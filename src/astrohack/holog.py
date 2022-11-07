@@ -11,7 +11,25 @@ from numba.core import types
 from numba.typed import Dict
 
 @njit(cache=False)
-def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis, flag, flag_row, map_ant_ids,ref_ant_ids):
+def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis, flag, flag_row, map_ant_ids, ref_ant_ids):
+    """_summary_
+
+    Args:
+        vis_data (numpy.ndarray): _description_
+        weight (numpy.ndarray): _description_
+        ant1 (numpy.ndarray): _description_
+        ant2 (numpy.ndarray): _description_
+        time_vis_row (numpy.ndarray): _description_
+        time_vis (numpy.ndarray): _description_
+        flag (numpy.ndarray): _description_
+        flag_row (numpy.ndarray): _description_
+        map_ant_ids (numpy.ndarray): _description_
+        ref_ant_ids (numpy.ndarray): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
     '''
     1. Should we do this in double precision?
     2. Add flag_row and flags
@@ -19,36 +37,38 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
     4. Channel averaging
     5. ? Calculate a time_vis as an average from time_vis_centroid
     '''
-    n_row,n_chan,n_pol = vis_data.shape
-    n_time = len(time_vis)
-    print('jit function',n_row,n_chan,n_pol)
 
-    vis_map_dict = {map_ant_ids[0]:np.zeros((n_time,n_chan,n_pol),dtype=types.complex64)}
-    for i_m in map_ant_ids[1:]:
-        vis_map_dict[i_m] = np.zeros((n_time,n_chan,n_pol),dtype=types.complex64)
+    n_row, n_chan, n_pol = vis_data.shape
+    n_time = len(time_vis)
+    
+    vis_map_dict = {}
+    for antenna_id in map_ant_ids:
+        vis_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
         
     #Create sum of weight dict
     
     print(vis_data.dtype)
     
-    for i_r in range(n_row):
-        i_a1 = ant1[i_r]
-        i_a2 = ant2[i_r]
+    for row in range(n_row):
+        ant1_index = ant1[row]
+        ant2_index = ant2[row]
         
-        if (i_a1 in map_ant_ids) and (i_a2 in ref_ant_ids):
-            vis_bl = vis_data[i_r,:,:] # n_chan x n_pol
-            i_m = i_a1 #mapping antenna index
-        elif (i_a2 in map_ant_ids) and (i_a1 not in ref_ant_ids): #conjugate
-            vis_bl = np.conjugate(vis_data[i_r,:,:])
-            i_m = i_a2
+        if (ant1_index in map_ant_ids) and (ant2_index in ref_ant_ids):
+            vis_baseline = vis_data[row, :, :] # n_chan x n_pol
+            mapping_ant_index = ant1_index # mapping antenna index
+
+        elif (ant2_index in map_ant_ids) and (ant1_index not in ref_ant_ids): #conjugate
+            vis_baseline = np.conjugate(vis_data[row, :, :])
+            mapping_ant_index = ant2_index
+
         else:
             continue
             
         #Need to do weights and flags
-        i_t = np.searchsorted(time_vis,time_vis_row[i_r])
+        time_index = np.searchsorted(time_vis, time_vis_row[row])
         
         #Should we unroll this assignment for numba?
-        vis_map_dict[i_m][i_t,:,:] = vis_map_dict[i_m][i_t,:,:] + vis_bl
+        vis_map_dict[mapping_ant_index][time_index, :, :] = vis_map_dict[mapping_ant_index][time_index, :, :] + vis_baseline
 
     return vis_map_dict
         
@@ -58,10 +78,21 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
             
         
 
-def holog_chunk(ms_name,data_col,ddi,scan,map_ant_ids,ref_ant_ids,sel_state_ids):
+def holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, sel_state_ids):
+    """_summary_
+
+    Args:
+        ms_name (str): _description_
+        data_col (str): _description_
+        ddi (int): _description_
+        scan (int): _description_
+        map_ant_ids (numpy.narray): _description_
+        ref_ant_ids (numpy.narray): _description_
+        sel_state_ids (list): _description_
+    """
     
     start = time.time()
-    ctb = ctables.taql('select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, STATE_ID from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s' % (data_col,ms_name,ddi,scan,sel_state_ids))
+    ctb = ctables.taql('select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, STATE_ID from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s' % (data_col, ms_name, ddi, scan, sel_state_ids))
     #    vis_data = ctb.getcol('DATA')
     #    weight = ctb.getcol('WEIGHT')
     #    ant1 = ctb.getcol('ANTENNA1')
@@ -81,19 +112,21 @@ def holog_chunk(ms_name,data_col,ddi,scan,map_ant_ids,ref_ant_ids,sel_state_ids)
     flag_row = ctb.getcol('FLAG_ROW',0,n_end)
     state_ids_row = ctb.getcol('STATE_ID',0,n_end)
     ctb.close()
+
     print(time.time()-start)
-    print(vis_data.shape, weight.shape, ant1.shape, ant2.shape, time_vis_row.shape, time_vis_centroid_row.shape, flag.shape, flag_row.shape)
+    #print(vis_data.shape, weight.shape, ant1.shape, ant2.shape, time_vis_row.shape, time_vis_centroid_row.shape, flag.shape, flag_row.shape)
     
     start = time.time()
-    time_vis, unique_indx = np.unique(time_vis_row,return_index=True) #Note that values are sorted.
-    state_ids = state_ids_row[unique_indx]
+    time_vis, unique_index = np.unique(time_vis_row, return_index=True) # Note that values are sorted.
+    state_ids = state_ids_row[unique_index]
     
     print('Time to unique ',time.time()-start)
 
     start = time.time()
-    vis_map_dict = extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis, flag, flag_row, map_ant_ids,ref_ant_ids)
-    print('Time to jit ',time.time()-start)
+    vis_map_dict = extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis, flag, flag_row, map_ant_ids, ref_ant_ids)
     
+    print('Time to jit ',time.time()-start)
+
     #pnt_ant_dict = load(...)
     #pnt_map_dict = extract_pointing_chunk(map_ant_ids,time_vis,pnt_ant_dict)
     #grid all subscans onto a single grid
@@ -138,13 +171,23 @@ def holog_chunk(ms_name,data_col,ddi,scan,map_ant_ids,ref_ant_ids,sel_state_ids)
 
 
 
-def holog(ms_name,holog_obs_dict,data_col='DATA',subscan_intent='MIXED',parallel=True):
-    '''
-    subscan_intent: 'MIXED' or 'REFERENCE'
-    '''
+def holog(ms_name, holog_obs_dict, data_col='DATA', subscan_intent='MIXED', parallel=True):
+    """subscan_intent: 'MIXED' or 'REFERENCE'
+
+    Args:
+        ms_name (string): measurement file name
+        holog_obs_dict (dict): nested dictionary ordered by ddi:{ scan: { map:[ant names], ref:[ant names] } } }
+        data_col (str, optional): data column from measurement set to acquire. Defaults to 'DATA'.
+        subscan_intent (str, optional): subscan intent, can be MIXED or REFERENCE; MIXED refers to a pointing measurement with half ON(OFF) source. Defaults to 'MIXED'.
+        parallel (bool, optional): bool for whether to process in parallel. Defaults to True.
+    """
     
     ######## Get Spectral Windows ########
-    ctb = ctables.table(os.path.join(ms_name,"DATA_DESCRIPTION"),readonly=True, lockoptions={'option': 'usernoread'}, ack=False) #nomodify=True when using CASA tables.
+    
+    # nomodify=True when using CASA tables.
+    print(os.path.join(ms_name,"DATA_DESCRIPTION"))
+
+    ctb = ctables.table(os.path.join(ms_name,"DATA_DESCRIPTION"),readonly=True, lockoptions={'option': 'usernoread'}, ack=False) 
     spectral_window_id = ctb.getcol("SPECTRAL_WINDOW_ID")
     ddi = np.arange(len(spectral_window_id))
     ctb.close()
@@ -166,22 +209,25 @@ def holog(ms_name,holog_obs_dict,data_col='DATA',subscan_intent='MIXED',parallel
     # Undefined : ?
     
     ctb = ctables.table(os.path.join(ms_name,"STATE"), readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
-    obs_modes = ctb.getcol("OBS_MODE") #scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE subtable.
+    
+    # scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE subtable.
+    obs_modes = ctb.getcol("OBS_MODE") 
     ctb.close()
     
     scan_intent = 'MAP_ANTENNA_SURFACE'
     state_ids = []
-    for i,ob in enumerate(obs_modes):
-        if (scan_intent in ob) and (subscan_intent in ob):
+    for i, mode in enumerate(obs_modes):
+        if (scan_intent in mode) and (subscan_intent in mode):
             state_ids.append(i)
 
 
     for ddi in holog_obs_dict:
-        for scan in [2]: #holog_obs_dict[ddi]
-            map_ant_ids = np.nonzero(np.in1d(ant_name,holog_obs_dict[ddi][scan]['map']))[0]
-            ref_ant_ids = np.nonzero(np.in1d(ant_name,holog_obs_dict[ddi][scan]['ref']))[0]
-            print(map_ant_ids,ref_ant_ids)
-            holog_chunk(ms_name,data_col,ddi,scan,map_ant_ids,ref_ant_ids,state_ids)
+        for scan in holog_obs_dict[ddi].keys(): 
+            print('Processing ddi: {ddi}, scan: {scan}'.format(ddi=ddi, scan=scan))
+            map_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['map']))[0]
+            ref_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['ref']))[0]
+            #print(map_ant_ids, ref_ant_ids)
+            holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, state_ids)
 
     
     '''
