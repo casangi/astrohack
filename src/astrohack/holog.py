@@ -1,33 +1,35 @@
+import dask
+import time
+import os
+
 import numpy as np
 import xarray as xr
 import dask.array as da
-import dask
-import time
-#from casatools import table
-from casacore import tables as ctables
-import os
+
 from numba import njit
 from numba.core import types
 from numba.typed import Dict
 
+from casacore import tables as ctables
+
 @njit(cache=False)
 def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis, flag, flag_row, map_ant_ids, ref_ant_ids):
-    """_summary_
+    """ JIT copiled function to extract relevant visibilty data from chunk after flagging and applying weights.
 
     Args:
-        vis_data (numpy.ndarray): _description_
-        weight (numpy.ndarray): _description_
-        ant1 (numpy.ndarray): _description_
-        ant2 (numpy.ndarray): _description_
-        time_vis_row (numpy.ndarray): _description_
-        time_vis (numpy.ndarray): _description_
-        flag (numpy.ndarray): _description_
-        flag_row (numpy.ndarray): _description_
-        map_ant_ids (numpy.ndarray): _description_
-        ref_ant_ids (numpy.ndarray): _description_
+        vis_data (numpy.ndarray): Visibility data (row, channel, polarization)
+        weight (numpy.ndarray): Data weight values (row, polarization)
+        ant1 (numpy.ndarray): List of antenna_ids for antenna1
+        ant2 (numpy.ndarray): List of antenna_ids for antenna2
+        time_vis_row (numpy.ndarray): Array of full time talues by row
+        time_vis (numpy.ndarray): Array of selected time values
+        flag (numpy.ndarray): Array of data quality flags to apply to data
+        flag_row (numpy.ndarray): Array indicating when a full row of data should be flagged/
+        map_ant_ids (numpy.ndarray): Array of antenna_ids for mapping data
+        ref_ant_ids (numpy.ndarray): Array of antenna_ids for reference data
 
     Returns:
-        _type_: _description_
+        dict: Antenna_id referenced (key) dictionary containing the visibility data selected by (time, channel, polarization)
     """
 
     '''
@@ -50,6 +52,10 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
     print(vis_data.dtype)
     
     for row in range(n_row):
+
+        if flag_row is False:
+            continue
+
         ant1_index = ant1[row]
         ant2_index = ant2[row]
         
@@ -68,49 +74,50 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
         time_index = np.searchsorted(time_vis, time_vis_row[row])
         
         #Should we unroll this assignment for numba?
-        vis_map_dict[mapping_ant_index][time_index, :, :] = vis_map_dict[mapping_ant_index][time_index, :, :] + vis_baseline
+        #vis_map_dict[mapping_ant_index][time_index, :, :] = vis_map_dict[mapping_ant_index][time_index, :, :] + vis_baseline
 
-    return vis_map_dict
-        
-            
-        
-            
-            
-        
+        for chan in range(n_chan):
+            for pol in range(n_pol):
+                vis_map_dict[mapping_ant_index][time_index, chan, pol] = vis_map_dict[mapping_ant_index][time_index, chan, pol] + vis_baseline[chan, pol]*weight[row, pol]*(~flag[row, chan, pol])
 
+    return vis_map_dict            
+            
 def holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, sel_state_ids):
-    """_summary_
+    """ Perform data query on holography data chunk and get unique time and state_ids/
 
     Args:
-        ms_name (str): _description_
-        data_col (str): _description_
-        ddi (int): _description_
-        scan (int): _description_
-        map_ant_ids (numpy.narray): _description_
-        ref_ant_ids (numpy.narray): _description_
-        sel_state_ids (list): _description_
+        ms_name (str): Measurementset name
+        data_col (str): Data column to extract.
+        ddi (int): Data description id
+        scan (int): Scan number
+        map_ant_ids (numpy.narray): Array of antenna_id values corresponding to mapping data.
+        ref_ant_ids (numpy.narray): Arry of antenna_id values corresponding to reference data.
+        sel_state_ids (list): List pf state_ids corresponding to holography data/
     """
     
     start = time.time()
     ctb = ctables.taql('select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, STATE_ID from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s' % (data_col, ms_name, ddi, scan, sel_state_ids))
-    #    vis_data = ctb.getcol('DATA')
-    #    weight = ctb.getcol('WEIGHT')
-    #    ant1 = ctb.getcol('ANTENNA1')
-    #    ant2 = ctb.getcol('ANTENNA2')
-    #    time = ctb.getcol('TIME')
-    #    time_vis_row_centroid = ctb.getcol('TIME_CENTROID')
-    #    flag = ctb.getcol('FLAG')
-    #    flag_row = ctb.getcol('FLAG_ROW')
-    n_end = int(1599066/8) #/8
-    vis_data = ctb.getcol('DATA',0,n_end)
-    weight = ctb.getcol('WEIGHT',0,n_end)
-    ant1 = ctb.getcol('ANTENNA1',0,n_end)
-    ant2 = ctb.getcol('ANTENNA2',0,n_end)
-    time_vis_row = ctb.getcol('TIME',0,n_end)
-    time_vis_centroid_row = ctb.getcol('TIME_CENTROID',0,n_end)
-    flag = ctb.getcol('FLAG',0,n_end)
-    flag_row = ctb.getcol('FLAG_ROW',0,n_end)
-    state_ids_row = ctb.getcol('STATE_ID',0,n_end)
+    
+    vis_data = ctb.getcol('DATA')
+    weight = ctb.getcol('WEIGHT')
+    ant1 = ctb.getcol('ANTENNA1')
+    ant2 = ctb.getcol('ANTENNA2')
+    time_vis_row = ctb.getcol('TIME')
+    time_vis_row_centroid = ctb.getcol('TIME_CENTROID')
+    flag = ctb.getcol('FLAG')
+    flag_row = ctb.getcol('FLAG_ROW')
+    state_ids_row = ctb.getcol('STATE_ID')
+
+    #n_end = int(1599066/8) #/8
+    #vis_data = ctb.getcol('DATA',0,n_end)
+    #weight = ctb.getcol('WEIGHT',0,n_end)
+    #ant1 = ctb.getcol('ANTENNA1',0,n_end)
+    #ant2 = ctb.getcol('ANTENNA2',0,n_end)
+    #time_vis_row = ctb.getcol('TIME',0,n_end)
+    #time_vis_centroid_row = ctb.getcol('TIME_CENTROID',0,n_end)
+    #flag = ctb.getcol('FLAG',0,n_end)
+    #flag_row = ctb.getcol('FLAG_ROW',0,n_end)
+    #state_ids_row = ctb.getcol('STATE_ID',0,n_end)
     ctb.close()
 
     print(time.time()-start)
