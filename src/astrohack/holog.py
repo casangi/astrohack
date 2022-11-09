@@ -34,8 +34,8 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
 
     '''
     1. Should we do this in double precision?
-    2. Add flag_row and flags
-    3. Do weighted sum of data
+    2. ~Add flag_row and flags~
+    3. ~Do weighted sum of data~
     4. Channel averaging
     5. ? Calculate a time_vis as an average from time_vis_centroid
     '''
@@ -44,8 +44,16 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
     n_time = len(time_vis)
     
     vis_map_dict = {}
+    sum_map_dict = {}
+    weight_map_dict = {}
+    total_weight_map_dict = {}
+
     for antenna_id in map_ant_ids:
         vis_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
+        weight_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
+        sum_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
+        total_weight_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
+
         
     #Create sum of weight dict
     
@@ -78,9 +86,19 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
 
         for chan in range(n_chan):
             for pol in range(n_pol):
-                vis_map_dict[mapping_ant_index][time_index, chan, pol] = vis_map_dict[mapping_ant_index][time_index, chan, pol] + vis_baseline[chan, pol]*weight[row, pol]*(~flag[row, chan, pol])
+                # Calculate running weighted sum of visibilities
+                sum_map_dict[mapping_ant_index][time_index, chan, pol] = sum_map_dict[mapping_ant_index][time_index, chan, pol] + vis_baseline[chan, pol]*weight[row, pol]*(~flag[row, chan, pol])
 
-    return vis_map_dict            
+                # Build map dictionary of weights for later use
+                weight_map_dict[mapping_ant_index][time_index, chan, pol] = weight[row, pol]
+
+                # Calculate running sum of weights
+                total_weight_map_dict[mapping_ant_index][time_index, chan, pol] = total_weight_map_dict[mapping_ant_index][time_index, chan, pol] + weight[row, pol]
+                                
+                # Calculate running weighted average
+                vis_map_dict[mapping_ant_index][time_index, chan, pol] = sum_map_dict[mapping_ant_index][time_index, chan, pol]/total_weight_map_dict[mapping_ant_index][time_index, chan, pol]
+
+    return vis_map_dict, weight_map_dict            
             
 def holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, sel_state_ids):
     """ Perform data query on holography data chunk and get unique time and state_ids/
@@ -130,14 +148,14 @@ def holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, sel_stat
     print('Time to unique ',time.time()-start)
 
     start = time.time()
-    vis_map_dict = extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis, flag, flag_row, map_ant_ids, ref_ant_ids)
+    vis_map_dict, weight_map_dict = extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis, flag, flag_row, map_ant_ids, ref_ant_ids)
     
     print('Time to jit ',time.time()-start)
 
     #pnt_ant_dict = load(...)
-    #pnt_map_dict = extract_pointing_chunk(map_ant_ids,time_vis,pnt_ant_dict)
+    #pnt_map_dict = extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)
     #grid all subscans onto a single grid
-    #bm_map_dict = create_beam_maps(vis_map_dict,pnt_map_dict,map_ant_ids,state_ids,time_vis) # each mapping antenna has an image cube of dims: n_state_ids (time) x nchan x pol x l x m, n_state_ids = len(np.unique(state_ids))
+    #bm_map_dict = create_beam_maps(vis_map_dict, pnt_map_dict, map_ant_ids, state_ids, time_vis) # each mapping antenna has an image cube of dims: n_state_ids (time) x nchan x pol x l x m, n_state_ids = len(np.unique(state_ids))
  
     '''
     start = time.time()
@@ -227,16 +245,49 @@ def holog(ms_name, holog_obs_dict, data_col='DATA', subscan_intent='MIXED', para
         if (scan_intent in mode) and (subscan_intent in mode):
             state_ids.append(i)
 
-
+    '''
     for ddi in holog_obs_dict:
         for scan in holog_obs_dict[ddi].keys(): 
             print('Processing ddi: {ddi}, scan: {scan}'.format(ddi=ddi, scan=scan))
+
+            # Determine antenna ids associated with mapping (reference) in list
             map_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['map']))[0]
             ref_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['ref']))[0]
-            #print(map_ant_ids, ref_ant_ids)
+            
             holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, state_ids)
 
-    
+    '''
+    if parallel:
+        delayed_list = []
+        for ddi in holog_obs_dict:
+            for scan in holog_obs_dict[ddi].keys(): 
+                print('Processing ddi: {ddi}, scan: {scan}'.format(ddi=ddi, scan=scan))
+
+                map_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['map']))[0]
+                ref_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['ref']))[0]
+
+                delayed_list.append(
+                    dask.delayed(holog_chunk)(
+                        dask.delayed(ms_name ), 
+                        dask.delayed(data_col), 
+                        dask.delayed(ddi),
+                        dask.delayed(scan),
+                        dask.delayed(map_ant_ids),
+                        dask.delayed(ref_ant_ids),
+                        dask.delayed(state_ids)
+                    )
+                )
+        
+        dask.compute(delayed_list)
+    else:
+        for ddi in holog_obs_dict:
+            for scan in holog_obs_dict[ddi].keys(): 
+                print('Processing ddi: {ddi}, scan: {scan}'.format(ddi=ddi, scan=scan))
+
+                map_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['map']))[0]
+                ref_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['ref']))[0]        
+                                
+                holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, state_ids)
     '''
     if parallel:
         delayed_list = []
