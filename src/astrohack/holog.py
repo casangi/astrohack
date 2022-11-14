@@ -10,7 +10,57 @@ from numba import njit
 from numba.core import types
 from numba.typed import Dict
 
+from ._utils import load_pnt_dict
+
 from casacore import tables as ctables
+
+def _get_nearest_index(value:float, array: np.ndarray):
+    """ Simple utility function to find the index of the nearest entry to value.
+
+    Args:
+        value (float): _description_
+        array (np.ndarray): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    
+    return np.abs(array - value).argmin()
+
+def extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
+    """ Extract nearest MAIN table time indexed pointing map
+
+    Args:
+        map_ant_ids (dict): list of antenna ids
+        time_vis (numpy.ndarray): sorted, unique list of visibility times
+        pnt_ant_dict (dict): map of pointing directional cosines with a map key based on the antenna id and indexed by the MAIN table visibility time. 
+
+    Returns:
+        _type_: _description_
+    """
+    # pnt_map_dict = extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)
+    # >> map_ant_ids: list of antenna ids
+    # >> time_vis: sorted, unique list of visibility times
+    # >> pnt_ant_dict: pointing directions mapped on antenna id [ant_id]->xarray.DIRECTIONAL_COSINES(time, direction) for instance
+
+    n_time_vis = time_vis.shape[0]
+
+    pnt_map_dict = {}
+
+    for antenna in map_ant_ids:
+        pnt_map_dict[antenna] = np.zeros((n_time_vis, 2)) 
+        for time_index, time in enumerate(time_vis):
+        
+            # find nearest pnt_ant_dict time value and add to dictionary
+            index = _get_nearest_index(time, pnt_ant_dict[antenna].coords['time'].data)
+
+            # l-value of directional cosines
+            pnt_map_dict[antenna][time_index] = pnt_ant_dict[antenna].DIRECTIONAL_COSINES[index][0]  
+
+            # m-value of directional cosines
+            pnt_map_dict[antenna][time_index] = pnt_ant_dict[antenna].DIRECTIONAL_COSINES[index][1]
+
+    return pnt_map_dict
 
 @njit(cache=False)
 def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis, flag, flag_row, map_ant_ids, ref_ant_ids):
@@ -116,26 +166,27 @@ def holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, sel_stat
     start = time.time()
     ctb = ctables.taql('select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, STATE_ID from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s' % (data_col, ms_name, ddi, scan, sel_state_ids))
     
-    vis_data = ctb.getcol('DATA')
-    weight = ctb.getcol('WEIGHT')
-    ant1 = ctb.getcol('ANTENNA1')
-    ant2 = ctb.getcol('ANTENNA2')
-    time_vis_row = ctb.getcol('TIME')
-    time_vis_row_centroid = ctb.getcol('TIME_CENTROID')
-    flag = ctb.getcol('FLAG')
-    flag_row = ctb.getcol('FLAG_ROW')
-    state_ids_row = ctb.getcol('STATE_ID')
+    #vis_data = ctb.getcol('DATA')
+    #weight = ctb.getcol('WEIGHT')
+    #ant1 = ctb.getcol('ANTENNA1')
+    #ant2 = ctb.getcol('ANTENNA2')
+    #time_vis_row = ctb.getcol('TIME')
+    #time_vis_row_centroid = ctb.getcol('TIME_CENTROID')
+    #flag = ctb.getcol('FLAG')
+    #flag_row = ctb.getcol('FLAG_ROW')
+    #state_ids_row = ctb.getcol('STATE_ID')
 
-    #n_end = int(1599066/8) #/8
-    #vis_data = ctb.getcol('DATA',0,n_end)
-    #weight = ctb.getcol('WEIGHT',0,n_end)
-    #ant1 = ctb.getcol('ANTENNA1',0,n_end)
-    #ant2 = ctb.getcol('ANTENNA2',0,n_end)
-    #time_vis_row = ctb.getcol('TIME',0,n_end)
-    #time_vis_centroid_row = ctb.getcol('TIME_CENTROID',0,n_end)
-    #flag = ctb.getcol('FLAG',0,n_end)
-    #flag_row = ctb.getcol('FLAG_ROW',0,n_end)
-    #state_ids_row = ctb.getcol('STATE_ID',0,n_end)
+    n_end = int(1599066/8) #/8
+    vis_data = ctb.getcol('DATA',0,n_end)
+    weight = ctb.getcol('WEIGHT',0,n_end)
+    ant1 = ctb.getcol('ANTENNA1',0,n_end)
+    ant2 = ctb.getcol('ANTENNA2',0,n_end)
+    time_vis_row = ctb.getcol('TIME',0,n_end)
+    time_vis_centroid_row = ctb.getcol('TIME_CENTROID',0,n_end)
+    flag = ctb.getcol('FLAG',0,n_end)
+    flag_row = ctb.getcol('FLAG_ROW',0,n_end)
+    state_ids_row = ctb.getcol('STATE_ID',0,n_end)
+    
     ctb.close()
 
     print(time.time()-start)
@@ -148,12 +199,27 @@ def holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, sel_stat
     print('Time to unique ',time.time()-start)
 
     start = time.time()
+
+    # vis_map_dict: [mapping_antenna](time_index, chan, polarization)
+    # weight_map_dict: [mapping_antenna](time_index, chan, polarization)
     vis_map_dict, weight_map_dict = extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis, flag, flag_row, map_ant_ids, ref_ant_ids)
+
+
     
     print('Time to jit ',time.time()-start)
 
-    #pnt_ant_dict = load(...)
-    #pnt_map_dict = extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)
+    #pnt_ant_dict = load_pnt_dict(...)
+    pnt_ant_dict = load_pnt_dict('.'.join((ms_name, 'pnt.dict')))
+    
+    # pnt_map_dict = extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)
+    # >> map_ant_ids: list of antenna ids
+    # >> time_vis: sorted, unique list of visibility times: MAIN table values
+    # >> pnt_ant_dict: pointing directions mapped on antenna id [ant_id]->xarray.DIRECTIONAL_COSINES(time, direction) for instance : POINTING tables values
+
+    pnt_map_dict = extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)
+
+    return pnt_map_dict
+
     #grid all subscans onto a single grid
     #bm_map_dict = create_beam_maps(vis_map_dict, pnt_map_dict, map_ant_ids, state_ids, time_vis) # each mapping antenna has an image cube of dims: n_state_ids (time) x nchan x pol x l x m, n_state_ids = len(np.unique(state_ids))
  
@@ -287,7 +353,7 @@ def holog(ms_name, holog_obs_dict, data_col='DATA', subscan_intent='MIXED', para
                 map_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['map']))[0]
                 ref_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['ref']))[0]        
                                 
-                holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, state_ids)
+                return holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, state_ids)
     '''
     if parallel:
         delayed_list = []

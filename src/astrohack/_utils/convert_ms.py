@@ -68,19 +68,19 @@ def make_ant_pnt_xds(ms_name, ant_id, pnt_name):
     pnt_xds = pnt_xds.assign_coords(coords)
     # Measurement set v2 definition: https://drive.google.com/file/d/1IapBTsFYnUT1qPu_UK09DIFGM81EIZQr/view?usp=sharing
     #DIRECTION: Antenna pointing direction
-    pnt_xds['DIRECTION'] = xr.DataArray(direction,dims=('time','az_el'))
+    pnt_xds['DIRECTION'] = xr.DataArray(direction, dims=('time','az_el'))
 
     # ENCODER: The current encoder values on the primary axes of the mount type for the antenna, expressed as a Direction 
     # Measure.
-    pnt_xds['ENCODER'] = xr.DataArray(encoder,dims=('time','az_el'))
+    pnt_xds['ENCODER'] = xr.DataArray(encoder, dims=('time','az_el'))
 
     # TARGET: This is the true expected position of the source, including all coordinate corrections such as precession, 
     # nutation etc.
-    pnt_xds['TARGET'] = xr.DataArray(target,dims=('time','az_el'))
+    pnt_xds['TARGET'] = xr.DataArray(target, dims=('time','az_el'))
 
     # POINTING_OFFSET: The a priori pointing corrections applied by the telescope in pointing to the DIRECTION position, 
     # optionally expressed as polynomial coefficients.
-    pnt_xds['POINTING_OFFSET'] = xr.DataArray(pointing_offset,dims=('time','az_el'))
+    pnt_xds['POINTING_OFFSET'] = xr.DataArray(pointing_offset, dims=('time','az_el'))
     
     #Calculate directional cosines (l,m) which are used as the gridding locations.
     # See equations 8,9 in https://library.nrao.edu/public/memos/evla/EVLAM_212.pdf.
@@ -92,7 +92,7 @@ def make_ant_pnt_xds(ms_name, ant_id, pnt_name):
     l = np.cos(target[:,1])*np.sin(target[:,0]-direction[:,0])
     m = np.sin(target[:,1])*np.cos(direction[:,1]) - np.cos(target[:,1])*np.sin(direction[:,1])*np.cos(target[:,0]-direction[:,0])
     
-    pnt_xds['DIRECTIONAL_COSINES'] = xr.DataArray(np.array([l,m]).T,dims=('time','ra_dec'))
+    pnt_xds['DIRECTIONAL_COSINES'] = xr.DataArray(np.array([l,m]).T, dims=('time','ra_dec'))
     #time.sleep(30)
     pnt_xds.to_zarr(os.path.join(pnt_name, str(ant_id)), mode='w', compute=True, consolidated=True)
 
