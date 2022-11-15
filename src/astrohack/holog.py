@@ -48,6 +48,7 @@ def extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     pnt_map_dict = {}
 
     for antenna in map_ant_ids:
+        print(antenna)
         pnt_map_dict[antenna] = np.zeros((n_time_vis, 2)) 
         for time_index, time in enumerate(time_vis):
         
@@ -94,14 +95,14 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
     n_time = len(time_vis)
     
     vis_map_dict = {}
-    sum_map_dict = {}
-    weight_map_dict = {}
-    total_weight_map_dict = {}
+    #sum_map_dict = {}
+    #weight_map_dict = {}
+    sum_weight_map_dict = {}
 
     for antenna_id in map_ant_ids:
         vis_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
         #weight_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
-        sum_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
+        #sum_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
         sum_weight_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
 
         
@@ -151,11 +152,15 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
 
     
 
-    for mapping_antenna_index in sum_map_dict.keys():
+    for mapping_antenna_index in vis_map_dict.keys():
+        print(mapping_antenna_index)
         for time_index in range(n_time):
             for chan in range(n_chan):
                 for pol in range(n_pol):
-                    vis_map_dict[mapping_antenna_index][time_index, chan, pol] = vis_map_dict[mapping_antenna_index][time_index, chan, pol]/sum_weight_map_dict[mapping_antenna_index][time_index, chan, pol]
+                    if sum_weight_map_dict[mapping_antenna_index][time_index, chan, pol] == 0:
+                        vis_map_dict[mapping_antenna_index][time_index, chan, pol] = 0.
+                    else:
+                        vis_map_dict[mapping_antenna_index][time_index, chan, pol] = vis_map_dict[mapping_antenna_index][time_index, chan, pol]/sum_weight_map_dict[mapping_antenna_index][time_index, chan, pol]
 
     return vis_map_dict, sum_weight_map_dict            
             
