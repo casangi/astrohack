@@ -100,9 +100,9 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
 
     for antenna_id in map_ant_ids:
         vis_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
-        weight_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
+        #weight_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
         sum_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
-        total_weight_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
+        sum_weight_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
 
         
     #Create sum of weight dict
@@ -136,19 +136,28 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
 
         for chan in range(n_chan):
             for pol in range(n_pol):
-                # Calculate running weighted sum of visibilities
-                sum_map_dict[mapping_ant_index][time_index, chan, pol] = sum_map_dict[mapping_ant_index][time_index, chan, pol] + vis_baseline[chan, pol]*weight[row, pol]*(~flag[row, chan, pol])
+                if ~(flag[row, chan, pol]):
+                    # Calculate running weighted sum of visibilities
+                    vis_map_dict[mapping_ant_index][time_index, chan, pol] = vis_map_dict[mapping_ant_index][time_index, chan, pol] + vis_baseline[chan, pol]*weight[row, pol]
 
-                # Build map dictionary of weights for later use
-                weight_map_dict[mapping_ant_index][time_index, chan, pol] = weight[row, pol]
+                    # Build map dictionary of weights for later use
+                    #weight_map_dict[mapping_ant_index][time_index, chan, pol] = weight[row, pol]
 
-                # Calculate running sum of weights
-                total_weight_map_dict[mapping_ant_index][time_index, chan, pol] = total_weight_map_dict[mapping_ant_index][time_index, chan, pol] + weight[row, pol]
+                    # Calculate running sum of weights
+                    sum_weight_map_dict[mapping_ant_index][time_index, chan, pol] = sum_weight_map_dict[mapping_ant_index][time_index, chan, pol] + weight[row, pol]
                                 
-                # Calculate running weighted average
-                vis_map_dict[mapping_ant_index][time_index, chan, pol] = sum_map_dict[mapping_ant_index][time_index, chan, pol]/total_weight_map_dict[mapping_ant_index][time_index, chan, pol]
+                    # Calculate running weighted average
+                    #vis_map_dict[mapping_ant_index][time_index, chan, pol] = sum_map_dict[mapping_ant_index][time_index, chan, pol]/total_weight_map_dict[mapping_ant_index][time_index, chan, pol]
 
-    return vis_map_dict, weight_map_dict            
+    
+
+    for mapping_antenna_index in sum_map_dict.keys():
+        for time_index in range(n_time):
+            for chan in range(n_chan):
+                for pol in range(n_pol):
+                    vis_map_dict[mapping_antenna_index][time_index, chan, pol] = vis_map_dict[mapping_antenna_index][time_index, chan, pol]/sum_weight_map_dict[mapping_antenna_index][time_index, chan, pol]
+
+    return vis_map_dict, sum_weight_map_dict            
             
 def holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, sel_state_ids):
     """ Perform data query on holography data chunk and get unique time and state_ids/
@@ -166,26 +175,26 @@ def holog_chunk(ms_name, data_col, ddi, scan, map_ant_ids, ref_ant_ids, sel_stat
     start = time.time()
     ctb = ctables.taql('select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, STATE_ID from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s' % (data_col, ms_name, ddi, scan, sel_state_ids))
     
-    #vis_data = ctb.getcol('DATA')
-    #weight = ctb.getcol('WEIGHT')
-    #ant1 = ctb.getcol('ANTENNA1')
-    #ant2 = ctb.getcol('ANTENNA2')
-    #time_vis_row = ctb.getcol('TIME')
-    #time_vis_row_centroid = ctb.getcol('TIME_CENTROID')
-    #flag = ctb.getcol('FLAG')
-    #flag_row = ctb.getcol('FLAG_ROW')
-    #state_ids_row = ctb.getcol('STATE_ID')
+    vis_data = ctb.getcol('DATA')
+    weight = ctb.getcol('WEIGHT')
+    ant1 = ctb.getcol('ANTENNA1')
+    ant2 = ctb.getcol('ANTENNA2')
+    time_vis_row = ctb.getcol('TIME')
+    time_vis_row_centroid = ctb.getcol('TIME_CENTROID')
+    flag = ctb.getcol('FLAG')
+    flag_row = ctb.getcol('FLAG_ROW')
+    state_ids_row = ctb.getcol('STATE_ID')
 
-    n_end = int(1599066/8) #/8
-    vis_data = ctb.getcol('DATA',0,n_end)
-    weight = ctb.getcol('WEIGHT',0,n_end)
-    ant1 = ctb.getcol('ANTENNA1',0,n_end)
-    ant2 = ctb.getcol('ANTENNA2',0,n_end)
-    time_vis_row = ctb.getcol('TIME',0,n_end)
-    time_vis_centroid_row = ctb.getcol('TIME_CENTROID',0,n_end)
-    flag = ctb.getcol('FLAG',0,n_end)
-    flag_row = ctb.getcol('FLAG_ROW',0,n_end)
-    state_ids_row = ctb.getcol('STATE_ID',0,n_end)
+    #n_end = int(1599066/8) #/8
+    #vis_data = ctb.getcol('DATA',0,n_end)
+    #weight = ctb.getcol('WEIGHT',0,n_end)
+    #ant1 = ctb.getcol('ANTENNA1',0,n_end)
+    #ant2 = ctb.getcol('ANTENNA2',0,n_end)
+    #time_vis_row = ctb.getcol('TIME',0,n_end)
+    #time_vis_centroid_row = ctb.getcol('TIME_CENTROID',0,n_end)
+    #flag = ctb.getcol('FLAG',0,n_end)
+    #flag_row = ctb.getcol('FLAG_ROW',0,n_end)
+    #state_ids_row = ctb.getcol('STATE_ID',0,n_end)
     
     ctb.close()
 
