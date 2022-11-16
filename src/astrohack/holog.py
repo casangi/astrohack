@@ -11,12 +11,12 @@ from numba.core import types
 from numba.typed import Dict
 
 from ._utils import load_pnt_dict
-from astrohack._utils import make_ant_pnt_dict, exstract_holog_chunk
+from astrohack._utils import make_ant_pnt_dict, extract_holog_chunk
 
 from casacore import tables as ctables
 
 
-def exstract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_intent='MIXED', parallel=True):
+def extract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_intent='MIXED', parallel=True):
     """subscan_intent: 'MIXED' or 'REFERENCE'
 
     Args:
@@ -79,35 +79,35 @@ def exstract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_
         spw_setup_id = ddi_spw[ddi]
         pol_setup_id = ddi_pol[ddi]
     
-        exstract_holog_parms = {'ms_name':ms_name,'hack_name':hack_name,'pnt_name':pnt_name,'ddi':ddi,'data_col':data_col,'chan_setup':{},'pol_setup':{}}
-        exstract_holog_parms['chan_setup']['chan_freq'] = spw_ctb.getcol('CHAN_FREQ',startrow=spw_setup_id,nrow=1)[0,:]
-        exstract_holog_parms['chan_setup']['chan_width'] = spw_ctb.getcol('CHAN_WIDTH',startrow=spw_setup_id,nrow=1)[0,:]
-        exstract_holog_parms['chan_setup']['eff_bw'] = spw_ctb.getcol('EFFECTIVE_BW',startrow=spw_setup_id,nrow=1)[0,:]
-        exstract_holog_parms['chan_setup']['ref_freq'] = spw_ctb.getcol('REF_FREQUENCY',startrow=spw_setup_id,nrow=1)[0]
-        exstract_holog_parms['chan_setup']['total_bw'] = spw_ctb.getcol('TOTAL_BANDWIDTH',startrow=spw_setup_id,nrow=1)[0]
+        extract_holog_parms = {'ms_name':ms_name,'hack_name':hack_name,'pnt_name':pnt_name,'ddi':ddi,'data_col':data_col,'chan_setup':{},'pol_setup':{}}
+        extract_holog_parms['chan_setup']['chan_freq'] = spw_ctb.getcol('CHAN_FREQ',startrow=spw_setup_id,nrow=1)[0,:]
+        extract_holog_parms['chan_setup']['chan_width'] = spw_ctb.getcol('CHAN_WIDTH',startrow=spw_setup_id,nrow=1)[0,:]
+        extract_holog_parms['chan_setup']['eff_bw'] = spw_ctb.getcol('EFFECTIVE_BW',startrow=spw_setup_id,nrow=1)[0,:]
+        extract_holog_parms['chan_setup']['ref_freq'] = spw_ctb.getcol('REF_FREQUENCY',startrow=spw_setup_id,nrow=1)[0]
+        extract_holog_parms['chan_setup']['total_bw'] = spw_ctb.getcol('TOTAL_BANDWIDTH',startrow=spw_setup_id,nrow=1)[0]
 
-        exstract_holog_parms['pol_setup']['pol'] = pol_ctb.getcol('CORR_TYPE',startrow=spw_setup_id,nrow=1)[0,:]
+        extract_holog_parms['pol_setup']['pol'] = pol_ctb.getcol('CORR_TYPE',startrow=spw_setup_id,nrow=1)[0,:]
         
         for scan in holog_obs_dict[ddi].keys():
             print('Processing ddi: {ddi}, scan: {scan}'.format(ddi=ddi, scan=scan))
             map_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['map']))[0]
             ref_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['ref']))[0]
 
-            exstract_holog_parms['map_ant_ids'] = map_ant_ids
-            exstract_holog_parms['map_ant_names'] = holog_obs_dict[ddi][scan]['map']
-            exstract_holog_parms['ref_ant_ids'] = ref_ant_ids
-            exstract_holog_parms['sel_state_ids'] = state_ids
-            exstract_holog_parms['scan'] = scan
+            extract_holog_parms['map_ant_ids'] = map_ant_ids
+            extract_holog_parms['map_ant_names'] = holog_obs_dict[ddi][scan]['map']
+            extract_holog_parms['ref_ant_ids'] = ref_ant_ids
+            extract_holog_parms['sel_state_ids'] = state_ids
+            extract_holog_parms['scan'] = scan
          
             
             if parallel:
                 delayed_list.append(
-                    dask.delayed(exstract_holog_chunk)(
-                        dask.delayed(exstract_holog_parms)
+                    dask.delayed(extract_holog_chunk)(
+                        dask.delayed(extract_holog_parms)
                     )
                 )
             else:
-                exstract_holog_chunk(exstract_holog_parms)
+                extract_holog_chunk(extract_holog_parms)
                 
     spw_ctb.close()
     pol_ctb.close()
