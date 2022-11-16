@@ -325,7 +325,7 @@ def create_map_hack_xds_dict(hack_name,vis_map_dict, weight_map_dict, pnt_map_di
         
     
             
-def exstract_holog_chunk(exstract_holog_parms):
+def extract_holog_chunk(extract_holog_parms):
     """ Perform data query on holography data chunk and get unique time and state_ids/
 
     Args:
@@ -338,20 +338,20 @@ def exstract_holog_chunk(exstract_holog_parms):
         sel_state_ids (list): List pf state_ids corresponding to holography data/
     """
     
-    ms_name = exstract_holog_parms['ms_name']
-    pnt_name = exstract_holog_parms['pnt_name']
-    data_col = exstract_holog_parms['data_col']
-    ddi = exstract_holog_parms['ddi']
-    scan = exstract_holog_parms['scan']
-    map_ant_ids = exstract_holog_parms['map_ant_ids']
-    ref_ant_ids = exstract_holog_parms['ref_ant_ids']
-    sel_state_ids = exstract_holog_parms['sel_state_ids']
-    hack_name = exstract_holog_parms['hack_name']
+    ms_name = extract_holog_parms['ms_name']
+    pnt_name = extract_holog_parms['pnt_name']
+    data_col = extract_holog_parms['data_col']
+    ddi = extract_holog_parms['ddi']
+    scan = extract_holog_parms['scan']
+    map_ant_ids = extract_holog_parms['map_ant_ids']
+    ref_ant_ids = extract_holog_parms['ref_ant_ids']
+    sel_state_ids = extract_holog_parms['sel_state_ids']
+    hack_name = extract_holog_parms['hack_name']
     
-    chan_freq = exstract_holog_parms['chan_setup']['chan_freq']
-    pol = exstract_holog_parms['pol_setup']['pol']
+    chan_freq = extract_holog_parms['chan_setup']['chan_freq']
+    pol = extract_holog_parms['pol_setup']['pol']
     
-    print(exstract_holog_parms.keys())
+    print(extract_holog_parms.keys())
     
     start = time.time()
     ctb = ctables.taql('select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, STATE_ID from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s' % (data_col, ms_name, ddi, scan, sel_state_ids))
