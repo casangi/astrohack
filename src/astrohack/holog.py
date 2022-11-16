@@ -79,7 +79,16 @@ def extract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_i
         spw_setup_id = ddi_spw[ddi]
         pol_setup_id = ddi_pol[ddi]
     
-        extract_holog_parms = {'ms_name':ms_name,'hack_name':hack_name,'pnt_name':pnt_name,'ddi':ddi,'data_col':data_col,'chan_setup':{},'pol_setup':{}}
+        extract_holog_parms = {
+            'ms_name':ms_name,
+            'hack_name':hack_name,
+            'pnt_name':pnt_name,
+            'ddi':ddi,
+            'data_col':data_col,
+            'chan_setup':{},
+            'pol_setup':{}
+        }
+
         extract_holog_parms['chan_setup']['chan_freq'] = spw_ctb.getcol('CHAN_FREQ',startrow=spw_setup_id,nrow=1)[0,:]
         extract_holog_parms['chan_setup']['chan_width'] = spw_ctb.getcol('CHAN_WIDTH',startrow=spw_setup_id,nrow=1)[0,:]
         extract_holog_parms['chan_setup']['eff_bw'] = spw_ctb.getcol('EFFECTIVE_BW',startrow=spw_setup_id,nrow=1)[0,:]
@@ -90,6 +99,7 @@ def extract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_i
         
         for scan in holog_obs_dict[ddi].keys():
             print('Processing ddi: {ddi}, scan: {scan}'.format(ddi=ddi, scan=scan))
+            
             map_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['map']))[0]
             ref_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['ref']))[0]
 

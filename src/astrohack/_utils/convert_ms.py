@@ -177,18 +177,8 @@ def extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     pnt_map_dict = {}
 
     for antenna in map_ant_ids:
-        #print(antenna)
         pnt_map_dict[antenna] = np.zeros((n_time_vis, 2))
-        for time_index, time in enumerate(time_vis):
-        
-            # find nearest pnt_ant_dict time value and add to dictionary
-            index = _get_nearest_index(time, pnt_ant_dict[antenna].coords['time'].data)
-
-            # l-value of directional cosines
-            pnt_map_dict[antenna][time_index] = pnt_ant_dict[antenna].DIRECTIONAL_COSINES[index][0]
-
-            # m-value of directional cosines
-            pnt_map_dict[antenna][time_index] = pnt_ant_dict[antenna].DIRECTIONAL_COSINES[index][1]
+        pnt_map_dict[antenna] = pnt_ant_dict[antenna].interp(time=time_vis, method='nearest').DIRECTIONAL_COSINES.values
 
     return pnt_map_dict
 
@@ -224,18 +214,14 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
     n_time = len(time_vis)
     
     vis_map_dict = {}
-    #sum_map_dict = {}
-    #weight_map_dict = {}
     sum_weight_map_dict = {}
 
     for antenna_id in map_ant_ids:
         vis_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
-        #weight_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
-        #sum_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
         sum_weight_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
 
         
-    #Create sum of weight dict
+    # Create sum of weight dict
     
     print(vis_data.dtype)
     
@@ -257,12 +243,8 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
 
         else:
             continue
-            
-        #Need to do weights and flags
-        time_index = np.searchsorted(time_vis, time_vis_row[row])
         
-        #Should we unroll this assignment for numba?
-        #vis_map_dict[map_ant_indx][time_index, :, :] = vis_map_dict[map_ant_indx][time_index, :, :] + vis_baseline
+        time_index = np.searchsorted(time_vis, time_vis_row[row])
         
         for chan in range(n_chan):
             for pol in range(n_pol):
@@ -270,20 +252,12 @@ def extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis
                     # Calculate running weighted sum of visibilities
                     vis_map_dict[map_ant_indx][time_index, chan, pol] = vis_map_dict[map_ant_indx][time_index, chan, pol] + vis_baseline[chan, pol]*weight[row, pol]
 
-                    # Build map dictionary of weights for later use
-                    #weight_map_dict[map_ant_indx][time_index, chan, pol] = weight[row, pol]
-
                     # Calculate running sum of weights
-                    sum_weight_map_dict[map_ant_indx][time_index, chan, pol] = sum_weight_map_dict[map_ant_indx][time_index, chan, pol] + weight[row, pol]
-                                
-                    # Calculate running weighted average
-                    #vis_map_dict[map_ant_indx][time_index, chan, pol] = sum_map_dict[map_ant_indx][time_index, chan, pol]/total_weight_map_dict[map_ant_indx][time_index, chan, pol]
+                    sum_weight_map_dict[map_ant_indx][time_index, chan, pol] = sum_weight_map_dict[map_ant_indx][time_index, chan, pol] + weight[row, pol]       
 
     flagged_mapping_antennas = []
 
     for map_ant_indx in vis_map_dict.keys():
-        #print('map antenna', map_ant_indx,np.sum(np.abs(vis_map_dict[map_ant_indx])))
-        #print(map_ant_indx)
         sum_of_sum_weight = 0
         
         for time_index in range(n_time):
@@ -400,10 +374,6 @@ def extract_holog_chunk(extract_holog_parms):
 
     pnt_ant_dict = load_pnt_dict(pnt_name)
     
-    # pnt_map_dict = extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)
-    # >> map_ant_ids: list of antenna ids
-    # >> time_vis: sorted, unique list of visibility times: MAIN table values
-    # >> pnt_ant_dict: pointing directions mapped on antenna id [ant_id]->xarray.DIRECTIONAL_COSINES(time, direction) for instance : POINTING tables values
     start = time.time()
     pnt_map_dict = extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)
     print('Time to extract_pointing_chunk ',time.time()-start)
@@ -411,11 +381,8 @@ def extract_holog_chunk(extract_holog_parms):
     start = time.time()
     hack_dict  = create_map_hack_xds_dict(hack_name,vis_map_dict, weight_map_dict, pnt_map_dict, time_vis, chan_freq, pol, flagged_mapping_antennas, scan, ddi)
     print('create_map_hack_xds_dict ',time.time()-start)
-    #print(pnt_map_dict,vis_map_dict,weight_map_dict)
     
     print('Done')
-
-    #return pnt_map_dict
 
     #grid all subscans onto a single grid
     #bm_map_dict = create_beam_maps(vis_map_dict, pnt_map_dict, map_ant_ids, state_ids, time_vis) # each mapping antenna has an image cube of dims: n_state_ids (time) x nchan x pol x l x m, n_state_ids = len(np.unique(state_ids))
