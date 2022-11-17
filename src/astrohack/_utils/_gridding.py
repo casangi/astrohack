@@ -1,5 +1,5 @@
 
-
+from numba import jit
 
 #When jit is used round is repolaced by standard c++ round that is different to python round
 @jit(nopython=True, cache=True, nogil=True)
