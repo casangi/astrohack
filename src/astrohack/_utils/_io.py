@@ -19,35 +19,36 @@ jit_cache =  False
 
 # Remove all trace of casa table tool
 
-
 #### Pointing Table Conversion ####
 def _load_pnt_dict(file):
-    """_summary_
+    """ Load pointing dictionary from disk.
 
     Args:
-        file (zarr): Input zarr file containing pointing dictionary
+        file (zarr): Input zarr file containing pointing dictionary.
 
     Returns:
         dict: Pointing dictionary
     """
     pnt_dict = {}
+
     for f in os.listdir(file):
-        
         if f.isnumeric():
-            pnt_dict[int(f)] =  xr.open_zarr(os.path.join(file, f))
+            pnt_dict[int(f)] = xr.open_zarr(os.path.join(file, f))
+
     return pnt_dict
 
 
 def _make_ant_pnt_xds_chunk(ms_name, ant_id, pnt_name):
-    """_summary_
+    """ Extract subset of pointing table data into a dictionary of xarray dataarrays. This is written to disk as a zarr file.
+            This function processes a chunk the overalll data and is managed by Dask.
 
     Args:
-        ms_name (str): Measurement file
+        ms_name (str): Measurement file name.
         ant_id (int): Antenna id
-        pnt_name (str): _description_
+        pnt_name (str): Name of output poitning dictinary file name.
     """
 
-    tb = ctables.taql('select DIRECTION,TIME,TARGET,ENCODER,ANTENNA_ID,POINTING_OFFSET from %s WHERE ANTENNA_ID == %s' % (os.path.join(ms_name, "POINTING"), ant_id))
+    tb = ctables.taql('select DIRECTION, TIME, TARGET, ENCODER, ANTENNA_ID, POINTING_OFFSET from %s WHERE ANTENNA_ID == %s' % (os.path.join(ms_name, "POINTING"), ant_id))
 
     ### NB: Add check if directions refrence frame is Azemuth Elevation (AZELGEO)
     direction = tb.getcol('DIRECTION')[:,0,:]
@@ -110,15 +111,15 @@ def _make_ant_pnt_xds_chunk(ms_name, ant_id, pnt_name):
 
 
 def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
-    """_summary_
+    """ Top level function to extract subset of pointing table data into a dictionary of xarray dataarrays.
 
     Args:
-        ms_name (str): Measurement file name
-        pnt_name (str): _description_
-        parallel (bool, optional): _description_. Defaults to True.
+        ms_name (str): Measurement file name.
+        pnt_name (str): Output pointing dictionary file name.
+        parallel (bool, optional): Process in parallel. Defaults to True.
 
     Returns:
-        _type_: _description_
+        dict: pointing dictionary of xarray dataarrays
     """
     
     ctb = ctables.table(os.path.join(ms_name,"ANTENNA"), readonly=True, lockoptions={'option': 'usernoread'})
@@ -148,7 +149,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
         pnt_ant_dict (dict): map of pointing directional cosines with a map key based on the antenna id and indexed by the MAIN table visibility time.
 
     Returns:
-        _type_: _description_
+        dict:  Dictionary of directional cosine data mapped to nearest MAIN table smaple times.
     """
 
     n_time_vis = time_vis.shape[0]
@@ -198,8 +199,6 @@ def _extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vi
     for antenna_id in map_ant_ids:
         vis_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
         sum_weight_map_dict[antenna_id] = np.zeros((n_time, n_chan, n_pol), dtype=types.complex64)
-    
-    print(vis_data.dtype)
     
     for row in range(n_row):
 
@@ -251,23 +250,21 @@ def _extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vi
 
     return vis_map_dict, sum_weight_map_dict, flagged_mapping_antennas
     
-def _create_hack_file(hack_name,vis_map_dict, weight_map_dict, pnt_map_dict, time, chan, pol, flagged_mapping_antennas, scan, ddi):
-    """_summary_
+def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time, chan, pol, flagged_mapping_antennas, scan, ddi):
+    """ Create hack-structured, formatted output file and save to zarr.
 
     Args:
-        hack_name (_type_): _description_
-        vis_map_dict (_type_): _description_
-        weight_map_dict (_type_): _description_
-        pnt_map_dict (_type_): _description_
-        time (_type_): _description_
-        chan (_type_): _description_
-        pol (_type_): _description_
-        flagged_mapping_antennas (_type_): _description_
-        scan (_type_): _description_
-        ddi (_type_): _description_
+        hack_name (str): Hack file name.
+        vis_map_dict (dict): _description_
+        weight_map_dict (dict): _description_
+        pnt_map_dict (dict): _description_
+        time (numpy.ndarray): _description_
+        chan (numpy.ndarray): _description_
+        pol (numpy.ndarray): _description_
+        flagged_mapping_antennas (numpy.ndarray): _description_
+        scan (numpy.ndarray): _description_
+        ddi (numpy.ndarray): _description_
     """
-
-    print(time.shape,chan.shape,pol.shape)
 
     coords = {'time':time, 'chan':chan, 'pol':pol}
     
@@ -275,9 +272,9 @@ def _create_hack_file(hack_name,vis_map_dict, weight_map_dict, pnt_map_dict, tim
         if map_ant_indx not in flagged_mapping_antennas:
             xds = xr.Dataset()
             xds = xds.assign_coords(coords)
-            xds['VIS'] = xr.DataArray(vis_map_dict[map_ant_indx],dims=['time','chan','pol'])
-            xds['WEIGHT'] = xr.DataArray(weight_map_dict[map_ant_indx],dims=['time','chan','pol'])
-            xds['DIRECTIONAL_COSINES'] = xr.DataArray(pnt_map_dict[map_ant_indx],dims=['time','lm'])
+            xds['VIS'] = xr.DataArray(vis_map_dict[map_ant_indx], dims=['time','chan','pol'])
+            xds['WEIGHT'] = xr.DataArray(weight_map_dict[map_ant_indx], dims=['time','chan','pol'])
+            xds['DIRECTIONAL_COSINES'] = xr.DataArray(pnt_map_dict[map_ant_indx], dims=['time','lm'])
             xds.attrs['scan'] = scan
             xds.attrs['ant_id'] = map_ant_indx
             xds.attrs['ddi'] = ddi
@@ -368,7 +365,7 @@ def _extract_holog_chunk(extract_holog_parms):
     print('Time to _extract_pointing_chunk ',time.time()-start)
     
     start = time.time()
-    hack_dict  = _create_hack_file(hack_name,vis_map_dict, weight_map_dict, pnt_map_dict, time_vis, chan_freq, pol, flagged_mapping_antennas, scan, ddi)
+    hack_dict  = _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time_vis, chan_freq, pol, flagged_mapping_antennas, scan, ddi)
     print('_create_hack_file ',time.time()-start)
     
     print('Done')

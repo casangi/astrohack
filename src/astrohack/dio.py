@@ -10,20 +10,29 @@ from astrohack._utils._io import _load_pnt_dict
 from astrohack._utils._io import _make_ant_pnt_dict
 from astrohack._utils._io import _extract_holog_chunk
 
-def load_hack_file(hack_name: str):
+def load_hack_file(hack_name):
     """ Loads .hack file from disk
 
     Args:
-        hack_name (hack): _description_
+        hack_name (str): Hack file name
 
     Returns:
-        _type_: _description_
+        hackfile (nested-dict): {
+                            'pnt.dict':{}, 'ddi':
+                                                {'scan':
+                                                    {'antenna':
+                                                        {
+                                                            xarray.DataArray
+                                                        }
+                                                    }
+                                                }
+                        }
     """
+    
     hack_dict = {}
-    pnt_dict = _load_pnt_dict(os.path.join(hack_name,'pnt.dict'))
-    hack_dict['pnt_dict'] = pnt_dict
+    
+    hack_dict['pnt_dict'] = _load_pnt_dict(os.path.join(hack_name, 'pnt.dict'))
 
-    pnt_dict = {}
     for ddi in os.listdir(hack_name):
         if ddi.isnumeric():
             hack_dict[int(ddi)] = {}
@@ -38,14 +47,15 @@ def load_hack_file(hack_name: str):
     return hack_dict
 
 def extract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_intent='MIXED', parallel=True):
-    """subscan_intent: 'MIXED' or 'REFERENCE'
+    """ Extract holography data and create beam maps.
+            subscan_intent: 'MIXED' or 'REFERENCE'
 
     Args:
         ms_name (string): measurement file name
         holog_obs_dict (dict): nested dictionary ordered by ddi:{ scan: { map:[ant names], ref:[ant names] } } }
         data_col (str, optional): data column from measurement set to acquire. Defaults to 'DATA'.
         subscan_intent (str, optional): subscan intent, can be MIXED or REFERENCE; MIXED refers to a pointing measurement with half ON(OFF) source. Defaults to 'MIXED'.
-        parallel (bool, optional): bool for whether to process in parallel. Defaults to True.
+        parallel (bool, optional): Bool for whether to process in parallel. Defaults to True.
     """
     
     pnt_name = os.path.join(hack_name,'pnt.dict')
@@ -86,13 +96,13 @@ def extract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_i
     
     scan_intent = 'MAP_ANTENNA_SURFACE'
     state_ids = []
+
     for i, mode in enumerate(obs_modes):
         if (scan_intent in mode) and (subscan_intent in mode):
-            state_ids.append(i)
+            state_ids.append(i)          
             
-            
-    spw_ctb = ctables.table(os.path.join(ms_name,"SPECTRAL_WINDOW"),readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
-    pol_ctb = ctables.table(os.path.join(ms_name,"POLARIZATION"),readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    spw_ctb = ctables.table(os.path.join(ms_name,"SPECTRAL_WINDOW"), readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    pol_ctb = ctables.table(os.path.join(ms_name,"POLARIZATION"), readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
 
     delayed_list = []
     for ddi in holog_obs_dict:
@@ -110,11 +120,11 @@ def extract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_i
             'pol_setup':{}
         }
 
-        extract_holog_parms['chan_setup']['chan_freq'] = spw_ctb.getcol('CHAN_FREQ',startrow=spw_setup_id,nrow=1)[0,:]
-        extract_holog_parms['chan_setup']['chan_width'] = spw_ctb.getcol('CHAN_WIDTH',startrow=spw_setup_id,nrow=1)[0,:]
-        extract_holog_parms['chan_setup']['eff_bw'] = spw_ctb.getcol('EFFECTIVE_BW',startrow=spw_setup_id,nrow=1)[0,:]
-        extract_holog_parms['chan_setup']['ref_freq'] = spw_ctb.getcol('REF_FREQUENCY',startrow=spw_setup_id,nrow=1)[0]
-        extract_holog_parms['chan_setup']['total_bw'] = spw_ctb.getcol('TOTAL_BANDWIDTH',startrow=spw_setup_id,nrow=1)[0]
+        extract_holog_parms['chan_setup']['chan_freq'] = spw_ctb.getcol('CHAN_FREQ', startrow=spw_setup_id,nrow=1)[0,:]
+        extract_holog_parms['chan_setup']['chan_width'] = spw_ctb.getcol('CHAN_WIDTH', startrow=spw_setup_id,nrow=1)[0,:]
+        extract_holog_parms['chan_setup']['eff_bw'] = spw_ctb.getcol('EFFECTIVE_BW', startrow=spw_setup_id,nrow=1)[0,:]
+        extract_holog_parms['chan_setup']['ref_freq'] = spw_ctb.getcol('REF_FREQUENCY', startrow=spw_setup_id,nrow=1)[0]
+        extract_holog_parms['chan_setup']['total_bw'] = spw_ctb.getcol('TOTAL_BANDWIDTH', startrow=spw_setup_id,nrow=1)[0]
 
         extract_holog_parms['pol_setup']['pol'] = pol_ctb.getcol('CORR_TYPE',startrow=spw_setup_id,nrow=1)[0,:]
         
