@@ -1,9 +1,13 @@
 import numpy as np
 
-
+# static methods not linked to any specific class
 def gauss_solver(system):
-    # Diagonalizes the system and then returns the diagonalized
+    # Used when trying to solve for the adjustments in each panel
+    # Diagonalizes a system and then returns the diagonalized
     # version of it
+    #
+    # Probably replaceable by a standard matrix diagonalization
+    # library, if not possible, should be jitted
     shape = system.shape
     if shape[0] != shape[1]:
         raise Exception("Matrix is not square")
@@ -12,6 +16,7 @@ def gauss_solver(system):
     rowidx = np.zeros(size)
     colidx = np.zeros(size)
 
+    # Main diagonalization Loop
     for iidx in range(size):
         big = 0.
         for jidx in range(size):
@@ -46,7 +51,7 @@ def gauss_solver(system):
                 system[jidx,icol] = 0.
                 system[jidx,:] -= system[icol,:]*copy
     
-
+    # Final test on diagonalization
     for iidx in range(size,0,-1):
         if rowidx[iidx] != colidx[iidx]:
             for kidx in range(size):
@@ -58,9 +63,13 @@ def gauss_solver(system):
 
 
 def convert_to_db(val):
+    # Convert to decibels
     return 10.*np.log10(val)
 
+
 class Linear_Axis:
+    # According to JWS this class is superseeded by xarray, which
+    # should be used instead
     def __init__(self,n,ref,val,inc):
         self.n = n
         self.ref = ref
@@ -73,8 +82,14 @@ class Linear_Axis:
     def coor_to_idx(self,coor):
         return (coor-self.val)/self.inc +self.ref
 
+    
 class Panel:
+    # Main working class that defines and works on panel objects
+    # Currently this class strongly relies on the fact that panels are
+    # sections of a ring of equal angular size, inner and outer radii
+    
     def __init__(self,kind,angle,ipanel,inrad,ourad,blc,tlc):
+        # Panel initialization
         self.kind   = kind
         self.ipanel = ipanel
         self.inrad  = inrad
@@ -85,19 +100,30 @@ class Panel:
         self.blc    = blc
         self.tlc    = tlc
 
+        
     def is_inside(self,rad,phi):
+        # Simple test of polar coordinates to check that a point is
+        # inside this panel
         angle  = self.theta1 <= phi <= self.theta2
         radius = self.inrad  <= rad <= self.ourad
         return (angle and radius)
 
+    
     def compute_points(self,amp,dev,xaxis,yaxis):
+        # Most computationally intensive routine so far.  This
+        # routines loops over points potentially inside a panel and
+        # checks wather they are inside the panel or not. If point is
+        # inside the panel store its x and y coordinates, its ix and
+        # iy indexes as well as its deviation
         inc = 15.0 / amp.shape[0]
         nsamp = 0
         ycoor = self.blc[1]
         values = []
+        # Loop over potential y coordinates
         while (ycoor<=self.tlc[1]):
             deltax = self.blc[0]+(self.tlc[0]-self.blc[0])*(ycoor-self.blc[1])/(self.tlc[1]-self.blc[1])
             xcoor = -deltax
+            # loop over potential x coordinates
             while (xcoor<=deltax):
                 phi1 = np.arctan2 (xcoor, ycoor)
                 phipoint = phi1 + self.zeta
@@ -137,7 +163,12 @@ class Panel:
         self.values = values
         return
 
+    
     def solve(self):
+        # Calls apropriated solving function based on panel type The
+        # parameters computed here are to be used in the future to
+        # compute the actual screw adjustments.
+        #
         # Flexible VLA like panel
         if self.kind == "flexible":
             self._solve_flexi()
@@ -151,7 +182,10 @@ class Panel:
             raise Exception("Don't know how to solve panel of kind: ",self.kind)
         return
 
+    
     def _solve_flexi(self):
+        # Solve panel adjustments for flexible VLA style panels by
+        # constructing a system of 4 linear equations
         syssize = 4
         system = np.zeros([syssize,syssize])
         vector = np.zeros(syssize)
@@ -197,6 +231,8 @@ class Panel:
 
 
     def _solve_rigid(self):
+        # Solve panel adjustments for rigid tilt and shift only panels by
+        # constructing a system of 3 linear equations
         syssize = 3
         system = np.zeros([syssize,syssize])
         vector = np.zeros(syssize)
@@ -223,7 +259,9 @@ class Panel:
             for jidx in range(syssize):
                 self.par[jidx] +=  newsys[jidx,iidx] * vector[jidx]
 
+                
     def _solve_single(self):
+        # Solve panel adjustments for rigid vertical shift only panels
         self.par = np.zeros(1)
         shiftmean = 0.
         ncount    = 0
@@ -235,8 +273,13 @@ class Panel:
         shiftmean  /= ncount
         self.par[0] = shiftmean
         
+        
 class Ring:
-    def __init__(self,kind,npanel,inrad,ourad):
+    # Class created just for hierarchical pourposes, irrelevant if
+    # dish is not circular or panel design is not organized in rings
+    
+    def __init__(self,kind,npanel,inrad,ourad):\
+        # Ring initialization
         self.kind   = kind
         self.npanel = npanel
         self.inrad  = inrad
@@ -245,21 +288,32 @@ class Ring:
         self.blc = [inrad*np.sin(self.angle/2.0),inrad*np.cos(self.angle/2.0)]
         self.tlc = [ourad*np.sin(self.angle/2.0),ourad*np.cos(self.angle/2.0)]
 
+
     def create_panels(self,amp,dev,xaxis,yaxis):
+        # Creates and computes the point inside each panel of the ring
         self.panels = []
         for ipanel in range(self.npanel):
             panel = Panel(self.kind,self.angle,ipanel,self.inrad,self.ourad,
                           self.blc,self.tlc)
             panel.compute_points(amp,dev,xaxis,yaxis)
             self.panels.append(panel)
-        
+
+            
     def solve_panels(self):
+        # Calls the panels to solve their adjustments
         for ipanel in range(self.npanel):
             self.panels[ipanel].solve()
-    
+
+            
 class Antenna_Surface:
+    # Describes the antenna surface properties, as well as being
+    # capable of computing the gains and rms over the surface.
+    # Heavily dependent on telescope architecture, currently only
+    # telescopes that have panels arranged in rings can be modeled
+    # here.
 
     def __init__(self,npoint,npix,telescope,perfect=False):
+        # Initializes antenna surface parameters
         if telescope == 'VLA':
             self._init_vla()
         elif telescope == 'VLBA':
@@ -283,14 +337,21 @@ class Antenna_Surface:
         if perfect:
             self.dev  = np.zeros([npix,npix])
         else:
-            # for the moment random to simulate a deformed antenna
+            # for the moment random to simulate a deformed antenna,
+            # this does not work in any decent way as there is no
+            # correlation between points inside a panel which crashes
+            # the matrix diagonalization.
             self.dev  = np.random.rand(npix,npix)-0.5
             
         # This amplitude image is used as a mask in subsequent
         # calculations
         self.amp = np.full([npix,npix],1.0)
 
+
+
+    # Other known telescopes should be included here, ALMA, ngVLA
     def _init_vla(self):
+        # Initializes surfaces according to VLA antenna parameters
         self.panelkind = "single"
         self.telescope = "VLA"
         self.diam      = 25.0  # meters
@@ -300,7 +361,9 @@ class Antenna_Surface:
         self.inrad     = [1.983, 3.683, 5.563, 7.391, 9.144, 10.87]
         self.ourad     = [3.683, 5.563, 7.391, 9.144, 10.87, 12.5 ]
 
+        
     def _init_vlba(self):
+        # Initializes surfaces according to VLBA antenna parameters
         self.panelkind = "unknown"
         self.telescope = "VLBA"
         self.diam      = 25.0  # meters
@@ -310,10 +373,10 @@ class Antenna_Surface:
         self.inrad     = [1.676,3.518,5.423,7.277, 9.081,10.808]
         self.ourad     = [3.518,5.423,7.277,9.081,10.808,12.500]
 
-    # Other known telescopes should be included here, ALMA, ngVLA
-
         
     def build_panels(self):
+        # Loops over rings so rings can initialize and compute the
+        # points inside their panels
         self.rings = []
         for iring in range(self.nrings):
             ring = Ring(self.panelkind,self.npanel[iring],self.inrad[iring],self.ourad[iring])
@@ -323,7 +386,8 @@ class Antenna_Surface:
 
         
     def gains(self,wavel):
-        # Wavel in cm?
+        # Compute the actual and theoretical gains for the current
+        # antenna surface. What is the unit for the wavelength, cm or mm?
         forpi = 4.0*np.pi
         fact = 1000. * self.reso / wavel
         fact *= fact
@@ -358,8 +422,10 @@ class Antenna_Surface:
         gain    = convert_to_db(gain)
         thgain  = convert_to_db(thgain)
         return gain,thgain
-        
+
+    
     def get_rms (self):
+        # Compute the RMS of the antenna surface
         rms   = 0.0
         nsamp = 0.0
         for iy in range(self.dev.shape[1]): # what is mx?
@@ -374,7 +440,10 @@ class Antenna_Surface:
         self.rms = rms
         return rms
 
+    
     def fit_adjustments(self):
+        # loops over the rings so that they can loop over the panels
+        # to compute the adjustments needed
         for iring in range(self.nrings):
             self.rings[iring].solve_panels()
         return 
