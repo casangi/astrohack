@@ -6,11 +6,9 @@ import numpy as np
 
 from casacore import tables as ctables
 
-from astrohack._utils._io import _load_pnt_dict
-from astrohack._utils._io import _make_ant_pnt_dict
-from astrohack._utils._io import _extract_holog_chunk
+from astrohack._utils._io import _load_pnt_dict, _make_ant_pnt_dict, _extract_holog_chunk, _open_no_dask_zarr
 
-def load_hack_file(hack_name):
+def load_hack_file(hack_name,dask_load=True):
     """ Loads .hack file from disk
 
     Args:
@@ -31,7 +29,7 @@ def load_hack_file(hack_name):
     
     hack_dict = {}
     
-    hack_dict['pnt_dict'] = _load_pnt_dict(os.path.join(hack_name, 'pnt.dict'))
+    hack_dict['pnt_dict'] = _load_pnt_dict(os.path.join(hack_name, 'pnt.dict'),dask_load)
 
     for ddi in os.listdir(hack_name):
         if ddi.isnumeric():
@@ -42,7 +40,11 @@ def load_hack_file(hack_name):
                     for ant_id in os.listdir(os.path.join(hack_name,ddi+'/'+scan)):
                         if ant_id.isnumeric():
                             mapping_ant_vis_holog_data_name = os.path.join(hack_name,ddi+'/'+scan+'/'+ant_id)
-                            hack_dict[int(ddi)][int(scan)][int(ant_id)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
+                            
+                            if dask_load:
+                                hack_dict[int(ddi)][int(scan)][int(ant_id)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
+                            else:
+                                hack_dict[int(ddi)][int(scan)][int(ant_id)] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
 
     return hack_dict
 
