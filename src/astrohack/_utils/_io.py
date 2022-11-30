@@ -376,6 +376,7 @@ def _extract_holog_chunk(extract_holog_parms):
     ctb = ctables.taql('select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, STATE_ID from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s' % (data_col, ms_name, ddi, scan, sel_state_ids))
 
     vis_data = ctb.getcol('DATA')
+    print('vis data type ',vis_data.dtype)
     weight = ctb.getcol('WEIGHT')
     ant1 = ctb.getcol('ANTENNA1')
     ant2 = ctb.getcol('ANTENNA2')
@@ -414,7 +415,8 @@ def _extract_holog_chunk(extract_holog_parms):
 
     vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis, flag, flag_row, map_ant_ids, ref_ant_ids)
     print('Time to _extract_holog_chunk_jit ',time.time()-start)
-
+    
+    del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row #No longer needed
 
     pnt_ant_dict = _load_pnt_dict(pnt_name,map_ant_ids,dask_load=False)
     
