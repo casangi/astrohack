@@ -73,7 +73,7 @@ def _open_no_dask_zarr(zarr_name,slice_dict={}):
     return xds
 
 #### Pointing Table Conversion ####
-def _load_pnt_dict(file,dask_load=True):
+def _load_pnt_dict(file,ant_list=None,dask_load=True):
     """ Load pointing dictionary from disk.
 
     Args:
@@ -86,10 +86,12 @@ def _load_pnt_dict(file,dask_load=True):
 
     for f in os.listdir(file):
         if f.isnumeric():
-            if dask_load:
-                pnt_dict[int(f)] = xr.open_zarr(os.path.join(file, f))
-            else:
-                pnt_dict[int(f)] = _open_no_dask_zarr(os.path.join(file, f))
+            if (ant_list is None) or (int(f) in ant_list):
+                if dask_load:
+                    pnt_dict[int(f)] = xr.open_zarr(os.path.join(file, f))
+                else:
+                    pnt_dict[int(f)] = _open_no_dask_zarr(os.path.join(file, f))
+    
 
     return pnt_dict
 
@@ -414,7 +416,7 @@ def _extract_holog_chunk(extract_holog_parms):
     print('Time to _extract_holog_chunk_jit ',time.time()-start)
 
 
-    pnt_ant_dict = _load_pnt_dict(pnt_name,dask_load=False)
+    pnt_ant_dict = _load_pnt_dict(pnt_name,map_ant_ids,dask_load=False)
     
     start = time.time()
     pnt_map_dict = _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)
