@@ -8,7 +8,7 @@ from casacore import tables as ctables
 
 from astrohack._utils._io import _load_pnt_dict, _make_ant_pnt_dict, _extract_holog_chunk, _open_no_dask_zarr
 
-def load_hack_file(hack_name,dask_load=True):
+def load_hack_file(hack_name, dask_load=True):
     """ Loads .hack file from disk
 
     Args:
@@ -29,7 +29,7 @@ def load_hack_file(hack_name,dask_load=True):
     
     hack_dict = {}
     
-    hack_dict['pnt_dict'] = _load_pnt_dict(os.path.join(hack_name, 'pnt.dict'),dask_load)
+    hack_dict['pnt_dict'] = _load_pnt_dict(file=os.path.join(hack_name, 'pnt.dict'), ant_list=None, dask_load=dask_load)
 
     for ddi in os.listdir(hack_name):
         if ddi.isnumeric():
