@@ -8,6 +8,10 @@ import dask.array as da
 import zarr
 import copy
 
+import astropy
+import astropy.units as u
+import astropy.coordinates as coord
+
 from numba import njit
 from numba.core import types
 from numba.typed import Dict
@@ -22,6 +26,37 @@ jit_cache =  False
 #   - Add logging (but not in numba code).
 
 # Remove all trace of casa table tool
+
+def _calculate_parallactic_angle_chunk(times, observing_location, direction, dir_frame='FK5', zenith_frame='FK5'):
+    """
+    Converts a direction and zenith (frame FK5) to a topocentric Altitude-Azimuth (https://docs.astropy.org/en/stable/api/astropy.coordinates.AltAz.html) 
+    frame centered at the observing_location (frame ITRF) for a UTC time. The parallactic angles is calculated as the position angle of the Altitude-Azimuth 
+    direction and zenith.
+    
+    Parameters
+    ----------
+    times: str np.array, [n_time], 'YYYY-MM-DDTHH:MM:SS.SSS'
+        UTC time series. Example '2019-10-03T19:00:00.000'.
+    observing_location: int np.array, [3], [x,y,z], meters
+        ITRF geocentric coordinates.
+    direction: float np.array, [n_time,2], [time,ra,dec], radians
+        The pointing direction.
+    Returns
+    -------
+    parallactic_angles: float np.array, [n_time], radians
+        An array of parallactic angles.
+    """
+    
+    observing_location = coord.EarthLocation.from_geocentric(x=observing_location[0]*u.m, y=observing_location[1]*u.m, z=observing_location[2]*u.m)
+    
+    direction = coord.SkyCoord(ra=direction[:,0]*u.rad, dec=direction[:,1]*u.rad, frame=dir_frame.lower())
+    zenith = coord.SkyCoord(0, 90, unit=u.deg, frame=zenith_frame.lower())
+    
+    altaz_frame = coord.AltAz(location=observing_location, obstime=times)
+    zenith_altaz = zenith.transform_to(altaz_frame)
+    direction_altaz = direction.transform_to(altaz_frame)
+    
+    return direction_altaz.position_angle(zenith_altaz)
 
 def _get_attrs(zarr_obj):
     '''
@@ -207,7 +242,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
         pnt_ant_dict (dict): map of pointing directional cosines with a map key based on the antenna id and indexed by the MAIN table visibility time.
 
     Returns:
-        dict:  Dictionary of directional cosine data mapped to nearest MAIN table smaple times.
+        dict:  Dictionary of directional cosine data mapped to nearest MAIN table sample times.
     """
 
     n_time_vis = time_vis.shape[0]
@@ -268,11 +303,11 @@ def _extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vi
         
         if (ant1_index in map_ant_ids) and (ant2_index in ref_ant_ids):
             vis_baseline = vis_data[row, :, :] # n_chan x n_pol
-            map_ant_indx = ant1_index # mapping antenna index
+            map_ant_index = ant1_index # mapping antenna index
 
         elif (ant2_index in map_ant_ids) and (ant1_index not in ref_ant_ids): #conjugate
             vis_baseline = np.conjugate(vis_data[row, :, :])
-            map_ant_indx = ant2_index
+            map_ant_index = ant2_index
 
         else:
             continue
@@ -283,32 +318,38 @@ def _extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vi
             for pol in range(n_pol):
                 if ~(flag[row, chan, pol]):
                     # Calculate running weighted sum of visibilities
-                    vis_map_dict[map_ant_indx][time_index, chan, pol] = vis_map_dict[map_ant_indx][time_index, chan, pol] + vis_baseline[chan, pol]*weight[row, pol]
+                    vis_map_dict[map_ant_index][time_index, chan, pol] = vis_map_dict[map_ant_index][time_index, chan, pol] + vis_baseline[chan, pol]*weight[row, pol]
 
                     # Calculate running sum of weights
-                    sum_weight_map_dict[map_ant_indx][time_index, chan, pol] = sum_weight_map_dict[map_ant_indx][time_index, chan, pol] + weight[row, pol]       
+                    sum_weight_map_dict[map_ant_index][time_index, chan, pol] = sum_weight_map_dict[map_ant_index][time_index, chan, pol] + weight[row, pol]       
 
     flagged_mapping_antennas = []
 
-    for map_ant_indx in vis_map_dict.keys():
+    for map_ant_index in vis_map_dict.keys():
         sum_of_sum_weight = 0
         
         for time_index in range(n_time):
             for chan in range(n_chan):
                 for pol in range(n_pol):
-                    sum_weight = sum_weight_map_dict[map_ant_indx][time_index, chan, pol]
+                    sum_weight = sum_weight_map_dict[map_ant_index][time_index, chan, pol]
                     sum_of_sum_weight = sum_of_sum_weight + sum_weight
                     if sum_weight == 0:
-                        vis_map_dict[map_ant_indx][time_index, chan, pol] = 0.
+                        vis_map_dict[map_ant_index][time_index, chan, pol] = 0.
                     else:
-                        vis_map_dict[map_ant_indx][time_index, chan, pol] = vis_map_dict[map_ant_indx][time_index, chan, pol]/sum_weight
+                        vis_map_dict[map_ant_index][time_index, chan, pol] = vis_map_dict[map_ant_index][time_index, chan, pol]/sum_weight
                         
         if sum_of_sum_weight == 0:
-            flagged_mapping_antennas.append(map_ant_indx)
+            flagged_mapping_antennas.append(map_ant_index)
 
     return vis_map_dict, sum_weight_map_dict, flagged_mapping_antennas
+
+def _calculate_parallactic_angle(time_vis, observing_location, pnt_map_dict):
+    n_time_vis = time_vis.shape[0]
     
-def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time, chan, pol, flagged_mapping_antennas, scan, ddi):
+    _calculate_parallactic_angle_chunk(times=time_vis, observing_location=observing_location, direction=pnt_map_dict)
+
+    
+def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time, chan, pol, flagged_mapping_antennas, scan, ddi, ms_name):
     """ Create hack-structured, formatted output file and save to zarr.
 
     Args:
@@ -324,22 +365,31 @@ def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, ti
         ddi (numpy.ndarray): _description_
     """
 
+    ctb = ctables.table("/".join((ms_name, "ANTENNA")))
+    observing_location = ctb.getcol("POSITION")
+    ctb.close()
+
+    time_vis_days = time/(3600*24)
+    astro_time_vis = astropy.time.Time(time_vis_days, format='mjd')
+
     coords = {'time':time, 'chan':chan, 'pol':pol}
     
-    for map_ant_indx in vis_map_dict.keys():
-        if map_ant_indx not in flagged_mapping_antennas:
+    for map_ant_index in vis_map_dict.keys():
+        if map_ant_index not in flagged_mapping_antennas:
+            # put PA calc here
+            _calculate_parallactic_angle(time_vis=astro_time_vis, observing_location=observing_location[map_ant_index], pnt_map_dict=pnt_map_dict[map_ant_index])
             xds = xr.Dataset()
             xds = xds.assign_coords(coords)
-            xds['VIS'] = xr.DataArray(vis_map_dict[map_ant_indx], dims=['time','chan','pol'])
-            xds['WEIGHT'] = xr.DataArray(weight_map_dict[map_ant_indx], dims=['time','chan','pol'])
-            xds['DIRECTIONAL_COSINES'] = xr.DataArray(pnt_map_dict[map_ant_indx], dims=['time','lm'])
+            xds['VIS'] = xr.DataArray(vis_map_dict[map_ant_index], dims=['time','chan','pol'])
+            xds['WEIGHT'] = xr.DataArray(weight_map_dict[map_ant_index], dims=['time','chan','pol'])
+            xds['DIRECTIONAL_COSINES'] = xr.DataArray(pnt_map_dict[map_ant_index], dims=['time','lm'])
             xds.attrs['scan'] = scan
-            xds.attrs['ant_id'] = map_ant_indx
+            xds.attrs['ant_id'] = map_ant_index
             xds.attrs['ddi'] = ddi
-            xds.to_zarr(os.path.join(hack_name, str(ddi) + '/' + str(scan) + '/' + str(map_ant_indx)), mode='w', compute=True, consolidated=True)
+            xds.to_zarr(os.path.join(hack_name, str(ddi) + '/' + str(scan) + '/' + str(map_ant_index)), mode='w', compute=True, consolidated=True)
             
         else:
-            print('In scan ', scan, ' antenna ', map_ant_indx, ' is flagged')
+            print('In scan ', scan, ' antenna ', map_ant_index, ' is flagged')
         
         
     
@@ -401,32 +451,19 @@ def _extract_holog_chunk(extract_holog_parms):
 
     ctb.close()
     
-    ###################################
-    
-    print(time.time()-start)
-    
-    start = time.time()
+      
     time_vis, unique_index = np.unique(time_vis_row, return_index=True) # Note that values are sorted.
     state_ids = state_ids_row[unique_index]
-    
-    print('Time to unique ',time.time()-start)
-
-    start = time.time()
 
     vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis, flag, flag_row, map_ant_ids, ref_ant_ids)
-    print('Time to _extract_holog_chunk_jit ',time.time()-start)
     
-    del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row #No longer needed
+    del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row 
 
-    pnt_ant_dict = _load_pnt_dict(pnt_name,map_ant_ids,dask_load=False)
+    pnt_ant_dict = _load_pnt_dict(pnt_name,map_ant_ids, dask_load=False)
     
-    start = time.time()
-    pnt_map_dict = _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)
-    print('Time to _extract_pointing_chunk ',time.time()-start)
+    pnt_map_dict = _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)    
     
-    start = time.time()
-    hack_dict  = _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time_vis, chan_freq, pol, flagged_mapping_antennas, scan, ddi)
-    print('_create_hack_file ',time.time()-start)
+    hack_dict  = _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time_vis, chan_freq, pol, flagged_mapping_antennas, scan, ddi, ms_name)
     
     print('Done')
 
