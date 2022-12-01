@@ -27,7 +27,7 @@ jit_cache =  False
 
 # Remove all trace of casa table tool
 
-def _calculate_parallactic_angle_chunk(times, observing_location, direction, dir_frame='FK5', zenith_frame='FK5'):
+def _calculate_parallactic_angle_chunk(time_samples, observing_location, direction, indicies, dir_frame='FK5', zenith_frame='FK5'):
     """
     Converts a direction and zenith (frame FK5) to a topocentric Altitude-Azimuth (https://docs.astropy.org/en/stable/api/astropy.coordinates.AltAz.html) 
     frame centered at the observing_location (frame ITRF) for a UTC time. The parallactic angles is calculated as the position angle of the Altitude-Azimuth 
@@ -35,7 +35,7 @@ def _calculate_parallactic_angle_chunk(times, observing_location, direction, dir
     
     Parameters
     ----------
-    times: str np.array, [n_time], 'YYYY-MM-DDTHH:MM:SS.SSS'
+    time_samples: str np.array, [n_time], 'YYYY-MM-DDTHH:MM:SS.SSS'
         UTC time series. Example '2019-10-03T19:00:00.000'.
     observing_location: int np.array, [3], [x,y,z], meters
         ITRF geocentric coordinates.
@@ -49,10 +49,12 @@ def _calculate_parallactic_angle_chunk(times, observing_location, direction, dir
     
     observing_location = coord.EarthLocation.from_geocentric(x=observing_location[0]*u.m, y=observing_location[1]*u.m, z=observing_location[2]*u.m)
     
+    direction = np.take(direction, indicies, axis=0)
+
     direction = coord.SkyCoord(ra=direction[:,0]*u.rad, dec=direction[:,1]*u.rad, frame=dir_frame.lower())
     zenith = coord.SkyCoord(0, 90, unit=u.deg, frame=zenith_frame.lower())
     
-    altaz_frame = coord.AltAz(location=observing_location, obstime=times)
+    altaz_frame = coord.AltAz(location=observing_location, obstime=time_samples)
     zenith_altaz = zenith.transform_to(altaz_frame)
     direction_altaz = direction.transform_to(altaz_frame)
     
@@ -108,7 +110,7 @@ def _open_no_dask_zarr(zarr_name,slice_dict={}):
     return xds
 
 #### Pointing Table Conversion ####
-def _load_pnt_dict(file,ant_list=None,dask_load=True):
+def _load_pnt_dict(file, ant_list=None, dask_load=True):
     """ Load pointing dictionary from disk.
 
     Args:
@@ -255,7 +257,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
 
     return pnt_map_dict
 
-@njit(cache=jit_cache)
+@njit(cache=jit_cache, nogil=True)
 def _extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vis, flag, flag_row, map_ant_ids, ref_ant_ids):
     """ JIT copiled function to extract relevant visibilty data from chunk after flagging and applying weights.
 
@@ -343,10 +345,21 @@ def _extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vi
 
     return vis_map_dict, sum_weight_map_dict, flagged_mapping_antennas
 
-def _calculate_parallactic_angle(time_vis, observing_location, pnt_map_dict):
+def _get_time_samples(time_vis):
+    """_summary_
+
+    Args:
+        time_vis (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     n_time_vis = time_vis.shape[0]
-    
-    _calculate_parallactic_angle_chunk(times=time_vis, observing_location=observing_location, direction=pnt_map_dict)
+
+    middle = int(n_time_vis*0.5)-1
+    indicies = [0, middle, n_time_vis - 1]
+
+    return np.take(time_vis, indicies), indicies
 
     
 def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time, chan, pol, flagged_mapping_antennas, scan, ddi, ms_name):
@@ -371,13 +384,21 @@ def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, ti
 
     time_vis_days = time/(3600*24)
     astro_time_vis = astropy.time.Time(time_vis_days, format='mjd')
+    time_samples, indicies = _get_time_samples(astro_time_vis)
 
     coords = {'time':time, 'chan':chan, 'pol':pol}
     
     for map_ant_index in vis_map_dict.keys():
         if map_ant_index not in flagged_mapping_antennas:
-            # put PA calc here
-            _calculate_parallactic_angle(time_vis=astro_time_vis, observing_location=observing_location[map_ant_index], pnt_map_dict=pnt_map_dict[map_ant_index])
+            
+            parallactic_samples = _calculate_parallactic_angle_chunk(
+                time_samples=time_samples, 
+                observing_location=observing_location[map_ant_index], 
+                direction=pnt_map_dict[map_ant_index], 
+                indicies=indicies
+            )
+
+            
             xds = xr.Dataset()
             xds = xds.assign_coords(coords)
             xds['VIS'] = xr.DataArray(vis_map_dict[map_ant_index], dims=['time','chan','pol'])
@@ -386,6 +407,7 @@ def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, ti
             xds.attrs['scan'] = scan
             xds.attrs['ant_id'] = map_ant_index
             xds.attrs['ddi'] = ddi
+            xds.attrs['parallactic_samples'] = parallactic_samples.to_string()
             xds.to_zarr(os.path.join(hack_name, str(ddi) + '/' + str(scan) + '/' + str(map_ant_index)), mode='w', compute=True, consolidated=True)
             
         else:
