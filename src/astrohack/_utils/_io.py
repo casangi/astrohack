@@ -25,8 +25,6 @@ jit_cache =  False
 #   - If antenna is flagged print out antenna name and id.
 #   - Add logging (but not in numba code).
 
-# Remove all trace of casa table tool
-
 def _calculate_parallactic_angle_chunk(time_samples, observing_location, direction, indicies, dir_frame='FK5', zenith_frame='FK5'):
     """
     Converts a direction and zenith (frame FK5) to a topocentric Altitude-Azimuth (https://docs.astropy.org/en/stable/api/astropy.coordinates.AltAz.html) 
@@ -58,7 +56,21 @@ def _calculate_parallactic_angle_chunk(time_samples, observing_location, directi
     zenith_altaz = zenith.transform_to(altaz_frame)
     direction_altaz = direction.transform_to(altaz_frame)
     
-    return direction_altaz.position_angle(zenith_altaz)
+    angles = direction_altaz.position_angle(zenith_altaz)
+
+    return list(map(_string_array_to_float, angles.to_string()))
+
+def _string_array_to_float(value):
+    """
+
+    Args:
+        value (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    return float(value.split('rad')[0])
 
 def _get_attrs(zarr_obj):
     '''
@@ -397,7 +409,6 @@ def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, ti
                 direction=pnt_map_dict[map_ant_index], 
                 indicies=indicies
             )
-
             
             xds = xr.Dataset()
             xds = xds.assign_coords(coords)
@@ -407,7 +418,7 @@ def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, ti
             xds.attrs['scan'] = scan
             xds.attrs['ant_id'] = map_ant_index
             xds.attrs['ddi'] = ddi
-            xds.attrs['parallactic_samples'] = parallactic_samples.to_string()
+            xds.attrs['parallactic_samples'] = parallactic_samples
             xds.to_zarr(os.path.join(hack_name, str(ddi) + '/' + str(scan) + '/' + str(map_ant_index)), mode='w', compute=True, consolidated=True)
             
         else:
