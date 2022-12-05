@@ -6,9 +6,10 @@ import numpy as np
 
 from casacore import tables as ctables
 
-from astrohack._utils._io import _load_pnt_dict, _make_ant_pnt_dict, _extract_holog_chunk, _open_no_dask_zarr
+from astrohack._utils._io import _load_pnt_dict, _make_ant_pnt_dict 
+from astrohack._utils._io import _extract_holog_chunk, _open_no_dask_zarr
 
-def load_hack_file(hack_name, dask_load=True, load_pnt_dict=True):
+def load_hack_file(hack_name, dask_load=True, load_pnt_dict=True, save_hack_json=False):
     """ Loads .hack file from disk
 
     Args:

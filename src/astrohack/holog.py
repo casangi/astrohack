@@ -26,8 +26,8 @@ def holog(hack_name, parallel=True):
         """_summary_
 
         Args:
-            hack_name (_type_): _description_
-            parallel (bool, optional): _description_. Defaults to True.
+            hack_name (str): Hack file name
+            parallel (bool, optional): Run in parallel with Dask or in serial. Defaults to True.
         """
        
         try:

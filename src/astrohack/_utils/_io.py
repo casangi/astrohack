@@ -1,6 +1,7 @@
 import dask
 import time
 import os
+import json
 
 import numpy as np
 import xarray as xr
@@ -21,9 +22,28 @@ DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 jit_cache =  False
 # To do
-#   - Check if weight spectrum is present and use that.
-#   - If antenna is flagged print out antenna name and id.
 #   - Add logging (but not in numba code).
+
+def _save_hack_to_json(hack_dict, output_name):
+    """ Save hack file meta information to json file with the transformation
+        of the ordering (ddi, scan, ant) --> (ant, ddi, scan).
+
+    Args:
+        hack_dict (hack): Hack file
+        output_name (str): Output name for hack json file.
+    """
+    ant_sub_dict = {}
+    ant_hack_dict = {}
+
+    for ddi, scan_dict in hack_dict.items():
+        for scan, ant_dict in scan_dict.items():
+            for ant, xds in ant_dict.items():
+                ant_sub_dict.setdefault(ddi, {})
+                ant_hack_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
+
+    with open(output_name, "w") as json_file:
+        json.dump(ant_hack_dict, json_file)
+
 
 def _calculate_parallactic_angle_chunk(time_samples, observing_location, direction, indicies, dir_frame='FK5', zenith_frame='FK5'):
     """
