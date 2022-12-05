@@ -30,22 +30,25 @@ def holog(hack_name, parallel=True):
             parallel (bool, optional): _description_. Defaults to True.
         """
        
+        try:
+                if os.path.exists(hack_name):
+                        ant_list = os.listdir('/'.join((hack_name, 'pnt.dict/')))
+                        ant_list = list(map(int, ant_list))
 
-        ant_list = os.listdir('/'.join((hack_name, 'pnt.dict/')))
-        ant_list = list(map(int, ant_list))
+                        delayed_list = []
 
-        delayed_list = []
+                        for ant in ant_list:
+                                if parallel:
+                                        delayed_list.append(
+                                                dask.delayed(_holog_chunk(ant, hack_name))
+                                        )
+                                else:
+                                        _holog_chunk(ant, hack_name)
 
-        for ant in ant_list:
-                if parallel:
-                        delayed_list.append(
-                                dask.delayed(_holog_chunk(ant, hack_name))
-                        )
+                        if parallel: 
+                                dask.compute(delayed_list)
+
                 else:
-                        _holog_chunk(ant, hack_name)
-
-        if parallel: 
-                dask.compute(delayed_list)
-
-
-
+                        raise FileNotFoundError("File: {} - not found error.".format(hack_name))
+        except Exception as e:
+                print(e)
