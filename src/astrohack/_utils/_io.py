@@ -2,12 +2,14 @@ import dask
 import time
 import os
 import json
-
-import numpy as np
-import xarray as xr
-import dask.array as da
 import zarr
 import copy
+import numbers
+
+import numpy as np
+
+import xarray as xr
+import dask.array as da
 
 import astropy
 import astropy.units as u
@@ -16,13 +18,13 @@ import astropy.coordinates as coord
 from numba import njit
 from numba.core import types
 from numba.typed import Dict
+
 from casacore import tables as ctables
+from astrohack._utils._parallactic_angle import _calculate_parallactic_angle_chunk
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 jit_cache =  False
-# To do
-#   - Add logging (but not in numba code).
 
 def _save_hack_to_json(hack_dict, output_name):
     """ Save hack file meta information to json file with the transformation
@@ -36,66 +38,24 @@ def _save_hack_to_json(hack_dict, output_name):
     ant_hack_dict = {}
 
     for ddi, scan_dict in hack_dict.items():
-        for scan, ant_dict in scan_dict.items():
-            for ant, xds in ant_dict.items():
-                ant_sub_dict.setdefault(ddi, {})
-                ant_hack_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
+        if isinstance(ddi, numbers.Number):
+            for scan, ant_dict in scan_dict.items():
+                for ant, xds in ant_dict.items():
+                    ant_sub_dict.setdefault(ddi, {})
+                    ant_hack_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
 
     with open(output_name, "w") as json_file:
         json.dump(ant_hack_dict, json_file)
 
-
-def _calculate_parallactic_angle_chunk(time_samples, observing_location, direction, indicies, dir_frame='FK5', zenith_frame='FK5'):
-    """
-    Converts a direction and zenith (frame FK5) to a topocentric Altitude-Azimuth (https://docs.astropy.org/en/stable/api/astropy.coordinates.AltAz.html) 
-    frame centered at the observing_location (frame ITRF) for a UTC time. The parallactic angles is calculated as the position angle of the Altitude-Azimuth 
-    direction and zenith.
-    
-    Parameters
-    ----------
-    time_samples: str np.array, [n_time], 'YYYY-MM-DDTHH:MM:SS.SSS'
-        UTC time series. Example '2019-10-03T19:00:00.000'.
-    observing_location: int np.array, [3], [x,y,z], meters
-        ITRF geocentric coordinates.
-    direction: float np.array, [n_time,2], [time,ra,dec], radians
-        The pointing direction.
-    Returns
-    -------
-    parallactic_angles: float np.array, [n_time], radians
-        An array of parallactic angles.
-    """
-    
-    observing_location = coord.EarthLocation.from_geocentric(x=observing_location[0]*u.m, y=observing_location[1]*u.m, z=observing_location[2]*u.m)
-    
-    direction = np.take(direction, indicies, axis=0)
-
-    direction = coord.SkyCoord(ra=direction[:,0]*u.rad, dec=direction[:,1]*u.rad, frame=dir_frame.lower())
-    zenith = coord.SkyCoord(0, 90, unit=u.deg, frame=zenith_frame.lower())
-    
-    altaz_frame = coord.AltAz(location=observing_location, obstime=time_samples)
-    zenith_altaz = zenith.transform_to(altaz_frame)
-    direction_altaz = direction.transform_to(altaz_frame)
-    
-    angles = direction_altaz.position_angle(zenith_altaz)
-
-    return list(map(_string_array_to_float, angles.to_string()))
-
-def _string_array_to_float(value):
-    """
+def _get_attrs(zarr_obj):
+    """get attributes of zarr obj (groups or arrays)
 
     Args:
-        value (_type_): _description_
+        zarr_obj (zarr): a zarr_group object
 
     Returns:
-        _type_: _description_
+        dict: a group of zarr attibutes
     """
-
-    return float(value.split('rad')[0])
-
-def _get_attrs(zarr_obj):
-    '''
-    get attributes of zarr obj (groups or arrays)
-    '''
     return {
         k: v
         for k, v in zarr_obj.attrs.asdict().items()
@@ -108,7 +68,7 @@ def _open_no_dask_zarr(zarr_name,slice_dict={}):
         
         slice_dict: A dictionary of slice objects for which values to read form a dimension.
                     For example silce_dict={'time':slice(0,10)} would select the first 10 elements in the time dimension.
-                    If a dim is not specified all values are retruned.
+                    If a dim is not specified all values are returned.
         return:
             xarray.Dataset()
     '''
@@ -301,21 +261,13 @@ def _extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vi
         time_vis_row (numpy.ndarray): Array of full time talues by row
         time_vis (numpy.ndarray): Array of selected time values
         flag (numpy.ndarray): Array of data quality flags to apply to data
-        flag_row (numpy.ndarray): Array indicating when a full row of data should be flagged/
+        flag_row (numpy.ndarray): Array indicating when a full row of data should be flagged
         map_ant_ids (numpy.ndarray): Array of antenna_ids for mapping data
         ref_ant_ids (numpy.ndarray): Array of antenna_ids for reference data
 
     Returns:
         dict: Antenna_id referenced (key) dictionary containing the visibility data selected by (time, channel, polarization)
     """
-
-    '''
-    1. Should we do this in double precision?
-    2. ~Add flag_row and flags~
-    3. ~Do weighted sum of data~
-    4. Channel averaging
-    5. ? Calculate a time_vis as an average from time_vis_centroid
-    '''
 
     n_row, n_chan, n_pol = vis_data.shape
     n_time = len(time_vis)
@@ -346,6 +298,7 @@ def _extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vi
         else:
             continue
         
+        # Find index of time_vis_row[row] in time_vis that maintains the value ordering
         time_index = np.searchsorted(time_vis, time_vis_row[row])
         
         for chan in range(n_chan):
@@ -378,14 +331,15 @@ def _extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vi
     return vis_map_dict, sum_weight_map_dict, flagged_mapping_antennas
 
 def _get_time_samples(time_vis):
-    """_summary_
+    """ Sample three values for time vis and cooresponding indicies. Values are sammpled as (first, middle, last)
 
     Args:
-        time_vis (_type_): _description_
+        time_vis (numpy.ndarray): a list of visibility times
 
     Returns:
-        _type_: _description_
+        numpy.ndarray, list: a select subset of visibility times (first, middle, last)
     """
+
     n_time_vis = time_vis.shape[0]
 
     middle = int(n_time_vis*0.5)-1
@@ -399,15 +353,15 @@ def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, ti
 
     Args:
         hack_name (str): Hack file name.
-        vis_map_dict (dict): _description_
-        weight_map_dict (dict): _description_
-        pnt_map_dict (dict): _description_
-        time (numpy.ndarray): _description_
-        chan (numpy.ndarray): _description_
-        pol (numpy.ndarray): _description_
-        flagged_mapping_antennas (numpy.ndarray): _description_
-        scan (numpy.ndarray): _description_
-        ddi (numpy.ndarray): _description_
+        vis_map_dict (dict): a nested dictionary/map of weighted visibilities indexed as [antenna][time, chan, pol]; mainains time ordering.
+        weight_map_dict (dict): weights dictionary/map for visibilites in vis_map_dict
+        pnt_map_dict (dict): pointing table map dictionary
+        time (numpy.ndarray): time_vis values
+        chan (numpy.ndarray): channel values
+        pol (numpy.ndarray): polarization values
+        flagged_mapping_antennas (numpy.ndarray): list of mapping antennas that have been flagged.
+        scan (numpy.ndarray): scan number
+        ddi (numpy.ndarray): data description id; a combination of polarization and spectral window
     """
 
     ctb = ctables.table("/".join((ms_name, "ANTENNA")))
@@ -488,19 +442,6 @@ def _extract_holog_chunk(extract_holog_parms):
     flag = ctb.getcol('FLAG')
     flag_row = ctb.getcol('FLAG_ROW')
     state_ids_row = ctb.getcol('STATE_ID')
-
-    '''
-    n_end = int(1599066/8) #/8
-    vis_data = ctb.getcol('DATA',0,n_end)
-    weight = ctb.getcol('WEIGHT',0,n_end)
-    ant1 = ctb.getcol('ANTENNA1',0,n_end)
-    ant2 = ctb.getcol('ANTENNA2',0,n_end)
-    time_vis_row = ctb.getcol('TIME',0,n_end)
-    time_vis_centroid_row = ctb.getcol('TIME_CENTROID',0,n_end)
-    flag = ctb.getcol('FLAG',0,n_end)
-    flag_row = ctb.getcol('FLAG_ROW',0,n_end)
-    state_ids_row = ctb.getcol('STATE_ID',0,n_end)
-    '''
 
     ctb.close()
     
