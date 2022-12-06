@@ -52,7 +52,7 @@ def gauss_solver(system):
                 system[jidx,:] -= system[icol,:]*copy
     
     # Final test on diagonalization
-    for iidx in range(size,0,-1):
+    for iidx in range(size-1,-1,-1):
         if rowidx[iidx] != colidx[iidx]:
             for kidx in range(size):
                 copy = system[kidx,rowidx[iidx]]
@@ -88,7 +88,7 @@ class Panel:
     # Currently this class strongly relies on the fact that panels are
     # sections of a ring of equal angular size, inner and outer radii
     
-    def __init__(self,kind,angle,ipanel,inrad,ourad,blc,tlc):
+    def __init__(self,kind,angle,ipanel,inrad,ourad,bmp,tmp):
         # Panel initialization
         self.kind   = kind
         self.ipanel = ipanel
@@ -97,8 +97,10 @@ class Panel:
         self.theta1 = ipanel*angle
         self.theta2 = (ipanel+1)*angle
         self.zeta   = (ipanel+0.5)*angle
-        self.blc    = blc
-        self.tlc    = tlc
+        self.bmp    = bmp
+        self.tmp    = tmp
+        self.built  = False
+        self.solved = False
 
         
     def is_inside(self,rad,phi):
@@ -117,11 +119,11 @@ class Panel:
         # iy indexes as well as its deviation
         inc = 15.0 / amp.shape[0]
         nsamp = 0
-        ycoor = self.blc[1]
+        ycoor = self.bmp[1]
         values = []
         # Loop over potential y coordinates
-        while (ycoor<=self.tlc[1]):
-            deltax = self.blc[0]+(self.tlc[0]-self.blc[0])*(ycoor-self.blc[1])/(self.tlc[1]-self.blc[1])
+        while (ycoor<=self.tmp[1]):
+            deltax = self.bmp[0]+(self.tmp[0]-self.bmp[0])*(ycoor-self.bmp[1])/(self.tmp[1]-self.bmp[1])
             xcoor = -deltax
             # loop over potential x coordinates
             while (xcoor<=deltax):
@@ -150,7 +152,7 @@ class Panel:
                         #    point on the reference panel
                         phi1 = phipoint - self.zeta
                         value = [radpoint*np.sin(phi1),
-                                 radpoint*np.cos(phi1)-self.blc[1],
+                                 radpoint*np.cos(phi1)-self.bmp[1],
                                  xint,yint,
                                  dev[xint,yint]]
                         values.append(value)
@@ -159,8 +161,26 @@ class Panel:
                 
             ycoor = ycoor + inc
 
-        self.nsamp = nsamp
+        self.nsamp  = nsamp
         self.values = values
+        self.built  = True
+        return
+
+
+    def compute_points_new(self,amp,dev,rad,phi):
+        self.nsamp = 0
+        self.values = []
+        for iy in range(rad.shape[0]):
+            for ix in range(rad.shape[0]):
+                if self.is_inside(rad[ix,iy],phi[ix,iy]): 
+                    if dev[ix,iy] > 0 and amp[ix,iy] > 0:
+                        self.nsamp += 1
+                        value = [rad[ix,iy]*np.sin(phi[ix,iy]),
+                                 rad[ix,iy]*np.cos(phi[ix,iy])-self.bmp[1],
+                                 ix,iy,
+                                 dev[ix,iy]]
+                        self.values.append(value)
+        self.built = True
         return
 
     
@@ -180,6 +200,8 @@ class Panel:
             self._solve_single()
         else:
             raise Exception("Don't know how to solve panel of kind: ",self.kind)
+
+        self.solved = True
         return
 
     
@@ -195,31 +217,31 @@ class Panel:
             if dev != 0:
                 xcoor = self.values[ipoint][0]
                 ycoor = self.values[ipoint][1]
-                fac   = self.blc[0]+ycoor*(self.tlc[0]-self.blc[0])/self.tlc[1]
-                coef1 = (self.tlc[2]-ycoor) * (1.-xcoor/fac) / (2.0*self.tlc[2])
-                coef2 = ycoor * (1.-xcoor/fac) / (2.0*self.tlc[2])
-                coef3 = (self.tlc[2]-ycoor) * (1.+xcoor/fac) / (2.0*self.tlc[2])
-                coef4 = ycoor * (1.+xcoor/fac) / (2.0*self.tlc[2])
-                system[1,1] += coef1*coef1
-                system[1,2] += coef1*coef2
-                system[1,3] += coef1*coef3
-                system[1,4] += coef1*coef4
+                fac   = self.bmp[0]+ycoor*(self.tmp[0]-self.bmp[0])/self.tmp[1]
+                coef1 = (self.tmp[1]-ycoor) * (1.-xcoor/fac) / (2.0*self.tmp[1])
+                coef2 = ycoor * (1.-xcoor/fac) / (2.0*self.tmp[1])
+                coef3 = (self.tmp[1]-ycoor) * (1.+xcoor/fac) / (2.0*self.tmp[1])
+                coef4 = ycoor * (1.+xcoor/fac) / (2.0*self.tmp[1])
+                system[0,0] += coef1*coef1
+                system[0,1] += coef1*coef2
+                system[0,2] += coef1*coef3
+                system[0,3] += coef1*coef4
+                system[1,0]  = system[0,1]
+                system[1,1] += coef2*coef2
+                system[1,2] += coef2*coef3
+                system[1,3] += coef2*coef4
+                system[2,0]  = system[0,2]
                 system[2,1]  = system[1,2]
-                system[2,2] += coef2*coef2
-                system[2,3] += coef2*coef3
-                system[2,4] += coef2*coef4
+                system[2,2] += coef3*coef3
+                system[2,3] += coef3*coef4
+                system[3,0]  = system[0,3]
                 system[3,1]  = system[1,3]
                 system[3,2]  = system[2,3]
-                system[3,3] += coef3*coef3
-                system[3,4] += coef3*coef4
-                system[4,1]  = system[1,4]
-                system[4,2]  = system[2,4]
-                system[4,3]  = system[3,4]
-                system[4,4] += coef4*coef4
-                vector[1]   = vector[1] + dev*a1
-                vector[2]   = vector[2] + dev*a2
-                vector[3]   = vector[3] + dev*a3
-                vector[4]   = vector[4] + dev*a4
+                system[3,3] += coef4*coef4
+                vector[0]   = vector[0] + dev*coef1
+                vector[1]   = vector[1] + dev*coef2
+                vector[2]   = vector[2] + dev*coef3
+                vector[3]   = vector[3] + dev*coef4
 
         newsys   = gauss_solver(system)
         self.par = np.zeros(syssize)
@@ -238,18 +260,18 @@ class Panel:
         vector = np.zeros(syssize)
         for ipoint in range(len(self.values)):
             if self.values[ipoint][-1] != 0:
-                system[1,1] += self.values[ipoint][0]*self.values[ipoint][0]
-                system[1,2] += self.values[ipoint][0]*self.values[ipoint][1]
-                system[1,3] += self.values[ipoint][0]
+                system[0,0] += self.values[ipoint][0]*self.values[ipoint][0]
+                system[0,1] += self.values[ipoint][0]*self.values[ipoint][1]
+                system[0,2] += self.values[ipoint][0]
+                system[1,0]  = system[0,1]
+                system[1,1] += self.values[ipoint][1]*self.values[ipoint][1]
+                system[1,2] += self.values[ipoint][1]
+                system[2,0]  = system[0,2]
                 system[2,1]  = system[1,2]
-                system[2,2] += self.values[ipoint][1]*self.values[ipoint][1]
-                system[2,3] += self.values[ipoint][1]
-                system[3,1]  = system[1,3]
-                system[3,2]  = system[2,3]
-                system[3,3] += 1.0
-                vector[1]   += self.values[ipoint][-1]*self.values[ipoint][0]
-                vector[2]   += self.values[ipoint][-1]*self.values[ipoint][1]
-                vector[3]   += self.values[ipoint][-1]
+                system[2,2] += 1.0
+                vector[0]   += self.values[ipoint][-1]*self.values[ipoint][0]
+                vector[1]   += self.values[ipoint][-1]*self.values[ipoint][1]
+                vector[2]   += self.values[ipoint][-1]
 
         # Call the gauss seidel solver
         newsys   = gauss_solver(system)
@@ -273,6 +295,26 @@ class Panel:
         shiftmean  /= ncount
         self.par[0] = shiftmean
         
+
+    def print_misc(self,verbose=False):
+        print("{0:20s}={1:8d}".format("ipanel",self.ipanel))
+        print("{0:20s}={1:8s}".format("kind"," "+self.kind))
+        print("{0:20s}={1:8.5f}".format("inrad",self.inrad))
+        print("{0:20s}={1:8.5f}".format("ourad",self.ourad))
+        print("{0:20s}={1:8.5f}".format("theta1",self.theta1))
+        print("{0:20s}={1:8.5f}".format("theta2",self.theta2))
+        print("{0:20s}={1:8.5f}".format("zeta",self.zeta))
+        print("{0:20s}={1:8.5f}, {2:8.5f}".format("bmp",*self.bmp))
+        print("{0:20s}={1:8.5f}, {2:8.5f}".format("tmp",*self.tmp))
+        if (self.built):
+            print("{0:20s}={1:8d}".format("nsamp",self.nsamp))
+            if verbose:
+                for isamp in range(self.nsamp):
+                    strg = "{0:20s}=".format("samp{0:d}".format(isamp))
+                    for val in self.values[isamp]:
+                        strg+= str(val)+", "
+                    print(strg)
+        
         
 class Ring:
     # Class created just for hierarchical pourposes, irrelevant if
@@ -285,8 +327,8 @@ class Ring:
         self.inrad  = inrad
         self.ourad  = ourad
         self.angle  = 2.0*np.pi/npanel
-        self.blc = [inrad*np.sin(self.angle/2.0),inrad*np.cos(self.angle/2.0)]
-        self.tlc = [ourad*np.sin(self.angle/2.0),ourad*np.cos(self.angle/2.0)]
+        self.bmp = [inrad*np.sin(self.angle/2.0),inrad*np.cos(self.angle/2.0)]
+        self.tmp = [ourad*np.sin(self.angle/2.0),ourad*np.cos(self.angle/2.0)]
 
 
     def create_panels(self,amp,dev,xaxis,yaxis):
@@ -294,8 +336,17 @@ class Ring:
         self.panels = []
         for ipanel in range(self.npanel):
             panel = Panel(self.kind,self.angle,ipanel,self.inrad,self.ourad,
-                          self.blc,self.tlc)
+                          self.bmp,self.tmp)
             panel.compute_points(amp,dev,xaxis,yaxis)
+            self.panels.append(panel)
+
+    def create_panels_new(self,amp,dev,rad,phi):
+        # Creates and computes the point inside each panel of the ring
+        self.panels = []
+        for ipanel in range(self.npanel):
+            panel = Panel(self.kind,self.angle,ipanel,self.inrad,self.ourad,
+                          self.bmp,self.tmp)
+            panel.compute_points_new(amp,dev,rad,phi)
             self.panels.append(panel)
 
             
@@ -303,6 +354,13 @@ class Ring:
         # Calls the panels to solve their adjustments
         for ipanel in range(self.npanel):
             self.panels[ipanel].solve()
+            
+
+    def print_misc(self):
+        if not (self.panels is None):
+            for panel in self.panels:
+                panel.print_misc()
+                print()
 
             
 class Antenna_Surface:
@@ -331,6 +389,7 @@ class Antenna_Surface:
         val = -self.diam/2.-inc/2
         self.xaxis = Linear_Axis(self.npix,ref,val,inc)
         self.yaxis = Linear_Axis(self.npix,ref,val,inc)
+        self._build_polar()
 
         # Deviation map, for the moment created ad hoc, shall be read
         # from a file
@@ -352,7 +411,7 @@ class Antenna_Surface:
     # Other known telescopes should be included here, ALMA, ngVLA
     def _init_vla(self):
         # Initializes surfaces according to VLA antenna parameters
-        self.panelkind = "single"
+        self.panelkind = "flexible"
         self.telescope = "VLA"
         self.diam      = 25.0  # meters
         self.focus     = 8.8   # meters
@@ -373,7 +432,20 @@ class Antenna_Surface:
         self.inrad     = [1.676,3.518,5.423,7.277, 9.081,10.808]
         self.ourad     = [3.518,5.423,7.277,9.081,10.808,12.500]
 
-        
+
+    def _build_polar(self):
+        self.rad = np.zeros([self.npix,self.npix])
+        self.phi = np.zeros([self.npix,self.npix])
+        for iy in range(self.npix):
+            ycoor = self.yaxis.idx_to_coor(iy)
+            for ix in range(self.npix):
+                xcoor = self.xaxis.idx_to_coor(ix)
+                self.rad[ix,iy] = np.sqrt(xcoor**2+ycoor**2)
+                self.phi[ix,iy] = np.arctan2(xcoor,ycoor)
+                if self.phi[ix,iy]<0:
+                    self.phi[ix,iy] +=2*np.pi
+
+                
     def build_panels(self):
         # Loops over rings so rings can initialize and compute the
         # points inside their panels
@@ -381,6 +453,17 @@ class Antenna_Surface:
         for iring in range(self.nrings):
             ring = Ring(self.panelkind,self.npanel[iring],self.inrad[iring],self.ourad[iring])
             ring.create_panels(self.amp,self.dev,self.xaxis,self.yaxis)
+            self.rings.append(ring)
+        return
+
+        
+    def build_panels_new(self):
+        # Loops over rings so rings can initialize and compute the
+        # points inside their panels
+        self.rings = []
+        for iring in range(self.nrings):
+            ring = Ring(self.panelkind,self.npanel[iring],self.inrad[iring],self.ourad[iring])
+            ring.create_panels_new(self.amp,self.dev,self.rad,self.phi)
             self.rings.append(ring)
         return
 
@@ -446,4 +529,15 @@ class Antenna_Surface:
         # to compute the adjustments needed
         for iring in range(self.nrings):
             self.rings[iring].solve_panels()
-        return 
+        return
+
+    
+    def print_misc(self):
+        iring = 0
+        for ring in self.rings:
+            iring +=1
+            print("************************************************************")
+            print("ring: ",str(iring))
+            ring.print_misc()
+            print()
+
