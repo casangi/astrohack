@@ -1,13 +1,10 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 # static methods not linked to any specific class
 def gauss_solver(system):
-    # Used when trying to solve for the adjustments in each panel
-    # Diagonalizes a system and then returns the diagonalized
-    # version of it
-    #
-    # Probably replaceable by a standard matrix diagonalization
-    # library, if not possible, should be jitted
+    # This is actually a simple matrix inversion
+    # can be replaced by a simple call to np.linalg.inv
     shape = system.shape
     if shape[0] != shape[1]:
         raise Exception("Matrix is not square")
@@ -61,6 +58,10 @@ def gauss_solver(system):
 
     return system
 
+
+def gauss_numpy(system,vector):
+    inverse = np.linalg.inv(system)
+    return np.dot(inverse,vector)
 
 def convert_to_db(val):
     # Convert to decibels
@@ -185,6 +186,8 @@ class Panel:
 
     
     def solve(self):
+        if not self.built:
+            raise Exception("Cannot solve a panel that is not built")
         # Calls apropriated solving function based on panel type The
         # parameters computed here are to be used in the future to
         # compute the actual screw adjustments.
@@ -242,13 +245,16 @@ class Panel:
                 vector[1]   = vector[1] + dev*coef2
                 vector[2]   = vector[2] + dev*coef3
                 vector[3]   = vector[3] + dev*coef4
-
-        newsys   = gauss_solver(system)
-        self.par = np.zeros(syssize)
-        for iidx in range(syssize):
-            valsum = 0.
-            for jidx in range(syssize):
-                self.par[jidx] +=  newsys[jidx,iidx] * vector[jidx]
+        
+        # New Numpy version
+        self.par = gauss_numpy(system,vector)
+        #
+        # Old Version
+        # newsys   = gauss_solver(system)
+        # self.par = np.zeros(syssize)
+        # for iidx in range(syssize):
+        #     for jidx in range(syssize):
+        #         self.par[jidx] +=  newsys[jidx,iidx] * vector[jidx]
         return
 
 
@@ -272,15 +278,16 @@ class Panel:
                 vector[0]   += self.values[ipoint][-1]*self.values[ipoint][0]
                 vector[1]   += self.values[ipoint][-1]*self.values[ipoint][1]
                 vector[2]   += self.values[ipoint][-1]
-
-        # Call the gauss seidel solver
-        newsys   = gauss_solver(system)
-        self.par = np.zeros(syssize)
-        for iidx in range(syssize):
-            valsum = 0.
-            for jidx in range(syssize):
-                self.par[jidx] +=  newsys[jidx,iidx] * vector[jidx]
-
+                
+        # New Numpy version
+        self.par = gauss_numpy(system,vector)
+        #
+        # Old Version
+        # self.par = np.zeros(syssize)
+        # for iidx in range(syssize):
+        #     for jidx in range(syssize):
+        #         self.par[jidx] +=  newsys[jidx,iidx] * vector[jidx]
+        return
                 
     def _solve_single(self):
         # Solve panel adjustments for rigid vertical shift only panels
@@ -294,8 +301,63 @@ class Panel:
 
         shiftmean  /= ncount
         self.par[0] = shiftmean
-        
 
+
+    def get_corrections(self):
+        if not self.solved:
+            raise Exception("Cannot correct a panel that is not solved")
+        # Flexible VLA like panel
+        if self.kind == "flexible":
+            self._get_corr_flexi()
+        # Rigid but can be tilted
+        elif self.kind == "rigid":
+            self._get_corr_rigid()
+        # Rigid and can only be moved vertically
+        elif self.kind == "single":
+            self._get_corr_single()
+        else:
+            raise Exception("Don't know how to solve panel of kind: ",self.kind)
+
+        
+    def _get_corr_flexi(self):
+        self.corr = np.ndarray(len(self.values))
+        coef = np.ndarray(4)
+        icorr = 0
+        for val in self.values:
+            xcoor,ycoor = val[0:2]
+            corrval = 0
+            fac   = self.bmp[0]+ycoor*(self.tmp[0]-self.bmp[0])/self.tmp[1]
+            coef[0] = (self.tmp[1]-ycoor) * (1.-xcoor/fac) / (2.0*self.tmp[1])
+            coef[1] = ycoor * (1.-xcoor/fac) / (2.0*self.tmp[1])
+            coef[2] = (self.tmp[1]-ycoor) * (1.+xcoor/fac) / (2.0*self.tmp[1])
+            coef[3] = ycoor * (1.+xcoor/fac) / (2.0*self.tmp[1])
+            for ipar in range(len(self.par)):
+                corrval += coef[ipar]*self.par[ipar]
+            self.corr[icorr] = corrval
+            icorr+=1
+        return
+
+
+    def _get_corr_rigid(self):
+        self.corr = np.ndarray(len(self.values))
+        icorr = 0
+        for val in self.values:
+            corrval = val[0]*self.par[0] + val[1]*self.par[1] + self.par[2]
+            self.corr[icorr] = corrval
+            icorr+=1
+        return
+
+
+    def _get_corr_single(self):
+        self.corr = np.ndarray(len(self.values))
+        icorr = 0
+        for val in self.values:
+            corrval = self.par[0]
+            self.corr[icorr] = corrval
+            icorr+=1
+        return
+
+    
     def print_misc(self,verbose=False):
         print("{0:20s}={1:8d}".format("ipanel",self.ipanel))
         print("{0:20s}={1:8s}".format("kind"," "+self.kind))
@@ -320,7 +382,7 @@ class Ring:
     # Class created just for hierarchical pourposes, irrelevant if
     # dish is not circular or panel design is not organized in rings
     
-    def __init__(self,kind,npanel,inrad,ourad):\
+    def __init__(self,kind,npanel,inrad,ourad):
         # Ring initialization
         self.kind   = kind
         self.npanel = npanel
@@ -340,6 +402,7 @@ class Ring:
             panel.compute_points(amp,dev,xaxis,yaxis)
             self.panels.append(panel)
 
+            
     def create_panels_new(self,amp,dev,rad,phi):
         # Creates and computes the point inside each panel of the ring
         self.panels = []
@@ -362,7 +425,7 @@ class Ring:
                 panel.print_misc()
                 print()
 
-            
+
 class Antenna_Surface:
     # Describes the antenna surface properties, as well as being
     # capable of computing the gains and rms over the surface.
@@ -400,7 +463,7 @@ class Antenna_Surface:
             # this does not work in any decent way as there is no
             # correlation between points inside a panel which crashes
             # the matrix diagonalization.
-            self.dev  = np.random.rand(npix,npix)-0.5
+            self.dev  = 5*np.random.rand(npix,npix)-0.5
             
         # This amplitude image is used as a mask in subsequent
         # calculations
@@ -412,6 +475,8 @@ class Antenna_Surface:
     def _init_vla(self):
         # Initializes surfaces according to VLA antenna parameters
         self.panelkind = "flexible"
+        # self.panelkind = "rigid"
+        # self.panelkind = "single"
         self.telescope = "VLA"
         self.diam      = 25.0  # meters
         self.focus     = 8.8   # meters
@@ -478,22 +543,17 @@ class Antenna_Surface:
         # What are these sums?
         sumrad   = 0.0
         sumtheta = 0.0
-        nsamp    = 0.0
+        nsamp    = 0
         #    convert surface error to phase
         #    and compute gain loss
         for iy in range(self.dev.shape[1]): 
-            ycoor = self.yaxis.idx_to_coor(iy)
             for ix in range(self.dev.shape[0]):
-                if self.amp[ix,iy]>0:
-                    xcoor = self.xaxis.idx_to_coor(ix)
-                    rad = np.sqrt(xcoor*xcoor+ycoor*ycoor)
-                    if rad > self.diam/2.:
-                        continue
-                    quo = rad / (2.*self.focus)
-                    phase     = self.dev[ix,iy]*forpi /(np.sqrt(1.+quo*quo)*wavel)
+                if self.amp[ix,iy]>0 and self.rad[ix,iy]<self.diam/2:
+                    quo = self.rad[ix,iy] / (2.*self.focus)
+                    phase     = self.dev[ix,iy]*forpi/(np.sqrt(1.+quo*quo)*wavel)
                     sumrad   += np.cos(phase)
                     sumtheta += np.sin(phase)
-                    nsamp    += 1.0                
+                    nsamp    += 1              
 
         ampmax  = np.sqrt(sumrad*sumrad + sumtheta*sumtheta)
         if (nsamp<=0):
@@ -511,9 +571,9 @@ class Antenna_Surface:
         # Compute the RMS of the antenna surface
         rms   = 0.0
         nsamp = 0.0
-        for iy in range(self.dev.shape[1]): # what is mx?
+        for iy in range(self.dev.shape[1]): 
             for ix in range(self.dev.shape[0]):
-                if self.amp[ix,iy]>0:
+                if self.amp[ix,iy]>0 and self.rad[ix,iy]<self.diam/2:
                     rms   += self.dev[ix,iy]**2
                     nsamp += 1
                     
@@ -531,6 +591,33 @@ class Antenna_Surface:
             self.rings[iring].solve_panels()
         return
 
+
+    def correct_surface(self):
+        npoint = self.diam/self.reso
+        corrected = Antenna_Surface(npoint,self.npix,self.telescope,perfect=True)
+        corrected.amp = np.copy(self.amp)
+        corrected.dev = np.copy(self.dev)
+        iring = 0
+        for ring in self.rings:
+            iring += 1
+            for panel in ring.panels:
+                panel.get_corrections()
+                nbad = 0
+                for ipnt in range(len(panel.corr)):
+                    if panel.corr[ipnt] > 10:
+                        nbad +=1
+                    val = panel.values[ipnt]
+                    ix,iy = int(val[0]),int(val[1])
+                    corrected.dev[ix,iy] -= panel.corr[ipnt]
+                if nbad > 0:
+                    print("**************************************************")
+                    print("ring :",iring)
+                    print("panel:",panel.ipanel)
+                    print("nbad :",nbad)
+                    print("nsamp:",panel.nsamp)
+                    
+        return corrected
+
     
     def print_misc(self):
         iring = 0
@@ -541,3 +628,17 @@ class Antenna_Surface:
             ring.print_misc()
             print()
 
+
+    def plot_deviations(self):
+        fig, ax = plt.subplots()
+        ax.set_title('Antenna Surface')
+        # set the limits of the plot to the limits of the data
+        # xmin = self.xaxis.idx_to_coor(0)-self.xaxis.inc/2
+        # xmax = self.xaxis.idx_to_coor(self.npix-1)+self.xaxis.inc/2
+        # ymin = self.yaxis.idx_to_coor(0)-self.yaxis.inc/2
+        # ymax = self.yaxis.idx_to_coor(self.npix-1)-self.yaxis.inc/2
+        # ax.axis([xmin, xmax, ymin, ymax])
+        plt.imshow(self.dev, cmap='viridis', interpolation='nearest')
+        plt.colorbar()
+        plt.show()
+        
