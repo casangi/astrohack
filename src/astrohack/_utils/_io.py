@@ -20,20 +20,51 @@ from numba.core import types
 from numba.typed import Dict
 
 from casacore import tables as ctables
+
 from astrohack._utils._parallactic_angle import _calculate_parallactic_angle_chunk
+#from astrohack.dio import load_hack_file
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 jit_cache =  False
 
-def _save_hack_to_json(hack_dict, output_name):
-    """ Save hack file meta information to json file with the transformation
+def _read_data_from_hack_meta(hack_name, hack_dict, ant_id):
+    """ Read hack file meta data and extract antenna based xds information for each (ddi, scan)
+
+    Args:
+        hack (_type_): _description_
+        ant_id (_type_): _description_
+
+    Returns:
+        nested dict: nested dictionary (ddi, scan, xds) with xds data embedded in it.
+    """
+    
+    ant_id_str = str(ant_id)
+
+    hack_meta_data = "/".join((hack_name, ".hack_json"))
+
+
+    with open(hack_meta_data, "r") as json_file: 
+        hack_json = json.load(json_file)
+    
+    ant_data_dict = {}
+    
+    for ddi in hack_json[ant_id_str].keys():
+        for scan in hack_json[ant_id_str][ddi].keys():
+            ant_data_dict.setdefault(int(ddi), {})[int(scan)]= hack_dict[int(ddi)][int(scan)][int(ant_id)]
+            
+    return ant_data_dict
+
+
+def _create_hack_meta_data(hack_name, hack_dict):
+    """Save hack file meta information to json file with the transformation
         of the ordering (ddi, scan, ant) --> (ant, ddi, scan).
 
     Args:
-        hack_dict (hack): Hack file
-        output_name (str): Output name for hack json file.
+        hack_name (_type_): _description_
+        hack (_type_): _description_
     """
+
     ant_sub_dict = {}
     ant_hack_dict = {}
 
@@ -44,7 +75,9 @@ def _save_hack_to_json(hack_dict, output_name):
                     ant_sub_dict.setdefault(ddi, {})
                     ant_hack_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
 
-    with open(output_name, "w") as json_file:
+    output_meta_file = "/".join( (hack_name, ".hack_json") )
+    
+    with open(output_meta_file, "w") as json_file:
         json.dump(ant_hack_dict, json_file)
 
 def _get_attrs(zarr_obj):
