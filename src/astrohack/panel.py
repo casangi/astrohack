@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from astropy.io import fits
 
 # static methods not linked to any specific class
 def gauss_solver(system):
@@ -63,10 +64,28 @@ def gauss_numpy(system,vector):
     inverse = np.linalg.inv(system)
     return np.dot(inverse,vector)
 
+
 def convert_to_db(val):
     # Convert to decibels
     return 10.*np.log10(val)
 
+
+def read_fits(filename):
+    hdul = fits.open(filename)
+    head = hdul[0].header
+    if head['NAXIS'] != 2:
+        if head['NAXIS'] < 2:
+            raise Exception(filename+" is not bi-dimensional")
+        elif head['NAXIS'] > 2:
+            for iax in range(2,head['NAXIS']):
+                if head['NAXIS'+str(iax+1)] != 1:
+                    raise Exception(filename+" is not bi-dimensional")
+    if head['NAXIS1'] != head['NAXIS2']:
+        raise Exception(filename+" image is not square")
+    data = hdul[0].data[0,0,:,:]
+    print(data.shape)
+    hdul.close()
+    return head, data
 
 class Linear_Axis:
     # According to JWS this class is superseeded by xarray, which
@@ -433,7 +452,7 @@ class Antenna_Surface:
     # telescopes that have panels arranged in rings can be modeled
     # here.
 
-    def __init__(self,npoint,npix,telescope,perfect=False):
+    def __init__(self,amp,dev,npoint,telescope,perfect=False):
         # Initializes antenna surface parameters
         if telescope == 'VLA':
             self._init_vla()
@@ -441,8 +460,11 @@ class Antenna_Surface:
             self._init_vlba()
         else:
             raise Exception("VLA is the only know telescope for the moment")
-
-        self.npix  = npix  # pix
+        
+        self.ampfile = amp
+        self.devfile = dev
+        self._read_images()
+        
         self.rms   = np.nan
         # Is this really how to compute this?
         self.reso  = self.diam/npoint
@@ -454,23 +476,18 @@ class Antenna_Surface:
         self.yaxis = Linear_Axis(self.npix,ref,val,inc)
         self._build_polar()
 
-        # Deviation map, for the moment created ad hoc, shall be read
-        # from a file
-        if perfect:
-            self.dev  = np.zeros([npix,npix])
-        else:
-            # for the moment random to simulate a deformed antenna,
-            # this does not work in any decent way as there is no
-            # correlation between points inside a panel which crashes
-            # the matrix diagonalization.
-            self.dev  = 5*np.random.rand(npix,npix)-0.5
-            
-        # This amplitude image is used as a mask in subsequent
-        # calculations
-        self.amp = np.full([npix,npix],1.0)
 
-
-
+        
+    def _read_images(self):
+        self.amphead,self.amp = read_fits(self.ampfile)
+        self.devhead,self.dev = read_fits(self.devfile)
+        #
+        if self.devhead['NAXIS1'] != self.amphead['NAXIS1']:
+            raise Exception("Amplitude and deviation images have different sizes")
+        self.npix = int(self.devhead['NAXIS1'])
+        return
+    
+        
     # Other known telescopes should be included here, ALMA, ngVLA
     def _init_vla(self):
         # Initializes surfaces according to VLA antenna parameters
