@@ -8,8 +8,9 @@ from casacore import tables as ctables
 
 from astrohack._utils._io import _load_pnt_dict, _make_ant_pnt_dict 
 from astrohack._utils._io import _extract_holog_chunk, _open_no_dask_zarr
+from astrohack._utils._io import _create_hack_meta_data, _read_data_from_hack_meta
 
-def load_hack_file(hack_name, dask_load=True, load_pnt_dict=True, save_hack_json=False):
+def load_hack_file(hack_name, dask_load=True, load_pnt_dict=True, ant_id=None): 
     """ Loads .hack file from disk
 
     Args:
@@ -39,16 +40,19 @@ def load_hack_file(hack_name, dask_load=True, load_pnt_dict=True, save_hack_json
             for scan in os.listdir(os.path.join(hack_name,ddi)):
                 if scan.isnumeric():
                     hack_dict[int(ddi)][int(scan)]={}
-                    for ant_id in os.listdir(os.path.join(hack_name,ddi+'/'+scan)):
-                        if ant_id.isnumeric():
-                            mapping_ant_vis_holog_data_name = os.path.join(hack_name,ddi+'/'+scan+'/'+ant_id)
+                    for ant in os.listdir(os.path.join(hack_name,ddi+'/'+scan)):
+                        if ant.isnumeric():
+                            mapping_ant_vis_holog_data_name = os.path.join(hack_name,ddi+'/'+scan+'/'+ant)
                             
                             if dask_load:
-                                hack_dict[int(ddi)][int(scan)][int(ant_id)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
+                                hack_dict[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
                             else:
-                                hack_dict[int(ddi)][int(scan)][int(ant_id)] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
+                                hack_dict[int(ddi)][int(scan)][int(ant)] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
 
-    return hack_dict
+    if ant_id == None:
+        return hack_dict
+
+    return hack_dict, _read_data_from_hack_meta(hack_name=hack_name, hack_dict=hack_dict, ant_id=ant_id)
 
 def extract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_intent='MIXED', parallel=True):
     """ Extract holography data and create beam maps.
@@ -159,3 +163,7 @@ def extract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_i
     
     if parallel:
         dask.compute(delayed_list)
+    
+    print("Finished dask compute ...")
+    hack_dict = load_hack_file(hack_name=extract_holog_parms['hack_name'], dask_load=True, load_pnt_dict=False)                            
+    _create_hack_meta_data(hack_name=extract_holog_parms['hack_name'], hack_dict=hack_dict)

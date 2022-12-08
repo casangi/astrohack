@@ -67,6 +67,9 @@ def _create_hack_meta_data(hack_name, hack_dict):
 
     ant_sub_dict = {}
     ant_hack_dict = {}
+    data_extent = {}
+    max_extent = {}
+    
 
     for ddi, scan_dict in hack_dict.items():
         if isinstance(ddi, numbers.Number):
@@ -75,10 +78,24 @@ def _create_hack_meta_data(hack_name, hack_dict):
                     ant_sub_dict.setdefault(ddi, {})
                     ant_hack_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
 
+                    # Find the max extent for each antenna, over (ddi, scan) and write the meta data to file.
+                    size = xds.DIRECTIONAL_COSINES.values.shape[0]
+                    data_extent.setdefault(ant, np.array([]))
+                    data_extent[ant] = np.append(data_extent[ant], size)
+                
+    # Please forgive me for another loop JW ...
+    for ant, values in data_extent.items():
+        max_value = np.max(values)
+        max_extent[ant] = int(max_value/2.)+1            
+
     output_meta_file = "/".join( (hack_name, ".hack_json") )
+    output_attr_file = "/".join( (hack_name, ".hack_attr") )
     
     with open(output_meta_file, "w") as json_file:
         json.dump(ant_hack_dict, json_file)
+
+    with open(output_attr_file, "w") as json_file:
+        json.dump(max_extent, json_file)
 
 def _get_attrs(zarr_obj):
     """get attributes of zarr obj (groups or arrays)

@@ -2,6 +2,7 @@ import dask
 import time
 import os
 import dask
+import dask.distributed
 
 import dask.array as da
 import numpy as np
@@ -15,16 +16,9 @@ def _holog_chunk(holog_chunk_params):
         Args:
             holog_chunk_params (dict): _description_
         """
-        
-        dask.distributed.get_worker().log_event("runtimes", {
-                "ant": holog_chunk_params['ant'], 
-                "hackfile": holog_chunk_params['hack_name'], 
-                "message": "h.a.c.k. ...."}
-        )
-        
-        result = load_hack_file(holog_chunk_params['hack_name'], dask_load=False, load_pnt_dict=False, ant_id=holog_chunk_params['ant'])
-        print(result)
 
+        hack, ant_meta_data = load_hack_file(holog_chunk_params['hack_name'], dask_load=False, load_pnt_dict=False, ant_id=holog_chunk_params['ant_id'])
+        
 def holog(hack_name, parallel=True):
         """_summary_
 
@@ -39,19 +33,20 @@ def holog(hack_name, parallel=True):
                         ant_list = list(map(int, ant_list))
 
                         holog_chunk_params = {}
+                        holog_chunk_params['hack_name'] = hack_name
 
                         delayed_list = []
 
                         for ant in ant_list:
-                                holog_chunk_params['ant'] = ant
-                                holog_chunk_params['hack_name'] = hack_name
+                                holog_chunk_params['ant_id'] = ant
                                 
                                 if parallel:
                                         delayed_list.append(
                                                 dask.delayed(_holog_chunk)(holog_chunk_params)
                                         )
+
                                 else:
-                                        _holog_chunk(ant, hack_name)
+                                        _holog_chunk(holog_chunk_params)
 
                         if parallel: 
                                 dask.compute(delayed_list)
