@@ -472,11 +472,10 @@ class Antenna_Surface:
         # Is this really how to compute this?
         self.reso  = self.diam/npoint
 
-        ref = -1.0
-        inc = self.diam/self.npix
-        val = -self.diam/2.-inc/2
-        self.xaxis = Linear_Axis(self.npix,ref,val,inc)
-        self.yaxis = Linear_Axis(self.npix,ref,val,inc)
+        self.xaxis = Linear_Axis(self.npix,self.amphead["CRPIX1"],
+                                 self.amphead["CRVAL1"],self.amphead["CDELT1"])
+        self.yaxis = Linear_Axis(self.npix,self.amphead["CRPIX2"],
+                                 self.amphead["CRVAL2"],self.amphead["CDELT2"])
         self._build_polar()
 
 
@@ -652,12 +651,31 @@ class Antenna_Surface:
         fig, ax = plt.subplots()
         ax.set_title('Antenna Surface')
         # set the limits of the plot to the limits of the data
-        # xmin = self.xaxis.idx_to_coor(0)-self.xaxis.inc/2
-        # xmax = self.xaxis.idx_to_coor(self.npix-1)+self.xaxis.inc/2
-        # ymin = self.yaxis.idx_to_coor(0)-self.yaxis.inc/2
-        # ymax = self.yaxis.idx_to_coor(self.npix-1)-self.yaxis.inc/2
-        # ax.axis([xmin, xmax, ymin, ymax])
-        plt.imshow(self.dev, cmap='viridis', interpolation='nearest')
-        plt.colorbar()
+        xmin = self.xaxis.idx_to_coor(-0.5)
+        xmax = self.xaxis.idx_to_coor(self.xaxis.n-0.5)
+        ymin = self.yaxis.idx_to_coor(-0.5)
+        ymax = self.yaxis.idx_to_coor(self.yaxis.n-0.5)
+        plt.imshow(self.dev, cmap='viridis', interpolation='nearest',
+                   extent=[xmin,xmax,ymin,ymax])
+        plt.colorbar(label="Deviation [mm]")
+        plt.xlabel("X axis [m]")
+        plt.ylabel("Y axis [m]")
+        if panels:
+            for ring in self.rings:
+                inrad = plt.Circle((0, 0), ring.inrad, color='black',fill=False)
+                ourad = plt.Circle((0, 0), ring.ourad, color='black',fill=False)
+                ax.add_patch(inrad)
+                ax.add_patch(ourad)
+                for panel in ring.panels:
+                    x1 = panel.inrad*np.sin(panel.theta1)
+                    y1 = panel.inrad*np.cos(panel.theta1)
+                    x2 = panel.ourad*np.sin(panel.theta1)
+                    y2 = panel.ourad*np.cos(panel.theta1)
+                    ax.plot([x1, x2],[y1, y2], ls='-',color='black',marker = None)
+                    scale = 0.05
+                    rt = (panel.inrad+panel.ourad)/2
+                    xt = rt*np.sin(panel.zeta)
+                    yt = rt*np.cos(panel.zeta)
+                    ax.text(xt,yt,str(panel.ipanel),fontsize=5)
         plt.show()
         
