@@ -82,10 +82,15 @@ def read_fits(filename):
                     raise Exception(filename+" is not bi-dimensional")
     if head['NAXIS1'] != head['NAXIS2']:
         raise Exception(filename+" image is not square")
-    data = hdul[0].data[0,0,:,:]
-    print(data.shape)
+
+    if "AIPS" in hdul[0].header["ORIGIN"]:
+        # AIPS data is in meters
+        data = hdul[0].data[0,0,:,:]*1000
+    else:
+        data = hdul[0].data[0,0,:,:]
     hdul.close()
     return head, data
+
 
 class Linear_Axis:
     # According to JWS this class is superseeded by xarray, which
@@ -211,19 +216,17 @@ class Panel:
         # parameters computed here are to be used in the future to
         # compute the actual screw adjustments.
         #
-        # Flexible VLA like panel
-        if self.kind == "flexible":
-            self._solve_flexi()
-        # Rigid but can be tilted
-        elif self.kind == "rigid":
-            self._solve_rigid()
-        # Rigid and can only be moved vertically
-        elif self.kind == "single":
-            self._solve_single()
-        else:
-            raise Exception("Don't know how to solve panel of kind: ",self.kind)
-
-        self.solved = True
+        try:
+            if self.kind == "flexible":
+                self._solve_flexi()
+            elif self.kind == "rigid":
+                self._solve_rigid()
+            elif self.kind == "single":
+                self._solve_single()
+            else:
+                raise Exception("Don't know how to solve panel of kind: ",self.kind)
+        except:
+            self.print_misc(verbose=True)
         return
 
     
@@ -231,6 +234,10 @@ class Panel:
         # Solve panel adjustments for flexible VLA style panels by
         # constructing a system of 4 linear equations
         syssize = 4
+        if self.nsamp < syssize:
+            # In this case the matrix will always be singular as the
+            # rows will be linear combinations
+            return
         system = np.zeros([syssize,syssize])
         vector = np.zeros(syssize)
         
@@ -265,15 +272,8 @@ class Panel:
                 vector[2]   = vector[2] + dev*coef3
                 vector[3]   = vector[3] + dev*coef4
         
-        # New Numpy version
         self.par = gauss_numpy(system,vector)
-        #
-        # Old Version
-        # newsys   = gauss_solver(system)
-        # self.par = np.zeros(syssize)
-        # for iidx in range(syssize):
-        #     for jidx in range(syssize):
-        #         self.par[jidx] +=  newsys[jidx,iidx] * vector[jidx]
+        self.solved = True
         return
 
 
@@ -281,6 +281,10 @@ class Panel:
         # Solve panel adjustments for rigid tilt and shift only panels by
         # constructing a system of 3 linear equations
         syssize = 3
+        if self.nsamp < syssize:
+            # In this case the matrix will always be singular as the
+            # rows will be linear combinations
+            return
         system = np.zeros([syssize,syssize])
         vector = np.zeros(syssize)
         for ipoint in range(len(self.values)):
@@ -298,16 +302,11 @@ class Panel:
                 vector[1]   += self.values[ipoint][-1]*self.values[ipoint][1]
                 vector[2]   += self.values[ipoint][-1]
                 
-        # New Numpy version
         self.par = gauss_numpy(system,vector)
-        #
-        # Old Version
-        # self.par = np.zeros(syssize)
-        # for iidx in range(syssize):
-        #     for jidx in range(syssize):
-        #         self.par[jidx] +=  newsys[jidx,iidx] * vector[jidx]
+        self.solved = True
         return
-                
+
+    
     def _solve_single(self):
         # Solve panel adjustments for rigid vertical shift only panels
         self.par = np.zeros(1)
@@ -320,6 +319,8 @@ class Panel:
 
         shiftmean  /= ncount
         self.par[0] = shiftmean
+        self.solved = True
+        return
 
 
     def get_corrections(self):
@@ -378,6 +379,7 @@ class Panel:
 
     
     def print_misc(self,verbose=False):
+        print("########################################")
         print("{0:20s}={1:8d}".format("ipanel",self.ipanel))
         print("{0:20s}={1:8s}".format("kind"," "+self.kind))
         print("{0:20s}={1:8.5f}".format("inrad",self.inrad))
@@ -395,6 +397,7 @@ class Panel:
                     for val in self.values[isamp]:
                         strg+= str(val)+", "
                     print(strg)
+        print()
         
         
 class Ring:
@@ -452,7 +455,7 @@ class Antenna_Surface:
     # telescopes that have panels arranged in rings can be modeled
     # here.
 
-    def __init__(self,amp,dev,npoint,telescope,perfect=False):
+    def __init__(self,amp,dev,npoint,telescope):
         # Initializes antenna surface parameters
         if telescope == 'VLA':
             self._init_vla()
@@ -527,7 +530,7 @@ class Antenna_Surface:
                 if self.phi[ix,iy]<0:
                     self.phi[ix,iy] +=2*np.pi
 
-                
+
     def build_panels(self):
         # Loops over rings so rings can initialize and compute the
         # points inside their panels
@@ -565,7 +568,7 @@ class Antenna_Surface:
         #    and compute gain loss
         for iy in range(self.dev.shape[1]): 
             for ix in range(self.dev.shape[0]):
-                if self.amp[ix,iy]>0 and self.rad[ix,iy]<self.diam/2:
+                if self.amp[ix,iy]>0 and self.rad[ix,iy]<self.diam/2 and not np.isnan(self.dev[ix,iy]):
                     quo = self.rad[ix,iy] / (2.*self.focus)
                     phase     = self.dev[ix,iy]*forpi/(np.sqrt(1.+quo*quo)*wavel)
                     sumrad   += np.cos(phase)
@@ -590,7 +593,7 @@ class Antenna_Surface:
         nsamp = 0.0
         for iy in range(self.dev.shape[1]): 
             for ix in range(self.dev.shape[0]):
-                if self.amp[ix,iy]>0 and self.rad[ix,iy]<self.diam/2:
+                if self.amp[ix,iy]>0 and self.rad[ix,iy]<self.diam/2 and not np.isnan(self.dev[ix,iy]):
                     rms   += self.dev[ix,iy]**2
                     nsamp += 1
                     
@@ -611,27 +614,26 @@ class Antenna_Surface:
 
     def correct_surface(self):
         npoint = self.diam/self.reso
-        corrected = Antenna_Surface(npoint,self.npix,self.telescope,perfect=True)
-        corrected.amp = np.copy(self.amp)
-        corrected.dev = np.copy(self.dev)
+        corrected = Antenna_Surface(self.ampfile,self.devfile,npoint,self.telescope)
         iring = 0
         for ring in self.rings:
             iring += 1
             for panel in ring.panels:
-                panel.get_corrections()
-                nbad = 0
-                for ipnt in range(len(panel.corr)):
-                    if panel.corr[ipnt] > 10:
-                        nbad +=1
-                    val = panel.values[ipnt]
-                    ix,iy = int(val[0]),int(val[1])
-                    corrected.dev[ix,iy] -= panel.corr[ipnt]
-                if nbad > 0:
-                    print("**************************************************")
-                    print("ring :",iring)
-                    print("panel:",panel.ipanel)
-                    print("nbad :",nbad)
-                    print("nsamp:",panel.nsamp)
+                if (panel.solved):
+                    panel.get_corrections()
+                    nbad = 0
+                    for ipnt in range(len(panel.corr)):
+                        if panel.corr[ipnt] > 10:
+                            nbad +=1
+                        val = panel.values[ipnt]
+                        ix,iy = int(val[0]),int(val[1])
+                        corrected.dev[ix,iy] -= panel.corr[ipnt]
+                    if nbad > 0:
+                        print("**************************************************")
+                        print("ring :",iring)
+                        print("panel:",panel.ipanel)
+                        print("nbad :",nbad)
+                        print("nsamp:",panel.nsamp)
                     
         return corrected
 
@@ -646,7 +648,7 @@ class Antenna_Surface:
             print()
 
 
-    def plot_deviations(self):
+    def plot_deviations(self,panels=True):
         fig, ax = plt.subplots()
         ax.set_title('Antenna Surface')
         # set the limits of the plot to the limits of the data
