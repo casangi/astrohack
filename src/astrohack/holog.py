@@ -1,5 +1,6 @@
 import dask
 import time
+import json
 import os
 import dask
 import dask.distributed
@@ -60,8 +61,14 @@ def holog(hack_name, parallel=True):
        
         try:
                 if os.path.exists(hack_name):
-                        ant_list = os.listdir('/'.join((hack_name, 'pnt.dict/')))
-                        ant_list = list(map(int, ant_list))
+                        hack_meta_data = "/".join((hack_name, ".hack_json"))
+
+
+                        with open(hack_meta_data, "r") as json_file: 
+                                hack_json = json.load(json_file)
+    
+                        ant_list = hack_json.keys()
+
 
                         holog_chunk_params = {}
                         holog_chunk_params['hack_name'] = hack_name
