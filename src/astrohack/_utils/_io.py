@@ -326,7 +326,7 @@ def _extract_holog_chunk_jit(vis_data, weight, ant1, ant2, time_vis_row, time_vi
         ant1 (numpy.ndarray): List of antenna_ids for antenna1
         ant2 (numpy.ndarray): List of antenna_ids for antenna2
         time_vis_row (numpy.ndarray): Array of full time talues by row
-        time_vis (numpy.ndarray): Array of selected time values
+        time_vis (numpy.ndarray): Array of unique time values from time_vis_row
         flag (numpy.ndarray): Array of data quality flags to apply to data
         flag_row (numpy.ndarray): Array indicating when a full row of data should be flagged
         map_ant_ids (numpy.ndarray): Array of antenna_ids for mapping data
