@@ -28,6 +28,22 @@ DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 jit_cache =  False
 
+def _read_dimensions_meta_data(hack_name, ant_id): 
+    """_summary_
+
+    Args:
+        ant (_type_): _description_
+        hack_name (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    with open('/'.join( (hack_name, '/.hack_attr') )) as json_file:
+        json_dict = json.load(json_file)
+        
+    return json_dict[str(ant_id)]
+
+
 def _read_data_from_hack_meta(hack_name, hack_dict, ant_id):
     """ Read hack file meta data and extract antenna based xds information for each (ddi, scan)
 
@@ -69,7 +85,7 @@ def _create_hack_meta_data(hack_name, hack_dict):
     ant_hack_dict = {}
     data_extent = {}
     max_extent = {}
-    
+    dims_meta_data = {}
 
     for ddi, scan_dict in hack_dict.items():
         if isinstance(ddi, numbers.Number):
@@ -79,14 +95,15 @@ def _create_hack_meta_data(hack_name, hack_dict):
                     ant_hack_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
 
                     # Find the max extent for each antenna, over (ddi, scan) and write the meta data to file.
-                    size = xds.DIRECTIONAL_COSINES.values.shape[0]
+                    dims = xds.dims
                     data_extent.setdefault(ant, np.array([]))
-                    data_extent[ant] = np.append(data_extent[ant], size)
+                    data_extent[ant] = np.append(data_extent[ant], dims['time'])
+                    dims_meta_data.setdefault(ant, {'time': dims['time'], 'pol':dims['pol']})
                 
     # Please forgive me for another loop JW ...
     for ant, values in data_extent.items():
         max_value = np.max(values)
-        max_extent[ant] = int(max_value/2.)+1            
+        max_extent[ant] = {'size':int(max_value/2.)+1, 'time':dims_meta_data[ant]['time'], 'pol':dims_meta_data[ant]['pol']}            
 
     output_meta_file = "/".join( (hack_name, ".hack_json") )
     output_attr_file = "/".join( (hack_name, ".hack_attr") )

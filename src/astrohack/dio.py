@@ -10,6 +10,25 @@ from astrohack._utils._io import _load_pnt_dict, _make_ant_pnt_dict
 from astrohack._utils._io import _extract_holog_chunk, _open_no_dask_zarr
 from astrohack._utils._io import _create_hack_meta_data, _read_data_from_hack_meta
 
+def load_holog_file(holog_name, dask_load=True): 
+    """_summary_
+
+    Args:
+        holog_name (_type_): _description_
+        dask_load (bool, optional): _description_. Defaults to True.
+    """
+    
+    holog_dict = {}
+    
+
+    #for ant_id in os.listdir(holog_name):
+    #    if ant_id.isnumeric():
+            #if dask_load:
+            #    hack_dict[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
+            #else:
+            #holog_dict[int(ant_id)] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
+
+
 def load_hack_file(hack_name, dask_load=True, load_pnt_dict=True, ant_id=None): 
     """ Loads .hack file from disk
 
