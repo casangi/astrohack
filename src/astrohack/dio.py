@@ -183,6 +183,5 @@ def extract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_i
     if parallel:
         dask.compute(delayed_list)
     
-    print("Finished dask compute ...")
     hack_dict = load_hack_file(hack_name=extract_holog_parms['hack_name'], dask_load=True, load_pnt_dict=False)                            
     _create_hack_meta_data(hack_name=extract_holog_parms['hack_name'], hack_dict=hack_dict)
