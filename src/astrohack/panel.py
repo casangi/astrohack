@@ -308,18 +308,21 @@ class Panel:
 
     
     def _solve_single(self):
-        # Solve panel adjustments for rigid vertical shift only panels
-        self.par = np.zeros(1)
-        shiftmean = 0.
-        ncount    = 0
-        for ipoint in range(len(self.values)):
-            if self.values[ipoint][-1] != 0:
-                shiftmean += self.values[ipoint][-1]
-                ncount    += 1
-
-        shiftmean  /= ncount
-        self.par[0] = shiftmean
-        self.solved = True
+        if self.nsamp > 0:
+            # Solve panel adjustments for rigid vertical shift only panels
+            self.par = np.zeros(1)
+            shiftmean = 0.
+            ncount    = 0
+            for value in self.values:
+                if value[-1] != 0:
+                    shiftmean += value[-1]
+                    ncount    += 1
+                    
+            shiftmean  /= ncount
+            self.par[0] = shiftmean
+            self.solved = True
+        else:
+            self.solved = False
         return
 
 
@@ -493,9 +496,9 @@ class Antenna_Surface:
     # Other known telescopes should be included here, ALMA, ngVLA
     def _init_vla(self):
         # Initializes surfaces according to VLA antenna parameters
-        self.panelkind = "flexible"
+        # self.panelkind = "flexible"
         # self.panelkind = "rigid"
-        # self.panelkind = "single"
+        self.panelkind = "single"
         self.telescope = "VLA"
         self.diam      = 25.0  # meters
         self.focus     = 8.8   # meters
