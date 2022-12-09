@@ -93,6 +93,7 @@ def _create_hack_meta_data(hack_name, hack_dict):
                 for ant, xds in ant_dict.items():
                     ant_sub_dict.setdefault(ddi, {})
                     ant_hack_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
+                    ant_sub_dict = {}
 
                     # Find the max extent for each antenna, over (ddi, scan) and write the meta data to file.
                     dims = xds.dims
