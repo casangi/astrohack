@@ -124,8 +124,9 @@ class Panel:
         self.zeta   = (ipanel+0.5)*angle
         self.bmp    = bmp
         self.tmp    = tmp
-        self.built  = False
         self.solved = False
+        self.nsamp = 0
+        self.values = []
 
         
     def is_inside(self,rad,phi):
@@ -136,82 +137,13 @@ class Panel:
         return (angle and radius)
 
     
-    def compute_points(self,amp,dev,xaxis,yaxis):
-        # Most computationally intensive routine so far.  This
-        # routines loops over points potentially inside a panel and
-        # checks wather they are inside the panel or not. If point is
-        # inside the panel store its x and y coordinates, its ix and
-        # iy indexes as well as its deviation
-        inc = 15.0 / amp.shape[0]
-        nsamp = 0
-        ycoor = self.bmp[1]
-        values = []
-        # Loop over potential y coordinates
-        while (ycoor<=self.tmp[1]):
-            deltax = self.bmp[0]+(self.tmp[0]-self.bmp[0])*(ycoor-self.bmp[1])/(self.tmp[1]-self.bmp[1])
-            xcoor = -deltax
-            # loop over potential x coordinates
-            while (xcoor<=deltax):
-                phi1 = np.arctan2 (xcoor, ycoor)
-                phipoint = phi1 + self.zeta
-                radpoint = np.sqrt(xcoor**2 + ycoor**2)
-                xpoint = radpoint * np.sin(phipoint)
-                ypoint = radpoint * np.cos(phipoint)
-                xint = round(xaxis.coor_to_idx(xpoint))
-                yint = round(yaxis.coor_to_idx(ypoint))
-                #    checks :
-                #    a. is this point truly
-                #    within the panel?
-                xpoint = xaxis.idx_to_coor(xint)
-                ypoint = yaxis.idx_to_coor(xint)
-                radpoint = np.sqrt(xpoint**2 + ypoint**2)
-                phipoint = np.arctan2 (xpoint, ypoint)
-                while (phipoint<0.):
-                    phipoint += 2.0*np.pi
-                #    b.  have we used this point
-                if (amp[xint,yint]>0 and self.is_inside(radpoint,phipoint)):
-                    if (dev[xint,yint] != 0.0):
-                        nsamp += 1
-                        #    set up the parameters for the
-                        #    panel solution -- locate each
-                        #    point on the reference panel
-                        phi1 = phipoint - self.zeta
-                        value = [radpoint*np.sin(phi1),
-                                 radpoint*np.cos(phi1)-self.bmp[1],
-                                 xint,yint,
-                                 dev[xint,yint]]
-                        values.append(value)
-                        
-                xcoor = xcoor + inc
-                
-            ycoor = ycoor + inc
-
-        self.nsamp  = nsamp
-        self.values = values
-        self.built  = True
-        return
-
-
-    def compute_points_new(self,amp,dev,rad,phi):
-        self.nsamp = 0
-        self.values = []
-        for iy in range(rad.shape[0]):
-            for ix in range(rad.shape[0]):
-                if self.is_inside(rad[ix,iy],phi[ix,iy]): 
-                    if dev[ix,iy] > 0 and amp[ix,iy] > 0:
-                        self.nsamp += 1
-                        value = [rad[ix,iy]*np.sin(phi[ix,iy]),
-                                 rad[ix,iy]*np.cos(phi[ix,iy])-self.bmp[1],
-                                 ix,iy,
-                                 dev[ix,iy]]
-                        self.values.append(value)
-        self.built = True
-        return
-
+    def add_point(self,value):
+        self.values.append(value)
+        self.nsamp += 1
     
     def solve(self):
-        if not self.built:
-            raise Exception("Cannot solve a panel that is not built")
+        # if not self.built:
+        #     raise Exception("Cannot solve a panel that is not built")
         # Calls apropriated solving function based on panel type The
         # parameters computed here are to be used in the future to
         # compute the actual screw adjustments.
@@ -392,16 +324,90 @@ class Panel:
         print("{0:20s}={1:8.5f}".format("zeta",self.zeta))
         print("{0:20s}={1:8.5f}, {2:8.5f}".format("bmp",*self.bmp))
         print("{0:20s}={1:8.5f}, {2:8.5f}".format("tmp",*self.tmp))
-        if (self.built):
-            print("{0:20s}={1:8d}".format("nsamp",self.nsamp))
-            if verbose:
-                for isamp in range(self.nsamp):
-                    strg = "{0:20s}=".format("samp{0:d}".format(isamp))
-                    for val in self.values[isamp]:
-                        strg+= str(val)+", "
-                    print(strg)
+        print("{0:20s}={1:8d}".format("nsamp",self.nsamp))
+        if verbose:
+            for isamp in range(self.nsamp):
+                strg = "{0:20s}=".format("samp{0:d}".format(isamp))
+                for val in self.values[isamp]:
+                    strg+= str(val)+", "
+                print(strg)
         print()
-        
+
+
+    # Obsolete routines
+    def compute_points(self,amp,dev,xaxis,yaxis):
+        # Most computationally intensive routine so far.  This
+        # routines loops over points potentially inside a panel and
+        # checks wather they are inside the panel or not. If point is
+        # inside the panel store its x and y coordinates, its ix and
+        # iy indexes as well as its deviation
+        inc = 15.0 / amp.shape[0]
+        nsamp = 0
+        ycoor = self.bmp[1]
+        values = []
+        # Loop over potential y coordinates
+        while (ycoor<=self.tmp[1]):
+            deltax = self.bmp[0]+(self.tmp[0]-self.bmp[0])*(ycoor-self.bmp[1])/(self.tmp[1]-self.bmp[1])
+            xcoor = -deltax
+            # loop over potential x coordinates
+            while (xcoor<=deltax):
+                phi1 = np.arctan2 (xcoor, ycoor)
+                phipoint = phi1 + self.zeta
+                radpoint = np.sqrt(xcoor**2 + ycoor**2)
+                xpoint = radpoint * np.sin(phipoint)
+                ypoint = radpoint * np.cos(phipoint)
+                xint = round(xaxis.coor_to_idx(xpoint))
+                yint = round(yaxis.coor_to_idx(ypoint))
+                #    checks :
+                #    a. is this point truly
+                #    within the panel?
+                xpoint = xaxis.idx_to_coor(xint)
+                ypoint = yaxis.idx_to_coor(xint)
+                radpoint = np.sqrt(xpoint**2 + ypoint**2)
+                phipoint = np.arctan2 (xpoint, ypoint)
+                while (phipoint<0.):
+                    phipoint += 2.0*np.pi
+                #    b.  have we used this point
+                if (amp[xint,yint]>0 and self.is_inside(radpoint,phipoint)):
+                    if (dev[xint,yint] != 0.0):
+                        nsamp += 1
+                        #    set up the parameters for the
+                        #    panel solution -- locate each
+                        #    point on the reference panel
+                        phi1 = phipoint - self.zeta
+                        value = [radpoint*np.sin(phi1),
+                                 radpoint*np.cos(phi1)-self.bmp[1],
+                                 xint,yint,
+                                 dev[xint,yint]]
+                        values.append(value)
+                        
+                xcoor = xcoor + inc
+                
+            ycoor = ycoor + inc
+
+        self.nsamp  = nsamp
+        self.values = values
+        self.built  = True
+        return
+
+
+    def compute_points_new(self,amp,dev,rad,phi):
+        dmax = -1000
+        dmin = 1000
+        for iy in range(rad.shape[0]):
+            for ix in range(rad.shape[0]):
+                x = rad[ix,iy]*np.sin(phi[ix,iy])
+                y = rad[ix,iy]*np.cos(phi[ix,iy])
+                if self.is_inside(rad[ix,iy],phi[ix,iy]): 
+                    if dev[ix,iy] > 0 and amp[ix,iy] > 0:
+                        self.nsamp += 1
+                        value = [x,
+                                 y-self.bmp[1],
+                                 ix,iy,
+                                 dev[ix,iy]]
+                        self.values.append(value)
+        return
+
         
 class Ring:
     # Class created just for hierarchical pourposes, irrelevant if
@@ -435,6 +441,14 @@ class Ring:
             panel = Panel(self.kind,self.angle,ipanel,self.inrad,self.ourad,
                           self.bmp,self.tmp)
             panel.compute_points_new(amp,dev,rad,phi)
+            self.panels.append(panel)
+
+    def create_panels_lite(self,amp,dev,rad,phi):
+        # Creates and computes the point inside each panel of the ring
+        self.panels = []
+        for ipanel in range(self.npanel):
+            panel = Panel(self.kind,self.angle,ipanel,self.inrad,self.ourad,
+                          self.bmp,self.tmp)
             self.panels.append(panel)
 
             
@@ -480,7 +494,7 @@ class Antenna_Surface:
         self.yaxis = Linear_Axis(self.npix,self.amphead["CRPIX2"],
                                  self.amphead["CRVAL2"],self.amphead["CDELT2"])
         self._build_polar()
-
+        self._build_panels()
 
         
     def _read_images(self):
@@ -528,33 +542,33 @@ class Antenna_Surface:
             for ix in range(self.npix):
                 xcoor = self.xaxis.idx_to_coor(ix)
                 self.rad[ix,iy] = np.sqrt(xcoor**2+ycoor**2)
-                self.phi[ix,iy] = np.arctan2(xcoor,ycoor)
+                self.phi[ix,iy] = np.arctan2(ycoor,xcoor)+np.pi/2
                 if self.phi[ix,iy]<0:
-                    self.phi[ix,iy] +=2*np.pi
+                    self.phi[ix,iy] += 2*np.pi
 
 
-    def build_panels(self):
-        # Loops over rings so rings can initialize and compute the
-        # points inside their panels
+    def _build_panels(self):
         self.rings = []
         for iring in range(self.nrings):
-            ring = Ring(self.panelkind,self.npanel[iring],self.inrad[iring],self.ourad[iring])
-            ring.create_panels(self.amp,self.dev,self.xaxis,self.yaxis)
+            ring = Ring(self.panelkind,self.npanel[iring],
+                        self.inrad[iring],self.ourad[iring])
+            ring.create_panels_lite(self.amp,self.dev,self.rad,self.phi)
             self.rings.append(ring)
         return
 
-        
-    def build_panels_new(self):
-        # Loops over rings so rings can initialize and compute the
-        # points inside their panels
-        self.rings = []
-        for iring in range(self.nrings):
-            ring = Ring(self.panelkind,self.npanel[iring],self.inrad[iring],self.ourad[iring])
-            ring.create_panels_new(self.amp,self.dev,self.rad,self.phi)
-            self.rings.append(ring)
-        return
 
-        
+    def compile_panel_points(self):
+        for iy in range(self.npix):
+            for ix in range(self.npix):
+                if not np.isnan(self.dev[ix,iy]) and self.amp[ix,iy] > 0:
+                    xc = self.xaxis.idx_to_coor(ix)
+                    yc = self.yaxis.idx_to_coor(iy)
+                    for ring in self.rings:
+                        for panel in ring.panels:
+                            if panel.is_inside(self.rad[ix,iy],self.phi[ix,iy]):
+                                panel.add_point([xc,yc,ix,iy,self.dev[ix,iy]])
+
+                                
     def gains(self,wavel):
         # Compute the actual and theoretical gains for the current
         # antenna surface. What is the unit for the wavelength, cm or mm?
@@ -623,19 +637,10 @@ class Antenna_Surface:
             for panel in ring.panels:
                 if (panel.solved):
                     panel.get_corrections()
-                    nbad = 0
                     for ipnt in range(len(panel.corr)):
-                        if panel.corr[ipnt] > 10:
-                            nbad +=1
                         val = panel.values[ipnt]
-                        ix,iy = int(val[0]),int(val[1])
+                        ix,iy = int(val[2]),int(val[3])
                         corrected.dev[ix,iy] -= panel.corr[ipnt]
-                    if nbad > 0:
-                        print("**************************************************")
-                        print("ring :",iring)
-                        print("panel:",panel.ipanel)
-                        print("nbad :",nbad)
-                        print("nsamp:",panel.nsamp)
                     
         return corrected
 
@@ -650,7 +655,7 @@ class Antenna_Surface:
             print()
 
 
-    def plot_deviations(self,panels=True):
+    def plot_deviations(self):
         fig, ax = plt.subplots()
         ax.set_title('Antenna Surface')
         # set the limits of the plot to the limits of the data
@@ -658,27 +663,51 @@ class Antenna_Surface:
         xmax = self.xaxis.idx_to_coor(self.xaxis.n-0.5)
         ymin = self.yaxis.idx_to_coor(-0.5)
         ymax = self.yaxis.idx_to_coor(self.yaxis.n-0.5)
-        plt.imshow(self.dev, cmap='viridis', interpolation='nearest',
-                   extent=[xmin,xmax,ymin,ymax])
+        plt.imshow(self.dev.T, cmap='viridis', interpolation='nearest',
+                   extent=[xmin,xmax,ymax,ymin])
         plt.colorbar(label="Deviation [mm]")
         plt.xlabel("X axis [m]")
         plt.ylabel("Y axis [m]")
-        if panels:
-            for ring in self.rings:
-                inrad = plt.Circle((0, 0), ring.inrad, color='black',fill=False)
-                ourad = plt.Circle((0, 0), ring.ourad, color='black',fill=False)
-                ax.add_patch(inrad)
-                ax.add_patch(ourad)
-                for panel in ring.panels:
-                    x1 = panel.inrad*np.sin(panel.theta1)
-                    y1 = panel.inrad*np.cos(panel.theta1)
-                    x2 = panel.ourad*np.sin(panel.theta1)
-                    y2 = panel.ourad*np.cos(panel.theta1)
-                    ax.plot([x1, x2],[y1, y2], ls='-',color='black',marker = None)
-                    scale = 0.05
-                    rt = (panel.inrad+panel.ourad)/2
-                    xt = rt*np.sin(panel.zeta)
-                    yt = rt*np.cos(panel.zeta)
-                    ax.text(xt,yt,str(panel.ipanel),fontsize=5)
+        for ring in self.rings:
+            inrad = plt.Circle((0, 0), ring.inrad, color='black',fill=False)
+            ourad = plt.Circle((0, 0), ring.ourad, color='black',fill=False)
+            ax.add_patch(inrad)
+            ax.add_patch(ourad)
+            for panel in ring.panels:
+                x1 = panel.inrad*np.sin(-panel.theta1-np.pi)
+                y1 = panel.inrad*np.cos(-panel.theta1-np.pi)
+                x2 = panel.ourad*np.sin(-panel.theta1-np.pi)
+                y2 = panel.ourad*np.cos(-panel.theta1-np.pi)
+                ax.plot([x1, x2],[y1, y2], ls='-',color='black',marker = None)
+                scale = 0.05
+                rt = (panel.inrad+panel.ourad)/2
+                xt = rt*np.sin(-panel.zeta-np.pi)
+                yt = rt*np.cos(-panel.zeta-np.pi)
+                ax.text(xt,yt,str(panel.ipanel),fontsize=5)
         plt.show()
+
+
+    # Obsolete routines
+
+    def build_panels(self):
+        # Loops over rings so rings can initialize and compute the
+        # points inside their panels
+        self.rings = []
+        for iring in range(self.nrings):
+            ring = Ring(self.panelkind,self.npanel[iring],self.inrad[iring],self.ourad[iring])
+            ring.create_panels(self.amp,self.dev,self.xaxis,self.yaxis)
+            self.rings.append(ring)
+        return
+
         
+    def build_panels_new(self):
+        # Loops over rings so rings can initialize and compute the
+        # points inside their panels
+        self.rings = []
+        for iring in range(self.nrings):
+            ring = Ring(self.panelkind,self.npanel[iring],self.inrad[iring],self.ourad[iring])
+            ring.create_panels_new(self.amp,self.dev,self.rad,self.phi)
+            self.rings.append(ring)
+        return
+
+
