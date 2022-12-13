@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from astropy.io import fits
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 lnbr = '\n'
 
@@ -345,8 +346,8 @@ class Antenna_Surface:
         self.ampfile = amp
         self.devfile = dev
         self._read_images()
+        self.corr = None
         
-        self.rms   = np.nan
         # Is this really how to compute this?
         self.reso  = self.diam/npoint
 
@@ -397,9 +398,9 @@ class Antenna_Surface:
         self.rad = np.zeros([self.npix,self.npix])
         self.phi = np.zeros([self.npix,self.npix])
         for iy in range(self.npix):
-            ycoor = self.yaxis.idx_to_coor(iy)
+            ycoor = self.yaxis.idx_to_coor(iy+0.5)
             for ix in range(self.npix):
-                xcoor = self.xaxis.idx_to_coor(ix)
+                xcoor = self.xaxis.idx_to_coor(ix+0.5)
                 self.rad[ix,iy] = np.sqrt(xcoor**2+ycoor**2)
                 self.phi[ix,iy] = np.arctan2(ycoor,xcoor)+np.pi/2
                 if self.phi[ix,iy]<0:
@@ -429,6 +430,15 @@ class Antenna_Surface:
 
                                 
     def gains(self,wavel):
+        self.ingains = self._gains_array(wavel,self.dev,self.amp)
+        if not self.corr is None:
+            self.ougains = self._gains_array(wavel,self.corr,self.amp)
+            return self.ingains, self.ougains
+        else:
+            return self.ingains
+
+        
+    def _gains_array(self,wavel,arr,mask):
         # Compute the actual and theoretical gains for the current
         # antenna surface. What is the unit for the wavelength, cm or mm?
         forpi = 4.0*np.pi
@@ -441,11 +451,11 @@ class Antenna_Surface:
         nsamp    = 0
         #    convert surface error to phase
         #    and compute gain loss
-        for iy in range(self.dev.shape[1]): 
-            for ix in range(self.dev.shape[0]):
-                if self.amp[ix,iy]>0 and self.rad[ix,iy]<self.diam/2 and not np.isnan(self.dev[ix,iy]):
+        for iy in range(self.npix): 
+            for ix in range(self.npix):
+                if mask[ix,iy]>0 and self.rad[ix,iy]<self.diam/2 and not np.isnan(arr[ix,iy]):
                     quo = self.rad[ix,iy] / (2.*self.focus)
-                    phase     = self.dev[ix,iy]*forpi/(np.sqrt(1.+quo*quo)*wavel)
+                    phase     = arr[ix,iy]*forpi/(np.sqrt(1.+quo*quo)*wavel)
                     sumrad   += np.cos(phase)
                     sumtheta += np.sin(phase)
                     nsamp    += 1              
@@ -462,24 +472,17 @@ class Antenna_Surface:
         return gain,thgain
 
     
-    def get_rms (self):
+    def get_rms(self):
         # Compute the RMS of the antenna surface
-        rms   = 0.0
-        nsamp = 0.0
-        for iy in range(self.dev.shape[1]): 
-            for ix in range(self.dev.shape[0]):
-                if self.amp[ix,iy]>0 and self.rad[ix,iy]<self.diam/2 and not np.isnan(self.dev[ix,iy]):
-                    rms   += self.dev[ix,iy]**2
-                    nsamp += 1
-                    
-        if (nsamp<=0):
-            raise Exception("Antenna is blanked")
-        rms = np.sqrt(rms/nsamp)
-        self.rms = rms
-        return rms
+        self.inrms = np.sqrt(np.nanmean(self.dev**2))
+        if not self.corr is None:
+            self.ourms = np.sqrt(np.nanmean(self.corr**2))
+            return self.inrms, self.ourms
+        else:
+            return self.inrms
 
     
-    def fit_adjustments(self):
+    def fit_surface(self):
         # loops over the rings so that they can loop over the panels
         # to compute the adjustments needed
         for iring in range(self.nrings):
@@ -488,8 +491,7 @@ class Antenna_Surface:
 
 
     def correct_surface(self):
-        npoint = self.diam/self.reso
-        corrected = Antenna_Surface(self.ampfile,self.devfile,npoint,self.telescope)
+        self.corr = np.copy(self.dev)
         iring = 0
         for ring in self.rings:
             iring += 1
@@ -499,10 +501,8 @@ class Antenna_Surface:
                     for ipnt in range(len(panel.corr)):
                         val = panel.values[ipnt]
                         ix,iy = int(val[2]),int(val[3])
-                        corrected.dev[ix,iy] -= panel.corr[ipnt]
-                    
-        return corrected
-
+                        self.corr[ix,iy] -= panel.corr[ipnt]
+        
     
     def print_misc(self):
         iring = 0
@@ -514,19 +514,41 @@ class Antenna_Surface:
             print()
 
 
-    def plot_deviations(self):
-        fig, ax = plt.subplots()
-        ax.set_title('Antenna Surface')
+    def plot_surface(self,filename=None):
+        vmin,vmax = np.nanmin(self.dev),np.nanmax(self.dev)
+        rms = self.get_rms()
+        if self.corr is None:
+            fig, ax = plt.subplots()
+            title = "Before correction\nRMS = {0:8.5} mm".format(rms)
+            self._plot_surface(self.dev,title,fig,ax,vmin,vmax)
+        else:
+            fig, ax = plt.subplots(1,2,figsize=[10,5])
+            title = "Before correction\nRMS = {0:.3} mm".format(rms[0])
+            self._plot_surface(self.dev,title,fig,ax[0],vmin,vmax)
+            title = "After correction\nRMS = {0:.3} mm".format(rms[1])
+            self._plot_surface(self.corr,title,fig,ax[1],vmin,vmax)
+        fig.suptitle("Antenna Surface")
+        fig.tight_layout()
+        if (filename is None):
+            plt.show()
+        else:
+            plt.savefig(filename)
+
+            
+    def _plot_surface(self,data,title,fig,ax,vmin,vmax):
+        ax.set_title(title)
         # set the limits of the plot to the limits of the data
         xmin = self.xaxis.idx_to_coor(-0.5)
         xmax = self.xaxis.idx_to_coor(self.xaxis.n-0.5)
         ymin = self.yaxis.idx_to_coor(-0.5)
         ymax = self.yaxis.idx_to_coor(self.yaxis.n-0.5)
-        plt.imshow(self.dev.T, cmap='viridis', interpolation='nearest',
-                   extent=[xmin,xmax,ymax,ymin])
-        plt.colorbar(label="Deviation [mm]")
-        plt.xlabel("X axis [m]")
-        plt.ylabel("Y axis [m]")
+        im   = ax.imshow(data.T, cmap='viridis', interpolation='nearest',
+                         extent=[xmin,xmax,ymax,ymin], vmin=vmin,vmax=vmax)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        fig.colorbar(im, label="Deviation [mm]", cax=cax)    
+        ax.set_xlabel("X axis [m]")
+        ax.set_ylabel("Y axis [m]")
         for ring in self.rings:
             inrad = plt.Circle((0, 0), ring.inrad, color='black',fill=False)
             ourad = plt.Circle((0, 0), ring.ourad, color='black',fill=False)
@@ -543,11 +565,12 @@ class Antenna_Surface:
                 xt = rt*np.sin(-panel.zeta-np.pi)
                 yt = rt*np.cos(-panel.zeta-np.pi)
                 ax.text(xt,yt,str(panel.ipanel),fontsize=5)
-        plt.show()
 
 
-    def export_surface(self,filename):
-        hdu = fits.PrimaryHDU(self.dev)
+    def export_corrected(self,filename):
+        if self.corr is None:
+            raise Exception("Cannot export corrected surface")
+        hdu = fits.PrimaryHDU(self.corr)
         hdu.header = self.devhead
         hdu.header["ORIGIN"] = 'Astrohack PANEL'
         hdu.writeto(filename, overwrite=True)
