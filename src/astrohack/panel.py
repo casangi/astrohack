@@ -2,6 +2,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from astropy.io import fits
 
+lnbr = '\n'
+
 # static methods not linked to any specific class
 def gauss_solver(system):
     # This is actually a simple matrix inversion
@@ -127,6 +129,23 @@ class Panel:
         self.solved = False
         self.nsamp = 0
         self.values = []
+        self.screws = np.ndarray([4,2])
+        self.screws[0,:] = -bmp[0],0.0
+        self.screws[1,:] =  bmp[0],0.0
+        self.screws[2,:] = -tmp[0],tmp[1]-bmp[1]
+        self.screws[3,:] =  tmp[0],tmp[1]-bmp[1]
+
+        if self.kind == "flexible":
+            self.solve      = self._solve_flexi
+            self.corr_point = self._corr_point_flexi
+        elif self.kind == "rigid":
+            self.solve      = self._solve_rigid
+            self.corr_point = self._corr_point_rigi
+        elif self.kind == "single":
+            self.solve      = self._solve_single
+            self.corr_point = self._corr_point_single
+        else:
+            raise Exception("Unknown panel kind: ",self.kind)
 
         
     def is_inside(self,rad,phi):
@@ -138,28 +157,9 @@ class Panel:
 
     
     def add_point(self,value):
+        value[1] -= self.bmp[1]
         self.values.append(value)
         self.nsamp += 1
-    
-    def solve(self):
-        # if not self.built:
-        #     raise Exception("Cannot solve a panel that is not built")
-        # Calls apropriated solving function based on panel type The
-        # parameters computed here are to be used in the future to
-        # compute the actual screw adjustments.
-        #
-        try:
-            if self.kind == "flexible":
-                self._solve_flexi()
-            elif self.kind == "rigid":
-                self._solve_rigid()
-            elif self.kind == "single":
-                self._solve_single()
-            else:
-                raise Exception("Don't know how to solve panel of kind: ",self.kind)
-        except:
-            self.print_misc(verbose=True)
-        return
 
     
     def _solve_flexi(self):
@@ -261,58 +261,51 @@ class Panel:
     def get_corrections(self):
         if not self.solved:
             raise Exception("Cannot correct a panel that is not solved")
-        # Flexible VLA like panel
-        if self.kind == "flexible":
-            self._get_corr_flexi()
-        # Rigid but can be tilted
-        elif self.kind == "rigid":
-            self._get_corr_rigid()
-        # Rigid and can only be moved vertically
-        elif self.kind == "single":
-            self._get_corr_single()
-        else:
-            raise Exception("Don't know how to solve panel of kind: ",self.kind)
-
-        
-    def _get_corr_flexi(self):
-        self.corr = np.ndarray(len(self.values))
-        coef = np.ndarray(4)
-        icorr = 0
-        for val in self.values:
-            xcoor,ycoor = val[0:2]
-            corrval = 0
-            fac   = self.bmp[0]+ycoor*(self.tmp[0]-self.bmp[0])/self.tmp[1]
-            coef[0] = (self.tmp[1]-ycoor) * (1.-xcoor/fac) / (2.0*self.tmp[1])
-            coef[1] = ycoor * (1.-xcoor/fac) / (2.0*self.tmp[1])
-            coef[2] = (self.tmp[1]-ycoor) * (1.+xcoor/fac) / (2.0*self.tmp[1])
-            coef[3] = ycoor * (1.+xcoor/fac) / (2.0*self.tmp[1])
-            for ipar in range(len(self.par)):
-                corrval += coef[ipar]*self.par[ipar]
-            self.corr[icorr] = corrval
-            icorr+=1
-        return
-
-
-    def _get_corr_rigid(self):
         self.corr = np.ndarray(len(self.values))
         icorr = 0
         for val in self.values:
-            corrval = val[0]*self.par[0] + val[1]*self.par[1] + self.par[2]
-            self.corr[icorr] = corrval
+            self.corr[icorr] = self.corr_point(val[0],val[1])
             icorr+=1
-        return
-
-
-    def _get_corr_single(self):
-        self.corr = np.ndarray(len(self.values))
-        icorr = 0
-        for val in self.values:
-            corrval = self.par[0]
-            self.corr[icorr] = corrval
-            icorr+=1
-        return
+        return          
 
     
+    def _corr_point_flexi(self,xcoor,ycoor):
+        coef = np.ndarray(4)
+        corrval = 0
+        fac   = self.bmp[0]+ycoor*(self.tmp[0]-self.bmp[0])/self.tmp[1]
+        coef[0] = (self.tmp[1]-ycoor) * (1.-xcoor/fac) / (2.0*self.tmp[1])
+        coef[1] = ycoor * (1.-xcoor/fac) / (2.0*self.tmp[1])
+        coef[2] = (self.tmp[1]-ycoor) * (1.+xcoor/fac) / (2.0*self.tmp[1])
+        coef[3] = ycoor * (1.+xcoor/fac) / (2.0*self.tmp[1])
+        for ipar in range(len(self.par)):
+            corrval += coef[ipar]*self.par[ipar]
+        return corrval
+
+    
+    def _corr_point_rigid(self,xcoor,ycoor):
+        return xcoor*self.par[0] + ycoor*self.par[1] + self.par[2]
+
+
+    def _corr_point_single(self,xcoor,ycoor):
+        return self.par[0]
+
+    
+    def export_adjustments(self, unit='mm', screen=False):
+        if unit == 'mm':
+            fac = 1.0
+        elif unit == 'miliinches':
+            fac = 1000.0/25.4
+        else:
+            raise Exception("Unknown unit: "+unit)
+        
+        string = '{0:8d}'.format(self.ipanel)
+        for screw in self.screws[:,]:
+            string += ' {0:10.5f}'.format(fac*self.corr_point(*screw))
+        if screen:
+            print(string)
+        return string
+
+
     def print_misc(self,verbose=False):
         print("########################################")
         print("{0:20s}={1:8d}".format("ipanel",self.ipanel))
@@ -510,9 +503,7 @@ class Antenna_Surface:
     # Other known telescopes should be included here, ALMA, ngVLA
     def _init_vla(self):
         # Initializes surfaces according to VLA antenna parameters
-        # self.panelkind = "flexible"
-        # self.panelkind = "rigid"
-        self.panelkind = "single"
+        self.panelkind = "flexible"
         self.telescope = "VLA"
         self.diam      = 25.0  # meters
         self.focus     = 8.8   # meters
@@ -524,7 +515,7 @@ class Antenna_Surface:
         
     def _init_vlba(self):
         # Initializes surfaces according to VLBA antenna parameters
-        self.panelkind = "unknown"
+        self.panelkind = "flexible"
         self.telescope = "VLBA"
         self.diam      = 25.0  # meters
         self.focus     = 8.75  # meters
@@ -686,6 +677,34 @@ class Antenna_Surface:
                 ax.text(xt,yt,str(panel.ipanel),fontsize=5)
         plt.show()
 
+
+    def export_surface(self,filename):
+        hdu = fits.PrimaryHDU(self.dev)
+        hdu.header = self.devhead
+        hdu.header["ORIGIN"] = 'Astrohack PANEL'
+        hdu.writeto(filename, overwrite=True)
+        return
+
+
+    def export_screw_adjustments(self,filename,unit='mm'):
+        spc = ' '
+        outfile = 'Screw adjustments for {0:s} {1:s} antenna\n'.format(
+            self.telescope, self.amphead['telescop'])
+        outfile += 'Adjustments are in '+unit+lnbr
+        outfile += 2*lnbr
+        outfile += 12*spc+"{0:22s}{1:22s}".format('Inner Edge','Outer Edge')+lnbr
+        outfile += 12*spc+2*"{0:11s}{1:11s}".format('left','right')+lnbr
+        for iring in range(len(self.rings)):
+            outfile += 50*'#'+lnbr
+            outfile += "Ring "+str(iring)+":\n"
+            for panel in self.rings[iring].panels:
+                outfile += panel.export_adjustments(unit=unit)+lnbr
+            outfile += lnbr
+        lefile = open(filename,'w')
+        lefile.write(outfile)
+        lefile.close()
+            
+            
 
     # Obsolete routines
 
