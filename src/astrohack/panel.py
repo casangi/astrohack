@@ -5,63 +5,6 @@ from astropy.io import fits
 lnbr = '\n'
 
 # static methods not linked to any specific class
-def gauss_solver(system):
-    # This is actually a simple matrix inversion
-    # can be replaced by a simple call to np.linalg.inv
-    shape = system.shape
-    if shape[0] != shape[1]:
-        raise Exception("Matrix is not square")
-    size = shape[0]
-    pivot = np.zeros(size)
-    rowidx = np.zeros(size)
-    colidx = np.zeros(size)
-
-    # Main diagonalization Loop
-    for iidx in range(size):
-        big = 0.
-        for jidx in range(size):
-            if pivot[jidx] != 1:
-                for kidx in range(size):
-                    if pivot[kidx] == 0:
-                        if abs(system[jidx,kidx]) >= big:
-                            big  = abs(system[jidx,kidx])
-                            irow = jidx
-                            icol = kidx
-                    elif pivot[kidx] > 1:
-                        raise Exception("matrix is singular")
-
-        pivot[icol] += 1
-        if irow != icol:
-            for jidx in range(size):
-                copy = system[irow,jidx]
-                system[irow,jidx] = system[icol,jidx]
-                system[icol,jidx] = copy
-
-        rowidx[iidx] = irow
-        colidx[iidx] = icol
-        if system[icol,icol] == 0:
-            raise Exception("matrix is singular")
-            
-        pivinv = 1.0/system[icol,icol]
-        system[icol,:] *= pivinv
-
-        for jidx in range(size):
-            if jidx != icol:
-                copy = system[jidx,icol]
-                system[jidx,icol] = 0.
-                system[jidx,:] -= system[icol,:]*copy
-    
-    # Final test on diagonalization
-    for iidx in range(size-1,-1,-1):
-        if rowidx[iidx] != colidx[iidx]:
-            for kidx in range(size):
-                copy = system[kidx,rowidx[iidx]]
-                system[kidx,rowidx[iidx]] = system[kidx,colidx[iidx]]
-                system[kidx,colidx[iidx]] = copy
-
-    return system
-
-
 def gauss_numpy(system,vector):
     inverse = np.linalg.inv(system)
     return np.dot(inverse,vector)
@@ -325,81 +268,6 @@ class Panel:
                     strg+= str(val)+", "
                 print(strg)
         print()
-
-
-    # Obsolete routines
-    def compute_points(self,amp,dev,xaxis,yaxis):
-        # Most computationally intensive routine so far.  This
-        # routines loops over points potentially inside a panel and
-        # checks wather they are inside the panel or not. If point is
-        # inside the panel store its x and y coordinates, its ix and
-        # iy indexes as well as its deviation
-        inc = 15.0 / amp.shape[0]
-        nsamp = 0
-        ycoor = self.bmp[1]
-        values = []
-        # Loop over potential y coordinates
-        while (ycoor<=self.tmp[1]):
-            deltax = self.bmp[0]+(self.tmp[0]-self.bmp[0])*(ycoor-self.bmp[1])/(self.tmp[1]-self.bmp[1])
-            xcoor = -deltax
-            # loop over potential x coordinates
-            while (xcoor<=deltax):
-                phi1 = np.arctan2 (xcoor, ycoor)
-                phipoint = phi1 + self.zeta
-                radpoint = np.sqrt(xcoor**2 + ycoor**2)
-                xpoint = radpoint * np.sin(phipoint)
-                ypoint = radpoint * np.cos(phipoint)
-                xint = round(xaxis.coor_to_idx(xpoint))
-                yint = round(yaxis.coor_to_idx(ypoint))
-                #    checks :
-                #    a. is this point truly
-                #    within the panel?
-                xpoint = xaxis.idx_to_coor(xint)
-                ypoint = yaxis.idx_to_coor(xint)
-                radpoint = np.sqrt(xpoint**2 + ypoint**2)
-                phipoint = np.arctan2 (xpoint, ypoint)
-                while (phipoint<0.):
-                    phipoint += 2.0*np.pi
-                #    b.  have we used this point
-                if (amp[xint,yint]>0 and self.is_inside(radpoint,phipoint)):
-                    if (dev[xint,yint] != 0.0):
-                        nsamp += 1
-                        #    set up the parameters for the
-                        #    panel solution -- locate each
-                        #    point on the reference panel
-                        phi1 = phipoint - self.zeta
-                        value = [radpoint*np.sin(phi1),
-                                 radpoint*np.cos(phi1)-self.bmp[1],
-                                 xint,yint,
-                                 dev[xint,yint]]
-                        values.append(value)
-                        
-                xcoor = xcoor + inc
-                
-            ycoor = ycoor + inc
-
-        self.nsamp  = nsamp
-        self.values = values
-        self.built  = True
-        return
-
-
-    def compute_points_new(self,amp,dev,rad,phi):
-        dmax = -1000
-        dmin = 1000
-        for iy in range(rad.shape[0]):
-            for ix in range(rad.shape[0]):
-                x = rad[ix,iy]*np.sin(phi[ix,iy])
-                y = rad[ix,iy]*np.cos(phi[ix,iy])
-                if self.is_inside(rad[ix,iy],phi[ix,iy]): 
-                    if dev[ix,iy] > 0 and amp[ix,iy] > 0:
-                        self.nsamp += 1
-                        value = [x,
-                                 y-self.bmp[1],
-                                 ix,iy,
-                                 dev[ix,iy]]
-                        self.values.append(value)
-        return
 
         
 class Ring:
@@ -705,28 +573,4 @@ class Antenna_Surface:
         lefile.close()
             
             
-
-    # Obsolete routines
-
-    def build_panels(self):
-        # Loops over rings so rings can initialize and compute the
-        # points inside their panels
-        self.rings = []
-        for iring in range(self.nrings):
-            ring = Ring(self.panelkind,self.npanel[iring],self.inrad[iring],self.ourad[iring])
-            ring.create_panels(self.amp,self.dev,self.xaxis,self.yaxis)
-            self.rings.append(ring)
-        return
-
-        
-    def build_panels_new(self):
-        # Loops over rings so rings can initialize and compute the
-        # points inside their panels
-        self.rings = []
-        for iring in range(self.nrings):
-            ring = Ring(self.panelkind,self.npanel[iring],self.inrad[iring],self.ourad[iring])
-            ring.create_panels_new(self.amp,self.dev,self.rad,self.phi)
-            self.rings.append(ring)
-        return
-
 
