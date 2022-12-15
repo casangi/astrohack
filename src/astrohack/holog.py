@@ -35,25 +35,22 @@ def _holog_chunk(holog_chunk_params):
 
         for ddi_index, ddi in enumerate(ant_data_dict.keys()):
                 for scan_index, scan in enumerate(ant_data_dict[ddi].keys()):
-                        for pol in range(n_pol):
-        
 
-                                # Grid (l, m) points
-                                lm = ant_data_dict[ddi][scan].DIRECTIONAL_COSINES.values[:, np.newaxis, :]
-                                lm = np.tile(lm, (1, n_pol, 1))
+                        # Grid (l, m) points
+                        lm = ant_data_dict[ddi][scan].DIRECTIONAL_COSINES.values[:, np.newaxis, :]
+                        lm = np.tile(lm, (1, n_pol, 1))
         
-                                # VIS values    
-                                vis = ant_data_dict[ddi][scan].VIS.mean(dim='chan').values
-                                time_centroid_index = int(ant_data_dict[ddi][scan].dims['time']*0.5)+1
+                        # VIS values    
+                        vis = ant_data_dict[ddi][scan].VIS.mean(dim='chan').values
+                        time_centroid_index = int(ant_data_dict[ddi][scan].dims['time']*0.5)+1
         
-                                time_centroid.append(ant_data_dict[ddi][scan].coords['time'][time_centroid_index].values)
-                                extent = dims['extent']
+                        time_centroid.append(ant_data_dict[ddi][scan].coords['time'][time_centroid_index].values)
+                        extent = dims['extent']
         
-                                grid_x, grid_y = np.mgrid[-extent:extent:n_points*1j, -extent:extent:n_points*1j]
+                        grid_x, grid_y = np.mgrid[-extent:extent:n_points*1j, -extent:extent:n_points*1j]
         
-                                grid = griddata(lm[:, ddi, :], vis[:, ddi], (grid_x, grid_y), method='nearest')
-                
-                
+                        grid = griddata(lm[:, ddi, :], vis[:, ddi], (grid_x, grid_y), method='nearest')
+                        for pol in range(n_pol):
                                 ant_data_array[scan_index, ddi_index, pol, :, :] = grid
         
 
