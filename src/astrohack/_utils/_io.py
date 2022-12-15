@@ -97,14 +97,15 @@ def _create_hack_meta_data(hack_name, hack_dict):
 
                     # Find the max extent for each antenna, over (ddi, scan) and write the meta data to file.
                     dims = xds.dims
+                    max_vis = np.max(xds.DIRECTIONAL_COSINES.values)
                     data_extent.setdefault(ant, np.array([]))
-                    data_extent[ant] = np.append(data_extent[ant], dims['time'])
+                    data_extent[ant] = np.append(data_extent[ant], max_vis)
                     dims_meta_data.setdefault(ant, {'time': dims['time'], 'pol':dims['pol']})
                 
     # Please forgive me for another loop JW ...
     for ant, values in data_extent.items():
         max_value = np.max(values)
-        max_extent[ant] = {'size':int(max_value/2.)+1, 'time':dims_meta_data[ant]['time'], 'pol':dims_meta_data[ant]['pol']}            
+        max_extent[ant] = {'extent':np.abs(max_value), 'time':dims_meta_data[ant]['time'], 'pol':dims_meta_data[ant]['pol']}            
 
     output_meta_file = "/".join( (hack_name, ".hack_json") )
     output_attr_file = "/".join( (hack_name, ".hack_attr") )
