@@ -27,7 +27,7 @@ def _holog_chunk(holog_chunk_params):
         n_ddi = len(ant_data_dict.keys())
         n_scan = len(ant_data_dict[0].keys())
         n_pol = dims['pol']
-        n_points = int(np.sqrt(dims['time'])+1)
+        n_points = int(np.sqrt(dims['time']))
 
         ant_data_array = np.empty((n_scan, n_ddi, n_pol, n_points, n_points), dtype=np.cdouble)
 
@@ -45,12 +45,18 @@ def _holog_chunk(holog_chunk_params):
                         time_centroid_index = int(ant_data_dict[ddi][scan].dims['time']*0.5)+1
         
                         time_centroid.append(ant_data_dict[ddi][scan].coords['time'][time_centroid_index].values)
-                        extent = dims['extent']
-        
-                        grid_x, grid_y = np.mgrid[-extent:extent:n_points*1j, -extent:extent:n_points*1j]
-        
-                        grid = griddata(lm[:, ddi, :], vis[:, ddi], (grid_x, grid_y), method='nearest')
+                        
                         for pol in range(n_pol):
+                                l_min_extent = np.min(lm[:, pol, 0])
+                                l_max_extent = np.max(lm[:, pol, 0])
+        
+                                m_min_extent = np.min(lm[:, pol, 1])
+                                m_max_extent = np.max(lm[:, pol, 1])
+        
+                                grid_x, grid_y = np.mgrid[l_min_extent:l_max_extent:n_points*1j, m_min_extent:m_max_extent:n_points*1j]
+        
+                                grid = griddata(lm[:, pol, :], vis[:, pol], (grid_x, grid_y), method='nearest')
+                                
                                 ant_data_array[scan_index, ddi_index, pol, :, :] = grid
         
 
