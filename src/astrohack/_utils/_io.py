@@ -141,14 +141,16 @@ def _create_hack_meta_data(hack_name, hack_dict):
                 }
             }            
 
-        output_meta_file = "{name}/{ddi}/{ext}".format(name=hack_name, ddi=ddi, ext=".hack_json")
         output_attr_file = "{name}/{ddi}/{ext}".format(name=hack_name, ddi=ddi, ext=".hack_attr")
-    
-        with open(output_meta_file, "w") as json_file:
-            json.dump(ant_hack_dict, json_file)
 
         with open(output_attr_file, "w") as json_file:
             json.dump(max_extent, json_file)
+    
+    
+    output_meta_file = "{name}/{ext}".format(name=hack_name, ext=".hack_json")
+    with open(output_meta_file, "w") as json_file:
+            json.dump(ant_hack_dict, json_file)
+
 
 def _get_attrs(zarr_obj):
     """get attributes of zarr obj (groups or arrays)

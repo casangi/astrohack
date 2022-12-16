@@ -22,19 +22,16 @@ def _holog_chunk(holog_chunk_params):
         """
         hack, ant_data_dict = load_hack_file('hack.dict', dask_load=False, load_pnt_dict=False, ant_id=27)
 
-        # The ddi here is a hack. I need a better way to do this ... I think it works more generally but I need to think about it after holidays.
-        meta_data = _read_dimensions_meta_data(hack_name='hack.dict', ddi=list(ant_data_dict.keys())[0], ant_id=holog_chunk_params['ant_id'])
-
-        n_ddi = len(ant_data_dict.keys())
-        n_scan = len(ant_data_dict[0].keys())
-        n_pol = meta_data['pol']
-        n_points = int(np.sqrt(meta_data['time']))
-
-        ant_data_array = np.empty((n_scan, n_ddi, n_pol, n_points, n_points), dtype=np.cdouble)
-
-        time_centroid = []
-
         for ddi_index, ddi in enumerate(ant_data_dict.keys()):
+                meta_data = _read_dimensions_meta_data(hack_name='hack.dict', ddi=ddi_index, ant_id=holog_chunk_params['ant_id'])
+
+                n_scan = len(ant_data_dict[ddi_index].keys())
+                n_pol = meta_data['pol']
+                n_points = int(np.sqrt(meta_data['time']))
+
+                ant_data_array = np.empty((n_scan, n_pol, n_points, n_points), dtype=np.cdouble)
+
+                time_centroid = []
                 for scan_index, scan in enumerate(ant_data_dict[ddi].keys()):
 
                         # Grid (l, m) points
@@ -58,24 +55,22 @@ def _holog_chunk(holog_chunk_params):
         
                                 grid = griddata(lm[:, pol, :], vis[:, pol], (grid_x, grid_y), method='nearest')
                                 
-                                ant_data_array[scan_index, ddi_index, pol, :, :] = grid
+                                ant_data_array[scan_index, pol, :, :] = grid
         
 
-        xds = xr.Dataset()
-        xds.assign_coords({
-                'time_centroid': np.array(time_centroid), 
-                'ddi':list(map(int, ant_data_dict.keys())), 
-                'pol':[i for i in range(n_pol)]
-        })
+                xds = xr.Dataset()
+                xds.assign_coords({
+                        'time_centroid': np.array(time_centroid), 
+                        'ddi':list(map(int, ant_data_dict.keys())), 
+                        'pol':[i for i in range(n_pol)]
+                })
 
-        xds['GRID'] = xr.DataArray(ant_data_array, dims=['time-centroid','ddi', 'pol', 'l', 'm'])
+                xds['GRID'] = xr.DataArray(ant_data_array, dims=['time-centroid', 'pol', 'l', 'm'])
 
-        xds.attrs['ant_id'] = holog_chunk_params['ant_id']
-        xds.attrs['time_centroid'] = np.array(time_centroid)
+                xds.attrs['ant_id'] = holog_chunk_params['ant_id']
+                xds.attrs['time_centroid'] = np.array(time_centroid)
 
-        xds.to_zarr(os.path.join(".".join((holog_chunk_params['hack_name'], "holog")) , str(holog_chunk_params['ant_id'])), mode='w', compute=True, consolidated=True)
-        
-
+                xds.to_zarr("{name}.holog/{ant}/{ddi}".format(name=holog_chunk_params['hack_name'], ant=holog_chunk_params['ant_id'], ddi=ddi_index), mode='w', compute=True, consolidated=True)
 
 def holog(hack_name, parallel=True):
         """_summary_
