@@ -22,12 +22,13 @@ def _holog_chunk(holog_chunk_params):
         """
         hack, ant_data_dict = load_hack_file('hack.dict', dask_load=False, load_pnt_dict=False, ant_id=27)
 
-        dims = _read_dimensions_meta_data(hack_name='hack.dict', ant_id=holog_chunk_params['ant_id'])
+        # The ddi here is a hack. I need a better way to do this ... I think it works more generally but I need to think about it after holidays.
+        meta_data = _read_dimensions_meta_data(hack_name='hack.dict', ddi=list(ant_data_dict.keys())[0], ant_id=holog_chunk_params['ant_id'])
 
         n_ddi = len(ant_data_dict.keys())
         n_scan = len(ant_data_dict[0].keys())
-        n_pol = dims['pol']
-        n_points = int(np.sqrt(dims['time']))
+        n_pol = meta_data['pol']
+        n_points = int(np.sqrt(meta_data['time']))
 
         ant_data_array = np.empty((n_scan, n_ddi, n_pol, n_points, n_points), dtype=np.cdouble)
 
@@ -47,11 +48,11 @@ def _holog_chunk(holog_chunk_params):
                         time_centroid.append(ant_data_dict[ddi][scan].coords['time'][time_centroid_index].values)
                         
                         for pol in range(n_pol):
-                                l_min_extent = np.min(lm[:, pol, 0])
-                                l_max_extent = np.max(lm[:, pol, 0])
+                                l_min_extent = meta_data['extent']['l']['min']
+                                l_max_extent = meta_data['extent']['l']['max']
         
-                                m_min_extent = np.min(lm[:, pol, 1])
-                                m_max_extent = np.max(lm[:, pol, 1])
+                                m_min_extent = meta_data['extent']['m']['min']
+                                m_max_extent = meta_data['extent']['m']['max']
         
                                 grid_x, grid_y = np.mgrid[l_min_extent:l_max_extent:n_points*1j, m_min_extent:m_max_extent:n_points*1j]
         

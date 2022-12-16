@@ -22,13 +22,13 @@ from numba.typed import Dict
 from casacore import tables as ctables
 
 from astrohack._utils._parallactic_angle import _calculate_parallactic_angle_chunk
-#from astrohack.dio import load_hack_file
+
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 jit_cache =  False
 
-def _read_dimensions_meta_data(hack_name, ant_id): 
+def _read_dimensions_meta_data(hack_name, ddi, ant_id): 
     """_summary_
 
     Args:
@@ -38,7 +38,7 @@ def _read_dimensions_meta_data(hack_name, ant_id):
     Returns:
         _type_: _description_
     """
-    with open('/'.join( (hack_name, '/.hack_attr') )) as json_file:
+    with open('{name}/{ddi}/{file}'.format(name=hack_name, ddi=ddi, file='/.hack_attr')) as json_file:
         json_dict = json.load(json_file)
         
     return json_dict[str(ant_id)]
@@ -81,41 +81,74 @@ def _create_hack_meta_data(hack_name, hack_dict):
         hack (_type_): _description_
     """
 
-    ant_sub_dict = {}
-    ant_hack_dict = {}
-    data_extent = {}
-    max_extent = {}
-    dims_meta_data = {}
-
+    
     for ddi, scan_dict in hack_dict.items():
         if isinstance(ddi, numbers.Number):
+            ant_sub_dict = {}
+            ant_hack_dict = {}
+            data_extent = {}
+            max_extent = {}
+            dims_meta_data = {}
+            lm_extent = {
+                'l':{
+                    'min':[], 
+                    'max':[]
+                    },
+                'm':{
+                    'min':[], 
+                    'max':[]
+                    }
+            }
+
             for scan, ant_dict in scan_dict.items():
                 for ant, xds in ant_dict.items():
                     ant_sub_dict.setdefault(ddi, {})
                     ant_hack_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
                     ant_sub_dict = {}
 
-                    # Find the max extent for each antenna, over (ddi, scan) and write the meta data to file.
+                    # Find the average (l, m) extent for each antenna, over (ddi, scan) and write the meta data to file.
                     dims = xds.dims
                     #max_vis = np.max(xds.DIRECTIONAL_COSINES.values)
+                    lm_extent['l']['min'].append(np.min(xds.DIRECTIONAL_COSINES.values[:, 0]))
+                    lm_extent['l']['max'].append(np.max(xds.DIRECTIONAL_COSINES.values[:, 0]))
+
+                    lm_extent['m']['min'].append(np.min(xds.DIRECTIONAL_COSINES.values[:, 1]))
+                    lm_extent['m']['max'].append(np.max(xds.DIRECTIONAL_COSINES.values[:, 1]))
                     
                     data_extent.setdefault(ant, np.array([]))
                     data_extent[ant] = np.append(data_extent[ant], dims['time'])
+                    
                     dims_meta_data.setdefault(ant, {'time': dims['time'], 'pol':dims['pol']})
                 
-    # Please forgive me for another loop JW ...
-    for ant, values in data_extent.items():
-        max_value = np.max(values)
-        max_extent[ant] = {'extent':max_value, 'time':dims_meta_data[ant]['time'], 'pol':dims_meta_data[ant]['pol']}            
+        # Please forgive me for another loop JW ...
+        for ant, values in data_extent.items():
+            max_value = np.max(values)
 
-    output_meta_file = "/".join( (hack_name, ".hack_json") )
-    output_attr_file = "/".join( (hack_name, ".hack_attr") )
+            max_extent[ant] = {
+                'n_time':max_value, 
+                'time':dims_meta_data[ant]['time'], 
+                'pol':dims_meta_data[ant]['pol'],
+                'extent':{
+                    'l':{
+                        'min':np.array(lm_extent['l']['min']).mean(),
+                        'max':np.array(lm_extent['l']['max']).mean()
+                    },
+                    'm':{
+                        'min':np.array(lm_extent['m']['min']).mean(),
+                        'max':np.array(lm_extent['m']['max']).mean()
+                    }
+                
+                }
+            }            
+
+        output_meta_file = "{name}/{ddi}/{ext}".format(name=hack_name, ddi=ddi, ext=".hack_json")
+        output_attr_file = "{name}/{ddi}/{ext}".format(name=hack_name, ddi=ddi, ext=".hack_attr")
     
-    with open(output_meta_file, "w") as json_file:
-        json.dump(ant_hack_dict, json_file)
+        with open(output_meta_file, "w") as json_file:
+            json.dump(ant_hack_dict, json_file)
 
-    with open(output_attr_file, "w") as json_file:
-        json.dump(max_extent, json_file)
+        with open(output_attr_file, "w") as json_file:
+            json.dump(max_extent, json_file)
 
 def _get_attrs(zarr_obj):
     """get attributes of zarr obj (groups or arrays)
