@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.patches import Arc
 from astropy.io import fits
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -54,31 +55,31 @@ class Linear_Axis:
         return (coor-self.val)/self.inc +self.ref
 
     
-class Panel:
-    # Main working class that defines and works on panel objects
-    # Currently this class strongly relies on the fact that panels are
-    # sections of a ring of equal angular size, inner and outer radii
+class Ring_Panel:
+    # This class describes and treats panels that are arranged in
+    # rings on the Antenna surface
     
-    def __init__(self,kind,angle,ipanel,inrad,ourad,bmp,tmp):
+    def __init__(self,kind,angle,iring,ipanel,inrad,ourad):
         # Panel initialization
         self.kind   = kind
         self.ipanel = ipanel
+        self.iring  = iring
         self.inrad  = inrad
         self.ourad  = ourad
         self.theta1 = ipanel*angle
         self.theta2 = (ipanel+1)*angle
         self.zeta   = (ipanel+0.5)*angle
-        self.bmp    = bmp
-        self.tmp    = tmp
         self.solved = False
-        self.nsamp = 0
-        self.values = []
+        self.bmp = [inrad*np.sin(angle/2.0),inrad*np.cos(angle/2.0)]
+        self.tmp = [ourad*np.sin(angle/2.0),ourad*np.cos(angle/2.0)]
         self.screws = np.ndarray([4,2])
-        self.screws[0,:] = -bmp[0],0.0
-        self.screws[1,:] =  bmp[0],0.0
-        self.screws[2,:] = -tmp[0],tmp[1]-bmp[1]
-        self.screws[3,:] =  tmp[0],tmp[1]-bmp[1]
-
+        self.screws[0,:] = -self.bmp[0],0.0
+        self.screws[1,:] =  self.bmp[0],0.0
+        self.screws[2,:] = -self.tmp[0],self.tmp[1]-self.bmp[1]
+        self.screws[3,:] =  self.tmp[0],self.tmp[1]-self.bmp[1]
+        self.nsamp = 0
+        self.values = []        
+        
         if self.kind == "flexible":
             self.solve      = self._solve_flexi
             self.corr_point = self._corr_point_flexi
@@ -242,7 +243,7 @@ class Panel:
         else:
             raise Exception("Unknown unit: "+unit)
         
-        string = '{0:8d}'.format(self.ipanel)
+        string = '{0:8d} {1:8d}'.format(self.iring,self.ipanel)
         for screw in self.screws[:,]:
             string += ' {0:10.5f}'.format(fac*self.corr_point(*screw))
         if screen:
@@ -270,93 +271,54 @@ class Panel:
                 print(strg)
         print()
 
-        
-class Ring:
-    # Class created just for hierarchical pourposes, irrelevant if
-    # dish is not circular or panel design is not organized in rings
-    
-    def __init__(self,kind,npanel,inrad,ourad):
-        # Ring initialization
-        self.kind   = kind
-        self.npanel = npanel
-        self.inrad  = inrad
-        self.ourad  = ourad
-        self.angle  = 2.0*np.pi/npanel
-        self.bmp = [inrad*np.sin(self.angle/2.0),inrad*np.cos(self.angle/2.0)]
-        self.tmp = [ourad*np.sin(self.angle/2.0),ourad*np.cos(self.angle/2.0)]
 
-
-    def create_panels(self,amp,dev,xaxis,yaxis):
-        # Creates and computes the point inside each panel of the ring
-        self.panels = []
-        for ipanel in range(self.npanel):
-            panel = Panel(self.kind,self.angle,ipanel,self.inrad,self.ourad,
-                          self.bmp,self.tmp)
-            panel.compute_points(amp,dev,xaxis,yaxis)
-            self.panels.append(panel)
+    def plot(self,ax):
+        angle1 = -self.theta1-np.pi
+        center = -self.zeta-np.pi
+        x1 = self.inrad*np.sin(angle1)
+        y1 = self.inrad*np.cos(angle1)
+        x2 = self.ourad*np.sin(angle1)
+        y2 = self.ourad*np.cos(angle1)
+        ax.plot([x1, x2],[y1, y2], ls='-',color='black',marker = None)
+        scale = 0.05
+        rt = (self.inrad+self.ourad)/2
+        xt = rt*np.sin(center)
+        yt = rt*np.cos(center)
+        ax.text(xt,yt,str(self.ipanel),fontsize=5)
+        if self.ipanel == 0:
+            inrad = plt.Circle((0, 0), self.inrad, color='black', fill=False)
+            ourad = plt.Circle((0, 0), self.ourad, color='black', fill=False)
+            ax.add_patch(inrad)
+            ax.add_patch(ourad)   
 
             
-    def create_panels_new(self,amp,dev,rad,phi):
-        # Creates and computes the point inside each panel of the ring
-        self.panels = []
-        for ipanel in range(self.npanel):
-            panel = Panel(self.kind,self.angle,ipanel,self.inrad,self.ourad,
-                          self.bmp,self.tmp)
-            panel.compute_points_new(amp,dev,rad,phi)
-            self.panels.append(panel)
-
-    def create_panels_lite(self,amp,dev,rad,phi):
-        # Creates and computes the point inside each panel of the ring
-        self.panels = []
-        for ipanel in range(self.npanel):
-            panel = Panel(self.kind,self.angle,ipanel,self.inrad,self.ourad,
-                          self.bmp,self.tmp)
-            self.panels.append(panel)
-
-            
-    def solve_panels(self):
-        # Calls the panels to solve their adjustments
-        for ipanel in range(self.npanel):
-            self.panels[ipanel].solve()
-            
-
-    def print_misc(self):
-        if not (self.panels is None):
-            for panel in self.panels:
-                panel.print_misc()
-                print()
-
-
 class Antenna_Surface:
     # Describes the antenna surface properties, as well as being
     # capable of computing the gains and rms over the surface.
-    # Heavily dependent on telescope architecture, currently only
-    # telescopes that have panels arranged in rings can be modeled
-    # here.
+    # Heavily dependent on telescope architecture, Panel geometry to
+    # be created by the specific _init_tel routine
 
     def __init__(self,amp,dev,npoint,telescope):
-        # Initializes antenna surface parameters
+        # Initializes antenna surface parameters    
+        self.ampfile = amp
+        self.devfile = dev
+        self._read_images()
+        
         if telescope == 'VLA':
             self._init_vla()
         elif telescope == 'VLBA':
             self._init_vlba()
         else:
-            raise Exception("VLA is the only know telescope for the moment")
-        
-        self.ampfile = amp
-        self.devfile = dev
-        self._read_images()
+            raise Exception("Unknown telescope: "+telescope)
+
         self.corr = None
+        self.solved = False
         
         # Is this really how to compute this?
         self.reso  = self.diam/npoint
 
-        self.xaxis = Linear_Axis(self.npix,self.amphead["CRPIX1"],
-                                 self.amphead["CRVAL1"],self.amphead["CDELT1"])
-        self.yaxis = Linear_Axis(self.npix,self.amphead["CRPIX2"],
-                                 self.amphead["CRVAL2"],self.amphead["CDELT2"])
-        self._build_polar()
-        self._build_panels()
+        if not self.ringed:
+            raise Exception("General shape panels not yet supported")
 
         
     def _read_images(self):
@@ -366,6 +328,10 @@ class Antenna_Surface:
         if self.devhead['NAXIS1'] != self.amphead['NAXIS1']:
             raise Exception("Amplitude and deviation images have different sizes")
         self.npix = int(self.devhead['NAXIS1'])
+        self.xaxis = Linear_Axis(self.npix,self.amphead["CRPIX1"],
+                                 self.amphead["CRVAL1"],self.amphead["CDELT1"])
+        self.yaxis = Linear_Axis(self.npix,self.amphead["CRPIX2"],
+                                 self.amphead["CRVAL2"],self.amphead["CDELT2"])
         return
     
         
@@ -376,10 +342,13 @@ class Antenna_Surface:
         self.telescope = "VLA"
         self.diam      = 25.0  # meters
         self.focus     = 8.8   # meters
+        self.ringed    = True
         self.nrings    = 6
         self.npanel    = [12,16,24,40,40,40]
         self.inrad     = [1.983, 3.683, 5.563, 7.391, 9.144, 10.87]
         self.ourad     = [3.683, 5.563, 7.391, 9.144, 10.87, 12.5 ]
+        self._build_polar()
+        self._build_ring_panels()
 
         
     def _init_vlba(self):
@@ -388,10 +357,13 @@ class Antenna_Surface:
         self.telescope = "VLBA"
         self.diam      = 25.0  # meters
         self.focus     = 8.75  # meters
+        self.ringed    = True
         self.nrings    = 6
         self.npanel    = [20,20,40,40,40,40]
         self.inrad     = [1.676,3.518,5.423,7.277, 9.081,10.808]
         self.ourad     = [3.518,5.423,7.277,9.081,10.808,12.500]
+        self._build_polar()
+        self._build_ring_panels()
 
 
     def _build_polar(self):
@@ -407,26 +379,33 @@ class Antenna_Surface:
                     self.phi[ix,iy] += 2*np.pi
 
 
-    def _build_panels(self):
-        self.rings = []
+    def _build_ring_panels(self):
+        self.panels = []
         for iring in range(self.nrings):
-            ring = Ring(self.panelkind,self.npanel[iring],
-                        self.inrad[iring],self.ourad[iring])
-            ring.create_panels_lite(self.amp,self.dev,self.rad,self.phi)
-            self.rings.append(ring)
+            angle = 2.0*np.pi/self.npanel[iring]
+            for ipanel in range(self.npanel[iring]):
+                panel = Ring_Panel(self.panelkind, angle, iring,
+                                   ipanel, self.inrad[iring], self.ourad[iring])
+                self.panels.append(panel)
         return
 
 
     def compile_panel_points(self):
         for iy in range(self.npix):
+            yc = self.yaxis.idx_to_coor(iy+0.5)
             for ix in range(self.npix):
                 if not np.isnan(self.dev[ix,iy]) and self.amp[ix,iy] > 0:
-                    xc = self.xaxis.idx_to_coor(ix)
-                    yc = self.yaxis.idx_to_coor(iy)
-                    for ring in self.rings:
-                        for panel in ring.panels:
-                            if panel.is_inside(self.rad[ix,iy],self.phi[ix,iy]):
-                                panel.add_point([xc,yc,ix,iy,self.dev[ix,iy]])
+                    xc = self.xaxis.idx_to_coor(ix+0.5)
+                    # How to do the coordinate choice here without
+                    # adding an if?
+                    for panel in self.panels:
+                        if panel.is_inside(self.rad[ix,iy],self.phi[ix,iy]):
+                            panel.add_point([xc,yc,ix,iy,self.dev[ix,iy]])
+                            # A contentious point is this break, what
+                            # it means is, can a point be part of two
+                            # panels? if not we have a significant
+                            # optimization
+                            break
 
                                 
     def gains(self,wavel):
@@ -483,35 +462,26 @@ class Antenna_Surface:
 
     
     def fit_surface(self):
-        # loops over the rings so that they can loop over the panels
-        # to compute the adjustments needed
-        for iring in range(self.nrings):
-            self.rings[iring].solve_panels()
-        return
+        for panel in self.panels:
+            panel.solve()
+        self.solved = True
 
 
     def correct_surface(self):
+        if not self.solved:
+            raise Exception("Panels must be fitted before atempting a correction")
         self.corr = np.copy(self.dev)
-        iring = 0
-        for ring in self.rings:
-            iring += 1
-            for panel in ring.panels:
-                if (panel.solved):
-                    panel.get_corrections()
-                    for ipnt in range(len(panel.corr)):
-                        val = panel.values[ipnt]
-                        ix,iy = int(val[2]),int(val[3])
-                        self.corr[ix,iy] -= panel.corr[ipnt]
-        
+        for panel in self.panels:
+            panel.get_corrections()
+            for ipnt in range(len(panel.corr)):
+                val = panel.values[ipnt]
+                ix,iy = int(val[2]),int(val[3])
+                self.corr[ix,iy] -= panel.corr[ipnt]
+                
     
     def print_misc(self):
-        iring = 0
-        for ring in self.rings:
-            iring +=1
-            print("************************************************************")
-            print("ring: ",str(iring))
-            ring.print_misc()
-            print()
+        for panel in self.panels:
+            panel.print_misc()
 
 
     def plot_surface(self,filename=None):
@@ -549,22 +519,8 @@ class Antenna_Surface:
         fig.colorbar(im, label="Deviation [mm]", cax=cax)    
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
-        for ring in self.rings:
-            inrad = plt.Circle((0, 0), ring.inrad, color='black',fill=False)
-            ourad = plt.Circle((0, 0), ring.ourad, color='black',fill=False)
-            ax.add_patch(inrad)
-            ax.add_patch(ourad)
-            for panel in ring.panels:
-                x1 = panel.inrad*np.sin(-panel.theta1-np.pi)
-                y1 = panel.inrad*np.cos(-panel.theta1-np.pi)
-                x2 = panel.ourad*np.sin(-panel.theta1-np.pi)
-                y2 = panel.ourad*np.cos(-panel.theta1-np.pi)
-                ax.plot([x1, x2],[y1, y2], ls='-',color='black',marker = None)
-                scale = 0.05
-                rt = (panel.inrad+panel.ourad)/2
-                xt = rt*np.sin(-panel.zeta-np.pi)
-                yt = rt*np.cos(-panel.zeta-np.pi)
-                ax.text(xt,yt,str(panel.ipanel),fontsize=5)
+        for panel in self.panels:
+            panel.plot(ax)
 
 
     def export_corrected(self,filename):
@@ -585,12 +541,8 @@ class Antenna_Surface:
         outfile += 2*lnbr
         outfile += 12*spc+"{0:22s}{1:22s}".format('Inner Edge','Outer Edge')+lnbr
         outfile += 12*spc+2*"{0:11s}{1:11s}".format('left','right')+lnbr
-        for iring in range(len(self.rings)):
-            outfile += 50*'#'+lnbr
-            outfile += "Ring "+str(iring)+":\n"
-            for panel in self.rings[iring].panels:
-                outfile += panel.export_adjustments(unit=unit)+lnbr
-            outfile += lnbr
+        for panel in self.panels:
+            outfile += panel.export_adjustments(unit=unit)+lnbr
         lefile = open(filename,'w')
         lefile.write(outfile)
         lefile.close()
