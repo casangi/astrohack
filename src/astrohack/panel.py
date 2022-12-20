@@ -148,6 +148,10 @@ class Ring_Panel:
                 vector[1]   = vector[1] + dev*coef2
                 vector[2]   = vector[2] + dev*coef3
                 vector[3]   = vector[3] + dev*coef4
+
+        # To be removed!
+        for i in range(4):
+            print(system[i,:],vector[i])
         
         self.par = gauss_numpy(system,vector)
         self.solved = True
@@ -245,7 +249,7 @@ class Ring_Panel:
         
         string = '{0:8d} {1:8d}'.format(self.iring,self.ipanel)
         for screw in self.screws[:,]:
-            string += ' {0:10.5f}'.format(fac*self.corr_point(*screw))
+            string += ' {0:10.2f}'.format(fac*self.corr_point(*screw))
         if screen:
             print(string)
         return string
@@ -298,11 +302,13 @@ class Antenna_Surface:
     # Heavily dependent on telescope architecture, Panel geometry to
     # be created by the specific _init_tel routine
 
-    def __init__(self,amp,dev,npoint,telescope):
+    def __init__(self,amp,dev,telescope,cutoff=0.15):
         # Initializes antenna surface parameters    
         self.ampfile = amp
         self.devfile = dev
-        self._read_images()
+        
+        self._read_images()        
+        self.cut = cutoff*np.max(self.amp)
         
         if telescope == 'VLA':
             self._init_vla()
@@ -311,15 +317,24 @@ class Antenna_Surface:
         else:
             raise Exception("Unknown telescope: "+telescope)
 
+        self._get_aips_headpars()
+        self.reso  = self.diam/self.npoint
+
         self.corr = None
         self.solved = False
         
-        # Is this really how to compute this?
-        self.reso  = self.diam/npoint
 
-        if not self.ringed:
-            raise Exception("General shape panels not yet supported")
-
+    def _get_aips_headpars(self):
+        for line in self.devhead["HISTORY"]:
+            wrds = line.split()
+            if wrds[1] == "Visibilities":
+                self.npoint = np.sqrt(int(wrds[-1]))
+            elif wrds[1] == "Observing":
+                self.wavel = float(wrds[-2])
+            elif wrds[1] == "Antenna" and wrds[2] == "surface":
+                self.inlim = abs(float(wrds[-3]))
+                self.oulim = abs(float(wrds[-2]))
+        
         
     def _read_images(self):
         self.amphead,self.amp = read_fits(self.ampfile)
@@ -333,7 +348,15 @@ class Antenna_Surface:
         self.yaxis = Linear_Axis(self.npix,self.amphead["CRPIX2"],
                                  self.amphead["CRVAL2"],self.amphead["CDELT2"])
         return
+
     
+    def _build_ring_mask(self):
+        self.mask = np.zeros((self.npix,self.npix))
+        self.mask = np.where(self.amp < self.cut, self.mask, 1)
+        self.mask = np.where(self.rad > self.inlim, self.mask, 0)
+        self.mask = np.where(self.rad < self.oulim, self.mask, 0)
+        self.mask = np.where(np.isnan(self.dev), 0, self.mask)
+
         
     # Other known telescopes should be included here, ALMA, ngVLA
     def _init_vla(self):
@@ -347,8 +370,11 @@ class Antenna_Surface:
         self.npanel    = [12,16,24,40,40,40]
         self.inrad     = [1.983, 3.683, 5.563, 7.391, 9.144, 10.87]
         self.ourad     = [3.683, 5.563, 7.391, 9.144, 10.87, 12.5 ]
+        self.inlim     = 2.0
+        self.oulim     = 12.0
         self._build_polar()
         self._build_ring_panels()
+        self._build_ring_mask()
 
         
     def _init_vlba(self):
@@ -362,8 +388,11 @@ class Antenna_Surface:
         self.npanel    = [20,20,40,40,40,40]
         self.inrad     = [1.676,3.518,5.423,7.277, 9.081,10.808]
         self.ourad     = [3.518,5.423,7.277,9.081,10.808,12.500]
+        self.inlim     = 2.0
+        self.oulim     = 12.0
         self._build_polar()
         self._build_ring_panels()
+        self._build_ring_mask()
 
 
     def _build_polar(self):
@@ -394,7 +423,7 @@ class Antenna_Surface:
         for iy in range(self.npix):
             yc = self.yaxis.idx_to_coor(iy+0.5)
             for ix in range(self.npix):
-                if not np.isnan(self.dev[ix,iy]) and self.amp[ix,iy] > 0:
+                if self.mask[ix,iy]:
                     xc = self.xaxis.idx_to_coor(ix+0.5)
                     # How to do the coordinate choice here without
                     # adding an if?
@@ -408,20 +437,20 @@ class Antenna_Surface:
                             break
 
                                 
-    def gains(self,wavel):
-        self.ingains = self._gains_array(wavel,self.dev,self.amp)
+    def gains(self):
+        self.ingains = self._gains_array(self.dev,self.amp)
         if not self.corr is None:
-            self.ougains = self._gains_array(wavel,self.corr,self.amp)
+            self.ougains = self._gains_array(self.corr,self.amp)
             return self.ingains, self.ougains
         else:
             return self.ingains
 
         
-    def _gains_array(self,wavel,arr,mask):
+    def _gains_array(self,arr,mask):
         # Compute the actual and theoretical gains for the current
         # antenna surface. What is the unit for the wavelength, cm or mm?
         forpi = 4.0*np.pi
-        fact = 1000. * self.reso / wavel
+        fact = 1000. * self.reso / self.wavel
         fact *= fact
         #
         # What are these sums?
@@ -434,7 +463,7 @@ class Antenna_Surface:
             for ix in range(self.npix):
                 if mask[ix,iy]>0 and self.rad[ix,iy]<self.diam/2 and not np.isnan(arr[ix,iy]):
                     quo = self.rad[ix,iy] / (2.*self.focus)
-                    phase     = arr[ix,iy]*forpi/(np.sqrt(1.+quo*quo)*wavel)
+                    phase     = arr[ix,iy]*forpi/(np.sqrt(1.+quo*quo)*self.wavel)
                     sumrad   += np.cos(phase)
                     sumtheta += np.sin(phase)
                     nsamp    += 1              
@@ -484,9 +513,17 @@ class Antenna_Surface:
             panel.print_misc()
 
 
-    def plot_surface(self,filename=None):
+    def plot_surface(self,filename=None,mask=False):
         vmin,vmax = np.nanmin(self.dev),np.nanmax(self.dev)
         rms = self.get_rms()
+        if mask:
+            fig, ax = plt.subplots(1,2,figsize=[10,5])
+            title = "Mask"
+            self._plot_surface(self.mask,title,fig,ax[0],0,1)
+            vmin,vmax = np.nanmin(self.amp),np.nanmax(self.amp)
+            title = "Amplitude min={0:.5f}, max ={1:.5f}".format(vmin,vmax)
+            self._plot_surface(self.amp,title,fig,ax[1],vmin,vmax)
+            return
         if self.corr is None:
             fig, ax = plt.subplots()
             title = "Before correction\nRMS = {0:8.5} mm".format(rms)
@@ -539,8 +576,9 @@ class Antenna_Surface:
             self.telescope, self.amphead['telescop'])
         outfile += 'Adjustments are in '+unit+lnbr
         outfile += 2*lnbr
-        outfile += 12*spc+"{0:22s}{1:22s}".format('Inner Edge','Outer Edge')+lnbr
-        outfile += 12*spc+2*"{0:11s}{1:11s}".format('left','right')+lnbr
+        outfile += 25*spc+"{0:22s}{1:22s}".format('Inner Edge','Outer Edge')+lnbr
+        outfile += 5*spc+"{0:8s}{1:8s}".format("Ring","panel")
+        outfile += 2*spc+2*"{0:11s}{1:11s}".format('left','right')+lnbr
         for panel in self.panels:
             outfile += panel.export_adjustments(unit=unit)+lnbr
         lefile = open(filename,'w')
