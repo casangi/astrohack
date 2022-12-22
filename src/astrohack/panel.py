@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 from matplotlib.patches import Arc
 from astropy.io import fits
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy import optimize as opt
 
 lnbr = '\n'
 
@@ -32,7 +33,7 @@ def read_fits(filename):
 
     if "AIPS" in hdul[0].header["ORIGIN"]:
         # AIPS data is in meters
-        data = hdul[0].data[0,0,:,:]*1000
+        data = hdul[0].data[0,0,:,:]
     else:
         data = hdul[0].data[0,0,:,:]
     hdul.close()
@@ -70,13 +71,27 @@ class Ring_Panel:
         self.theta2 = (ipanel+1)*angle
         self.zeta   = (ipanel+0.5)*angle
         self.solved = False
-        self.bmp = [inrad*np.sin(angle/2.0),inrad*np.cos(angle/2.0)]
-        self.tmp = [ourad*np.sin(angle/2.0),ourad*np.cos(angle/2.0)]
+        self.bmp = [inrad*np.sin(self.zeta),-inrad*np.cos(self.zeta)]
+        self.tmp = [ourad*np.sin(self.zeta),-ourad*np.cos(self.zeta)]
+        rt = (self.inrad+self.ourad)/2
+        self.center = [rt*np.sin(self.zeta),rt*np.cos(self.zeta)]
         self.screws = np.ndarray([4,2])
-        self.screws[0,:] = -self.bmp[0],0.0
-        self.screws[1,:] =  self.bmp[0],0.0
-        self.screws[2,:] = -self.tmp[0],self.tmp[1]-self.bmp[1]
-        self.screws[3,:] =  self.tmp[0],self.tmp[1]-self.bmp[1]
+
+        # AIPS definition of the screws, seem arbitrary and don't
+        # really work
+        # self.screws[0,:] = -self.bmp[0],self.bmp[1]
+        # self.screws[1,:] =  self.bmp[0],self.bmp[1]
+        # self.screws[2,:] = -self.tmp[0],self.tmp[1]
+        # self.screws[3,:] =  self.tmp[0],self.tmp[1]
+        rscale = 0.1*(ourad-inrad)
+        tscale = 0.1*(self.theta2-self.theta1)
+        self.screws[0,:] = np.sin(self.theta1+tscale),-np.cos(self.theta1+tscale)
+        self.screws[1,:] = np.sin(self.theta2-tscale),-np.cos(self.theta2-tscale)
+        self.screws[2,:] = np.sin(self.theta1+tscale),-np.cos(self.theta1+tscale)
+        self.screws[3,:] = np.sin(self.theta2-tscale),-np.cos(self.theta2-tscale)
+        self.screws[0:2,:] *= (inrad+rscale)
+        self.screws[2:,:]  *= (ourad-rscale)
+              
         self.nsamp = 0
         self.values = []        
         
@@ -85,10 +100,13 @@ class Ring_Panel:
             self.corr_point = self._corr_point_flexi
         elif self.kind == "rigid":
             self.solve      = self._solve_rigid
-            self.corr_point = self._corr_point_rigi
+            self.corr_point = self._corr_point_rigid
         elif self.kind == "single":
             self.solve      = self._solve_single
             self.corr_point = self._corr_point_single
+        elif self.kind == "scipy":
+            self.solve      = self._solve_flexi_scipy
+            self.corr_point = self._corr_point_flexi_scipy
         else:
             raise Exception("Unknown panel kind: ",self.kind)
 
@@ -102,11 +120,10 @@ class Ring_Panel:
 
     
     def add_point(self,value):
-        value[1] -= self.bmp[1]
         self.values.append(value)
         self.nsamp += 1
 
-    
+
     def _solve_flexi(self):
         # Solve panel adjustments for flexible VLA style panels by
         # constructing a system of 4 linear equations
@@ -149,15 +166,30 @@ class Ring_Panel:
                 vector[2]   = vector[2] + dev*coef3
                 vector[3]   = vector[3] + dev*coef4
 
-        # To be removed!
-        for i in range(4):
-            print(system[i,:],vector[i])
-        
         self.par = gauss_numpy(system,vector)
         self.solved = True
         return
 
 
+    def _solve_flexi_scipy(self):
+        devia = np.ndarray(self.nsamp)
+        coords = np.ndarray([2,self.nsamp])
+        for i in range(self.nsamp):
+            devia[i] = self.values[i][-1]
+            coords[:,i] = self.values[i][0],self.values[i][1]
+        popt,pcov=opt.curve_fit(self.paraboloid,coords,devia,
+                                p0=[1.,1., np.mean(devia)])    
+        self.par = popt
+        self.solved = True
+
+        
+    def paraboloid(self,coords,a,b,c):
+        # This assumes that the center of the paraboloid is the center
+        # of the panel a reasonable assumption
+        x,y = coords
+        return -(((x-self.center[0])/a)**2+((y-self.center[1])/b)**2)+c
+
+        
     def _solve_rigid(self):
         # Solve panel adjustments for rigid tilt and shift only panels by
         # constructing a system of 3 linear equations
@@ -231,6 +263,11 @@ class Ring_Panel:
         return corrval
 
     
+    def _corr_point_flexi_scipy(self,xcoor,ycoor):
+        corrval = self.paraboloid([xcoor,ycoor],*self.par)
+        return corrval
+
+    
     def _corr_point_rigid(self,xcoor,ycoor):
         return xcoor*self.par[0] + ycoor*self.par[1] + self.par[2]
 
@@ -276,7 +313,7 @@ class Ring_Panel:
         print()
 
 
-    def plot(self,ax):
+    def plot(self,ax,screws=False):
         angle1 = -self.theta1-np.pi
         center = -self.zeta-np.pi
         x1 = self.inrad*np.sin(angle1)
@@ -289,11 +326,14 @@ class Ring_Panel:
         xt = rt*np.sin(center)
         yt = rt*np.cos(center)
         ax.text(xt,yt,str(self.ipanel),fontsize=5)
+        if screws:
+            for screw in self.screws[:,]:
+                ax.plot(screw[0],screw[1],marker='o',color='black', markersize=1)
         if self.ipanel == 0:
             inrad = plt.Circle((0, 0), self.inrad, color='black', fill=False)
             ourad = plt.Circle((0, 0), self.ourad, color='black', fill=False)
             ax.add_patch(inrad)
-            ax.add_patch(ourad)   
+            ax.add_patch(ourad)
 
             
 class Antenna_Surface:
@@ -302,13 +342,13 @@ class Antenna_Surface:
     # Heavily dependent on telescope architecture, Panel geometry to
     # be created by the specific _init_tel routine
 
-    def __init__(self,amp,dev,telescope,cutoff=0.15):
+    def __init__(self,amp,dev,telescope,cutoff=0.8):
         # Initializes antenna surface parameters    
         self.ampfile = amp
         self.devfile = dev
         
         self._read_images()        
-        self.cut = cutoff*np.max(self.amp)
+        self.cut = cutoff
         
         if telescope == 'VLA':
             self._init_vla()
@@ -320,7 +360,7 @@ class Antenna_Surface:
         self._get_aips_headpars()
         self.reso  = self.diam/self.npoint
 
-        self.corr = None
+        self.resi = None
         self.solved = False
         
 
@@ -339,6 +379,7 @@ class Antenna_Surface:
     def _read_images(self):
         self.amphead,self.amp = read_fits(self.ampfile)
         self.devhead,self.dev = read_fits(self.devfile)
+        self.dev *= 1000
         #
         if self.devhead['NAXIS1'] != self.amphead['NAXIS1']:
             raise Exception("Amplitude and deviation images have different sizes")
@@ -351,17 +392,17 @@ class Antenna_Surface:
 
     
     def _build_ring_mask(self):
-        self.mask = np.zeros((self.npix,self.npix))
-        self.mask = np.where(self.amp < self.cut, self.mask, 1)
-        self.mask = np.where(self.rad > self.inlim, self.mask, 0)
-        self.mask = np.where(self.rad < self.oulim, self.mask, 0)
-        self.mask = np.where(np.isnan(self.dev), 0, self.mask)
+        self.mask = np.where(self.amp < self.cut, False, True)
+        self.mask = np.where(self.rad > self.inlim, self.mask, False)
+        self.mask = np.where(self.rad < self.oulim, self.mask, False)
+        self.mask = np.where(np.isnan(self.dev), False, self.mask)
 
         
     # Other known telescopes should be included here, ALMA, ngVLA
     def _init_vla(self):
         # Initializes surfaces according to VLA antenna parameters
         self.panelkind = "flexible"
+        self.panelkind = 'scipy'
         self.telescope = "VLA"
         self.diam      = 25.0  # meters
         self.focus     = 8.8   # meters
@@ -434,19 +475,19 @@ class Antenna_Surface:
                             # it means is, can a point be part of two
                             # panels? if not we have a significant
                             # optimization
-                            break
+                            # break
 
-                                
+                            
     def gains(self):
-        self.ingains = self._gains_array(self.dev,self.amp)
-        if not self.corr is None:
-            self.ougains = self._gains_array(self.corr,self.amp)
+        self.ingains = self._gains_array(self.dev)
+        if not self.resi is None:
+            self.ougains = self._gains_array(self.resi)
             return self.ingains, self.ougains
         else:
             return self.ingains
 
         
-    def _gains_array(self,arr,mask):
+    def _gains_array(self,arr):
         # Compute the actual and theoretical gains for the current
         # antenna surface. What is the unit for the wavelength, cm or mm?
         forpi = 4.0*np.pi
@@ -461,7 +502,7 @@ class Antenna_Surface:
         #    and compute gain loss
         for iy in range(self.npix): 
             for ix in range(self.npix):
-                if mask[ix,iy]>0 and self.rad[ix,iy]<self.diam/2 and not np.isnan(arr[ix,iy]):
+                if self.mask[ix,iy]:
                     quo = self.rad[ix,iy] / (2.*self.focus)
                     phase     = arr[ix,iy]*forpi/(np.sqrt(1.+quo*quo)*self.wavel)
                     sumrad   += np.cos(phase)
@@ -482,9 +523,9 @@ class Antenna_Surface:
     
     def get_rms(self):
         # Compute the RMS of the antenna surface
-        self.inrms = np.sqrt(np.nanmean(self.dev**2))
-        if not self.corr is None:
-            self.ourms = np.sqrt(np.nanmean(self.corr**2))
+        self.inrms = np.sqrt(np.mean(self.dev[self.mask]**2))
+        if not self.resi is None:
+            self.ourms = np.sqrt(np.mean(self.resi[self.mask]**2))
             return self.inrms, self.ourms
         else:
             return self.inrms
@@ -499,41 +540,47 @@ class Antenna_Surface:
     def correct_surface(self):
         if not self.solved:
             raise Exception("Panels must be fitted before atempting a correction")
-        self.corr = np.copy(self.dev)
+        self.corr = np.where(self.mask,0,np.nan)
+        self.resi = np.copy(self.dev)
         for panel in self.panels:
             panel.get_corrections()
             for ipnt in range(len(panel.corr)):
                 val = panel.values[ipnt]
                 ix,iy = int(val[2]),int(val[3])
-                self.corr[ix,iy] -= panel.corr[ipnt]
+                self.resi[ix,iy] -=  panel.corr[ipnt]
+                self.corr[ix,iy]  = -panel.corr[ipnt]
+
                 
-    
     def print_misc(self):
         for panel in self.panels:
             panel.print_misc()
 
 
-    def plot_surface(self,filename=None,mask=False):
+    def plot_surface(self,filename=None,mask=False,screws=False):
         vmin,vmax = np.nanmin(self.dev),np.nanmax(self.dev)
         rms = self.get_rms()
         if mask:
             fig, ax = plt.subplots(1,2,figsize=[10,5])
             title = "Mask"
-            self._plot_surface(self.mask,title,fig,ax[0],0,1)
+            self._plot_surface(self.mask,title,fig,ax[0],0,1,screws=screws,
+                               mask=mask)
             vmin,vmax = np.nanmin(self.amp),np.nanmax(self.amp)
             title = "Amplitude min={0:.5f}, max ={1:.5f}".format(vmin,vmax)
-            self._plot_surface(self.amp,title,fig,ax[1],vmin,vmax)
+            self._plot_surface(self.amp,title,fig,ax[1],vmin,vmax,screws=screws,
+                               unit=self.amphead["BUNIT"].strip())
             return
-        if self.corr is None:
+        if self.resi is None:
             fig, ax = plt.subplots()
             title = "Before correction\nRMS = {0:8.5} mm".format(rms)
-            self._plot_surface(self.dev,title,fig,ax,vmin,vmax)
+            self._plot_surface(self.dev,title,fig,ax,vmin,vmax,screws=screws)
         else:
-            fig, ax = plt.subplots(1,2,figsize=[10,5])
+            fig, ax = plt.subplots(1,3,figsize=[15,5])
             title = "Before correction\nRMS = {0:.3} mm".format(rms[0])
-            self._plot_surface(self.dev,title,fig,ax[0],vmin,vmax)
+            self._plot_surface(self.dev,title,fig,ax[0],vmin,vmax,screws=screws)
+            title = "Corrections"
+            self._plot_surface(self.corr,title,fig,ax[1],vmin,vmax,screws=screws)
             title = "After correction\nRMS = {0:.3} mm".format(rms[1])
-            self._plot_surface(self.corr,title,fig,ax[1],vmin,vmax)
+            self._plot_surface(self.resi,title,fig,ax[2],vmin,vmax,screws=screws)
         fig.suptitle("Antenna Surface")
         fig.tight_layout()
         if (filename is None):
@@ -542,7 +589,8 @@ class Antenna_Surface:
             plt.savefig(filename)
 
             
-    def _plot_surface(self,data,title,fig,ax,vmin,vmax):
+    def _plot_surface(self,data,title,fig,ax,vmin,vmax,screws=False,mask=False,
+                      unit='mm'):
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
         xmin = self.xaxis.idx_to_coor(-0.5)
@@ -552,18 +600,19 @@ class Antenna_Surface:
         im   = ax.imshow(data.T, cmap='viridis', interpolation='nearest',
                          extent=[xmin,xmax,ymax,ymin], vmin=vmin,vmax=vmax)
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", size="5%", pad=0.05)
-        fig.colorbar(im, label="Deviation [mm]", cax=cax)    
+        if not mask:
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            fig.colorbar(im, label="Z Scale ["+unit+"]", cax=cax)    
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
-            panel.plot(ax)
+            panel.plot(ax,screws=screws)
 
 
     def export_corrected(self,filename):
-        if self.corr is None:
+        if self.resi is None:
             raise Exception("Cannot export corrected surface")
-        hdu = fits.PrimaryHDU(self.corr)
+        hdu = fits.PrimaryHDU(self.resi)
         hdu.header = self.devhead
         hdu.header["ORIGIN"] = 'Astrohack PANEL'
         hdu.writeto(filename, overwrite=True)
