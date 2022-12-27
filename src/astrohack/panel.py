@@ -370,7 +370,8 @@ class Antenna_Surface:
             if wrds[1] == "Visibilities":
                 self.npoint = np.sqrt(int(wrds[-1]))
             elif wrds[1] == "Observing":
-                self.wavel = float(wrds[-2])
+                # Stored in mm
+                self.wavel = 1000*float(wrds[-2]) 
             elif wrds[1] == "Antenna" and wrds[2] == "surface":
                 self.inlim = abs(float(wrds[-3]))
                 self.oulim = abs(float(wrds[-2]))
@@ -489,7 +490,7 @@ class Antenna_Surface:
         
     def _gains_array(self,arr):
         # Compute the actual and theoretical gains for the current
-        # antenna surface. What is the unit for the wavelength, cm or mm?
+        # antenna surface. What is the unit for the wavelength? mm 
         forpi = 4.0*np.pi
         fact = 1000. * self.reso / self.wavel
         fact *= fact
