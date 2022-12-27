@@ -63,8 +63,8 @@ class Ring_Panel:
     def __init__(self,kind,angle,iring,ipanel,inrad,ourad):
         # Panel initialization
         self.kind   = kind
-        self.ipanel = ipanel
-        self.iring  = iring
+        self.ipanel = ipanel+1
+        self.iring  = iring+1
         self.inrad  = inrad
         self.ourad  = ourad
         self.theta1 = ipanel*angle
@@ -84,13 +84,15 @@ class Ring_Panel:
         # self.screws[2,:] = -self.tmp[0],self.tmp[1]
         # self.screws[3,:] =  self.tmp[0],self.tmp[1]
         rscale = 0.1*(ourad-inrad)
-        tscale = 0.1*(self.theta2-self.theta1)
-        self.screws[0,:] = np.sin(self.theta1+tscale),-np.cos(self.theta1+tscale)
-        self.screws[1,:] = np.sin(self.theta2-tscale),-np.cos(self.theta2-tscale)
-        self.screws[2,:] = np.sin(self.theta1+tscale),-np.cos(self.theta1+tscale)
-        self.screws[3,:] = np.sin(self.theta2-tscale),-np.cos(self.theta2-tscale)
-        self.screws[0:2,:] *= (inrad+rscale)
-        self.screws[2:,:]  *= (ourad-rscale)
+        tscale = 0.1*angle
+        self.screws[0,:] = np.sin(self.theta1+tscale),np.cos(self.theta1+tscale)
+        self.screws[1,:] = np.sin(self.theta2-tscale),np.cos(self.theta2-tscale)
+        self.screws[2,:] = np.sin(self.theta1+tscale),np.cos(self.theta1+tscale)
+        self.screws[3,:] = np.sin(self.theta2-tscale),np.cos(self.theta2-tscale)
+        self.screws[0,:] *= (inrad+rscale)
+        self.screws[1,:] *= (inrad+rscale)
+        self.screws[2,:] *= (ourad-rscale)
+        self.screws[3,:] *= (ourad-rscale)
               
         self.nsamp = 0
         self.values = []        
@@ -314,24 +316,28 @@ class Ring_Panel:
 
 
     def plot(self,ax,screws=False):
-        angle1 = -self.theta1-np.pi
-        center = -self.zeta-np.pi
-        x1 = self.inrad*np.sin(angle1)
-        y1 = self.inrad*np.cos(angle1)
-        x2 = self.ourad*np.sin(angle1)
-        y2 = self.ourad*np.cos(angle1)
-        ax.plot([x1, x2],[y1, y2], ls='-',color='black',marker = None)
+        lw = 0.5
+        msize = 2
+        x1 = self.inrad*np.sin(self.theta1)
+        y1 = self.inrad*np.cos(self.theta1)
+        x2 = self.ourad*np.sin(self.theta1)
+        y2 = self.ourad*np.cos(self.theta1)
+        ax.plot([x1, x2],[y1, y2], ls='-',color='black',marker = None, lw=lw)
         scale = 0.05
         rt = (self.inrad+self.ourad)/2
-        xt = rt*np.sin(center)
-        yt = rt*np.cos(center)
-        ax.text(xt,yt,str(self.ipanel),fontsize=5)
+        xt = rt*np.sin(self.zeta)
+        yt = rt*np.cos(self.zeta)
+        ax.text(xt,yt,str(self.ipanel),fontsize=5,ha='center')
         if screws:
-            for screw in self.screws[:,]:
-                ax.plot(screw[0],screw[1],marker='o',color='black', markersize=1)
-        if self.ipanel == 0:
-            inrad = plt.Circle((0, 0), self.inrad, color='black', fill=False)
-            ourad = plt.Circle((0, 0), self.ourad, color='black', fill=False)
+            markers = ['x','o','*','+']
+            colors  = ['g','g','r','r']
+            for iscrew in range(self.screws.shape[0]):
+                screw = self.screws[iscrew,]
+                ax.scatter(screw[0],screw[1], marker=markers[iscrew],
+                           lw=lw, s=msize, color=colors[iscrew] )
+        if self.ipanel == 1:
+            inrad = plt.Circle((0, 0), self.inrad, color='black', fill=False,lw=lw)
+            ourad = plt.Circle((0, 0), self.ourad, color='black', fill=False,lw=lw)
             ax.add_patch(inrad)
             ax.add_patch(ourad)
 
@@ -362,6 +368,9 @@ class Antenna_Surface:
 
         self.resi = None
         self.solved = False
+        if self.ringed:
+            self.fetch_panel = self._fetch_panel_ringed
+            self.compile_panel_points = self._compile_panel_points_ringed
         
 
     def _get_aips_headpars(self):
@@ -445,7 +454,7 @@ class Antenna_Surface:
             for ix in range(self.npix):
                 xcoor = self.xaxis.idx_to_coor(ix+0.5)
                 self.rad[ix,iy] = np.sqrt(xcoor**2+ycoor**2)
-                self.phi[ix,iy] = np.arctan2(ycoor,xcoor)+np.pi/2
+                self.phi[ix,iy] = np.arctan2(ycoor,xcoor)
                 if self.phi[ix,iy]<0:
                     self.phi[ix,iy] += 2*np.pi
 
@@ -461,7 +470,7 @@ class Antenna_Surface:
         return
 
 
-    def compile_panel_points(self):
+    def _compile_panel_points_ringed(self):
         for iy in range(self.npix):
             yc = self.yaxis.idx_to_coor(iy+0.5)
             for ix in range(self.npix):
@@ -478,7 +487,14 @@ class Antenna_Surface:
                             # optimization
                             # break
 
-                            
+    def _fetch_panel_ringed(self,ring,panel):
+        if ring == 1:
+            ipanel = panel-1
+        else:
+            ipanel = np.sum(self.npanel[:ring-1])+panel-1
+        return self.panels[ipanel]
+
+    
     def gains(self):
         self.ingains = self._gains_array(self.dev)
         if not self.resi is None:
@@ -587,7 +603,7 @@ class Antenna_Surface:
         if (filename is None):
             plt.show()
         else:
-            plt.savefig(filename)
+            plt.savefig(filename, dpi=600)
 
             
     def _plot_surface(self,data,title,fig,ax,vmin,vmax,screws=False,mask=False,
@@ -598,8 +614,8 @@ class Antenna_Surface:
         xmax = self.xaxis.idx_to_coor(self.xaxis.n-0.5)
         ymin = self.yaxis.idx_to_coor(-0.5)
         ymax = self.yaxis.idx_to_coor(self.yaxis.n-0.5)
-        im   = ax.imshow(data.T, cmap='viridis', interpolation='nearest',
-                         extent=[xmin,xmax,ymax,ymin], vmin=vmin,vmax=vmax)
+        im   = ax.imshow(np.flipud(data), cmap='viridis', interpolation='nearest',
+                         extent=[xmin,xmax,ymin,ymax], vmin=vmin,vmax=vmax)
         divider = make_axes_locatable(ax)
         if not mask:
             cax = divider.append_axes("right", size="5%", pad=0.05)
