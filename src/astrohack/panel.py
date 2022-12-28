@@ -106,9 +106,14 @@ class Ring_Panel:
         elif self.kind == "single":
             self.solve      = self._solve_single
             self.corr_point = self._corr_point_single
-        elif self.kind == "scipy":
-            self.solve      = self._solve_flexi_scipy
-            self.corr_point = self._corr_point_flexi_scipy
+        elif self.kind == "xyparaboloid":
+            self.solve       = self._solve_flexi_scipy
+            self.corr_point  = self._corr_point_flexi_scipy
+            self._paraboloid = self._xyaxes_paraboloid
+        elif self.kind == "thetaparaboloid":
+            self.solve       = self._solve_flexi_scipy
+            self.corr_point  = self._corr_point_flexi_scipy
+            self._paraboloid = self._rotated_paraboloid
         else:
             raise Exception("Unknown panel kind: ",self.kind)
 
@@ -173,24 +178,58 @@ class Ring_Panel:
         return
 
 
-    def _solve_flexi_scipy(self):
+    def _solve_flexi_scipy(self,verbose=False):
         devia = np.ndarray(self.nsamp)
         coords = np.ndarray([2,self.nsamp])
         for i in range(self.nsamp):
             devia[i] = self.values[i][-1]
             coords[:,i] = self.values[i][0],self.values[i][1]
-        popt,pcov=opt.curve_fit(self.paraboloid,coords,devia,
-                                p0=[1.,1., np.mean(devia)])    
+        
+        if self.kind == "thetaparaboloid":
+            liminf = [0, 0, -np.inf, 0.0]
+            limsup = [np.inf, np.inf, np.inf, np.pi]
+            p0     = [1e2, 1e2, np.mean(devia), 0]
+        elif self.kind == "xyparaboloid":
+            liminf = [0, 0, -np.inf]
+            limsup = [np.inf, np.inf, np.inf]
+            p0     = [1e2, 1e2, np.mean(devia)]
+            
+        maxfevs=[1e5,1e6,1e7]
+        for maxfev in maxfevs:
+            try:
+                popt, pcov = opt.curve_fit(self._paraboloid,coords,devia,
+                                           p0=p0, bounds=[liminf,limsup],
+                                           maxfev=maxfev)
+            except RuntimeError:
+                if (verbose):
+                    print("Increasing number of iterations")
+                continue
+            else:
+                if (verbose):
+                    print("Converged with less than {0:d} iterations".format(maxfev))
+                break
         self.par = popt
         self.solved = True
 
         
-    def paraboloid(self,coords,a,b,c):
+    def _rotated_paraboloid(self,coords,ucurv,vcurv,zoff,theta):
         # This assumes that the center of the paraboloid is the center
-        # of the panel a reasonable assumption
+        # of the panel, is this reasonable?
+        # Also this function can produce degeneracies, due to the fact
+        # that there are multiple combinations of theta ucurv and
+        # vcurv that produce the same paraboloid
+        x,y = coords
+        xc,yc = self.center
+        u = (x-xc)*np.cos(theta) + (y-yc)*np.sin(theta)
+        v = (x-xc)*np.sin(theta) + (y-yc)*np.cos(theta)
+        return -((u/ucurv)**2+(v/vcurv)**2)+zoff
+
+    def _xyaxes_paraboloid(self,coords,a,b,c):
+        # This assumes that the center of the paraboloid is the center
+        # of the panel, is this reasonable?
         x,y = coords
         return -(((x-self.center[0])/a)**2+((y-self.center[1])/b)**2)+c
-
+    
         
     def _solve_rigid(self):
         # Solve panel adjustments for rigid tilt and shift only panels by
@@ -266,7 +305,7 @@ class Ring_Panel:
 
     
     def _corr_point_flexi_scipy(self,xcoor,ycoor):
-        corrval = self.paraboloid([xcoor,ycoor],*self.par)
+        corrval = self._paraboloid([xcoor,ycoor],*self.par)
         return corrval
 
     
@@ -348,7 +387,7 @@ class Antenna_Surface:
     # Heavily dependent on telescope architecture, Panel geometry to
     # be created by the specific _init_tel routine
 
-    def __init__(self,amp,dev,telescope,cutoff=0.8):
+    def __init__(self,amp,dev,telescope,cutoff=0.8,pkind=None):
         # Initializes antenna surface parameters    
         self.ampfile = amp
         self.devfile = dev
@@ -362,6 +401,8 @@ class Antenna_Surface:
             self._init_vlba()
         else:
             raise Exception("Unknown telescope: "+telescope)
+        if not pkind is None:
+            self.panelkind = pkind
 
         self._get_aips_headpars()
         self.reso  = self.diam/self.npoint
@@ -369,6 +410,9 @@ class Antenna_Surface:
         self.resi = None
         self.solved = False
         if self.ringed:
+            self._build_polar()
+            self._build_ring_panels()
+            self._build_ring_mask()
             self.fetch_panel = self._fetch_panel_ringed
             self.compile_panel_points = self._compile_panel_points_ringed
         
@@ -411,8 +455,7 @@ class Antenna_Surface:
     # Other known telescopes should be included here, ALMA, ngVLA
     def _init_vla(self):
         # Initializes surfaces according to VLA antenna parameters
-        self.panelkind = "flexible"
-        self.panelkind = 'scipy'
+        self.panelkind = 'flexible'
         self.telescope = "VLA"
         self.diam      = 25.0  # meters
         self.focus     = 8.8   # meters
@@ -423,9 +466,6 @@ class Antenna_Surface:
         self.ourad     = [3.683, 5.563, 7.391, 9.144, 10.87, 12.5 ]
         self.inlim     = 2.0
         self.oulim     = 12.0
-        self._build_polar()
-        self._build_ring_panels()
-        self._build_ring_mask()
 
         
     def _init_vlba(self):
@@ -441,9 +481,6 @@ class Antenna_Surface:
         self.ourad     = [3.518,5.423,7.277,9.081,10.808,12.500]
         self.inlim     = 2.0
         self.oulim     = 12.0
-        self._build_polar()
-        self._build_ring_panels()
-        self._build_ring_mask()
 
 
     def _build_polar(self):
