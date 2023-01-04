@@ -4,6 +4,7 @@ from matplotlib.patches import Arc
 from astropy.io import fits
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import optimize as opt
+from numba import jit
 
 lnbr = '\n'
 
@@ -415,6 +416,7 @@ class Antenna_Surface:
             self._build_ring_mask()
             self.fetch_panel = self._fetch_panel_ringed
             self.compile_panel_points = self._compile_panel_points_ringed
+            self.compile_panel_points_numba = self._compile_panel_points_ringed_numba
         
 
     def _get_aips_headpars(self):
@@ -508,6 +510,24 @@ class Antenna_Surface:
 
 
     def _compile_panel_points_ringed(self):
+        for iy in range(self.npix):
+            yc = self.yaxis.idx_to_coor(iy+0.5)
+            for ix in range(self.npix):
+                if self.mask[ix,iy]:
+                    xc = self.xaxis.idx_to_coor(ix+0.5)
+                    # How to do the coordinate choice here without
+                    # adding an if?
+                    for panel in self.panels:
+                        if panel.is_inside(self.rad[ix,iy],self.phi[ix,iy]):
+                            panel.add_point([xc,yc,ix,iy,self.dev[ix,iy]])
+                            # A contentious point is this break, what
+                            # it means is, can a point be part of two
+                            # panels? if not we have a significant
+                            # optimization
+                            # break
+
+    @jit
+    def _compile_panel_points_ringed_numba(self):
         for iy in range(self.npix):
             yc = self.yaxis.idx_to_coor(iy+0.5)
             for ix in range(self.npix):
