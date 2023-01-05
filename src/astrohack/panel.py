@@ -407,13 +407,14 @@ class Antenna_Surface:
     # Heavily dependent on telescope architecture, Panel geometry to
     # be created by the specific _init_tel routine
 
-    def __init__(self,amp,dev,telescope,cutoff=0.8,pkind=None):
+    def __init__(self,amp,dev,telescope,cutoff=0.21,pkind=None):
         # Initializes antenna surface parameters    
         self.ampfile = amp
         self.devfile = dev
         
         self._read_images()        
-        self.cut = cutoff
+        self.cut = cutoff*np.max(self.amp)
+        print(self.cut)
         
         if telescope == 'VLA':
             self._init_vla()
@@ -652,19 +653,19 @@ class Antenna_Surface:
             title = "Amplitude min={0:.5f}, max ={1:.5f}".format(vmin,vmax)
             self._plot_surface(self.amp,title,fig,ax[1],vmin,vmax,screws=screws,
                                unit=self.amphead["BUNIT"].strip())
-            return
-        if self.resi is None:
-            fig, ax = plt.subplots()
-            title = "Before correction\nRMS = {0:8.5} mm".format(rms)
-            self._plot_surface(self.dev,title,fig,ax,vmin,vmax,screws=screws)
         else:
-            fig, ax = plt.subplots(1,3,figsize=[15,5])
-            title = "Before correction\nRMS = {0:.3} mm".format(rms[0])
-            self._plot_surface(self.dev,title,fig,ax[0],vmin,vmax,screws=screws)
-            title = "Corrections"
-            self._plot_surface(self.corr,title,fig,ax[1],vmin,vmax,screws=screws)
-            title = "After correction\nRMS = {0:.3} mm".format(rms[1])
-            self._plot_surface(self.resi,title,fig,ax[2],vmin,vmax,screws=screws)
+            if self.resi is None:
+                fig, ax = plt.subplots()
+                title = "Before correction\nRMS = {0:8.5} mm".format(rms)
+                self._plot_surface(self.dev,title,fig,ax,vmin,vmax,screws=screws)
+            else:
+                fig, ax = plt.subplots(1,3,figsize=[15,5])
+                title = "Before correction\nRMS = {0:.3} mm".format(rms[0])
+                self._plot_surface(self.dev,title,fig,ax[0],vmin,vmax,screws=screws)
+                title = "Corrections"
+                self._plot_surface(self.corr,title,fig,ax[1],vmin,vmax,screws=screws)
+                title = "After correction\nRMS = {0:.3} mm".format(rms[1])
+                self._plot_surface(self.resi,title,fig,ax[2],vmin,vmax,screws=screws)
         fig.suptitle("Antenna Surface")
         fig.tight_layout()
         if (filename is None):
