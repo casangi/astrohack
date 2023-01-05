@@ -115,6 +115,10 @@ class Ring_Panel:
             self.solve       = self._solve_flexi_scipy
             self.corr_point  = self._corr_point_flexi_scipy
             self._paraboloid = self._rotated_paraboloid
+        elif self.kind == "fixedtheta":
+            self.solve       = self._solve_flexi_scipy
+            self.corr_point  = self._corr_point_flexi_scipy
+            self._paraboloid = self._fixed_paraboloid
         else:
             raise Exception("Unknown panel kind: ",self.kind)
 
@@ -190,7 +194,7 @@ class Ring_Panel:
             liminf = [0, 0, -np.inf, 0.0]
             limsup = [np.inf, np.inf, np.inf, np.pi]
             p0     = [1e2, 1e2, np.mean(devia), 0]
-        elif self.kind == "xyparaboloid":
+        elif self.kind == "xyparaboloid" or self.kind == "fixedtheta":
             liminf = [0, 0, -np.inf]
             limsup = [np.inf, np.inf, np.inf]
             p0     = [1e2, 1e2, np.mean(devia)]
@@ -213,6 +217,20 @@ class Ring_Panel:
         self.solved = True
 
         
+    def _fixed_paraboloid(self,coords,ucurv,vcurv,zoff):
+        # Same as the rotated paraboloid, but theta is the panel center
+        # This assumes that the center of the paraboloid is the center
+        # of the panel, is this reasonable?
+        # Also this function can produce degeneracies, due to the fact
+        # that there are multiple combinations of theta ucurv and
+        # vcurv that produce the same paraboloid
+        x,y = coords
+        xc,yc = self.center
+        u = (x-xc)*np.cos(self.zeta) + (y-yc)*np.sin(self.zeta)
+        v = (x-xc)*np.sin(self.zeta) + (y-yc)*np.cos(self.zeta)
+        return -((u/ucurv)**2+(v/vcurv)**2)+zoff
+
+    
     def _rotated_paraboloid(self,coords,ucurv,vcurv,zoff,theta):
         # This assumes that the center of the paraboloid is the center
         # of the panel, is this reasonable?
@@ -225,6 +243,7 @@ class Ring_Panel:
         v = (x-xc)*np.sin(theta) + (y-yc)*np.cos(theta)
         return -((u/ucurv)**2+(v/vcurv)**2)+zoff
 
+    
     def _xyaxes_paraboloid(self,coords,a,b,c):
         # This assumes that the center of the paraboloid is the center
         # of the panel, is this reasonable?
@@ -520,11 +539,6 @@ class Antenna_Surface:
                     for panel in self.panels:
                         if panel.is_inside(self.rad[ix,iy],self.phi[ix,iy]):
                             panel.add_point([xc,yc,ix,iy,self.dev[ix,iy]])
-                            # A contentious point is this break, what
-                            # it means is, can a point be part of two
-                            # panels? if not we have a significant
-                            # optimization
-                            # break
 
     @jit
     def _compile_panel_points_ringed_numba(self):
@@ -538,12 +552,8 @@ class Antenna_Surface:
                     for panel in self.panels:
                         if panel.is_inside(self.rad[ix,iy],self.phi[ix,iy]):
                             panel.add_point([xc,yc,ix,iy,self.dev[ix,iy]])
-                            # A contentious point is this break, what
-                            # it means is, can a point be part of two
-                            # panels? if not we have a significant
-                            # optimization
-                            # break
 
+                            
     def _fetch_panel_ringed(self,ring,panel):
         if ring == 1:
             ipanel = panel-1
