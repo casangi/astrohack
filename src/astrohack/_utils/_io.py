@@ -28,7 +28,7 @@ DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 jit_cache =  False
 
-def _read_dimensions_meta_data(hack_name, ddi, ant_id): 
+def _read_dimensions_meta_data(hack_file, ddi, ant_id): 
     """_summary_
 
     Args:
@@ -38,13 +38,13 @@ def _read_dimensions_meta_data(hack_name, ddi, ant_id):
     Returns:
         _type_: _description_
     """
-    with open('{name}/{ddi}/{file}'.format(name=hack_name, ddi=ddi, file='/.hack_attr')) as json_file:
+    with open('{name}/{ddi}/{file}'.format(name=hack_file, ddi=ddi, file='/.hack_attr')) as json_file:
         json_dict = json.load(json_file)
         
     return json_dict[str(ant_id)]
 
 
-def _read_data_from_hack_meta(hack_name, hack_dict, ant_id):
+def _read_data_from_hack_meta(hack_file, hack_dict, ant_id):
     """ Read hack file meta data and extract antenna based xds information for each (ddi, scan)
 
     Args:
@@ -57,7 +57,7 @@ def _read_data_from_hack_meta(hack_name, hack_dict, ant_id):
     
     ant_id_str = str(ant_id)
 
-    hack_meta_data = "/".join((hack_name, ".hack_json"))
+    hack_meta_data = "/".join((hack_file, ".hack_json"))
 
 
     with open(hack_meta_data, "r") as json_file: 
@@ -72,7 +72,7 @@ def _read_data_from_hack_meta(hack_name, hack_dict, ant_id):
     return ant_data_dict
 
 
-def _create_hack_meta_data(hack_name, hack_dict):
+def _create_hack_meta_data(hack_file, hack_dict):
     """Save hack file meta information to json file with the transformation
         of the ordering (ddi, scan, ant) --> (ant, ddi, scan).
 
@@ -81,7 +81,6 @@ def _create_hack_meta_data(hack_name, hack_dict):
         hack (_type_): _description_
     """
 
-    
     for ddi, scan_dict in hack_dict.items():
         if isinstance(ddi, numbers.Number):
             ant_sub_dict = {}
@@ -120,7 +119,6 @@ def _create_hack_meta_data(hack_name, hack_dict):
                     
                     dims_meta_data.setdefault(ant, {'time': dims['time'], 'pol':dims['pol']})
                 
-        # Please forgive me for another loop JW ...
         for ant, values in data_extent.items():
             max_value = np.max(values)
 
@@ -141,13 +139,13 @@ def _create_hack_meta_data(hack_name, hack_dict):
                 }
             }            
 
-        output_attr_file = "{name}/{ddi}/{ext}".format(name=hack_name, ddi=ddi, ext=".hack_attr")
+        output_attr_file = "{name}/{ddi}/{ext}".format(name=hack_file, ddi=ddi, ext=".hack_attr")
 
         with open(output_attr_file, "w") as json_file:
             json.dump(max_extent, json_file)
     
     
-    output_meta_file = "{name}/{ext}".format(name=hack_name, ext=".hack_json")
+    output_meta_file = "{name}/{ext}".format(name=hack_file, ext=".hack_json")
     with open(output_meta_file, "w") as json_file:
             json.dump(ant_hack_dict, json_file)
 
@@ -167,7 +165,7 @@ def _get_attrs(zarr_obj):
         if not k.startswith("_NC")
     }
 
-def _open_no_dask_zarr(zarr_name,slice_dict={}):
+def _open_no_dask_zarr(zarr_name, slice_dict={}):
     '''
         Alternative to xarray open_zarr where the arrays are not Dask Arrays.
         
@@ -447,7 +445,7 @@ def _get_time_samples(time_vis):
 
     n_time_vis = time_vis.shape[0]
 
-    middle = int(n_time_vis*0.5)-1
+    middle = int(n_time_vis//2)
     indicies = [0, middle, n_time_vis - 1]
 
     return np.take(time_vis, indicies), indicies
@@ -498,7 +496,9 @@ def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, ti
             xds.attrs['ant_id'] = map_ant_index
             xds.attrs['ddi'] = ddi
             xds.attrs['parallactic_samples'] = parallactic_samples
-            xds.to_zarr(os.path.join(hack_name, str(ddi) + '/' + str(scan) + '/' + str(map_ant_index)), mode='w', compute=True, consolidated=True)
+
+            hack_file = "{base}.{suffix}".format(base=hack_name, suffix="holog.zarr")
+            xds.to_zarr(os.path.join(hack_file, str(ddi) + '/' + str(scan) + '/' + str(map_ant_index)), mode='w', compute=True, consolidated=True)
             
         else:
             print('In scan ', scan, ' antenna ', map_ant_index, ' is flagged')
@@ -538,7 +538,7 @@ def _extract_holog_chunk(extract_holog_parms):
     ctb = ctables.taql('select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, STATE_ID from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s' % (data_col, ms_name, ddi, scan, sel_state_ids))
 
     vis_data = ctb.getcol('DATA')
-    print('vis data type ',vis_data.dtype)
+    print('vis data type ', vis_data.dtype)
     weight = ctb.getcol('WEIGHT')
     ant1 = ctb.getcol('ANTENNA1')
     ant2 = ctb.getcol('ANTENNA2')
@@ -558,15 +558,11 @@ def _extract_holog_chunk(extract_holog_parms):
     
     del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row 
 
-    pnt_ant_dict = _load_pnt_dict(pnt_name,map_ant_ids, dask_load=False)
+    pnt_ant_dict = _load_pnt_dict(pnt_name, map_ant_ids, dask_load=False)
     
     pnt_map_dict = _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)    
     
     hack_dict  = _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time_vis, chan_freq, pol, flagged_mapping_antennas, scan, ddi, ms_name)
     
-    print('Done')
-
-    # Grid all subscans onto a single grid
-    # bm_map_dict = create_beam_maps(vis_map_dict, pnt_map_dict, map_ant_ids, state_ids, time_vis) # each mapping antenna has an image cube of dims: n_state_ids (time) x nchan x pol x l x m, n_state_ids = len(np.unique(state_ids))
- 
+    print('Done') 
 

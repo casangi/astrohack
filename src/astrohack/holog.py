@@ -20,10 +20,10 @@ def _holog_chunk(holog_chunk_params):
         Args:
             holog_chunk_params (dict): _description_
         """
-        hack, ant_data_dict = load_hack_file('hack.dict', dask_load=False, load_pnt_dict=False, ant_id=27)
+        _, ant_data_dict = load_hack_file(holog_chunk_params['hack_file'], dask_load=False, load_pnt_dict=False, ant_id=27)
 
         for ddi_index, ddi in enumerate(ant_data_dict.keys()):
-                meta_data = _read_dimensions_meta_data(hack_name='hack.dict', ddi=ddi_index, ant_id=holog_chunk_params['ant_id'])
+                meta_data = _read_dimensions_meta_data(hack_file=holog_chunk_params['hack_file'], ddi=ddi_index, ant_id=holog_chunk_params['ant_id'])
 
                 n_scan = len(ant_data_dict[ddi_index].keys())
                 n_pol = meta_data['pol']
@@ -70,9 +70,11 @@ def _holog_chunk(holog_chunk_params):
                 xds.attrs['ant_id'] = holog_chunk_params['ant_id']
                 xds.attrs['time_centroid'] = np.array(time_centroid)
 
-                xds.to_zarr("{name}.holog/{ant}/{ddi}".format(name=holog_chunk_params['hack_name'], ant=holog_chunk_params['ant_id'], ddi=ddi_index), mode='w', compute=True, consolidated=True)
+                hack_base_name = holog_chunk_params['hack_file'].split('.holog.zarr')[0]
 
-def holog(hack_name, parallel=True):
+                xds.to_zarr("{name}.image.zarr/{ant}/{ddi}".format(name=hack_base_name, ant=holog_chunk_params['ant_id'], ddi=ddi_index), mode='w', compute=True, consolidated=True)
+
+def holog(hack_file, parallel=True):
         """_summary_
 
         Args:
@@ -81,8 +83,8 @@ def holog(hack_name, parallel=True):
         """
        
         try:
-                if os.path.exists(hack_name):
-                        hack_meta_data = "/".join((hack_name, ".hack_json"))
+                if os.path.exists(hack_file):
+                        hack_meta_data = "/".join((hack_file, ".hack_json"))
 
 
                         with open(hack_meta_data, "r") as json_file: 
@@ -92,7 +94,7 @@ def holog(hack_name, parallel=True):
 
 
                         holog_chunk_params = {}
-                        holog_chunk_params['hack_name'] = hack_name
+                        holog_chunk_params['hack_file'] = hack_file
 
                         delayed_list = []
 
@@ -113,6 +115,6 @@ def holog(hack_name, parallel=True):
                                 dask.compute(delayed_list)
 
                 else:
-                        raise FileNotFoundError("File: {} - not found error.".format(hack_name))
+                        raise FileNotFoundError("File: {} - not found error.".format(hack_file))
         except Exception as e:
                 print('Exception thrown for antenna: ', e)
