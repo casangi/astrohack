@@ -541,19 +541,6 @@ class Antenna_Surface:
                         if panel.is_inside(self.rad[ix,iy],self.phi[ix,iy]):
                             panel.add_point([xc,yc,ix,iy,self.dev[ix,iy]])
 
-    @jit
-    def _compile_panel_points_ringed_numba(self):
-        for iy in range(self.npix):
-            yc = self.yaxis.idx_to_coor(iy+0.5)
-            for ix in range(self.npix):
-                if self.mask[ix,iy]:
-                    xc = self.xaxis.idx_to_coor(ix+0.5)
-                    # How to do the coordinate choice here without
-                    # adding an if?
-                    for panel in self.panels:
-                        if panel.is_inside(self.rad[ix,iy],self.phi[ix,iy]):
-                            panel.add_point([xc,yc,ix,iy,self.dev[ix,iy]])
-
                             
     def _fetch_panel_ringed(self,ring,panel):
         if ring == 1:
