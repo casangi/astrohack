@@ -11,7 +11,7 @@ import xarray as xr
 
 from scipy.interpolate import griddata
 
-from astrohack._utils import _system_message as sys
+from astrohack._utils import _system_message as system_message
 from astrohack.dio import load_hack_file
 from astrohack._utils._io import _read_dimensions_meta_data
 
@@ -19,7 +19,7 @@ def _holog_chunk(holog_chunk_params):
         """_summary_
 
         Args:
-            holog_chunk_params (dict): _description_
+            holog_chunk_params (dict): Dictionary containing holography parameters.
         """
         _, ant_data_dict = load_hack_file(holog_chunk_params['hack_file'], dask_load=False, load_pnt_dict=False, ant_id=27)
 
@@ -76,13 +76,13 @@ def _holog_chunk(holog_chunk_params):
                 xds.to_zarr("{name}.image.zarr/{ant}/{ddi}".format(name=hack_base_name, ant=holog_chunk_params['ant_id'], ddi=ddi_index), mode='w', compute=True, consolidated=True)
 
 def holog(hack_file, parallel=True):
-        """_summary_
+        """ Process holography data
 
         Args:
             hack_name (str): Hack file name
             parallel (bool, optional): Run in parallel with Dask or in serial. Defaults to True.
         """
-        sys.debug("Hack file name is: {}".format(hack_file))
+        system_message.info("Loading holography file {hack_file} ...".format(hack_file=hack_file))
 
         try:
                 if os.path.exists(hack_file):
@@ -117,6 +117,7 @@ def holog(hack_file, parallel=True):
                                 dask.compute(delayed_list)
 
                 else:
-                        raise FileNotFoundError("File: {} - not found error.".format(hack_file))
-        except Exception as e:
-                print('Exception thrown for antenna: ', e)
+                        raise FileNotFoundError()
+                        system_message.error("[holog] Holography file {hack_file} not found.".format(hack_file=hack_file))
+        except Exception as error:
+                system_message.error('[holog] {error}'.format(error=error))

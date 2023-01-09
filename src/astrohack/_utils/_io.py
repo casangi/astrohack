@@ -21,7 +21,7 @@ from numba.typed import Dict
 
 from casacore import tables as ctables
 
-from astrohack._utils import _system_message as sys
+from astrohack._utils import _system_message as system_message
 from astrohack._utils._parallactic_angle import _calculate_parallactic_angle_chunk
 
 
@@ -30,17 +30,21 @@ DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 jit_cache =  False
 
 def _read_dimensions_meta_data(hack_file, ddi, ant_id): 
-    """_summary_
+    """ Reads dimensional data from hack meta file.
 
     Args:
-        ant (_type_): _description_
-        hack_name (_type_): _description_
+        ant_id (int): Antenna id
+        hack_file (str): Hack file name.
 
     Returns:
-        _type_: _description_
+        dict: dictionary containing dimension data.
     """
-    with open('{name}/{ddi}/{file}'.format(name=hack_file, ddi=ddi, file='/.hack_attr')) as json_file:
-        json_dict = json.load(json_file)
+    try:
+        with open('{name}/{ddi}/{file}'.format(name=hack_file, ddi=ddi, file='/.hack_attr')) as json_file:
+            json_dict = json.load(json_file)
+    
+    except Exception as error:
+        system_message.error("[_read_dimensions_meta_data] {error}".format(error=error))
         
     return json_dict[str(ant_id)]
 
@@ -49,8 +53,9 @@ def _read_data_from_hack_meta(hack_file, hack_dict, ant_id):
     """ Read hack file meta data and extract antenna based xds information for each (ddi, scan)
 
     Args:
-        hack (_type_): _description_
-        ant_id (_type_): _description_
+        hack_file (str): Hack file name.
+        hack_dict (dict): Hack file dictionary containing msxds data.
+        ant_id (int): Antenna id
 
     Returns:
         nested dict: nested dictionary (ddi, scan, xds) with xds data embedded in it.
@@ -61,8 +66,12 @@ def _read_data_from_hack_meta(hack_file, hack_dict, ant_id):
     hack_meta_data = "/".join((hack_file, ".hack_json"))
 
 
-    with open(hack_meta_data, "r") as json_file: 
-        hack_json = json.load(json_file)
+    try:
+        with open(hack_meta_data, "r") as json_file: 
+            hack_json = json.load(json_file)
+    
+    except Exception as error:
+        system_message.error("[_read_data_from_hack_meta] {error}".format(error=error))
     
     ant_data_dict = {}
     
@@ -74,12 +83,12 @@ def _read_data_from_hack_meta(hack_file, hack_dict, ant_id):
 
 
 def _create_hack_meta_data(hack_file, hack_dict):
-    """Save hack file meta information to json file with the transformation
+    """ Save hack file meta information to json file with the transformation
         of the ordering (ddi, scan, ant) --> (ant, ddi, scan).
 
     Args:
-        hack_name (_type_): _description_
-        hack (_type_): _description_
+        hack_name (str): Hack file name.
+        hack_dict (dict): Dictionary containing msdx data.
     """
 
     for ddi, scan_dict in hack_dict.items():
@@ -142,17 +151,26 @@ def _create_hack_meta_data(hack_file, hack_dict):
 
         output_attr_file = "{name}/{ddi}/{ext}".format(name=hack_file, ddi=ddi, ext=".hack_attr")
 
-        with open(output_attr_file, "w") as json_file:
-            json.dump(max_extent, json_file)
+        try:
+            with open(output_attr_file, "w") as json_file:
+                json.dump(max_extent, json_file)
+
+        except Exception as error:
+            system_message.error("[_create_hack_meta_data] {error}".format(error=error))
     
     
     output_meta_file = "{name}/{ext}".format(name=hack_file, ext=".hack_json")
-    with open(output_meta_file, "w") as json_file:
+    
+    try:
+        with open(output_meta_file, "w") as json_file:
             json.dump(ant_hack_dict, json_file)
+    
+    except Exception as error:
+            system_message.error("[_create_hack_meta_data] {error}".format(error=error))
 
 
 def _get_attrs(zarr_obj):
-    """get attributes of zarr obj (groups or arrays)
+    """ Get attributes of zarr obj (groups or arrays)
 
     Args:
         zarr_obj (zarr): a zarr_group object
@@ -183,6 +201,7 @@ def _open_no_dask_zarr(zarr_name, slice_dict={}):
     slice_dict_complete = copy.deepcopy(slice_dict)
     coords = {}
     xds = xr.Dataset()
+
     for var_name, var in zarr_group.arrays():
         var_attrs = _get_attrs(var)
         
@@ -230,7 +249,7 @@ def _load_pnt_dict(file, ant_list=None, dask_load=True):
 
 
 def _make_ant_pnt_xds_chunk(ms_name, ant_id, pnt_name):
-    """ Extract subset of pointing table data into a dictionary of xarray dataarrays. This is written to disk as a zarr file.
+    """ Extract subset of pointing table data into a dictionary of xarray data arrays. This is written to disk as a zarr file.
             This function processes a chunk the overalll data and is managed by Dask.
 
     Args:
@@ -248,7 +267,6 @@ def _make_ant_pnt_xds_chunk(ms_name, ant_id, pnt_name):
     direction_time = tb.getcol('TIME')
     pointing_offset = tb.getcol('POINTING_OFFSET')[:,0,:]
     
-    #print(direction.shape, target.shape, encoder.shape, direction_time.shape, pointing_offset.shape)
     tb.close()
 
     '''Using CASA table tool
@@ -298,6 +316,7 @@ def _make_ant_pnt_xds_chunk(ms_name, ant_id, pnt_name):
     
     pnt_xds['DIRECTIONAL_COSINES'] = xr.DataArray(np.array([l,m]).T, dims=('time','ra_dec'))
     
+    system_message.info("[_make_ant_pnt_xds_chunk] Writing pointing xds to {file}".format(file=os.path.join(pnt_name, str(ant_id))))
     pnt_xds.to_zarr(os.path.join(pnt_name, str(ant_id)), mode='w', compute=True, consolidated=True)
 
 
@@ -452,7 +471,7 @@ def _get_time_samples(time_vis):
     return np.take(time_vis, indicies), indicies
 
     
-def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time, chan, pol, flagged_mapping_antennas, scan, ddi, ms_name):
+def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time, chan, pol, flagged_mapping_antennas, scan, ddi, ms_name, overwrite):
     """ Create hack-structured, formatted output file and save to zarr.
 
     Args:
@@ -499,10 +518,17 @@ def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, ti
             xds.attrs['parallactic_samples'] = parallactic_samples
 
             hack_file = "{base}.{suffix}".format(base=hack_name, suffix="holog.zarr")
+
+            if overwrite is False:
+                if os.path.exists(hack_file):
+                    raise Exception()
+                    system_message.error('[_create_hack_file] Hack file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.'.format(file=hack_file))
+
+            system_message.info("[_create_hack_file] Writing hack file to {file}".format(file=hack_file))
             xds.to_zarr(os.path.join(hack_file, str(ddi) + '/' + str(scan) + '/' + str(map_ant_index)), mode='w', compute=True, consolidated=True)
             
         else:
-            print('In scan ', scan, ' antenna ', map_ant_index, ' is flagged')
+            system_message.warning('[_create_hack_file] [FLAGGED DATA] scan: {scan} mapping antenna index {index}'.format(scan=scan, index=map_ant_index))
         
         
     
@@ -529,17 +555,14 @@ def _extract_holog_chunk(extract_holog_parms):
     ref_ant_ids = extract_holog_parms['ref_ant_ids']
     sel_state_ids = extract_holog_parms['sel_state_ids']
     hack_name = extract_holog_parms['hack_name']
+    overwrite = extract_holog_parms['overwrite']
     
     chan_freq = extract_holog_parms['chan_setup']['chan_freq']
     pol = extract_holog_parms['pol_setup']['pol']
     
-    print(extract_holog_parms.keys())
-    
-    start = time.time()
     ctb = ctables.taql('select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, STATE_ID from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s' % (data_col, ms_name, ddi, scan, sel_state_ids))
 
     vis_data = ctb.getcol('DATA')
-    print('vis data type ', vis_data.dtype)
     weight = ctb.getcol('WEIGHT')
     ant1 = ctb.getcol('ANTENNA1')
     ant2 = ctb.getcol('ANTENNA2')
@@ -563,7 +586,7 @@ def _extract_holog_chunk(extract_holog_parms):
     
     pnt_map_dict = _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)    
     
-    hack_dict  = _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time_vis, chan_freq, pol, flagged_mapping_antennas, scan, ddi, ms_name)
+    hack_dict  = _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time_vis, chan_freq, pol, flagged_mapping_antennas, scan, ddi, ms_name, overwrite=overwrite)
     
-    print('Done') 
+    system_message.info("Finished extracting holography chunk for ddi: {ddi} scan: {scan}".format(ddi=ddi, scan=scan))
 

@@ -20,7 +20,7 @@ def info(message:str):
     INFO = "\033[01;34m"
     RESET = "\033[01;00;39m"
 
-    print("[" + INFO + "info" + RESET + "]: " + message)
+    print("[" + INFO + "system info" + RESET + "]: " + message)
         
 def warning(message:str):
     """ Prints formatted message with logging levels for warning
