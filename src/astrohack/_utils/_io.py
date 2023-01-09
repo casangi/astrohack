@@ -21,6 +21,7 @@ from numba.typed import Dict
 
 from casacore import tables as ctables
 
+from astrohack._utils import _system_message as sys
 from astrohack._utils._parallactic_angle import _calculate_parallactic_angle_chunk
 
 
@@ -54,7 +55,7 @@ def _read_data_from_hack_meta(hack_file, hack_dict, ant_id):
     Returns:
         nested dict: nested dictionary (ddi, scan, xds) with xds data embedded in it.
     """
-    
+
     ant_id_str = str(ant_id)
 
     hack_meta_data = "/".join((hack_file, ".hack_json"))

@@ -11,6 +11,7 @@ import xarray as xr
 
 from scipy.interpolate import griddata
 
+from astrohack._utils import _system_message as sys
 from astrohack.dio import load_hack_file
 from astrohack._utils._io import _read_dimensions_meta_data
 
@@ -81,7 +82,8 @@ def holog(hack_file, parallel=True):
             hack_name (str): Hack file name
             parallel (bool, optional): Run in parallel with Dask or in serial. Defaults to True.
         """
-       
+        sys.debug("Hack file name is: {}".format(hack_file))
+
         try:
                 if os.path.exists(hack_file):
                         hack_meta_data = "/".join((hack_file, ".hack_json"))
