@@ -41,7 +41,7 @@ def read_fits(filename):
 
 
 class LinearAxis:
-    # According to JWS this class is superseeded by xarray, which
+    # According to JWS this class is superseded by xarray, which
     # should be used instead
     def __init__(self, n, ref, val, inc):
         self.n = n
@@ -198,27 +198,27 @@ class RingPanel:
         maxfevs = [100000, 1000000, 10000000]
         for maxfev in maxfevs:
             try:
-                popt, pcov = opt.curve_fit(self._paraboloid, coords, devia,
-                                           p0=p0, bounds=[liminf, limsup],
-                                           maxfev=maxfev)
+                result = opt.curve_fit(self._paraboloid, coords, devia,
+                                       p0=p0, bounds=[liminf, limsup],
+                                       maxfev=maxfev)
             except RuntimeError:
                 if verbose:
                     print("Increasing number of iterations")
                 continue
             else:
+                self.par = result[0]
+                self.solved = True
                 if verbose:
                     print("Converged with less than {0:d} iterations".format(maxfev))
                 break
-        self.par    = popt
-        self.solved = True
 
     def _fixed_paraboloid(self, coords, ucurv, vcurv, zoff):
         # Same as the rotated paraboloid, but theta is the panel center
         # This assumes that the center of the paraboloid is the center
         # of the panel, is this reasonable?
         # Also, this function can produce degeneracies, due to the fact
-        # that there are multiple combinations of theta ucurv and
-        # vcurv that produce the same paraboloid
+        # that there are multiple combinations of theta u curvature and
+        # v curvature that produce the same paraboloid
         x, y = coords
         xc, yc = self.center
         u = (x - xc) * np.cos(self.zeta) + (y - yc) * np.sin(self.zeta)
@@ -229,8 +229,8 @@ class RingPanel:
         # This assumes that the center of the paraboloid is the center
         # of the panel, is this reasonable?
         # Also, this function can produce degeneracies, due to the fact
-        # that there are multiple combinations of theta ucurv and
-        # vcurv that produce the same paraboloid
+        # that there are multiple combinations of theta u curvature and
+        # v curvature that produce the same paraboloid
         x, y = coords
         xc, yc = self.center
         u = (x - xc) * np.cos(theta) + (y - yc) * np.sin(theta)
@@ -396,8 +396,8 @@ class AntennaSurface:
 
         self.ingains = np.nan
         self.ougains = np.nan
-        self.inrms   = np.nan
-        self.ourms   = np.nan
+        self.inrms = np.nan
+        self.ourms = np.nan
 
         self._read_images()
         self.cut = cutoff * np.max(self.amp)
