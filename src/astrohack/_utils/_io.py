@@ -18,10 +18,11 @@ import astropy.coordinates as coord
 from numba import njit
 from numba.core import types
 from numba.typed import Dict
+from datetime import datetime
 
 from casacore import tables as ctables
 
-from astrohack._utils import _system_message as system_message
+from astrohack._utils import _system_message as console
 from astrohack._utils._parallactic_angle import _calculate_parallactic_angle_chunk
 
 
@@ -44,7 +45,7 @@ def _read_dimensions_meta_data(hack_file, ddi, ant_id):
             json_dict = json.load(json_file)
     
     except Exception as error:
-        system_message.error("[_read_dimensions_meta_data] {error}".format(error=error))
+        console.error("[_read_dimensions_meta_data] {error}".format(error=error))
         
     return json_dict[str(ant_id)]
 
@@ -71,7 +72,7 @@ def _read_data_from_hack_meta(hack_file, hack_dict, ant_id):
             hack_json = json.load(json_file)
     
     except Exception as error:
-        system_message.error("[_read_data_from_hack_meta] {error}".format(error=error))
+        console.error("[_read_data_from_hack_meta] {error}".format(error=error))
     
     ant_data_dict = {}
     
@@ -156,7 +157,7 @@ def _create_hack_meta_data(hack_file, hack_dict):
                 json.dump(max_extent, json_file)
 
         except Exception as error:
-            system_message.error("[_create_hack_meta_data] {error}".format(error=error))
+            console.error("[_create_hack_meta_data] {error}".format(error=error))
     
     
     output_meta_file = "{name}/{ext}".format(name=hack_file, ext=".hack_json")
@@ -166,7 +167,7 @@ def _create_hack_meta_data(hack_file, hack_dict):
             json.dump(ant_hack_dict, json_file)
     
     except Exception as error:
-            system_message.error("[_create_hack_meta_data] {error}".format(error=error))
+            console.error("[_create_hack_meta_data] {error}".format(error=error))
 
 
 def _get_attrs(zarr_obj):
@@ -316,7 +317,7 @@ def _make_ant_pnt_xds_chunk(ms_name, ant_id, pnt_name):
     
     pnt_xds['DIRECTIONAL_COSINES'] = xr.DataArray(np.array([l,m]).T, dims=('time','ra_dec'))
     
-    system_message.info("[_make_ant_pnt_xds_chunk] Writing pointing xds to {file}".format(file=os.path.join(pnt_name, str(ant_id))))
+    console.info("[_make_ant_pnt_xds_chunk] Writing pointing xds to {file}".format(file=os.path.join(pnt_name, str(ant_id))))
     pnt_xds.to_zarr(os.path.join(pnt_name, str(ant_id)), mode='w', compute=True, consolidated=True)
 
 
@@ -471,7 +472,7 @@ def _get_time_samples(time_vis):
     return np.take(time_vis, indicies), indicies
 
     
-def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time, chan, pol, flagged_mapping_antennas, scan, ddi, ms_name, overwrite):
+def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time_vis, chan, pol, flagged_mapping_antennas, scan, ddi, ms_name, overwrite):
     """ Create hack-structured, formatted output file and save to zarr.
 
     Args:
@@ -479,7 +480,7 @@ def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, ti
         vis_map_dict (dict): a nested dictionary/map of weighted visibilities indexed as [antenna][time, chan, pol]; mainains time ordering.
         weight_map_dict (dict): weights dictionary/map for visibilites in vis_map_dict
         pnt_map_dict (dict): pointing table map dictionary
-        time (numpy.ndarray): time_vis values
+        time_vis (numpy.ndarray): time_vis values
         chan (numpy.ndarray): channel values
         pol (numpy.ndarray): polarization values
         flagged_mapping_antennas (numpy.ndarray): list of mapping antennas that have been flagged.
@@ -491,11 +492,11 @@ def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, ti
     observing_location = ctb.getcol("POSITION")
     ctb.close()
 
-    time_vis_days = time/(3600*24)
+    time_vis_days = time_vis/(3600*24)
     astro_time_vis = astropy.time.Time(time_vis_days, format='mjd')
     time_samples, indicies = _get_time_samples(astro_time_vis)
 
-    coords = {'time':time, 'chan':chan, 'pol':pol}
+    coords = {'time':time_vis, 'chan':chan, 'pol':pol}
     
     for map_ant_index in vis_map_dict.keys():
         if map_ant_index not in flagged_mapping_antennas:
@@ -521,14 +522,13 @@ def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, ti
 
             if overwrite is False:
                 if os.path.exists(hack_file):
-                    raise Exception()
-                    system_message.error('[_create_hack_file] Hack file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.'.format(file=hack_file))
+                    console.warning('[_create_hack_file] Hack file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.'.format(file=hack_file))
 
-            system_message.info("[_create_hack_file] Writing hack file to {file}".format(file=hack_file))
+            console.info("[_create_hack_file] Writing hack file to {file}".format(file=hack_file))
             xds.to_zarr(os.path.join(hack_file, str(ddi) + '/' + str(scan) + '/' + str(map_ant_index)), mode='w', compute=True, consolidated=True)
             
         else:
-            system_message.warning('[_create_hack_file] [FLAGGED DATA] scan: {scan} mapping antenna index {index}'.format(scan=scan, index=map_ant_index))
+            console.warning('[_create_hack_file] [FLAGGED DATA] scan: {scan} mapping antenna index {index}'.format(scan=scan, index=map_ant_index))
         
         
     
@@ -588,5 +588,5 @@ def _extract_holog_chunk(extract_holog_parms):
     
     hack_dict  = _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, time_vis, chan_freq, pol, flagged_mapping_antennas, scan, ddi, ms_name, overwrite=overwrite)
     
-    system_message.info("Finished extracting holography chunk for ddi: {ddi} scan: {scan}".format(ddi=ddi, scan=scan))
+    console.info("Finished extracting holography chunk for ddi: {ddi} scan: {scan}".format(ddi=ddi, scan=scan))
 

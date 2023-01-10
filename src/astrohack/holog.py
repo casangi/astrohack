@@ -11,7 +11,7 @@ import xarray as xr
 
 from scipy.interpolate import griddata
 
-from astrohack._utils import _system_message as system_message
+from astrohack._utils import _system_message as console
 from astrohack.dio import load_hack_file
 from astrohack._utils._io import _read_dimensions_meta_data
 
@@ -82,7 +82,7 @@ def holog(hack_file, parallel=True):
             hack_name (str): Hack file name
             parallel (bool, optional): Run in parallel with Dask or in serial. Defaults to True.
         """
-        system_message.info("Loading holography file {hack_file} ...".format(hack_file=hack_file))
+        console.info("Loading holography file {hack_file} ...".format(hack_file=hack_file))
 
         try:
                 if os.path.exists(hack_file):
@@ -117,7 +117,7 @@ def holog(hack_file, parallel=True):
                                 dask.compute(delayed_list)
 
                 else:
+                        console.error("[holog] Holography file {hack_file} not found.".format(hack_file=hack_file))
                         raise FileNotFoundError()
-                        system_message.error("[holog] Holography file {hack_file} not found.".format(hack_file=hack_file))
         except Exception as error:
-                system_message.error('[holog] {error}'.format(error=error))
+                console.error('[holog] {error}'.format(error=error))

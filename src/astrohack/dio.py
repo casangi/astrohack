@@ -1,12 +1,13 @@
 import os
 import dask
+import sys
 
 import xarray as xr
 import numpy as np
 
 from casacore import tables as ctables
 
-from astrohack._utils import _system_message as system_message
+from astrohack._utils import _system_message as console
 from astrohack._utils._io import _load_pnt_dict, _make_ant_pnt_dict 
 from astrohack._utils._io import _extract_holog_chunk, _open_no_dask_zarr
 from astrohack._utils._io import _create_hack_meta_data, _read_data_from_hack_meta
@@ -33,7 +34,7 @@ def load_hack_file(hack_file, dask_load=True, load_pnt_dict=True, ant_id=None):
     hack_dict = {}
 
     if load_pnt_dict == True:
-        system_message.info("Loading pointing dictionary to hack ...")
+        console.info("Loading pointing dictionary to hack ...")
         hack_dict['pnt_dict'] = _load_pnt_dict(file=hack_file, ant_list=None, dask_load=dask_load)
 
     for ddi in os.listdir(hack_file):
@@ -70,7 +71,13 @@ def extract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_i
         overwrite (bool, optional): Boolean for whether to overwrite current holography file.
     """
     
-    if overwrite == True: system_message.warning('[extract_holog] Warning, current holography files will be overwritten.')
+    hack_file = "{base}.{suffix}".format(base=hack_name, suffix="holog.zarr")
+
+    if os.path.exists(hack_file) is True and overwrite is False:
+        console.error('[_create_hack_file] Hack file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.'.format(file=hack_file))
+        raise FileExistsError
+    else:
+        console.warning('[extract_holog] Warning, current holography files will be overwritten.')
 
     pnt_name = "{base}.{pointing}".format(base=hack_name, pointing='point.zarr')
     
@@ -80,7 +87,7 @@ def extract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_i
     
     # nomodify=True when using CASA tables.
     # print(os.path.join(ms_name,"DATA_DESCRIPTION"))
-    system_message.info("Opening measurement file {ms}".format(ms=os.path.join(ms_name,"DATA_DESCRIPTION")))
+    console.info("Opening measurement file {ms}".format(ms=os.path.join(ms_name,"DATA_DESCRIPTION")))
 
     ctb = ctables.table(os.path.join(ms_name,"DATA_DESCRIPTION"), readonly=True, lockoptions={'option': 'usernoread'}, ack=False) 
     ddi_spw = ctb.getcol("SPECTRAL_WINDOW_ID")
@@ -146,7 +153,7 @@ def extract_holog(ms_name, hack_name, holog_obs_dict, data_col='DATA', subscan_i
         extract_holog_parms['pol_setup']['pol'] = pol_ctb.getcol('CORR_TYPE',startrow=spw_setup_id,nrow=1)[0,:]
         
         for scan in holog_obs_dict[ddi].keys():
-            system_message.info('Processing ddi: {ddi}, scan: {scan}'.format(ddi=ddi, scan=scan))
+            console.info('Processing ddi: {ddi}, scan: {scan}'.format(ddi=ddi, scan=scan))
             
             map_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['map']))[0]
             ref_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]['ref']))[0]
