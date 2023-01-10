@@ -514,6 +514,7 @@ def _create_hack_file(hack_name, vis_map_dict, weight_map_dict, pnt_map_dict, ti
             xds['VIS'] = xr.DataArray(vis_map_dict[map_ant_index], dims=['time','chan','pol'])
             xds['WEIGHT'] = xr.DataArray(weight_map_dict[map_ant_index], dims=['time','chan','pol'])
             xds['DIRECTIONAL_COSINES'] = xr.DataArray(pnt_map_dict[map_ant_index], dims=['time','lm'])
+            xds['chan_freq'] = chan
             xds.attrs['scan'] = scan
             xds.attrs['ant_id'] = map_ant_index
             xds.attrs['ddi'] = ddi
