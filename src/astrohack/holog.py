@@ -31,11 +31,13 @@ def _holog_chunk(holog_chunk_params):
                 n_scan = len(ant_data_dict[ddi_index].keys())
                 n_pol = meta_data['pol']
                 n_points = int(np.sqrt(meta_data['time']))
-                if simple_avg:
-                        n_chan = 1
+                n_chan = meta_data['chan']
+                if not simple_avg:
+                        beams = np.empty((n_scan, n_chan, n_pol, n_points, n_points), dtype=np.cdouble)
+                if average:
+                        ant_data_array = np.empty((n_scan, 1, n_pol, n_points, n_points), dtype=np.cdouble)
                 else:
-                        n_chan = meta_data['chan']
-                ant_data_array = np.empty((n_scan, n_chan, n_pol, n_points, n_points), dtype=np.cdouble)
+                        ant_data_array = np.empty((n_scan, n_chan, n_pol, n_points, n_points), dtype=np.cdouble)
 
                 time_centroid = []
                 for scan_index, scan in enumerate(ant_data_dict[ddi].keys()):
@@ -69,17 +71,19 @@ def _holog_chunk(holog_chunk_params):
         
                                         grid_x, grid_y = np.mgrid[l_min_extent:l_max_extent:n_points*1j, m_min_extent:m_max_extent:n_points*1j]
 
+                                        grid = griddata(lm[:, chan, pol, :], vis[:, chan, pol], (grid_x, grid_y), method='nearest')
                                         if simple_avg:
-                                                grid = griddata(lm[:, chan, pol, :], vis[:, pol],
-                                                                (grid_x, grid_y), method='nearest')
+                                                ant_data_array[scan_index, chan, pol, :, :] = grid
                                         else:
-                                                grid = griddata(lm[:, chan, pol, :], vis[:, chan, pol],
-                                                                (grid_x, grid_y), method='nearest')
-                                        ant_data_array[scan_index, chan, pol, :, :] = grid
-        
-                if average and not simple_avg:
-                        # do something to average ant_data_array over
+                                                beams[scan_index, chan, pol, :, :] = grid
+                if simple_avg:
                         pass
+                else:
+                        if average:
+                                ant_data_array[:, 0, :, :, :] = np.mean(beams, axis=1)
+                        else:
+                                ant_data_array = beams
+
                 xds = xr.Dataset()
                 xds.assign_coords({
                         'time_centroid': np.array(time_centroid), 
