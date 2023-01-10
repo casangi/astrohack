@@ -22,43 +22,64 @@ def _holog_chunk(holog_chunk_params):
             holog_chunk_params (dict): Dictionary containing holography parameters.
         """
         _, ant_data_dict = load_hack_file(holog_chunk_params['hack_file'], dask_load=False, load_pnt_dict=False, ant_id=27)
-
+        average = holog_chunk_params['average']
+        lmscale = holog_chunk_params['lmscale']
+        simple_avg = average and not lmscale
         for ddi_index, ddi in enumerate(ant_data_dict.keys()):
                 meta_data = _read_dimensions_meta_data(hack_file=holog_chunk_params['hack_file'], ddi=ddi_index, ant_id=holog_chunk_params['ant_id'])
 
                 n_scan = len(ant_data_dict[ddi_index].keys())
                 n_pol = meta_data['pol']
                 n_points = int(np.sqrt(meta_data['time']))
-
-                ant_data_array = np.empty((n_scan, n_pol, n_points, n_points), dtype=np.cdouble)
+                if simple_avg:
+                        n_chan = 1
+                else:
+                        n_chan = meta_data['chan']
+                ant_data_array = np.empty((n_scan, n_chan, n_pol, n_points, n_points), dtype=np.cdouble)
 
                 time_centroid = []
                 for scan_index, scan in enumerate(ant_data_dict[ddi].keys()):
-
                         # Grid (l, m) points
-                        lm = ant_data_dict[ddi][scan].DIRECTIONAL_COSINES.values[:, np.newaxis, :]
-                        lm = np.tile(lm, (1, n_pol, 1))
-        
-                        # VIS values    
-                        vis = ant_data_dict[ddi][scan].VIS.mean(dim='chan').values
+                        lm = ant_data_dict[ddi][scan].DIRECTIONAL_COSINES.values[:, np.newaxis, np.newaxis, :]
+                        lm = np.tile(lm, (1, n_chan, n_pol, 1))
+                        # VIS values
+                        if simple_avg:
+                                vis = ant_data_dict[ddi][scan].VIS.mean(dim='chan').values
+                        else:
+                                vis = ant_data_dict[ddi][scan].VIS.values
+                                if lmscale:
+                                        frequencies = ant_data_dict[ddi][scan].chan_freq.values
+                                        # Reference frequency not available yet, using the middle channel frequency
+                                        reffreq = frequencies[n_chan//2]
+                                        # This can be vectorized for a speedup
+                                        for chan in range(n_chan):
+                                                lm[:, chan, :, :] *= frequencies[chan]/reffreq
+
                         time_centroid_index = int(ant_data_dict[ddi][scan].dims['time']*0.5)+1
         
                         time_centroid.append(ant_data_dict[ddi][scan].coords['time'][time_centroid_index].values)
-                        
-                        for pol in range(n_pol):
-                                l_min_extent = meta_data['extent']['l']['min']
-                                l_max_extent = meta_data['extent']['l']['max']
-        
-                                m_min_extent = meta_data['extent']['m']['min']
-                                m_max_extent = meta_data['extent']['m']['max']
-        
-                                grid_x, grid_y = np.mgrid[l_min_extent:l_max_extent:n_points*1j, m_min_extent:m_max_extent:n_points*1j]
-        
-                                grid = griddata(lm[:, pol, :], vis[:, pol], (grid_x, grid_y), method='nearest')
-                                
-                                ant_data_array[scan_index, pol, :, :] = grid
-        
 
+                        for chan in range(n_chan):
+                                for pol in range(n_pol):
+                                        l_min_extent = meta_data['extent']['l']['min']
+                                        l_max_extent = meta_data['extent']['l']['max']
+        
+                                        m_min_extent = meta_data['extent']['m']['min']
+                                        m_max_extent = meta_data['extent']['m']['max']
+        
+                                        grid_x, grid_y = np.mgrid[l_min_extent:l_max_extent:n_points*1j, m_min_extent:m_max_extent:n_points*1j]
+
+                                        if simple_avg:
+                                                grid = griddata(lm[:, chan, pol, :], vis[:, pol],
+                                                                (grid_x, grid_y), method='nearest')
+                                        else:
+                                                grid = griddata(lm[:, chan, pol, :], vis[:, chan, pol],
+                                                                (grid_x, grid_y), method='nearest')
+                                        ant_data_array[scan_index, chan, pol, :, :] = grid
+        
+                if average and not simple_avg:
+                        # do something to average ant_data_array over
+                        pass
                 xds = xr.Dataset()
                 xds.assign_coords({
                         'time_centroid': np.array(time_centroid), 
@@ -66,7 +87,7 @@ def _holog_chunk(holog_chunk_params):
                         'pol':[i for i in range(n_pol)]
                 })
 
-                xds['GRID'] = xr.DataArray(ant_data_array, dims=['time-centroid', 'pol', 'l', 'm'])
+                xds['GRID'] = xr.DataArray(ant_data_array, dims=['time-centroid', 'chan', 'pol', 'l', 'm'])
 
                 xds.attrs['ant_id'] = holog_chunk_params['ant_id']
                 xds.attrs['time_centroid'] = np.array(time_centroid)
@@ -75,7 +96,7 @@ def _holog_chunk(holog_chunk_params):
 
                 xds.to_zarr("{name}.image.zarr/{ant}/{ddi}".format(name=hack_base_name, ant=holog_chunk_params['ant_id'], ddi=ddi_index), mode='w', compute=True, consolidated=True)
 
-def holog(hack_file, parallel=True):
+def holog(hack_file, parallel=True, average=True, lmscale=False):
         """ Process holography data
 
         Args:
@@ -97,6 +118,8 @@ def holog(hack_file, parallel=True):
 
                         holog_chunk_params = {}
                         holog_chunk_params['hack_file'] = hack_file
+                        holog_chunk_params['average'] = average
+                        holog_chunk_params['lmscale'] = lmscale
 
                         delayed_list = []
 
