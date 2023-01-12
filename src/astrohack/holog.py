@@ -1,9 +1,11 @@
-import dask
+import math
 import time
 import json
 import os
+
 import dask
 import dask.distributed
+import scipy.fftpack
 
 import dask.array as da
 import numpy as np
@@ -15,13 +17,38 @@ from astrohack._utils import _system_message as console
 from astrohack.dio import load_hack_file
 from astrohack._utils._io import _read_dimensions_meta_data
 
+def _calculate_aperture_pattern(grid, scaling_factor=20):
+        console.info("Calculating aperture illumination pattern ...")
+        initial_dimension = grid.shape[3]
+
+        assert grid.shape[2] == grid.shape[3]
+    
+        # Calculate padding as the nearest power of 2
+        # k log (2) = log(N) => k = log(N)/log(2)
+        # New shape => K = math.ceil(k) => shape = (K, K)
+    
+        k = np.log(initial_dimension*scaling_factor)/np.log(2)
+        K = math.ceil(k)
+    
+        padding = (np.power(2, K) - scaling_factor*initial_dimension)//2
+        
+        padded_grid = np.pad(array=grid, pad_width=[(0, 0), (0, 0), (padding, padding), (padding, padding)], mode='constant')
+    
+        shifted = scipy.fftpack.fftshift(padded_grid)
+    
+        grid_fft = scipy.fftpack.fft2(shifted)                        
+    
+        aperture_grid = scipy.fftpack.fftshift(grid_fft)
+
+        return aperture_grid
+
 def _holog_chunk(holog_chunk_params):
         """_summary_
 
         Args:
             holog_chunk_params (dict): Dictionary containing holography parameters.
         """
-        _, ant_data_dict = load_hack_file(holog_chunk_params['hack_file'], dask_load=False, load_pnt_dict=False, ant_id=27)
+        _, ant_data_dict = load_hack_file(holog_chunk_params['hack_file'], dask_load=False, load_pnt_dict=False, ant_id=holog_chunk_params['ant_id'])
 
         for ddi_index, ddi in enumerate(ant_data_dict.keys()):
                 meta_data = _read_dimensions_meta_data(hack_file=holog_chunk_params['hack_file'], ddi=ddi_index, ant_id=holog_chunk_params['ant_id'])
@@ -59,6 +86,8 @@ def _holog_chunk(holog_chunk_params):
                                 ant_data_array[scan_index, pol, :, :] = grid
         
 
+                aperture_grid = _calculate_aperture_pattern(grid=ant_data_array)
+
                 xds = xr.Dataset()
                 xds.assign_coords({
                         'time_centroid': np.array(time_centroid), 
@@ -67,6 +96,7 @@ def _holog_chunk(holog_chunk_params):
                 })
 
                 xds['GRID'] = xr.DataArray(ant_data_array, dims=['time-centroid', 'pol', 'l', 'm'])
+                xds['APERTURE'] = xr.DataArray(aperture_grid, dims=['time-centroid', 'pol', 'u', 'v'])
 
                 xds.attrs['ant_id'] = holog_chunk_params['ant_id']
                 xds.attrs['time_centroid'] = np.array(time_centroid)
