@@ -6,6 +6,7 @@ import os
 import dask
 import dask.distributed
 import scipy.fftpack
+import scipy.constants
 
 import dask.array as da
 import numpy as np
@@ -17,7 +18,7 @@ from astrohack._utils import _system_message as console
 from astrohack.dio import load_hack_file
 from astrohack._utils._io import _read_dimensions_meta_data
 
-def _calculate_aperture_pattern(grid, scaling_factor=20):
+def _calculate_aperture_pattern(grid, frequency, ant_id, padding_factor=100):
         console.info("Calculating aperture illumination pattern ...")
         initial_dimension = grid.shape[3]
 
@@ -27,10 +28,10 @@ def _calculate_aperture_pattern(grid, scaling_factor=20):
         # k log (2) = log(N) => k = log(N)/log(2)
         # New shape => K = math.ceil(k) => shape = (K, K)
     
-        k = np.log(initial_dimension*scaling_factor)/np.log(2)
+        k = np.log(initial_dimension*padding_factor)/np.log(2)
         K = math.ceil(k)
     
-        padding = (np.power(2, K) - scaling_factor*initial_dimension)//2
+        padding = (np.power(2, K) - padding_factor*initial_dimension)//2
         
         padded_grid = np.pad(array=grid, pad_width=[(0, 0), (0, 0), (padding, padding), (padding, padding)], mode='constant')
     
@@ -40,6 +41,14 @@ def _calculate_aperture_pattern(grid, scaling_factor=20):
     
         aperture_grid = scipy.fftpack.fftshift(grid_fft)
 
+        # Regrid data appropriately
+        c = scipy.constants.speed_of_light
+        
+        wave_length = c/frequency
+
+        image_size = grid[ant_id].dims['u']
+
+
         return aperture_grid
 
 def _holog_chunk(holog_chunk_params):
@@ -48,7 +57,7 @@ def _holog_chunk(holog_chunk_params):
         Args:
             holog_chunk_params (dict): Dictionary containing holography parameters.
         """
-        _, ant_data_dict = load_hack_file(holog_chunk_params['hack_file'], dask_load=False, load_pnt_dict=False, ant_id=holog_chunk_params['ant_id'])
+        hack, ant_data_dict = load_hack_file(holog_chunk_params['hack_file'], dask_load=False, load_pnt_dict=False, ant_id=holog_chunk_params['ant_id'])
 
         for ddi_index, ddi in enumerate(ant_data_dict.keys()):
                 meta_data = _read_dimensions_meta_data(hack_file=holog_chunk_params['hack_file'], ddi=ddi_index, ant_id=holog_chunk_params['ant_id'])
@@ -56,6 +65,9 @@ def _holog_chunk(holog_chunk_params):
                 n_scan = len(ant_data_dict[ddi_index].keys())
                 n_pol = meta_data['pol']
                 n_points = int(np.sqrt(meta_data['time']))
+
+                # Make sure that n_points creates a grid with [0, 0] at the center, ie. n_points must be odd.
+                if n_points % 2 == 0: n_points = n_points + 1
 
                 ant_data_array = np.empty((n_scan, n_pol, n_points, n_points), dtype=np.cdouble)
 
@@ -85,8 +97,8 @@ def _holog_chunk(holog_chunk_params):
                                 
                                 ant_data_array[scan_index, pol, :, :] = grid
         
-
-                aperture_grid = _calculate_aperture_pattern(grid=ant_data_array)
+                console.debug("[_holog_chunk] padding factor {}".format(holog_chunk_params['padding_factor']))
+                aperture_grid = _calculate_aperture_pattern(grid=ant_data_array, ant_id=holog_chunk_params['ant_id'], frequency=1.11e11, padding_factor=holog_chunk_params['padding_factor'])
 
                 xds = xr.Dataset()
                 xds.assign_coords({
@@ -105,7 +117,7 @@ def _holog_chunk(holog_chunk_params):
 
                 xds.to_zarr("{name}.image.zarr/{ant}/{ddi}".format(name=hack_base_name, ant=holog_chunk_params['ant_id'], ddi=ddi_index), mode='w', compute=True, consolidated=True)
 
-def holog(hack_file, parallel=True):
+def holog(hack_file, padding_factor=20, parallel=True):
         """ Process holography data
 
         Args:
@@ -127,6 +139,7 @@ def holog(hack_file, parallel=True):
 
                         holog_chunk_params = {}
                         holog_chunk_params['hack_file'] = hack_file
+                        holog_chunk_params['padding_factor'] = padding_factor
 
                         delayed_list = []
 
