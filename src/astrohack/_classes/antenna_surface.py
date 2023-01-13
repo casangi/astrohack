@@ -1,8 +1,8 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from linear_axis import LinearAxis
-from ring_panel import RingPanel
+from astrohack._classes.linear_axis import LinearAxis
+from astrohack._classes.ring_panel import RingPanel
 from astrohack._utils._fits_io import _read_fits
 from astrohack._utils._fits_io import _write_fits
 
@@ -42,7 +42,6 @@ class AntennaSurface:
 
         self._read_images()
         self.cut = cutoff * np.max(self.amp)
-        print(self.cut)
 
         if telescope == 'VLA':
             self._init_vla()
@@ -302,7 +301,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.print_misc()
 
-    def plot_surface(self, filename=None, mask=False, screws=False):
+    def plot_surface(self, filename=None, mask=False, screws=False, dpi=300):
         """
         Do plots of the antenna surface
         Args:
@@ -339,7 +338,7 @@ class AntennaSurface:
         if filename is None:
             plt.show()
         else:
-            plt.savefig(filename, dpi=600)
+            plt.savefig(filename, dpi=dpi)
 
     def _plot_surface(self, data, title, fig, ax, vmin, vmax, screws=False, mask=False,
                       unit='mm'):
