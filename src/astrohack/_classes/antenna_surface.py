@@ -3,10 +3,12 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astrohack._classes.linear_axis import LinearAxis
 from astrohack._classes.ring_panel import RingPanel
+from astrohack._classes.telescope import Telescope
 from astrohack._utils._fits_io import _read_fits
 from astrohack._utils._fits_io import _write_fits
 
 lnbr = '\n'
+
 
 def _convert_to_db(val: float):
     """
@@ -17,6 +19,7 @@ def _convert_to_db(val: float):
         Value in decibels
     """
     return 10. * np.log10(val)
+
 
 class AntennaSurface:
 
@@ -43,24 +46,23 @@ class AntennaSurface:
         self._read_images()
         self.cut = cutoff * np.max(self.amp)
 
-        if telescope == 'VLA':
-            self._init_vla()
-        elif telescope == 'VLBA':
-            self._init_vlba()
-        else:
-            raise Exception("Unknown telescope: " + telescope)
+        self.telescope = Telescope(telescope)
+
         if pkind is None:
-            pass
+            if self.telescope.ringed:
+                self.panelkind = 'fixedtheta'
+            else:
+                self.panelkind = 'xyparaboloid'
         else:
             self.panelkind = pkind
 
         self._get_aips_headpars()
-        self.reso = self.diam / self.npoint
+        self.reso = self.telescope.diam / self.npoint
 
         self.resi = None
         self.corr = None
         self.solved = False
-        if self.ringed:
+        if self.telescope.ringed:
             self._build_polar()
             self._build_ring_panels()
             self._build_ring_mask()
@@ -109,39 +111,6 @@ class AntennaSurface:
         self.mask = np.where(self.rad < self.oulim, self.mask, False)
         self.mask = np.where(np.isnan(self.dev), False, self.mask)
 
-    # Other known telescopes should be included here, ALMA, ngVLA
-    def _init_vla(self):
-        """
-        Initializes object according to parameters specific to VLA panel distribution
-        """
-        self.panelkind = 'flexible'
-        self.telescope = "VLA"
-        self.diam = 25.0  # meters
-        self.focus = 8.8  # meters
-        self.ringed = True
-        self.nrings = 6
-        self.npanel = [12, 16, 24, 40, 40, 40]
-        self.inrad = [1.983, 3.683, 5.563, 7.391, 9.144, 10.87]
-        self.ourad = [3.683, 5.563, 7.391, 9.144, 10.87, 12.5]
-        self.inlim = 2.0
-        self.oulim = 12.0
-
-    def _init_vlba(self):
-        """
-        Initializes object according to parameters specific to VLBA panel distribution
-        """
-        self.panelkind = "flexible"
-        self.telescope = "VLBA"
-        self.diam = 25.0  # meters
-        self.focus = 8.75  # meters
-        self.ringed = True
-        self.nrings = 6
-        self.npanel = [20, 20, 40, 40, 40, 40]
-        self.inrad = [1.676, 3.518, 5.423, 7.277, 9.081, 10.808]
-        self.ourad = [3.518, 5.423, 7.277, 9.081, 10.808, 12.500]
-        self.inlim = 2.0
-        self.oulim = 12.0
-
     def _build_polar(self):
         """
         Build polar coordinate grid, specific for circular antennas with panels arranged in rings
@@ -162,11 +131,11 @@ class AntennaSurface:
         Build list of panels, specific for circular antennas with panels arranged in rings
         """
         self.panels = []
-        for iring in range(self.nrings):
-            angle = 2.0 * np.pi / self.npanel[iring]
-            for ipanel in range(self.npanel[iring]):
+        for iring in range(self.telescope.nrings):
+            angle = 2.0 * np.pi / self.telescope.npanel[iring]
+            for ipanel in range(self.telescope.npanel[iring]):
                 panel = RingPanel(self.panelkind, angle, iring,
-                                  ipanel, self.inrad[iring], self.ourad[iring])
+                                  ipanel, self.telescope.inrad[iring], self.telescope.ourad[iring])
                 self.panels.append(panel)
         return
 
@@ -200,7 +169,7 @@ class AntennaSurface:
         if ring == 1:
             ipanel = panel - 1
         else:
-            ipanel = np.sum(self.npanel[:ring - 1]) + panel - 1
+            ipanel = np.sum(self.telescope.npanel[:ring - 1]) + panel - 1
         return self.panels[ipanel]
 
     def gains(self):
@@ -225,8 +194,6 @@ class AntennaSurface:
         Returns:
         Actual and theoretical gains
         """
-        # Compute the actual and theoretical gains for the current
-        # antenna surface. What is the unit for the wavelength? mm
         forpi = 4.0 * np.pi
         fact = 1000. * self.reso / self.wavel
         fact *= fact
@@ -240,7 +207,7 @@ class AntennaSurface:
         for iy in range(self.npix):
             for ix in range(self.npix):
                 if self.mask[ix, iy]:
-                    quo = self.rad[ix, iy] / (2. * self.focus)
+                    quo = self.rad[ix, iy] / (2. * self.telescope.focus)
                     phase = arr[ix, iy] * forpi / (np.sqrt(1. + quo * quo) * self.wavel)
                     sumrad += np.cos(phase)
                     sumtheta += np.sin(phase)
@@ -308,6 +275,7 @@ class AntennaSurface:
             filename: Save plot to a file rather than displaying it with matplotlib widgets
             mask: Display mask and amplitudes rather than deviation images
             screws: Display the screws on the panels
+            dpi: Plot resolution in DPI
         """
         vmin, vmax = np.nanmin(self.dev), np.nanmax(self.dev)
         rms = self.get_rms()
@@ -380,7 +348,7 @@ class AntennaSurface:
         """
         if self.resi is None:
             raise Exception("Cannot export corrected surface")
-        _write_fits(self.devhead,self.resi,filename)
+        _write_fits(self.devhead, self.resi, filename)
         return
 
     def export_screw_adjustments(self, filename, unit='mm'):
@@ -392,7 +360,7 @@ class AntennaSurface:
         """
         spc = ' '
         outfile = 'Screw adjustments for {0:s} {1:s} antenna\n'.format(
-            self.telescope, self.amphead['telescop'])
+            self.telescope.name, self.amphead['telescop'])
         outfile += 'Adjustments are in ' + unit + lnbr
         outfile += 2 * lnbr
         outfile += 25 * spc + "{0:22s}{1:22s}".format('Inner Edge', 'Outer Edge') + lnbr
