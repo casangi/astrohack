@@ -1,106 +1,64 @@
+import xarray as xr
+import pkg_resources
+import os
+
 ring_list_keys = ['npanel', 'inrad', 'ourad']
 ring_simple_keys = ['name', 'diam', 'focus', 'nrings', 'inlim', 'oulim']
+tel_data_path = pkg_resources.resource_filename('astrohack', '../../data/telescopes')
 
+
+def _find_cfg_file(name, path):
+    newpath = None
+    for root, dirs, files in os.walk(path):
+        if name in dirs:
+            newpath = os.path.join(root, name)
+
+    if newpath is None:
+        raise FileNotFoundError
+    else:
+        return newpath
 
 class Telescope:
-    def __init__(self, name):
+    def __init__(self, name: str, path=None):
         """
         Initializes antenna surface relevant information based on the telescope name
         Args:
             name: telescope name
         """
-        if name == 'VLA':
-            self._init_vla()
-        elif name == 'VLBA':
-            self._init_vlba()
-        else:
-            raise Exception("Unknown telescope: " + name)
-        return
-
-    def _read_cfg_file(self, filename):
+        filename = name.lower()+'.zarr'
         try:
-            cfgfile = open(filename, 'r')
-            ledict = {}
-            for line in cfgfile:
-                wrds = line.split('=')
-                ledict[wrds[0].strip()] = wrds[1]
-            cfgfile.close()
-        except:
-            raise Exception('Badly formatted cfg file')
-
-        print(ledict)
-        print(ledict['ringed'])
-        try:
-            self.ringed = bool(ledict['ringed'])
-        except KeyError:
-            raise Exception('Ringed keyword missing from cfg file')
-        except ValueError:
-            raise Exception('Value for keyword ringed is not boolean')
-
+            if path is None:
+                filepath = _find_cfg_file(filename, tel_data_path)
+            else:
+                filepath = _find_cfg_file(name, path)
+        except FileNotFoundError:
+            raise Exception('Unknown telescope: '+name)
+        self.read(filepath)
         if self.ringed:
-            self._init_ringed_telescope(ledict)
+            self._ringed_consistency()
         else:
-            self._init_general_telescope(ledict)
-
+            self._general_consistency()
         return
 
-    def _init_ringed_telescope(self, ledict):
-        for key in ring_simple_keys:
-            try:
-                setattr(self, key, float(ledict[key]))
-            except KeyError:
-                raise Exception(key+' keyword missing from cfg file')
-            except ValueError:
-                raise Exception('Cannot convert '+ledict[key]+' to float')
-
-        for key in ring_list_keys:
-            try:
-                wrds = ledict[key].split(',')
-                lelist = []
-                for word in wrds:
-                    lelist.append(float(word))
-                setattr(self, key, lelist)
-            except KeyError:
-                raise Exception(key+' keyword missing from cfg file')
-            except ValueError:
-                raise Exception('Failed to convert values to float for keyword '+key)
-
-        if not self.npanel == len(self.npanel) == len(self.inrad) == self.ourad:
+    def _ringed_consistency(self):
+        if not self.nrings == len(self.inrad) == len(self.ourad):
             raise Exception('Number of panels don\'t match radii or number of panels list sizes')
-
+        if not self.onaxisoptics:
+            raise Exception('Off axis optics not yet supported')
         return
 
-    def _init_general_telescope(self, ledict):
-        raise Exception("General layout telescopes not yet supported")
+    def _general_consistency(self):
+        raise Exception('General layout telescopes not yet supported')
+
+    def write(self, filename):
+        ledict = vars(self)
+        xds = xr.Dataset()
+        xds.attrs = ledict
+        xds.to_zarr(filename, mode='w', compute=True, consolidated=True)
         return
 
-    # Other known telescopes should be included here, ALMA, ngVLA
-    def _init_vla(self):
-        """
-        Initializes object according to parameters specific to VLA panel distribution
-        """
-        self.name = "VLA"
-        self.diam = 25.0  # meters
-        self.focus = 8.8  # meters
-        self.ringed = True
-        self.nrings = 6
-        self.npanel = [12, 16, 24, 40, 40, 40]
-        self.inrad = [1.983, 3.683, 5.563, 7.391, 9.144, 10.87]
-        self.ourad = [3.683, 5.563, 7.391, 9.144, 10.87, 12.5]
-        self.inlim = 2.0
-        self.oulim = 12.0
-
-    def _init_vlba(self):
-        """
-        Initializes object according to parameters specific to VLBA panel distribution
-        """
-        self.name = "VLBA"
-        self.diam = 25.0  # meters
-        self.focus = 8.75  # meters
-        self.ringed = True
-        self.nrings = 6
-        self.npanel = [20, 20, 40, 40, 40, 40]
-        self.inrad = [1.676, 3.518, 5.423, 7.277, 9.081, 10.808]
-        self.ourad = [3.518, 5.423, 7.277, 9.081, 10.808, 12.500]
-        self.inlim = 2.0
-        self.oulim = 12.0
+    def read(self, filename):
+        xds = xr.open_zarr(filename)
+        for key in xds.attrs:
+            setattr(self, key, xds.attrs[key])
+        return
