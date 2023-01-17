@@ -1,0 +1,42 @@
+{
+    "metadata": {
+        ".zattrs": {
+            "diam": 25.0,
+            "focus": 8.8,
+            "inlim": 2.0,
+            "inrad": [
+                1.983,
+                3.683,
+                5.563,
+                7.391,
+                9.144,
+                10.87
+            ],
+            "name": "VLA",
+            "npanel": [
+                12,
+                16,
+                24,
+                40,
+                40,
+                40
+            ],
+            "nrings": 6,
+            "onaxisoptics": true,
+            "oulim": 12.0,
+            "ourad": [
+                3.683,
+                5.563,
+                7.391,
+                9.144,
+                10.87,
+                12.5
+            ],
+            "ringed": true
+        },
+        ".zgroup": {
+            "zarr_format": 2
+        }
+    },
+    "zarr_consolidated_format": 1
+}
