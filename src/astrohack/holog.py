@@ -50,7 +50,7 @@ def _holog_chunk(holog_chunk_params):
                         else:
                                 vis = ant_data_dict[ddi][scan].VIS.values
                                 if lmscale:
-                                        frequencies = ant_data_dict[ddi][scan].chan_freq.values
+                                        frequencies = ant_data_dict[ddi][scan].chan.values
                                         # Reference frequency not available yet, using the middle channel frequency
                                         reffreq = frequencies[n_chan//2]
                                         # This can be vectorized for a speedup
