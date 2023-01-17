@@ -34,10 +34,10 @@ def _calculate_aperture_pattern(grid, frequency, ant_id, padding_factor=100):
         padding = (np.power(2, K) - padding_factor*initial_dimension)//2
         
         padded_grid = np.pad(array=grid, pad_width=[(0, 0), (0, 0), (padding, padding), (padding, padding)], mode='constant')
-    
+        
         shifted = scipy.fftpack.fftshift(padded_grid)
     
-        grid_fft = scipy.fftpack.fft2(shifted)                        
+        grid_fft = scipy.fftpack.fft2(shifted)                      
     
         aperture_grid = scipy.fftpack.fftshift(grid_fft)
 
@@ -46,7 +46,7 @@ def _calculate_aperture_pattern(grid, frequency, ant_id, padding_factor=100):
         
         wave_length = c/frequency
 
-        image_size = grid[ant_id].dims['u']
+        #image_size = grid[ant_id].dims['u']
 
 
         return aperture_grid
