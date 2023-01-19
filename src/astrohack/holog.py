@@ -18,7 +18,7 @@ from astrohack._utils import _system_message as console
 from astrohack.dio import load_hack_file
 from astrohack._utils._io import _read_dimensions_meta_data
 
-def _calculate_aperture_pattern(grid, frequency, ant_id, padding_factor=100):
+def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=100):
         console.info("Calculating aperture illumination pattern ...")
         initial_dimension = grid.shape[3]
 
@@ -41,15 +41,24 @@ def _calculate_aperture_pattern(grid, frequency, ant_id, padding_factor=100):
     
         aperture_grid = scipy.fftpack.fftshift(grid_fft)
 
-        # Regrid data appropriately
-        c = scipy.constants.speed_of_light
-        
-        wave_length = c/frequency
+        u_size = aperture_grid.shape[2]
+        v_size = aperture_grid.shape[3]
 
-        #image_size = grid[ant_id].dims['u']
+        image_size = np.array([
+                u_size,
+                v_size
+        ])
 
+        wave_length = scipy.constants.speed_of_light/frequency
 
-        return aperture_grid
+        cell_size = wave_length/(image_size*delta)
+
+        image_center = image_size//2
+
+        u = np.arange(-image_center[0], image_size[0]-image_center[0])*cell_size[0]
+        v = np.arange(-image_center[1], image_size[1]-image_center[1])*cell_size[1]
+
+        return aperture_grid, u, v
 
 def _holog_chunk(holog_chunk_params):
         """_summary_
@@ -57,7 +66,8 @@ def _holog_chunk(holog_chunk_params):
         Args:
             holog_chunk_params (dict): Dictionary containing holography parameters.
         """
-        hack, ant_data_dict = load_hack_file(holog_chunk_params['hack_file'], dask_load=False, load_pnt_dict=False, ant_id=holog_chunk_params['ant_id'])
+        
+        _, ant_data_dict = load_hack_file(holog_chunk_params['hack_file'], dask_load=False, load_pnt_dict=False, ant_id=holog_chunk_params['ant_id'])
 
         for ddi_index, ddi in enumerate(ant_data_dict.keys()):
                 meta_data = _read_dimensions_meta_data(hack_file=holog_chunk_params['hack_file'], ddi=ddi_index, ant_id=holog_chunk_params['ant_id'])
@@ -66,52 +76,84 @@ def _holog_chunk(holog_chunk_params):
                 n_pol = meta_data['pol']
                 n_points = int(np.sqrt(meta_data['time']))
 
-                # Make sure that n_points creates a grid with [0, 0] at the center, ie. n_points must be odd.
-                if n_points % 2 == 0: n_points = n_points + 1
-
                 ant_data_array = np.empty((n_scan, n_pol, n_points, n_points), dtype=np.cdouble)
 
                 time_centroid = []
+
+                l_min_extent = meta_data['extent']['l']['min']
+                l_max_extent = meta_data['extent']['l']['max']
+        
+                m_min_extent = meta_data['extent']['m']['min']
+                m_max_extent = meta_data['extent']['m']['max']
+
+                delta_lm = np.array([
+                        (l_max_extent - l_min_extent)/n_points,
+                        (m_max_extent - m_min_extent)/n_points
+                ])
+
+                image_size = np.array([
+                        n_points,
+                        n_points
+                ])
+
+                image_center = image_size//2
+
+                c = scipy.constants.speed_of_light
+        
+                step_l = (l_max_extent - l_min_extent)/n_points
+                step_m = (m_max_extent - m_min_extent)/n_points
+
+                l = np.arange(-image_center[0], image_size[0]-image_center[0])*step_l
+                m = np.arange(-image_center[1], image_size[1]-image_center[1])*step_m
+
+                grid_x, grid_y = np.meshgrid(l, m)
+
                 for scan_index, scan in enumerate(ant_data_dict[ddi].keys()):
 
-                        # Grid (l, m) points
+                        frequency_array = ant_data_dict[ddi][scan]
+                
+                        # This needs to be changed when we are not doing channel averaging I think.
+                        frequency = frequency_array.chan.values.mean()
+
                         lm = ant_data_dict[ddi][scan].DIRECTIONAL_COSINES.values[:, np.newaxis, :]
                         lm = np.tile(lm, (1, n_pol, 1))
         
                         # VIS values    
                         vis = ant_data_dict[ddi][scan].VIS.mean(dim='chan').values
-                        time_centroid_index = int(ant_data_dict[ddi][scan].dims['time']*0.5)+1
+                        time_centroid_index = ant_data_dict[ddi][scan].dims['time']//2
         
                         time_centroid.append(ant_data_dict[ddi][scan].coords['time'][time_centroid_index].values)
                         
                         for pol in range(n_pol):
-                                l_min_extent = meta_data['extent']['l']['min']
-                                l_max_extent = meta_data['extent']['l']['max']
-        
-                                m_min_extent = meta_data['extent']['m']['min']
-                                m_max_extent = meta_data['extent']['m']['max']
-        
-                                grid_x, grid_y = np.mgrid[l_min_extent:l_max_extent:n_points*1j, m_min_extent:m_max_extent:n_points*1j]
-        
-                                grid = griddata(lm[:, pol, :], vis[:, pol], (grid_x, grid_y), method='nearest')
-                                
+                                grid = griddata(lm[:, pol, :], vis[:, pol], (grid_x.T, grid_y.T), method='nearest')
                                 ant_data_array[scan_index, pol, :, :] = grid
         
-                console.debug("[_holog_chunk] padding factor {}".format(holog_chunk_params['padding_factor']))
-                aperture_grid = _calculate_aperture_pattern(grid=ant_data_array, ant_id=holog_chunk_params['ant_id'], frequency=1.11e11, padding_factor=holog_chunk_params['padding_factor'])
+                console.info("[_holog_chunk] FFT padding factor {}".format(holog_chunk_params['padding_factor']))
+                aperture_grid, u, v = _calculate_aperture_pattern(
+                        grid=ant_data_array,
+                        frequency=frequency,
+                        delta=delta_lm, 
+                        padding_factor=holog_chunk_params['padding_factor']
+                )
 
                 xds = xr.Dataset()
-                xds.assign_coords({
-                        'time_centroid': np.array(time_centroid), 
-                        'ddi':list(map(int, ant_data_dict.keys())), 
-                        'pol':[i for i in range(n_pol)]
-                })
 
                 xds['GRID'] = xr.DataArray(ant_data_array, dims=['time-centroid', 'pol', 'l', 'm'])
                 xds['APERTURE'] = xr.DataArray(aperture_grid, dims=['time-centroid', 'pol', 'u', 'v'])
 
                 xds.attrs['ant_id'] = holog_chunk_params['ant_id']
                 xds.attrs['time_centroid'] = np.array(time_centroid)
+
+                coords = {}
+                coords['time_centroid'] = np.array(time_centroid)
+                coords['ddi'] = list(map(int, ant_data_dict.keys()))
+                coords['pol'] = [i for i in range(n_pol)]
+                coords['l'] = l
+                coords['m'] = m
+                coords['u'] = u
+                coords['v'] = v
+
+                xds = xds.assign_coords(coords)
 
                 hack_base_name = holog_chunk_params['hack_file'].split('.holog.zarr')[0]
 
