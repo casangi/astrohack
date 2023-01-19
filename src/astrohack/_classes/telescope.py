@@ -2,8 +2,6 @@ import xarray as xr
 import pkg_resources
 import os
 
-ring_list_keys = ['npanel', 'inrad', 'ourad']
-ring_simple_keys = ['name', 'diam', 'focus', 'nrings', 'inlim', 'oulim']
 tel_data_path = pkg_resources.resource_filename('astrohack', '../../data/telescopes')
 
 
