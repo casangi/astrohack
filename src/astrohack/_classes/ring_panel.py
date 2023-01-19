@@ -2,6 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy import optimize as opt
 
+
 def _gauss_elimination_numpy(system, vector):
     """
     Gauss elimination solving of a system using numpy
@@ -14,6 +15,7 @@ def _gauss_elimination_numpy(system, vector):
     """
     inverse = np.linalg.inv(system)
     return np.dot(inverse, vector)
+
 
 class RingPanel:
     # This class describes and treats panels that are arranged in
@@ -46,12 +48,6 @@ class RingPanel:
         self.center = [rt * np.sin(self.zeta), rt * np.cos(self.zeta)]
         self.screws = np.ndarray([4, 2])
 
-        # AIPS definition of the screws, seem arbitrary and don't
-        # really work
-        # self.screws[0,:] = -self.bmp[0],self.bmp[1]
-        # self.screws[1,:] =  self.bmp[0],self.bmp[1]
-        # self.screws[2,:] = -self.tmp[0],self.tmp[1]
-        # self.screws[3,:] =  self.tmp[0],self.tmp[1]
         rscale = 0.1 * (ourad - inrad)
         tscale = 0.1 * angle
         self.screws[0, :] = np.sin(self.theta1 + tscale), np.cos(self.theta1 + tscale)
@@ -67,10 +63,7 @@ class RingPanel:
         self.values = []
         self.corr = None
 
-        if self.kind == "flexible":
-            self.solve = self._solve_flexi
-            self.corr_point = self._corr_point_flexi
-        elif self.kind == "rigid":
+        if self.kind == "rigid":
             self.solve = self._solve_rigid
             self.corr_point = self._corr_point_rigid
         elif self.kind == "single":
@@ -115,52 +108,6 @@ class RingPanel:
         """
         self.values.append(value)
         self.nsamp += 1
-
-    def _solve_flexi(self):
-        """
-        Fit panel surface using AIPS gauss elimination model for flexible panels
-        """
-        syssize = 4
-        if self.nsamp < syssize:
-            # In this case the matrix will always be singular as the
-            # rows will be linear combinations
-            return
-        system = np.zeros([syssize, syssize])
-        vector = np.zeros(syssize)
-
-        for ipoint in range(len(self.values)):
-            dev = self.values[ipoint][-1]
-            if dev != 0:
-                xcoor = self.values[ipoint][0]
-                ycoor = self.values[ipoint][1]
-                fac = self.bmp[0] + ycoor * (self.tmp[0] - self.bmp[0]) / self.tmp[1]
-                coef1 = (self.tmp[1] - ycoor) * (1. - xcoor / fac) / (2.0 * self.tmp[1])
-                coef2 = ycoor * (1. - xcoor / fac) / (2.0 * self.tmp[1])
-                coef3 = (self.tmp[1] - ycoor) * (1. + xcoor / fac) / (2.0 * self.tmp[1])
-                coef4 = ycoor * (1. + xcoor / fac) / (2.0 * self.tmp[1])
-                system[0, 0] += coef1 * coef1
-                system[0, 1] += coef1 * coef2
-                system[0, 2] += coef1 * coef3
-                system[0, 3] += coef1 * coef4
-                system[1, 0] = system[0, 1]
-                system[1, 1] += coef2 * coef2
-                system[1, 2] += coef2 * coef3
-                system[1, 3] += coef2 * coef4
-                system[2, 0] = system[0, 2]
-                system[2, 1] = system[1, 2]
-                system[2, 2] += coef3 * coef3
-                system[2, 3] += coef3 * coef4
-                system[3, 0] = system[0, 3]
-                system[3, 1] = system[1, 3]
-                system[3, 2] = system[2, 3]
-                system[3, 3] += coef4 * coef4
-                vector[0] = vector[0] + dev * coef1
-                vector[1] = vector[1] + dev * coef2
-                vector[2] = vector[2] + dev * coef3
-                vector[3] = vector[3] + dev * coef4
-
-        self.par = _gauss_elimination_numpy(system, vector)
-        self.solved = True
 
     def _solve_scipy(self, verbose=False):
         """
@@ -320,27 +267,6 @@ class RingPanel:
         for val in self.values:
             self.corr[icorr] = self.corr_point(val[0], val[1])
             icorr += 1
-
-    def _corr_point_flexi(self, xcoor, ycoor):
-        """
-        Computes fitted value for point [xcoor, ycoor] using AIPS gauss elimination model for flexible panels
-        Args:
-            xcoor: X coordinate of point
-            ycoor: Y coordinate of point
-
-        Returns:
-        Fitted value at xcoor,ycoor
-        """
-        coef = np.ndarray([4])
-        corrval = 0
-        fac = self.bmp[0] + ycoor * (self.tmp[0] - self.bmp[0]) / self.tmp[1]
-        coef[0] = (self.tmp[1] - ycoor) * (1. - xcoor / fac) / (2.0 * self.tmp[1])
-        coef[1] = ycoor * (1. - xcoor / fac) / (2.0 * self.tmp[1])
-        coef[2] = (self.tmp[1] - ycoor) * (1. + xcoor / fac) / (2.0 * self.tmp[1])
-        coef[3] = ycoor * (1. + xcoor / fac) / (2.0 * self.tmp[1])
-        for ipar in range(len(self.par)):
-            corrval += coef[ipar] * self.par[ipar]
-        return corrval
 
     def _corr_point_flexi_scipy(self, xcoor, ycoor):
         """
