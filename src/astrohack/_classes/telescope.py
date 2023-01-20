@@ -1,6 +1,7 @@
 import xarray as xr
 import pkg_resources
 import os
+from astrohack._utils import _system_message as console
 
 tel_data_path = pkg_resources.resource_filename('astrohack', '../../data/telescopes')
 
@@ -39,10 +40,15 @@ class Telescope:
         return
 
     def _ringed_consistency(self):
+        error = False
         if not self.nrings == len(self.inrad) == len(self.ourad):
-            raise Exception('Number of panels don\'t match radii or number of panels list sizes')
+            console.error('Number of panels don\'t match radii or number of panels list sizes')
+            error = True
         if not self.onaxisoptics:
-            raise Exception('Off axis optics not yet supported')
+            console.error('Off axis optics not yet supported')
+            error = True
+        if error:
+            raise Exception('Failed Consistency check')
         return
 
     def _general_consistency(self):
