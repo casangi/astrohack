@@ -20,9 +20,9 @@ from astrohack._utils._io import _read_dimensions_meta_data
 
 def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=100):
         console.info("Calculating aperture illumination pattern ...")
-        initial_dimension = grid.shape[3]
 
-        assert grid.shape[2] == grid.shape[3]
+        assert grid.shape[-1] == grid.shape[-2]
+        initial_dimension = grid.shape[-1]
     
         # Calculate padding as the nearest power of 2
         # k log (2) = log(N) => k = log(N)/log(2)
@@ -33,7 +33,7 @@ def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=100):
     
         padding = (np.power(2, K) - padding_factor*initial_dimension)//2
         
-        padded_grid = np.pad(array=grid, pad_width=[(0, 0), (0, 0), (padding, padding), (padding, padding)], mode='constant')
+        padded_grid = np.pad(array=grid, pad_width=[(0, 0), (0, 0), (0, 0), (padding, padding), (padding, padding)], mode='constant')
         
         shifted = scipy.fftpack.fftshift(padded_grid)
     
@@ -75,9 +75,15 @@ def _holog_chunk(holog_chunk_params):
                 n_scan = len(ant_data_dict[ddi_index].keys())
                 n_pol = meta_data['pol']
                 n_points = int(np.sqrt(meta_data['time']))
+                n_chan = 1
 
-                ant_data_array = np.empty((n_scan, n_pol, n_points, n_points), dtype=np.cdouble)
+                if holog_chunk_params['frequency_scaling']:
+                        n_chan = ant_data_dict[0][0].chan.values.shape[0] # This assumes the number of channels don't change over a measurement.
+                
+                ant_data_array = np.empty((n_scan, n_chan, n_pol, n_points, n_points), dtype=np.cdouble)
 
+                
+                
                 time_centroid = []
 
                 l_min_extent = meta_data['extent']['l']['min']
@@ -109,37 +115,53 @@ def _holog_chunk(holog_chunk_params):
                 grid_x, grid_y = np.meshgrid(l, m)
 
                 for scan_index, scan in enumerate(ant_data_dict[ddi].keys()):
-
-                        frequency_array = ant_data_dict[ddi][scan]
                 
-                        # This needs to be changed when we are not doing channel averaging I think.
-                        frequency = frequency_array.chan.values.mean()
-
-                        lm = ant_data_dict[ddi][scan].DIRECTIONAL_COSINES.values[:, np.newaxis, :]
-                        lm = np.tile(lm, (1, n_pol, 1))
+                        frequencies = ant_data_dict[ddi][scan].chan.values
+                
+                        lm = ant_data_dict[ddi][scan].DIRECTIONAL_COSINES.values[:, np.newaxis, np.newaxis, :]
+                        lm = np.tile(lm, (1, n_chan, n_pol, 1))
         
-                        # VIS values    
-                        vis = ant_data_dict[ddi][scan].VIS.mean(dim='chan').values
+                        # VIS values
+                        if holog_chunk_params['frequency_scaling']:    
+                                vis = ant_data_dict[ddi][scan].VIS.values
+                                
+                                # Reference frequency not available yet, using the middle channel frequency
+                                reffreq = frequencies[n_chan//2]
+                                
+                                # This can be vectorized for a speedup
+                                for chan in range(n_chan):
+                                        lm[:, chan, :, :] *= frequencies[chan]/reffreq
+                        else:
+                                vis = ant_data_dict[ddi][scan].VIS.mean(dim='chan').values
+                                vis = vis[:, np.newaxis, ...]
+                        
                         time_centroid_index = ant_data_dict[ddi][scan].dims['time']//2
-        
+                
                         time_centroid.append(ant_data_dict[ddi][scan].coords['time'][time_centroid_index].values)
                         
-                        for pol in range(n_pol):
-                                grid = griddata(lm[:, pol, :], vis[:, pol], (grid_x.T, grid_y.T), method='nearest')
-                                ant_data_array[scan_index, pol, :, :] = grid
+                        # There has got to be a better way to do this but the array structure required by griddata makes 
+                        # this more difficult when we keep channel.
+
+                        for chan in range(n_chan):
+                                for pol in range(n_pol):
+                                        grid = griddata(lm[:, chan, pol, :], vis[:, chan, pol], (grid_x.T, grid_y.T), method='nearest')
+                                        ant_data_array[scan_index, chan, pol, :, :] = grid
+                        
+                        if holog_chunk_params['frequency_scaling']:
+                                ant_data_array = ant_data_array.mean(axis=1, keep_dims=True)
         
                 console.info("[_holog_chunk] FFT padding factor {}".format(holog_chunk_params['padding_factor']))
                 aperture_grid, u, v = _calculate_aperture_pattern(
                         grid=ant_data_array,
-                        frequency=frequency,
+                        frequency=frequencies.mean(),
                         delta=delta_lm, 
                         padding_factor=holog_chunk_params['padding_factor']
                 )
 
                 xds = xr.Dataset()
 
-                xds['GRID'] = xr.DataArray(ant_data_array, dims=['time-centroid', 'pol', 'l', 'm'])
-                xds['APERTURE'] = xr.DataArray(aperture_grid, dims=['time-centroid', 'pol', 'u', 'v'])
+                xds['GRID'] = xr.DataArray(ant_data_array, dims=['time-centroid', 'chan', 'pol', 'l', 'm'])
+                xds['APERTURE'] = xr.DataArray(aperture_grid, dims=['time-centroid', 'chan', 'pol', 'u', 'v'])
 
                 xds.attrs['ant_id'] = holog_chunk_params['ant_id']
                 xds.attrs['time_centroid'] = np.array(time_centroid)
@@ -148,10 +170,10 @@ def _holog_chunk(holog_chunk_params):
                 coords['time_centroid'] = np.array(time_centroid)
                 coords['ddi'] = list(map(int, ant_data_dict.keys()))
                 coords['pol'] = [i for i in range(n_pol)]
-                coords['l'] = l
-                coords['m'] = m
-                coords['u'] = u
-                coords['v'] = v
+                #coords['l'] = l
+                #coords['m'] = m
+                #coords['u'] = u
+                #coords['v'] = v
 
                 xds = xds.assign_coords(coords)
 
@@ -159,7 +181,7 @@ def _holog_chunk(holog_chunk_params):
 
                 xds.to_zarr("{name}.image.zarr/{ant}/{ddi}".format(name=hack_base_name, ant=holog_chunk_params['ant_id'], ddi=ddi_index), mode='w', compute=True, consolidated=True)
 
-def holog(hack_file, padding_factor=20, parallel=True):
+def holog(hack_file, padding_factor=20, frequency_scaling=False, parallel=True):
         """ Process holography data
 
         Args:
@@ -182,6 +204,7 @@ def holog(hack_file, padding_factor=20, parallel=True):
                         holog_chunk_params = {}
                         holog_chunk_params['hack_file'] = hack_file
                         holog_chunk_params['padding_factor'] = padding_factor
+                        holog_chunk_params['frequency_scaling'] = frequency_scaling
 
                         delayed_list = []
 
