@@ -41,8 +41,8 @@ def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=100):
     
         aperture_grid = scipy.fftpack.fftshift(grid_fft)
 
-        u_size = aperture_grid.shape[2]
-        v_size = aperture_grid.shape[3]
+        u_size = aperture_grid.shape[-2]
+        v_size = aperture_grid.shape[-1]
 
         image_size = np.array([
                 u_size,
@@ -170,10 +170,10 @@ def _holog_chunk(holog_chunk_params):
                 coords['time_centroid'] = np.array(time_centroid)
                 coords['ddi'] = list(map(int, ant_data_dict.keys()))
                 coords['pol'] = [i for i in range(n_pol)]
-                #coords['l'] = l
-                #coords['m'] = m
-                #coords['u'] = u
-                #coords['v'] = v
+                coords['l'] = l
+                coords['m'] = m
+                coords['u'] = u
+                coords['v'] = v
 
                 xds = xds.assign_coords(coords)
 
