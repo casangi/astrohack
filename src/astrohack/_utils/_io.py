@@ -128,7 +128,7 @@ def _create_hack_meta_data(hack_file, hack_dict):
                     data_extent.setdefault(ant, np.array([]))
                     data_extent[ant] = np.append(data_extent[ant], dims['time'])
                     
-                    dims_meta_data.setdefault(ant, {'time': dims['time'], 'pol':dims['pol']})
+                    dims_meta_data.setdefault(ant, {'time': dims['time'], 'chan':dims['chan'], 'pol':dims['pol']})
                 
         for ant, values in data_extent.items():
             max_value = np.max(values)
@@ -137,6 +137,7 @@ def _create_hack_meta_data(hack_file, hack_dict):
                 'n_time':max_value, 
                 'time':dims_meta_data[ant]['time'], 
                 'pol':dims_meta_data[ant]['pol'],
+                'chan':dims_meta_data[ant]['chan'],
                 'extent':{
                     'l':{
                         'min':np.array(lm_extent['l']['min']).mean(),
