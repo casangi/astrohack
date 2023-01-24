@@ -1,6 +1,7 @@
 from astrohack._classes.antenna_surface import AntennaSurface
 import os
 
+
 def _panel_chunk(basename, amp, dev, telescope, cutoff=0.21, pkind=None, savemask=False,
                  saveplots=True, exportcorrected=False, unit='miliinches'):
     surface = AntennaSurface(amp, dev, telescope, cutoff, pkind)
