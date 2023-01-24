@@ -4,7 +4,7 @@ from astropy.io import fits
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import optimize as opt
 
-lnbr = '\n'
+lnbr = "\n"
 
 
 # static methods not linked to any specific class
@@ -30,7 +30,7 @@ def convert_to_db(val: float):
     Returns:
         Value in decibels
     """
-    return 10. * np.log10(val)
+    return 10.0 * np.log10(val)
 
 
 def read_fits(filename):
@@ -44,14 +44,14 @@ def read_fits(filename):
     """
     hdul = fits.open(filename)
     head = hdul[0].header
-    if head['NAXIS'] != 2:
-        if head['NAXIS'] < 2:
+    if head["NAXIS"] != 2:
+        if head["NAXIS"] < 2:
             raise Exception(filename + " is not bi-dimensional")
-        elif head['NAXIS'] > 2:
-            for iax in range(2, head['NAXIS']):
-                if head['NAXIS' + str(iax + 1)] != 1:
+        elif head["NAXIS"] > 2:
+            for iax in range(2, head["NAXIS"]):
+                if head["NAXIS" + str(iax + 1)] != 1:
                     raise Exception(filename + " is not bi-dimensional")
-    if head['NAXIS1'] != head['NAXIS2']:
+    if head["NAXIS1"] != head["NAXIS2"]:
         raise Exception(filename + " image is not square")
 
     data = hdul[0].data[0, 0, :, :]
@@ -141,10 +141,10 @@ class RingPanel:
         self.screws[1, :] = np.sin(self.theta2 - tscale), np.cos(self.theta2 - tscale)
         self.screws[2, :] = np.sin(self.theta1 + tscale), np.cos(self.theta1 + tscale)
         self.screws[3, :] = np.sin(self.theta2 - tscale), np.cos(self.theta2 - tscale)
-        self.screws[0, :] *= (inrad + rscale)
-        self.screws[1, :] *= (inrad + rscale)
-        self.screws[2, :] *= (ourad - rscale)
-        self.screws[3, :] *= (ourad - rscale)
+        self.screws[0, :] *= inrad + rscale
+        self.screws[1, :] *= inrad + rscale
+        self.screws[2, :] *= ourad - rscale
+        self.screws[3, :] *= ourad - rscale
 
         self.nsamp = 0
         self.values = []
@@ -217,10 +217,14 @@ class RingPanel:
                 xcoor = self.values[ipoint][0]
                 ycoor = self.values[ipoint][1]
                 fac = self.bmp[0] + ycoor * (self.tmp[0] - self.bmp[0]) / self.tmp[1]
-                coef1 = (self.tmp[1] - ycoor) * (1. - xcoor / fac) / (2.0 * self.tmp[1])
-                coef2 = ycoor * (1. - xcoor / fac) / (2.0 * self.tmp[1])
-                coef3 = (self.tmp[1] - ycoor) * (1. + xcoor / fac) / (2.0 * self.tmp[1])
-                coef4 = ycoor * (1. + xcoor / fac) / (2.0 * self.tmp[1])
+                coef1 = (
+                    (self.tmp[1] - ycoor) * (1.0 - xcoor / fac) / (2.0 * self.tmp[1])
+                )
+                coef2 = ycoor * (1.0 - xcoor / fac) / (2.0 * self.tmp[1])
+                coef3 = (
+                    (self.tmp[1] - ycoor) * (1.0 + xcoor / fac) / (2.0 * self.tmp[1])
+                )
+                coef4 = ycoor * (1.0 + xcoor / fac) / (2.0 * self.tmp[1])
                 system[0, 0] += coef1 * coef1
                 system[0, 1] += coef1 * coef2
                 system[0, 2] += coef1 * coef3
@@ -269,9 +273,14 @@ class RingPanel:
         maxfevs = [100000, 1000000, 10000000]
         for maxfev in maxfevs:
             try:
-                result = opt.curve_fit(self._paraboloid, coords, devia,
-                                       p0=p0, bounds=[liminf, limsup],
-                                       maxfev=maxfev)
+                result = opt.curve_fit(
+                    self._paraboloid,
+                    coords,
+                    devia,
+                    p0=p0,
+                    bounds=[liminf, limsup],
+                    maxfev=maxfev,
+                )
             except RuntimeError:
                 if verbose:
                     print("Increasing number of iterations")
@@ -339,7 +348,10 @@ class RingPanel:
         Paraboloid value at X and Y
         """
         x, y = coords
-        return -(((x - self.center[0]) / xcurv) ** 2 + ((y - self.center[1]) / ycurv) ** 2) + zoff
+        return (
+            -(((x - self.center[0]) / xcurv) ** 2 + ((y - self.center[1]) / ycurv) ** 2)
+            + zoff
+        )
 
     def _solve_rigid(self):
         """
@@ -378,7 +390,7 @@ class RingPanel:
         if self.nsamp > 0:
             # Solve panel adjustments for rigid vertical shift only panels
             self.par = np.zeros(1)
-            shiftmean = 0.
+            shiftmean = 0.0
             ncount = 0
             for value in self.values:
                 if value[-1] != 0:
@@ -417,10 +429,10 @@ class RingPanel:
         coef = np.ndarray([4])
         corrval = 0
         fac = self.bmp[0] + ycoor * (self.tmp[0] - self.bmp[0]) / self.tmp[1]
-        coef[0] = (self.tmp[1] - ycoor) * (1. - xcoor / fac) / (2.0 * self.tmp[1])
-        coef[1] = ycoor * (1. - xcoor / fac) / (2.0 * self.tmp[1])
-        coef[2] = (self.tmp[1] - ycoor) * (1. + xcoor / fac) / (2.0 * self.tmp[1])
-        coef[3] = ycoor * (1. + xcoor / fac) / (2.0 * self.tmp[1])
+        coef[0] = (self.tmp[1] - ycoor) * (1.0 - xcoor / fac) / (2.0 * self.tmp[1])
+        coef[1] = ycoor * (1.0 - xcoor / fac) / (2.0 * self.tmp[1])
+        coef[2] = (self.tmp[1] - ycoor) * (1.0 + xcoor / fac) / (2.0 * self.tmp[1])
+        coef[3] = ycoor * (1.0 + xcoor / fac) / (2.0 * self.tmp[1])
         for ipar in range(len(self.par)):
             corrval += coef[ipar] * self.par[ipar]
         return corrval
@@ -462,7 +474,7 @@ class RingPanel:
         """
         return self.par[0]
 
-    def export_adjustments(self, unit='mm', screen=False):
+    def export_adjustments(self, unit="mm", screen=False):
         """
         Exports panel screw adjustments to a string
         Args:
@@ -472,16 +484,18 @@ class RingPanel:
         Returns:
         String with screw adjustments for this panel
         """
-        if unit == 'mm':
+        if unit == "mm":
             fac = 1.0
-        elif unit == 'miliinches':
+        elif unit == "miliinches":
             fac = 1000.0 / 25.4
         else:
             raise Exception("Unknown unit: " + unit)
 
-        string = '{0:8d} {1:8d}'.format(self.iring, self.ipanel)
-        for screw in self.screws[:, ]:
-            string += ' {0:10.2f}'.format(fac * self.corr_point(*screw))
+        string = "{0:8d} {1:8d}".format(self.iring, self.ipanel)
+        for screw in self.screws[
+            :,
+        ]:
+            string += " {0:10.2f}".format(fac * self.corr_point(*screw))
         if screen:
             print(string)
         return string
@@ -525,28 +539,35 @@ class RingPanel:
         y1 = self.inrad * np.cos(self.theta1)
         x2 = self.ourad * np.sin(self.theta1)
         y2 = self.ourad * np.cos(self.theta1)
-        ax.plot([x1, x2], [y1, y2], ls='-', color='black', marker=None, lw=lw)
+        ax.plot([x1, x2], [y1, y2], ls="-", color="black", marker=None, lw=lw)
         rt = (self.inrad + self.ourad) / 2
         xt = rt * np.sin(self.zeta)
         yt = rt * np.cos(self.zeta)
-        ax.text(xt, yt, str(self.ipanel), fontsize=5, ha='center')
+        ax.text(xt, yt, str(self.ipanel), fontsize=5, ha="center")
         if screws:
-            markers = ['x', 'o', '*', '+']
-            colors = ['g', 'g', 'r', 'r']
+            markers = ["x", "o", "*", "+"]
+            colors = ["g", "g", "r", "r"]
             for iscrew in range(self.screws.shape[0]):
-                screw = self.screws[iscrew, ]
-                ax.scatter(screw[0], screw[1], marker=markers[iscrew],
-                           lw=lw, s=msize, color=colors[iscrew])
+                screw = self.screws[
+                    iscrew,
+                ]
+                ax.scatter(
+                    screw[0],
+                    screw[1],
+                    marker=markers[iscrew],
+                    lw=lw,
+                    s=msize,
+                    color=colors[iscrew],
+                )
         if self.ipanel == 1:
             # Draw ring outline with first panel
-            inrad = plt.Circle((0, 0), self.inrad, color='black', fill=False, lw=lw)
-            ourad = plt.Circle((0, 0), self.ourad, color='black', fill=False, lw=lw)
+            inrad = plt.Circle((0, 0), self.inrad, color="black", fill=False, lw=lw)
+            ourad = plt.Circle((0, 0), self.ourad, color="black", fill=False, lw=lw)
             ax.add_patch(inrad)
             ax.add_patch(ourad)
 
 
 class AntennaSurface:
-
     def __init__(self, amp, dev, telescope, cutoff=0.21, pkind=None):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
@@ -558,7 +579,7 @@ class AntennaSurface:
             surface fitting
             pkind: Kind of panel surface fitting, if is None defaults to telescope default
         """
-        # Initializes antenna surface parameters    
+        # Initializes antenna surface parameters
         self.ampfile = amp
         self.devfile = dev
 
@@ -571,9 +592,9 @@ class AntennaSurface:
         self.cut = cutoff * np.max(self.amp)
         print(self.cut)
 
-        if telescope == 'VLA':
+        if telescope == "VLA":
             self._init_vla()
-        elif telescope == 'VLBA':
+        elif telescope == "VLBA":
             self._init_vlba()
         else:
             raise Exception("Unknown telescope: " + telescope)
@@ -618,13 +639,21 @@ class AntennaSurface:
         self.devhead, self.dev = read_fits(self.devfile)
         self.dev *= 1000
         #
-        if self.devhead['NAXIS1'] != self.amphead['NAXIS1']:
+        if self.devhead["NAXIS1"] != self.amphead["NAXIS1"]:
             raise Exception("Amplitude and deviation images have different sizes")
-        self.npix = int(self.devhead['NAXIS1'])
-        self.xaxis = LinearAxis(self.npix, self.amphead["CRPIX1"],
-                                self.amphead["CRVAL1"], self.amphead["CDELT1"])
-        self.yaxis = LinearAxis(self.npix, self.amphead["CRPIX2"],
-                                self.amphead["CRVAL2"], self.amphead["CDELT2"])
+        self.npix = int(self.devhead["NAXIS1"])
+        self.xaxis = LinearAxis(
+            self.npix,
+            self.amphead["CRPIX1"],
+            self.amphead["CRVAL1"],
+            self.amphead["CDELT1"],
+        )
+        self.yaxis = LinearAxis(
+            self.npix,
+            self.amphead["CRPIX2"],
+            self.amphead["CRVAL2"],
+            self.amphead["CDELT2"],
+        )
         return
 
     def _build_ring_mask(self):
@@ -642,7 +671,7 @@ class AntennaSurface:
         """
         Initializes object according to parameters specific to VLA panel distribution
         """
-        self.panelkind = 'flexible'
+        self.panelkind = "flexible"
         self.telescope = "VLA"
         self.diam = 25.0  # meters
         self.focus = 8.8  # meters
@@ -680,7 +709,7 @@ class AntennaSurface:
             ycoor = self.yaxis.idx_to_coor(iy + 0.5)
             for ix in range(self.npix):
                 xcoor = self.xaxis.idx_to_coor(ix + 0.5)
-                self.rad[ix, iy] = np.sqrt(xcoor ** 2 + ycoor ** 2)
+                self.rad[ix, iy] = np.sqrt(xcoor**2 + ycoor**2)
                 self.phi[ix, iy] = np.arctan2(ycoor, xcoor)
                 if self.phi[ix, iy] < 0:
                     self.phi[ix, iy] += 2 * np.pi
@@ -693,8 +722,14 @@ class AntennaSurface:
         for iring in range(self.nrings):
             angle = 2.0 * np.pi / self.npanel[iring]
             for ipanel in range(self.npanel[iring]):
-                panel = RingPanel(self.panelkind, angle, iring,
-                                  ipanel, self.inrad[iring], self.ourad[iring])
+                panel = RingPanel(
+                    self.panelkind,
+                    angle,
+                    iring,
+                    ipanel,
+                    self.inrad[iring],
+                    self.ourad[iring],
+                )
                 self.panels.append(panel)
         return
 
@@ -728,7 +763,7 @@ class AntennaSurface:
         if ring == 1:
             ipanel = panel - 1
         else:
-            ipanel = np.sum(self.npanel[:ring - 1]) + panel - 1
+            ipanel = np.sum(self.npanel[: ring - 1]) + panel - 1
         return self.panels[ipanel]
 
     def gains(self):
@@ -754,9 +789,9 @@ class AntennaSurface:
         Actual and theoretical gains
         """
         # Compute the actual and theoretical gains for the current
-        # antenna surface. What is the unit for the wavelength? mm 
+        # antenna surface. What is the unit for the wavelength? mm
         forpi = 4.0 * np.pi
-        fact = 1000. * self.reso / self.wavel
+        fact = 1000.0 * self.reso / self.wavel
         fact *= fact
         #
         # What are these sums?
@@ -768,8 +803,10 @@ class AntennaSurface:
         for iy in range(self.npix):
             for ix in range(self.npix):
                 if self.mask[ix, iy]:
-                    quo = self.rad[ix, iy] / (2. * self.focus)
-                    phase = arr[ix, iy] * forpi / (np.sqrt(1. + quo * quo) * self.wavel)
+                    quo = self.rad[ix, iy] / (2.0 * self.focus)
+                    phase = (
+                        arr[ix, iy] * forpi / (np.sqrt(1.0 + quo * quo) * self.wavel)
+                    )
                     sumrad += np.cos(phase)
                     sumtheta += np.sin(phase)
                     nsamp += 1
@@ -842,12 +879,21 @@ class AntennaSurface:
         if mask:
             fig, ax = plt.subplots(1, 2, figsize=[10, 5])
             title = "Mask"
-            self._plot_surface(self.mask, title, fig, ax[0], 0, 1, screws=screws,
-                               mask=mask)
+            self._plot_surface(
+                self.mask, title, fig, ax[0], 0, 1, screws=screws, mask=mask
+            )
             vmin, vmax = np.nanmin(self.amp), np.nanmax(self.amp)
             title = "Amplitude min={0:.5f}, max ={1:.5f}".format(vmin, vmax)
-            self._plot_surface(self.amp, title, fig, ax[1], vmin, vmax, screws=screws,
-                               unit=self.amphead["BUNIT"].strip())
+            self._plot_surface(
+                self.amp,
+                title,
+                fig,
+                ax[1],
+                vmin,
+                vmax,
+                screws=screws,
+                unit=self.amphead["BUNIT"].strip(),
+            )
         else:
             if self.resi is None:
                 fig, ax = plt.subplots()
@@ -856,11 +902,17 @@ class AntennaSurface:
             else:
                 fig, ax = plt.subplots(1, 3, figsize=[15, 5])
                 title = "Before correction\nRMS = {0:.3} mm".format(rms[0])
-                self._plot_surface(self.dev, title, fig, ax[0], vmin, vmax, screws=screws)
+                self._plot_surface(
+                    self.dev, title, fig, ax[0], vmin, vmax, screws=screws
+                )
                 title = "Corrections"
-                self._plot_surface(self.corr, title, fig, ax[1], vmin, vmax, screws=screws)
+                self._plot_surface(
+                    self.corr, title, fig, ax[1], vmin, vmax, screws=screws
+                )
                 title = "After correction\nRMS = {0:.3} mm".format(rms[1])
-                self._plot_surface(self.resi, title, fig, ax[2], vmin, vmax, screws=screws)
+                self._plot_surface(
+                    self.resi, title, fig, ax[2], vmin, vmax, screws=screws
+                )
         fig.suptitle("Antenna Surface")
         fig.tight_layout()
         if filename is None:
@@ -868,8 +920,9 @@ class AntennaSurface:
         else:
             plt.savefig(filename, dpi=600)
 
-    def _plot_surface(self, data, title, fig, ax, vmin, vmax, screws=False, mask=False,
-                      unit='mm'):
+    def _plot_surface(
+        self, data, title, fig, ax, vmin, vmax, screws=False, mask=False, unit="mm"
+    ):
         """
         Does the plotting of a data array in a figure's subplot
         Args:
@@ -889,8 +942,14 @@ class AntennaSurface:
         xmax = self.xaxis.idx_to_coor(self.xaxis.n - 0.5)
         ymin = self.yaxis.idx_to_coor(-0.5)
         ymax = self.yaxis.idx_to_coor(self.yaxis.n - 0.5)
-        im = ax.imshow(np.flipud(data), cmap='viridis', interpolation='nearest',
-                       extent=[xmin, xmax, ymin, ymax], vmin=vmin, vmax=vmax)
+        im = ax.imshow(
+            np.flipud(data),
+            cmap="viridis",
+            interpolation="nearest",
+            extent=[xmin, xmax, ymin, ymax],
+            vmin=vmin,
+            vmax=vmax,
+        )
         divider = make_axes_locatable(ax)
         if not mask:
             cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -910,27 +969,28 @@ class AntennaSurface:
             raise Exception("Cannot export corrected surface")
         hdu = fits.PrimaryHDU(self.resi)
         hdu.header = self.devhead
-        hdu.header["ORIGIN"] = 'Astrohack PANEL'
+        hdu.header["ORIGIN"] = "Astrohack PANEL"
         hdu.writeto(filename, overwrite=True)
         return
 
-    def export_screw_adjustments(self, filename, unit='mm'):
+    def export_screw_adjustments(self, filename, unit="mm"):
         """
         Export screw adjustments for all panels onto an ASCII file
         Args:
             filename: ASCII file name/path
             unit: unit for panel screw adjustments ['mm','miliinches']
         """
-        spc = ' '
-        outfile = 'Screw adjustments for {0:s} {1:s} antenna\n'.format(
-            self.telescope, self.amphead['telescop'])
-        outfile += 'Adjustments are in ' + unit + lnbr
+        spc = " "
+        outfile = "Screw adjustments for {0:s} {1:s} antenna\n".format(
+            self.telescope, self.amphead["telescop"]
+        )
+        outfile += "Adjustments are in " + unit + lnbr
         outfile += 2 * lnbr
-        outfile += 25 * spc + "{0:22s}{1:22s}".format('Inner Edge', 'Outer Edge') + lnbr
+        outfile += 25 * spc + "{0:22s}{1:22s}".format("Inner Edge", "Outer Edge") + lnbr
         outfile += 5 * spc + "{0:8s}{1:8s}".format("Ring", "panel")
-        outfile += 2 * spc + 2 * "{0:11s}{1:11s}".format('left', 'right') + lnbr
+        outfile += 2 * spc + 2 * "{0:11s}{1:11s}".format("left", "right") + lnbr
         for panel in self.panels:
             outfile += panel.export_adjustments(unit=unit) + lnbr
-        lefile = open(filename, 'w')
+        lefile = open(filename, "w")
         lefile.write(outfile)
         lefile.close()
