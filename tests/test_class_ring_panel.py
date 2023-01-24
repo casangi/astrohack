@@ -1,5 +1,4 @@
 import pytest
-
 from astrohack._classes.ring_panel import RingPanel, _gauss_elimination_numpy
 import numpy as np
 
