@@ -24,6 +24,10 @@ class TestClassAntennaSurface:
     datashape = (256, 256)
     middlepix = 128
     testantenna = AntennaSurface(ampfits, devfits, 'vla')
+    tolerance = 1e-6
+    sigma = 20
+    rand = sigma * np.random.randn(*datashape)
+    zero = np.zeros(datashape)
 
     def test_init(self):
         assert np.isnan(self.testantenna.inrms)
@@ -60,3 +64,33 @@ class TestClassAntennaSurface:
         for i in range(len(solveparsp30)):
             assert abs(self.testantenna.panels[0].par[i] - solveparsp0[i]) < 1e-4
             assert abs(self.testantenna.panels[30].par[i] - solveparsp30[i]) < 1e-4
+
+    def test_correct_surface(self):
+        self.testantenna.correct_surface()
+        reconstruction = self.testantenna.resi-self.testantenna.corr
+        assert np.nansum((reconstruction-self.testantenna.dev)[self.testantenna.mask]) < 1e-8
+
+    def test_export_screw_adjustments(self):
+        self.testantenna.export_screw_adjustments('test.txt')
+        data = np.loadtxt('test.txt', skiprows=6, unpack=True)
+        assert data[0][11] == 1
+        assert data[1][11] == 12
+        for i in range(2, 6):
+            assert data[i][11] == 0.18
+
+    def test_gains_array(self):
+        zgains = self.testantenna._gains_array(self.zero)
+        assert zgains[0] == zgains[1]
+        rgains = self.testantenna._gains_array(self.rand)
+        assert rgains[0] < rgains[1]
+        return
+
+    def test_get_rms(self):
+        self.testantenna.resi = self.zero
+        zrms = self.testantenna.get_rms()
+        assert zrms[1] == 0
+        self.testantenna.resi = self.rand
+        self.testantenna.mask[:, :] = True
+        rrms = self.testantenna.get_rms()
+        assert abs(rrms[1] - self.sigma) < 1e-2
+        return
