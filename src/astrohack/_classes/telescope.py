@@ -3,7 +3,7 @@ import pkg_resources
 import os
 from astrohack._utils import _system_message as console
 
-tel_data_path = pkg_resources.resource_filename('astrohack', '../../data/telescopes')
+tel_data_path = pkg_resources.resource_filename("astrohack", "../../data/telescopes")
 
 
 def _find_cfg_file(name, path):
@@ -17,6 +17,7 @@ def _find_cfg_file(name, path):
     else:
         return newpath
 
+
 class Telescope:
     def __init__(self, name: str, path=None):
         """
@@ -24,14 +25,14 @@ class Telescope:
         Args:
             name: telescope name
         """
-        filename = name.lower()+'.zarr'
+        filename = name.lower() + ".zarr"
         try:
             if path is None:
                 filepath = _find_cfg_file(filename, tel_data_path)
             else:
                 filepath = _find_cfg_file(name, path)
         except FileNotFoundError:
-            raise Exception('Unknown telescope: '+name)
+            raise Exception("Unknown telescope: " + name)
         self.read(filepath)
         if self.ringed:
             self._ringed_consistency()
@@ -42,23 +43,25 @@ class Telescope:
     def _ringed_consistency(self):
         error = False
         if not self.nrings == len(self.inrad) == len(self.ourad):
-            console.error('Number of panels don\'t match radii or number of panels list sizes')
+            console.error(
+                "Number of panels don't match radii or number of panels list sizes"
+            )
             error = True
         if not self.onaxisoptics:
-            console.error('Off axis optics not yet supported')
+            console.error("Off axis optics not yet supported")
             error = True
         if error:
-            raise Exception('Failed Consistency check')
+            raise Exception("Failed Consistency check")
         return
 
     def _general_consistency(self):
-        raise Exception('General layout telescopes not yet supported')
+        raise Exception("General layout telescopes not yet supported")
 
     def write(self, filename):
         ledict = vars(self)
         xds = xr.Dataset()
         xds.attrs = ledict
-        xds.to_zarr(filename, mode='w', compute=True, consolidated=True)
+        xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
         return
 
     def read(self, filename):

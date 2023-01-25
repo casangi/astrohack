@@ -54,10 +54,10 @@ class RingPanel:
         self.screws[1, :] = np.sin(self.theta2 - tscale), np.cos(self.theta2 - tscale)
         self.screws[2, :] = np.sin(self.theta1 + tscale), np.cos(self.theta1 + tscale)
         self.screws[3, :] = np.sin(self.theta2 - tscale), np.cos(self.theta2 - tscale)
-        self.screws[0, :] *= (inrad + rscale)
-        self.screws[1, :] *= (inrad + rscale)
-        self.screws[2, :] *= (ourad - rscale)
-        self.screws[3, :] *= (ourad - rscale)
+        self.screws[0, :] *= inrad + rscale
+        self.screws[1, :] *= inrad + rscale
+        self.screws[2, :] *= ourad - rscale
+        self.screws[3, :] *= ourad - rscale
 
         self.nsamp = 0
         self.values = []
@@ -133,9 +133,14 @@ class RingPanel:
         maxfevs = [100000, 1000000, 10000000]
         for maxfev in maxfevs:
             try:
-                result = opt.curve_fit(self._paraboloid, coords, devia,
-                                       p0=p0, bounds=[liminf, limsup],
-                                       maxfev=maxfev)
+                result = opt.curve_fit(
+                    self._paraboloid,
+                    coords,
+                    devia,
+                    p0=p0,
+                    bounds=[liminf, limsup],
+                    maxfev=maxfev,
+                )
             except RuntimeError:
                 if verbose:
                     print("Increasing number of iterations")
@@ -203,7 +208,10 @@ class RingPanel:
         Paraboloid value at X and Y
         """
         x, y = coords
-        return -(((x - self.center[0]) / xcurv) ** 2 + ((y - self.center[1]) / ycurv) ** 2) + zoff
+        return (
+            -(((x - self.center[0]) / xcurv) ** 2 + ((y - self.center[1]) / ycurv) ** 2)
+            + zoff
+        )
 
     def _solve_rigid(self):
         """
@@ -242,7 +250,7 @@ class RingPanel:
         if self.nsamp > 0:
             # Solve panel adjustments for rigid vertical shift only panels
             self.par = np.zeros(1)
-            shiftmean = 0.
+            shiftmean = 0.0
             ncount = 0
             for value in self.values:
                 if value[-1] != 0:
@@ -305,7 +313,7 @@ class RingPanel:
         """
         return self.par[0]
 
-    def export_adjustments(self, unit='mm', screen=False):
+    def export_adjustments(self, unit="mm", screen=False):
         """
         Exports panel screw adjustments to a string
         Args:
@@ -315,16 +323,18 @@ class RingPanel:
         Returns:
         String with screw adjustments for this panel
         """
-        if unit == 'mm':
+        if unit == "mm":
             fac = 1.0
-        elif unit == 'miliinches':
+        elif unit == "miliinches":
             fac = 1000.0 / 25.4
         else:
             raise Exception("Unknown unit: " + unit)
 
-        string = '{0:8d} {1:8d}'.format(self.iring, self.ipanel)
-        for screw in self.screws[:, ]:
-            string += ' {0:10.2f}'.format(fac * self.corr_point(*screw))
+        string = "{0:8d} {1:8d}".format(self.iring, self.ipanel)
+        for screw in self.screws[
+            :,
+        ]:
+            string += " {0:10.2f}".format(fac * self.corr_point(*screw))
         if screen:
             print(string)
         return string
@@ -368,21 +378,29 @@ class RingPanel:
         y1 = self.inrad * np.cos(self.theta1)
         x2 = self.ourad * np.sin(self.theta1)
         y2 = self.ourad * np.cos(self.theta1)
-        ax.plot([x1, x2], [y1, y2], ls='-', color='black', marker=None, lw=lw)
+        ax.plot([x1, x2], [y1, y2], ls="-", color="black", marker=None, lw=lw)
         rt = (self.inrad + self.ourad) / 2
         xt = rt * np.sin(self.zeta)
         yt = rt * np.cos(self.zeta)
-        ax.text(xt, yt, str(self.ipanel), fontsize=5, ha='center')
+        ax.text(xt, yt, str(self.ipanel), fontsize=5, ha="center")
         if screws:
-            markers = ['x', 'o', '*', '+']
-            colors = ['g', 'g', 'r', 'r']
+            markers = ["x", "o", "*", "+"]
+            colors = ["g", "g", "r", "r"]
             for iscrew in range(self.screws.shape[0]):
-                screw = self.screws[iscrew, ]
-                ax.scatter(screw[0], screw[1], marker=markers[iscrew],
-                           lw=lw, s=msize, color=colors[iscrew])
+                screw = self.screws[
+                    iscrew,
+                ]
+                ax.scatter(
+                    screw[0],
+                    screw[1],
+                    marker=markers[iscrew],
+                    lw=lw,
+                    s=msize,
+                    color=colors[iscrew],
+                )
         if self.ipanel == 1:
             # Draw ring outline with first panel
-            inrad = plt.Circle((0, 0), self.inrad, color='black', fill=False, lw=lw)
-            ourad = plt.Circle((0, 0), self.ourad, color='black', fill=False, lw=lw)
+            inrad = plt.Circle((0, 0), self.inrad, color="black", fill=False, lw=lw)
+            ourad = plt.Circle((0, 0), self.ourad, color="black", fill=False, lw=lw)
             ax.add_patch(inrad)
             ax.add_patch(ourad)

@@ -8,11 +8,11 @@ mm2mi = 1000 / 25.4
 class TestRingPanel:
     inrad = 2.0
     ourad = 3.0
-    angle = np.pi/2
+    angle = np.pi / 2
     position = 1
     deviation = 2.0
     point = [2.5, -2.5, 1, 1, deviation]
-    fixedthetapan = RingPanel('fixedtheta', angle, position, position, inrad, ourad)
+    fixedthetapan = RingPanel("fixedtheta", angle, position, position, inrad, ourad)
 
     def test_gauss_elimination_numpy(self):
         """
@@ -33,14 +33,20 @@ class TestRingPanel:
         assert self.fixedthetapan.zeta == 1.5 * self.angle
 
         with pytest.raises(Exception):
-            panel = RingPanel('xxx', self.angle, self.position, self.position, self.inrad, self.ourad)
+            panel = RingPanel(
+                "xxx", self.angle, self.position, self.position, self.inrad, self.ourad
+            )
 
     def test_is_inside(self):
         """
         Test over the is_inside test for a point
         """
-        assert self.fixedthetapan.is_inside((self.inrad + self.ourad) / 2, 1.5 * self.angle)
-        assert not self.fixedthetapan.is_inside((self.inrad + self.ourad) / 2, 3.5 * self.angle)
+        assert self.fixedthetapan.is_inside(
+            (self.inrad + self.ourad) / 2, 1.5 * self.angle
+        )
+        assert not self.fixedthetapan.is_inside(
+            (self.inrad + self.ourad) / 2, 3.5 * self.angle
+        )
 
     def test_add_point(self):
         """
@@ -80,7 +86,7 @@ class TestRingPanel:
         mmscrews = self.fixedthetapan.export_adjustments().split()[2:]
         for screw in mmscrews:
             assert abs(float(screw) - self.deviation) < 1e-3
-        miscrews = self.fixedthetapan.export_adjustments(unit='miliinches').split()[2:]
+        miscrews = self.fixedthetapan.export_adjustments(unit="miliinches").split()[2:]
         for screw in miscrews:
-            print(screw, mm2mi*self.deviation)
-            assert abs(float(screw) - mm2mi*self.deviation) < 1e-2
+            print(screw, mm2mi * self.deviation)
+            assert abs(float(screw) - mm2mi * self.deviation) < 1e-2
