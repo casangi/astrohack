@@ -11,8 +11,8 @@ class TestClassTelescope:
         Test the initialization of a Telescope object using the VLA as a test case
         """
         tel = Telescope('vla')
-        assert tel.name == 'VLA'
-        assert tel.diam == 25.0
+        assert tel.name == 'VLA', 'Telescope name loaded incorrectly'
+        assert tel.diam == 25.0, 'Telescope diameter loaded incorrectly'
 
         with pytest.raises(Exception):
             tel = Telescope('xxx')
@@ -23,8 +23,8 @@ class TestClassTelescope:
         """
         tel = Telescope('vla')
         tel.read(tel_data_path+'/vlba.zarr')
-        assert tel.name == 'VLBA'
-        assert tel.focus == 8.75
+        assert tel.name == 'VLBA', 'Telescope name loaded incorrectly'
+        assert tel.focus == 8.75, 'Telescope focus length loaded incorrectly'
 
         with pytest.raises(FileNotFoundError):
             tel.read('xxx')
@@ -36,8 +36,10 @@ class TestClassTelescope:
         testfile = 'test-tel.zarr'
         tel = Telescope('vla')
         tel.write(testfile)
-        assert os.path.exists(testfile)
-        assert filecmp.cmp(tel_data_path+'/vlba.zarr/.zattrs', testfile+'/.zattrs') == 0
+        assert os.path.exists(testfile), 'Telescope configuration file not created at the proper location'
+        assert filecmp.cmp(tel_data_path+'/vlba.zarr/.zattrs', testfile+'/.zattrs') == 0, 'Telescope configuration ' \
+                                                                                          'file is not equal to the ' \
+                                                                                          'reference'
         shutil.rmtree(testfile)
 
     def test_ringed_consistency(self):
@@ -65,6 +67,6 @@ class TestClassTelescope:
         tests the routine to automatically find a hack cfg file for a Telescope object
         """
         filefullpath = _find_cfg_file('vla.zarr', tel_data_path)
-        assert filefullpath == tel_data_path+'/vla.zarr'
+        assert filefullpath == tel_data_path+'/vla.zarr', 'Returned path is not the expected path'
         with pytest.raises(FileNotFoundError):
             dummy = _find_cfg_file('xxx', './xxx')

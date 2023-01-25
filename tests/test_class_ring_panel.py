@@ -22,15 +22,20 @@ class TestRingPanel:
         identity = np.identity(size)
         vector = np.arange(size)
         for pos in range(size):
-            assert _gauss_elimination_numpy(identity, vector)[pos] == vector[pos]
+            assert _gauss_elimination_numpy(identity, vector)[pos] == vector[pos], 'Gaussian elimination failed'
 
     def test_init(self):
         """
         Tests the correct initialization of a RingPanel object, not all parameters tested
         """
-        assert self.fixedthetapan.theta1 == self.angle
-        assert self.fixedthetapan.theta2 == 2 * self.angle
-        assert self.fixedthetapan.zeta == 1.5 * self.angle
+        assert self.fixedthetapan.theta1 == self.angle, 'Panel initial angle is incorrect'
+        assert self.fixedthetapan.theta2 == 2 * self.angle, 'Panel final angle is incorrect'
+        assert self.fixedthetapan.zeta == 1.5 * self.angle, 'Panel central angle is incorrect'
+        assert self.fixedthetapan.solve == self.fixedthetapan._solve_scipy(), 'solve method overloading failed'
+        assert self.fixedthetapan.corr_point == self.fixedthetapan._corr_point_flexi_scipy, 'corr_point method ' \
+                                                                                            'overloading failed'
+        assert self.fixedthetapan._paraboloid == self.fixedthetapan._fixed_paraboloid, 'Paraboloid method overload ' \
+                                                                                       'failed'
 
         with pytest.raises(Exception):
             panel = RingPanel('xxx', self.angle, self.position, self.position, self.inrad, self.ourad)
@@ -39,17 +44,20 @@ class TestRingPanel:
         """
         Test over the is_inside test for a point
         """
-        assert self.fixedthetapan.is_inside((self.inrad + self.ourad) / 2, 1.5 * self.angle)
-        assert not self.fixedthetapan.is_inside((self.inrad + self.ourad) / 2, 3.5 * self.angle)
+        assert self.fixedthetapan.is_inside((self.inrad + self.ourad) / 2, 1.5 * self.angle), 'Point that should be ' \
+                                                                                              'inside the panel isn\'t'
+        assert not self.fixedthetapan.is_inside((self.inrad + self.ourad) / 2, 3.5 * self.angle), 'Point that should ' \
+                                                                                                  'be outside the ' \
+                                                                                                  'panel isn\'t'
 
     def test_add_point(self):
         """
         Tests the addition of a point to the panel list of points
         """
         self.fixedthetapan.add_point(self.point)
-        assert self.fixedthetapan.nsamp == 1
-        assert self.fixedthetapan.values[0] == self.point
-        assert len(self.fixedthetapan.values) == 1
+        assert self.fixedthetapan.nsamp == 1, 'Failed to increase number of samples after adding a point'
+        assert self.fixedthetapan.values[0] == self.point, 'Added point do not correspond to the data added'
+        assert len(self.fixedthetapan.values) == 1, 'Lenght of values list does not match its size counter'
 
     def test_solve(self):
         """
@@ -59,19 +67,20 @@ class TestRingPanel:
         for i in range(npoints):
             self.fixedthetapan.add_point(self.point)
         self.fixedthetapan.solve()
-        assert self.fixedthetapan.solved
-        assert self.fixedthetapan.par[0] > 1e2
-        assert self.fixedthetapan.par[1] > 1e2
-        assert abs(self.fixedthetapan.par[2] - self.deviation) < 1e-3
+        assert self.fixedthetapan.solved, 'Panel solving failed'
+        assert self.fixedthetapan.par[0] > 1e2, 'Panel curvature is smaller than expected'
+        assert self.fixedthetapan.par[1] > 1e2, 'Panel curvature is smaller than expected'
+        assert abs(self.fixedthetapan.par[2] - self.deviation) < 1e-3, 'Panel Z offset not within 0.1% tolerance'
 
     def test_get_correction(self):
         """
         Tests that corrections are what are expected based on the input data
         """
         self.fixedthetapan.get_corrections()
-        assert len(self.fixedthetapan.corr) == self.fixedthetapan.nsamp
+        assert len(self.fixedthetapan.corr) == self.fixedthetapan.nsamp, 'Length of corrections array is not the same' \
+                                                                         ' as the number of samples'
         for isamp in range(self.fixedthetapan.nsamp):
-            assert abs(self.fixedthetapan.corr[isamp] - self.deviation) < 1e-3
+            assert abs(self.fixedthetapan.corr[isamp] - self.deviation) < 1e-3, 'Corrections not within 0.1% tolerance'
 
     def test_export_adjustments(self):
         """
@@ -79,8 +88,9 @@ class TestRingPanel:
         """
         mmscrews = self.fixedthetapan.export_adjustments().split()[2:]
         for screw in mmscrews:
-            assert abs(float(screw) - self.deviation) < 1e-3
+            assert abs(float(screw) - self.deviation) < 1e-3, 'mm screw adjustments not within 0.1% tolerance of the ' \
+                                                              'expected value'
         miscrews = self.fixedthetapan.export_adjustments(unit='miliinches').split()[2:]
         for screw in miscrews:
-            print(screw, mm2mi*self.deviation)
-            assert abs(float(screw) - mm2mi*self.deviation) < 1e-2
+            assert abs(float(screw) - mm2mi*self.deviation) < 1e-2, 'Miliinches screw adjustments not within 0.1% ' \
+                                                                    'tolerance of the expected value'
