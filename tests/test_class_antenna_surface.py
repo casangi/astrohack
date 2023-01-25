@@ -6,24 +6,24 @@ import shutil
 import os
 
 
-def download_test_data():
-    """
-    Downloads the data needed to execute the unit tests
-    Returns:
-        Path to downloaded data
-    """
-    datafolder = "./paneldata/"
+datafolder = "./paneldata/"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def data_download_and_cleanup():
     os.makedirs(name=datafolder, exist_ok=True)
     panelzip = datafolder + "panel.zip"
     if not os.path.exists(panelzip):
         url = "https://drive.google.com/u/1/uc?id=10fXyut_UHPUjIuaaEy6-m6wcycZHit2v&export=download"
         gdown.download(url, panelzip)
     shutil.unpack_archive(filename=panelzip, extract_dir=datafolder)
-    return datafolder
+
+    yield
+
+    shutil.rmtree(datafolder)
 
 
 class TestClassAntennaSurface:
-    datafolder = download_test_data()
     ampfits = datafolder+'amp.fits'
     devfits = datafolder+'dev.fits'
     datashape = (256, 256)
@@ -99,8 +99,8 @@ class TestClassAntennaSurface:
         """
         Tests that exported screw adjustmens are in agreement with reference
         """
-        self.testantenna.export_screw_adjustments('test.txt')
-        data = np.loadtxt('test.txt', skiprows=6, unpack=True)
+        self.testantenna.export_screw_adjustments(datafolder+'test.txt')
+        data = np.loadtxt(datafolder+'test.txt', skiprows=6, unpack=True)
         assert data[0][11] == 1, 'Ring numbering is wrong'
         assert data[1][11] == 12, 'Panel numbering is wrong'
         for i in range(2, 6):
