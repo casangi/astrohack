@@ -7,6 +7,7 @@ import dask
 import dask.distributed
 import scipy.fftpack
 import scipy.constants
+import scipy.signal
 
 import dask.array as da
 import numpy as np
@@ -18,6 +19,46 @@ from astrohack._utils import _system_message as console
 from astrohack.dio import load_hack_file
 from astrohack._utils._io import _read_dimensions_meta_data
 
+def _calculate_euclidean_distance(x, y, center):
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+            y (_type_): _description_
+            center (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        return np.sqrt(np.power(x - center[0],2) + np.power(y - center[1], 2))
+
+def _apply_mask(data, scaling=0.5):
+    x, y = data.shape
+    assert scaling > 0, console.error("Scaling must be > 0")
+                              
+    mask = int(x//(1//scaling))
+    
+    assert mask >  0, console.error("Scaling values too small. Minimum values is:{}, though search may still fail due to lack of poitns.".format(1/x))
+    
+    start = int(x//2 - mask//2)
+    return data[start:(start+mask), start:(start+mask)]
+
+
+def _find_peak_beam_value(data, height=0.5, scaling=0.5):
+    masked_data = _apply_mask(data, scaling=scaling)
+
+    array = masked_data.flatten()
+    cutoff = np.abs(array).max()*height
+    
+    index, _ = scipy.signal.find_peaks(np.abs(array), height=cutoff)
+    x, y = np.unravel_index(index, masked_data.shape)
+    
+    center = (masked_data.shape[0]//2, masked_data.shape[1]//2)
+    
+    distances = _calculate_euclidean_distance(x, y, center)
+    index = distances.argmin()
+    
+    return masked_data[x[index], y[index]]
 
 def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=100):
     console.info("Calculating aperture illumination pattern ...")
@@ -90,9 +131,8 @@ def _holog_chunk(holog_chunk_params):
         n_chan = 1
 
         if holog_chunk_params["frequency_scaling"]:
-            n_chan = ant_data_dict[0][0].chan.values.shape[
-                0
-            ]  # This assumes the number of channels don't change over a measurement.
+            # This assumes the number of channels don't change over a measurement.
+            n_chan = ant_data_dict[0][0].chan.values.shape[0]
 
         ant_data_array = np.empty(
             (n_scan, n_chan, n_pol, n_points, n_points), dtype=np.cdouble
@@ -131,9 +171,7 @@ def _holog_chunk(holog_chunk_params):
 
             frequencies = ant_data_dict[ddi][scan].chan.values
 
-            lm = ant_data_dict[ddi][scan].DIRECTIONAL_COSINES.values[
-                :, np.newaxis, np.newaxis, :
-            ]
+            lm = ant_data_dict[ddi][scan].DIRECTIONAL_COSINES.values[:, np.newaxis, np.newaxis, :]
             lm = np.tile(lm, (1, n_chan, n_pol, 1))
 
             # VIS values
@@ -168,6 +206,12 @@ def _holog_chunk(holog_chunk_params):
                         method="nearest",
                     )
                     ant_data_array[scan_index, chan, pol, :, :] = grid
+                
+                xx_peak = _find_peak_beam_value(ant_data_array[scan_index, chan, 0, ...], scaling=0.25)
+                yy_peak = _find_peak_beam_value(ant_data_array[scan_index, chan, 3, ...], scaling=0.25)
+
+                normalization = np.abs(0.5*(xx_peak + yy_peak))
+                ant_data_array[scan_index, chan, ...] /= normalization
 
             if holog_chunk_params["frequency_scaling"]:
                 ant_data_array = ant_data_array.mean(axis=1, keep_dims=True)
