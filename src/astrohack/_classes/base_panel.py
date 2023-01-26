@@ -60,6 +60,15 @@ class BasePanel:
         else:
             raise Exception("Unknown panel kind: ", self.kind)
 
+    def add_point(self, value):
+        """
+        Add a point to the panel's list of point to be fitted
+        Args:
+            value: tuple/list containing point description [xcoor,ycoor,xidx,yidx,value]
+        """
+        self.values.append(value)
+        self.nsamp += 1
+
     def _solve_scipy(self, verbose=False):
         """
         Fit ponel surface by using arbitrary models using scipy surface fitting engine

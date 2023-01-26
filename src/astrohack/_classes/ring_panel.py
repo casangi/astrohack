@@ -62,15 +62,6 @@ class RingPanel(BasePanel):
         radius = self.inrad <= rad <= self.ourad
         return angle and radius
 
-    def add_point(self, value):
-        """
-        Add a point to the panel's list of point to be fitted
-        Args:
-            value: tuple/list containing point description [xcoor,ycoor,xidx,yidx,value]
-        """
-        self.values.append(value)
-        self.nsamp += 1
-
     def export_adjustments(self, unit='mm'):
         """
         Exports panel screw adjustments to a string
