@@ -2,6 +2,14 @@ import numpy as np
 from scipy import optimize as opt
 
 
+panelkinds = ["rigid", "mean", "xyparaboloid", "rotatedparaboloid", "corotatedparaboloid"]
+irigid   = 0
+imean    = 1
+ixypara  = 2
+irotpara = 3
+icorpara = 4
+
+
 def _gauss_elimination_numpy(system, vector):
     """
     Gauss elimination solving of a system using numpy
@@ -45,21 +53,21 @@ class BasePanel:
         self.center = [0, 0]
         self.zeta = 0
 
-        if self.kind == "rigid":
+        if self.kind == panelkinds[irigid]:
             self.solve = self._solve_rigid
             self.corr_point = self._corr_point_rigid
-        elif self.kind == "mean":
+        elif self.kind == panelkinds[imean]:
             self.solve = self._solve_mean
             self.corr_point = self._corr_point_mean
-        elif self.kind == "xyparaboloid":
+        elif self.kind == panelkinds[ixypara]:
             self.solve = self._solve_scipy
             self.corr_point = self._corr_point_scipy
             self._paraboloid = self._xyaxes_paraboloid
-        elif self.kind == "rotatedparaboloid":
+        elif self.kind == panelkinds[irotpara]:
             self.solve = self._solve_scipy
             self.corr_point = self._corr_point_scipy
             self._paraboloid = self._rotated_paraboloid
-        elif self.kind == "corotatedparaboloid":
+        elif self.kind == panelkinds[icorpara]:
             self.solve = self._solve_scipy
             self.corr_point = self._corr_point_scipy
             self._paraboloid = self._corotated_paraboloid

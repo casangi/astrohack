@@ -1,6 +1,6 @@
 from shapely import Polygon
 from shapely.plotting import plot_polygon
-from astrohack._classes.base_panel import BasePanel
+from astrohack._classes.base_panel import BasePanel, panelkinds, icorpara
 
 
 class GeneralPanel(BasePanel):
@@ -17,7 +17,7 @@ class GeneralPanel(BasePanel):
         super().__init__(kind, ipanel, screws)
         self.polygon = Polygon(polygon)
         self.center = self.polygon.centroid
-        if kind == 'corotatedparaboloid':
+        if kind == panelkinds[icorpara]:
             raise Exception('corotatedparaboloid not supported for Polygon based panels')
         return
 
