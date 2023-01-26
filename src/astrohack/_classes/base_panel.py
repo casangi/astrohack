@@ -17,6 +17,12 @@ def _gauss_elimination_numpy(system, vector):
 
 
 class BasePanel:
+    markers = ['X', 'o', '*', 'P', 'D']
+    colors = ['g', 'g', 'r', 'r', 'b']
+    fontsize = 5
+    linewidth = 0.5
+    markersize = 2
+    linecolor = 'black'
 
     def __init__(self, kind, ipanel, screws):
         """
@@ -285,3 +291,22 @@ class BasePanel:
         for screw in self.screws[:, ]:
             string += ' {0:10.2f}'.format(fac * self.corr_point(*screw))
         return string
+
+    def plot_label(self, ax):
+        """
+        Plots panel label to ax
+        Args:
+            ax: matplotlib axes instance
+        """
+        ax.text(self.center[0], self.center[1], str(self.ipanel), fontsize=self.fontsize, ha='center')
+
+    def plot_screws(self, ax):
+        """
+        Plots panel screws to ax
+        Args:
+            ax: matplotlib axes instance
+        """
+        for iscrew in range(self.screws.shape[0]):
+            screw = self.screws[iscrew, ]
+            ax.scatter(screw[0], screw[1], marker=self.markers[iscrew], lw=self.linewidth, s=self.markersize,
+                       color=self.colors[iscrew])

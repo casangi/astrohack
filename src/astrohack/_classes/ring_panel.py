@@ -1,6 +1,5 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from scipy import optimize as opt
 from astrohack._classes.base_panel import BasePanel
 
 
@@ -105,37 +104,18 @@ class RingPanel(BasePanel):
         Args:
             ax: matplotlib axes instance
             screws: Display screws in plot
-
         """
-        lw = 0.5
-        msize = 2
         x1 = self.inrad * np.sin(self.theta1)
         y1 = self.inrad * np.cos(self.theta1)
         x2 = self.ourad * np.sin(self.theta1)
         y2 = self.ourad * np.cos(self.theta1)
-        ax.plot([x1, x2], [y1, y2], ls="-", color="black", marker=None, lw=lw)
-        rt = (self.inrad + self.ourad) / 2
-        xt = rt * np.sin(self.zeta)
-        yt = rt * np.cos(self.zeta)
-        ax.text(xt, yt, str(self.ipanel), fontsize=5, ha="center")
-        if screws:
-            markers = ["x", "o", "*", "+"]
-            colors = ["g", "g", "r", "r"]
-            for iscrew in range(self.screws.shape[0]):
-                screw = self.screws[
-                    iscrew,
-                ]
-                ax.scatter(
-                    screw[0],
-                    screw[1],
-                    marker=markers[iscrew],
-                    lw=lw,
-                    s=msize,
-                    color=colors[iscrew],
-                )
+        ax.plot([x1, x2], [y1, y2], ls='-', color=self.linecolor, marker=None, lw=self.linewidth)
         if self.ipanel == 1:
             # Draw ring outline with first panel
-            inrad = plt.Circle((0, 0), self.inrad, color="black", fill=False, lw=lw)
-            ourad = plt.Circle((0, 0), self.ourad, color="black", fill=False, lw=lw)
+            inrad = plt.Circle((0, 0), self.inrad, color=self.linecolor, fill=False, lw=self.linewidth)
+            ourad = plt.Circle((0, 0), self.ourad, color=self.linecolor, fill=False, lw=self.linewidth)
             ax.add_patch(inrad)
             ax.add_patch(ourad)
+        self.plot_label(ax)
+        if screws:
+            self.plot_screws(ax)
