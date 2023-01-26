@@ -99,7 +99,7 @@ class BasePanel:
         limsup = [np.inf, np.inf, np.inf]
         p0 = [1e2, 1e2, np.mean(devia)]
 
-        if self.kind == "thetaparaboloid":
+        if self.kind == panelkinds[irotpara]:
             liminf.append(0.0)
             limsup.append(np.pi)
             p0.append(0)
