@@ -1,9 +1,9 @@
-from shapely import Polygon
+from shapely import Polygon, Point
 from shapely.plotting import plot_polygon
 from astrohack._classes.base_panel import BasePanel, panelkinds, icorpara
 
 
-class GeneralPanel(BasePanel):
+class PolygonPanel(BasePanel):
 
     def __init__(self, kind, ipanel, polygon, screws):
         """
@@ -14,11 +14,13 @@ class GeneralPanel(BasePanel):
             polygon: Polygon describing the panel shape
             screws: Positions of the screw over the panel
         """
-        super().__init__(kind, ipanel, screws)
-        self.polygon = Polygon(polygon)
-        self.center = self.polygon.centroid
         if kind == panelkinds[icorpara]:
             raise Exception('corotatedparaboloid not supported for Polygon based panels')
+        super().__init__(kind, ipanel, screws)
+        self.polygon = Polygon(polygon)
+        if not self.polygon.is_simple:
+            raise Exception('Polygon must not intersect itself')
+        self.center = self.polygon.centroid.x, self.polygon.centroid.y
         return
 
     def is_inside(self, point):
@@ -27,7 +29,7 @@ class GeneralPanel(BasePanel):
         Args:
             point: point to be tested
         """
-        return self.polygon.within(point)
+        return self.polygon.intersects(Point(point))
 
     def export_adjustments(self, unit='mm'):
         """
