@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import optimize as opt
+from astrohack._utils._linear_algebra import _gauss_elimination_numpy
 
 
 panelkinds = ["rigid", "mean", "xyparaboloid", "rotatedparaboloid", "corotatedparaboloid"]
@@ -8,20 +9,6 @@ imean    = 1
 ixypara  = 2
 irotpara = 3
 icorpara = 4
-
-
-def _gauss_elimination_numpy(system, vector):
-    """
-    Gauss elimination solving of a system using numpy
-    Args:
-        system: System matrix to be solved
-        vector: Vector that represents the right hand side of the system
-
-    Returns:
-    The solved system
-    """
-    inverse = np.linalg.inv(system)
-    return np.dot(inverse, vector)
 
 
 class BasePanel:
