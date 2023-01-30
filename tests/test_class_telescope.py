@@ -15,7 +15,7 @@ class TestClassTelescope:
         assert tel.diam == 25.0, 'Telescope diameter loaded incorrectly'
 
         with pytest.raises(Exception):
-            tel = Telescope('xxx')
+            tel = Telescope("xxx")
 
     def test_read(self):
         """
@@ -27,14 +27,14 @@ class TestClassTelescope:
         assert tel.focus == 8.75, 'Telescope focus length loaded incorrectly'
 
         with pytest.raises(FileNotFoundError):
-            tel.read('xxx')
+            tel.read("xxx")
 
     def test_write(self):
         """
         Test the writting of a hack file containing the telescope atributes
         """
-        testfile = 'test-tel.zarr'
-        tel = Telescope('vla')
+        testfile = "test-tel.zarr"
+        tel = Telescope("vla")
         tel.write(testfile)
         assert os.path.exists(testfile), 'Telescope configuration file not created at the proper location'
         assert filecmp.cmp(tel_data_path+'/vlba.zarr/.zattrs', testfile+'/.zattrs') == 0, 'Telescope configuration ' \
@@ -46,7 +46,7 @@ class TestClassTelescope:
         """
         Tests the consistency checks on ringed layout Telescope object
         """
-        tel = Telescope('vla')
+        tel = Telescope("vla")
         tel.onaxisoptics = False
         with pytest.raises(Exception):
             tel._ringed_consistency()
@@ -58,7 +58,7 @@ class TestClassTelescope:
         """
         Tests the consistency on a general layout Telescope Object
         """
-        tel = Telescope('vla')
+        tel = Telescope("vla")
         with pytest.raises(Exception):
             tel._general_consistency()
 
@@ -69,4 +69,4 @@ class TestClassTelescope:
         filefullpath = _find_cfg_file('vla.zarr', tel_data_path)
         assert filefullpath == tel_data_path+'/vla.zarr', 'Returned path is not the expected path'
         with pytest.raises(FileNotFoundError):
-            dummy = _find_cfg_file('xxx', './xxx')
+            dummy = _find_cfg_file("xxx", "./xxx")

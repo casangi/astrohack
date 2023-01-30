@@ -7,7 +7,7 @@ from astrohack._classes.telescope import Telescope
 from astrohack._utils._fits_io import _read_fits
 from astrohack._utils._fits_io import _write_fits
 
-lnbr = '\n'
+lnbr = "\n"
 
 
 def _convert_to_db(val: float):
@@ -18,11 +18,10 @@ def _convert_to_db(val: float):
     Returns:
         Value in decibels
     """
-    return 10. * np.log10(val)
+    return 10.0 * np.log10(val)
 
 
 class AntennaSurface:
-
     def __init__(self, amp, dev, telescope, cutoff=0.21, pkind=None):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
@@ -50,9 +49,9 @@ class AntennaSurface:
 
         if pkind is None:
             if self.telescope.ringed:
-                self.panelkind = 'fixedtheta'
+                self.panelkind = "fixedtheta"
             else:
-                self.panelkind = 'xyparaboloid'
+                self.panelkind = "xyparaboloid"
         else:
             self.panelkind = pkind
 
@@ -92,13 +91,21 @@ class AntennaSurface:
         self.devhead, self.dev = _read_fits(self.devfile)
         self.dev *= 1000
         #
-        if self.devhead['NAXIS1'] != self.amphead['NAXIS1']:
+        if self.devhead["NAXIS1"] != self.amphead["NAXIS1"]:
             raise Exception("Amplitude and deviation images have different sizes")
-        self.npix = int(self.devhead['NAXIS1'])
-        self.xaxis = LinearAxis(self.npix, self.amphead["CRPIX1"],
-                                self.amphead["CRVAL1"], self.amphead["CDELT1"])
-        self.yaxis = LinearAxis(self.npix, self.amphead["CRPIX2"],
-                                self.amphead["CRVAL2"], self.amphead["CDELT2"])
+        self.npix = int(self.devhead["NAXIS1"])
+        self.xaxis = LinearAxis(
+            self.npix,
+            self.amphead["CRPIX1"],
+            self.amphead["CRVAL1"],
+            self.amphead["CDELT1"],
+        )
+        self.yaxis = LinearAxis(
+            self.npix,
+            self.amphead["CRPIX2"],
+            self.amphead["CRVAL2"],
+            self.amphead["CDELT2"],
+        )
         return
 
     def _build_ring_mask(self):
@@ -121,7 +128,7 @@ class AntennaSurface:
             ycoor = self.yaxis.idx_to_coor(iy + 0.5)
             for ix in range(self.npix):
                 xcoor = self.xaxis.idx_to_coor(ix + 0.5)
-                self.rad[ix, iy] = np.sqrt(xcoor ** 2 + ycoor ** 2)
+                self.rad[ix, iy] = np.sqrt(xcoor**2 + ycoor**2)
                 self.phi[ix, iy] = np.arctan2(ycoor, xcoor)
                 if self.phi[ix, iy] < 0:
                     self.phi[ix, iy] += 2 * np.pi
@@ -134,8 +141,14 @@ class AntennaSurface:
         for iring in range(self.telescope.nrings):
             angle = 2.0 * np.pi / self.telescope.npanel[iring]
             for ipanel in range(self.telescope.npanel[iring]):
-                panel = RingPanel(self.panelkind, angle, iring,
-                                  ipanel, self.telescope.inrad[iring], self.telescope.ourad[iring])
+                panel = RingPanel(
+                    self.panelkind,
+                    angle,
+                    iring,
+                    ipanel,
+                    self.telescope.inrad[iring],
+                    self.telescope.ourad[iring],
+                )
                 self.panels.append(panel)
         return
 
@@ -169,7 +182,7 @@ class AntennaSurface:
         if ring == 1:
             ipanel = panel - 1
         else:
-            ipanel = np.sum(self.telescope.npanel[:ring - 1]) + panel - 1
+            ipanel = np.sum(self.telescope.npanel[: ring - 1]) + panel - 1
         return self.panels[ipanel]
 
     def gains(self):
@@ -195,7 +208,7 @@ class AntennaSurface:
         Actual and theoretical gains
         """
         forpi = 4.0 * np.pi
-        fact = 1000. * self.reso / self.wavel
+        fact = 1000.0 * self.reso / self.wavel
         fact *= fact
         #
         # What are these sums?
@@ -207,8 +220,10 @@ class AntennaSurface:
         for iy in range(self.npix):
             for ix in range(self.npix):
                 if self.mask[ix, iy]:
-                    quo = self.rad[ix, iy] / (2. * self.telescope.focus)
-                    phase = arr[ix, iy] * forpi / (np.sqrt(1. + quo * quo) * self.wavel)
+                    quo = self.rad[ix, iy] / (2.0 * self.telescope.focus)
+                    phase = (
+                        arr[ix, iy] * forpi / (np.sqrt(1.0 + quo * quo) * self.wavel)
+                    )
                     sumrad += np.cos(phase)
                     sumtheta += np.sin(phase)
                     nsamp += 1
@@ -282,12 +297,21 @@ class AntennaSurface:
         if mask:
             fig, ax = plt.subplots(1, 2, figsize=[10, 5])
             title = "Mask"
-            self._plot_surface(self.mask, title, fig, ax[0], 0, 1, screws=screws,
-                               mask=mask)
+            self._plot_surface(
+                self.mask, title, fig, ax[0], 0, 1, screws=screws, mask=mask
+            )
             vmin, vmax = np.nanmin(self.amp), np.nanmax(self.amp)
             title = "Amplitude min={0:.5f}, max ={1:.5f}".format(vmin, vmax)
-            self._plot_surface(self.amp, title, fig, ax[1], vmin, vmax, screws=screws,
-                               unit=self.amphead["BUNIT"].strip())
+            self._plot_surface(
+                self.amp,
+                title,
+                fig,
+                ax[1],
+                vmin,
+                vmax,
+                screws=screws,
+                unit=self.amphead["BUNIT"].strip(),
+            )
         else:
             if self.resi is None:
                 fig, ax = plt.subplots()
@@ -296,11 +320,17 @@ class AntennaSurface:
             else:
                 fig, ax = plt.subplots(1, 3, figsize=[15, 5])
                 title = "Before correction\nRMS = {0:.3} mm".format(rms[0])
-                self._plot_surface(self.dev, title, fig, ax[0], vmin, vmax, screws=screws)
+                self._plot_surface(
+                    self.dev, title, fig, ax[0], vmin, vmax, screws=screws
+                )
                 title = "Corrections"
-                self._plot_surface(self.corr, title, fig, ax[1], vmin, vmax, screws=screws)
+                self._plot_surface(
+                    self.corr, title, fig, ax[1], vmin, vmax, screws=screws
+                )
                 title = "After correction\nRMS = {0:.3} mm".format(rms[1])
-                self._plot_surface(self.resi, title, fig, ax[2], vmin, vmax, screws=screws)
+                self._plot_surface(
+                    self.resi, title, fig, ax[2], vmin, vmax, screws=screws
+                )
         fig.suptitle("Antenna Surface")
         fig.tight_layout()
         if filename is None:
@@ -308,8 +338,9 @@ class AntennaSurface:
         else:
             plt.savefig(filename, dpi=dpi)
 
-    def _plot_surface(self, data, title, fig, ax, vmin, vmax, screws=False, mask=False,
-                      unit='mm'):
+    def _plot_surface(
+        self, data, title, fig, ax, vmin, vmax, screws=False, mask=False, unit="mm"
+    ):
         """
         Does the plotting of a data array in a figure's subplot
         Args:
@@ -329,8 +360,14 @@ class AntennaSurface:
         xmax = self.xaxis.idx_to_coor(self.xaxis.n - 0.5)
         ymin = self.yaxis.idx_to_coor(-0.5)
         ymax = self.yaxis.idx_to_coor(self.yaxis.n - 0.5)
-        im = ax.imshow(np.flipud(data), cmap='viridis', interpolation='nearest',
-                       extent=[xmin, xmax, ymin, ymax], vmin=vmin, vmax=vmax)
+        im = ax.imshow(
+            np.flipud(data),
+            cmap="viridis",
+            interpolation="nearest",
+            extent=[xmin, xmax, ymin, ymax],
+            vmin=vmin,
+            vmax=vmax,
+        )
         divider = make_axes_locatable(ax)
         if not mask:
             cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -351,23 +388,24 @@ class AntennaSurface:
         _write_fits(self.devhead, self.resi, filename)
         return
 
-    def export_screw_adjustments(self, filename, unit='mm'):
+    def export_screw_adjustments(self, filename, unit="mm"):
         """
         Export screw adjustments for all panels onto an ASCII file
         Args:
             filename: ASCII file name/path
             unit: unit for panel screw adjustments ['mm','miliinches']
         """
-        spc = ' '
-        outfile = 'Screw adjustments for {0:s} {1:s} antenna\n'.format(
-            self.telescope.name, self.amphead['telescop'])
-        outfile += 'Adjustments are in ' + unit + lnbr
+        spc = " "
+        outfile = "Screw adjustments for {0:s} {1:s} antenna\n".format(
+            self.telescope.name, self.amphead["telescop"]
+        )
+        outfile += "Adjustments are in " + unit + lnbr
         outfile += 2 * lnbr
-        outfile += 25 * spc + "{0:22s}{1:22s}".format('Inner Edge', 'Outer Edge') + lnbr
+        outfile += 25 * spc + "{0:22s}{1:22s}".format("Inner Edge", "Outer Edge") + lnbr
         outfile += 5 * spc + "{0:8s}{1:8s}".format("Ring", "panel")
-        outfile += 2 * spc + 2 * "{0:11s}{1:11s}".format('left', 'right') + lnbr
+        outfile += 2 * spc + 2 * "{0:11s}{1:11s}".format("left", "right") + lnbr
         for panel in self.panels:
             outfile += panel.export_adjustments(unit=unit) + lnbr
-        lefile = open(filename, 'w')
+        lefile = open(filename, "w")
         lefile.write(outfile)
         lefile.close()

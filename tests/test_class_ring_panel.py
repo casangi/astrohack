@@ -8,11 +8,11 @@ mm2mi = 1000 / 25.4
 class TestRingPanel:
     inrad = 2.0
     ourad = 3.0
-    angle = np.pi/2
+    angle = np.pi / 2
     position = 1
     deviation = 2.0
     point = [2.5, -2.5, 1, 1, deviation]
-    fixedthetapan = RingPanel('fixedtheta', angle, position, position, inrad, ourad)
+    fixedthetapan = RingPanel("fixedtheta", angle, position, position, inrad, ourad)
 
     def test_gauss_elimination_numpy(self):
         """
@@ -38,7 +38,9 @@ class TestRingPanel:
                                                                                        'failed'
 
         with pytest.raises(Exception):
-            panel = RingPanel('xxx', self.angle, self.position, self.position, self.inrad, self.ourad)
+            panel = RingPanel(
+                "xxx", self.angle, self.position, self.position, self.inrad, self.ourad
+            )
 
     def test_is_inside(self):
         """
