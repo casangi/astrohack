@@ -18,7 +18,7 @@ def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_imag
                   disable_focus_xy_offsets, disable_focus_z_offset, disable_subreflector_tilt, disable_pointing_offset,
                   disable_cassegrain_offset, magnification, secondary_z_offset, phase_slope):
     """
-    corrects the grading phase for pointing, focus, and feed offset errors using least squares, and a model
+    Corrects the grading phase for pointing, focus, and feed offset errors using least squares, and a model
     incorporating subreflector position errors.  Includes reference pointing
 
     This is a revised version of the task, offering a two-reflector solution.  M. Kesteven, 6/12/1994
@@ -121,7 +121,7 @@ def _nullify(matrix, vector, start_par, end_par):
         end_par: Last parameter to nullify
 
     Returns:
-    matrix and vector with nullified rows and columns
+        matrix and vector with nullified rows and columns
     """
     if start_par == end_par:
         loop = [start_par]
@@ -156,7 +156,6 @@ def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, mag
     """
     npix = phase_image.shape[0]
     #   focal length in cellular units
-    focal_path = focal_length / cellxy
     ix0 = npix/2
     iy0 = npix/2
     matrix = np.zeros((npar, npar))
@@ -204,8 +203,8 @@ def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, mag
             x_delta_pix = ix - ix0
             y_delta_pix = iy - iy0
             z_focus, x_focus, y_focus, x_tilt, y_tilt, x_cass, y_cass = _matrix_coeffs(x_delta_pix, y_delta_pix,
-                                                                                       magnification, focal_path,
-                                                                                       phase_slope)
+                                                                                       magnification, focal_length,
+                                                                                       cellxy, phase_slope)
 
             #  build the design matrix.
             vector[0] += phase * weight
@@ -282,7 +281,7 @@ def _correct_phase(phase_image, cellxy, parameters, magnification, focal_length,
     Args:
         phase_image: Grading phase map
         cellxy: Map cell spacing, in meters
-        parameters:
+        parameters: Parameters to be used in model determination
         magnification: Telescope Magnification
         focal_length: Nominal focal length, in meters
         phase_slope: Slope to apply to Q factor
@@ -290,7 +289,6 @@ def _correct_phase(phase_image, cellxy, parameters, magnification, focal_length,
     Returns:
         Corrected phase image and corresponfing phase_model
     """
-    focal_path = focal_length / cellxy
     npix = phase_image.shape[0]
     ix0 = npix/2
     iy0 = npix/2
@@ -305,8 +303,8 @@ def _correct_phase(phase_image, cellxy, parameters, magnification, focal_length,
                 y_delta_pix = iy - iy0
 
                 z_focus, x_focus, y_focus, x_tilt, y_tilt, x_cass, y_cass = _matrix_coeffs(x_delta_pix, y_delta_pix,
-                                                                                           magnification, focal_path,
-                                                                                           phase_slope)
+                                                                                           magnification, focal_length,
+                                                                                           cellxy, phase_slope)
 
                 corr = phase_offset + x_pnt_off * x_delta_pix + y_pnt_off * y_delta_pix + x_focus_off * x_focus
                 corr += y_focus_off * y_focus + z_focus_off * z_focus + x_subref_tilt * x_tilt + y_subref_tilt * y_tilt
@@ -317,14 +315,15 @@ def _correct_phase(phase_image, cellxy, parameters, magnification, focal_length,
     return corrected_phase, phase_model
 
 
-def _matrix_coeffs(x_delta_pix, y_delta_pix, magnification, focal_path, phase_slope):
+def _matrix_coeffs(x_delta_pix, y_delta_pix, magnification, focal_length, cellxy, phase_slope):
     """
     Computes the matrix coefficients used when building the design matrix and correcting the phase image
     Args:
         x_delta_pix: Distance from X reference pixel, in pixels
         y_delta_pix: Distance from Y reference pixel, in pixels
         magnification: Telescope Magnification
-        focal_length: Nominal focal length, in meters
+        focal_length: Nominal focal length
+        cellxy: Map cell spacing, in meters
         phase_slope: Slope to apply to Q factor
 
     Returns:
@@ -336,6 +335,7 @@ def _matrix_coeffs(x_delta_pix, y_delta_pix, magnification, focal_path, phase_sl
         x_cass: Cassegrain coefficient in x direction
         y_cass: Cassegrain coefficient in y direction
     """
+    focal_path = focal_length / cellxy
     rad = np.sqrt(x_delta_pix * x_delta_pix + y_delta_pix * y_delta_pix)
     ang = np.atan2(y_delta_pix, x_delta_pix)
     q_factor = rad / (2. * focal_path)
