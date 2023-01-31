@@ -10,17 +10,17 @@ from casacore import tables as ctables
 from astrohack._utils import _system_message as console
 from astrohack._utils._io import _load_pnt_dict, _make_ant_pnt_dict
 from astrohack._utils._io import _extract_holog_chunk, _open_no_dask_zarr
-from astrohack._utils._io import _create_hack_meta_data, _read_data_from_hack_meta
+from astrohack._utils._io import _create_holog_meta_data, _read_data_from_holog_meta
 
 
-def load_hack_file(hack_file, dask_load=True, load_pnt_dict=True, ant_id=None):
-    """Loads hack file from disk
+def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None):
+    """Loads holog file from disk
 
     Args:
-        hack_name (str): Hack file name
+        holog_name (str): holog file name
 
     Returns:
-        hackfile (nested-dict): {
+        hologfile (nested-dict): {
                             'point.dict':{}, 'ddi':
                                                 {'scan':
                                                     {'antenna':
@@ -32,46 +32,46 @@ def load_hack_file(hack_file, dask_load=True, load_pnt_dict=True, ant_id=None):
                         }
     """
 
-    hack_dict = {}
+    holog_dict = {}
 
     if load_pnt_dict == True:
-        console.info("Loading pointing dictionary to hack ...")
-        hack_dict["pnt_dict"] = _load_pnt_dict(
-            file=hack_file, ant_list=None, dask_load=dask_load
+        console.info("Loading pointing dictionary to holog ...")
+        holog_dict["pnt_dict"] = _load_pnt_dict(
+            file=holog_file, ant_list=None, dask_load=dask_load
         )
 
-    for ddi in os.listdir(hack_file):
+    for ddi in os.listdir(holog_file):
         if ddi.isnumeric():
-            hack_dict[int(ddi)] = {}
-            for scan in os.listdir(os.path.join(hack_file, ddi)):
+            holog_dict[int(ddi)] = {}
+            for scan in os.listdir(os.path.join(holog_file, ddi)):
                 if scan.isnumeric():
-                    hack_dict[int(ddi)][int(scan)] = {}
-                    for ant in os.listdir(os.path.join(hack_file, ddi + "/" + scan)):
+                    holog_dict[int(ddi)][int(scan)] = {}
+                    for ant in os.listdir(os.path.join(holog_file, ddi + "/" + scan)):
                         if ant.isnumeric():
                             mapping_ant_vis_holog_data_name = os.path.join(
-                                hack_file, ddi + "/" + scan + "/" + ant
+                                holog_file, ddi + "/" + scan + "/" + ant
                             )
 
                             if dask_load:
-                                hack_dict[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(
+                                holog_dict[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(
                                     mapping_ant_vis_holog_data_name
                                 )
                             else:
-                                hack_dict[int(ddi)][int(scan)][
+                                holog_dict[int(ddi)][int(scan)][
                                     int(ant)
                                 ] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
 
     if ant_id == None:
-        return hack_dict
+        return holog_dict
 
-    return hack_dict, _read_data_from_hack_meta(
-        hack_file=hack_file, hack_dict=hack_dict, ant_id=ant_id
+    return holog_dict, _read_data_from_holog_meta(
+        holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id
     )
 
 
 def extract_holog(
     ms_name,
-    hack_name,
+    holog_name,
     holog_obs_dict,
     data_col="DATA",
     subscan_intent="MIXED",
@@ -83,7 +83,7 @@ def extract_holog(
 
     Args:
         ms_name (string): Measurement file name
-        hack_name (string): Basename of hack file to create.
+        holog_name (string): Basename of holog file to create.
         holog_obs_dict (dict): Nested dictionary ordered by ddi:{ scan: { map:[ant names], ref:[ant names] } } }
         data_col (str, optional): Data column from measurement set to acquire. Defaults to 'DATA'.
         subscan_intent (str, optional): Subscan intent, can be MIXED or REFERENCE; MIXED refers to a pointing measurement with half ON(OFF) source. Defaults to 'MIXED'.
@@ -91,12 +91,12 @@ def extract_holog(
         overwrite (bool, optional): Boolean for whether to overwrite current holography file.
     """
 
-    hack_file = "{base}.{suffix}".format(base=hack_name, suffix="holog.zarr")
+    holog_file = "{base}.{suffix}".format(base=holog_name, suffix="holog.zarr")
 
-    if os.path.exists(hack_file) is True and overwrite is False:
+    if os.path.exists(holog_file) is True and overwrite is False:
         console.error(
-            "[_create_hack_file] Hack file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(
-                file=hack_file
+            "[_create_holog_file] holog file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(
+                file=holog_file
             )
         )
         raise FileExistsError
@@ -105,7 +105,7 @@ def extract_holog(
             "[extract_holog] Warning, current holography files will be overwritten."
         )
 
-    pnt_name = "{base}.{pointing}".format(base=hack_name, pointing="point.zarr")
+    pnt_name = "{base}.{pointing}".format(base=holog_name, pointing="point.zarr")
 
     _make_ant_pnt_dict(ms_name, pnt_name, parallel=parallel)
 
@@ -190,7 +190,7 @@ def extract_holog(
 
         extract_holog_parms = {
             "ms_name": ms_name,
-            "hack_name": hack_name,
+            "holog_name": holog_name,
             "pnt_name": pnt_name,
             "ddi": ddi,
             "data_col": data_col,
@@ -252,9 +252,9 @@ def extract_holog(
     if parallel:
         dask.compute(delayed_list)
 
-    hack_file = "{base}.{suffix}".format(
-        base=extract_holog_parms["hack_name"], suffix="holog.zarr"
+    holog_file = "{base}.{suffix}".format(
+        base=extract_holog_parms["holog_name"], suffix="holog.zarr"
     )
 
-    hack_dict = load_hack_file(hack_file=hack_file, dask_load=True, load_pnt_dict=False)
-    _create_hack_meta_data(hack_file=hack_file, hack_dict=hack_dict)
+    holog_dict = load_holog_file(holog_file=holog_file, dask_load=True, load_pnt_dict=False)
+    _create_holog_meta_data(holog_file=holog_file, holog_dict=holog_dict)
