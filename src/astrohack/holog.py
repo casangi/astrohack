@@ -12,6 +12,7 @@ import scipy.signal
 import dask.array as da
 import numpy as np
 import xarray as xr
+import scipy
 
 from scipy.interpolate import griddata
 
@@ -109,6 +110,26 @@ def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=20):
     v = np.arange(-image_center[1], image_size[1] - image_center[1]) * cell_size[1]
 
     return aperture_grid, u, v
+
+def _parallactic_derotation(data, parallactic_angle_dict):
+    # Find the middle index of the array. This is calcualted because there might be a desire to change 
+    # the array length at some point and I don't want to hard code the middle value.
+    #
+    # It is assumed, and should be true, that the parallacitc angle array size is consistent over scan.
+    scans = list(parallactic_angle_dict.keys())
+    # Get the median index for the first scan (this should be the same for every scan).
+    median_index = len(parallactic_angle_dict[scans[0]].parallactic_samples)//2
+    
+    # This is the angle we will rotated the scans to.
+    median_angular_reference = parallactic_angle_dict[scans[0]].parallactic_samples[median_index]
+    
+    for scan, scan_value in enumerate(scans):
+        median_angular_offset = median_angular_reference - parallactic_angle_dict[scan_value].parallactic_samples[median_index]
+        median_angular_offset *= 180/np.pi
+            
+        data[scan] = scipy.ndimage.rotate(input=data[scan, ...], angle=median_angular_offset, axes=(3, 2), reshape=False)
+        
+    return data
 
 
 def _holog_chunk(holog_chunk_params):
@@ -226,8 +247,10 @@ def _holog_chunk(holog_chunk_params):
             if holog_chunk_params["frequency_scaling"]:
                 ant_data_array = ant_data_array.mean(axis=1, keep_dims=True)
 
+        ant_data_array = _parallactic_derotation(data=ant_data_array, parallactic_angle_dict=ant_data_dict[ddi])
+
         console.info(
-            "[_holog_chunk] FFT padding factor {}".format(
+            "[_holog_chunk] FFT padding factor {} ...".format(
                 holog_chunk_params["padding_factor"]
             )
         )
@@ -243,6 +266,7 @@ def _holog_chunk(holog_chunk_params):
         xds["GRID"] = xr.DataArray(
             ant_data_array, dims=["time-centroid", "chan", "pol", "l", "m"]
         )
+        
         xds["APERTURE"] = xr.DataArray(
             aperture_grid, dims=["time-centroid", "chan", "pol", "u", "v"]
         )
