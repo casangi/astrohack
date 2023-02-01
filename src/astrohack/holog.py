@@ -1,5 +1,4 @@
 import math
-import time
 import json
 import os
 
@@ -22,20 +21,32 @@ from astrohack._utils._io import _read_dimensions_meta_data
 
 
 def _calculate_euclidean_distance(x, y, center):
-    """_summary_
+    """ Calculates the euclidean distance between a pair of pair of input points.
 
     Args:
-        x (_type_): _description_
-        y (_type_): _description_
-        center (_type_): _description_
+        x (float): x-coordinate
+        y (float): y-coordinate
+        center (tuple (float)): float tuple containing the coordinates to the center pixel
 
     Returns:
-        _type_: _description_
+        float: euclidean distance of points from center pixel
     """
+
     return np.sqrt(np.power(x - center[0], 2) + np.power(y - center[1], 2))
 
 
 def _apply_mask(data, scaling=0.5):
+    """ Applies a cropping mask to the input data according to the scale factor
+
+    Args:
+        data (numpy,ndarray): numpy array containing the aperture grid.
+        scaling (float, optional): Scale factor which is used to determine the amount of the data to crop, ex. scale=0.5 
+                                   means to crop the data by 50%. Defaults to 0.5.
+
+    Returns:
+        numpy.ndarray: cropped aperture grid data
+    """
+
     x, y = data.shape
     assert scaling > 0, console.error("Scaling must be > 0")
 
@@ -52,6 +63,17 @@ def _apply_mask(data, scaling=0.5):
 
 
 def _find_peak_beam_value(data, height=0.5, scaling=0.5):
+    """ Search algorithm to determine the maximal signal peak in the beam pattern.
+
+    Args:
+        data (numpy.ndarray): beam data grid
+        height (float, optional): Peak threshold. Looks for the maixmimum peak in data and uses a percentage of this 
+                                  peak to determine a threhold for other peaks. Defaults to 0.5.
+        scaling (float, optional): scaling factor for beam data cropping. Defaults to 0.5.
+
+    Returns:
+        float: peak maximum value
+    """
     masked_data = _apply_mask(data, scaling=scaling)
 
     array = masked_data.flatten()
@@ -69,6 +91,18 @@ def _find_peak_beam_value(data, height=0.5, scaling=0.5):
 
 
 def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=20):
+    """ Calcualtes the aperture illumination pattern from the beam data.
+
+    Args:
+        grid (numpy.ndarray): gridded beam data
+        frequency (float): channel frequency
+        delta (float): incremental spacing between lm values, ie. delta_l = l_(n+1) - l_(n)
+        padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edged of 
+                                        each beam data grid and not between layers. Defaults to 20.
+
+    Returns:
+        numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
+    """
     console.info("Calculating aperture illumination pattern ...")
 
     assert grid.shape[-1] == grid.shape[-2]
@@ -112,6 +146,17 @@ def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=20):
     return aperture_grid, u, v
 
 def _parallactic_derotation(data, parallactic_angle_dict):
+    """ Uses samples of parallactic angle (PA) values to correct differences in PA between scans. The reference PA is selected 
+        to be the first scans median parallactic angle. All values are rotated to this PA value using scypi.ndimage.rotate(...)
+
+    Args:
+        data (numpy.ndarray): beam data grid (scan, chan, pol, l, m)
+        parallactic_angle_dict (dict): dictionary containing antenna selected xds from which the aprallactic angle samples 
+                                       are retrieved ==> [scan](xds), here the scan referres to the scan values not the scan index.
+
+    Returns:
+        numpy.ndarray: rotation adjusted beam data grid
+    """
     # Find the middle index of the array. This is calcualted because there might be a desire to change 
     # the array length at some point and I don't want to hard code the middle value.
     #
@@ -126,14 +171,15 @@ def _parallactic_derotation(data, parallactic_angle_dict):
     for scan, scan_value in enumerate(scans):
         median_angular_offset = median_angular_reference - parallactic_angle_dict[scan_value].parallactic_samples[median_index]
         median_angular_offset *= 180/np.pi
-            
+            _summary_
         data[scan] = scipy.ndimage.rotate(input=data[scan, ...], angle=median_angular_offset, axes=(3, 2), reshape=False)
         
     return data
 
 
 def _holog_chunk(holog_chunk_params):
-    """_summary_
+    """ Process chunk holography data along the antenna axis. Works with holography file to properly grid , normalize, average and correct data
+        and returns the aperture pattern.
 
     Args:
         holog_chunk_params (dict): Dictionary containing holography parameters.
