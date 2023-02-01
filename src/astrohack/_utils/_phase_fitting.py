@@ -18,7 +18,7 @@ def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_imag
                   disable_focus_xy_offsets, disable_focus_z_offset, disable_subreflector_tilt, disable_pointing_offset,
                   disable_cassegrain_offset, magnification, secondary_z_offset, phase_slope):
     """
-    Corrects the grading phase for pointing, focus, and feed offset errors using least squares, and a model
+    Corrects the grading phase for pointing, focus, and feed offset errors using the least squares method, and a model
     incorporating subreflector position errors.  Includes reference pointing
 
     This is a revised version of the task, offering a two-reflector solution.  M. Kesteven, 6/12/1994
@@ -156,8 +156,8 @@ def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, mag
     """
     npix = phase_image.shape[0]
     #   focal length in cellular units
-    ix0 = npix/2
-    iy0 = npix/2
+    ix0 = npix//2
+    iy0 = npix//2
     matrix = np.zeros((npar, npar))
     vector = np.zeros(npar)
     ixymin = abs(xymin/cellxy)
@@ -165,34 +165,34 @@ def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, mag
     min_squared_pix_radius = (xymin*xymin)/(cellxy*cellxy)
     max_squared_pix_radius = (xymax*xymax)/(cellxy*cellxy)
 
-    for iy in range(npix):
-        y_delta_pix = abs(iy - iy0)
+    for ix in range(npix):
+        x_delta_pix = abs(ix - ix0)
         #   check absolute limits.
-        if xymin > 0.0 and y_delta_pix < ixymin:
+        if xymin > 0.0 and x_delta_pix < ixymin:
             continue
-        if xymax > 0.0 and y_delta_pix > ixymax:
+        if xymax > 0.0 and x_delta_pix > ixymax:
             continue
         #   is this row of pixels outside
         #   the outer ring?
-        if xymax < 0.0 and y_delta_pix * y_delta_pix > max_squared_pix_radius:
+        if xymax < 0.0 and x_delta_pix * x_delta_pix > max_squared_pix_radius:
             continue
-        for ix in range(npix):
+        for iy in range(npix):
             #   ignore blanked pixels.
             if np.isnan(phase_image[ix, iy]):
                 continue
             #   check for inclusion.
-            x_delta_pix = abs(ix - ix0)
+            y_delta_pix = abs(iy - iy0)
             radius_pix_squared = x_delta_pix * x_delta_pix + y_delta_pix * y_delta_pix
             #   inner limits.
             if xymin > 0.0:
-                if x_delta_pix < ixymin:
+                if y_delta_pix < ixymin:
                     continue
             elif xymin < 0.0:
                 if radius_pix_squared < min_squared_pix_radius:
                     continue
             #   outer limits.
             if xymax > 0.0:
-                if x_delta_pix > ixymax:
+                if y_delta_pix > ixymax:
                     continue
             elif xymax < 0.0:
                 if radius_pix_squared > max_squared_pix_radius:
@@ -202,10 +202,9 @@ def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, mag
             weight = amplitude_image[ix, iy]
             x_delta_pix = ix - ix0
             y_delta_pix = iy - iy0
-            z_focus, x_focus, y_focus, x_tilt, y_tilt, x_cass, y_cass = _matrix_coeffs(x_delta_pix, y_delta_pix,
+            x_focus, y_focus, z_focus, x_tilt, y_tilt, x_cass, y_cass = _matrix_coeffs(x_delta_pix, y_delta_pix,
                                                                                        magnification, focal_length,
                                                                                        cellxy, phase_slope)
-
             #  build the design matrix.
             vector[0] += phase * weight
             vector[1] += phase * x_delta_pix * weight
@@ -231,7 +230,7 @@ def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, mag
             matrix[1, 2] += x_delta_pix * y_delta_pix * weight
             matrix[1, 3] += x_delta_pix * x_focus * weight
             matrix[1, 4] += x_delta_pix * y_focus * weight
-            matrix[1, 6] += x_delta_pix * z_focus * weight
+            matrix[1, 5] += x_delta_pix * z_focus * weight
             matrix[1, 6] += x_delta_pix * x_tilt * weight
             matrix[1, 7] += x_delta_pix * y_tilt * weight
             matrix[1, 8] += x_delta_pix * x_cass * weight
@@ -239,29 +238,29 @@ def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, mag
             matrix[2, 2] += y_delta_pix * y_delta_pix * weight
             matrix[2, 3] += y_delta_pix * x_focus * weight
             matrix[2, 4] += y_delta_pix * y_focus * weight
-            matrix[2, 6] += y_delta_pix * z_focus * weight
+            matrix[2, 5] += y_delta_pix * z_focus * weight
             matrix[2, 6] += y_delta_pix * x_tilt * weight
             matrix[2, 7] += y_delta_pix * y_tilt * weight
             matrix[2, 8] += y_delta_pix * x_cass * weight
             matrix[2, 9] += y_delta_pix * y_cass * weight
             matrix[3, 3] += x_focus * x_focus * weight
             matrix[3, 4] += x_focus * y_focus * weight
-            matrix[3, 6] += x_focus * z_focus * weight
+            matrix[3, 5] += x_focus * z_focus * weight
             matrix[3, 6] += x_focus * x_tilt * weight
             matrix[3, 7] += x_focus * y_tilt * weight
             matrix[3, 8] += x_focus * x_cass * weight
             matrix[3, 9] += x_focus * y_cass * weight
             matrix[4, 4] += y_focus * y_focus * weight
-            matrix[4, 6] += y_focus * z_focus * weight
+            matrix[4, 5] += y_focus * z_focus * weight
             matrix[4, 6] += y_focus * x_tilt * weight
             matrix[4, 7] += y_focus * y_tilt * weight
             matrix[4, 8] += y_focus * x_cass * weight
             matrix[4, 9] += y_focus * y_cass * weight
-            matrix[6, 6] += z_focus * z_focus * weight
-            matrix[6, 6] += z_focus * x_tilt * weight
-            matrix[6, 7] += z_focus * y_tilt * weight
-            matrix[6, 8] += z_focus * x_cass * weight
-            matrix[6, 9] += z_focus * y_cass * weight
+            matrix[5, 5] += z_focus * z_focus * weight
+            matrix[5, 6] += z_focus * x_tilt * weight
+            matrix[5, 7] += z_focus * y_tilt * weight
+            matrix[5, 8] += z_focus * x_cass * weight
+            matrix[5, 9] += z_focus * y_cass * weight
             matrix[6, 6] += x_tilt * x_tilt * weight
             matrix[6, 7] += x_tilt * y_tilt * weight
             matrix[6, 8] += x_tilt * x_cass * weight
@@ -290,8 +289,8 @@ def _correct_phase(phase_image, cellxy, parameters, magnification, focal_length,
         Corrected phase image and corresponfing phase_model
     """
     npix = phase_image.shape[0]
-    ix0 = npix/2
-    iy0 = npix/2
+    ix0 = npix//2
+    iy0 = npix//2
     phase_model = np.zeros((npix, npix))
     corrected_phase = np.zeros((npix, npix))
     phase_offset, x_pnt_off, y_pnt_off, x_focus_off, y_focus_off, z_focus_off, x_subref_tilt, y_subref_tilt, \
@@ -302,10 +301,9 @@ def _correct_phase(phase_image, cellxy, parameters, magnification, focal_length,
                 x_delta_pix = ix - ix0
                 y_delta_pix = iy - iy0
 
-                z_focus, x_focus, y_focus, x_tilt, y_tilt, x_cass, y_cass = _matrix_coeffs(x_delta_pix, y_delta_pix,
+                x_focus, y_focus, z_focus, x_tilt, y_tilt, x_cass, y_cass = _matrix_coeffs(x_delta_pix, y_delta_pix,
                                                                                            magnification, focal_length,
                                                                                            cellxy, phase_slope)
-
                 corr = phase_offset + x_pnt_off * x_delta_pix + y_pnt_off * y_delta_pix + x_focus_off * x_focus
                 corr += y_focus_off * y_focus + z_focus_off * z_focus + x_subref_tilt * x_tilt + y_subref_tilt * y_tilt
                 corr += x_cass_off * x_cass + y_cass_off * y_cass
@@ -337,7 +335,7 @@ def _matrix_coeffs(x_delta_pix, y_delta_pix, magnification, focal_length, cellxy
     """
     focal_path = focal_length / cellxy
     rad = np.sqrt(x_delta_pix * x_delta_pix + y_delta_pix * y_delta_pix)
-    ang = np.atan2(y_delta_pix, x_delta_pix)
+    ang = np.arctan2(y_delta_pix, x_delta_pix)
     q_factor = rad / (2. * focal_path)
     q_factor_scaled = q_factor / magnification
     denominator = 1. + q_factor * q_factor
@@ -353,7 +351,7 @@ def _matrix_coeffs(x_delta_pix, y_delta_pix, magnification, focal_length, cellxy
     x_cass = -2. * np.cos(ang) * q_factor_scaled / denominator_scaled
     y_cass = -2. * np.sin(ang) * q_factor_scaled / denominator_scaled
 
-    return z_focus, x_focus, y_focus, x_tilt, y_tilt, x_cass, y_cass
+    return x_focus, y_focus, z_focus, x_tilt, y_tilt, x_cass, y_cass
 
 
 def _compute_phase_rms(phase_image):
