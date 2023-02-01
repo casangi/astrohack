@@ -18,6 +18,7 @@ def _gauss_elimination_numpy(system, vector):
 def _least_squares_fit(system, vector):
     """
     Least squares fitting of a system of linear equations
+    The variances are simplified as the diagonal of the covariances
     Args:
         system: System matrix to be solved
         vector: Vector that represents the right hand side of the system
@@ -29,10 +30,9 @@ def _least_squares_fit(system, vector):
         raise Exception('System must have 2 dimensions')
     if system.shape[0] != system.shape[1]:
         raise Exception('System must be a square matrix')
-    rank = system.shape[0]
-    fit = np.linalg.lstsq(system, vector)
+    fit = np.linalg.lstsq(system, vector, rcond=None)
     result = fit[0]
     residuals = fit[1]
     covar = np.matrix(np.dot(system.T, system)).I
-    variances = np.dot(covar, np.identity(rank))
+    variances = np.diagonal(covar)
     return result, variances, residuals
