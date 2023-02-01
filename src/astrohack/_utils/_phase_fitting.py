@@ -14,8 +14,8 @@ i_x_cass_off = 8
 i_y_cass_off = 9
 
 
-def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_image, phase_image,
-                  disable_focus_xy_offsets, disable_focus_z_offset, disable_subreflector_tilt, disable_pointing_offset,
+def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_image, phase_image, disable_pointing_offset,
+                  disable_focus_xy_offsets, disable_focus_z_offset, disable_subreflector_tilt,
                   disable_cassegrain_offset, magnification, secondary_z_offset, phase_slope):
     """
     Corrects the grading phase for pointing, focus, and feed offset errors using the least squares method, and a model
@@ -56,10 +56,10 @@ def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_imag
         cellxy: Map cell spacing, in meters
         amplitude_image: Grading amplitude map
         phase_image: Grading phase map
+        disable_pointing_offset: Disable phase slope (pointing offset)
         disable_focus_xy_offsets: Disable subreflector offset model
         disable_focus_z_offset: Disable subreflector focus (z) model
         disable_subreflector_tilt: Enable subreflector rotation model
-        disable_pointing_offset: Disable phase slope (pointing offset)
         disable_cassegrain_offset: Disable Cassegrain offsets (X, Y, Z)
         magnification: Telescope Magnification
         secondary_z_offset: Offset (prime focus to bottom subreflector)
@@ -76,19 +76,15 @@ def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_imag
 
     matrix, vector = _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, magnification,
                                           phase_slope, focal_length)
-    if disable_pointing_offset:
-        matrix, vector = _nullify(matrix, vector, i_x_pnt_off, i_y_pnt_off)
-    if disable_focus_xy_offsets:
-        matrix, vector = _nullify(matrix, vector, i_x_focus_off, i_y_focus_off)
-    if disable_focus_z_offset:
-        matrix, vector = _nullify(matrix, vector, i_z_focus_off, i_z_focus_off)
-    if disable_subreflector_tilt:
-        matrix, vector = _nullify(matrix, vector, i_x_subref_tilt, i_y_subref_tilt)
-    if disable_cassegrain_offset:
-        matrix, vector = _nullify(matrix, vector, i_x_cass_off, i_y_cass_off)
 
+    matrix, vector, ignored = _ignore_non_fitted(disable_pointing_offset, disable_focus_xy_offsets,
+                                                 disable_focus_z_offset, disable_subreflector_tilt,
+                                                 disable_cassegrain_offset, matrix, vector)
     #   compute the least squares solution.
     results, variances, residuals = _least_squares_fit(matrix, vector)
+    # Reconstruct full output for ignored parameters
+    results, variances = _reconstruct_full_results(results, variances, ignored)
+
     #   apply the correction.
     corrected_phase, phase_model = _correct_phase(phase_image, cellxy, results, magnification, focal_length,
                                                   phase_slope)
@@ -111,29 +107,31 @@ def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_imag
     return results, errors, corrected_phase, phase_model, inrms, ourms
 
 
-def _nullify(matrix, vector, start_par, end_par):
-    """
-    Nullify parameters that are not to be fitted
-    Args:
-        matrix: Fitting matrix
-        vector: fitting vector
-        start_par: First parameter to nullify
-        end_par: Last parameter to nullify
+def _ignore_non_fitted(disable_pointing_offset, disable_focus_xy_offsets, disable_focus_z_offset,
+                       disable_subreflector_tilt, disable_cassegrain_offset, matrix, vector):
+    ignored = np.array([False, disable_pointing_offset, disable_pointing_offset, disable_focus_xy_offsets,
+                        disable_focus_xy_offsets, disable_focus_z_offset, disable_subreflector_tilt,
+                        disable_subreflector_tilt, disable_cassegrain_offset, disable_cassegrain_offset])
+    ndeleted = 0
+    for ipar in range(npar):
+        if ignored[ipar]:
+            vector = np.delete(vector, ipar-ndeleted, 0)
+            for axis in range(2):
+                matrix = np.delete(matrix, ipar-ndeleted, axis)
+            ndeleted += 1
+    return matrix, vector, ignored
 
-    Returns:
-        matrix and vector with nullified rows and columns
-    """
-    if start_par == end_par:
-        loop = [start_par]
-    else:
-        loop = [start_par, end_par]
-    for ipar in loop:
-        vector[ipar] = 0.0
-        for jpar in range(npar):
-            matrix[jpar, ipar] = 0.0
-            matrix[ipar, jpar] = 0.0
 
-    return matrix, vector
+def _reconstruct_full_results(results, variances, ignored):
+    reconstructed_results = np.zeros(npar)
+    reconstructed_variances = np.full(npar, np.nan)
+    jpar = 0
+    for ipar in range(npar):
+        if not ignored[ipar]:
+            reconstructed_results[ipar] = results[jpar]
+            reconstructed_variances[ipar] = variances[jpar]
+            jpar += 1
+    return reconstructed_results, reconstructed_variances
 
 
 def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, magnification, phase_slope, focal_length):
