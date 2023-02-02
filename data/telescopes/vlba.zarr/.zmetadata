@@ -1,6 +1,7 @@
 {
     "metadata": {
         ".zattrs": {
+            "comment": "Data taken from AIPS source code and EVLA memo 212",
             "diam": 25.0,
             "focus": 8.75,
             "inlim": 2.0,
@@ -12,6 +13,7 @@
                 9.081,
                 10.808
             ],
+            "magnification": 13.0,
             "name": "VLBA",
             "npanel": [
                 20,
@@ -32,7 +34,9 @@
                 10.808,
                 12.5
             ],
-            "ringed": true
+            "ringed": true,
+            "secondary_dist": 0.522,
+            "surp_slope": 0.65
         },
         ".zgroup": {
             "zarr_format": 2
