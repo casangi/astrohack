@@ -14,9 +14,9 @@ i_x_cass_off = 8
 i_y_cass_off = 9
 
 
-def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_image, phase_image, disable_pointing_offset,
+def phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, disable_pointing_offset,
                   disable_focus_xy_offsets, disable_focus_z_offset, disable_subreflector_tilt,
-                  disable_cassegrain_offset, magnification, secondary_z_offset, phase_slope):
+                  disable_cassegrain_offset):
     """
     Corrects the grading phase for pointing, focus, and feed offset errors using the least squares method, and a model
     incorporating subreflector position errors.  Includes reference pointing
@@ -48,11 +48,7 @@ def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_imag
 
     Args:
         wavelength: Observing wavelength, in meters
-        focal_length: Nominal focal length, in meters
-        xymin: minimum of |x| and |y| used in correcting for pointing, focus, and feed offset. Negative values denote a
-        range of SQRT(x*x + y*y)
-        xymax: maximum of |x| and |y| used in correcting for pointing, focus, and feed offset. Negative values denote a
-        range of SQRT(x*x + y*y)
+        telescope: Telescope object containing the optics parameters
         cellxy: Map cell spacing, in meters
         amplitude_image: Grading amplitude map
         phase_image: Grading phase map
@@ -61,9 +57,6 @@ def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_imag
         disable_focus_z_offset: Disable subreflector focus (z) model
         disable_subreflector_tilt: Enable subreflector rotation model
         disable_cassegrain_offset: Disable Cassegrain offsets (X, Y, Z)
-        magnification: Telescope Magnification
-        secondary_z_offset: Offset (prime focus to bottom subreflector)
-        phase_slope: Slope to apply to Q factor
 
     Returns:
         results: Array containining the fit results in convenient units
@@ -74,8 +67,8 @@ def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_imag
         ourms: Phase RMS after fitting
     """
 
-    matrix, vector = _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, magnification,
-                                          phase_slope, focal_length)
+    matrix, vector = _build_design_matrix(-telescope.inlim, -telescope.diam/2, cellxy, phase_image, amplitude_image,
+                                          telescope.magnification, telescope.surp_slope, telescope.focus)
 
     matrix, vector, ignored = _ignore_non_fitted(disable_pointing_offset, disable_focus_xy_offsets,
                                                  disable_focus_z_offset, disable_subreflector_tilt,
@@ -86,8 +79,8 @@ def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_imag
     results, variances = _reconstruct_full_results(results, variances, ignored)
 
     #   apply the correction.
-    corrected_phase, phase_model = _correct_phase(phase_image, cellxy, results, magnification, focal_length,
-                                                  phase_slope)
+    corrected_phase, phase_model = _correct_phase(phase_image, cellxy, results, telescope.magnification,
+                                                  telescope.focus, telescope.surp_slope)
     # get RMSes before and after the fit
     inrms = _compute_phase_rms(phase_image)
     ourms = _compute_phase_rms(corrected_phase)
@@ -99,8 +92,8 @@ def phase_fitting(wavelength, focal_length, xymin, xymax, cellxy, amplitude_imag
     errors[3:] *= scaling
     # Sub-reflector tilts to degrees
     rad2dg = np.pi / 180
-    results[6:8] *= rad2dg / (190.0 * secondary_z_offset)
-    errors[6:8] *= rad2dg / (190.0 * secondary_z_offset)
+    results[6:8] *= rad2dg / (190.0 * telescope.secondary_dist)
+    errors[6:8] *= rad2dg / (190.0 * telescope.secondary_dist)
     # rescale phase slope to pointing offset
     results[1:3] *= wavelength / rad2dg / 6. / cellxy
 
