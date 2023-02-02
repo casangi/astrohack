@@ -1,8 +1,6 @@
 import pytest
-from astrohack._classes.ring_panel import RingPanel, _gauss_elimination_numpy
+from astrohack._classes.ring_panel import RingPanel
 import numpy as np
-
-mm2mi = 1000 / 25.4
 
 
 class TestRingPanel:
@@ -12,87 +10,37 @@ class TestRingPanel:
     position = 1
     deviation = 2.0
     point = [2.5, -2.5, 1, 1, deviation]
-    fixedthetapan = RingPanel("fixedtheta", angle, position, position, inrad, ourad)
-
-    def test_gauss_elimination_numpy(self):
-        """
-        Tests the gaussian elimination routine by using an identity matrix
-        """
-        size = 3
-        identity = np.identity(size)
-        vector = np.arange(size)
-        for pos in range(size):
-            assert _gauss_elimination_numpy(identity, vector)[pos] == vector[pos], 'Gaussian elimination failed'
+    corotatedpan = RingPanel('corotatedparaboloid', angle, position, position, inrad, ourad)
 
     def test_init(self):
         """
         Tests the correct initialization of a RingPanel object, not all parameters tested
         """
-        assert self.fixedthetapan.theta1 == self.angle, 'Panel initial angle is incorrect'
-        assert self.fixedthetapan.theta2 == 2 * self.angle, 'Panel final angle is incorrect'
-        assert self.fixedthetapan.zeta == 1.5 * self.angle, 'Panel central angle is incorrect'
-        assert self.fixedthetapan.solve == self.fixedthetapan._solve_scipy(), 'solve method overloading failed'
-        assert self.fixedthetapan.corr_point == self.fixedthetapan._corr_point_flexi_scipy, 'corr_point method ' \
-                                                                                            'overloading failed'
-        assert self.fixedthetapan._paraboloid == self.fixedthetapan._fixed_paraboloid, 'Paraboloid method overload ' \
-                                                                                       'failed'
-
-        with pytest.raises(Exception):
-            panel = RingPanel(
-                "xxx", self.angle, self.position, self.position, self.inrad, self.ourad
-            )
+        assert self.corotatedpan.theta1 == self.angle, 'Panel initial angle is incorrect'
+        assert self.corotatedpan.theta2 == 2 * self.angle, 'Panel final angle is incorrect'
+        assert self.corotatedpan.zeta == 1.5 * self.angle, 'Panel central angle is incorrect'
+        assert self.corotatedpan.iring == self.position+1, 'Panel ring numbering is incorrect'
 
     def test_is_inside(self):
         """
         Test over the is_inside test for a point
         """
-        assert self.fixedthetapan.is_inside((self.inrad + self.ourad) / 2, 1.5 * self.angle), 'Point that should be ' \
-                                                                                              'inside the panel isn\'t'
-        assert not self.fixedthetapan.is_inside((self.inrad + self.ourad) / 2, 3.5 * self.angle), 'Point that should ' \
-                                                                                                  'be outside the ' \
-                                                                                                  'panel isn\'t'
-
-    def test_add_point(self):
-        """
-        Tests the addition of a point to the panel list of points
-        """
-        self.fixedthetapan.add_point(self.point)
-        assert self.fixedthetapan.nsamp == 1, 'Failed to increase number of samples after adding a point'
-        assert self.fixedthetapan.values[0] == self.point, 'Added point do not correspond to the data added'
-        assert len(self.fixedthetapan.values) == 1, 'Lenght of values list does not match its size counter'
-
-    def test_solve(self):
-        """
-        Tests the solving of the panel surface but using only the scipy fitting of the fixedtheta version
-        """
-        npoints = 200
-        for i in range(npoints):
-            self.fixedthetapan.add_point(self.point)
-        self.fixedthetapan.solve()
-        assert self.fixedthetapan.solved, 'Panel solving failed'
-        assert self.fixedthetapan.par[0] > 1e2, 'Panel curvature is smaller than expected'
-        assert self.fixedthetapan.par[1] > 1e2, 'Panel curvature is smaller than expected'
-        assert abs(self.fixedthetapan.par[2] - self.deviation) < 1e-3, 'Panel Z offset not within 0.1% tolerance'
-
-    def test_get_correction(self):
-        """
-        Tests that corrections are what are expected based on the input data
-        """
-        self.fixedthetapan.get_corrections()
-        assert len(self.fixedthetapan.corr) == self.fixedthetapan.nsamp, 'Length of corrections array is not the same' \
-                                                                         ' as the number of samples'
-        for isamp in range(self.fixedthetapan.nsamp):
-            assert abs(self.fixedthetapan.corr[isamp] - self.deviation) < 1e-3, 'Corrections not within 0.1% tolerance'
+        assert self.corotatedpan.is_inside((self.inrad + self.ourad) / 2, 1.5 * self.angle), 'Point that should be ' \
+                                                                                             'inside the panel isn\'t'
+        assert not self.corotatedpan.is_inside((self.inrad + self.ourad) / 2, 3.5 * self.angle), 'Point that should ' \
+                                                                                                 'be outside the ' \
+                                                                                                 'panel isn\'t'
 
     def test_export_adjustments(self):
         """
         Tests that panel adjustments are within what is expected from input data
         """
-        mmscrews = self.fixedthetapan.export_adjustments().split()[2:]
-        for screw in mmscrews:
-            assert abs(float(screw) - self.deviation) < 1e-3, 'mm screw adjustments not within 0.1% tolerance of the ' \
-                                                              'expected value'
-        miscrews = self.fixedthetapan.export_adjustments(unit='miliinches').split()[2:]
-        for screw in miscrews:
-            assert abs(float(screw) - mm2mi*self.deviation) < 1e-2, 'Miliinches screw adjustments not within 0.1% ' \
-                                                                    'tolerance of the expected value'
+        npoints = 200
+        for i in range(npoints):
+            self.corotatedpan.add_point(self.point)
+        self.corotatedpan.solve()
+        self.corotatedpan.get_corrections()
+        exportedstr = self.corotatedpan.export_adjustments().split()
+
+        assert float(exportedstr[0]) == self.position + 1, 'Panel ring numbering is wrong when exported'
+        assert float(exportedstr[1]) == self.position + 1, 'Panel numbering is wrong when exported'

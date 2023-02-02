@@ -30,19 +30,19 @@ DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 jit_cache = False
 
 
-def _read_dimensions_meta_data(hack_file, ddi, ant_id):
-    """Reads dimensional data from hack meta file.
+def _read_dimensions_meta_data(holog_file, ddi, ant_id):
+    """Reads dimensional data from holog meta file.
 
     Args:
         ant_id (int): Antenna id
-        hack_file (str): Hack file name.
+        holog_file (str): holog file name.
 
     Returns:
         dict: dictionary containing dimension data.
     """
     try:
         with open(
-            "{name}/{ddi}/{file}".format(name=hack_file, ddi=ddi, file="/.hack_attr")
+            "{name}/{ddi}/{file}".format(name=holog_file, ddi=ddi, file="/.holog_attr")
         ) as json_file:
             json_dict = json.load(json_file)
 
@@ -52,12 +52,12 @@ def _read_dimensions_meta_data(hack_file, ddi, ant_id):
     return json_dict[str(ant_id)]
 
 
-def _read_data_from_hack_meta(hack_file, hack_dict, ant_id):
-    """Read hack file meta data and extract antenna based xds information for each (ddi, scan)
+def _read_data_from_holog_meta(holog_file, holog_dict, ant_id):
+    """Read holog file meta data and extract antenna based xds information for each (ddi, scan)
 
     Args:
-        hack_file (str): Hack file name.
-        hack_dict (dict): Hack file dictionary containing msxds data.
+        holog_file (str): holog file name.
+        holog_dict (dict): holog file dictionary containing msxds data.
         ant_id (int): Antenna id
 
     Returns:
@@ -66,39 +66,39 @@ def _read_data_from_hack_meta(hack_file, hack_dict, ant_id):
 
     ant_id_str = str(ant_id)
 
-    hack_meta_data = "/".join((hack_file, ".hack_json"))
+    holog_meta_data = "/".join((holog_file, ".holog_json"))
 
     try:
-        with open(hack_meta_data, "r") as json_file:
-            hack_json = json.load(json_file)
+        with open(holog_meta_data, "r") as json_file:
+            holog_json = json.load(json_file)
 
     except Exception as error:
-        console.error("[_read_data_from_hack_meta] {error}".format(error=error))
+        console.error("[_read_data_from_holog_meta] {error}".format(error=error))
 
     ant_data_dict = {}
 
-    for ddi in hack_json[ant_id_str].keys():
-        for scan in hack_json[ant_id_str][ddi].keys():
-            ant_data_dict.setdefault(int(ddi), {})[int(scan)] = hack_dict[int(ddi)][
+    for ddi in holog_json[ant_id_str].keys():
+        for scan in holog_json[ant_id_str][ddi].keys():
+            ant_data_dict.setdefault(int(ddi), {})[int(scan)] = holog_dict[int(ddi)][
                 int(scan)
             ][int(ant_id)]
 
     return ant_data_dict
 
 
-def _create_hack_meta_data(hack_file, hack_dict):
-    """Save hack file meta information to json file with the transformation
+def _create_holog_meta_data(holog_file, holog_dict):
+    """Save holog file meta information to json file with the transformation
         of the ordering (ddi, scan, ant) --> (ant, ddi, scan).
 
     Args:
-        hack_name (str): Hack file name.
-        hack_dict (dict): Dictionary containing msdx data.
+        holog_name (str): holog file name.
+        holog_dict (dict): Dictionary containing msdx data.
     """
 
-    for ddi, scan_dict in hack_dict.items():
+    for ddi, scan_dict in holog_dict.items():
         if isinstance(ddi, numbers.Number):
             ant_sub_dict = {}
-            ant_hack_dict = {}
+            ant_holog_dict = {}
             data_extent = {}
             max_extent = {}
             dims_meta_data = {}
@@ -107,7 +107,7 @@ def _create_hack_meta_data(hack_file, hack_dict):
             for scan, ant_dict in scan_dict.items():
                 for ant, xds in ant_dict.items():
                     ant_sub_dict.setdefault(ddi, {})
-                    ant_hack_dict.setdefault(ant, ant_sub_dict)[ddi][
+                    ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][
                         scan
                     ] = xds.to_dict(data=False)
                     ant_sub_dict = {}
@@ -162,7 +162,7 @@ def _create_hack_meta_data(hack_file, hack_dict):
             }
 
         output_attr_file = "{name}/{ddi}/{ext}".format(
-            name=hack_file, ddi=ddi, ext=".hack_attr"
+            name=holog_file, ddi=ddi, ext=".holog_attr"
         )
 
         try:
@@ -170,16 +170,16 @@ def _create_hack_meta_data(hack_file, hack_dict):
                 json.dump(max_extent, json_file)
 
         except Exception as error:
-            console.error("[_create_hack_meta_data] {error}".format(error=error))
+            console.error("[_create_holog_meta_data] {error}".format(error=error))
 
-    output_meta_file = "{name}/{ext}".format(name=hack_file, ext=".hack_json")
-
+    output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
+    
     try:
         with open(output_meta_file, "w") as json_file:
-            json.dump(ant_hack_dict, json_file)
+            json.dump(ant_holog_dict, json_file)
 
     except Exception as error:
-        console.error("[_create_hack_meta_data] {error}".format(error=error))
+        console.error("[_create_holog_meta_data] {error}".format(error=error))
 
 
 def _get_attrs(zarr_obj):
@@ -457,7 +457,7 @@ def _extract_holog_chunk_jit(
             (n_time, n_chan, n_pol), dtype=types.complex64
         )
         sum_weight_map_dict[antenna_id] = np.zeros(
-            (n_time, n_chan, n_pol), dtype=types.complex64
+            (n_time, n_chan, n_pol), dtype=types.float64
         )
 
     for row in range(n_row):
@@ -543,8 +543,8 @@ def _get_time_samples(time_vis):
     return np.take(time_vis, indicies), indicies
 
 
-def _create_hack_file(
-    hack_name,
+def _create_holog_file(
+    holog_name,
     vis_map_dict,
     weight_map_dict,
     pnt_map_dict,
@@ -557,10 +557,10 @@ def _create_hack_file(
     ms_name,
     overwrite,
 ):
-    """Create hack-structured, formatted output file and save to zarr.
+    """Create holog-structured, formatted output file and save to zarr.
 
     Args:
-        hack_name (str): Hack file name.
+        holog_name (str): holog file name.
         vis_map_dict (dict): a nested dictionary/map of weighted visibilities indexed as [antenna][time, chan, pol]; mainains time ordering.
         weight_map_dict (dict): weights dictionary/map for visibilites in vis_map_dict
         pnt_map_dict (dict): pointing table map dictionary
@@ -608,22 +608,22 @@ def _create_hack_file(
             xds.attrs["ddi"] = ddi
             xds.attrs["parallactic_samples"] = parallactic_samples
 
-            hack_file = "{base}.{suffix}".format(base=hack_name, suffix="holog.zarr")
+            holog_file = "{base}.{suffix}".format(base=holog_name, suffix="holog.zarr")
 
             if overwrite is False:
-                if os.path.exists(hack_file):
+                if os.path.exists(holog_file):
                     console.warning(
-                        "[_create_hack_file] Hack file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(
-                            file=hack_file
+                        "[_create_holog_file] holog file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(
+                            file=holog_file
                         )
                     )
 
             console.info(
-                "[_create_hack_file] Writing hack file to {file}".format(file=hack_file)
+                "[_create_holog_file] Writing holog file to {file}".format(file=holog_file)
             )
             xds.to_zarr(
                 os.path.join(
-                    hack_file, str(ddi) + "/" + str(scan) + "/" + str(map_ant_index)
+                    holog_file, str(ddi) + "/" + str(scan) + "/" + str(map_ant_index)
                 ),
                 mode="w",
                 compute=True,
@@ -632,7 +632,7 @@ def _create_hack_file(
 
         else:
             console.warning(
-                "[_create_hack_file] [FLAGGED DATA] scan: {scan} mapping antenna index {index}".format(
+                "[_create_holog_file] [FLAGGED DATA] scan: {scan} mapping antenna index {index}".format(
                     scan=scan, index=map_ant_index
                 )
             )
@@ -659,7 +659,7 @@ def _extract_holog_chunk(extract_holog_parms):
     map_ant_ids = extract_holog_parms["map_ant_ids"]
     ref_ant_ids = extract_holog_parms["ref_ant_ids"]
     sel_state_ids = extract_holog_parms["sel_state_ids"]
-    hack_name = extract_holog_parms["hack_name"]
+    holog_name = extract_holog_parms["holog_name"]
     overwrite = extract_holog_parms["overwrite"]
 
     chan_freq = extract_holog_parms["chan_setup"]["chan_freq"]
@@ -706,8 +706,8 @@ def _extract_holog_chunk(extract_holog_parms):
 
     pnt_map_dict = _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)
 
-    hack_dict = _create_hack_file(
-        hack_name,
+    holog_dict = _create_holog_file(
+        holog_name,
         vis_map_dict,
         weight_map_dict,
         pnt_map_dict,
