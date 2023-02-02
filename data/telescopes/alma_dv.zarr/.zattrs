@@ -1,0 +1,16 @@
+{
+    "comment": "Preliminary data for ALMA Vertex antennas",
+    "diam": 12.0,
+    "focus": NaN,
+    "inlim": NaN,
+    "inrad": NaN,
+    "magnification": NaN,
+    "name": "ALMA DV",
+    "npanel": NaN,
+    "nrings": NaN,
+    "onaxisoptics": true,
+    "oulim": NaN,
+    "ourad": NaN,
+    "ringed": true,
+    "surp_slope": NaN
+}
