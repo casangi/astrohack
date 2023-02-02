@@ -69,3 +69,8 @@ class Telescope:
         for key in xds.attrs:
             setattr(self, key, xds.attrs[key])
         return
+
+    def print(self):
+        ledict = vars(self)
+        for key in ledict:
+            print("{0:15s} = ".format(key)+str(ledict[key]))
