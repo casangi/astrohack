@@ -171,7 +171,7 @@ def _parallactic_derotation(data, parallactic_angle_dict):
     for scan, scan_value in enumerate(scans):
         median_angular_offset = median_angular_reference - parallactic_angle_dict[scan_value].parallactic_samples[median_index]
         median_angular_offset *= 180/np.pi
-            _summary_
+            
         data[scan] = scipy.ndimage.rotate(input=data[scan, ...], angle=median_angular_offset, axes=(3, 2), reshape=False)
         
     return data
