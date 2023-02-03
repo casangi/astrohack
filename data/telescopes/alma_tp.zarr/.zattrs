@@ -1,0 +1,41 @@
+{
+    "comment": "Preliminary data for ALMA total power Melco antennas. Diameter, focus, magnification and secondary distance taken from ALMA memo 339. npanel, nrings and inlim from ALMA cycle 9 technical handbook. inrad and ourad computed assuming equal radial spans for each ring. surp_slope assumed to be 0",
+    "diam": 12.0,
+    "focus": 4.800000000000001,
+    "inlim": 0.375,
+    "inrad": [
+        0.375,
+        1.1785714285714286,
+        1.9821428571428572,
+        2.7857142857142856,
+        3.5892857142857144,
+        4.392857142857143,
+        5.196428571428571
+    ],
+    "magnification": 20.0,
+    "name": "ALMA TP",
+    "npanel": [
+        5,
+        20,
+        20,
+        40,
+        40,
+        40,
+        40
+    ],
+    "nrings": 7,
+    "onaxisoptics": true,
+    "oulim": 6,
+    "ourad": [
+        1.1785714285714286,
+        1.9821428571428572,
+        2.7857142857142856,
+        3.5892857142857144,
+        4.392857142857143,
+        5.196428571428571,
+        6.0
+    ],
+    "ringed": true,
+    "secondary_dist": 0.294,
+    "surp_slope": 0.0
+}

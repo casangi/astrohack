@@ -1,16 +1,44 @@
 {
-    "comment": "Preliminary data for ALMA Vertex antennas",
+    "comment": "Preliminary data for ALMA Vertex antennas. Diameter, focus, magnification and secondary distance taken from ALMA memo 339. npanel, nrings and inlim from ALMA cycle 9 technical handbook. inrad and ourad computed assuming equal radial spans for each ring. surp_slope assumed to be 0",
     "diam": 12.0,
-    "focus": NaN,
-    "inlim": NaN,
-    "inrad": NaN,
-    "magnification": NaN,
+    "focus": 4.800000000000001,
+    "inlim": 0.375,
+    "inrad": [
+        0.375,
+        1.078125,
+        1.78125,
+        2.484375,
+        3.1875,
+        3.890625,
+        4.59375,
+        5.296875
+    ],
+    "magnification": 20.0,
     "name": "ALMA DV",
-    "npanel": NaN,
-    "nrings": NaN,
+    "npanel": [
+        12,
+        12,
+        24,
+        24,
+        48,
+        48,
+        48,
+        48
+    ],
+    "nrings": 8,
     "onaxisoptics": true,
-    "oulim": NaN,
-    "ourad": NaN,
+    "oulim": 6,
+    "ourad": [
+        1.078125,
+        1.78125,
+        2.484375,
+        3.1875,
+        3.890625,
+        4.59375,
+        5.296875,
+        6.0
+    ],
     "ringed": true,
-    "surp_slope": NaN
+    "secondary_dist": 0.294,
+    "surp_slope": 0.0
 }
