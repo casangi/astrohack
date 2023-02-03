@@ -126,7 +126,7 @@ def extract_holog(
         ack=False,
     )
     ddi_spw = ctb.getcol("SPECTRAL_WINDOW_ID")
-    ddi_pol = ctb.getcol("POLARIZATION_ID")
+    ddpol_indexol = ctb.getcol("POLARIZATION_ID")
     ddi = np.arange(len(ddi_spw))
     ctb.close()
 
@@ -186,7 +186,7 @@ def extract_holog(
     for ddi in holog_obs_dict:
 
         spw_setup_id = ddi_spw[ddi]
-        pol_setup_id = ddi_pol[ddi]
+        pol_setup_id = ddpol_indexol[ddi]
 
         extract_holog_parms = {
             "ms_name": ms_name,

@@ -99,22 +99,22 @@ def _create_holog_meta_data(holog_file, holog_dict):
         if isinstance(ddi, numbers.Number):
             ant_sub_dict = {}
             ant_holog_dict = {}
-            data_extent = {}
             max_extent = {}
             dims_meta_data = {}
+
+            data_extent = []
+
             lm_extent = {"l": {"min": [], "max": []}, "m": {"min": [], "max": []}}
 
             for scan, ant_dict in scan_dict.items():
                 for ant, xds in ant_dict.items():
                     ant_sub_dict.setdefault(ddi, {})
-                    ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][
-                        scan
-                    ] = xds.to_dict(data=False)
+                    ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
                     ant_sub_dict = {}
 
                     # Find the average (l, m) extent for each antenna, over (ddi, scan) and write the meta data to file.
                     dims = xds.dims
-                    # max_vis = np.max(xds.DIRECTIONAL_COSINES.values)
+                    
                     lm_extent["l"]["min"].append(
                         np.min(xds.DIRECTIONAL_COSINES.values[:, 0])
                     )
@@ -128,9 +128,8 @@ def _create_holog_meta_data(holog_file, holog_dict):
                     lm_extent["m"]["max"].append(
                         np.max(xds.DIRECTIONAL_COSINES.values[:, 1])
                     )
-
-                    data_extent.setdefault(ant, np.array([]))
-                    data_extent[ant] = np.append(data_extent[ant], dims["time"])
+                    
+                    data_extent.append(dims["time"])
 
                     dims_meta_data.setdefault(
                         ant,
@@ -141,37 +140,34 @@ def _create_holog_meta_data(holog_file, holog_dict):
                         },
                     )
 
-        for ant, values in data_extent.items():
-            max_value = np.max(values)
+    
+    max_value = int(np.array(data_extent).max())
 
-            max_extent[ant] = {
-                "n_time": max_value,
-                "time": dims_meta_data[ant]["time"],
-                "pol": dims_meta_data[ant]["pol"],
-                "chan": dims_meta_data[ant]["chan"],
-                "extent": {
-                    "l": {
-                        "min": np.array(lm_extent["l"]["min"]).mean(),
-                        "max": np.array(lm_extent["l"]["max"]).mean(),
-                    },
-                    "m": {
-                        "min": np.array(lm_extent["m"]["min"]).mean(),
-                        "max": np.array(lm_extent["m"]["max"]).mean(),
-                    },
-                },
-            }
+    max_extent = {
+        "n_time": max_value,
+        "extent": {
+            "l": {
+                "min": np.array(lm_extent["l"]["min"]).mean(),
+                "max": np.array(lm_extent["l"]["max"]).mean(),
+            },
+            "m": {
+                "min": np.array(lm_extent["m"]["min"]).mean(),
+                "max": np.array(lm_extent["m"]["max"]).mean(),
+            },
+        },
+    }
 
-        output_attr_file = "{name}/{ddi}/{ext}".format(
-            name=holog_file, ddi=ddi, ext=".holog_attr"
-        )
+    output_attr_file = "{name}/{ext}".format(name=holog_file, ext=".holog_attr")
 
-        try:
-            with open(output_attr_file, "w") as json_file:
-                json.dump(max_extent, json_file)
+    try:
+        with open(output_attr_file, "w") as json_file:
+            json.dump(max_extent, json_file)
 
-        except Exception as error:
-            console.error("[_create_holog_meta_data] {error}".format(error=error))
+    except Exception as error:
+        console.error("[_create_holog_meta_data] {error}".format(error=error))
+    
 
+    
     output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
     
     try:
@@ -241,7 +237,6 @@ def _open_no_dask_zarr(zarr_name, slice_dict={}):
     return xds
 
 
-#### Pointing Table Conversion ####
 def _load_pnt_dict(file, ant_list=None, dask_load=True):
     """Load pointing dictionary from disk.
 
