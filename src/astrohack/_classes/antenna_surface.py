@@ -9,7 +9,6 @@ from astrohack._utils._fits_io import _read_fits
 from astrohack._utils._fits_io import _write_fits
 from astrohack._utils._globals import *
 
-
 lnbr = "\n"
 
 
@@ -52,6 +51,8 @@ class AntennaSurface:
 
         self.resi = None
         self.corr = None
+        self.phase_corrections = None
+        self.phase_residuals = None
         self.solved = False
         if self.telescope.ringed:
             self._build_polar()
@@ -105,13 +106,13 @@ class AntennaSurface:
         return
 
     def _phase_to_deviation(self, phase):
-        acoeff = (self.wavel/twopi) / (4.0*self.telescope.focus)
-        bcoeff = 4 * self.telescope.focus**2
-        return acoeff*phase*np.sqrt(self.rad**2+bcoeff)
+        acoeff = (self.wavel / twopi) / (4.0 * self.telescope.focus)
+        bcoeff = 4 * self.telescope.focus ** 2
+        return acoeff * phase * np.sqrt(self.rad ** 2 + bcoeff)
 
     def _deviation_to_phase(self, deviation):
-        acoeff = (self.wavel/twopi) / (4.0*self.telescope.focus)
-        bcoeff = 4 * self.telescope.focus**2
+        acoeff = (self.wavel / twopi) / (4.0 * self.telescope.focus)
+        bcoeff = 4 * self.telescope.focus ** 2
         return deviation / (acoeff * np.sqrt(self.rad ** 2 + bcoeff))
 
     def _build_ring_mask(self):
@@ -134,7 +135,7 @@ class AntennaSurface:
             ycoor = self.yaxis.idx_to_coor(iy + 0.5)
             for ix in range(self.npix):
                 xcoor = self.xaxis.idx_to_coor(ix + 0.5)
-                self.rad[ix, iy] = np.sqrt(xcoor**2 + ycoor**2)
+                self.rad[ix, iy] = np.sqrt(xcoor ** 2 + ycoor ** 2)
                 self.phi[ix, iy] = np.arctan2(ycoor, xcoor)
                 if self.phi[ix, iy] < 0:
                     self.phi[ix, iy] += 2 * np.pi
@@ -197,48 +198,26 @@ class AntennaSurface:
         Returns:
         Gains before panel fitting OR Gains before and after panel fitting
         """
-        self.ingains = self._gains_array(self.dev)
+        self.ingains = self._gains_array(self.phase)
         if self.resi is None:
             return self.ingains
         else:
-            self.ougains = self._gains_array(self.resi)
+            self.ougains = self._gains_array(self.phase_residuals)
             return self.ingains, self.ougains
 
     def _gains_array(self, arr):
         """
         Worker for gains method, works with the actual arrays to compute the gains
+        This numpy version is significantly faster than the previous version
         Args:
             arr: Deviation image over which to compute the gains
 
         Returns:
         Actual and theoretical gains
         """
-        fact = 1000.0 * self.reso / self.wavel
-        fact *= fact
-        #
-        # What are these sums?
-        sumrad = 0.0
-        sumtheta = 0.0
-        nsamp = 0
-        #    convert surface error to phase
-        #    and compute gain loss
-        for iy in range(self.npix):
-            for ix in range(self.npix):
-                if self.mask[ix, iy]:
-                    sumrad += np.cos(self.phase[ix, iy])
-                    sumtheta += np.sin(self.phase[ix, iy])
-                    nsamp += 1
-
-        ampmax = np.sqrt(sumrad * sumrad + sumtheta * sumtheta)
-        if nsamp <= 0:
-            raise Exception("Antenna is blanked")
-        ampmax *= fact / nsamp
-        gain = ampmax * fourpi
-        thgain = fact * fourpi
-        #
-        gain = convert_to_db(gain)
-        thgain = convert_to_db(thgain)
-        return gain, thgain
+        thgain = fourpi * (1000.0 * self.reso / self.wavel) ** 2
+        gain = thgain * np.sqrt(np.sum(np.cos(arr[self.mask]))**2 + np.sum(np.sin(arr[self.mask]))**2)/np.sum(self.mask)
+        return convert_to_db(gain), convert_to_db(thgain)
 
     def get_rms(self):
         """
@@ -276,6 +255,8 @@ class AntennaSurface:
                 ix, iy = int(val[2]), int(val[3])
                 self.resi[ix, iy] -= panel.corr[ipnt]
                 self.corr[ix, iy] = -panel.corr[ipnt]
+        self.phase_corrections = self._deviation_to_phase(self.corr)
+        self.phase_residuals = self._deviation_to_phase(self.resi)
 
     def print_misc(self):
         """
@@ -311,20 +292,20 @@ class AntennaSurface:
             if self.resi is None:
                 fig, ax = plt.subplots()
                 title = "Before correction\nRMS = {0:8.5} mm".format(rms)
-                self._plot_surface(m2mm*self.dev, title, fig, ax, vmin, vmax, screws=screws)
+                self._plot_surface(m2mm * self.dev, title, fig, ax, vmin, vmax, screws=screws)
             else:
                 fig, ax = plt.subplots(1, 3, figsize=[15, 5])
                 title = "Before correction\nRMS = {0:.3} mm".format(rms[0])
                 self._plot_surface(
-                    m2mm*self.dev, title, fig, ax[0], vmin, vmax, screws=screws
+                    m2mm * self.dev, title, fig, ax[0], vmin, vmax, screws=screws
                 )
                 title = "Corrections"
                 self._plot_surface(
-                    m2mm*self.corr, title, fig, ax[1], vmin, vmax, screws=screws
+                    m2mm * self.corr, title, fig, ax[1], vmin, vmax, screws=screws
                 )
                 title = "After correction\nRMS = {0:.3} mm".format(rms[1])
                 self._plot_surface(
-                    m2mm*self.resi, title, fig, ax[2], vmin, vmax, screws=screws
+                    m2mm * self.resi, title, fig, ax[2], vmin, vmax, screws=screws
                 )
         fig.suptitle("Antenna Surface")
         fig.tight_layout()
@@ -334,7 +315,7 @@ class AntennaSurface:
             plt.savefig(filename, dpi=dpi)
 
     def _plot_surface(
-        self, data, title, fig, ax, vmin, vmax, screws=False, mask=False, unit="mm"
+            self, data, title, fig, ax, vmin, vmax, screws=False, mask=False, unit="mm"
     ):
         """
         Does the plotting of a data array in a figure's subplot
