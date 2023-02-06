@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import optimize as opt
 from astrohack._utils._linear_algebra import _gauss_elimination_numpy
-
+from astrohack._utils._globals import *
 
 panelkinds = ["rigid", "mean", "xyparaboloid", "rotatedparaboloid", "corotatedparaboloid"]
 irigid   = 0
@@ -276,9 +276,9 @@ class BasePanel:
         String with screw adjustments for this panel
         """
         if unit == 'mm':
-            fac = 1.0
+            fac = m2mm
         elif unit == 'miliinches':
-            fac = 1000.0 / 25.4
+            fac = m2mils
         else:
             raise Exception("Unknown unit: " + unit)
 

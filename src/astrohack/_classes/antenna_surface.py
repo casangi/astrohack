@@ -7,20 +7,10 @@ from astrohack._classes.ring_panel import RingPanel
 from astrohack._classes.telescope import Telescope
 from astrohack._utils._fits_io import _read_fits
 from astrohack._utils._fits_io import _write_fits
+from astrohack._utils._globals import *
 
 
 lnbr = "\n"
-
-
-def _convert_to_db(val: float):
-    """
-    Converts a float value to decibels
-    Args:
-        val (float): Value to be converted to decibels
-    Returns:
-        Value in decibels
-    """
-    return 10.0 * np.log10(val)
 
 
 class AntennaSurface:
@@ -85,8 +75,7 @@ class AntennaSurface:
             if wrds[1] == "Visibilities":
                 self.npoint = np.sqrt(int(wrds[-1]))
             elif wrds[1] == "Observing":
-                # Stored in mm
-                self.wavel = 1000 * float(wrds[-2])
+                self.wavel = float(wrds[-2])
             elif wrds[1] == "Antenna" and wrds[2] == "surface":
                 self.inlim = abs(float(wrds[-3]))
                 self.oulim = abs(float(wrds[-2]))
@@ -97,7 +86,6 @@ class AntennaSurface:
         """
         self.amphead, self.amp = _read_fits(self.ampfile)
         self.devhead, self.dev = _read_fits(self.devfile)
-        self.dev *= 1000
         #
         if self.devhead["NAXIS1"] != self.amphead["NAXIS1"]:
             raise Exception("Amplitude and deviation images have different sizes")
@@ -117,12 +105,12 @@ class AntennaSurface:
         return
 
     def _phase_to_deviation(self, phase):
-        acoeff = (self.wavel/360.0) / (4.0*self.telescope.focus)
+        acoeff = (self.wavel/twopi) / (4.0*self.telescope.focus)
         bcoeff = 4 * self.telescope.focus**2
         return acoeff*phase*np.sqrt(self.rad**2+bcoeff)
 
     def _deviation_to_phase(self, deviation):
-        acoeff = (self.wavel/360.0) / (4.0*self.telescope.focus)
+        acoeff = (self.wavel/twopi) / (4.0*self.telescope.focus)
         bcoeff = 4 * self.telescope.focus**2
         return deviation / (acoeff * np.sqrt(self.rad ** 2 + bcoeff))
 
@@ -225,7 +213,6 @@ class AntennaSurface:
         Returns:
         Actual and theoretical gains
         """
-        forpi = 4.0 * np.pi
         fact = 1000.0 * self.reso / self.wavel
         fact *= fact
         #
@@ -238,23 +225,19 @@ class AntennaSurface:
         for iy in range(self.npix):
             for ix in range(self.npix):
                 if self.mask[ix, iy]:
-                    quo = self.rad[ix, iy] / (2.0 * self.telescope.focus)
-                    phase = (
-                        arr[ix, iy] * forpi / (np.sqrt(1.0 + quo * quo) * self.wavel)
-                    )
-                    sumrad += np.cos(phase)
-                    sumtheta += np.sin(phase)
+                    sumrad += np.cos(self.phase[ix, iy])
+                    sumtheta += np.sin(self.phase[ix, iy])
                     nsamp += 1
 
         ampmax = np.sqrt(sumrad * sumrad + sumtheta * sumtheta)
         if nsamp <= 0:
             raise Exception("Antenna is blanked")
         ampmax *= fact / nsamp
-        gain = ampmax * forpi
-        thgain = fact * forpi
+        gain = ampmax * fourpi
+        thgain = fact * fourpi
         #
-        gain = _convert_to_db(gain)
-        thgain = _convert_to_db(thgain)
+        gain = convert_to_db(gain)
+        thgain = convert_to_db(thgain)
         return gain, thgain
 
     def get_rms(self):
@@ -263,11 +246,11 @@ class AntennaSurface:
         Returns:
         RMS before panel fitting OR RMS before and after panel fitting
         """
-        self.inrms = np.sqrt(np.mean(self.dev[self.mask] ** 2))
+        self.inrms = np.sqrt(np.mean(self.dev[self.mask] ** 2)) * m2mm
         if self.resi is None:
             return self.inrms
         else:
-            self.ourms = np.sqrt(np.mean(self.resi[self.mask] ** 2))
+            self.ourms = np.sqrt(np.mean(self.resi[self.mask] ** 2)) * m2mm
             return self.inrms, self.ourms
 
     def fit_surface(self):
@@ -301,7 +284,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.print_misc()
 
-    def plot_surface(self, filename=None, mask=False, screws=False, dpi=300, phase=False):
+    def plot_surface(self, filename=None, mask=False, screws=False, dpi=300):
         """
         Do plots of the antenna surface
         Args:
@@ -310,8 +293,6 @@ class AntennaSurface:
             screws: Display the screws on the panels
             dpi: Plot resolution in DPI
         """
-        vmin, vmax = np.nanmin(self.dev), np.nanmax(self.dev)
-        rms = self.get_rms()
         if mask:
             fig, ax = plt.subplots(1, 2, figsize=[10, 5])
             title = "Mask"
@@ -319,35 +300,31 @@ class AntennaSurface:
                 self.mask, title, fig, ax[0], 0, 1, screws=screws, mask=mask
             )
             vmin, vmax = np.nanmin(self.amp), np.nanmax(self.amp)
-            title = "Amplitude min={0:.5f}, max ={1:.5f}".format(vmin, vmax)
+            title = "Amplitude min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
             self._plot_surface(
-                self.amp,
-                title,
-                fig,
-                ax[1],
-                vmin,
-                vmax,
-                screws=screws,
+                self.amp, title, fig, ax[1], vmin, vmax, screws=screws,
                 unit=self.amphead["BUNIT"].strip(),
             )
         else:
+            vmin, vmax = np.nanmin(m2mm * self.dev), np.nanmax(m2mm * self.dev)
+            rms = self.get_rms()
             if self.resi is None:
                 fig, ax = plt.subplots()
                 title = "Before correction\nRMS = {0:8.5} mm".format(rms)
-                self._plot_surface(self.dev, title, fig, ax, vmin, vmax, screws=screws)
+                self._plot_surface(m2mm*self.dev, title, fig, ax, vmin, vmax, screws=screws)
             else:
                 fig, ax = plt.subplots(1, 3, figsize=[15, 5])
                 title = "Before correction\nRMS = {0:.3} mm".format(rms[0])
                 self._plot_surface(
-                    self.dev, title, fig, ax[0], vmin, vmax, screws=screws
+                    m2mm*self.dev, title, fig, ax[0], vmin, vmax, screws=screws
                 )
                 title = "Corrections"
                 self._plot_surface(
-                    self.corr, title, fig, ax[1], vmin, vmax, screws=screws
+                    m2mm*self.corr, title, fig, ax[1], vmin, vmax, screws=screws
                 )
                 title = "After correction\nRMS = {0:.3} mm".format(rms[1])
                 self._plot_surface(
-                    self.resi, title, fig, ax[2], vmin, vmax, screws=screws
+                    m2mm*self.resi, title, fig, ax[2], vmin, vmax, screws=screws
                 )
         fig.suptitle("Antenna Surface")
         fig.tight_layout()
