@@ -30,29 +30,26 @@ DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 jit_cache = False
 
 
-def _read_dimensions_meta_data(holog_file, ddi, ant_id):
+def _read_meta_data(holog_file):
     """Reads dimensional data from holog meta file.
 
     Args:
-        ant_id (int): Antenna id
         holog_file (str): holog file name.
 
     Returns:
         dict: dictionary containing dimension data.
     """
     try:
-        with open(
-            "{name}/{ddi}/{file}".format(name=holog_file, ddi=ddi, file="/.holog_attr")
-        ) as json_file:
+        with open("{name}/{file}".format(name=holog_file, file="/.holog_attr")) as json_file:
             json_dict = json.load(json_file)
 
     except Exception as error:
-        console.error("[_read_dimensions_meta_data] {error}".format(error=error))
+        console.error("[_read_meta_data] {error}".format(error=error))
 
-    return json_dict[str(ant_id)]
+    return json_dict
 
 
-def _read_data_from_holog_meta(holog_file, holog_dict, ant_id):
+def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
     """Read holog file meta data and extract antenna based xds information for each (ddi, scan)
 
     Args:
@@ -73,7 +70,7 @@ def _read_data_from_holog_meta(holog_file, holog_dict, ant_id):
             holog_json = json.load(json_file)
 
     except Exception as error:
-        console.error("[_read_data_from_holog_meta] {error}".format(error=error))
+        console.error("[_read_data_from_holog_json] {error}".format(error=error))
 
     ant_data_dict = {}
 
@@ -579,12 +576,12 @@ def _create_holog_file(
 
     for map_ant_index in vis_map_dict.keys():
         if map_ant_index not in flagged_mapping_antennas:
+            direction = np.take(pnt_map_dict[map_ant_index], indicies, axis=0)
 
             parallactic_samples = _calculate_parallactic_angle_chunk(
                 time_samples=time_samples,
                 observing_location=observing_location[map_ant_index],
-                direction=pnt_map_dict[map_ant_index],
-                indicies=indicies,
+                direction=direction
             )
 
             xds = xr.Dataset()

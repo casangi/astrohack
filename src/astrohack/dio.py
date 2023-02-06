@@ -10,7 +10,8 @@ from casacore import tables as ctables
 from astrohack._utils import _system_message as console
 from astrohack._utils._io import _load_pnt_dict, _make_ant_pnt_dict
 from astrohack._utils._io import _extract_holog_chunk, _open_no_dask_zarr
-from astrohack._utils._io import _create_holog_meta_data, _read_data_from_holog_meta
+from astrohack._utils._io import _create_holog_meta_data, _read_data_from_holog_json
+from astrohack._utils._io import _read_meta_data
 
 
 def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None):
@@ -64,9 +65,7 @@ def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None)
     if ant_id == None:
         return holog_dict
 
-    return holog_dict, _read_data_from_holog_meta(
-        holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id
-    )
+    return holog_dict, _read_data_from_holog_json(holog_file=holog_file)
 
 
 def extract_holog(
@@ -258,3 +257,110 @@ def extract_holog(
 
     holog_dict = load_holog_file(holog_file=holog_file, dask_load=True, load_pnt_dict=False)
     _create_holog_meta_data(holog_file=holog_file, holog_dict=holog_dict)
+
+class HoloData:
+    def __init__(self, file_stem, path='./'):
+                        
+        self._image_path = None
+        self._holog_path = None
+
+        self.holog = None
+        self.image = None
+            
+        self._verify_holog_files(file_stem, path)
+            
+
+    def _verify_holog_files(self, file_stem, path):
+        console.info("Verifying {stem}.* files in path={path} ...".format(stem=file_stem, path=path))
+
+        file_path = "{path}/{stem}.holog.zarr".format(path=path, stem=file_stem)
+            
+        if os.path.isdir(file_path):
+            console.info("Found {stem}.holog.zarr directory ...".format(stem=file_stem))
+            self._holog_path = file_path
+            self.holog = AstrohackHologFile(file_path)
+                
+
+        file_path = "{path}/{stem}.image.zarr".format(path=path, stem=file_stem)
+
+        if os.path.isdir(file_path):
+            console.info("Found {stem}.image.zarr directory ...".format(stem=file_stem))
+            self._image_path = file_path
+            self.image = AstrohackImageFile(file_path)
+
+class AstrohackImageFile:
+    def __init__(self, file):
+        self.file = file
+        self._image_dict = None
+
+    def __call__(self):
+        return self._image_dict
+
+    def open(self, file=None):
+        if file is None:
+            file = self.file
+
+        image_dict = {}
+        ddi_sub_dict = {}
+
+        ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
+
+        for ant in ant_list:
+            ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
+            for ddi in ddi_list:
+                ddi_sub_dict.setdefault(int(ddi), {})
+                image_dict.setdefault(int(ant), ddi_sub_dict)[int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
+
+        self._image_dict = image_dict
+
+        return True
+
+    @property
+    def data(self):
+        return self._image_dict
+
+    def select(self, ant=None, ddi=None):
+        if ant is None or ddi is None:
+            return self._image_dict
+        else:
+            return self._image_dict[ant][ddi]
+
+class AstrohackHologFile:
+    def __init__(self, file):
+        self.file = file
+        self._holog_dict = None
+        self._meta_data = None
+
+    def __call__(self):
+        return self._holog_dict
+
+    def open(self, file=None):
+        if file is None:
+            file = self.file
+
+        holog_dict = {}
+
+        self._meta_data = _read_meta_data(holog_file=file)
+
+        for ddi in os.listdir(file):
+            if ddi.isnumeric():
+                holog_dict[int(ddi)] = {}
+                for scan in os.listdir(os.path.join(file, ddi)):
+                    if scan.isnumeric():
+                        holog_dict[int(ddi)][int(scan)] = {}
+                        for ant in os.listdir(os.path.join(file, ddi + "/" + scan)):
+                            if ant.isnumeric():
+                                mapping_ant_vis_holog_data_name = os.path.join(file, ddi + "/" + scan + "/" + ant)
+                                holog_dict[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
+
+        self._holog_dict = holog_dict
+
+        return True
+
+    @property
+    def meta_data(self):
+        return self._meta_data
+
+    @property
+    def data(self):
+        return self._holog_dict

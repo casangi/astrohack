@@ -19,7 +19,7 @@ from scipy.interpolate import griddata, LinearNDInterpolator, NearestNDInterpola
 
 from astrohack._utils import _system_message as console
 from astrohack.dio import load_holog_file
-from astrohack._utils._io import _read_dimensions_meta_data
+from astrohack._utils._io import _read_meta_data
 
 
 def _calculate_euclidean_distance(x, y, center):
