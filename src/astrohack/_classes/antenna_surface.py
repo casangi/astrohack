@@ -2,10 +2,12 @@ import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astrohack._classes.linear_axis import LinearAxis
+from astrohack._classes.base_panel import panelkinds, irotpara, ixypara
 from astrohack._classes.ring_panel import RingPanel
 from astrohack._classes.telescope import Telescope
 from astrohack._utils._fits_io import _read_fits
 from astrohack._utils._fits_io import _write_fits
+
 
 lnbr = "\n"
 
@@ -22,7 +24,7 @@ def _convert_to_db(val: float):
 
 
 class AntennaSurface:
-    def __init__(self, amp, dev, telescope, cutoff=0.21, pkind=None):
+    def __init__(self, amp, dev, telescope, cutoff=0.21, pkind=None, deviationisphase=False):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -49,9 +51,9 @@ class AntennaSurface:
 
         if pkind is None:
             if self.telescope.ringed:
-                self.panelkind = "fixedtheta"
+                self.panelkind = panelkinds[irotpara]
             else:
-                self.panelkind = "xyparaboloid"
+                self.panelkind = panelkinds[ixypara]
         else:
             self.panelkind = pkind
 
@@ -67,6 +69,12 @@ class AntennaSurface:
             self._build_ring_mask()
             self.fetch_panel = self._fetch_panel_ringed
             self.compile_panel_points = self._compile_panel_points_ringed
+
+        if deviationisphase:
+            self.phase = self.dev
+            self.dev = self._phase_to_deviation(self.phase)
+        else:
+            self.phase = self._deviation_to_phase(self.dev)
 
     def _get_aips_headpars(self):
         """
@@ -107,6 +115,16 @@ class AntennaSurface:
             self.amphead["CDELT2"],
         )
         return
+
+    def _phase_to_deviation(self, phase):
+        acoeff = (self.wavel/360.0) / (4.0*self.telescope.focus)
+        bcoeff = 4 * self.telescope.focus**2
+        return acoeff*phase*np.sqrt(self.rad**2+bcoeff)
+
+    def _deviation_to_phase(self, deviation):
+        acoeff = (self.wavel/360.0) / (4.0*self.telescope.focus)
+        bcoeff = 4 * self.telescope.focus**2
+        return deviation / (acoeff * np.sqrt(self.rad ** 2 + bcoeff))
 
     def _build_ring_mask(self):
         """
@@ -283,7 +301,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.print_misc()
 
-    def plot_surface(self, filename=None, mask=False, screws=False, dpi=300):
+    def plot_surface(self, filename=None, mask=False, screws=False, dpi=300, phase=False):
         """
         Do plots of the antenna surface
         Args:
