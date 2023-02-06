@@ -106,11 +106,27 @@ class AntennaSurface:
         return
 
     def _phase_to_deviation(self, phase):
+        """
+        Transforms a phase map to a physical deviation map
+        Args:
+            phase: Input phase map
+
+        Returns:
+            Physical deviation map
+        """
         acoeff = (self.wavel / twopi) / (4.0 * self.telescope.focus)
         bcoeff = 4 * self.telescope.focus ** 2
         return acoeff * phase * np.sqrt(self.rad ** 2 + bcoeff)
 
     def _deviation_to_phase(self, deviation):
+        """
+        Transforms a physical deviation map to a phase map
+        Args:
+            deviation: Input physical deviation map
+
+        Returns:
+            Phase map
+        """
         acoeff = (self.wavel / twopi) / (4.0 * self.telescope.focus)
         bcoeff = 4 * self.telescope.focus ** 2
         return deviation / (acoeff * np.sqrt(self.rad ** 2 + bcoeff))
@@ -219,18 +235,29 @@ class AntennaSurface:
         gain = thgain * np.sqrt(np.sum(np.cos(arr[self.mask]))**2 + np.sum(np.sin(arr[self.mask]))**2)/np.sum(self.mask)
         return convert_to_db(gain), convert_to_db(thgain)
 
-    def get_rms(self):
+    def get_rms(self, phase=False):
         """
         Computes antenna surface RMS before and after panel surface fitting
         Returns:
         RMS before panel fitting OR RMS before and after panel fitting
         """
-        self.inrms = np.sqrt(np.mean(self.deviation[self.mask] ** 2)) * m2mm
+        self.inrms = m2mm * self._compute_rms_array(self.deviation)
         if self.residuals is None:
             return self.inrms
         else:
-            self.ourms = np.sqrt(np.mean(self.residuals[self.mask] ** 2)) * m2mm
-            return self.inrms, self.ourms
+            self.ourms = m2mm * self._compute_rms_array(self.residuals)
+        return self.inrms, self.ourms
+
+    def _compute_rms_array(self, array):
+        """
+        Factorized the computation of the RMS of an array
+        Args:
+            array: Input data array
+
+        Returns:
+            RMS of the input array
+        """
+        return np.sqrt(np.mean(array[self.mask] ** 2))
 
     def fit_surface(self):
         """
@@ -265,15 +292,17 @@ class AntennaSurface:
         for panel in self.panels:
             panel.print_misc()
 
-    def plot_surface(self, filename=None, mask=False, screws=False, dpi=300):
+    def plot_surface(self, filename=None, mask=False, screws=False, dpi=300, plotphase=False):
         """
         Do plots of the antenna surface
         Args:
             filename: Save plot to a file rather than displaying it with matplotlib widgets
-            mask: Display mask and amplitudes rather than deviation images
+            mask: Display mask and amplitudes rather than deviation/phase images
+            plotphase: plot phase images rather than deviation images 
             screws: Display the screws on the panels
             dpi: Plot resolution in DPI
         """
+            
         if mask:
             fig, ax = plt.subplots(1, 2, figsize=[10, 5])
             title = "Mask"
@@ -287,36 +316,51 @@ class AntennaSurface:
                 unit=self.amphead["BUNIT"].strip(),
             )
         else:
-            vmin, vmax = np.nanmin(m2mm * self.deviation), np.nanmax(m2mm * self.deviation)
-            rms = self.get_rms()
-            if self.residuals is None:
-                fig, ax = plt.subplots()
-                title = "Before correction\nRMS = {0:8.5} mm".format(rms)
-                self._plot_surface(m2mm * self.deviation, title, fig, ax, vmin, vmax, screws=screws)
+            if plotphase:
+                self._plot_three_surfaces(self.phase, self.phase_corrections, self.phase_residuals, 'degress',
+                                          rad2deg, screws, 'Antenna surface phase')
             else:
-                fig, ax = plt.subplots(1, 3, figsize=[15, 5])
-                title = "Before correction\nRMS = {0:.3} mm".format(rms[0])
-                self._plot_surface(
-                    m2mm * self.deviation, title, fig, ax[0], vmin, vmax, screws=screws
-                )
-                title = "Corrections"
-                self._plot_surface(
-                    m2mm * self.corrections, title, fig, ax[1], vmin, vmax, screws=screws
-                )
-                title = "After correction\nRMS = {0:.3} mm".format(rms[1])
-                self._plot_surface(
-                    m2mm * self.residuals, title, fig, ax[2], vmin, vmax, screws=screws
-                )
-        fig.suptitle("Antenna Surface")
-        fig.tight_layout()
+                self._plot_three_surfaces(self.deviation, self.corrections, self.residuals, 'mm', m2mm, screws,
+                                          'Antenna surface')
         if filename is None:
             plt.show()
         else:
             plt.savefig(filename, dpi=dpi)
 
-    def _plot_surface(
-            self, data, title, fig, ax, vmin, vmax, screws=False, mask=False, unit="mm"
-    ):
+    def _plot_three_surfaces(self, original, corrections, residuals, unit, conversion, screws, suptitle):
+        """
+        Factorizes the plot of the combination of 3 maps
+        Args:
+            original: Original dataset
+            corrections: Corrections applied to the dataset
+            residuals: Residuals after correction
+            unit: Unit of the output data
+            conversion: Conversion factor between internal units and unit
+            screws: show screws (Bool)
+            suptitle: Superior title to be displayed on top of the figure
+
+        Returns:
+
+        """
+        vmin, vmax = np.nanmin(conversion * original), np.nanmax(conversion * original)
+        inrms = conversion * self._compute_rms_array(original)
+        if self.residuals is None:
+            fig, ax = plt.subplots()
+            title = "Before correction\nRMS = {0:8.5} ".format(inrms)+unit
+            self._plot_surface(conversion * original, title, fig, ax, vmin, vmax, screws=screws, unit=unit)
+        else:
+            fig, ax = plt.subplots(1, 3, figsize=[15, 5])
+            ourms = conversion * self._compute_rms_array(residuals)
+            title = "Before correction\nRMS = {0:.3} ".format(inrms)+unit
+            self._plot_surface(conversion * original, title, fig, ax[0], vmin, vmax, screws=screws, unit=unit)
+            title = "Corrections"
+            self._plot_surface(conversion * corrections, title, fig, ax[1], vmin, vmax, screws=screws, unit=unit)
+            title = "After correction\nRMS = {0:.3} ".format(ourms)+unit
+            self._plot_surface(conversion * residuals, title, fig, ax[2], vmin, vmax, screws=screws, unit=unit)
+        fig.suptitle(suptitle)
+        fig.tight_layout()
+
+    def _plot_surface(self, data, title, fig, ax, vmin, vmax, screws=False, mask=False, unit="mm"):
         """
         Does the plotting of a data array in a figure's subplot
         Args:

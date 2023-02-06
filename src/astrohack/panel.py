@@ -3,7 +3,7 @@ from astrohack._utils._globals import *
 import os
 
 
-def _panel_chunk(basename, amp, dev, telescope, cutoff=0.21, pkind=None, savemask=False, saveplots=True,
+def _panel_chunk(basename, amp, dev, telescope, cutoff=0.21, pkind=None, savemask=False, saveplots=True, savephase=True,
                  exportcorrected=False, unit="miliinches",):
     surface = AntennaSurface(amp, dev, telescope, cutoff, pkind)
     surface.compile_panel_points()
@@ -19,6 +19,8 @@ def _panel_chunk(basename, amp, dev, telescope, cutoff=0.21, pkind=None, savemas
         surface.plot_surface(filename=basename + "mask.png", mask=True, screws=True)
     if saveplots:
         surface.plot_surface(filename=basename + "surface.png")
+    if savephase:
+        surface.plot_surface(filename=basename + "phase.png", plotphase=True)
     if exportcorrected:
         surface.export_corrected(basename + "corrected.fits")
 
