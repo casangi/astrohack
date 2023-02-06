@@ -44,7 +44,7 @@ class TestClassAntennaSurface:
         assert self.testantenna.panelkind == 'fixedtheta', 'Default panel kind should be fixedtheta'
         # test _read_images
         assert self.testantenna.amp.shape == self.datashape, 'Amplitude image does not have the expected dimensions'
-        assert self.testantenna.dev.shape == self.datashape, 'Deviation image does not have the expected dimensions'
+        assert self.testantenna.deviation.shape == self.datashape, 'Deviation image does not have the expected dimensions'
         # Tests _build_polar
         assert self.testantenna.rad.shape == self.datashape, 'Radius image does not have the expected dimensions'
         assert abs(self.testantenna.rad[self.middlepix, self.middlepix]) < 1e-1, 'Radius at the center of the image ' \
@@ -91,8 +91,8 @@ class TestClassAntennaSurface:
         Tests that surface corrections and residuals combined properly reconstruct the original deviations
         """
         self.testantenna.correct_surface()
-        reconstruction = self.testantenna.resi-self.testantenna.corr
-        assert np.nansum((reconstruction-self.testantenna.dev)[self.testantenna.mask]) < self.tolerance, \
+        reconstruction = self.testantenna.residuals - self.testantenna.corrections
+        assert np.nansum((reconstruction - self.testantenna.deviation)[self.testantenna.mask]) < self.tolerance, \
             'Reconstruction is not faithful to original data'
 
     def test_export_screw_adjustments(self):
@@ -119,10 +119,10 @@ class TestClassAntennaSurface:
         """
         Tests RMS computations by using a zero array and a random array
         """
-        self.testantenna.resi = self.zero
+        self.testantenna.residuals = self.zero
         zrms = self.testantenna.get_rms()
         assert zrms[1] == 0, 'RMS should be zero when computed over a zero array'
-        self.testantenna.resi = self.rand
+        self.testantenna.residuals = self.rand
         self.testantenna.mask[:, :] = True
         rrms = self.testantenna.get_rms()
         assert abs(rrms[1] - self.sigma)/self.sigma < 0.01, 'Computed RMS does not match expected RMS within 1%'

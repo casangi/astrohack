@@ -49,8 +49,8 @@ class AntennaSurface:
         self._get_aips_headpars()
         self.reso = self.telescope.diam / self.npoint
 
-        self.resi = None
-        self.corr = None
+        self.residuals = None
+        self.corrections = None
         self.phase_corrections = None
         self.phase_residuals = None
         self.solved = False
@@ -62,10 +62,10 @@ class AntennaSurface:
             self.compile_panel_points = self._compile_panel_points_ringed
 
         if deviationisphase:
-            self.phase = self.dev
-            self.dev = self._phase_to_deviation(self.phase)
+            self.phase = self.deviation
+            self.deviation = self._phase_to_deviation(self.phase)
         else:
-            self.phase = self._deviation_to_phase(self.dev)
+            self.phase = self._deviation_to_phase(self.deviation)
 
     def _get_aips_headpars(self):
         """
@@ -86,7 +86,7 @@ class AntennaSurface:
         Reads amplitude and deviation images and initializes the X and Y axes
         """
         self.amphead, self.amp = _read_fits(self.ampfile)
-        self.devhead, self.dev = _read_fits(self.devfile)
+        self.devhead, self.deviation = _read_fits(self.devfile)
         #
         if self.devhead["NAXIS1"] != self.amphead["NAXIS1"]:
             raise Exception("Amplitude and deviation images have different sizes")
@@ -123,7 +123,7 @@ class AntennaSurface:
         self.mask = np.where(self.amp < self.cut, False, True)
         self.mask = np.where(self.rad > self.inlim, self.mask, False)
         self.mask = np.where(self.rad < self.oulim, self.mask, False)
-        self.mask = np.where(np.isnan(self.dev), False, self.mask)
+        self.mask = np.where(np.isnan(self.deviation), False, self.mask)
 
     def _build_polar(self):
         """
@@ -173,7 +173,7 @@ class AntennaSurface:
                     # adding an if?
                     for panel in self.panels:
                         if panel.is_inside(self.rad[ix, iy], self.phi[ix, iy]):
-                            panel.add_point([xc, yc, ix, iy, self.dev[ix, iy]])
+                            panel.add_point([xc, yc, ix, iy, self.deviation[ix, iy]])
 
     def _fetch_panel_ringed(self, ring, panel):
         """
@@ -199,7 +199,7 @@ class AntennaSurface:
         Gains before panel fitting OR Gains before and after panel fitting
         """
         self.ingains = self._gains_array(self.phase)
-        if self.resi is None:
+        if self.residuals is None:
             return self.ingains
         else:
             self.ougains = self._gains_array(self.phase_residuals)
@@ -225,11 +225,11 @@ class AntennaSurface:
         Returns:
         RMS before panel fitting OR RMS before and after panel fitting
         """
-        self.inrms = np.sqrt(np.mean(self.dev[self.mask] ** 2)) * m2mm
-        if self.resi is None:
+        self.inrms = np.sqrt(np.mean(self.deviation[self.mask] ** 2)) * m2mm
+        if self.residuals is None:
             return self.inrms
         else:
-            self.ourms = np.sqrt(np.mean(self.resi[self.mask] ** 2)) * m2mm
+            self.ourms = np.sqrt(np.mean(self.residuals[self.mask] ** 2)) * m2mm
             return self.inrms, self.ourms
 
     def fit_surface(self):
@@ -246,17 +246,17 @@ class AntennaSurface:
         """
         if not self.solved:
             raise Exception("Panels must be fitted before atempting a correction")
-        self.corr = np.where(self.mask, 0, np.nan)
-        self.resi = np.copy(self.dev)
+        self.corrections = np.where(self.mask, 0, np.nan)
+        self.residuals = np.copy(self.deviation)
         for panel in self.panels:
             panel.get_corrections()
             for ipnt in range(len(panel.corr)):
                 val = panel.values[ipnt]
                 ix, iy = int(val[2]), int(val[3])
-                self.resi[ix, iy] -= panel.corr[ipnt]
-                self.corr[ix, iy] = -panel.corr[ipnt]
-        self.phase_corrections = self._deviation_to_phase(self.corr)
-        self.phase_residuals = self._deviation_to_phase(self.resi)
+                self.residuals[ix, iy] -= panel.corr[ipnt]
+                self.corrections[ix, iy] = -panel.corr[ipnt]
+        self.phase_corrections = self._deviation_to_phase(self.corrections)
+        self.phase_residuals = self._deviation_to_phase(self.residuals)
 
     def print_misc(self):
         """
@@ -287,25 +287,25 @@ class AntennaSurface:
                 unit=self.amphead["BUNIT"].strip(),
             )
         else:
-            vmin, vmax = np.nanmin(m2mm * self.dev), np.nanmax(m2mm * self.dev)
+            vmin, vmax = np.nanmin(m2mm * self.deviation), np.nanmax(m2mm * self.deviation)
             rms = self.get_rms()
-            if self.resi is None:
+            if self.residuals is None:
                 fig, ax = plt.subplots()
                 title = "Before correction\nRMS = {0:8.5} mm".format(rms)
-                self._plot_surface(m2mm * self.dev, title, fig, ax, vmin, vmax, screws=screws)
+                self._plot_surface(m2mm * self.deviation, title, fig, ax, vmin, vmax, screws=screws)
             else:
                 fig, ax = plt.subplots(1, 3, figsize=[15, 5])
                 title = "Before correction\nRMS = {0:.3} mm".format(rms[0])
                 self._plot_surface(
-                    m2mm * self.dev, title, fig, ax[0], vmin, vmax, screws=screws
+                    m2mm * self.deviation, title, fig, ax[0], vmin, vmax, screws=screws
                 )
                 title = "Corrections"
                 self._plot_surface(
-                    m2mm * self.corr, title, fig, ax[1], vmin, vmax, screws=screws
+                    m2mm * self.corrections, title, fig, ax[1], vmin, vmax, screws=screws
                 )
                 title = "After correction\nRMS = {0:.3} mm".format(rms[1])
                 self._plot_surface(
-                    m2mm * self.resi, title, fig, ax[2], vmin, vmax, screws=screws
+                    m2mm * self.residuals, title, fig, ax[2], vmin, vmax, screws=screws
                 )
         fig.suptitle("Antenna Surface")
         fig.tight_layout()
@@ -359,9 +359,9 @@ class AntennaSurface:
         Args:
             filename: Output FITS file name/path
         """
-        if self.resi is None:
+        if self.residuals is None:
             raise Exception("Cannot export corrected surface")
-        _write_fits(self.devhead, self.resi, filename)
+        _write_fits(self.devhead, self.residuals, filename)
         return
 
     def export_screw_adjustments(self, filename, unit="mm"):
