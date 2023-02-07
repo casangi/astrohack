@@ -1,43 +1,45 @@
-import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from astrohack._classes.linear_axis import LinearAxis
 from astrohack._classes.base_panel import panelkinds, irotpara, ixypara
 from astrohack._classes.ring_panel import RingPanel
-from astrohack._classes.telescope import Telescope
-from astrohack._utils._fits_io import _read_fits
-from astrohack._utils._fits_io import _write_fits
 from astrohack._utils._globals import *
 
 lnbr = "\n"
 
 
 class AntennaSurface:
-    def __init__(self, amp, dev, telescope, cutoff=0.21, pkind=None, deviationisphase=False):
+    def __init__(self, inputxds, telescope, cutoff=None, pkind=None, deviationisphase=False):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
-            amp: Amplitude aperture image (AIPS FITS file)
-            dev: Physical deviation aperture image (AIPS FITS file)
-            telescope: currently supported: ["VLA","VLBA"]
-            cutoff: fractional cutoff on the amplitude image to exclude regions with weak amplitude from the panel
+            inputxds: Input xarray dataset
+            telescope: Telescope object
+            cutoff: fractional cutoff on the amplitude image to exclude regions with weak amplitude from the panel,
+            defaults to 21%
             surface fitting
             pkind: Kind of panel surface fitting, if is None defaults to telescope default
         """
-        # Initializes antenna surface parameters
-        self.ampfile = amp
-        self.devfile = dev
 
-        self.ingains = np.nan
-        self.ougains = np.nan
-        self.inrms = np.nan
-        self.ourms = np.nan
+        if inputxds.attrs['AIPS']:
+            self.amplitude = inputxds["AMPLITUDE"].values
+            self.deviation = inputxds["DEVIATION"].values
+            self.npoint = inputxds.attrs['npoint']
+            self.npoint = inputxds.attrs['npoint']
+            self.wavelength = inputxds.attrs['wavelength']
+            self.npix = inputxds.attrs['npix']
+            self.cell_size = inputxds.attrs['cell_size']
+            self.antenna_name = inputxds.attrs['antenna_name']
+            self.u_axis = inputxds.u.values
+            self.v_axis = inputxds.v.values
+            self.amp_unit = inputxds.attrs['amp_unit']
+        else:
+            raise Exception('Why are you trying to break my code JW?')
 
-        self._read_images()
-        self.cut = cutoff * np.max(self.amp)
-
-        self.telescope = Telescope(telescope)
-
+        self.telescope = telescope
+        if cutoff is None:
+            self.cut = 0.21 * np.max(self.amplitude)
+        else:
+            self.cut = cutoff * np.max(self.amplitude)
         if pkind is None:
             if self.telescope.ringed:
                 self.panelkind = panelkinds[irotpara]
@@ -45,15 +47,17 @@ class AntennaSurface:
                 self.panelkind = panelkinds[ixypara]
         else:
             self.panelkind = pkind
-
-        self._get_aips_headpars()
         self.reso = self.telescope.diam / self.npoint
-
         self.residuals = None
         self.corrections = None
         self.phase_corrections = None
         self.phase_residuals = None
         self.solved = False
+        self.ingains = np.nan
+        self.ougains = np.nan
+        self.inrms = np.nan
+        self.ourms = np.nan
+
         if self.telescope.ringed:
             self._build_polar()
             self._build_ring_panels()
@@ -67,44 +71,6 @@ class AntennaSurface:
         else:
             self.phase = self._deviation_to_phase(self.deviation)
 
-    def _get_aips_headpars(self):
-        """
-        Fetches AIPS specific metadata from FITS headers
-        """
-        for line in self.devhead["HISTORY"]:
-            wrds = line.split()
-            if wrds[1] == "Visibilities":
-                self.npoint = np.sqrt(int(wrds[-1]))
-            elif wrds[1] == "Observing":
-                self.wavel = float(wrds[-2])
-            elif wrds[1] == "Antenna" and wrds[2] == "surface":
-                self.inlim = abs(float(wrds[-3]))
-                self.oulim = abs(float(wrds[-2]))
-
-    def _read_images(self):
-        """
-        Reads amplitude and deviation images and initializes the X and Y axes
-        """
-        self.amphead, self.amp = _read_fits(self.ampfile)
-        self.devhead, self.deviation = _read_fits(self.devfile)
-        #
-        if self.devhead["NAXIS1"] != self.amphead["NAXIS1"]:
-            raise Exception("Amplitude and deviation images have different sizes")
-        self.npix = int(self.devhead["NAXIS1"])
-        self.xaxis = LinearAxis(
-            self.npix,
-            self.amphead["CRPIX1"],
-            self.amphead["CRVAL1"],
-            self.amphead["CDELT1"],
-        )
-        self.yaxis = LinearAxis(
-            self.npix,
-            self.amphead["CRPIX2"],
-            self.amphead["CRVAL2"],
-            self.amphead["CDELT2"],
-        )
-        return
-
     def _phase_to_deviation(self, phase):
         """
         Transforms a phase map to a physical deviation map
@@ -114,7 +80,7 @@ class AntennaSurface:
         Returns:
             Physical deviation map
         """
-        acoeff = (self.wavel / twopi) / (4.0 * self.telescope.focus)
+        acoeff = (self.wavelength / twopi) / (4.0 * self.telescope.focus)
         bcoeff = 4 * self.telescope.focus ** 2
         return acoeff * phase * np.sqrt(self.rad ** 2 + bcoeff)
 
@@ -127,7 +93,7 @@ class AntennaSurface:
         Returns:
             Phase map
         """
-        acoeff = (self.wavel / twopi) / (4.0 * self.telescope.focus)
+        acoeff = (self.wavelength / twopi) / (4.0 * self.telescope.focus)
         bcoeff = 4 * self.telescope.focus ** 2
         return deviation / (acoeff * np.sqrt(self.rad ** 2 + bcoeff))
 
@@ -136,9 +102,9 @@ class AntennaSurface:
         Builds the mask on regions to be included in panel surface masks, specific to circular antennas as there is an
         outer and inner limit to the mask based on the antenna's inner receiver hole and outer edge
         """
-        self.mask = np.where(self.amp < self.cut, False, True)
-        self.mask = np.where(self.rad > self.inlim, self.mask, False)
-        self.mask = np.where(self.rad < self.oulim, self.mask, False)
+        self.mask = np.where(self.amplitude < self.cut, False, True)
+        self.mask = np.where(self.rad > self.telescope.inlim, self.mask, False)
+        self.mask = np.where(self.rad < self.telescope.oulim, self.mask, False)
         self.mask = np.where(np.isnan(self.deviation), False, self.mask)
 
     def _build_polar(self):
@@ -147,10 +113,10 @@ class AntennaSurface:
         """
         self.rad = np.zeros([self.npix, self.npix])
         self.phi = np.zeros([self.npix, self.npix])
-        for iy in range(self.npix):
-            ycoor = self.yaxis.idx_to_coor(iy + 0.5)
-            for ix in range(self.npix):
-                xcoor = self.xaxis.idx_to_coor(ix + 0.5)
+        for ix in range(self.npix):
+            xcoor = self.u_axis[ix]
+            for iy in range(self.npix):
+                ycoor = self.v_axis[iy]
                 self.rad[ix, iy] = np.sqrt(xcoor ** 2 + ycoor ** 2)
                 self.phi[ix, iy] = np.arctan2(ycoor, xcoor)
                 if self.phi[ix, iy] < 0:
@@ -180,11 +146,11 @@ class AntennaSurface:
         Loops through the points in the antenna surface and checks to which panels it belongs,
         specific for circular antennas with panels arranged in rings
         """
-        for iy in range(self.npix):
-            yc = self.yaxis.idx_to_coor(iy + 0.5)
-            for ix in range(self.npix):
+        for ix in range(self.npix):
+            xc = self.u_axis[ix]
+            for iy in range(self.npix):
                 if self.mask[ix, iy]:
-                    xc = self.xaxis.idx_to_coor(ix + 0.5)
+                    yc = self.v_axis[iy]
                     # How to do the coordinate choice here without
                     # adding an if?
                     for panel in self.panels:
@@ -231,11 +197,11 @@ class AntennaSurface:
         Returns:
         Actual and theoretical gains
         """
-        thgain = fourpi * (1000.0 * self.reso / self.wavel) ** 2
+        thgain = fourpi * (1000.0 * self.reso / self.wavelength) ** 2
         gain = thgain * np.sqrt(np.sum(np.cos(arr[self.mask]))**2 + np.sum(np.sin(arr[self.mask]))**2)/np.sum(self.mask)
         return convert_to_db(gain), convert_to_db(thgain)
 
-    def get_rms(self, phase=False):
+    def get_rms(self):
         """
         Computes antenna surface RMS before and after panel surface fitting
         Returns:
@@ -309,11 +275,11 @@ class AntennaSurface:
             self._plot_surface(
                 self.mask, title, fig, ax[0], 0, 1, screws=screws, mask=mask
             )
-            vmin, vmax = np.nanmin(self.amp), np.nanmax(self.amp)
+            vmin, vmax = np.nanmin(self.amplitude), np.nanmax(self.amplitude)
             title = "Amplitude min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
             self._plot_surface(
-                self.amp, title, fig, ax[1], vmin, vmax, screws=screws,
-                unit=self.amphead["BUNIT"].strip(),
+                self.amplitude, title, fig, ax[1], vmin, vmax, screws=screws,
+                unit=self.amp_unit,
             )
         else:
             if plotphase:
@@ -376,10 +342,10 @@ class AntennaSurface:
         """
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
-        xmin = self.xaxis.idx_to_coor(-0.5)
-        xmax = self.xaxis.idx_to_coor(self.xaxis.n - 0.5)
-        ymin = self.yaxis.idx_to_coor(-0.5)
-        ymax = self.yaxis.idx_to_coor(self.yaxis.n - 0.5)
+        xmin = np.min(self.u_axis)
+        xmax = np.max(self.u_axis)
+        ymin = np.min(self.v_axis)
+        ymax = np.max(self.v_axis)
         im = ax.imshow(
             np.flipud(data),
             cmap="viridis",
@@ -397,17 +363,6 @@ class AntennaSurface:
         for panel in self.panels:
             panel.plot(ax, screws=screws)
 
-    def export_corrected(self, filename):
-        """
-        Export corrected surface to a FITS file
-        Args:
-            filename: Output FITS file name/path
-        """
-        if self.residuals is None:
-            raise Exception("Cannot export corrected surface")
-        _write_fits(self.devhead, self.residuals, filename)
-        return
-
     def export_screw_adjustments(self, filename, unit="mm"):
         """
         Export screw adjustments for all panels onto an ASCII file
@@ -417,7 +372,7 @@ class AntennaSurface:
         """
         spc = " "
         outfile = "Screw adjustments for {0:s} {1:s} antenna\n".format(
-            self.telescope.name, self.amphead["telescop"]
+            self.telescope.name, self.antenna_name
         )
         outfile += "Adjustments are in " + unit + lnbr
         outfile += 2 * lnbr
