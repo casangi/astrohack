@@ -240,12 +240,14 @@ def _holog_chunk(holog_chunk_params):
     """
     c = scipy.constants.speed_of_light
 
-    _, ant_data_dict = load_holog_file(
+    holog_file, ant_data_dict = load_holog_file(
         holog_chunk_params["holog_file"],
         dask_load=False,
         load_pnt_dict=False,
         ant_id=holog_chunk_params["ant_id"],
     )
+
+    meta_data = _read_meta_data(holog_chunk_params["holog_file"])
 
     # Calculate lm coordinates
     l, m = _calc_coords(holog_chunk_params["grid_size"], holog_chunk_params["cell_size"])
@@ -348,8 +350,11 @@ def _holog_chunk(holog_chunk_params):
 
         xds["BEAM"] = xr.DataArray(beam_grid, dims=["time-centroid", "chan", "pol", "l", "m"])
         xds["APERTURE"] = xr.DataArray(aperture_grid, dims=["time-centroid", "chan", "pol", "u", "v"])
+        xds["AMPLITUDE"] = xr.DataArray(np.absolute(aperture_grid), dims=["time-centroid", "chan", "pol", "u", "v"])
+        xds["ANGLE"] = xr.DataArray(np.angle(aperture_grid, deg=True), dims=["time-centroid", "chan", "pol", "u", "v"])
 
         xds.attrs["ant_id"] = holog_chunk_params["ant_id"]
+        xds.attrs["telescope_name"] = meta_data['telescope_name']
         xds.attrs["time_centroid"] = np.array(time_centroid)
 
         coords = {}

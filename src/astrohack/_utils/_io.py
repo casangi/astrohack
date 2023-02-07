@@ -83,7 +83,7 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
     return ant_data_dict
 
 
-def _create_holog_meta_data(holog_file, holog_dict):
+def _create_holog_meta_data(holog_file, holog_dict, holog_params):
     """Save holog file meta information to json file with the transformation
         of the ordering (ddi, scan, ant) --> (ant, ddi, scan).
 
@@ -142,6 +142,7 @@ def _create_holog_meta_data(holog_file, holog_dict):
 
     max_extent = {
         "n_time": max_value,
+        "telescope_name": holog_params['telescope_name'],
         "extent": {
             "l": {
                 "min": np.array(lm_extent["l"]["min"]).mean(),
@@ -566,6 +567,10 @@ def _create_holog_file(
 
     ctb = ctables.table("/".join((ms_name, "ANTENNA")))
     observing_location = ctb.getcol("POSITION")
+
+    ctb = ctables.table("/".join((ms_name, "OBSERVATION")))
+    telescope_name = ctb.getcol("TELESCOPE_NAME")[0]
+
     ctb.close()
 
     time_vis_days = time_vis / (3600 * 24)
@@ -599,6 +604,7 @@ def _create_holog_file(
             xds.attrs["ant_id"] = map_ant_index
             xds.attrs["ddi"] = ddi
             xds.attrs["parallactic_samples"] = parallactic_samples
+            xds.attrs["telescope_name"] = telescope_name
 
             holog_file = "{base}.{suffix}".format(base=holog_name, suffix="holog.zarr")
 
@@ -630,7 +636,7 @@ def _create_holog_file(
             )
 
 
-def _extract_holog_chunk(extract_holog_parms):
+def _extract_holog_chunk(extract_holog_params):
     """Perform data query on holography data chunk and get unique time and state_ids/
 
     Args:
@@ -643,19 +649,19 @@ def _extract_holog_chunk(extract_holog_parms):
         sel_state_ids (list): List pf state_ids corresponding to holography data/
     """
 
-    ms_name = extract_holog_parms["ms_name"]
-    pnt_name = extract_holog_parms["pnt_name"]
-    data_col = extract_holog_parms["data_col"]
-    ddi = extract_holog_parms["ddi"]
-    scan = extract_holog_parms["scan"]
-    map_ant_ids = extract_holog_parms["map_ant_ids"]
-    ref_ant_ids = extract_holog_parms["ref_ant_ids"]
-    sel_state_ids = extract_holog_parms["sel_state_ids"]
-    holog_name = extract_holog_parms["holog_name"]
-    overwrite = extract_holog_parms["overwrite"]
+    ms_name = extract_holog_params["ms_name"]
+    pnt_name = extract_holog_params["pnt_name"]
+    data_col = extract_holog_params["data_col"]
+    ddi = extract_holog_params["ddi"]
+    scan = extract_holog_params["scan"]
+    map_ant_ids = extract_holog_params["map_ant_ids"]
+    ref_ant_ids = extract_holog_params["ref_ant_ids"]
+    sel_state_ids = extract_holog_params["sel_state_ids"]
+    holog_name = extract_holog_params["holog_name"]
+    overwrite = extract_holog_params["overwrite"]
 
-    chan_freq = extract_holog_parms["chan_setup"]["chan_freq"]
-    pol = extract_holog_parms["pol_setup"]["pol"]
+    chan_freq = extract_holog_params["chan_setup"]["chan_freq"]
+    pol = extract_holog_params["pol_setup"]["pol"]
 
     ctb = ctables.taql(
         "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, STATE_ID from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s"
