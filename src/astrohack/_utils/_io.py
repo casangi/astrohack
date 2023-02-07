@@ -1,5 +1,4 @@
 import dask
-import time
 import os
 import json
 import zarr
@@ -31,29 +30,26 @@ DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 jit_cache = False
 
 
-def _read_dimensions_meta_data(holog_file, ddi, ant_id):
+def _read_meta_data(holog_file):
     """Reads dimensional data from holog meta file.
 
     Args:
-        ant_id (int): Antenna id
         holog_file (str): holog file name.
 
     Returns:
         dict: dictionary containing dimension data.
     """
     try:
-        with open(
-            "{name}/{ddi}/{file}".format(name=holog_file, ddi=ddi, file="/.holog_attr")
-        ) as json_file:
+        with open("{name}/{file}".format(name=holog_file, file="/.holog_attr")) as json_file:
             json_dict = json.load(json_file)
 
     except Exception as error:
-        console.error("[_read_dimensions_meta_data] {error}".format(error=error))
+        console.error("[_read_meta_data] {error}".format(error=error))
 
-    return json_dict[str(ant_id)]
+    return json_dict
 
 
-def _read_data_from_holog_meta(holog_file, holog_dict, ant_id):
+def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
     """Read holog file meta data and extract antenna based xds information for each (ddi, scan)
 
     Args:
@@ -74,7 +70,7 @@ def _read_data_from_holog_meta(holog_file, holog_dict, ant_id):
             holog_json = json.load(json_file)
 
     except Exception as error:
-        console.error("[_read_data_from_holog_meta] {error}".format(error=error))
+        console.error("[_read_data_from_holog_json] {error}".format(error=error))
 
     ant_data_dict = {}
 
@@ -87,7 +83,7 @@ def _read_data_from_holog_meta(holog_file, holog_dict, ant_id):
     return ant_data_dict
 
 
-def _create_holog_meta_data(holog_file, holog_dict):
+def _create_holog_meta_data(holog_file, holog_dict, holog_params):
     """Save holog file meta information to json file with the transformation
         of the ordering (ddi, scan, ant) --> (ant, ddi, scan).
 
@@ -100,22 +96,22 @@ def _create_holog_meta_data(holog_file, holog_dict):
         if isinstance(ddi, numbers.Number):
             ant_sub_dict = {}
             ant_holog_dict = {}
-            data_extent = {}
             max_extent = {}
             dims_meta_data = {}
+
+            data_extent = []
+
             lm_extent = {"l": {"min": [], "max": []}, "m": {"min": [], "max": []}}
 
             for scan, ant_dict in scan_dict.items():
                 for ant, xds in ant_dict.items():
                     ant_sub_dict.setdefault(ddi, {})
-                    ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][
-                        scan
-                    ] = xds.to_dict(data=False)
+                    ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
                     ant_sub_dict = {}
 
                     # Find the average (l, m) extent for each antenna, over (ddi, scan) and write the meta data to file.
                     dims = xds.dims
-                    # max_vis = np.max(xds.DIRECTIONAL_COSINES.values)
+                    
                     lm_extent["l"]["min"].append(
                         np.min(xds.DIRECTIONAL_COSINES.values[:, 0])
                     )
@@ -129,9 +125,8 @@ def _create_holog_meta_data(holog_file, holog_dict):
                     lm_extent["m"]["max"].append(
                         np.max(xds.DIRECTIONAL_COSINES.values[:, 1])
                     )
-
-                    data_extent.setdefault(ant, np.array([]))
-                    data_extent[ant] = np.append(data_extent[ant], dims["time"])
+                    
+                    data_extent.append(dims["time"])
 
                     dims_meta_data.setdefault(
                         ant,
@@ -142,37 +137,35 @@ def _create_holog_meta_data(holog_file, holog_dict):
                         },
                     )
 
-        for ant, values in data_extent.items():
-            max_value = np.max(values)
+    
+    max_value = int(np.array(data_extent).max())
 
-            max_extent[ant] = {
-                "n_time": max_value,
-                "time": dims_meta_data[ant]["time"],
-                "pol": dims_meta_data[ant]["pol"],
-                "chan": dims_meta_data[ant]["chan"],
-                "extent": {
-                    "l": {
-                        "min": np.array(lm_extent["l"]["min"]).mean(),
-                        "max": np.array(lm_extent["l"]["max"]).mean(),
-                    },
-                    "m": {
-                        "min": np.array(lm_extent["m"]["min"]).mean(),
-                        "max": np.array(lm_extent["m"]["max"]).mean(),
-                    },
-                },
-            }
+    max_extent = {
+        "n_time": max_value,
+        "telescope_name": holog_params['telescope_name'],
+        "extent": {
+            "l": {
+                "min": np.array(lm_extent["l"]["min"]).mean(),
+                "max": np.array(lm_extent["l"]["max"]).mean(),
+            },
+            "m": {
+                "min": np.array(lm_extent["m"]["min"]).mean(),
+                "max": np.array(lm_extent["m"]["max"]).mean(),
+            },
+        },
+    }
 
-        output_attr_file = "{name}/{ddi}/{ext}".format(
-            name=holog_file, ddi=ddi, ext=".holog_attr"
-        )
+    output_attr_file = "{name}/{ext}".format(name=holog_file, ext=".holog_attr")
 
-        try:
-            with open(output_attr_file, "w") as json_file:
-                json.dump(max_extent, json_file)
+    try:
+        with open(output_attr_file, "w") as json_file:
+            json.dump(max_extent, json_file)
 
-        except Exception as error:
-            console.error("[_create_holog_meta_data] {error}".format(error=error))
+    except Exception as error:
+        console.error("[_create_holog_meta_data] {error}".format(error=error))
+    
 
+    
     output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
     
     try:
@@ -242,7 +235,6 @@ def _open_no_dask_zarr(zarr_name, slice_dict={}):
     return xds
 
 
-#### Pointing Table Conversion ####
 def _load_pnt_dict(file, ant_list=None, dask_load=True):
     """Load pointing dictionary from disk.
 
@@ -575,6 +567,10 @@ def _create_holog_file(
 
     ctb = ctables.table("/".join((ms_name, "ANTENNA")))
     observing_location = ctb.getcol("POSITION")
+
+    ctb = ctables.table("/".join((ms_name, "OBSERVATION")))
+    telescope_name = ctb.getcol("TELESCOPE_NAME")[0]
+
     ctb.close()
 
     time_vis_days = time_vis / (3600 * 24)
@@ -585,12 +581,12 @@ def _create_holog_file(
 
     for map_ant_index in vis_map_dict.keys():
         if map_ant_index not in flagged_mapping_antennas:
+            direction = np.take(pnt_map_dict[map_ant_index], indicies, axis=0)
 
             parallactic_samples = _calculate_parallactic_angle_chunk(
                 time_samples=time_samples,
                 observing_location=observing_location[map_ant_index],
-                direction=pnt_map_dict[map_ant_index],
-                indicies=indicies,
+                direction=direction
             )
 
             xds = xr.Dataset()
@@ -608,6 +604,7 @@ def _create_holog_file(
             xds.attrs["ant_id"] = map_ant_index
             xds.attrs["ddi"] = ddi
             xds.attrs["parallactic_samples"] = parallactic_samples
+            xds.attrs["telescope_name"] = telescope_name
 
             holog_file = "{base}.{suffix}".format(base=holog_name, suffix="holog.zarr")
 
@@ -639,7 +636,7 @@ def _create_holog_file(
             )
 
 
-def _extract_holog_chunk(extract_holog_parms):
+def _extract_holog_chunk(extract_holog_params):
     """Perform data query on holography data chunk and get unique time and state_ids/
 
     Args:
@@ -652,19 +649,19 @@ def _extract_holog_chunk(extract_holog_parms):
         sel_state_ids (list): List pf state_ids corresponding to holography data/
     """
 
-    ms_name = extract_holog_parms["ms_name"]
-    pnt_name = extract_holog_parms["pnt_name"]
-    data_col = extract_holog_parms["data_col"]
-    ddi = extract_holog_parms["ddi"]
-    scan = extract_holog_parms["scan"]
-    map_ant_ids = extract_holog_parms["map_ant_ids"]
-    ref_ant_ids = extract_holog_parms["ref_ant_ids"]
-    sel_state_ids = extract_holog_parms["sel_state_ids"]
-    holog_name = extract_holog_parms["holog_name"]
-    overwrite = extract_holog_parms["overwrite"]
+    ms_name = extract_holog_params["ms_name"]
+    pnt_name = extract_holog_params["pnt_name"]
+    data_col = extract_holog_params["data_col"]
+    ddi = extract_holog_params["ddi"]
+    scan = extract_holog_params["scan"]
+    map_ant_ids = extract_holog_params["map_ant_ids"]
+    ref_ant_ids = extract_holog_params["ref_ant_ids"]
+    sel_state_ids = extract_holog_params["sel_state_ids"]
+    holog_name = extract_holog_params["holog_name"]
+    overwrite = extract_holog_params["overwrite"]
 
-    chan_freq = extract_holog_parms["chan_setup"]["chan_freq"]
-    pol = extract_holog_parms["pol_setup"]["pol"]
+    chan_freq = extract_holog_params["chan_setup"]["chan_freq"]
+    pol = extract_holog_params["pol_setup"]["pol"]
 
     ctb = ctables.taql(
         "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, STATE_ID from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s"

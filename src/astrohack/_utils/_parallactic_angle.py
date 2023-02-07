@@ -8,7 +8,6 @@ def _calculate_parallactic_angle_chunk(
     time_samples,
     observing_location,
     direction,
-    indicies,
     dir_frame="FK5",
     zenith_frame="FK5",
 ):
@@ -36,8 +35,6 @@ def _calculate_parallactic_angle_chunk(
         y=observing_location[1] * u.m,
         z=observing_location[2] * u.m,
     )
-
-    direction = np.take(direction, indicies, axis=0)
 
     direction = coord.SkyCoord(
         ra=direction[:, 0] * u.rad, dec=direction[:, 1] * u.rad, frame=dir_frame.lower()
