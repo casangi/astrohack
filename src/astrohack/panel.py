@@ -1,28 +1,57 @@
 from astrohack._classes.antenna_surface import AntennaSurface
-from astrohack._utils._globals import *
+from astrohack._classes.telescope import Telescope
 import os
+import xarray as xr
 
 
-def _panel_chunk(basename, amp, dev, telescope, cutoff=0.21, pkind=None, savemask=False, saveplots=True, savephase=True,
-                 exportcorrected=False, unit="miliinches",):
-    surface = AntennaSurface(amp, dev, telescope, cutoff, pkind)
+def panel(holog_image, aipsdata=False, telescope=None, cutoff=None, panel_kind=None, basename=None, unit='mm',
+          save_mask=False, save_deviations=True, save_phase=False, parallel=True):
+    panel_chunk_params = {'holog_image': holog_image,
+                          'unit': unit,
+                          'panel_kind': panel_kind,
+                          'cutoff': cutoff,
+                          'save_mask': save_mask,
+                          'save_deviations': save_deviations,
+                          'save_phase': save_phase,
+                          }
+
+    if aipsdata:
+        if telescope is None:
+            raise Exception('For AIPS data a telescope must be specified')
+        if basename is None:
+            raise Exception('For AIPS data a basename must be specified')
+        panel_chunk_params['telescope'] = telescope
+        panel_chunk_params['basename'] = basename
+        panel_chunk_params['origin'] = 'AIPS'
+        _panel_chunk(panel_chunk_params)
+    else:
+        raise Exception('Non AIPS data not yet supported')
+
+
+def _panel_chunk(panel_chunk_params):
+    inputxds = xr.open_zarr(panel_chunk_params['holog_image'])
+    if panel_chunk_params['origin'] == 'AIPS':
+        telescope = Telescope(panel_chunk_params['telescope'])
+    else:
+        inputxds.attrs['AIPS'] = False
+        telescope = None
+
+    surface = AntennaSurface(inputxds, telescope, panel_chunk_params['cutoff'], panel_chunk_params['panel_kind'])
     surface.compile_panel_points()
     surface.fit_surface()
     surface.correct_surface()
 
+    basename = panel_chunk_params['basename']
     os.makedirs(name=basename, exist_ok=True)
     basename += "/"
+    surface.export_screw_adjustments(basename + "screws.txt", unit=panel_chunk_params['unit'])
 
-    surface.export_screw_adjustments(basename + "screws.txt", unit=unit)
-
-    if savemask:
+    if panel_chunk_params['save_mask']:
         surface.plot_surface(filename=basename + "mask.png", mask=True, screws=True)
-    if saveplots:
+    if panel_chunk_params['save_deviations']:
         surface.plot_surface(filename=basename + "surface.png")
-    if savephase:
+    if panel_chunk_params['save_phase']:
         surface.plot_surface(filename=basename + "phase.png", plotphase=True)
-    if exportcorrected:
-        surface.export_corrected(basename + "corrected.fits")
 
     ingains, ougains = surface.gains()
     inrms, ourms = surface.get_rms()
