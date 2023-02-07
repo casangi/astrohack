@@ -311,6 +311,10 @@ class AstrohackImageFile:
         return self._image_dict
 
     def summary(self):
+        from IPython.core.display import HTML,display
+
+        display(HTML('jws.html'))
+
         table = PrettyTable()
         table.field_names = ["antenna", "ddi"]
         table.align = "l"
@@ -362,6 +366,10 @@ class AstrohackHologFile:
         return True
 
     def summary(self):
+        from IPython.core.display import HTML, display
+
+        display(HTML('jws.html'))
+
         table = PrettyTable()
         table.field_names = ["ddi", "scan", "antenna"]
         table.align = "l"
