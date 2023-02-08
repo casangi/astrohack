@@ -57,10 +57,11 @@ def _panel_chunk(panel_chunk_params):
         inputxds.attrs['AIPS'] = False
         inputxds.attrs['antenna_name'] = panel_chunk_params['antenna']
         if panel_chunk_params['telescope'] is None:
-            telescope = Telescope(inputxds.attrs['telescope_name'])
+            tname = inputxds.attrs['telescope_name']+'_'+inputxds.attrs['ant_name'][0:2]
+            telescope = Telescope(tname)
         else:
             telescope = Telescope(panel_chunk_params['telescope'])
-        suffix = '_' + panel_chunk_params['antenna'] + '_' + panel_chunk_params['ddi']
+        suffix = '_' + inputxds.attrs['ant_name'] + '_' + panel_chunk_params['ddi']
 
     surface = AntennaSurface(inputxds, telescope, panel_chunk_params['cutoff'], panel_chunk_params['panel_kind'])
     surface.compile_panel_points()
