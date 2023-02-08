@@ -16,7 +16,7 @@ from astrohack._utils._io import _create_holog_meta_data, _read_data_from_holog_
 from astrohack._utils._io import _read_meta_data
 
 
-def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None):
+def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None):
     """Loads holog file from disk
 
     Args:
@@ -249,7 +249,7 @@ def extract_holog(
 
     holog_file = "{base}.{suffix}".format(base=extract_holog_params["holog_name"], suffix="holog.zarr")
 
-    holog_dict = load_holog_file(holog_file=holog_file, dask_load=True, load_pnt_dict=False)
+    holog_dict = _load_holog_file(holog_file=holog_file, dask_load=True, load_pnt_dict=False)
     _create_holog_meta_data(holog_file=holog_file, holog_dict=holog_dict, holog_params=extract_holog_params)
 
 class HoloData:
@@ -283,11 +283,21 @@ class HoloData:
             self.image = AstrohackImageFile(file_path)
 
 class AstrohackImageFile:
+    """_summary_
+    """
     def __init__(self, file):
         self.file = file
         self._image_dict = None
 
     def open(self, file=None):
+        """_summary_
+
+        Args:
+            file (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
         if file is None:
             file = self.file
 
@@ -308,9 +318,16 @@ class AstrohackImageFile:
 
     @property
     def data(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         return self._image_dict
 
     def summary(self):
+        """_summary_
+        """
         from IPython.core.display import HTML,display
 
         display(HTML('jws.html'))
@@ -326,6 +343,16 @@ class AstrohackImageFile:
 
 
     def select(self, ant=None, ddi=None, polar=False):
+        """_summary_
+
+        Args:
+            ant (_type_, optional): _description_. Defaults to None.
+            ddi (_type_, optional): _description_. Defaults to None.
+            polar (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
         if ant is None and ddi is None:
             console.info("No selections made ...")
             return self._image_dict
@@ -336,6 +363,8 @@ class AstrohackImageFile:
             return self._image_dict[ant][ddi]
 
 class AstrohackHologFile:
+    """_summary_
+    """
     def __init__(self, file):
         self.file = file
         self._holog_dict = None
@@ -343,6 +372,14 @@ class AstrohackHologFile:
 
 
     def open(self, file=None):
+        """_summary_
+
+        Args:
+            file (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
         if file is None:
             file = self.file
 
@@ -366,6 +403,8 @@ class AstrohackHologFile:
         return True
 
     def summary(self):
+        """_summary_
+        """
         from IPython.core.display import HTML, display
 
         display(HTML('jws.html'))
@@ -381,6 +420,16 @@ class AstrohackHologFile:
         print(table)
 
     def select(self, ddi=None, scan=None, ant=None):
+        """_summary_
+
+        Args:
+            ddi (_type_, optional): _description_. Defaults to None.
+            scan (_type_, optional): _description_. Defaults to None.
+            ant (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
         if ant is None or ddi is None or scan is None:
             console.info("No selections made ...")
             return self._holog_dict
@@ -389,8 +438,18 @@ class AstrohackHologFile:
 
     @property
     def meta_data(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         return self._meta_data
 
     @property
     def data(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         return self._holog_dict

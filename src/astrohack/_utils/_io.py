@@ -29,6 +29,14 @@ DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 jit_cache = False
 
+def _load_image_xds(file_stem, ant, ddi):
+    image_path = "{image}.image.zarr/{ant}/{ddi}".format(image=file_stem, ant=ant, ddi=ddi)
+
+    if os.path.isdir(image_path):
+        return xr.open_zarr(image_path)
+    else:
+        raise FileNotFoundError("Image file: {} not found".format(image_path))
+
 
 def _read_meta_data(holog_file):
     """Reads dimensional data from holog meta file.

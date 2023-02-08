@@ -18,8 +18,11 @@ from numba import njit
 from scipy.interpolate import griddata, LinearNDInterpolator, NearestNDInterpolator
 
 from astrohack._utils import _system_message as console
-from astrohack.dio import load_holog_file
+from astrohack.dio import _load_holog_file
 from astrohack._utils._io import _read_meta_data
+
+from astrohack._utils._phase_fitting import phase_fitting
+from astrohack._classes.telescope import Telescope
 
 
 def _calculate_euclidean_distance(x, y, center):
@@ -240,7 +243,7 @@ def _holog_chunk(holog_chunk_params):
     """
     c = scipy.constants.speed_of_light
 
-    holog_file, ant_data_dict = load_holog_file(
+    holog_file, ant_data_dict = _load_holog_file(
         holog_chunk_params["holog_file"],
         dask_load=False,
         load_pnt_dict=False,
