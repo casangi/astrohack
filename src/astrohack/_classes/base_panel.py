@@ -41,25 +41,33 @@ class BasePanel:
         self.zeta = 0
 
         if self.kind == panelkinds[irigid]:
-            self.solve = self._solve_rigid
-            self.corr_point = self._corr_point_rigid
+            self._associate_rigid()
         elif self.kind == panelkinds[imean]:
-            self.solve = self._solve_mean
-            self.corr_point = self._corr_point_mean
+            self._associate_mean()
         elif self.kind == panelkinds[ixypara]:
-            self.solve = self._solve_scipy
-            self.corr_point = self._corr_point_scipy
-            self._paraboloid = self._xyaxes_paraboloid
+            self._associate_scipy(self._xyaxes_paraboloid, 3)
         elif self.kind == panelkinds[irotpara]:
-            self.solve = self._solve_scipy
-            self.corr_point = self._corr_point_scipy
-            self._paraboloid = self._rotated_paraboloid
+            self._associate_scipy(self._rotated_paraboloid, 4)
         elif self.kind == panelkinds[icorpara]:
-            self.solve = self._solve_scipy
-            self.corr_point = self._corr_point_scipy
-            self._paraboloid = self._corotated_paraboloid
+            self._associate_scipy(self._corotated_paraboloid, 3)
         else:
             raise Exception("Unknown panel kind: ", self.kind)
+
+    def _associate_scipy(self, fitting_function, npar):
+        self.npar = npar
+        self._solve_sub = self._solve_scipy
+        self.corr_point = self._corr_point_scipy
+        self._fitting_function = fitting_function
+
+    def _associate_rigid(self):
+        self.npar = 3
+        self._solve_sub = self._solve_rigid
+        self.corr_point = self._corr_point_rigid
+
+    def _associate_mean(self):
+        self.npar = 1
+        self._solve_sub = self._solve_mean
+        self.corr_point = self._corr_point_mean
 
     def add_point(self, value):
         """
@@ -69,6 +77,20 @@ class BasePanel:
         """
         self.values.append(value)
         self.nsamp += 1
+
+    def solve(self):
+        # fallback behaviour for impossible fits
+        if self.nsamp < self.npar:
+            self._associate_mean()
+            if self.nsamp == 0:
+                self.par = [0.0]
+                self.solved = True
+            else:
+                self._solve_sub()
+        else:
+            self._solve_sub()
+
+        return
 
     def _solve_scipy(self, verbose=False):
         """
@@ -94,7 +116,7 @@ class BasePanel:
         maxfevs = [100000, 1000000, 10000000]
         for maxfev in maxfevs:
             try:
-                result = opt.curve_fit(self._paraboloid, coords, devia,
+                result = opt.curve_fit(self._fitting_function, coords, devia,
                                        p0=p0, bounds=[liminf, limsup],
                                        maxfev=maxfev)
             except RuntimeError:
@@ -240,7 +262,7 @@ class BasePanel:
         Returns:
         Fitted value at xcoor,ycoor
         """
-        corrval = self._paraboloid([xcoor, ycoor], *self.par)
+        corrval = self._fitting_function([xcoor, ycoor], *self.par)
         return corrval
 
     def _corr_point_rigid(self, xcoor, ycoor):
