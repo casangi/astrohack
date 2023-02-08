@@ -1,3 +1,4 @@
+import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astrohack._classes.base_panel import panelkinds, irotpara, ixypara
@@ -28,9 +29,9 @@ class AntennaSurface:
             self.npoint = inputxds.attrs['npoint']
             self.wavelength = inputxds.attrs['wavelength']
             self.amp_unit = inputxds.attrs['amp_unit']
-            computephase = True
             self.u_axis = inputxds.u.values
             self.v_axis = inputxds.v.values
+            computephase = True
 
         else:
             if inputxds.dims['chan'] != 1:
@@ -45,7 +46,8 @@ class AntennaSurface:
             computephase = False
 
         # Common elements
-        self.npix = inputxds.dims['u']
+        self.unpix = inputxds.dims['u']
+        self.vnpix = inputxds.dims['v']
         self.antenna_name = inputxds.attrs['antenna_name']
         self.telescope = telescope
         if cutoff is None:
@@ -83,6 +85,9 @@ class AntennaSurface:
             self.phase = self._deviation_to_phase(self.deviation)
         else:
             self.deviation = self._phase_to_deviation(self.phase)
+        # Patchwork for the moment
+        self.phase = np.where(self.rad < self.telescope.diam / 2, self.phase, np.nan)
+        self.deviation = np.where(self.rad < self.telescope.diam / 2, self.deviation, np.nan)
 
     def _crop_maps(self, margin=0.025):
         edge = (0.5+margin)*self.telescope.diam
@@ -90,11 +95,8 @@ class AntennaSurface:
         iumax = np.argmax(self.u_axis > edge)
         ivmin = np.argmax(self.v_axis > -edge)
         ivmax = np.argmax(self.v_axis > edge)
-        unpix = iumax-iumin
-        vnpix = ivmax-ivmin
-        if unpix != vnpix:
-            raise Exception('This should not happen...')
-        self.npix = unpix
+        self.unpix = iumax-iumin
+        self.vnpix = ivmax-ivmin
         self.u_axis = self.u_axis[iumin:iumax]
         self.v_axis = self.v_axis[ivmin:ivmax]
         self.amplitude = self.amplitude[iumin:iumax, ivmin:ivmax]
@@ -143,11 +145,11 @@ class AntennaSurface:
         """
         Build polar coordinate grid, specific for circular antennas with panels arranged in rings
         """
-        self.rad = np.zeros([self.npix, self.npix])
-        self.phi = np.zeros([self.npix, self.npix])
-        for ix in range(self.npix):
+        self.rad = np.zeros([self.unpix, self.vnpix])
+        self.phi = np.zeros([self.unpix, self.vnpix])
+        for ix in range(self.unpix):
             xcoor = self.u_axis[ix]
-            for iy in range(self.npix):
+            for iy in range(self.vnpix):
                 ycoor = self.v_axis[iy]
                 self.rad[ix, iy] = np.sqrt(xcoor ** 2 + ycoor ** 2)
                 self.phi[ix, iy] = np.arctan2(ycoor, xcoor)
@@ -178,9 +180,9 @@ class AntennaSurface:
         Loops through the points in the antenna surface and checks to which panels it belongs,
         specific for circular antennas with panels arranged in rings
         """
-        for ix in range(self.npix):
+        for ix in range(self.unpix):
             xc = self.u_axis[ix]
-            for iy in range(self.npix):
+            for iy in range(self.vnpix):
                 if self.mask[ix, iy]:
                     yc = self.v_axis[iy]
                     # How to do the coordinate choice here without
@@ -340,7 +342,8 @@ class AntennaSurface:
         Returns:
 
         """
-        vmin, vmax = np.nanmin(conversion * original), np.nanmax(conversion * original)
+        vmax = np.nanmax(np.abs(conversion*original))
+        vmin = -vmax
         inrms = conversion * self._compute_rms_array(original)
         if self.residuals is None:
             fig, ax = plt.subplots()
