@@ -1,7 +1,9 @@
 from astrohack._classes.antenna_surface import AntennaSurface
 from astrohack._classes.telescope import Telescope
+from astrohack._utils._io import _load_image_xds
 import os
 import xarray as xr
+import dask
 
 
 def panel(holog_image, aipsdata=False, telescope=None, cutoff=None, panel_kind=None, basename=None, unit='mm',
@@ -13,6 +15,8 @@ def panel(holog_image, aipsdata=False, telescope=None, cutoff=None, panel_kind=N
                           'save_mask': save_mask,
                           'save_deviations': save_deviations,
                           'save_phase': save_phase,
+                          'telescope': telescope,
+                          'basename': basename
                           }
 
     if aipsdata:
@@ -20,28 +24,53 @@ def panel(holog_image, aipsdata=False, telescope=None, cutoff=None, panel_kind=N
             raise Exception('For AIPS data a telescope must be specified')
         if basename is None:
             raise Exception('For AIPS data a basename must be specified')
-        panel_chunk_params['telescope'] = telescope
-        panel_chunk_params['basename'] = basename
         panel_chunk_params['origin'] = 'AIPS'
         _panel_chunk(panel_chunk_params)
     else:
-        raise Exception('Non AIPS data not yet supported')
+        panel_chunk_params['origin'] = 'astrohack'
+        delayed_list = []
+        fullname = holog_image+'.image.zarr'
+        antennae = os.listdir(fullname)
+        for antenna in antennae:
+            panel_chunk_params['antenna'] = antenna
+            ddis = os.listdir(fullname+'/'+antenna)
+            for ddi in ddis:
+                panel_chunk_params['ddi'] = ddi
+                if parallel:
+                    delayed_list.append(dask.delayed(_panel_chunk)(dask.delayed(panel_chunk_params)))
+                else:
+                    _panel_chunk(panel_chunk_params)
+        if parallel:
+            dask.compute(delayed_list)
 
 
 def _panel_chunk(panel_chunk_params):
-    inputxds = xr.open_zarr(panel_chunk_params['holog_image'])
+
     if panel_chunk_params['origin'] == 'AIPS':
         telescope = Telescope(panel_chunk_params['telescope'])
+        inputxds = xr.open_zarr(panel_chunk_params['holog_image'])
+        suffix = ''
     else:
+        inputxds = _load_image_xds(panel_chunk_params['holog_image'],
+                                   panel_chunk_params['antenna'],
+                                   panel_chunk_params['ddi'])
         inputxds.attrs['AIPS'] = False
-        telescope = None
+        inputxds.attrs['antenna_name'] = panel_chunk_params['antenna']
+        if panel_chunk_params['telescope'] is None:
+            telescope = Telescope(inputxds.attrs['telescope_name'])
+        else:
+            telescope = Telescope(panel_chunk_params['telescope'])
+        suffix = '_' + panel_chunk_params['antenna'] + '_' + panel_chunk_params['ddi']
 
     surface = AntennaSurface(inputxds, telescope, panel_chunk_params['cutoff'], panel_chunk_params['panel_kind'])
     surface.compile_panel_points()
     surface.fit_surface()
     surface.correct_surface()
 
-    basename = panel_chunk_params['basename']
+    if panel_chunk_params['basename'] is None:
+        basename = telescope.name + suffix
+    else:
+        basename = panel_chunk_params['basename'] + suffix
     os.makedirs(name=basename, exist_ok=True)
     basename += "/"
     surface.export_screw_adjustments(basename + "screws.txt", unit=panel_chunk_params['unit'])

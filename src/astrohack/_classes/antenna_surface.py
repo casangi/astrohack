@@ -8,7 +8,7 @@ lnbr = "\n"
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pkind=None, deviationisphase=False):
+    def __init__(self, inputxds, telescope, cutoff=None, pkind=None):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -16,24 +16,32 @@ class AntennaSurface:
             telescope: Telescope object
             cutoff: fractional cutoff on the amplitude image to exclude regions with weak amplitude from the panel,
             defaults to 21%
-            surface fitting
             pkind: Kind of panel surface fitting, if is None defaults to telescope default
         """
 
+        # Origin dependant Reading
         if inputxds.attrs['AIPS']:
             self.amplitude = inputxds["AMPLITUDE"].values
             self.deviation = inputxds["DEVIATION"].values
             self.npoint = inputxds.attrs['npoint']
-            self.npoint = inputxds.attrs['npoint']
             self.wavelength = inputxds.attrs['wavelength']
-            self.npix = inputxds.attrs['npix']
-            self.cell_size = inputxds.attrs['cell_size']
-            self.antenna_name = inputxds.attrs['antenna_name']
-            self.u_axis = inputxds.u.values
-            self.v_axis = inputxds.v.values
             self.amp_unit = inputxds.attrs['amp_unit']
+            computephase = True
         else:
-            raise Exception('Why are you trying to break my code JW?')
+            if inputxds.dims['chan'] != 1:
+                raise Exception("Only single channel holographies supported")
+            self.wavelength = inputxds.chan.values[0]/clight
+            self.npoint = inputxds.dims['l']
+            self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
+            self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
+            self.amp_unit = 'V'
+            computephase = False
+
+        # Common elements
+        self.npix = inputxds.dims['u']
+        self.u_axis = inputxds.u.values
+        self.v_axis = inputxds.v.values
+        self.antenna_name = inputxds.attrs['antenna_name']
 
         self.telescope = telescope
         if cutoff is None:
@@ -64,12 +72,10 @@ class AntennaSurface:
             self._build_ring_mask()
             self.fetch_panel = self._fetch_panel_ringed
             self.compile_panel_points = self._compile_panel_points_ringed
-
-        if deviationisphase:
-            self.phase = self.deviation
-            self.deviation = self._phase_to_deviation(self.phase)
-        else:
+        if computephase:
             self.phase = self._deviation_to_phase(self.deviation)
+        else:
+            self.deviation = self._phase_to_deviation(self.phase)
 
     def _phase_to_deviation(self, phase):
         """
@@ -105,7 +111,7 @@ class AntennaSurface:
         self.mask = np.where(self.amplitude < self.cut, False, True)
         self.mask = np.where(self.rad > self.telescope.inlim, self.mask, False)
         self.mask = np.where(self.rad < self.telescope.oulim, self.mask, False)
-        self.mask = np.where(np.isnan(self.deviation), False, self.mask)
+        self.mask = np.where(np.isnan(self.amplitude), False, self.mask)
 
     def _build_polar(self):
         """
