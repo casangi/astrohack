@@ -458,7 +458,6 @@ def holog(
                     )
 
                 else:
-                    console.debug("processing {}".format(holog_chunk_params['ant_id']))
                     _holog_chunk(holog_chunk_params)
 
             if parallel:

@@ -309,19 +309,14 @@ class AstrohackImageFile:
             file = self.file
 
         image_dict = {}
-        ddi_sub_dict = {}
 
         ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
         
         for ant in ant_list:
             ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
+            image_dict[int(ant)] = {}
             for ddi in ddi_list:
-                ddi_sub_dict.setdefault(int(ddi), {})
-                print("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
-                image_dict.setdefault(int(ant), ddi_sub_dict)[int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
-                #image_dict.setdefault(int(ant), ddi_sub_dict)[int(ddi)] = _load_image_xds(file_stem="hack_file", ant=ant, ddi=ddi)
-                #image_dict.setdefault(ant, ddi_sub_dict)[int(ddi)] = ant
-                p#rint(image_dict)
+                image_dict[int(ant)][int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
 
         self._image_dict = image_dict
 

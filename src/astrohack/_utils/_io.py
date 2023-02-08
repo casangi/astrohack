@@ -84,9 +84,7 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
 
     for ddi in holog_json[ant_id_str].keys():
         for scan in holog_json[ant_id_str][ddi].keys():
-            ant_data_dict.setdefault(int(ddi), {})[int(scan)] = holog_dict[int(ddi)][
-                int(scan)
-            ][int(ant_id)]
+            ant_data_dict.setdefault(int(ddi), {})[int(scan)] = holog_dict[int(ddi)][int(scan)][int(ant_id)]
 
     return ant_data_dict
 
