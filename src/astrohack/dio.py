@@ -138,8 +138,10 @@ def extract_holog(
         lockoptions={"option": "usernoread"},
         ack=False,
     )
+
     ant_name = ctb.getcol("NAME")
     ant_id = np.arange(len(ant_name))
+
     ctb.close()
 
     ######## Get Scan and Subscan IDs ########
@@ -219,15 +221,12 @@ def extract_holog(
         extract_holog_params["telescope_name"] = obs_ctb.getcol("TELESCOPE_NAME")[0]
 
         for scan in holog_obs_dict[ddi].keys():
-            console.info(
-                "Processing ddi: {ddi}, scan: {scan}".format(ddi=ddi, scan=scan)
-            )
+            console.info("Processing ddi: {ddi}, scan: {scan}".format(ddi=ddi, scan=scan))
 
             map_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]["map"]))[0]
             ref_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]["ref"]))[0]
 
             extract_holog_params["map_ant_ids"] = map_ant_ids
-            extract_holog_params["map_ant_names"] = holog_obs_dict[ddi][scan]["map"]
             extract_holog_params["ref_ant_ids"] = ref_ant_ids
             extract_holog_params["sel_state_ids"] = state_ids
             extract_holog_params["scan"] = scan
@@ -247,9 +246,15 @@ def extract_holog(
     if parallel:
         dask.compute(delayed_list)
 
+    extract_holog_params["holog_obs_dict"] = {}
+
+    for id in ant_id:
+        extract_holog_params["holog_obs_dict"][str(id)] = ant_name[id]
+
     holog_file = "{base}.{suffix}".format(base=extract_holog_params["holog_name"], suffix="holog.zarr")
 
     holog_dict = _load_holog_file(holog_file=holog_file, dask_load=True, load_pnt_dict=False)
+
     _create_holog_meta_data(holog_file=holog_file, holog_dict=holog_dict, holog_params=extract_holog_params)
 
 class HoloData:
@@ -298,6 +303,8 @@ class AstrohackImageFile:
         Returns:
             _type_: _description_
         """
+        from astrohack._utils._io import _load_image_xds
+
         if file is None:
             file = self.file
 
@@ -305,12 +312,16 @@ class AstrohackImageFile:
         ddi_sub_dict = {}
 
         ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
-
+        
         for ant in ant_list:
             ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
             for ddi in ddi_list:
                 ddi_sub_dict.setdefault(int(ddi), {})
+                print("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
                 image_dict.setdefault(int(ant), ddi_sub_dict)[int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
+                #image_dict.setdefault(int(ant), ddi_sub_dict)[int(ddi)] = _load_image_xds(file_stem="hack_file", ant=ant, ddi=ddi)
+                #image_dict.setdefault(ant, ddi_sub_dict)[int(ddi)] = ant
+                p#rint(image_dict)
 
         self._image_dict = image_dict
 

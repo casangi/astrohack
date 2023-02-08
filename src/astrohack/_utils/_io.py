@@ -106,6 +106,7 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
             ant_holog_dict = {}
             max_extent = {}
             dims_meta_data = {}
+            ant_name_map = {}
 
             data_extent = []
 
@@ -144,13 +145,13 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
                             "pol": dims["pol"],
                         },
                     )
-
     
     max_value = int(np.array(data_extent).max())
 
     max_extent = {
         "n_time": max_value,
         "telescope_name": holog_params['telescope_name'],
+        "ant_map": holog_params['holog_obs_dict'],
         "extent": {
             "l": {
                 "min": np.array(lm_extent["l"]["min"]).mean(),

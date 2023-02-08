@@ -345,8 +345,6 @@ def _holog_chunk(holog_chunk_params):
             padding_factor=holog_chunk_params["padding_factor"],
         )
 
-
-        # Create xds
         
         ###To Do: Add Paralactic angle as a non-dimension coordinate dependant on time.
         xds = xr.Dataset()
@@ -357,6 +355,7 @@ def _holog_chunk(holog_chunk_params):
         xds["ANGLE"] = xr.DataArray(np.angle(aperture_grid, deg=True), dims=["time-centroid", "chan", "pol", "u", "v"])
 
         xds.attrs["ant_id"] = holog_chunk_params["ant_id"]
+        xds.attrs["ant_name"] = meta_data["ant_map"][str(holog_chunk_params["ant_id"])]
         xds.attrs["telescope_name"] = meta_data['telescope_name']
         xds.attrs["time_centroid"] = np.array(time_centroid)
 
@@ -459,6 +458,7 @@ def holog(
                     )
 
                 else:
+                    console.debug("processing {}".format(holog_chunk_params['ant_id']))
                     _holog_chunk(holog_chunk_params)
 
             if parallel:
