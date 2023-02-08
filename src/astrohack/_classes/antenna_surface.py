@@ -8,7 +8,7 @@ lnbr = "\n"
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pkind=None):
+    def __init__(self, inputxds, telescope, cutoff=None, pkind=None, crop=True):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -19,6 +19,8 @@ class AntennaSurface:
             pkind: Kind of panel surface fitting, if is None defaults to telescope default
         """
 
+        self.phase = None
+        self.deviation = None
         # Origin dependant Reading
         if inputxds.attrs['AIPS']:
             self.amplitude = inputxds["AMPLITUDE"].values
@@ -27,22 +29,24 @@ class AntennaSurface:
             self.wavelength = inputxds.attrs['wavelength']
             self.amp_unit = inputxds.attrs['amp_unit']
             computephase = True
+            self.u_axis = inputxds.u.values
+            self.v_axis = inputxds.v.values
+
         else:
             if inputxds.dims['chan'] != 1:
                 raise Exception("Only single channel holographies supported")
-            self.wavelength = inputxds.chan.values[0]/clight
+            self.wavelength = clight/inputxds.chan.values[0]
             self.npoint = inputxds.dims['l']
             self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
             self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
             self.amp_unit = 'V'
+            self.u_axis = inputxds.u.values*self.wavelength
+            self.v_axis = inputxds.v.values*self.wavelength
             computephase = False
 
         # Common elements
         self.npix = inputxds.dims['u']
-        self.u_axis = inputxds.u.values
-        self.v_axis = inputxds.v.values
         self.antenna_name = inputxds.attrs['antenna_name']
-
         self.telescope = telescope
         if cutoff is None:
             self.cut = 0.21 * np.max(self.amplitude)
@@ -66,6 +70,9 @@ class AntennaSurface:
         self.inrms = np.nan
         self.ourms = np.nan
 
+        if crop:
+            self._crop_maps()
+
         if self.telescope.ringed:
             self._build_polar()
             self._build_ring_panels()
@@ -76,6 +83,25 @@ class AntennaSurface:
             self.phase = self._deviation_to_phase(self.deviation)
         else:
             self.deviation = self._phase_to_deviation(self.phase)
+
+    def _crop_maps(self, margin=0.025):
+        edge = (0.5+margin)*self.telescope.diam
+        iumin = np.argmax(self.u_axis > -edge)
+        iumax = np.argmax(self.u_axis > edge)
+        ivmin = np.argmax(self.v_axis > -edge)
+        ivmax = np.argmax(self.v_axis > edge)
+        unpix = iumax-iumin
+        vnpix = ivmax-ivmin
+        if unpix != vnpix:
+            raise Exception('This should not happen...')
+        self.npix = unpix
+        self.u_axis = self.u_axis[iumin:iumax]
+        self.v_axis = self.v_axis[ivmin:ivmax]
+        self.amplitude = self.amplitude[iumin:iumax, ivmin:ivmax]
+        if self.phase is not None:
+            self.phase = self.phase[iumin:iumax, ivmin:ivmax]
+        if self.deviation is not None:
+            self.deviation = self.deviation[iumin:iumax, ivmin:ivmax]
 
     def _phase_to_deviation(self, phase):
         """
@@ -270,11 +296,11 @@ class AntennaSurface:
         Args:
             filename: Save plot to a file rather than displaying it with matplotlib widgets
             mask: Display mask and amplitudes rather than deviation/phase images
-            plotphase: plot phase images rather than deviation images 
+            plotphase: plot phase images rather than deviation images
             screws: Display the screws on the panels
             dpi: Plot resolution in DPI
         """
-            
+
         if mask:
             fig, ax = plt.subplots(1, 2, figsize=[10, 5])
             title = "Mask"
