@@ -8,6 +8,23 @@ import dask
 
 def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, panel_kind=None, basename=None, unit='mm',
           save_mask=False, save_deviations=True, save_phase=False, parallel=True):
+    """
+    Process holographies to produce screw adjustments for panels, several data products are also produced in the process
+    Args:
+        holog_image: Input holography data, can be from astrohack.holog, but also preprocessed AIPS data
+        outfile: Name for the output directory structure containing the products
+        aipsdata: Is input data from AIPS?
+        telescope: Name of the telescope used, can be derived from the holography dataset
+        cutoff: Cut off in amplitude for the physical deviation fitting, default is 21%
+        panel_kind: Type of fitting function used to fit panel surfaces, defaults to corotated_paraboloid for ringed
+                    telescopes
+        basename: Name for subfolders in the directory structure, defaults to telescope name if None
+        unit: Unit for panel adjustments
+        save_mask: Save plot of the mask derived from amplitude cutoff to a png file
+        save_deviations: Save plot of physical deviations to a png file
+        save_phase: Save plot of phases to a png file
+        parallel: Run chunks of processing in parallel
+    """
     outfile += '.panel.zarr'
     panel_chunk_params = {'holog_image': holog_image,
                           'unit': unit,
@@ -47,7 +64,11 @@ def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, pan
 
 
 def _panel_chunk(panel_chunk_params):
-
+    """
+    Process a chunk of the holographies, usually a chunk consists of an antenna over a ddi
+    Args:
+        panel_chunk_params: dictionary of inputs
+    """
     if panel_chunk_params['origin'] == 'AIPS':
         telescope = Telescope(panel_chunk_params['telescope'])
         inputxds = xr.open_zarr(panel_chunk_params['holog_image'])
