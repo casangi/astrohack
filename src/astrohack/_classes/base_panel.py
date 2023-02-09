@@ -96,17 +96,25 @@ class BasePanel:
 
     def solve(self):
         # fallback behaviour for impossible fits
-        if self.nsamp < self.npar:
+        if self.nsamp == 0:
+            # WARNING SHOULD BE RAISED HERE
             self._associate_mean()
-            if self.nsamp == 0:
-                self.par = [0.0]
-                self.solved = True
-            else:
-                self._solve_sub()
+            self.par = [0.0]
+            self.solved = True
+        elif self.nsamp < self.npar:
+            # WARNING SHOULD BE RAISED HERE
+            self._fallback_solve()
         else:
-            self._solve_sub()
-
+            try:
+                self._solve_sub()
+            except np.linalg.LinAlgError:
+                # WARNING SHOULD BE RAISED HERE
+                self._fallback_solve()
         return
+
+    def _fallback_solve(self):
+        self._associate_mean()
+        self._solve_sub()
 
     def _solve_least_squares_paraboloid(self):
         # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
