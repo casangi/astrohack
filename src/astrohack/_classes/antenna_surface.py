@@ -19,7 +19,6 @@ class AntennaSurface:
             defaults to 21%
             pkind: Kind of panel surface fitting, if is None defaults to telescope default
         """
-
         self.phase = None
         self.deviation = None
         # Origin dependant Reading
@@ -87,6 +86,11 @@ class AntennaSurface:
             self.deviation = self._phase_to_deviation(self.phase)
 
     def _crop_maps(self, margin=0.025):
+        """
+        Crop the amplitude and phase/deviation maps to decrease that usage and speedup calculations
+        Args:
+            margin: How much margin should be left outside of the dish diameter
+        """
         edge = (0.5+margin)*self.telescope.diam
         iumin = np.argmax(self.u_axis > -edge)
         iumax = np.argmax(self.u_axis > edge)
@@ -142,16 +146,11 @@ class AntennaSurface:
         """
         Build polar coordinate grid, specific for circular antennas with panels arranged in rings
         """
-        self.rad = np.zeros([self.unpix, self.vnpix])
-        self.phi = np.zeros([self.unpix, self.vnpix])
-        for ix in range(self.unpix):
-            xcoor = self.u_axis[ix]
-            for iy in range(self.vnpix):
-                ycoor = self.v_axis[iy]
-                self.rad[ix, iy] = np.sqrt(xcoor ** 2 + ycoor ** 2)
-                self.phi[ix, iy] = np.arctan2(ycoor, xcoor)
-                if self.phi[ix, iy] < 0:
-                    self.phi[ix, iy] += 2 * np.pi
+        u2d = self.u_axis.reshape(self.unpix, 1)
+        v2d = self.v_axis.reshape(1, self.vnpix)
+        self.rad = np.sqrt(u2d**2 + v2d**2)
+        self.phi = np.arctan2(u2d, v2d)
+        self.phi = np.where(self.phi < 0, self.phi+twopi, self.phi)
 
     def _build_ring_panels(self):
         """
@@ -335,9 +334,6 @@ class AntennaSurface:
             conversion: Conversion factor between internal units and unit
             screws: show screws (Bool)
             suptitle: Superior title to be displayed on top of the figure
-
-        Returns:
-
         """
         vmax = np.nanmax(np.abs(conversion*original))
         vmin = -vmax
@@ -418,6 +414,11 @@ class AntennaSurface:
         lefile.close()
 
     def export_xds(self):
+        """
+        Export all the data to Xarray dataset
+        Returns:
+            XarrayDataSet contaning all the relevant information
+        """
         xds = xr.Dataset()
         gains = self.gains()
         rms = self.get_rms()
