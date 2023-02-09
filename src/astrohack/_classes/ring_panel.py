@@ -29,10 +29,10 @@ class RingPanel(BasePanel):
 
         rscale = 0.1 * (ourad - inrad)
         tscale = 0.1 * angle
-        screws[0, :] = np.sin(self.theta1 + tscale), np.cos(self.theta1 + tscale)
-        screws[1, :] = np.sin(self.theta2 - tscale), np.cos(self.theta2 - tscale)
-        screws[2, :] = np.sin(self.theta1 + tscale), np.cos(self.theta1 + tscale)
-        screws[3, :] = np.sin(self.theta2 - tscale), np.cos(self.theta2 - tscale)
+        screws[0, :] = np.cos(self.theta1 + tscale), np.sin(self.theta1 + tscale)
+        screws[1, :] = np.cos(self.theta2 - tscale), np.sin(self.theta2 - tscale)
+        screws[2, :] = np.cos(self.theta1 + tscale), np.sin(self.theta1 + tscale)
+        screws[3, :] = np.cos(self.theta2 - tscale), np.sin(self.theta2 - tscale)
         screws[0, :] *= (inrad + rscale)
         screws[1, :] *= (inrad + rscale)
         screws[2, :] *= (ourad - rscale)
