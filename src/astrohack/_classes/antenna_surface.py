@@ -1,4 +1,4 @@
-import numpy as np
+import xarray as xr
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astrohack._classes.base_panel import panelkinds, irotpara, ixypara
@@ -85,9 +85,6 @@ class AntennaSurface:
             self.phase = self._deviation_to_phase(self.deviation)
         else:
             self.deviation = self._phase_to_deviation(self.phase)
-        # Patchwork for the moment
-        self.phase = np.where(self.rad < self.telescope.diam / 2, self.phase, np.nan)
-        self.deviation = np.where(self.rad < self.telescope.diam / 2, self.deviation, np.nan)
 
     def _crop_maps(self, margin=0.025):
         edge = (0.5+margin)*self.telescope.diam
@@ -419,3 +416,35 @@ class AntennaSurface:
         lefile = open(filename, "w")
         lefile.write(outfile)
         lefile.close()
+
+    def export_xds(self):
+        xds = xr.Dataset()
+        gains = self.gains()
+        rms = self.get_rms()
+        xds.attrs['telescope_name'] = self.telescope.name
+        xds.attrs['antenna_name'] = self.antenna_name
+        xds.attrs['wavelength'] = self.wavelength
+        xds.attrs['AIPS'] = False
+        xds.attrs['amp_unit'] = self.amp_unit
+        xds['AMPLITUDE'] = xr.DataArray(self.amplitude, dims=["u", "v"])
+        xds['PHASE'] = xr.DataArray(self.phase, dims=["u", "v"])
+        xds['DEVIATION'] = xr.DataArray(self.deviation, dims=["u", "v"])
+        xds['MASK'] = xr.DataArray(self.mask, dims=["u", "v"])
+        if self.residuals is not None:
+            xds['PHASE_RESIDUALS'] = xr.DataArray(self.phase_residuals, dims=["u", "v"])
+            xds['RESIDUALS'] = xr.DataArray(self.residuals, dims=["u", "v"])
+            xds['PHASE_CORRECTIONS'] = xr.DataArray(self.phase_corrections, dims=["u", "v"])
+            xds['CORRECTIONS'] = xr.DataArray(self.corrections, dims=["u", "v"])
+            xds.attrs['input_rms'] = rms[0]
+            xds.attrs['output_rms'] = rms[1]
+            xds.attrs['input_gain'] = gains[0][0]
+            xds.attrs['output_gain'] = gains[1][0]
+            xds.attrs['theoretical_gain'] = gains[0][1]
+        else:
+            xds.attrs['input_rms'] = rms
+            xds.attrs['input_gain'] = gains[0]
+            xds.attrs['theoretical_gain'] = gains[1]
+
+        coords = {"u": self.u_axis, "v": self.v_axis}
+        xds = xds.assign_coords(coords)
+        return xds

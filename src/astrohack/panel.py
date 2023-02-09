@@ -6,8 +6,9 @@ import xarray as xr
 import dask
 
 
-def panel(holog_image, aipsdata=False, telescope=None, cutoff=None, panel_kind=None, basename=None, unit='mm',
+def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, panel_kind=None, basename=None, unit='mm',
           save_mask=False, save_deviations=True, save_phase=False, parallel=True):
+    outfile += '.panel.zarr'
     panel_chunk_params = {'holog_image': holog_image,
                           'unit': unit,
                           'panel_kind': panel_kind,
@@ -16,9 +17,10 @@ def panel(holog_image, aipsdata=False, telescope=None, cutoff=None, panel_kind=N
                           'save_deviations': save_deviations,
                           'save_phase': save_phase,
                           'telescope': telescope,
-                          'basename': basename
+                          'basename': basename,
+                          'outfile': outfile
                           }
-
+    os.makedirs(name=outfile,  exist_ok=True)
     if aipsdata:
         if telescope is None:
             raise Exception('For AIPS data a telescope must be specified')
@@ -61,7 +63,7 @@ def _panel_chunk(panel_chunk_params):
             telescope = Telescope(tname)
         else:
             telescope = Telescope(panel_chunk_params['telescope'])
-        suffix = '_' + inputxds.attrs['ant_name'] + '_' + panel_chunk_params['ddi']
+        suffix = '_' + inputxds.attrs['ant_name'] + '/' + panel_chunk_params['ddi']
 
     surface = AntennaSurface(inputxds, telescope, panel_chunk_params['cutoff'], panel_chunk_params['panel_kind'])
     surface.compile_panel_points()
@@ -69,28 +71,17 @@ def _panel_chunk(panel_chunk_params):
     surface.correct_surface()
 
     if panel_chunk_params['basename'] is None:
-        basename = telescope.name + suffix
+        basename = panel_chunk_params['outfile'] + '/' + telescope.name + suffix
     else:
-        basename = panel_chunk_params['basename'] + suffix
+        basename = panel_chunk_params['outfile'] + '/' + panel_chunk_params['basename'] + suffix
     os.makedirs(name=basename, exist_ok=True)
     basename += "/"
+    xds = surface.export_xds()
+    xds.to_zarr(basename+'xds.zarr', mode='w')
     surface.export_screw_adjustments(basename + "screws.txt", unit=panel_chunk_params['unit'])
-
     if panel_chunk_params['save_mask']:
         surface.plot_surface(filename=basename + "mask.png", mask=True, screws=True)
     if panel_chunk_params['save_deviations']:
         surface.plot_surface(filename=basename + "surface.png")
     if panel_chunk_params['save_phase']:
         surface.plot_surface(filename=basename + "phase.png", plotphase=True)
-
-    ingains, ougains = surface.gains()
-    inrms, ourms = surface.get_rms()
-    report = open(basename + "report.txt", "w")
-
-    report.write("Gains before correction: Real: {0:7.3} dB, Theoretical: {1:7.3} dB\n".format(*ingains))
-    report.write("RMS before correction: {0:7.3} mm\n".format(inrms))
-    report.write("\n")
-    report.write("Gains after correction: Real: {0:7.3} dB, Theoretical: {1:7.3} dB\n".format(*ougains))
-    report.write("RMS after correction: {0:7.3} mm\n".format(ourms))
-    report.close()
-    return
