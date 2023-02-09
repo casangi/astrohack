@@ -1,14 +1,14 @@
-import numpy as np
 from scipy import optimize as opt
-from astrohack._utils._linear_algebra import _gauss_elimination_numpy
+from astrohack._utils._linear_algebra import _gauss_elimination_numpy, _least_squares_fit
 from astrohack._utils._globals import *
 
-panelkinds = ["rigid", "mean", "xyparaboloid", "rotatedparaboloid", "corotatedparaboloid"]
+panelkinds = ["rigid", "mean", "xyparaboloid", "rotatedparaboloid", "corotatedparaboloid", "least_squares"]
 irigid   = 0
 imean    = 1
 ixypara  = 2
 irotpara = 3
 icorpara = 4
+ilstsqr = 5
 
 
 class BasePanel:
@@ -50,6 +50,8 @@ class BasePanel:
             self._associate_scipy(self._rotated_paraboloid, 4)
         elif self.kind == panelkinds[icorpara]:
             self._associate_scipy(self._corotated_paraboloid, 3)
+        elif self.kind == panelkinds[ilstsqr]:
+            self._associate_least_squares()
         else:
             raise Exception("Unknown panel kind: ", self.kind)
 
@@ -68,6 +70,11 @@ class BasePanel:
         self.npar = 1
         self._solve_sub = self._solve_mean
         self.corr_point = self._corr_point_mean
+
+    def _associate_least_squares(self):
+        self.npar = 9
+        self._solve_sub = self._solve_least_squares_paraboloid
+        self.corr_point = self._corr_point_least_squares_paraboloid
 
     def add_point(self, value):
         """
@@ -91,6 +98,32 @@ class BasePanel:
             self._solve_sub()
 
         return
+
+    def _solve_least_squares_paraboloid(self):
+        # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
+        data = np.array(self.values)
+        system = np.full((self.nsamp, self.npar), 1.0)
+        system[:, 0] = data[:, 0]**2 * data[:, 1]**2
+        system[:, 1] = data[:, 0]**2 * data[:, 1]
+        system[:, 2] = data[:, 1]**2 * data[:, 0]
+        system[:, 3] = data[:, 0] ** 2
+        system[:, 4] = data[:, 1] ** 2
+        system[:, 5] = data[:, 0] * data[:, 1]
+        system[:, 6] = data[:, 0]
+        system[:, 7] = data[:, 1]
+        vector = data[:, -1]
+        result = _least_squares_fit(system, vector)
+        self.par = result[0]
+        self.solved = True
+
+    def _corr_point_least_squares_paraboloid(self, xcoor, ycoor):
+        # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
+        xsq = xcoor**2
+        ysq = ycoor**2
+        point = self.par[0]*xsq*ysq + self.par[1]*xsq*ycoor + self.par[2]*ysq*xcoor
+        point += self.par[3]*xsq + self.par[4]*ysq + self.par[5]*xcoor*ycoor
+        point += self.par[6]*xcoor + self.par[7]*ycoor + self.par[8]
+        return point
 
     def _solve_scipy(self, verbose=False):
         """
