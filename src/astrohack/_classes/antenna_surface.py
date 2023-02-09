@@ -141,7 +141,7 @@ class AntennaSurface:
         self.mask = np.where(self.rad > self.telescope.inlim, self.mask, False)
         self.mask = np.where(self.rad < self.telescope.oulim, self.mask, False)
         self.mask = np.where(np.isnan(self.amplitude), False, self.mask)
-        self.mask = np.where(np.isnan(self.deviation), False, self.mask)
+        self.mask = np.where(self.deviation != self.deviation, False, self.mask)
 
     def _build_polar(self):
         """
@@ -182,12 +182,11 @@ class AntennaSurface:
             for iy in range(self.vnpix):
                 if self.mask[ix, iy]:
                     yc = self.v_axis[iy]
-                    if not np.isnan(self.deviation[ix, iy]):
-                        # How to do the coordinate choice here without
-                        # adding an if?
-                        for panel in self.panels:
-                            if panel.is_inside(self.rad[ix, iy], self.phi[ix, iy]):
-                                panel.add_point([xc, yc, ix, iy, self.deviation[ix, iy]])
+                    # How to do the coordinate choice here without
+                    # adding an if?
+                    for panel in self.panels:
+                        if panel.is_inside(self.rad[ix, iy], self.phi[ix, iy]):
+                            panel.add_point([xc, yc, ix, iy, self.deviation[ix, iy]])
 
     def _fetch_panel_ringed(self, ring, panel):
         """
