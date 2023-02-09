@@ -40,10 +40,10 @@ class RingPanel(BasePanel):
         super().__init__(kind, ipanel, screws)
 
         self.zeta = (ipanel + 0.5) * angle
-        self.bmp = [inrad * np.sin(self.zeta), -inrad * np.cos(self.zeta)]
-        self.tmp = [ourad * np.sin(self.zeta), -ourad * np.cos(self.zeta)]
+        self.bmp = [inrad * np.cos(self.zeta), -inrad * np.sin(self.zeta)]
+        self.tmp = [ourad * np.cos(self.zeta), -ourad * np.sin(self.zeta)]
         rt = (self.inrad + self.ourad) / 2
-        self.center = [rt * np.sin(self.zeta), rt * np.cos(self.zeta)]
+        self.center = [rt * np.cos(self.zeta), rt * np.sin(self.zeta)]
 
     def is_inside(self, rad, phi):
         """
