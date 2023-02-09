@@ -2,13 +2,15 @@ from scipy import optimize as opt
 from astrohack._utils._linear_algebra import _gauss_elimination_numpy, _least_squares_fit
 from astrohack._utils._globals import *
 
-panelkinds = ["rigid", "mean", "xyparaboloid", "rotatedparaboloid", "corotatedparaboloid", "least_squares"]
+panelkinds = ["rigid", "mean", "xyparaboloid", "rotatedparaboloid", "corotatedparaboloid", "least_squares",
+              "corotated_lst_sq"]
 irigid   = 0
 imean    = 1
 ixypara  = 2
 irotpara = 3
 icorpara = 4
 ilstsqr = 5
+icolstsq = 6
 
 
 class BasePanel:
@@ -52,6 +54,8 @@ class BasePanel:
             self._associate_scipy(self._corotated_paraboloid, 3)
         elif self.kind == panelkinds[ilstsqr]:
             self._associate_least_squares()
+        elif self.kind == panelkinds[icolstsq]:
+            self._associate_corotated_lst_sq()
         else:
             raise Exception("Unknown panel kind: ", self.kind)
 
@@ -75,6 +79,11 @@ class BasePanel:
         self.npar = 9
         self._solve_sub = self._solve_least_squares_paraboloid
         self.corr_point = self._corr_point_least_squares_paraboloid
+
+    def _associate_corotated_lst_sq(self):
+        self.npar = 3
+        self._solve_sub = self._solve_corotated_lst_sq
+        self.corr_point = self._corr_point_corotated_lst_sq
 
     def add_point(self, value):
         """
@@ -112,8 +121,7 @@ class BasePanel:
         system[:, 6] = data[:, 0]
         system[:, 7] = data[:, 1]
         vector = data[:, -1]
-        result = _least_squares_fit(system, vector)
-        self.par = result[0]
+        self.par, _, _ = _least_squares_fit(system, vector)
         self.solved = True
 
     def _corr_point_least_squares_paraboloid(self, xcoor, ycoor):
@@ -124,6 +132,24 @@ class BasePanel:
         point += self.par[3]*xsq + self.par[4]*ysq + self.par[5]*xcoor*ycoor
         point += self.par[6]*xcoor + self.par[7]*ycoor + self.par[8]
         return point
+
+    def _solve_corotated_lst_sq(self):
+        # a*u**2 + b*v**2 + c
+        data = np.array(self.values)
+        system = np.full((self.nsamp, self.npar), 1.0)
+        xc, yc = self.center
+        system[:, 0] = ((data[:, 0] - xc) * np.cos(self.zeta) + (data[:, 1] - yc) * np.sin(self.zeta))**2  # U
+        system[:, 1] = ((data[:, 0] - xc) * np.sin(self.zeta) + (data[:, 1] - yc) * np.cos(self.zeta))**2  # V
+        vector = data[:, -1]
+        self.par, _, _ = _least_squares_fit(system, vector)
+        self.solved = True
+
+    def _corr_point_corotated_lst_sq(self, xcoor, ycoor):
+        # a*u**2 + b*v**2 + c
+        xc, yc = self.center
+        usq = ((xcoor - xc) * np.cos(self.zeta) + (ycoor - yc) * np.sin(self.zeta))**2
+        vsq = ((xcoor - xc) * np.sin(self.zeta) + (ycoor - yc) * np.cos(self.zeta))**2
+        return self.par[0]*usq + self.par[1]*vsq + self.par[2]
 
     def _solve_scipy(self, verbose=False):
         """
