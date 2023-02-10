@@ -32,7 +32,14 @@
         10.808,
         12.5
     ],
+    "panel_numbering": "ring, clockwise, top",
     "ringed": true,
+    "screw_description": [
+        "il",
+        "ir",
+        "ol",
+        "or"
+    ],
     "secondary_dist": 0.522,
     "surp_slope": 0.65
 }
