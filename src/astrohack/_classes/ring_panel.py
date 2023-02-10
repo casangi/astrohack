@@ -40,8 +40,6 @@ class RingPanel(BasePanel):
         super().__init__(kind, ipanel, screws)
 
         self.zeta = (ipanel + 0.5) * angle
-        self.bmp = [inrad * np.cos(self.zeta), -inrad * np.sin(self.zeta)]
-        self.tmp = [ourad * np.cos(self.zeta), -ourad * np.sin(self.zeta)]
         rt = (self.inrad + self.ourad) / 2
         self.center = [rt * np.cos(self.zeta), rt * np.sin(self.zeta)]
 
@@ -87,8 +85,6 @@ class RingPanel(BasePanel):
         print("{0:20s}={1:8.5f}".format("theta1", self.theta1))
         print("{0:20s}={1:8.5f}".format("theta2", self.theta2))
         print("{0:20s}={1:8.5f}".format("zeta", self.zeta))
-        print("{0:20s}={1:8.5f}, {2:8.5f}".format("bmp", *self.bmp))
-        print("{0:20s}={1:8.5f}, {2:8.5f}".format("tmp", *self.tmp))
         print("{0:20s}={1:8d}".format("nsamp", self.nsamp))
         if verbose:
             for isamp in range(self.nsamp):
