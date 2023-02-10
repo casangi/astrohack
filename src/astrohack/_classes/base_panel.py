@@ -21,18 +21,18 @@ class BasePanel:
     markersize = 2
     linecolor = 'black'
 
-    def __init__(self, kind, ipanel, screws):
+    def __init__(self, kind, screws, label):
         """
         Initializes a BasePanel with the common machinery to both PolygonPanel and RingPanel
         Args:
             kind: What kind of surface to be used in fitting ["rigid", "mean", "xyparaboloid",
             "rotatedparaboloid", "corotatedparaboloid"]
-            ipanel: Panel numbering
+            label: Panel label
             screws: position of the screws
         """
         self.kind = kind
         self.solved = False
-        self.ipanel = ipanel + 1
+        self.label = label
         self.screws = screws
         self.samples = []
         self.margins = []
@@ -380,7 +380,7 @@ class BasePanel:
         Args:
             ax: matplotlib axes instance
         """
-        ax.text(self.center[0], self.center[1], str(self.ipanel), fontsize=self.fontsize, ha='center')
+        ax.text(self.center[0], self.center[1], self.label, fontsize=self.fontsize, ha='center')
 
     def plot_screws(self, ax):
         """

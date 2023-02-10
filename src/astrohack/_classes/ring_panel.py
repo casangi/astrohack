@@ -25,14 +25,16 @@ class RingPanel(BasePanel):
         self.ourad = ourad
         self.theta1 = ipanel * angle
         self.theta2 = (ipanel + 1) * angle
+        self.zeta = (ipanel + 0.5) * angle
+        dradius = ourad-inrad
         self.margin_theta1 = self.theta1 + margin * angle
         self.margin_theta2 = self.theta2 - margin * angle
-        dradius = ourad-inrad
         self.margin_inrad = inrad + margin * dradius
         self.margin_ourad = ourad - margin * dradius
         self.solved = False
-        screws = np.ndarray([4, 2])
 
+        screws = np.ndarray([4, 2])
+        self.first = ipanel == 0
         rscale = 0.1 * dradius
         tscale = 0.1 * angle
         screws[0, :] = np.cos(self.theta1 + tscale), np.sin(self.theta1 + tscale)
@@ -43,9 +45,8 @@ class RingPanel(BasePanel):
         screws[1, :] *= (inrad + rscale)
         screws[2, :] *= (ourad - rscale)
         screws[3, :] *= (ourad - rscale)
-        super().__init__(kind, ipanel, screws)
+        super().__init__(kind, screws, str(ipanel+1))
 
-        self.zeta = (ipanel + 0.5) * angle
         rt = (self.inrad + self.ourad) / 2
         self.center = [rt * np.cos(self.zeta), rt * np.sin(self.zeta)]
 
@@ -79,30 +80,21 @@ class RingPanel(BasePanel):
         Returns:
         String with screw adjustments for this panel
         """
-        string = '{0:8d} {1:8d}'.format(self.iring, self.ipanel)
+        string = '{0:8d} {1:8d}'.format(self.iring, self.label)
         return string+self.export_screw_adjustments(unit)
 
-    def print_misc(self, verbose=False):
+    def print_misc(self):
         """
         Print miscelaneous information about the panel to the terminal
-        Args:
-            verbose: Include more information in print
         """
         print("########################################")
-        print("{0:20s}={1:8d}".format("ipanel", self.ipanel))
+        print("{0:20s}={1:8s}".format("ipanel", self.label))
         print("{0:20s}={1:8s}".format("kind", " " + self.kind))
         print("{0:20s}={1:8.5f}".format("inrad", self.inrad))
         print("{0:20s}={1:8.5f}".format("ourad", self.ourad))
         print("{0:20s}={1:8.5f}".format("theta1", self.theta1))
         print("{0:20s}={1:8.5f}".format("theta2", self.theta2))
         print("{0:20s}={1:8.5f}".format("zeta", self.zeta))
-        print("{0:20s}={1:8d}".format("nsamp", self.nsamp))
-        if verbose:
-            for isamp in range(self.nsamp):
-                strg = "{0:20s}=".format("samp{0:d}".format(isamp))
-                for val in self.values[isamp]:
-                    strg += str(val) + ", "
-                print(strg)
         print()
 
     def plot(self, ax, screws=False):
@@ -117,7 +109,7 @@ class RingPanel(BasePanel):
         x2 = self.ourad * np.sin(self.theta1)
         y2 = self.ourad * np.cos(self.theta1)
         ax.plot([x1, x2], [y1, y2], ls='-', color=self.linecolor, marker=None, lw=self.linewidth)
-        if self.ipanel == 1:
+        if self.first:
             # Draw ring outline with first panel
             inrad = plt.Circle((0, 0), self.inrad, color=self.linecolor, fill=False, lw=self.linewidth)
             ourad = plt.Circle((0, 0), self.ourad, color=self.linecolor, fill=False, lw=self.linewidth)
