@@ -1,4 +1,6 @@
 import numpy as np
+
+from numba import njit
 from astrohack._utils._linear_algebra import _least_squares_fit
 
 
@@ -215,7 +217,7 @@ def create_phase_model(npix, parameters, wavelength, telescope, cellxy):
                               telescope.surp_slope)
     return model
 
-
+@njit(cache=False, nogil=True)
 def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, magnification, phase_slope, focal_length):
     """
     Builds the design matrix to be used on the least squares fitting
@@ -398,7 +400,7 @@ def _correct_phase(phase_image, cellxy, parameters, magnification, focal_length,
 
     return corrected_phase, phase_model
 
-
+@njit(cache=False, nogil=True)
 def _matrix_coeffs(x_delta_pix, y_delta_pix, magnification, focal_length, cellxy, phase_slope):
     """
     Computes the matrix coefficients used when building the design matrix and correcting the phase image

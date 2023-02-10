@@ -357,7 +357,7 @@ def _holog_chunk(holog_chunk_params):
 
         phase_corrected_angle = np.empty_like(aperture_grid)
 
-        aperture_radius = (0.55*telescope.diam)/wavelength
+        aperture_radius = (0.55*telescope.diam)/wavelength 
 
         i = np.where(np.abs(u) < aperture_radius)[0]
         j = np.where(np.abs(v) < aperture_radius)[0]
