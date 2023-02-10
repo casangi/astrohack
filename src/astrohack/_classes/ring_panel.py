@@ -7,48 +7,56 @@ class RingPanel(BasePanel):
     # This class describes and treats panels that are arranged in
     # rings on the Antenna surface
 
-    def __init__(self, kind, angle, iring, ipanel, inrad, ourad, margin=0.05):
+    def __init__(self, kind, angle, ipanel, label, inrad, ourad, margin=0.05, screw_scheme=None):
         """
         Initializes a panel that is a section of a ring in a circular antenna
         Args:
             kind: What kind of surface to be used in fitting ["rigid", "mean", "xyparaboloid",
             "rotatedparaboloid", "corotatedparaboloid"]
             angle: Azimuthal span of the panel
-            iring: Which ring is the panel in
             ipanel: Panel number clockwise from top
+            label: Panel label
             inrad: Radius at panel inner side
             ourad: Radius at panel outer side
             margin: Fraction from panel edge inwards that won't be used for fitting
         """
-        self.iring = iring + 1
         self.inrad = inrad
         self.ourad = ourad
         self.theta1 = ipanel * angle
         self.theta2 = (ipanel + 1) * angle
-        self.zeta = (ipanel + 0.5) * angle
-        dradius = ourad-inrad
+        dradius = ourad - inrad
         self.margin_theta1 = self.theta1 + margin * angle
         self.margin_theta2 = self.theta2 - margin * angle
         self.margin_inrad = inrad + margin * dradius
         self.margin_ourad = ourad - margin * dradius
-        self.solved = False
-
-        screws = np.ndarray([4, 2])
         self.first = ipanel == 0
-        rscale = 0.1 * dradius
-        tscale = 0.1 * angle
-        screws[0, :] = np.cos(self.theta1 + tscale), np.sin(self.theta1 + tscale)
-        screws[1, :] = np.cos(self.theta2 - tscale), np.sin(self.theta2 - tscale)
-        screws[2, :] = np.cos(self.theta1 + tscale), np.sin(self.theta1 + tscale)
-        screws[3, :] = np.cos(self.theta2 - tscale), np.sin(self.theta2 - tscale)
-        screws[0, :] *= (inrad + rscale)
-        screws[1, :] *= (inrad + rscale)
-        screws[2, :] *= (ourad - rscale)
-        screws[3, :] *= (ourad - rscale)
-        super().__init__(kind, screws, str(ipanel+1))
-
+        zeta = (ipanel + 0.5) * angle
         rt = (self.inrad + self.ourad) / 2
-        self.center = [rt * np.cos(self.zeta), rt * np.sin(self.zeta)]
+        self.center = [rt * np.cos(zeta), rt * np.sin(zeta)]
+        screws = self._init_screws(screw_scheme)
+        # Now we are ready to initialize the base object
+        super().__init__(kind, screws, label, center=self.center, zeta=zeta)
+
+    def _init_screws(self, scheme, offset=0.1):
+        if scheme is None:
+            scheme = ['il', 'ir', 'ol', 'or']
+        nscrews = len(scheme)
+        screws = np.ndarray([nscrews, 2])
+        roffset = offset*(self.ourad-self.inrad)
+        toffset = offset*(self.theta2-self.theta1)
+        for iscrew in range(nscrews):
+            if scheme[iscrew] == 'c':
+                screws[iscrew, :] = self.center
+                continue
+            if scheme[iscrew][1] == 'l':
+                screws[iscrew, :] = np.cos(self.theta1 + toffset), np.sin(self.theta1 + toffset)
+            else:
+                screws[iscrew, :] = np.cos(self.theta2 - toffset), np.sin(self.theta2 - toffset)
+            if scheme[iscrew][0] == 'i':
+                screws[iscrew, :] *= self.inrad + roffset
+            else:
+                screws[iscrew, :] *= self.ourad - roffset
+        return screws
 
     def is_inside(self, rad, phi):
         """
@@ -70,18 +78,6 @@ class RingPanel(BasePanel):
         radius = self.margin_inrad <= rad <= self.margin_ourad
         issample = angle and radius
         return issample, inpanel
-
-    def export_adjustments(self, unit='mm'):
-        """
-        Exports panel screw adjustments to a string
-        Args:
-            unit: Unit for screw adjustments ['mm','miliinches']
-
-        Returns:
-        String with screw adjustments for this panel
-        """
-        string = '{0:8d} {1:8d}'.format(self.iring, self.label)
-        return string+self.export_screw_adjustments(unit)
 
     def print_misc(self):
         """

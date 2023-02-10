@@ -21,7 +21,7 @@ class BasePanel:
     markersize = 2
     linecolor = 'black'
 
-    def __init__(self, kind, screws, label):
+    def __init__(self, kind, screws, label, center=None, zeta=None):
         """
         Initializes a BasePanel with the common machinery to both PolygonPanel and RingPanel
         Args:
@@ -29,6 +29,8 @@ class BasePanel:
             "rotatedparaboloid", "corotatedparaboloid"]
             label: Panel label
             screws: position of the screws
+            center: Panel center
+            zeta: panel center angle
         """
         self.kind = kind
         self.solved = False
@@ -38,9 +40,14 @@ class BasePanel:
         self.margins = []
         self.corr = None
 
-        # These are overridden by the derived classes
-        self.center = [0, 0]
-        self.zeta = 0
+        if center is None:
+            self.center = [0, 0]
+        else:
+            self.center = center
+        if zeta is None:
+            self.zeta = 0
+        else:
+            self.zeta = zeta
 
         if self.kind == panelkinds[irigid]:
             self._associate_rigid()
@@ -354,7 +361,7 @@ class BasePanel:
         """
         return self.par[0]
 
-    def export_screw_adjustments(self, unit='mm'):
+    def export_adjustments(self, unit='mm'):
         """
         Exports panel screw adjustments to a string
         Args:
@@ -368,8 +375,7 @@ class BasePanel:
             fac = m2mils
         else:
             raise Exception("Unknown unit: " + unit)
-
-        string = ''
+        string = self.label
         for screw in self.screws[:, ]:
             string += ' {0:10.2f}'.format(fac * self.corr_point(*screw))
         return string
@@ -380,7 +386,7 @@ class BasePanel:
         Args:
             ax: matplotlib axes instance
         """
-        ax.text(self.center[0], self.center[1], self.label, fontsize=self.fontsize, ha='center')
+        ax.text(self.center[1], self.center[0], self.label, fontsize=self.fontsize, ha='center')
 
     def plot_screws(self, ax):
         """
@@ -390,5 +396,5 @@ class BasePanel:
         """
         for iscrew in range(self.screws.shape[0]):
             screw = self.screws[iscrew, ]
-            ax.scatter(screw[0], screw[1], marker=self.markers[iscrew], lw=self.linewidth, s=self.markersize,
+            ax.scatter(screw[1], screw[0], marker=self.markers[iscrew], lw=self.linewidth, s=self.markersize,
                        color=self.colors[iscrew])
