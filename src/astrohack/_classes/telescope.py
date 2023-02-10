@@ -33,11 +33,15 @@ class Telescope:
                 filepath = _find_cfg_file(name, path)
         except FileNotFoundError:
             raise Exception("Unknown telescope: " + name)
+        
         self.read(filepath)
+        
         if self.ringed:
             self._ringed_consistency()
+        
         else:
             self._general_consistency()
+        
         return
 
     def _ringed_consistency(self):
