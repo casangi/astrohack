@@ -319,10 +319,6 @@ def _holog_chunk(holog_chunk_params):
 
             time_centroid.append(ant_data_dict[ddi][scan].coords["time"][time_centroid_index].values)
 
-        
-            # Normalization
-            import time
-
             for chan in range(n_chan): ### Todo: Vectorize scan and channel axis
                 xx_peak = _find_peak_beam_value(beam_grid[scan_index, chan, 0, ...], scaling=0.25)
                 
