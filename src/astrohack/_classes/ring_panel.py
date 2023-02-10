@@ -7,7 +7,7 @@ class RingPanel(BasePanel):
     # This class describes and treats panels that are arranged in
     # rings on the Antenna surface
 
-    def __init__(self, kind, angle, iring, ipanel, inrad, ourad):
+    def __init__(self, kind, angle, iring, ipanel, inrad, ourad, margin=0.05):
         """
         Initializes a panel that is a section of a ring in a circular antenna
         Args:
@@ -18,16 +18,22 @@ class RingPanel(BasePanel):
             ipanel: Panel number clockwise from top
             inrad: Radius at panel inner side
             ourad: Radius at panel outer side
+            margin: Fraction from panel edge inwards that won't be used for fitting
         """
         self.iring = iring + 1
         self.inrad = inrad
         self.ourad = ourad
         self.theta1 = ipanel * angle
         self.theta2 = (ipanel + 1) * angle
+        self.margin_theta1 = self.theta1 + margin * angle
+        self.margin_theta2 = self.theta2 - margin * angle
+        dradius = ourad-inrad
+        self.margin_inrad = inrad + margin * dradius
+        self.margin_ourad = ourad - margin * dradius
         self.solved = False
         screws = np.ndarray([4, 2])
 
-        rscale = 0.1 * (ourad - inrad)
+        rscale = 0.1 * dradius
         tscale = 0.1 * angle
         screws[0, :] = np.cos(self.theta1 + tscale), np.sin(self.theta1 + tscale)
         screws[1, :] = np.cos(self.theta2 - tscale), np.sin(self.theta2 - tscale)
@@ -51,13 +57,18 @@ class RingPanel(BasePanel):
             phi: angle of the point in polar coordinates
 
         Returns:
-        True if point is inside the panel, False otherwise
+            issample: True if point is inside the fitting part of the panel
+            inpanel: True if point is inside the panel
         """
         # Simple test of polar coordinates to check that a point is
         # inside this panel
         angle = self.theta1 <= phi <= self.theta2
         radius = self.inrad <= rad <= self.ourad
-        return angle and radius
+        inpanel = angle and radius
+        angle = self.margin_theta1 <= phi <= self.margin_theta2
+        radius = self.margin_inrad <= rad <= self.margin_ourad
+        issample = angle and radius
+        return issample, inpanel
 
     def export_adjustments(self, unit='mm'):
         """

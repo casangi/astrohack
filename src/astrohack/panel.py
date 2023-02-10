@@ -8,7 +8,7 @@ from astrohack._utils._io import _load_image_xds
 
 
 def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, panel_kind=None, basename=None, unit='mm',
-          save_mask=False, save_deviations=True, save_phase=False, parallel=True):
+          panel_margins=0.05, save_mask=False, save_deviations=True, save_phase=False, parallel=True):
     """
     Process holographies to produce screw adjustments for panels, several data products are also produced in the process
     Args:
@@ -28,20 +28,18 @@ def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, pan
     """
 
     outfile += '.panel.zarr'
-
-    panel_chunk_params = {
-        'holog_image': holog_image,
-        'unit': unit,
-        'panel_kind': panel_kind,
-        'cutoff': cutoff,
-        'save_mask': save_mask,
-        'save_deviations': save_deviations,
-        'save_phase': save_phase,
-        'telescope': telescope,
-        'basename': basename,
-        'outfile': outfile
-    }
-    
+    panel_chunk_params = {'holog_image': holog_image,
+                          'unit': unit,
+                          'panel_kind': panel_kind,
+                          'cutoff': cutoff,
+                          'save_mask': save_mask,
+                          'save_deviations': save_deviations,
+                          'save_phase': save_phase,
+                          'telescope': telescope,
+                          'basename': basename,
+                          'outfile': outfile,
+                          'panel_margins': panel_margins,
+                          }
     os.makedirs(name=outfile,  exist_ok=True)
 
     if aipsdata:
@@ -103,7 +101,8 @@ def _panel_chunk(panel_chunk_params):
             
         suffix = '_' + inputxds.attrs['ant_name'] + '/' + panel_chunk_params['ddi']
 
-    surface = AntennaSurface(inputxds, telescope, panel_chunk_params['cutoff'], panel_chunk_params['panel_kind'])
+    surface = AntennaSurface(inputxds, telescope, panel_chunk_params['cutoff'], panel_chunk_params['panel_kind'],
+                             panel_margins=panel_chunk_params['panel_margins'])
     surface.compile_panel_points()
     surface.fit_surface()
     surface.correct_surface()

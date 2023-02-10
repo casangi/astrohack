@@ -9,7 +9,7 @@ lnbr = "\n"
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pkind=None, crop=True):
+    def __init__(self, inputxds, telescope, cutoff=None, pkind=None, crop=True, panel_margins=0.05):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -60,6 +60,7 @@ class AntennaSurface:
                 self.panelkind = panelkinds[ixypara]
         else:
             self.panelkind = pkind
+        self.panel_margins = panel_margins
         self.reso = self.telescope.diam / self.npoint
         self.residuals = None
         self.corrections = None
@@ -168,6 +169,7 @@ class AntennaSurface:
                     ipanel,
                     self.telescope.inrad[iring],
                     self.telescope.ourad[iring],
+                    margin=self.panel_margins,
                 )
                 self.panels.append(panel)
         return
@@ -182,11 +184,13 @@ class AntennaSurface:
             for iy in range(self.vnpix):
                 if self.mask[ix, iy]:
                     yc = self.v_axis[iy]
-                    # How to do the coordinate choice here without
-                    # adding an if?
                     for panel in self.panels:
-                        if panel.is_inside(self.rad[ix, iy], self.phi[ix, iy]):
-                            panel.add_point([xc, yc, ix, iy, self.deviation[ix, iy]])
+                        issample, inpanel = panel.is_inside(self.rad[ix, iy], self.phi[ix, iy])
+                        if inpanel:
+                            if issample:
+                                panel.add_sample([xc, yc, ix, iy, self.deviation[ix, iy]])
+                            else:
+                                panel.add_margin([xc, yc, ix, iy, self.deviation[ix, iy]])
 
     def _fetch_panel_ringed(self, ring, panel):
         """
@@ -273,12 +277,11 @@ class AntennaSurface:
         self.corrections = np.where(self.mask, 0, np.nan)
         self.residuals = np.copy(self.deviation)
         for panel in self.panels:
-            panel.get_corrections()
-            for ipnt in range(len(panel.corr)):
-                val = panel.values[ipnt]
-                ix, iy = int(val[2]), int(val[3])
-                self.residuals[ix, iy] -= panel.corr[ipnt]
-                self.corrections[ix, iy] = -panel.corr[ipnt]
+            corrections = panel.get_corrections()
+            for corr in corrections:
+                ix, iy = int(corr[0]), int(corr[1])
+                self.residuals[ix, iy] -= corr[-1]
+                self.corrections[ix, iy] = -corr[-1]
         self.phase_corrections = self._deviation_to_phase(self.corrections)
         self.phase_residuals = self._deviation_to_phase(self.residuals)
 

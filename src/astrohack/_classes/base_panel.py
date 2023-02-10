@@ -34,8 +34,8 @@ class BasePanel:
         self.solved = False
         self.ipanel = ipanel + 1
         self.screws = screws
-        self.nsamp = 0
-        self.values = []
+        self.samples = []
+        self.margins = []
         self.corr = None
 
         # These are overridden by the derived classes
@@ -85,23 +85,25 @@ class BasePanel:
         self._solve_sub = self._solve_corotated_lst_sq
         self.corr_point = self._corr_point_corotated_lst_sq
 
-    def add_point(self, value):
+    def add_sample(self, value):
         """
-        Add a point to the panel's list of point to be fitted
+        Add a point to the panel's list of points to be fitted
         Args:
             value: tuple/list containing point description [xcoor,ycoor,xidx,yidx,value]
         """
-        self.values.append(value)
-        self.nsamp += 1
+        self.samples.append(value)
+
+    def add_margin(self, value):
+        """
+        Add a point to the panel's list of points to be corrected, but not fitted
+        Args:
+            value: tuple/list containing point description [xcoor,ycoor,xidx,yidx,value]
+        """
+        self.margins.append(value)
 
     def solve(self):
         # fallback behaviour for impossible fits
-        if self.nsamp == 0:
-            # WARNING SHOULD BE RAISED HERE
-            self._associate_mean()
-            self.par = [0.0]
-            self.solved = True
-        elif self.nsamp < self.npar:
+        if len(self.samples) < self.npar:
             # WARNING SHOULD BE RAISED HERE
             self._fallback_solve()
         else:
@@ -118,8 +120,8 @@ class BasePanel:
 
     def _solve_least_squares_paraboloid(self):
         # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
-        data = np.array(self.values)
-        system = np.full((self.nsamp, self.npar), 1.0)
+        data = np.array(self.samples)
+        system = np.full((len(self.samples), self.npar), 1.0)
         system[:, 0] = data[:, 0]**2 * data[:, 1]**2
         system[:, 1] = data[:, 0]**2 * data[:, 1]
         system[:, 2] = data[:, 1]**2 * data[:, 0]
@@ -143,8 +145,8 @@ class BasePanel:
 
     def _solve_corotated_lst_sq(self):
         # a*u**2 + b*v**2 + c
-        data = np.array(self.values)
-        system = np.full((self.nsamp, self.npar), 1.0)
+        data = np.array(self.samples)
+        system = np.full((len(self.samples), self.npar), 1.0)
         xc, yc = self.center
         system[:, 0] = ((data[:, 0] - xc) * np.cos(self.zeta) + (data[:, 1] - yc) * np.sin(self.zeta))**2  # U
         system[:, 1] = ((data[:, 0] - xc) * np.sin(self.zeta) + (data[:, 1] - yc) * np.cos(self.zeta))**2  # V
@@ -165,11 +167,11 @@ class BasePanel:
         Args:
             verbose: Increase verbosity in the fitting process
         """
-        devia = np.ndarray([self.nsamp])
-        coords = np.ndarray([2, self.nsamp])
-        for i in range(self.nsamp):
-            devia[i] = self.values[i][-1]
-            coords[:, i] = self.values[i][0], self.values[i][1]
+        devia = np.ndarray([len(self.samples)])
+        coords = np.ndarray([2, len(self.samples)])
+        for i in range(len(self.samples)):
+            devia[i] = self.samples[i][-1]
+            coords[:, i] = self.samples[i][0], self.samples[i][1]
 
         liminf = [0, 0, -np.inf]
         limsup = [np.inf, np.inf, np.inf]
@@ -260,27 +262,22 @@ class BasePanel:
         """
         Fit panel surface using AIPS gaussian elimination model for rigid panels
         """
-        syssize = 3
-        if self.nsamp < syssize:
-            # In this case the matrix will always be singular as the
-            # rows will be linear combinations
-            return
-        system = np.zeros([syssize, syssize])
-        vector = np.zeros(syssize)
-        for ipoint in range(len(self.values)):
-            if self.values[ipoint][-1] != 0:
-                system[0, 0] += self.values[ipoint][0] * self.values[ipoint][0]
-                system[0, 1] += self.values[ipoint][0] * self.values[ipoint][1]
-                system[0, 2] += self.values[ipoint][0]
+        system = np.zeros([self.npar, self.npar])
+        vector = np.zeros(self.npar)
+        for ipoint in range(len(self.samples)):
+            if self.samples[ipoint][-1] != 0:
+                system[0, 0] += self.samples[ipoint][0] * self.samples[ipoint][0]
+                system[0, 1] += self.samples[ipoint][0] * self.samples[ipoint][1]
+                system[0, 2] += self.samples[ipoint][0]
                 system[1, 0] = system[0, 1]
-                system[1, 1] += self.values[ipoint][1] * self.values[ipoint][1]
-                system[1, 2] += self.values[ipoint][1]
+                system[1, 1] += self.samples[ipoint][1] * self.samples[ipoint][1]
+                system[1, 2] += self.samples[ipoint][1]
                 system[2, 0] = system[0, 2]
                 system[2, 1] = system[1, 2]
                 system[2, 2] += 1.0
-                vector[0] += self.values[ipoint][-1] * self.values[ipoint][0]
-                vector[1] += self.values[ipoint][-1] * self.values[ipoint][1]
-                vector[2] += self.values[ipoint][-1]
+                vector[0] += self.samples[ipoint][-1] * self.samples[ipoint][0]
+                vector[1] += self.samples[ipoint][-1] * self.samples[ipoint][1]
+                vector[2] += self.samples[ipoint][-1]
 
         self.par = _gauss_elimination_numpy(system, vector)
         self.solved = True
@@ -290,20 +287,13 @@ class BasePanel:
         """
         Fit panel surface as a simple mean of its points Z deviation
         """
-        if self.nsamp > 0:
+        if len(self.samples) > 0:
             # Solve panel adjustments for rigid vertical shift only panels
-            self.par = np.zeros(1)
-            shiftmean = 0.
-            ncount = 0
-            for value in self.values:
-                if value[-1] != 0:
-                    shiftmean += value[-1]
-                    ncount += 1
-
-            shiftmean /= ncount
-            self.par[0] = shiftmean
+            self.par = np.zeros(self.npar)
+            self.par[0] = np.mean(self.samples)
             self.solved = True
         else:
+            self.par[0] = 0
             self.solved = False
         return
 
@@ -313,11 +303,20 @@ class BasePanel:
         """
         if not self.solved:
             raise Exception("Cannot correct a panel that is not solved")
-        self.corr = np.ndarray([len(self.values)])
+        lencorr = len(self.samples)+len(self.margins)
+        self.corr = np.ndarray([lencorr, 3])
         icorr = 0
-        for val in self.values:
-            self.corr[icorr] = self.corr_point(val[0], val[1])
+        for isamp in range(len(self.samples)):
+            xc, yc = self.samples[isamp][0:2]
+            ix, iy = self.samples[isamp][2:4]
+            self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
             icorr += 1
+        for imarg in range(len(self.margins)):
+            xc, yc = self.margins[imarg][0:2]
+            ix, iy = self.margins[imarg][2:4]
+            self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
+            icorr += 1
+        return self.corr
 
     def _corr_point_scipy(self, xcoor, ycoor):
         """
