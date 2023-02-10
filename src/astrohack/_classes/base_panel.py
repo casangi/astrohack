@@ -199,22 +199,23 @@ class BasePanel:
                     print("Converged with less than {0:d} iterations".format(maxfev))
                 break
 
-    def _xyaxes_paraboloid(self, coords, xcurv, ycurv, zoff):
+    def _xyaxes_paraboloid(self, coords, ucurv, vcurv, zoff):
         """
         Surface model to be used in fitting with scipy
         Assumes that the center of the paraboloid is the center of the panel
         In this model the panel can only bend in the x and y directions
         Args:
             coords: [x,y] coordinate pair for point
-            xcurv: curvature in x direction
-            ycurv: curvature in y direction
+            ucurv: curvature in x direction
+            vcurv: curvature in y direction
             zoff:  Z offset of the paraboloid
 
         Returns:
         Paraboloid value at X and Y
         """
-        x, y = coords
-        return -(((x - self.center[0]) / xcurv) ** 2 + ((y - self.center[1]) / ycurv) ** 2) + zoff
+        u = coords[0] - self.center[0]
+        v = coords[1] - self.center[1]
+        return ucurv * u**2 + vcurv * v**2 + zoff
 
     def _rotated_paraboloid(self, coords, ucurv, vcurv, zoff, theta):
         """
@@ -235,7 +236,7 @@ class BasePanel:
         xc, yc = self.center
         u = (x - xc) * np.cos(theta) + (y - yc) * np.sin(theta)
         v = (x - xc) * np.sin(theta) + (y - yc) * np.cos(theta)
-        return -((u / ucurv) ** 2 + (v / vcurv) ** 2) + zoff
+        return ucurv * u**2 + vcurv * v**2 + zoff
 
     def _corotated_paraboloid(self, coords, ucurv, vcurv, zoff):
         """
@@ -256,7 +257,7 @@ class BasePanel:
         xc, yc = self.center
         u = (x - xc) * np.cos(self.zeta) + (y - yc) * np.sin(self.zeta)
         v = (x - xc) * np.sin(self.zeta) + (y - yc) * np.cos(self.zeta)
-        return -((u / ucurv) ** 2 + (v / vcurv) ** 2) + zoff
+        return ucurv * u**2 + vcurv * v**2 + zoff
 
     def _solve_rigid(self):
         """
