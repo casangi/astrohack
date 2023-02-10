@@ -287,12 +287,20 @@ class HoloData:
             self._image_path = file_path
             self.image = AstrohackImageFile(file_path)
 
-class AstrohackImageFile:
+class AstrohackImageFile(dict):
     """_summary_
     """
     def __init__(self, file):
+        super().__init__()
+
         self.file = file
-        self._image_dict = None
+
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+    
+    def __setitem__(self, key, value):
+        return super().__setitem__(key, value)
+        
 
     def open(self, file=None):
         """_summary_
@@ -308,42 +316,27 @@ class AstrohackImageFile:
         if file is None:
             file = self.file
 
-        image_dict = {}
 
         ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
         
         for ant in ant_list:
             ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
-            image_dict[int(ant)] = {}
+            self[int(ant)] = {}
             for ddi in ddi_list:
-                image_dict[int(ant)][int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
-
-        self._image_dict = image_dict
+                self[int(ant)][int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
 
         return True
-
-    @property
-    def data(self):
-        """_summary_
-
-        Returns:
-            _type_: _description_
-        """
-        return self._image_dict
 
     def summary(self):
         """_summary_
         """
-        from IPython.core.display import HTML,display
-
-        display(HTML('jws.html'))
 
         table = PrettyTable()
         table.field_names = ["antenna", "ddi"]
         table.align = "l"
         
-        for ant in self._image_dict.keys():
-            table.add_row([ant, list(self._image_dict[int(ant)].keys())])
+        for ant in self.keys():
+            table.add_row([ant, list(self[int(ant)].keys())])
         
         print(table)
 
@@ -361,21 +354,28 @@ class AstrohackImageFile:
         """
         if ant is None and ddi is None:
             console.info("No selections made ...")
-            return self._image_dict
+            return self
         else:
             if polar:
-                return self._image_dict[ant][ddi].apply(np.absolute), self._image_dict[ant][ddi].apply(np.angle, deg=True)
+                return self[ant][ddi].apply(np.absolute), self[ant][ddi].apply(np.angle, deg=True)
 
-            return self._image_dict[ant][ddi]
+            return self[ant][ddi]
 
-class AstrohackHologFile:
+class AstrohackHologFile(dict):
     """_summary_
     """
     def __init__(self, file):
+        super().__init__()
+        
         self.file = file
-        self._holog_dict = None
         self._meta_data = None
 
+
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+    
+    def __setitem__(self, key, value):
+        return super().__setitem__(key, value)
 
     def open(self, file=None):
         """_summary_
@@ -389,39 +389,32 @@ class AstrohackHologFile:
         if file is None:
             file = self.file
 
-        holog_dict = {}
-
         self._meta_data = _read_meta_data(holog_file=file)
 
         for ddi in os.listdir(file):
             if ddi.isnumeric():
-                holog_dict[int(ddi)] = {}
+                self[int(ddi)] = {}
                 for scan in os.listdir(os.path.join(file, ddi)):
                     if scan.isnumeric():
-                        holog_dict[int(ddi)][int(scan)] = {}
+                        self[int(ddi)][int(scan)] = {}
                         for ant in os.listdir(os.path.join(file, ddi + "/" + scan)):
                             if ant.isnumeric():
                                 mapping_ant_vis_holog_data_name = os.path.join(file, ddi + "/" + scan + "/" + ant)
-                                holog_dict[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
-
-        self._holog_dict = holog_dict
+                                self[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
 
         return True
 
     def summary(self):
         """_summary_
         """
-        from IPython.core.display import HTML, display
-
-        display(HTML('jws.html'))
 
         table = PrettyTable()
         table.field_names = ["ddi", "scan", "antenna"]
         table.align = "l"
         
-        for ddi in self._holog_dict.keys():
-            for scan in self._holog_dict[int(ddi)].keys():
-                table.add_row([ddi, scan, list(self._holog_dict[int(ddi)][int(scan)].keys())])
+        for ddi in self.keys():
+            for scan in self[int(ddi)].keys():
+                table.add_row([ddi, scan, list(self[int(ddi)][int(scan)].keys())])
         
         print(table)
 
@@ -438,9 +431,9 @@ class AstrohackHologFile:
         """
         if ant is None or ddi is None or scan is None:
             console.info("No selections made ...")
-            return self._holog_dict
+            return self
         else:
-            return self._holog_dict[ddi][scan][ant]
+            return self[ddi][scan][ant]
 
     @property
     def meta_data(self):
@@ -450,12 +443,3 @@ class AstrohackHologFile:
             _type_: _description_
         """
         return self._meta_data
-
-    @property
-    def data(self):
-        """_summary_
-
-        Returns:
-            _type_: _description_
-        """
-        return self._holog_dict
