@@ -105,10 +105,18 @@ class AntennaSurface:
 
     @staticmethod
     def _vla_panel_labeling(iring, ipanel):
-        return '{0:d}:{1:2d}'.format(iring+1, ipanel+1)
+        return '{0:d}-{1:2d}'.format(iring+1, ipanel+1)
 
-    def _alma_panel_labeling(self):
-        return
+    def _alma_panel_labeling(self, iring, ipanel):
+        angle = twopi/self.telescope.npanel[iring]
+        sector_angle = twopi/self.telescope.npanel[0]
+        theta = twopi-(ipanel+0.5)*angle
+        sector = int(((theta/sector_angle)+1+self.telescope.npanel[0]/4) % self.telescope.npanel[0])
+        if sector == 0:
+            sector = self.telescope.npanel[0]
+        nppersec = self.telescope.npanel[iring]/self.telescope.npanel[0]
+        jpanel = int(nppersec-(ipanel % nppersec))
+        return '{0:1d}-{1:1d}{2:1d}'.format(sector, iring+1, jpanel)
 
     def _crop_maps(self, margin=0.025):
         """
