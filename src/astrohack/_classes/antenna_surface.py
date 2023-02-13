@@ -91,11 +91,24 @@ class AntennaSurface:
         self.ourms = np.nan
 
     def _init_ringed(self):
+        if self.telescope.panel_numbering == 'ring, clockwise, top':
+            self._panel_label = self._vla_panel_labeling
+        elif self.telescope.panel_numbering == 'sector, counterclockwise, right':
+            self._panel_label = self._alma_panel_labeling
+        else:
+            raise Exception("Unknown panel labeling: "+self.telescope.panel_numbering)
         self._build_polar()
         self._build_ring_panels()
         self._build_ring_mask()
         self.fetch_panel = self._fetch_panel_ringed
         self.compile_panel_points = self._compile_panel_points_ringed
+
+    @staticmethod
+    def _vla_panel_labeling(iring, ipanel):
+        return '{0:d}:{1:2d}'.format(iring+1, ipanel+1)
+
+    def _alma_panel_labeling(self):
+        return
 
     def _crop_maps(self, margin=0.025):
         """
@@ -177,7 +190,7 @@ class AntennaSurface:
                     self.panelkind,
                     angle,
                     ipanel,
-                    '{0:d}:{1:2d}'.format(iring+1, ipanel+1),
+                    self._panel_label(iring, ipanel),
                     self.telescope.inrad[iring],
                     self.telescope.ourad[iring],
                     margin=self.panel_margins,
