@@ -19,36 +19,10 @@ class AntennaSurface:
             defaults to 21%
             pkind: Kind of panel surface fitting, if is None defaults to telescope default
         """
-        self.phase = None
-        self.deviation = None
-        # Origin dependant Reading
-        if inputxds.attrs['AIPS']:
-            self.amplitude = inputxds["AMPLITUDE"].values
-            self.deviation = inputxds["DEVIATION"].values
-            self.npoint = inputxds.attrs['npoint']
-            self.wavelength = inputxds.attrs['wavelength']
-            self.amp_unit = inputxds.attrs['amp_unit']
-            self.u_axis = inputxds.u.values
-            self.v_axis = inputxds.v.values
-            computephase = True
-
-        else:
-            if inputxds.dims['chan'] != 1:
-                raise Exception("Only single channel holographies supported")
-            self.wavelength = clight/inputxds.chan.values[0]
-            self.npoint = inputxds.dims['l']
-            self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
-            self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
-            self.amp_unit = 'V'
-            self.u_axis = inputxds.u.values*self.wavelength
-            self.v_axis = inputxds.v.values*self.wavelength
-            computephase = False
-
-        # Common elements
-        self.unpix = inputxds.dims['u']
-        self.vnpix = inputxds.dims['v']
-        self.antenna_name = inputxds.attrs['antenna_name']
+        self._nullify()
         self.telescope = telescope
+        computephase = self._read_xds(inputxds)
+
         if cutoff is None:
             self.cut = 0.21 * np.max(self.amplitude)
         else:
@@ -62,6 +36,50 @@ class AntennaSurface:
             self.panelkind = pkind
         self.panel_margins = panel_margins
         self.reso = self.telescope.diam / self.npoint
+
+        if crop:
+            self._crop_maps()
+
+        if self.telescope.ringed:
+            self._init_ringed()
+
+        if computephase:
+            self.phase = self._deviation_to_phase(self.deviation)
+        else:
+            self.deviation = self._phase_to_deviation(self.phase)
+
+    def _read_xds(self, inputxds):
+        # Origin dependant Reading
+        if inputxds.attrs['AIPS']:
+            self.amplitude = inputxds["AMPLITUDE"].values
+            self.deviation = inputxds["DEVIATION"].values
+            self.npoint = inputxds.attrs['npoint']
+            self.wavelength = inputxds.attrs['wavelength']
+            self.amp_unit = inputxds.attrs['amp_unit']
+            self.u_axis = inputxds.u.values
+            self.v_axis = inputxds.v.values
+            computephase = True
+        else:
+            if inputxds.dims['chan'] != 1:
+                raise Exception("Only single channel holographies supported")
+            self.wavelength = clight / inputxds.chan.values[0]
+            self.npoint = inputxds.dims['l']
+            self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
+            self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
+            self.amp_unit = 'V'
+            self.u_axis = inputxds.u.values * self.wavelength
+            self.v_axis = inputxds.v.values * self.wavelength
+            computephase = False
+
+        # Common elements
+        self.unpix = inputxds.dims['u']
+        self.vnpix = inputxds.dims['v']
+        self.antenna_name = inputxds.attrs['antenna_name']
+        return computephase
+
+    def _nullify(self):
+        self.phase = None
+        self.deviation = None
         self.residuals = None
         self.corrections = None
         self.phase_corrections = None
@@ -72,19 +90,12 @@ class AntennaSurface:
         self.inrms = np.nan
         self.ourms = np.nan
 
-        if crop:
-            self._crop_maps()
-
-        if self.telescope.ringed:
-            self._build_polar()
-            self._build_ring_panels()
-            self._build_ring_mask()
-            self.fetch_panel = self._fetch_panel_ringed
-            self.compile_panel_points = self._compile_panel_points_ringed
-        if computephase:
-            self.phase = self._deviation_to_phase(self.deviation)
-        else:
-            self.deviation = self._phase_to_deviation(self.phase)
+    def _init_ringed(self):
+        self._build_polar()
+        self._build_ring_panels()
+        self._build_ring_mask()
+        self.fetch_panel = self._fetch_panel_ringed
+        self.compile_panel_points = self._compile_panel_points_ringed
 
     def _crop_maps(self, margin=0.025):
         """
