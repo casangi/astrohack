@@ -16,7 +16,7 @@ icolstsq = 6
 class BasePanel:
     markers = ['X', 'o', '*', 'P', 'D']
     colors = ['g', 'g', 'r', 'r', 'b']
-    fontsize = 5
+    fontsize = 4
     linewidth = 0.5
     markersize = 2
     linecolor = 'black'
@@ -380,13 +380,19 @@ class BasePanel:
             string += ' {0:10.2f}'.format(fac * self.corr_point(*screw))
         return string
 
-    def plot_label(self, ax):
+    def plot_label(self, ax, rotate=True):
         """
         Plots panel label to ax
         Args:
             ax: matplotlib axes instance
+            rotate: Rotate label for better display
         """
-        ax.text(self.center[1], self.center[0], self.label, fontsize=self.fontsize, ha='center')
+        if rotate:
+            angle = (-self.zeta % pi - pi/2)*rad2deg
+        else:
+            angle = 0
+        ax.text(self.center[1], self.center[0], self.label, fontsize=self.fontsize, ha='center', va='center',
+                rotation=angle)
 
     def plot_screws(self, ax):
         """
