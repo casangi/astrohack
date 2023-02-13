@@ -67,13 +67,13 @@ class AntennaSurface:
             self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
             self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
             self.amp_unit = 'V'
-            self.u_axis = inputxds.u.values * self.wavelength
-            self.v_axis = inputxds.v.values * self.wavelength
+            self.u_axis = inputxds.u_prime.values * self.wavelength
+            self.v_axis = inputxds.v_prime.values * self.wavelength
             computephase = False
 
         # Common elements
-        self.unpix = inputxds.dims['u']
-        self.vnpix = inputxds.dims['v']
+        self.unpix = self.u_axis.shape[0]
+        self.vnpix = self.v_axis.shape[0]
         self.antenna_name = inputxds.attrs['antenna_name']
         return computephase
 
