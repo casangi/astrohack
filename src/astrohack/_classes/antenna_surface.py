@@ -359,6 +359,7 @@ class AntennaSurface:
             plt.show()
         else:
             plt.savefig(filename, dpi=dpi)
+        plt.close()
 
     def _plot_three_surfaces(self, original, corrections, residuals, unit, conversion, screws, suptitle):
         """
