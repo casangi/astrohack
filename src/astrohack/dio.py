@@ -16,7 +16,7 @@ from astrohack._utils._io import _create_holog_meta_data, _read_data_from_holog_
 from astrohack._utils._io import _read_meta_data
 
 
-def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None):
+def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None):
     """Loads holog file from disk
 
     Args:
@@ -166,8 +166,10 @@ def extract_holog(
         lockoptions={"option": "usernoread"},
         ack=False,
     )
+
     ant_name = ctb.getcol("NAME")
     ant_id = np.arange(len(ant_name))
+
     ctb.close()
 
     ######## Get Scan and Subscan IDs ########
@@ -247,15 +249,12 @@ def extract_holog(
         extract_holog_params["telescope_name"] = obs_ctb.getcol("TELESCOPE_NAME")[0]
 
         for scan in holog_obs_dict[ddi].keys():
-            console.info(
-                "Processing ddi: {ddi}, scan: {scan}".format(ddi=ddi, scan=scan)
-            )
+            console.info("Processing ddi: {ddi}, scan: {scan}".format(ddi=ddi, scan=scan))
 
             map_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]["map"]))[0]
             ref_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]["ref"]))[0]
 
             extract_holog_params["map_ant_ids"] = map_ant_ids
-            extract_holog_params["map_ant_names"] = holog_obs_dict[ddi][scan]["map"]
             extract_holog_params["ref_ant_ids"] = ref_ant_ids
             extract_holog_params["sel_state_ids"] = state_ids
             extract_holog_params["scan"] = scan
@@ -275,12 +274,18 @@ def extract_holog(
     if parallel:
         dask.compute(delayed_list)
 
+    extract_holog_params["holog_obs_dict"] = {}
+
+    for id in ant_id:
+        extract_holog_params["holog_obs_dict"][str(id)] = ant_name[id]
+
     holog_file = "{base}.{suffix}".format(base=extract_holog_params["holog_name"], suffix="holog.zarr")
 
-    holog_dict = load_holog_file(holog_file=holog_file, dask_load=True, load_pnt_dict=False)
+    holog_dict = _load_holog_file(holog_file=holog_file, dask_load=True, load_pnt_dict=False)
+
     _create_holog_meta_data(holog_file=holog_file, holog_dict=holog_dict, holog_params=extract_holog_params)
 
-class HoloData:
+class AstrohackDataFile:
     def __init__(self, file_stem, path='./'):
                         
         self._image_path = None
@@ -310,115 +315,164 @@ class HoloData:
             self._image_path = file_path
             self.image = AstrohackImageFile(file_path)
 
-class AstrohackImageFile:
+class AstrohackImageFile(dict):
+    """_summary_
+    """
     def __init__(self, file):
+        super().__init__()
+
         self.file = file
-        self._image_dict = None
+
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+    
+    def __setitem__(self, key, value):
+        return super().__setitem__(key, value)
+        
 
     def open(self, file=None):
+        """_summary_
+
+        Args:
+            file (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
+        from astrohack._utils._io import _load_image_xds
+
         if file is None:
             file = self.file
 
-        image_dict = {}
-        ddi_sub_dict = {}
 
         ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
-
+        
         for ant in ant_list:
             ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
+            self[int(ant)] = {}
             for ddi in ddi_list:
-                ddi_sub_dict.setdefault(int(ddi), {})
-                image_dict.setdefault(int(ant), ddi_sub_dict)[int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
-
-        self._image_dict = image_dict
+                self[int(ant)][int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
 
         return True
 
-    @property
-    def data(self):
-        return self._image_dict
-
     def summary(self):
-        from IPython.core.display import HTML,display
-
-        display(HTML('jws.html'))
+        """_summary_
+        """
 
         table = PrettyTable()
         table.field_names = ["antenna", "ddi"]
         table.align = "l"
         
-        for ant in self._image_dict.keys():
-            table.add_row([ant, list(self._image_dict[int(ant)].keys())])
+        for ant in self.keys():
+            table.add_row([ant, list(self[int(ant)].keys())])
         
         print(table)
 
 
     def select(self, ant=None, ddi=None, polar=False):
+        """_summary_
+
+        Args:
+            ant (_type_, optional): _description_. Defaults to None.
+            ddi (_type_, optional): _description_. Defaults to None.
+            polar (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
         if ant is None and ddi is None:
             console.info("No selections made ...")
-            return self._image_dict
+            return self
         else:
             if polar:
-                return self._image_dict[ant][ddi].apply(np.absolute), self._image_dict[ant][ddi].apply(np.angle, deg=True)
+                return self[ant][ddi].apply(np.absolute), self[ant][ddi].apply(np.angle, deg=True)
 
-            return self._image_dict[ant][ddi]
+            return self[ant][ddi]
 
-class AstrohackHologFile:
+class AstrohackHologFile(dict):
+    """_summary_
+    """
     def __init__(self, file):
+        super().__init__()
+        
         self.file = file
-        self._holog_dict = None
         self._meta_data = None
 
 
-    def open(self, file=None):
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+    
+    def __setitem__(self, key, value):
+        return super().__setitem__(key, value)
+
+    def open(self, file=None, dask_load=False):
+        """_summary_
+
+        Args:self =_
+            file (_type_, optional): _description_. Defaults to None.
+            dask_load (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        import copy
+
         if file is None:
             file = self.file
 
-        holog_dict = {}
-
         self._meta_data = _read_meta_data(holog_file=file)
 
+        #hack_dict = _load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False)
         for ddi in os.listdir(file):
             if ddi.isnumeric():
-                holog_dict[int(ddi)] = {}
+                self[int(ddi)] = {}
                 for scan in os.listdir(os.path.join(file, ddi)):
                     if scan.isnumeric():
-                        holog_dict[int(ddi)][int(scan)] = {}
+                        self[int(ddi)][int(scan)] = {}
                         for ant in os.listdir(os.path.join(file, ddi + "/" + scan)):
                             if ant.isnumeric():
-                                mapping_ant_vis_holog_data_name = os.path.join(file, ddi + "/" + scan + "/" + ant)
-                                holog_dict[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
+                               mapping_ant_vis_holog_data_name = os.path.join(file, ddi + "/" + scan + "/" + ant)
+                               self[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
 
-        self._holog_dict = holog_dict
-
+        
         return True
 
     def summary(self):
-        from IPython.core.display import HTML, display
-
-        display(HTML('jws.html'))
+        """_summary_self =_
+        """
 
         table = PrettyTable()
         table.field_names = ["ddi", "scan", "antenna"]
         table.align = "l"
         
-        for ddi in self._holog_dict.keys():
-            for scan in self._holog_dict[int(ddi)].keys():
-                table.add_row([ddi, scan, list(self._holog_dict[int(ddi)][int(scan)].keys())])
+        for ddi in self.keys():
+            for scan in self[int(ddi)].keys():
+                table.add_row([ddi, scan, list(self[int(ddi)][int(scan)].keys())])
         
         print(table)
 
     def select(self, ddi=None, scan=None, ant=None):
+        """_summary_
+
+        Args:
+            ddi (_type_, optional): _description_. Defaults to None.
+            scan (_type_, optional): _description_. Defaults to None.
+            ant (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
         if ant is None or ddi is None or scan is None:
             console.info("No selections made ...")
-            return self._holog_dict
+            return self
         else:
-            return self._holog_dict[ddi][scan][ant]
+            return self[ddi][scan][ant]
 
     @property
     def meta_data(self):
-        return self._meta_data
+        """_summary_
 
-    @property
-    def data(self):
-        return self._holog_dict
+        Returns:
+            _type_: _description_
+        """
+        return self._meta_data

@@ -1,4 +1,6 @@
 import numpy as np
+
+from numba import njit
 from astrohack._utils._linear_algebra import _least_squares_fit
 
 
@@ -15,9 +17,9 @@ i_y_cass_off = 9
 rad2dg = 180./np.pi
 
 
-def phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, disable_pointing_offset,
-                  disable_focus_xy_offsets, disable_focus_z_offset, disable_subreflector_tilt,
-                  disable_cassegrain_offset):
+def phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
+                  focus_xy_offsets, focus_z_offset, subreflector_tilt,
+                  cassegrain_offset):
     """
     Corrects the grading phase for pointing, focus, and feed offset errors using the least squares method, and a model
     incorporating subreflector position errors.  Includes reference pointing
@@ -53,11 +55,11 @@ def phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, d
         cellxy: Map cell spacing, in meters
         amplitude_image: Grading amplitude map
         phase_image: Grading phase map
-        disable_pointing_offset: Disable phase slope (pointing offset)
-        disable_focus_xy_offsets: Disable subreflector offset model
-        disable_focus_z_offset: Disable subreflector focus (z) model
-        disable_subreflector_tilt: Enable subreflector rotation model
-        disable_cassegrain_offset: Disable Cassegrain offsets (X, Y, Z)
+        pointing_offset: Disable phase slope (pointing offset)
+        focus_xy_offsets: Disable subreflector offset model
+        focus_z_offset: Disable subreflector focus (z) model
+        subreflector_tilt: Enable subreflector rotation model
+        cassegrain_offset: Disable Cassegrain offsets (X, Y, Z)
 
     Returns:
         results: Array containining the fit results in convenient units
@@ -67,15 +69,17 @@ def phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, d
         inrms: Phase RMS before fitting
         ourms: Phase RMS after fitting
     """
-
+    
     matrix, vector = _build_design_matrix(-telescope.inlim, -telescope.diam/2, cellxy, phase_image, amplitude_image,
                                           telescope.magnification, telescope.surp_slope, telescope.focus)
 
-    matrix, vector, ignored = _ignore_non_fitted(disable_pointing_offset, disable_focus_xy_offsets,
-                                                 disable_focus_z_offset, disable_subreflector_tilt,
-                                                 disable_cassegrain_offset, matrix, vector)
+    matrix, vector, ignored = _ignore_non_fitted(pointing_offset, focus_xy_offsets,
+                                                 focus_z_offset, subreflector_tilt,
+                                                 cassegrain_offset, matrix, vector)
+
     #   compute the least squares solution.
     results, variances, residuals = _least_squares_fit(matrix, vector)
+
     # Reconstruct full output for ignored parameters
     results, variances = _reconstruct_full_results(results, variances, ignored)
 
@@ -85,40 +89,43 @@ def phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, d
     # get RMSes before and after the fit
     inrms = _compute_phase_rms(phase_image)
     ourms = _compute_phase_rms(corrected_phase)
+    
     # Convert output to convenient units
     results = _internal_to_external_parameters(results, wavelength, telescope, cellxy)
     errors  = _internal_to_external_parameters(np.sqrt(variances), wavelength, telescope, cellxy)
+    
     return results, errors, corrected_phase, phase_model, inrms, ourms
 
 
-def _ignore_non_fitted(disable_pointing_offset, disable_focus_xy_offsets, disable_focus_z_offset,
-                       disable_subreflector_tilt, disable_cassegrain_offset, matrix, vector):
+def _ignore_non_fitted(pointing_offset, focus_xy_offsets, focus_z_offset,
+                       subreflector_tilt, cassegrain_offset, matrix, vector):
     """
     Disable the fitting of certain parameters by removing rows and columns from the design matrix and its associated
     vector
     Args:
-        disable_pointing_offset: Remove rows and columns related to pointing offsets
-        disable_focus_xy_offsets: Remove rows and columns related to XY focus offsets
-        disable_focus_z_offset: Remove the row and column related to Z focus offsets
-        disable_subreflector_tilt: Remove the rows and columns related to subreflector tilt
-        disable_cassegrain_offset: Remove the rows and columns related to cassegrain offsets
+        pointing_offset: Remove rows and columns related to pointing offsets
+        focus_xy_offsets: Remove rows and columns related to XY focus offsets
+        focus_z_offset: Remove the row and column related to Z focus offsets
+        subreflector_tilt: Remove the rows and columns related to subreflector tilt
+        cassegrain_offset: Remove the rows and columns related to cassegrain offsets
         matrix: The design matrix
         vector: the vector associated with the design matrix
 
     Returns:
         The design matrix and its associated vector minus the rows and columns disabled
     """
-    ignored = np.array([False, disable_pointing_offset, disable_pointing_offset, disable_focus_xy_offsets,
-                        disable_focus_xy_offsets, disable_focus_z_offset, disable_subreflector_tilt,
-                        disable_subreflector_tilt, disable_cassegrain_offset, disable_cassegrain_offset])
+    ignored = np.array([True, pointing_offset, pointing_offset, focus_xy_offsets,
+                        focus_xy_offsets, focus_z_offset, subreflector_tilt,
+                        subreflector_tilt, cassegrain_offset, cassegrain_offset])
     ndeleted = 0
     for ipar in range(npar):
-        if ignored[ipar]:
+        if ignored[ipar] is False:
             vector = np.delete(vector, ipar-ndeleted, 0)
             for axis in range(2):
                 matrix = np.delete(matrix, ipar-ndeleted, axis)
             ndeleted += 1
-    return matrix, vector, ignored
+
+    return matrix, vector, ~ignored
 
 
 def _reconstruct_full_results(results, variances, ignored):
@@ -205,11 +212,12 @@ def create_phase_model(npix, parameters, wavelength, telescope, cellxy):
     """
     inparameters = _external_to_internal_parameters(parameters, wavelength, telescope, cellxy)
     dummyphase = np.zeros((npix, npix))
+
     _, model = _correct_phase(dummyphase, cellxy, inparameters, telescope.magnification, telescope.focus,
                               telescope.surp_slope)
     return model
 
-
+@njit(cache=False, nogil=True)
 def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, magnification, phase_slope, focal_length):
     """
     Builds the design matrix to be used on the least squares fitting
@@ -229,16 +237,18 @@ def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, mag
         Design matrix and associated vector
     """
     npix = phase_image.shape[0]
+
     #   focal length in cellular units
     ix0 = npix//2
     iy0 = npix//2
+
     matrix = np.zeros((npar, npar))
     vector = np.zeros(npar)
     ixymin = abs(xymin/cellxy)
     ixymax = abs(xymax/cellxy)
     min_squared_pix_radius = (xymin*xymin)/(cellxy*cellxy)
     max_squared_pix_radius = (xymax*xymax)/(cellxy*cellxy)
-
+    
     for ix in range(npix):
         x_delta_pix = abs(ix - ix0)
         #   check absolute limits.
@@ -271,11 +281,14 @@ def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, mag
             elif xymax < 0.0:
                 if radius_pix_squared > max_squared_pix_radius:
                     continue
+            
             #   evaluate variables (in cells)
             phase = phase_image[ix, iy]
             weight = amplitude_image[ix, iy]
+            
             x_delta_pix = ix - ix0
             y_delta_pix = iy - iy0
+            
             x_focus, y_focus, z_focus, x_tilt, y_tilt, x_cass, y_cass = _matrix_coeffs(x_delta_pix, y_delta_pix,
                                                                                        magnification, focal_length,
                                                                                        cellxy, phase_slope)
@@ -345,6 +358,7 @@ def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, mag
             matrix[8, 8] += x_cass * x_cass * weight
             matrix[8, 9] += x_cass * y_cass * weight
             matrix[9, 9] += y_cass * y_cass * weight
+
     return matrix, vector
 
 
@@ -386,7 +400,7 @@ def _correct_phase(phase_image, cellxy, parameters, magnification, focal_length,
 
     return corrected_phase, phase_model
 
-
+@njit(cache=False, nogil=True)
 def _matrix_coeffs(x_delta_pix, y_delta_pix, magnification, focal_length, cellxy, phase_slope):
     """
     Computes the matrix coefficients used when building the design matrix and correcting the phase image

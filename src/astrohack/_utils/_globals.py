@@ -7,7 +7,7 @@ clight = 299792458.0
 # Unit conversion
 mm2m = 1/1000.
 m2mm = 1000.
-m2mils = 1e6 / 2.54
+m2mils = 1e6 / 25.4
 mils2m = 1. / m2mils
 
 

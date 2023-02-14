@@ -12,14 +12,18 @@ import dask.array as da
 import numpy as np
 import xarray as xr
 import scipy
+import scipy.constants
 
 from numba import njit
 
-from scipy.interpolate import griddata, LinearNDInterpolator, NearestNDInterpolator
+from scipy.interpolate import griddata
 
 from astrohack._utils import _system_message as console
-from astrohack.dio import load_holog_file
+from astrohack.dio import _load_holog_file
 from astrohack._utils._io import _read_meta_data
+
+from astrohack._utils._phase_fitting import phase_fitting
+from astrohack._classes.telescope import Telescope
 
 
 def _calculate_euclidean_distance(x, y, center):
@@ -105,7 +109,7 @@ def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=50):
     Returns:
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
-    console.info("Calculating aperture illumination pattern ...")
+    console.info("[_calculate_aperture_pattern] Calculating aperture illumination pattern ...")
 
     assert grid.shape[-1] == grid.shape[-2] ###To do: why is this expected that l.shape == m.shape
     initial_dimension = grid.shape[-1]
@@ -142,7 +146,7 @@ def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=50):
 
     u, v = _calc_coords(image_size, cell_size)
 
-    return aperture_grid, u, v
+    return aperture_grid, u, v, cell_size
 
 def _parallactic_derotation(data, parallactic_angle_dict):
     """ Uses samples of parallactic angle (PA) values to correct differences in PA between scans. The reference PA is selected 
@@ -240,7 +244,7 @@ def _holog_chunk(holog_chunk_params):
     """
     c = scipy.constants.speed_of_light
 
-    holog_file, ant_data_dict = load_holog_file(
+    holog_file, ant_data_dict = _load_holog_file(
         holog_chunk_params["holog_file"],
         dask_load=False,
         load_pnt_dict=False,
@@ -315,10 +319,6 @@ def _holog_chunk(holog_chunk_params):
 
             time_centroid.append(ant_data_dict[ddi][scan].coords["time"][time_centroid_index].values)
 
-        
-            # Normalization
-            import time
-
             for chan in range(n_chan): ### Todo: Vectorize scan and channel axis
                 xx_peak = _find_peak_beam_value(beam_grid[scan_index, chan, 0, ...], scaling=0.25)
                 
@@ -331,29 +331,79 @@ def _holog_chunk(holog_chunk_params):
 
         if holog_chunk_params["scan_average"]:          
             beam_grid = np.mean(beam_grid,axis=0)[None,...]
-
-        console.info("[_holog_chunk] FFT padding factor {} ...".format(holog_chunk_params["padding_factor"]))
         
         # Current bottleneck
-        aperture_grid, u, v = _calculate_aperture_pattern(
+        aperture_grid, u, v, uv_cell_size = _calculate_aperture_pattern(
             grid=beam_grid,
             delta=holog_chunk_params["cell_size"],
             frequency = freq_chan,
             padding_factor=holog_chunk_params["padding_factor"],
         )
 
+        console.info("[_holog_chunk] Applying phase correction ...")
 
-        # Create xds
-        
+        wavelength = scipy.constants.speed_of_light/freq_chan[0]
+
+        if meta_data["ant_map"][str(holog_chunk_params["ant_id"])].__contains__('DV'):
+            telescope_name = "_".join((meta_data['telescope_name'], 'DV'))
+
+        elif meta_data["ant_map"][str(holog_chunk_params["ant_id"])].__contains__('DA'):
+            telescope_name = "_".join((meta_data['telescope_name'], 'DA'))
+
+        else:
+            raise Exception("Antenna type not found: {}".format(meta_data['ant_name']))
+
+        telescope = Telescope(telescope_name)
+
+        phase_corrected_angle = np.empty_like(aperture_grid)
+
+        aperture_radius = (0.75*telescope.diam)/wavelength 
+
+        i = np.where(np.abs(u) < aperture_radius)[0]
+        j = np.where(np.abs(v) < aperture_radius)[0]
+
+        # Ensure the cut is square by using the smaller dimension. Phase correction fails otherwise.
+        if i.shape[0] < j.shape[0]: 
+            cut = i
+        else:
+            cut = j
+
+        u_prime = u[cut.min():cut.max()]
+        v_prime = v[cut.min():cut.max()]
+
+        amplitude = np.absolute(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()])
+
+        phase = np.angle(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()], deg=True)
+        phase_corrected_angle = np.empty_like(phase)
+
+        for time in range(amplitude.shape[0]):
+            for chan in range(amplitude.shape[1]):
+                for pol in range(amplitude.shape[2]):
+                    
+                    _, _, phase_corrected_angle[time, chan, pol, ...], _, _, _ = phase_fitting(
+                        wavelength=wavelength, 
+                        telescope=telescope, 
+                        cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
+                        amplitude_image=amplitude[time, chan, pol, ...], 
+                        phase_image=phase[time, chan, pol, ...], 
+                        pointing_offset=False, 
+                        focus_xy_offsets=False, 
+                        focus_z_offset=False,
+                        subreflector_tilt=False, 
+                        cassegrain_offset=True
+                    )
+                    
         ###To Do: Add Paralactic angle as a non-dimension coordinate dependant on time.
         xds = xr.Dataset()
 
         xds["BEAM"] = xr.DataArray(beam_grid, dims=["time-centroid", "chan", "pol", "l", "m"])
         xds["APERTURE"] = xr.DataArray(aperture_grid, dims=["time-centroid", "chan", "pol", "u", "v"])
-        xds["AMPLITUDE"] = xr.DataArray(np.absolute(aperture_grid), dims=["time-centroid", "chan", "pol", "u", "v"])
-        xds["ANGLE"] = xr.DataArray(np.angle(aperture_grid, deg=True), dims=["time-centroid", "chan", "pol", "u", "v"])
+        xds["AMPLITUDE"] = xr.DataArray(amplitude, dims=["time-centroid", "chan", "pol", "u_prime", "v_prime"])
+
+        xds["ANGLE"] = xr.DataArray(phase_corrected_angle, dims=["time-centroid", "chan", "pol", "u_prime", "v_prime"])
 
         xds.attrs["ant_id"] = holog_chunk_params["ant_id"]
+        xds.attrs["ant_name"] = meta_data["ant_map"][str(holog_chunk_params["ant_id"])]
         xds.attrs["telescope_name"] = meta_data['telescope_name']
         xds.attrs["time_centroid"] = np.array(time_centroid)
 
@@ -365,6 +415,8 @@ def _holog_chunk(holog_chunk_params):
         coords["m"] = m
         coords["u"] = u
         coords["v"] = v
+        coords["u_prime"] = u_prime
+        coords["v_prime"] = v_prime
         coords["chan"] = freq_chan
 
         xds = xds.assign_coords(coords)

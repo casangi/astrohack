@@ -29,7 +29,15 @@
         2.8457,
         3.5
     ],
+    "panel_numbering": "sector, counterclockwise, right",
     "ringed": true,
+    "screw_description": [
+        "il",
+        "ir",
+        "ol",
+        "or",
+        "c"
+    ],
     "secondary_dist": 0.16825275532696526,
     "surp_slope": 0.0
 }

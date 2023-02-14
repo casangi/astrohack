@@ -1,18 +1,18 @@
 {
     "metadata": {
         ".zattrs": {
-            "comment": "Preliminary data for ALMA total power Melco antennas. Diameter, focus, magnification and secondary distance taken from ALMA memo 339. npanel, nrings and inlim from ALMA cycle 9 technical handbook. inrad and ourad computed assuming equal radial spans for each ring. surp_slope assumed to be 0",
+            "comment": "Preliminary data for ALMA total power Melco antennas. Diameter, focus, magnification and secondary distance taken from ALMA memo 339. npanel, nrings and inlim from ALMA cycle 9 technical handbook. inrad and ourad fetched from the CLIC (GILDAS) script for ALMA holography (J. Magnum, private communication). surp_slope assumed to be zero. Numbering of panels and screw positions taken from ALMA Holography memo: Baars, Lucas & Mangum 2004",
             "diam": 12.0,
             "focus": 4.800000000000001,
             "inlim": 0.375,
             "inrad": [
                 0.375,
-                1.1785714285714286,
-                1.9821428571428572,
-                2.7857142857142856,
-                3.5892857142857144,
-                4.392857142857143,
-                5.196428571428571
+                0.770582,
+                1.715753,
+                2.621734,
+                3.521014,
+                4.393722,
+                5.237261
             ],
             "magnification": 20.0,
             "name": "ALMA TP",
@@ -29,15 +29,23 @@
             "onaxisoptics": true,
             "oulim": 6,
             "ourad": [
-                1.1785714285714286,
-                1.9821428571428572,
-                2.7857142857142856,
-                3.5892857142857144,
-                4.392857142857143,
-                5.196428571428571,
+                0.770582,
+                1.715753,
+                2.621734,
+                3.521014,
+                4.393722,
+                5.237261,
                 6.0
             ],
+            "panel_numbering": "sector, counterclockwise, right",
             "ringed": true,
+            "screw_description": [
+                "il",
+                "ir",
+                "ol",
+                "or",
+                "c"
+            ],
             "secondary_dist": 0.294,
             "surp_slope": 0.0
         },

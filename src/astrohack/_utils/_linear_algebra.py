@@ -28,8 +28,8 @@ def _least_squares_fit(system, vector):
     """
     if len(system.shape) != 2:
         raise Exception('System must have 2 dimensions')
-    if system.shape[0] != system.shape[1]:
-        raise Exception('System must be a square matrix')
+    if system.shape[0] < system.shape[1]:
+        raise Exception('System must have at least the same number of rows as it has of columns')
     fit = np.linalg.lstsq(system, vector, rcond=None)
     result = fit[0]
     residuals = fit[1]
