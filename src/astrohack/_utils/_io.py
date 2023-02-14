@@ -14,6 +14,7 @@ import astropy
 import astropy.units as u
 import astropy.coordinates as coord
 
+import numba
 from numba import njit
 from numba.core import types
 from numba.typed import Dict
@@ -23,10 +24,10 @@ from casacore import tables as ctables
 
 from astrohack._utils import _system_message as console
 from astrohack._utils._parallactic_angle import _calculate_parallactic_angle_chunk
+from scipy import spatial
 
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
-
 jit_cache = False
 
 
@@ -257,7 +258,7 @@ def _load_pnt_dict(file, ant_list=None, dask_load=True):
     return pnt_dict
 
 
-def _make_ant_pnt_xds_chunk(ms_name, ant_id, pnt_name):
+def _make_ant_pnt_xds_chunk(ms_name, pnt_parms):
     """Extract subset of pointing table data into a dictionary of xarray data arrays. This is written to disk as a zarr file.
             This function processes a chunk the overalll data and is managed by Dask.
 
@@ -266,7 +267,11 @@ def _make_ant_pnt_xds_chunk(ms_name, ant_id, pnt_name):
         ant_id (int): Antenna id
         pnt_name (str): Name of output poitning dictinary file name.
     """
-
+    
+    ant_id = pnt_parms['ant_id']
+    pnt_name = pnt_parms['pnt_name']
+    scan_time_dict = pnt_parms['scan_time_dict']
+    
     tb = ctables.taql(
         "select DIRECTION, TIME, TARGET, ENCODER, ANTENNA_ID, POINTING_OFFSET from %s WHERE ANTENNA_ID == %s"
         % (os.path.join(ms_name, "POINTING"), ant_id)
@@ -295,7 +300,7 @@ def _make_ant_pnt_xds_chunk(ms_name, ant_id, pnt_name):
     pointing_offset = np.swapaxes(pt_ant_table.getcol('POINTING_OFFSET')[:,0,:],0,1)
     tb.close()
     """
-
+    
     pnt_xds = xr.Dataset()
     coords = {"time": direction_time}
     pnt_xds = pnt_xds.assign_coords(coords)
@@ -331,7 +336,30 @@ def _make_ant_pnt_xds_chunk(ms_name, ant_id, pnt_name):
     pnt_xds["DIRECTIONAL_COSINES"] = xr.DataArray(
         np.array([l, m]).T, dims=("time", "ra_dec")
     )
-
+    
+    ###############
+    
+    mapping_scans = {}
+    time_tree = spatial.KDTree(direction_time[:,None]) #Use for nearest interpolation
+    
+    for ddi_id, ddi in scan_time_dict.items():
+        scan_list = []
+        for scan_id, scan_time in ddi.items():
+            _, time_index = time_tree.query(scan_time[:,None])
+            sub_lm = pnt_xds["DIRECTIONAL_COSINES"].isel(time=slice(time_index[0],time_index[1])).mean()
+            
+            if sub_lm > 10**-12: #Antenna is mapping since lm is non-zero
+                scan_list.append(scan_id)
+        
+        mapping_scans[ddi_id] = scan_list
+            
+    pnt_xds.attrs['mapping_scans'] = mapping_scans
+    ###############
+    
+    
+    pnt_xds.attrs['ant_name'] = pnt_parms['ant_name']
+    
+    
     console.info(
         "[_make_ant_pnt_xds_chunk] Writing pointing xds to {file}".format(
             file=os.path.join(pnt_name, str(ant_id))
@@ -354,6 +382,7 @@ def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
         dict: pointing dictionary of xarray dataarrays
     """
 
+    #Get antenna names and ids
     ctb = ctables.table(
         os.path.join(ms_name, "ANTENNA"),
         readonly=True,
@@ -364,22 +393,74 @@ def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
     antenna_id = np.arange(len(antenna_name))
 
     ctb.close()
+    
 
+    
+    ###########################################################################################
+    #Get scans with start and end times.
+    ctb = ctables.table(
+        ms_name,
+        readonly=True,
+        lockoptions={"option": "usernoread"},
+    )
+
+    scan_ids = ctb.getcol("SCAN_NUMBER")
+    time = ctb.getcol("TIME")
+    ddi = ctb.getcol("DATA_DESC_ID")
+    ctb.close()
+
+    scan_time_dict = _exstract_scan_time_dict(time,scan_ids,ddi)
+    ###########################################################################################
+    pnt_parms = {'pnt_name':pnt_name,'scan_time_dict':scan_time_dict}
+    
     if parallel:
         delayed_pnt_list = []
         for id in antenna_id:
+            pnt_parms['ant_id'] = id
+            pnt_parms['ant_name'] = antenna_name[id]
             delayed_pnt_list.append(
                 dask.delayed(_make_ant_pnt_xds_chunk)(
-                    dask.delayed(ms_name), dask.delayed(id), dask.delayed(pnt_name)
+                    dask.delayed(ms_name), dask.delayed(pnt_parms)
                 )
             )
         dask.compute(delayed_pnt_list)
     else:
         for id in antenna_id:
-            _make_ant_pnt_xds_chunk(ms_name, id, pnt_name)
+            pnt_parms['ant_id'] = id
+            pnt_parms['ant_name'] = antenna_name[id]
+            _make_ant_pnt_xds_chunk(ms_name, pnt_parms)
 
     return _load_pnt_dict(pnt_name)
+    
+    
+@njit(cache=jit_cache, nogil=True)
+def _exstract_scan_time_dict(time,scan_ids,ddi_ids):
+    d1 = Dict.empty(
+        key_type=types.int64,
+        value_type=np.zeros(2,dtype=types.float64),
+    )
+    
+    scan_time_dict = Dict.empty(
+        key_type=types.int64,
+        value_type=d1, # base the scan_time_dict instance values of the type of d1
+    )
+    
+    for i,s in enumerate(scan_ids):
+        s = types.int64(s)
+        t = time[i]
+        ddi = ddi_ids[i]
+        if ddi in scan_time_dict:
+            if s in scan_time_dict[ddi]:
+                if  scan_time_dict[ddi][s][0] > t:
+                    scan_time_dict[ddi][s][0] = t
+                if  scan_time_dict[ddi][s][1] < t:
+                    scan_time_dict[ddi][s][1] = t
+            else:
+                scan_time_dict[ddi][s] = np.array([t,t])
+        else:
+            scan_time_dict[ddi] = {s: np.array([t,t])}
 
+    return scan_time_dict
 
 def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     """Extract nearest MAIN table time indexed pointing map

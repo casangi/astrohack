@@ -73,7 +73,7 @@ def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None)
 def extract_holog(
     ms_name,
     holog_name,
-    holog_obs_dict,
+    holog_obs_dict=None,
     data_col="DATA",
     subscan_intent="MIXED",
     parallel=True,
@@ -108,7 +108,35 @@ def extract_holog(
 
     pnt_name = "{base}.{pointing}".format(base=holog_name, pointing="point.zarr")
 
-    _make_ant_pnt_dict(ms_name, pnt_name, parallel=parallel)
+    #pnt_dict = _load_pnt_dict(pnt_name)
+    pnt_dict = _make_ant_pnt_dict(ms_name, pnt_name, parallel=parallel)
+    
+    if holog_obs_dict is None:
+        ant_names_list = []
+        #Create mapping antennas
+        holog_obs_dict = {}
+        for ant_id,pnt_xds in pnt_dict.items():
+            ant_name = pnt_xds.attrs['ant_name']
+            mapping_scans = pnt_xds.attrs['mapping_scans']
+            ant_names_list.append(ant_name)
+            for ddi,scans in  mapping_scans.items():
+                ddi = int(ddi)
+                for s in scans:
+                    try:
+                        holog_obs_dict[ddi][s]['map'].append(ant_name)
+                    except:
+                        holog_obs_dict.setdefault(ddi,{})[s] = {'map':[ant_name]}#dict(zip(scans, [ant_name]*len(scans)))
+       
+       
+        #Create reference antennas
+        
+        ant_names_set = set(ant_names_list)
+        for ddi,scan in holog_obs_dict.items():
+            for scan_id,ant_types in scan.items():
+                holog_obs_dict[ddi][scan_id]['ref'] = ant_names_set - set(holog_obs_dict[ddi][scan_id]['map'])
+            
+    print(holog_obs_dict)
+
 
     ######## Get Spectral Windows ########
 
