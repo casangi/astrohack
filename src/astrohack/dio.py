@@ -257,7 +257,7 @@ def extract_holog(
 
     _create_holog_meta_data(holog_file=holog_file, holog_dict=holog_dict, holog_params=extract_holog_params)
 
-class HoloData:
+class AstrohackDataFile:
     def __init__(self, file_stem, path='./'):
                         
         self._image_path = None
@@ -377,20 +377,24 @@ class AstrohackHologFile(dict):
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
 
-    def open(self, file=None):
+    def open(self, file=None, dask_load=False):
         """_summary_
 
-        Args:
+        Args:self =_
             file (_type_, optional): _description_. Defaults to None.
+            dask_load (bool, optional): _description_. Defaults to False.
 
         Returns:
             _type_: _description_
         """
+        import copy
+
         if file is None:
             file = self.file
 
         self._meta_data = _read_meta_data(holog_file=file)
 
+        #hack_dict = _load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False)
         for ddi in os.listdir(file):
             if ddi.isnumeric():
                 self[int(ddi)] = {}
@@ -399,13 +403,14 @@ class AstrohackHologFile(dict):
                         self[int(ddi)][int(scan)] = {}
                         for ant in os.listdir(os.path.join(file, ddi + "/" + scan)):
                             if ant.isnumeric():
-                                mapping_ant_vis_holog_data_name = os.path.join(file, ddi + "/" + scan + "/" + ant)
-                                self[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
+                               mapping_ant_vis_holog_data_name = os.path.join(file, ddi + "/" + scan + "/" + ant)
+                               self[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
 
+        
         return True
 
     def summary(self):
-        """_summary_
+        """_summary_self =_
         """
 
         table = PrettyTable()
