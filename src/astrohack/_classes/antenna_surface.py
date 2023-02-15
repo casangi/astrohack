@@ -18,6 +18,8 @@ class AntennaSurface:
             cutoff: fractional cutoff on the amplitude image to exclude regions with weak amplitude from the panel,
             defaults to 21%
             pkind: Kind of panel surface fitting, if is None defaults to telescope default
+            crop: Crop apertures to slightly larger frames than the antenna diameter
+            panel_margins: Margin to be ignored at edges of panels when fitting
         """
         self._nullify()
         self.telescope = telescope
@@ -49,6 +51,11 @@ class AntennaSurface:
             self.deviation = self._phase_to_deviation(self.phase)
 
     def _read_xds(self, inputxds):
+        """
+        Read input XDS, distinguishing what is derived from AIPS data and what was created by astrohack.holog
+        Args:
+            inputxds: X array dataset
+        """
         # Origin dependant Reading
         if inputxds.attrs['AIPS']:
             self.amplitude = inputxds["AMPLITUDE"].values
@@ -78,6 +85,9 @@ class AntennaSurface:
         return computephase
 
     def _nullify(self):
+        """
+        Part of the initialization process, nullify the data objects to be used later
+        """
         self.phase = None
         self.deviation = None
         self.residuals = None
@@ -91,6 +101,9 @@ class AntennaSurface:
         self.ourms = np.nan
 
     def _init_ringed(self):
+        """
+        Do the proper method association for the case of a ringed antenna
+        """
         if self.telescope.panel_numbering == 'ring, clockwise, top':
             self._panel_label = self._vla_panel_labeling
         elif self.telescope.panel_numbering == 'sector, counterclockwise, right':
@@ -105,9 +118,27 @@ class AntennaSurface:
 
     @staticmethod
     def _vla_panel_labeling(iring, ipanel):
+        """
+        Provide the correct panel label for VLA style panels
+        Args:
+            iring: Number of the ring the panel is in
+            ipanel: Number of the panel in that ring clockwise from the top
+        Returns:
+            The proper label for the panel at iring, ipanel
+        """
         return '{0:d}-{1:2d}'.format(iring+1, ipanel+1)
 
     def _alma_panel_labeling(self, iring, ipanel):
+        """
+        Provide the correct panel label for ALMA style panels, which is more complicated than VLA panels due to the
+        implementation of panel sectors
+        Args:
+            iring: Number of the ring the panel is in
+            ipanel: Number of the panel in that ring clockwise from the top
+
+        Returns:
+            The proper label for the panel at iring, ipanel
+        """
         angle = twopi/self.telescope.npanel[iring]
         sector_angle = twopi/self.telescope.npanel[0]
         theta = twopi-(ipanel+0.5)*angle
@@ -122,7 +153,7 @@ class AntennaSurface:
         """
         Crop the amplitude and phase/deviation maps to decrease that usage and speedup calculations
         Args:
-            margin: How much margin should be left outside of the dish diameter
+            margin: How much margin should be left outside the dish diameter
         """
         edge = (0.5+margin)*self.telescope.diam
         iumin = np.argmax(self.u_axis > -edge)
