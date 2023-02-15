@@ -3,6 +3,7 @@ import numpy as np
 from numba import njit
 from astrohack._utils._linear_algebra import _least_squares_fit
 
+from memory_profiler import profile
 
 npar = 10
 i_x_pnt_off = 1
@@ -16,7 +17,8 @@ i_x_cass_off = 8
 i_y_cass_off = 9
 rad2dg = 180./np.pi
 
-
+fp=open('phase_fitting.log','w+')
+@profile(stream=fp)
 def phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
                   focus_xy_offsets, focus_z_offset, subreflector_tilt,
                   cassegrain_offset):

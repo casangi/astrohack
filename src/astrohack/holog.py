@@ -25,6 +25,8 @@ from astrohack._utils._io import _read_meta_data
 from astrohack._utils._phase_fitting import phase_fitting
 from astrohack._classes.telescope import Telescope
 
+from memory_profiler import profile
+
 
 def _calculate_euclidean_distance(x, y, center):
     """ Calculates the euclidean distance between a pair of pair of input points.
@@ -95,7 +97,8 @@ def _find_peak_beam_value(data, height=0.5, scaling=0.5):
 
     return masked_data[x[index], y[index]]
 
-
+fp=open('aperture_pattern.log','w+')
+@profile(stream=fp)
 def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=50):
     """ Calcualtes the aperture illumination pattern from the beam data.
 
@@ -425,6 +428,8 @@ def _holog_chunk(holog_chunk_params):
 
         xds.to_zarr("{name}.image.zarr/{ant}/{ddi}".format(name=holog_base_name, ant=holog_chunk_params["ant_id"], ddi=ddi_index), mode="w", compute=True, consolidated=True)
 
+fp=open('holog.log','w+')
+@profile(stream=fp)
 def holog(
     holog_file,
     padding_factor=50,

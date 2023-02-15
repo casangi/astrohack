@@ -15,6 +15,7 @@ from astrohack._utils._io import _extract_holog_chunk, _open_no_dask_zarr
 from astrohack._utils._io import _create_holog_meta_data, _read_data_from_holog_json
 from astrohack._utils._io import _read_meta_data
 
+from memory_profiler import profile
 
 def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None):
     """Loads holog file from disk
@@ -69,7 +70,8 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
 
     return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id)
 
-
+fp=open('extract_holog.log','w+')
+@profile(stream=fp)
 def extract_holog(
     ms_name,
     holog_name,
