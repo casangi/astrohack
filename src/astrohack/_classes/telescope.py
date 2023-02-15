@@ -7,6 +7,15 @@ tel_data_path = pkg_resources.resource_filename("astrohack", "../../data/telesco
 
 
 def _find_cfg_file(name, path):
+    """
+    Search for the correct telescope configuration file
+    Args:
+        name: Name of the telescope configuration file
+        path: Path to search for the telescope configuration file
+
+    Returns:
+        fullpath to the telescope configuration file
+    """
     newpath = None
     for root, dirs, files in os.walk(path):
         if name in dirs:
@@ -23,9 +32,11 @@ class Telescope:
         """
         Initializes antenna surface relevant information based on the telescope name
         Args:
-            name: telescope name
+            name: telescope name, spaces are replaced by _ when searching
+            path: Path in which to look for telescope configuration files, defaults to the astrohack package
+            data directory if None
         """
-        filename = name.lower() + ".zarr"
+        filename = name.lower().replace(" ", "_") + ".zarr"
         try:
             if path is None:
                 filepath = _find_cfg_file(filename, tel_data_path)
@@ -45,6 +56,9 @@ class Telescope:
         return
 
     def _ringed_consistency(self):
+        """
+        Performs a consistency check on the telescope parameters for the ringed telescope case
+        """
         error = False
         if not self.nrings == len(self.inrad) == len(self.ourad):
             console.error(
@@ -59,9 +73,17 @@ class Telescope:
         return
 
     def _general_consistency(self):
+        """
+        For the moment simply raises an Exception since only ringed telescopes are supported at the moment
+        """
         raise Exception("General layout telescopes not yet supported")
 
     def write(self, filename):
+        """
+        Write the telescope object to an X array .zarr telescope configuration file
+        Args:
+            filename: Name of the output file
+        """
         ledict = vars(self)
         xds = xr.Dataset()
         xds.attrs = ledict
@@ -69,12 +91,20 @@ class Telescope:
         return
 
     def read(self, filename):
+        """
+        Read the telescope object from an X array .zarr telescope configuration file
+        Args:
+            filename: name of the input file
+        """
         xds = xr.open_zarr(filename)
         for key in xds.attrs:
             setattr(self, key, xds.attrs[key])
         return
 
     def print(self):
+        """
+        Prints all the parameters defined for the telescope object
+        """
         ledict = vars(self)
         for key in ledict:
             print("{0:15s} = ".format(key)+str(ledict[key]))

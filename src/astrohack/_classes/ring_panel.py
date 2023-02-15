@@ -19,6 +19,7 @@ class RingPanel(BasePanel):
             inrad: Radius at panel inner side
             ourad: Radius at panel outer side
             margin: Fraction from panel edge inwards that won't be used for fitting
+            screw_scheme: tuple containing the description of screw positions
         """
         self.inrad = inrad
         self.ourad = ourad
@@ -38,6 +39,15 @@ class RingPanel(BasePanel):
         super().__init__(kind, screws, label, center=self.center, zeta=zeta)
 
     def _init_screws(self, scheme, offset=0.1):
+        """
+        Initialize screws according to the scheme
+        Args:
+            scheme: Tuple of strings containing the positioning of the screws
+            offset: How far from the edge of the panel are corner screws
+
+        Returns:
+            numpy array with the positions of the screws
+        """
         if scheme is None:
             scheme = ['il', 'ir', 'ol', 'or']
         nscrews = len(scheme)

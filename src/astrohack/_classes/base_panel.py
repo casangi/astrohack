@@ -4,9 +4,9 @@ from astrohack._utils._globals import *
 
 panelkinds = ["rigid", "mean", "xyparaboloid", "rotatedparaboloid", "corotatedparaboloid", "least_squares",
               "corotated_lst_sq"]
-irigid   = 0
-imean    = 1
-ixypara  = 2
+irigid = 0
+imean = 1
+ixypara = 2
 irotpara = 3
 icorpara = 4
 ilstsqr = 5
@@ -67,27 +67,45 @@ class BasePanel:
             raise Exception("Unknown panel kind: ", self.kind)
 
     def _associate_scipy(self, fitting_function, npar):
+        """
+        Associate the proper methods to enable scipy fitting
+        Args:
+            fitting_function: The fitting function to be used by scipy
+            npar: Number of paramenters in the fitting function
+        """
         self.npar = npar
         self._solve_sub = self._solve_scipy
         self.corr_point = self._corr_point_scipy
         self._fitting_function = fitting_function
 
     def _associate_rigid(self):
+        """
+        Associate the proper methods to enable the rigid panel Linear algebra fitting
+        """
         self.npar = 3
         self._solve_sub = self._solve_rigid
         self.corr_point = self._corr_point_rigid
 
     def _associate_mean(self):
+        """
+        Associate the proper methods to enable fitting by mean determination
+        """
         self.npar = 1
         self._solve_sub = self._solve_mean
         self.corr_point = self._corr_point_mean
 
     def _associate_least_squares(self):
+        """
+        Associate the proper methods to enable least squares fitting of a fully fledged 9 parameter paraboloid
+        """
         self.npar = 9
         self._solve_sub = self._solve_least_squares_paraboloid
         self.corr_point = self._corr_point_least_squares_paraboloid
 
     def _associate_corotated_lst_sq(self):
+        """
+        Associate the proper methods to enable least squares fitting of a corotated paraboloid
+        """
         self.npar = 3
         self._solve_sub = self._solve_corotated_lst_sq
         self.corr_point = self._corr_point_corotated_lst_sq
@@ -109,6 +127,9 @@ class BasePanel:
         self.margins.append(value)
 
     def solve(self):
+        """
+        Wrapping method around fitting to allow for a fallback to mean fitting in the case of an impossible fit
+        """
         # fallback behaviour for impossible fits
         if len(self.samples) < self.npar:
             # WARNING SHOULD BE RAISED HERE
@@ -122,10 +143,17 @@ class BasePanel:
         return
 
     def _fallback_solve(self):
+        """
+        Changes the method association to mean surface fitting, and fits the panel with it
+        """
         self._associate_mean()
         self._solve_sub()
 
     def _solve_least_squares_paraboloid(self):
+        """
+        Builds the designer matrix for least squares fitting, and calls the _least_squares fitter for a fully fledged
+        9 parameter paraboloid
+        """
         # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
         data = np.array(self.samples)
         system = np.full((len(self.samples), self.npar), 1.0)
@@ -142,6 +170,14 @@ class BasePanel:
         self.solved = True
 
     def _corr_point_least_squares_paraboloid(self, xcoor, ycoor):
+        """
+        Computes the correction from the fitted parameters to the 9 parameter paraboloid at (xcoor, ycoor)
+        Args:
+            xcoor: Coordinate of point in X
+            ycoor: Coordinate of point in Y
+        Returns:
+            The correction at point
+        """
         # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
         xsq = xcoor**2
         ysq = ycoor**2
@@ -151,6 +187,10 @@ class BasePanel:
         return point
 
     def _solve_corotated_lst_sq(self):
+        """
+        Builds the designer matrix for least squares fitting, and calls the _least_squares fitter for a corotated
+        paraboloid centered at the center of the panel
+        """
         # a*u**2 + b*v**2 + c
         data = np.array(self.samples)
         system = np.full((len(self.samples), self.npar), 1.0)
@@ -162,6 +202,14 @@ class BasePanel:
         self.solved = True
 
     def _corr_point_corotated_lst_sq(self, xcoor, ycoor):
+        """
+        Computes the correction from the least squares fitted parameters to the corotated paraboloid
+        Args:
+            xcoor: Coordinate of point in X
+            ycoor: Coordinate of point in Y
+        Returns:
+            The correction at point
+        """
         # a*u**2 + b*v**2 + c
         xc, yc = self.center
         usq = ((xcoor - xc) * np.cos(self.zeta) + (ycoor - yc) * np.sin(self.zeta))**2
@@ -170,7 +218,7 @@ class BasePanel:
 
     def _solve_scipy(self, verbose=False):
         """
-        Fit ponel surface by using arbitrary models using scipy surface fitting engine
+        Fit ponel surface by using arbitrary models through scipy fitting engine
         Args:
             verbose: Increase verbosity in the fitting process
         """
@@ -305,7 +353,7 @@ class BasePanel:
 
     def get_corrections(self):
         """
-        Store corrections for the fitted panel points
+        Store corrections for the points in the panel
         """
         if not self.solved:
             raise Exception("Cannot correct a panel that is not solved")
@@ -326,7 +374,7 @@ class BasePanel:
 
     def _corr_point_scipy(self, xcoor, ycoor):
         """
-        Computes fitted value for point [xcoor, ycoor] using the scipy models
+        Computes the fitted value for point [xcoor, ycoor] using the scipy models
         Args:
             xcoor: X coordinate of point
             ycoor: Y coordinate of point
