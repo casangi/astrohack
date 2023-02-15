@@ -14,7 +14,7 @@ def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, pan
     Args:
         holog_image: Input holography data, can be from astrohack.holog, but also preprocessed AIPS data
         outfile: Name for the output directory structure containing the products
-        aipsdata: Is input data from AIPS?
+        aipsdata: Is input data from AIPS, if so ony a single antenna can be processed at a time
         telescope: Name of the telescope used, can be derived from the holography dataset
         cutoff: Cut off in amplitude for the physical deviation fitting, default is 21%
         panel_kind: Type of fitting function used to fit panel surfaces, defaults to corotated_paraboloid for ringed
@@ -25,6 +25,7 @@ def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, pan
         save_deviations: Save plot of physical deviations to a png file
         save_phase: Save plot of phases to a png file
         parallel: Run chunks of processing in parallel
+        panel_margins: Margin to be ignored at edges of panels when fitting
     """
 
     outfile += '.panel.zarr'
