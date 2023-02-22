@@ -296,6 +296,7 @@ class AstrohackImageFile(dict):
         super().__init__()
 
         self.file = file
+        self._open = False
 
     def __getitem__(self, key):
         return super().__getitem__(key)
@@ -303,6 +304,8 @@ class AstrohackImageFile(dict):
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
         
+    def is_open(self):
+        return self._open
 
     def open(self, file=None):
         """_summary_
@@ -326,6 +329,8 @@ class AstrohackImageFile(dict):
             self[int(ant)] = {}
             for ddi in ddi_list:
                 self[int(ant)][int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
+
+        self._open = True
 
         return True
 
@@ -371,6 +376,7 @@ class AstrohackHologFile(dict):
         
         self.file = file
         self._meta_data = None
+        self._open = False
 
 
     def __getitem__(self, key):
@@ -378,6 +384,9 @@ class AstrohackHologFile(dict):
     
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
+
+    def is_open(self):
+        return self._open
 
     def open(self, file=None, dask_load=False):
         """_summary_
@@ -408,6 +417,7 @@ class AstrohackHologFile(dict):
                                mapping_ant_vis_holog_data_name = os.path.join(file, ddi + "/" + scan + "/" + ant)
                                self[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
 
+        self._open = True
         
         return True
 
