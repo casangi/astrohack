@@ -117,7 +117,6 @@ class ApertureViewer(param.Parameterized):
 
         return mpl_pane
 
-
     @param.depends('type')
     def _make_plot(self):
         return self._plot_function[self.type]
@@ -140,7 +139,6 @@ class ApertureViewer(param.Parameterized):
             golden.sidebar.append(self.param.ddi)
             
             golden.main.append(
-
                 pn.Card(self._make_aperture_plot, name="aperture")
             )
             
