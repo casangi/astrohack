@@ -17,7 +17,7 @@ from astrohack._utils._io import _read_meta_data
 
 from memory_profiler import profile
 
-def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None):
+def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None, holog_dict=None):
     """Loads holog file from disk
 
     Args:
@@ -36,7 +36,8 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
                         }
     """
 
-    holog_dict = {}
+    if holog_dict is None:
+        holog_dict = {}
 
     if load_pnt_dict == True:
         console.info("Loading pointing dictionary to holog ...")
@@ -290,7 +291,8 @@ class AstrohackDataFile:
             self.image = AstrohackImageFile(file_path)
 
 class AstrohackImageFile(dict):
-    """_summary_
+    """
+        Data class for holography image data.
     """
     def __init__(self, file):
         super().__init__()
@@ -308,34 +310,39 @@ class AstrohackImageFile(dict):
         return self._open
 
     def open(self, file=None):
-        """_summary_
+        """ Open hologgraphy file.
 
-        Args:
-            file (_type_, optional): _description_. Defaults to None.
+        Args:self =_
+            file (str, optional): Path to holography file. Defaults to None.
 
         Returns:
-            _type_: _description_
+            bool: bool describing whether the file was opened properly
         """
         from astrohack._utils._io import _load_image_xds
 
         if file is None:
             file = self.file
 
-
         ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
         
-        for ant in ant_list:
-            ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
-            self[int(ant)] = {}
-            for ddi in ddi_list:
-                self[int(ant)][int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
+        try:
+            for ant in ant_list:
+                ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
+                self[int(ant)] = {}
+                for ddi in ddi_list:
+                    self[int(ant)][int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
 
-        self._open = True
+            self._open = True
 
-        return True
+        except Exception as e:
+            console.error("[AstroHackImageFile.open()]: {}".format(e))
+            self._open = False
+
+        return self._open
 
     def summary(self):
-        """_summary_
+        """
+           Prints summary table of holog image file. 
         """
 
         table = PrettyTable()
@@ -349,15 +356,14 @@ class AstrohackImageFile(dict):
 
 
     def select(self, ant=None, ddi=None, polar=False):
-        """_summary_
+        """Select data on the basis of ddi, scan, ant. This is a convenience function.
 
         Args:
-            ant (_type_, optional): _description_. Defaults to None.
-            ddi (_type_, optional): _description_. Defaults to None.
-            polar (bool, optional): _description_. Defaults to False.
+            ddi (int, optional): Data description ID. Defaults to None.
+            ant (int, optional): Antenna ID. Defaults to None.
 
         Returns:
-            _type_: _description_
+            xarray.Dataset: xarray dataset of corresponding ddi, scan, antenna ID.
         """
         if ant is None and ddi is None:
             console.info("No selections made ...")
@@ -369,7 +375,8 @@ class AstrohackImageFile(dict):
             return self[ant][ddi]
 
 class AstrohackHologFile(dict):
-    """_summary_
+    """
+        Data Class to interact ith holography imaging data.
     """
     def __init__(self, file):
         super().__init__()
@@ -389,40 +396,34 @@ class AstrohackHologFile(dict):
         return self._open
 
     def open(self, file=None, dask_load=False):
-        """_summary_
+        """ Open hologgraphy file.
 
         Args:self =_
-            file (_type_, optional): _description_. Defaults to None.
-            dask_load (bool, optional): _description_. Defaults to False.
+            file (str, optional): Path to holography file. Defaults to None.
+            dask_load (bool, optional): If True the file is loaded with Dask. Defaults to False.
 
         Returns:
-            _type_: _description_
+            bool: bool describing whether the file was opened properly
         """
-        import copy
 
         if file is None:
             file = self.file
 
         self._meta_data = _read_meta_data(holog_file=file)
 
-        #hack_dict = _load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False)
-        for ddi in os.listdir(file):
-            if ddi.isnumeric():
-                self[int(ddi)] = {}
-                for scan in os.listdir(os.path.join(file, ddi)):
-                    if scan.isnumeric():
-                        self[int(ddi)][int(scan)] = {}
-                        for ant in os.listdir(os.path.join(file, ddi + "/" + scan)):
-                            if ant.isnumeric():
-                               mapping_ant_vis_holog_data_name = os.path.join(file, ddi + "/" + scan + "/" + ant)
-                               self[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(mapping_ant_vis_holog_data_name)
+        try:
+            _load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
+            self._open = True
 
-        self._open = True
+        except Exception as e:
+            console.error("[AstrohackHologFile]: {}".format(e))
+            self._open = False
         
-        return True
+        return self._open
 
     def summary(self):
-        """_summary_self =_
+        """
+            Prints summary table of holog file.
         """
 
         table = PrettyTable()
@@ -436,15 +437,15 @@ class AstrohackHologFile(dict):
         print(table)
 
     def select(self, ddi=None, scan=None, ant=None):
-        """_summary_
+        """ Select data on the basis of ddi, scan, ant. This is a convenience function.
 
         Args:
-            ddi (_type_, optional): _description_. Defaults to None.
-            scan (_type_, optional): _description_. Defaults to None.
-            ant (_type_, optional): _description_. Defaults to None.
+            ddi (int, optional): Data description ID. Defaults to None.
+            scan (int, optional): Scan number. Defaults to None.
+            ant (int, optional): Antenna ID. Defaults to None.
 
         Returns:
-            _type_: _description_
+            xarray.Dataset: xarray dataset of corresponding ddi, scan, antenna ID.
         """
         if ant is None or ddi is None or scan is None:
             console.info("No selections made ...")
@@ -454,9 +455,10 @@ class AstrohackHologFile(dict):
 
     @property
     def meta_data(self):
-        """_summary_
+        """ Holog file meta data.
 
         Returns:
-            _type_: _description_
+            JSON: JSON file of holography meta data.
         """
+
         return self._meta_data

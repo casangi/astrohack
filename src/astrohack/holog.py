@@ -99,7 +99,7 @@ def _find_peak_beam_value(data, height=0.5, scaling=0.5):
 
 fp=open('aperture_pattern.log','w+')
 @profile(stream=fp)
-def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=50):
+def _calculate_aperture_pattern(grid, delta, padding_factor=50):
     """ Calcualtes the aperture illumination pattern from the beam data.
 
     Args:
@@ -145,8 +145,6 @@ def _calculate_aperture_pattern(grid, frequency, delta, padding_factor=50):
 
     cell_size = 1 / (image_size * delta)
 
-    image_center = image_size // 2
-
     u, v = _calc_coords(image_size, cell_size)
 
     return aperture_grid, u, v, cell_size
@@ -168,6 +166,7 @@ def _parallactic_derotation(data, parallactic_angle_dict):
     #
     # It is assumed, and should be true, that the parallacitc angle array size is consistent over scan.
     scans = list(parallactic_angle_dict.keys())
+
     # Get the median index for the first scan (this should be the same for every scan).
     median_index = len(parallactic_angle_dict[scans[0]].parallactic_samples)//2
     
@@ -339,7 +338,6 @@ def _holog_chunk(holog_chunk_params):
         aperture_grid, u, v, uv_cell_size = _calculate_aperture_pattern(
             grid=beam_grid,
             delta=holog_chunk_params["cell_size"],
-            frequency = freq_chan,
             padding_factor=holog_chunk_params["padding_factor"],
         )
 
@@ -530,6 +528,16 @@ def holog(
 
 
 def _find_nearest(array, value):
+    """ Find the nearest entry in array to that of value.
+
+    Args:
+        array (numpy.array): _description_
+        value (float): _description_
+
+    Returns:
+        int, float: index, array value
+    """
+    
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return idx, array[idx]
