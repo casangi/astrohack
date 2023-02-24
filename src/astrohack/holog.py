@@ -16,6 +16,7 @@ import scipy.constants
 
 from numba import njit
 
+from skimage.draw import disk
 from scipy.interpolate import griddata
 
 from astrohack._utils import _system_message as console
@@ -68,6 +69,24 @@ def _apply_mask(data, scaling=0.5):
 
     start = int(x // 2 - mask // 2)
     return data[start : (start + mask), start : (start + mask)]
+
+def _mask_circular_disk(center, radius, array, mask_value=1):
+
+    if center == None:
+        image_slice = array[0, 0, 0, ...]
+        center = (image_slice.shape[0]//2, image_slice.shape[1]//2)
+
+    n_time, n_chan, n_pol, m, n = array.shape
+    
+    shape = tuple((m, n))
+    
+    r, c = disk(center, radius, shape=shape)
+    mask = np.zeros(shape, dtype=array.dtype)   
+    mask[r, c] = mask_value
+    
+    mask = np.tile(mask, reps=(n_time, n_chan, n_pol, 1, 1))
+    
+    return mask
 
 
 def _find_peak_beam_value(data, height=0.5, scaling=0.5):
@@ -358,10 +377,13 @@ def _holog_chunk(holog_chunk_params):
 
         phase_corrected_angle = np.empty_like(aperture_grid)
 
-        aperture_radius = (0.75*telescope.diam)/wavelength 
+        aperture_radius = (0.5*telescope.diam)/wavelength
 
-        i = np.where(np.abs(u) < aperture_radius)[0]
-        j = np.where(np.abs(v) < aperture_radius)[0]
+        # We don't want the crop to be overly aggresive but I want the aperture radius to be just that
+        # so we multiply by (3/4)/(1/2) --> 3/2 to scale the crop up a bit.
+
+        i = np.where(np.abs(u) < (3/2)*aperture_radius)[0]
+        j = np.where(np.abs(v) < (3/2)*aperture_radius)[0]
 
         # Ensure the cut is square by using the smaller dimension. Phase correction fails otherwise.
         if i.shape[0] < j.shape[0]: 
@@ -393,7 +415,20 @@ def _holog_chunk(holog_chunk_params):
                         subreflector_tilt=False, 
                         cassegrain_offset=True
                     )
-                    
+
+        # Masking Aperture image
+        image_slice = aperture_grid[0, 0, 0, ...]
+        center_pixel = (image_slice.shape[0]//2, image_slice.shape[1]//2)
+
+        outer_pixel = np.where(np.abs(u) < aperture_radius)[0].max()
+
+        mask = _mask_circular_disk(
+            radius=np.abs(outer_pixel - center_pixel[0])+1, # Let's not be too aggresive 
+            array=aperture_grid
+        )
+
+        aperture_grid = mask*aperture_grid
+        
         ###To Do: Add Paralactic angle as a non-dimension coordinate dependant on time.
         xds = xr.Dataset()
 
