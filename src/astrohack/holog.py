@@ -242,6 +242,10 @@ def _chunked_average(data, weight, avg_map, avg_freq):
             # Most probably will have to unravel assigment
             data_avg[:, avg_index, :] = (data_avg[:, avg_index, :] + weight[:, index, :] * data[:, index, :])
             weight_sum[:, avg_index, :] = weight_sum[:, avg_index, :] + weight[:, index, :]
+            #for time in n_time:
+            #    for pol in n_pol:
+            #        data_avg[time, avg_index, pol] = (data_avg[time, avg_index, pol] + weight[time, index, pol] * data[time, index, pol])
+            #        weight_sum[time, avg_index, pol] = weight_sum[time, avg_index, pol] + weight[time, index, pol]
             
             index = index + 1
 
@@ -314,7 +318,7 @@ def _holog_chunk(holog_chunk_params):
             # Grid the data
             vis = ant_xds.VIS.values
             lm = ant_xds.DIRECTIONAL_COSINES.values
-            weight = ant_xds.WEIGHT
+            weight = ant_xds.WEIGHT.values
 
             if holog_chunk_params["chan_average"]:
                 vis_avg, weight_sum = _chunked_average(vis, weight, avg_chan_map, avg_freq)
@@ -423,6 +427,7 @@ def _holog_chunk(holog_chunk_params):
         outer_pixel = np.where(np.abs(u) < aperture_radius)[0].max()
 
         mask = _mask_circular_disk(
+            center=None,
             radius=np.abs(outer_pixel - center_pixel[0])+1, # Let's not be too aggresive 
             array=aperture_grid
         )
