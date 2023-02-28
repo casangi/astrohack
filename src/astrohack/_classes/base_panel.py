@@ -1,19 +1,31 @@
-import numpy as np
 from scipy import optimize as opt
 from astrohack._utils._linear_algebra import _gauss_elimination_numpy, _least_squares_fit
 from astrohack._utils._globals import *
+from astrohack._utils._system_message import warning, error
 
-panelkinds = ["rigid", "mean", "xyparaboloid", "rotatedparaboloid", "corotatedparaboloid", "least_squares",
-              "corotated_lst_sq", "double", "safe_lst"]
+panelkinds = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
+              "rotated_paraboloid", "full_paraboloid_lst_sq"]
+imean = 0
 irigid = 0
-imean = 1
-ixypara = 2
-irotpara = 3
-icorpara = 4
-ilstsqr = 5
-icolstsq = 6
-idouble = 7
-isafe = 8
+icorscp = 2
+icorlst = 3
+icorrob = 4
+ixypara = 5
+irotpara = 6
+ifulllst = 7
+
+warned = False
+
+
+def set_warned(value: bool):
+    """
+    set the global warned to avoid repeated messages about experimental values
+    Args:
+        value: True or False
+
+    """
+    global warned
+    warned = value
 
 
 class BasePanel:
@@ -26,10 +38,22 @@ class BasePanel:
 
     def __init__(self, kind, screws, label, center=None, zeta=None):
         """
-        Initializes a BasePanel with the common machinery to both PolygonPanel and RingPanel
+        Initializes the base panel with the appropriated fitting methods and providing basic functionality
+        Fitting method kinds are:
+        AIPS fitting kinds:
+            mean: The panel is corrected by the mean of its samples
+            rigid: The panel samples are fitted to a rigid surface
+        Corotated Paraboloids (the two bending axes are parallel and perpendicular to the radius of the antenna crossing
+        the middle of the panel):
+            corotated_scipy: Paraboloid is fitted using scipy.optimize, robust but slow
+            corotated_lst_sq: Paraboloid is fitted using the linear algebra least squares method, fast but unreliable
+            corotated_robust: Tries corotated_lst_sq, if it diverges falls back to corotated_scipy
+        Experimental fitting kinds:
+            xy_paraboloid: fitted using scipy.optimize, bending axes are parallel to the x and y axes
+            rotated_paraboloid: fitted using scipy.optimize, bending axes can be rotated by an arbitrary angle
+            full_paraboloid_lst_sq: Full 9 parameter paraboloid fitted using least_squares method, heavily overfits
         Args:
-            kind: What kind of surface to be used in fitting ["rigid", "mean", "xyparaboloid",
-            "rotatedparaboloid", "corotatedparaboloid"]
+            kind: What kind of surface fitting method to be used
             label: Panel label
             screws: position of the screws
             center: Panel center
@@ -52,26 +76,46 @@ class BasePanel:
         else:
             self.zeta = zeta
 
-        if self.kind == panelkinds[irigid]:
+        self._associate()
+
+    def _associate(self):
+        """
+        Does the fitting method associations according to the kind chosen by the user
+        """
+        try:
+            ikind = panelkinds.index(self.kind)
+        except ValueError:
+            error("Unknown panel kind: "+self.kind)
+            raise ValueError('Panel kind not in list')
+        if ikind > icorrob:
+            self._warn_experimental_method()
+
+        if ikind == irigid:
             self._associate_rigid()
-        elif self.kind == panelkinds[imean]:
+        elif ikind == imean:
             self._associate_mean()
-        elif self.kind == panelkinds[ixypara]:
+        elif ikind == ixypara:
             self._associate_scipy(self._xyaxes_paraboloid, 3)
-        elif self.kind == panelkinds[irotpara]:
+        elif ikind == irotpara:
             self._associate_scipy(self._rotated_paraboloid, 4)
-        elif self.kind == panelkinds[icorpara]:
+        elif ikind == icorscp:
             self._associate_scipy(self._corotated_paraboloid, 3)
-        elif self.kind == panelkinds[ilstsqr]:
+        elif ikind == ifulllst:
             self._associate_least_squares()
-        elif self.kind == panelkinds[icolstsq]:
+        elif ikind == icorlst:
             self._associate_corotated_lst_sq()
-        elif self.kind == panelkinds[idouble]:
-            self._associate_double()
-        elif self.kind == panelkinds[isafe]:
-            self._associate_safe()
+        elif ikind == icorrob:
+            self._associate_robust()
+
+    def _warn_experimental_method(self):
+        """
+        Raises a warning about experimental methods if a warning has not been raised before
+        """
+        if warned:
+            return
         else:
-            raise Exception("Unknown panel kind: ", self.kind)
+            warning("Experimental kind: "+self.kind)
+            set_warned(True)
 
     def _associate_scipy(self, fitting_function, npar):
         """
@@ -85,15 +129,14 @@ class BasePanel:
         self.corr_point = self._corr_point_scipy
         self._fitting_function = fitting_function
 
-    def _associate_double(self):
-        self.npar = 3
-        self._solve_sub = self._solve_double
-        self.corr_point = self._corr_point_corotated_lst_sq
-        self._fitting_function = self._corotated_paraboloid
+    def _associate_robust(self):
+        """
+        Associate fitting method for the corotated_robust kind
+        Returns:
 
-    def _associate_safe(self):
+        """
         self.npar = 3
-        self._solve_sub = self._solve_safe
+        self._solve_sub = self._solve_robust
         self.corr_point = self._corr_point_corotated_lst_sq
         self._fitting_function = self._corotated_paraboloid
 
@@ -205,12 +248,11 @@ class BasePanel:
         point += self.par[6]*xcoor + self.par[7]*ycoor + self.par[8]
         return point
 
-    def _solve_double(self):
-        self._solve_corotated_lst_sq()
-        self._solve_scipy(x0=self.par)
-        newpar = self.par
-
-    def _solve_safe(self):
+    def _solve_robust(self):
+        """
+        Try fitting the Surface of a panel using the corotated least_squares method, if that fails fallback to scipy
+        fitting
+        """
         try:
             self._solve_corotated_lst_sq()
         except np.linalg.LinAlgError:
