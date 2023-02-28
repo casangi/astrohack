@@ -1,9 +1,10 @@
+import numpy as np
 from scipy import optimize as opt
 from astrohack._utils._linear_algebra import _gauss_elimination_numpy, _least_squares_fit
 from astrohack._utils._globals import *
 
 panelkinds = ["rigid", "mean", "xyparaboloid", "rotatedparaboloid", "corotatedparaboloid", "least_squares",
-              "corotated_lst_sq"]
+              "corotated_lst_sq", "double", "safe_lst"]
 irigid = 0
 imean = 1
 ixypara = 2
@@ -11,6 +12,8 @@ irotpara = 3
 icorpara = 4
 ilstsqr = 5
 icolstsq = 6
+idouble = 7
+isafe = 8
 
 
 class BasePanel:
@@ -63,6 +66,10 @@ class BasePanel:
             self._associate_least_squares()
         elif self.kind == panelkinds[icolstsq]:
             self._associate_corotated_lst_sq()
+        elif self.kind == panelkinds[idouble]:
+            self._associate_double()
+        elif self.kind == panelkinds[isafe]:
+            self._associate_safe()
         else:
             raise Exception("Unknown panel kind: ", self.kind)
 
@@ -77,6 +84,18 @@ class BasePanel:
         self._solve_sub = self._solve_scipy
         self.corr_point = self._corr_point_scipy
         self._fitting_function = fitting_function
+
+    def _associate_double(self):
+        self.npar = 3
+        self._solve_sub = self._solve_double
+        self.corr_point = self._corr_point_corotated_lst_sq
+        self._fitting_function = self._corotated_paraboloid
+
+    def _associate_safe(self):
+        self.npar = 3
+        self._solve_sub = self._solve_safe
+        self.corr_point = self._corr_point_corotated_lst_sq
+        self._fitting_function = self._corotated_paraboloid
 
     def _associate_rigid(self):
         """
@@ -186,6 +205,17 @@ class BasePanel:
         point += self.par[6]*xcoor + self.par[7]*ycoor + self.par[8]
         return point
 
+    def _solve_double(self):
+        self._solve_corotated_lst_sq()
+        self._solve_scipy(x0=self.par)
+        newpar = self.par
+
+    def _solve_safe(self):
+        try:
+            self._solve_corotated_lst_sq()
+        except np.linalg.LinAlgError:
+            self._solve_scipy()
+
     def _solve_corotated_lst_sq(self):
         """
         Builds the designer matrix for least squares fitting, and calls the _least_squares fitter for a corotated
@@ -216,7 +246,7 @@ class BasePanel:
         vsq = ((xcoor - xc) * np.sin(self.zeta) + (ycoor - yc) * np.cos(self.zeta))**2
         return self.par[0]*usq + self.par[1]*vsq + self.par[2]
 
-    def _solve_scipy(self, verbose=False):
+    def _solve_scipy(self, verbose=False, x0=None):
         """
         Fit ponel surface by using arbitrary models through scipy fitting engine
         Args:
@@ -228,10 +258,12 @@ class BasePanel:
             devia[i] = self.samples[i][-1]
             coords[:, i] = self.samples[i][0], self.samples[i][1]
 
-        liminf = [0, 0, -np.inf]
+        liminf = [-np.inf, -np.inf, -np.inf]
         limsup = [np.inf, np.inf, np.inf]
-        p0 = [1e2, 1e2, np.mean(devia)]
-
+        if x0 is None:
+            p0 = [1e2, 1e2, np.mean(devia)]
+        else:
+            p0 = x0
         if self.kind == panelkinds[irotpara]:
             liminf.append(0.0)
             limsup.append(np.pi)
