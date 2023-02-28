@@ -194,13 +194,13 @@ class BasePanel:
         """
         # fallback behaviour for impossible fits
         if len(self.samples) < self.npar:
-            # WARNING SHOULD BE RAISED HERE
+            warning("Impossible fit, falling back to mean")
             self._fallback_solve()
         else:
             try:
                 self._solve_sub()
             except np.linalg.LinAlgError:
-                # WARNING SHOULD BE RAISED HERE
+                warning("Fit diverged, falling back to mean")
                 self._fallback_solve()
         return
 
