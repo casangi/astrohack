@@ -6,7 +6,7 @@ from astrohack._utils._system_message import warning, error
 panelkinds = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
               "rotated_paraboloid", "full_paraboloid_lst_sq"]
 imean = 0
-irigid = 0
+irigid = 1
 icorscp = 2
 icorlst = 3
 icorrob = 4
@@ -75,7 +75,6 @@ class BasePanel:
             self.zeta = 0
         else:
             self.zeta = zeta
-
         self._associate()
 
     def _associate(self):
@@ -89,7 +88,6 @@ class BasePanel:
             raise ValueError('Panel kind not in list')
         if ikind > icorrob:
             self._warn_experimental_method()
-
         if ikind == irigid:
             self._associate_rigid()
         elif ikind == imean:
@@ -106,7 +104,7 @@ class BasePanel:
             self._associate_corotated_lst_sq()
         elif ikind == icorrob:
             self._associate_robust()
-
+        
     def _warn_experimental_method(self):
         """
         Raises a warning about experimental methods if a warning has not been raised before
