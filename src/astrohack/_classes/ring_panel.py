@@ -7,12 +7,24 @@ class RingPanel(BasePanel):
     # This class describes and treats panels that are arranged in
     # rings on the Antenna surface
 
-    def __init__(self, kind, angle, ipanel, label, inrad, ourad, margin=0.05, screw_scheme=None):
+    def __init__(self, kind, angle, ipanel, label, inrad, ourad, margin=0.20, screw_scheme=None):
         """
         Initializes a panel that is a section of a ring in a circular antenna
+        Fitting method kinds are:
+        AIPS fitting kinds:
+            mean: The panel is corrected by the mean of its samples
+            rigid: The panel samples are fitted to a rigid surface
+        Corotated Paraboloids (the two bending axes are parallel and perpendicular to the radius of the antenna crossing
+        the middle of the panel):
+            corotated_scipy: Paraboloid is fitted using scipy.optimize, robust but slow
+            corotated_lst_sq: Paraboloid is fitted using the linear algebra least squares method, fast but unreliable
+            corotated_robust: Tries corotated_lst_sq, if it diverges falls back to corotated_scipy
+        Experimental fitting kinds:
+            xy_paraboloid: fitted using scipy.optimize, bending axes are parallel to the x and y axes
+            rotated_paraboloid: fitted using scipy.optimize, bending axes can be rotated by an arbitrary angle
+            full_paraboloid_lst_sq: Full 9 parameter paraboloid fitted using least_squares method, heavily overfits
         Args:
-            kind: What kind of surface to be used in fitting ["rigid", "mean", "xyparaboloid",
-            "rotatedparaboloid", "corotatedparaboloid"]
+            kind: What kind of surface fitting method to be used
             angle: Azimuthal span of the panel
             ipanel: Panel number clockwise from top
             label: Panel label
@@ -38,7 +50,7 @@ class RingPanel(BasePanel):
         # Now we are ready to initialize the base object
         super().__init__(kind, screws, label, center=self.center, zeta=zeta)
 
-    def _init_screws(self, scheme, offset=0.1):
+    def _init_screws(self, scheme, offset=0.05):
         """
         Initialize screws according to the scheme
         Args:
