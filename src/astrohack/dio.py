@@ -45,15 +45,18 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
 
     for ddi in os.listdir(holog_file):
         if ddi.isnumeric():
-            holog_dict[int(ddi)] = {}
+            if int(ddi) not in holog_dict:
+                holog_dict[int(ddi)] = {}
             for scan in os.listdir(os.path.join(holog_file, ddi)):
                 if scan.isnumeric():
-                    holog_dict[int(ddi)][int(scan)] = {}
+                    if int(scan) not in holog_dict[int(ddi)]:
+                        holog_dict[int(ddi)][int(scan)] = {}
                     for ant in os.listdir(os.path.join(holog_file, ddi + "/" + scan)):
                         if ant.isnumeric():
                             mapping_ant_vis_holog_data_name = os.path.join(
                                 holog_file, ddi + "/" + scan + "/" + ant
                             )
+                            
 
                             if dask_load:
                                 holog_dict[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(
@@ -64,8 +67,10 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
                                     int(ant)
                                 ] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
 
+    
     if ant_id == None:
         return holog_dict
+        
 
     return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id)
 
@@ -73,7 +78,7 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
 def extract_holog(
     ms_name,
     holog_name,
-    holog_obs_dict=None,
+    holog_obs_dict,
     data_col="DATA",
     subscan_intent="MIXED",
     parallel=True,
@@ -108,9 +113,13 @@ def extract_holog(
 
     pnt_name = "{base}.{pointing}".format(base=holog_name, pointing="point.zarr")
 
-    #pnt_dict = _load_pnt_dict(pnt_name)
-    pnt_dict = _make_ant_pnt_dict(ms_name, pnt_name, parallel=parallel)
+    pnt_dict = _load_pnt_dict(pnt_name)
+    #pnt_dict = _make_ant_pnt_dict(ms_name, pnt_name, parallel=parallel)
     
+    #print(pnt_dict)
+    
+
+    ''' VLA datasets causeing issues.
     if holog_obs_dict is None:
         ant_names_list = []
         #Create mapping antennas
@@ -136,6 +145,7 @@ def extract_holog(
                 holog_obs_dict[ddi][scan_id]['ref'] = ant_names_set - set(holog_obs_dict[ddi][scan_id]['map'])
             
     print(holog_obs_dict)
+    '''
 
 
     ######## Get Spectral Windows ########
@@ -219,10 +229,12 @@ def extract_holog(
         lockoptions={"option": "usernoread"},
         ack=False,
     )
+    
+    
 
     delayed_list = []
-    for ddi in holog_obs_dict:
-
+    #for ddi in [holog_obs_dict['ddi'][0]]: #### NBNBNB: Chnage to all ddi's
+    for ddi in holog_obs_dict['ddi']:
         spw_setup_id = ddi_spw[ddi]
         pol_setup_id = ddpol_indexol[ddi]
 
@@ -244,29 +256,42 @@ def extract_holog(
         extract_holog_params["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[0]
         extract_holog_params["chan_setup"]["total_bw"] = spw_ctb.getcol("TOTAL_BANDWIDTH", startrow=spw_setup_id, nrow=1)[0]
 
-        extract_holog_params["pol_setup"]["pol"] = pol_ctb.getcol("CORR_TYPE", startrow=spw_setup_id, nrow=1)[0, :]
+        extract_holog_params["pol_setup"]["pol"] = pol_ctb.getcol("CORR_TYPE", startrow=pol_setup_id, nrow=1)[0, :]
         
         extract_holog_params["telescope_name"] = obs_ctb.getcol("TELESCOPE_NAME")[0]
+        
 
-        for scan in holog_obs_dict[ddi].keys():
-            console.info("Processing ddi: {ddi}, scan: {scan}".format(ddi=ddi, scan=scan))
-
-            map_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]["map"]))[0]
-            ref_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]["ref"]))[0]
-
-            extract_holog_params["map_ant_ids"] = map_ant_ids
-            extract_holog_params["ref_ant_ids"] = ref_ant_ids
-            extract_holog_params["sel_state_ids"] = state_ids
-            extract_holog_params["scan"] = scan
-
-            if parallel:
-                delayed_list.append(
-                    dask.delayed(_extract_holog_chunk)(
-                        dask.delayed(extract_holog_params)
+        for holog_scan_id in holog_obs_dict.keys(): #loop over all beam_scan_ids, a beam_scan_id can conist out of more than one scan in an ms (this is the case for the VLA pointed mosiacs).
+            if isinstance(holog_scan_id,int):
+                scans = holog_obs_dict[holog_scan_id]["scans"]
+                console.info("Processing ddi: {ddi}, scans: {scans}".format(ddi=ddi, scans=scans))
+            
+                #map_ref_ant_dict = {}
+                map_ant_list = []
+                ref_ant_per_map_ant_list = [] #
+                for map_ant_str in holog_obs_dict[holog_scan_id]['ant'].keys():
+                    ref_ant_ids = np.array(convert_ant_name_to_id(ant_name,list(holog_obs_dict[holog_scan_id]['ant'][map_ant_str])))
+                    map_ant_id = convert_ant_name_to_id(ant_name,map_ant_str)[0]
+                    #map_ref_ant_dict[map_ant_id] = ref_ant_ids
+                    ref_ant_per_map_ant_list.append(ref_ant_ids)
+                    map_ant_list.append(map_ant_id)
+                    
+                #extract_holog_params["map_ref_ant_dict"] = map_ref_ant_dict
+                extract_holog_params["ref_ant_per_map_ant_tuple"] = tuple(ref_ant_per_map_ant_list)
+                extract_holog_params["map_ant_tuple"] = tuple(map_ant_list)
+                extract_holog_params["scans"] = scans
+                extract_holog_params["sel_state_ids"] = state_ids
+                extract_holog_params["holog_scan_id"] = holog_scan_id
+                
+                if parallel:
+                    delayed_list.append(
+                        dask.delayed(_extract_holog_chunk)(
+                            dask.delayed(extract_holog_params)
+                        )
                     )
-                )
-            else:
-                _extract_holog_chunk(extract_holog_params)
+                else:
+                    _extract_holog_chunk(extract_holog_params)
+                
 
     spw_ctb.close()
     pol_ctb.close()
@@ -284,6 +309,9 @@ def extract_holog(
     holog_dict = _load_holog_file(holog_file=holog_file, dask_load=True, load_pnt_dict=False)
 
     _create_holog_meta_data(holog_file=holog_file, holog_dict=holog_dict, holog_params=extract_holog_params)
+                
+def convert_ant_name_to_id(ant_name,ant_name_to_convert):
+    return np.nonzero(np.in1d(ant_name,ant_name_to_convert))[0]
 
 class AstrohackDataFile:
     def __init__(self, file_stem, path='./'):

@@ -98,24 +98,24 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
         holog_name (str): holog file name.
         holog_dict (dict): Dictionary containing msdx data.
     """
+    data_extent = []
+    lm_extent = {"l": {"min": [], "max": []}, "m": {"min": [], "max": []}}
+    ant_holog_dict = {}
 
     for ddi, scan_dict in holog_dict.items():
         if isinstance(ddi, numbers.Number):
-            ant_sub_dict = {}
-            ant_holog_dict = {}
-            max_extent = {}
-            dims_meta_data = {}
-            ant_name_map = {}
-
-            data_extent = []
-
-            lm_extent = {"l": {"min": [], "max": []}, "m": {"min": [], "max": []}}
-
             for scan, ant_dict in scan_dict.items():
                 for ant, xds in ant_dict.items():
-                    ant_sub_dict.setdefault(ddi, {})
-                    ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
-                    ant_sub_dict = {}
+                    
+                    if ant not in ant_holog_dict:
+                        ant_holog_dict[ant] = {ddi:{scan:{}}}
+                    elif ddi not in ant_holog_dict[ant]:
+                        ant_holog_dict[ant][ddi] = {scan:{}}
+                    
+                    ant_holog_dict[ant][ddi][scan] = xds.to_dict(data=False)
+                
+                    #ant_sub_dict.setdefault(ddi, {})
+                    #ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
 
                     # Find the average (l, m) extent for each antenna, over (ddi, scan) and write the meta data to file.
                     dims = xds.dims
@@ -136,14 +136,7 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
                     
                     data_extent.append(dims["time"])
 
-                    dims_meta_data.setdefault(
-                        ant,
-                        {
-                            "time": dims["time"],
-                            "chan": dims["chan"],
-                            "pol": dims["pol"],
-                        },
-                    )
+
     
     max_value = int(np.array(data_extent).max())
 
@@ -265,7 +258,7 @@ def _load_pnt_dict(file, ant_list=None, dask_load=True):
     return pnt_dict
 
 
-def _make_ant_pnt_xds_chunk(ms_name, pnt_parms):
+def _make_ant_pnt_chunk(ms_name, pnt_parms):
     """Extract subset of pointing table data into a dictionary of xarray data arrays. This is written to disk as a zarr file.
             This function processes a chunk the overalll data and is managed by Dask.
 
@@ -284,30 +277,23 @@ def _make_ant_pnt_xds_chunk(ms_name, pnt_parms):
         % (os.path.join(ms_name, "POINTING"), ant_id)
     )
 
+    #print('tb.getcol("DIRECTION").shape',tb.getcol("DIRECTION").shape,ant_id)
     ### NB: Add check if directions refrence frame is Azemuth Elevation (AZELGEO)
-    direction = tb.getcol("DIRECTION")[:, 0, :]
-    target = tb.getcol("TARGET")[:, 0, :]
-    encoder = tb.getcol("ENCODER")
-    direction_time = tb.getcol("TIME")
-    pointing_offset = tb.getcol("POINTING_OFFSET")[:, 0, :]
+    try:
+        direction = tb.getcol("DIRECTION")[:, 0, :]
+        target = tb.getcol("TARGET")[:, 0, :]
+        encoder = tb.getcol("ENCODER")
+        direction_time = tb.getcol("TIME")
+        pointing_offset = tb.getcol("POINTING_OFFSET")[:, 0, :]
+    except Exception as e:
+        tb.close()
+        print('Skipping antenna ' + str(ant_id) + ' no pointing info')
+        
+        console.warning("[_make_ant_pnt_chunk] Skipping antenna " + str(ant_id) + " no pointing info")
 
+        return 0
     tb.close()
 
-    """Using CASA table tool
-    tb = table()
-    tb.open(os.path.join(ms_name,"POINTING"), nomodify=True, lockoptions={'option': 'usernoread'})
-    pt_ant_table = tb.taql('select DIRECTION,TIME,TARGET,ENCODER,ANTENNA_ID,POINTING_OFFSET from %s WHERE ANTENNA_ID == %s' % (os.path.join(ms_name,"POINTING"),ant_id))
-    
-    ### NB: Add check if directions refrence frame is Azemuth Elevation (AZELGEO)
-    
-    direction = np.swapaxes(pt_ant_table.getcol('DIRECTION')[:,0,:],0,1)
-    target = np.swapaxes(pt_ant_table.getcol('TARGET')[:,0,:],0,1)
-    encoder = np.swapaxes(pt_ant_table.getcol('ENCODER'),0,1)
-    direction_time = pt_ant_table.getcol('TIME')
-    pointing_offset = np.swapaxes(pt_ant_table.getcol('POINTING_OFFSET')[:,0,:],0,1)
-    tb.close()
-    """
-    
     pnt_xds = xr.Dataset()
     coords = {"time": direction_time}
     pnt_xds = pnt_xds.assign_coords(coords)
@@ -353,17 +339,15 @@ def _make_ant_pnt_xds_chunk(ms_name, pnt_parms):
         scan_list = []
         for scan_id, scan_time in ddi.items():
             _, time_index = time_tree.query(scan_time[:,None])
-            sub_lm = pnt_xds["DIRECTIONAL_COSINES"].isel(time=slice(time_index[0],time_index[1])).mean()
+            sub_lm = np.abs(pnt_xds["DIRECTIONAL_COSINES"].isel(time=slice(time_index[0],time_index[1]))).mean()
             
             if sub_lm > 10**-12: #Antenna is mapping since lm is non-zero
                 scan_list.append(scan_id)
-        
         mapping_scans[ddi_id] = scan_list
             
     pnt_xds.attrs['mapping_scans'] = mapping_scans
     ###############
-    
-    
+
     pnt_xds.attrs['ant_name'] = pnt_parms['ant_name']
     
     
@@ -420,13 +404,14 @@ def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
     ###########################################################################################
     pnt_parms = {'pnt_name':pnt_name,'scan_time_dict':scan_time_dict}
     
+    
     if parallel:
         delayed_pnt_list = []
         for id in antenna_id:
             pnt_parms['ant_id'] = id
             pnt_parms['ant_name'] = antenna_name[id]
             delayed_pnt_list.append(
-                dask.delayed(_make_ant_pnt_xds_chunk)(
+                dask.delayed(_make_ant_pnt_chunk)(
                     dask.delayed(ms_name), dask.delayed(pnt_parms)
                 )
             )
@@ -435,7 +420,7 @@ def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
         for id in antenna_id:
             pnt_parms['ant_id'] = id
             pnt_parms['ant_name'] = antenna_name[id]
-            _make_ant_pnt_xds_chunk(ms_name, pnt_parms)
+            _make_ant_pnt_chunk(ms_name, pnt_parms)
 
     return _load_pnt_dict(pnt_name)
     
@@ -506,8 +491,10 @@ def _extract_holog_chunk_jit(
     time_vis,
     flag,
     flag_row,
-    map_ant_ids,
-    ref_ant_ids,
+    #map_ant_ids,
+    #ref_ant_ids,
+    ref_ant_per_map_ant_tuple,
+    map_ant_tuple,
 ):
     """JIT copiled function to extract relevant visibilty data from chunk after flagging and applying weights.
 
@@ -533,7 +520,7 @@ def _extract_holog_chunk_jit(
     vis_map_dict = {}
     sum_weight_map_dict = {}
 
-    for antenna_id in map_ant_ids:
+    for antenna_id in map_ant_tuple:
         vis_map_dict[antenna_id] = np.zeros(
             (n_time, n_chan, n_pol), dtype=types.complex64
         )
@@ -546,22 +533,31 @@ def _extract_holog_chunk_jit(
         if flag_row is False:
             continue
 
-        ant1_index = ant1[row]
-        ant2_index = ant2[row]
-
-        if (ant1_index in map_ant_ids) and (ant2_index in ref_ant_ids):
-            vis_baseline = vis_data[row, :, :]  # n_chan x n_pol
-            map_ant_index = ant1_index  # mapping antenna index
-
-        elif (ant2_index in map_ant_ids) and (
-            ant1_index not in ref_ant_ids
-        ):  # conjugate
-            vis_baseline = np.conjugate(vis_data[row, :, :])
-            map_ant_index = ant2_index
-
+        ant1_id = ant1[row]
+        ant2_id = ant2[row]
+        
+        if ant1_id in map_ant_tuple:
+            indx = map_ant_tuple.index(ant1_id)
+            conjugate = False
+            ref_ant_id = ant2_id
+            map_ant_id = ant1_id  # mapping antenna index
+        elif ant2_id in map_ant_tuple:
+            indx = map_ant_tuple.index(ant2_id)
+            conjugate = True
+            ref_ant_id = ant1_id
+            map_ant_id = ant2_id  # mapping antenna index
         else:
             continue
-
+            
+        
+        if ref_ant_id in ref_ant_per_map_ant_tuple[indx]:
+            if conjugate:
+                vis_baseline = np.conjugate(vis_data[row, :, :])
+            else:
+                vis_baseline = vis_data[row, :, :]  # n_chan x n_pol
+        else:
+            continue
+        
         # Find index of time_vis_row[row] in time_vis that maintains the value ordering
         time_index = np.searchsorted(time_vis, time_vis_row[row])
 
@@ -569,39 +565,39 @@ def _extract_holog_chunk_jit(
             for pol in range(n_pol):
                 if ~(flag[row, chan, pol]):
                     # Calculate running weighted sum of visibilities
-                    vis_map_dict[map_ant_index][time_index, chan, pol] = (
-                        vis_map_dict[map_ant_index][time_index, chan, pol]
+                    vis_map_dict[map_ant_id][time_index, chan, pol] = (
+                        vis_map_dict[map_ant_id][time_index, chan, pol]
                         + vis_baseline[chan, pol] * weight[row, pol]
                     )
 
                     # Calculate running sum of weights
-                    sum_weight_map_dict[map_ant_index][time_index, chan, pol] = (
-                        sum_weight_map_dict[map_ant_index][time_index, chan, pol]
+                    sum_weight_map_dict[map_ant_id][time_index, chan, pol] = (
+                        sum_weight_map_dict[map_ant_id][time_index, chan, pol]
                         + weight[row, pol]
                     )
 
     flagged_mapping_antennas = []
 
-    for map_ant_index in vis_map_dict.keys():
+    for map_ant_id in vis_map_dict.keys():
         sum_of_sum_weight = 0
 
         for time_index in range(n_time):
             for chan in range(n_chan):
                 for pol in range(n_pol):
-                    sum_weight = sum_weight_map_dict[map_ant_index][
+                    sum_weight = sum_weight_map_dict[map_ant_id][
                         time_index, chan, pol
                     ]
                     sum_of_sum_weight = sum_of_sum_weight + sum_weight
                     if sum_weight == 0:
-                        vis_map_dict[map_ant_index][time_index, chan, pol] = 0.0
+                        vis_map_dict[map_ant_id][time_index, chan, pol] = 0.0
                     else:
-                        vis_map_dict[map_ant_index][time_index, chan, pol] = (
-                            vis_map_dict[map_ant_index][time_index, chan, pol]
+                        vis_map_dict[map_ant_id][time_index, chan, pol] = (
+                            vis_map_dict[map_ant_id][time_index, chan, pol]
                             / sum_weight
                         )
 
         if sum_of_sum_weight == 0:
-            flagged_mapping_antennas.append(map_ant_index)
+            flagged_mapping_antennas.append(map_ant_id)
 
     return vis_map_dict, sum_weight_map_dict, flagged_mapping_antennas
 
@@ -741,9 +737,16 @@ def _extract_holog_chunk(extract_holog_params):
     pnt_name = extract_holog_params["pnt_name"]
     data_col = extract_holog_params["data_col"]
     ddi = extract_holog_params["ddi"]
-    scan = extract_holog_params["scan"]
-    map_ant_ids = extract_holog_params["map_ant_ids"]
-    ref_ant_ids = extract_holog_params["ref_ant_ids"]
+    scans = extract_holog_params["scans"]
+    #map_ant_ids = extract_holog_params["map_ant_ids"]
+    #ref_ant_ids = extract_holog_params["ref_ant_ids"]
+    #map_ref_ant_dict = extract_holog_params["map_ref_ant_dict"]
+    ref_ant_per_map_ant_tuple = extract_holog_params["ref_ant_per_map_ant_tuple"]
+    map_ant_tuple = extract_holog_params["map_ant_tuple"]
+    holog_scan_id = extract_holog_params["holog_scan_id"]
+    
+    assert len(ref_ant_per_map_ant_tuple) == len(map_ant_tuple), "ref_ant_per_map_ant_tuple and map_ant_tuple should have same length."
+    
     sel_state_ids = extract_holog_params["sel_state_ids"]
     holog_name = extract_holog_params["holog_name"]
     overwrite = extract_holog_params["overwrite"]
@@ -751,10 +754,17 @@ def _extract_holog_chunk(extract_holog_params):
     chan_freq = extract_holog_params["chan_setup"]["chan_freq"]
     pol = extract_holog_params["pol_setup"]["pol"]
 
-    ctb = ctables.taql(
-        "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, STATE_ID from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s"
-        % (data_col, ms_name, ddi, scan, sel_state_ids)
-    )
+    if sel_state_ids:
+        ctb = ctables.taql(
+            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s"
+            % (data_col, ms_name, ddi, scans, sel_state_ids)
+        )
+    else:
+        ctb = ctables.taql(
+            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
+            % (data_col, ms_name, ddi, scans)
+        )
+        
 
     vis_data = ctb.getcol("DATA")
     weight = ctb.getcol("WEIGHT")
@@ -764,15 +774,12 @@ def _extract_holog_chunk(extract_holog_params):
     time_vis_row_centroid = ctb.getcol("TIME_CENTROID")
     flag = ctb.getcol("FLAG")
     flag_row = ctb.getcol("FLAG_ROW")
-    state_ids_row = ctb.getcol("STATE_ID")
-
     ctb.close()
-
+    
     time_vis, unique_index = np.unique(
         time_vis_row, return_index=True
     )  # Note that values are sorted.
-    state_ids = state_ids_row[unique_index]
-
+    
     vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(
         vis_data,
         weight,
@@ -782,15 +789,15 @@ def _extract_holog_chunk(extract_holog_params):
         time_vis,
         flag,
         flag_row,
-        map_ant_ids,
-        ref_ant_ids,
+        ref_ant_per_map_ant_tuple,
+        map_ant_tuple,
     )
 
     del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row
 
-    pnt_ant_dict = _load_pnt_dict(pnt_name, map_ant_ids, dask_load=False)
+    pnt_ant_dict = _load_pnt_dict(pnt_name, map_ant_tuple, dask_load=False)
 
-    pnt_map_dict = _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict)
+    pnt_map_dict = _extract_pointing_chunk(map_ant_tuple, time_vis, pnt_ant_dict)
 
     holog_dict = _create_holog_file(
         holog_name,
@@ -801,14 +808,14 @@ def _extract_holog_chunk(extract_holog_params):
         chan_freq,
         pol,
         flagged_mapping_antennas,
-        scan,
+        holog_scan_id,
         ddi,
         ms_name,
         overwrite=overwrite,
     )
 
     console.info(
-        "Finished extracting holography chunk for ddi: {ddi} scan: {scan}".format(
-            ddi=ddi, scan=scan
+        "Finished extracting holography chunk for ddi: {ddi} holog_scan_id: {holog_scan_id}".format(
+            ddi=ddi, holog_scan_id=holog_scan_id
         )
     )

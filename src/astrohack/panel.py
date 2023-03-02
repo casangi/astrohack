@@ -60,15 +60,18 @@ def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, pan
         antennae = os.listdir(fullname)
         
         for antenna in antennae:
-            panel_chunk_params['antenna'] = antenna
-            ddis = os.listdir(fullname+'/'+antenna)
-        
-            for ddi in ddis:
-                panel_chunk_params['ddi'] = ddi
-                if parallel:
-                    delayed_list.append(dask.delayed(_panel_chunk)(dask.delayed(panel_chunk_params)))
-                else:
-                    _panel_chunk(panel_chunk_params)
+            if antenna.isnumeric():
+                panel_chunk_params['antenna'] = antenna
+                ddis = os.listdir(fullname+'/'+antenna)
+            
+                for ddi in ddis:
+                    if ddi.isnumeric():
+                        print('*()*',antenna,ddi)
+                        panel_chunk_params['ddi'] = ddi
+                        if parallel:
+                            delayed_list.append(dask.delayed(_panel_chunk)(dask.delayed(panel_chunk_params)))
+                        else:
+                            _panel_chunk(panel_chunk_params)
         if parallel:
             dask.compute(delayed_list)
 
@@ -86,13 +89,16 @@ def _panel_chunk(panel_chunk_params):
         suffix = ''
 
     else:
+        print('**',panel_chunk_params['antenna'],panel_chunk_params['ddi'])
         inputxds = _load_image_xds(panel_chunk_params['holog_image'],
                                    panel_chunk_params['antenna'],
                                    panel_chunk_params['ddi'])
         
         inputxds.attrs['AIPS'] = False
         inputxds.attrs['antenna_name'] = panel_chunk_params['antenna']
-
+        
+        panel_chunk_params['telescope'] = 'VLA' # NBNBNB: Remove
+        
         if panel_chunk_params['telescope'] is None:
             tname = inputxds.attrs['telescope_name']+'_'+inputxds.attrs['ant_name'][0:2]
             telescope = Telescope(tname)

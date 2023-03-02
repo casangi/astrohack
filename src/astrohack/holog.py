@@ -246,7 +246,7 @@ def _holog_chunk(holog_chunk_params):
 
     holog_file, ant_data_dict = _load_holog_file(
         holog_chunk_params["holog_file"],
-        dask_load=False,
+        dask_load=True,
         load_pnt_dict=False,
         ant_id=holog_chunk_params["ant_id"],
     )
@@ -256,10 +256,12 @@ def _holog_chunk(holog_chunk_params):
     # Calculate lm coordinates
     l, m = _calc_coords(holog_chunk_params["grid_size"], holog_chunk_params["cell_size"])
     grid_l, grid_m = list(map(np.transpose, np.meshgrid(l, m)))
+    
+    #print(ant_data_dict)
 
-    for ddi_index, ddi in enumerate(ant_data_dict.keys()):
-
-        n_scan = len(ant_data_dict[ddi_index].keys())
+    #for ddi in ant_data_dict.keys():
+    for ddi in [1]:
+        n_scan = len(ant_data_dict[ddi].keys())
         
         # For a fixed ddi the frequency axis should not change over scans, consequently we only have to consider the first scan.
         scan0 = list(ant_data_dict[ddi].keys())[0]  
@@ -267,7 +269,7 @@ def _holog_chunk(holog_chunk_params):
         freq_chan = ant_data_dict[ddi][scan0].chan.values
         n_chan = ant_data_dict[ddi][scan0].dims["chan"]
         n_pol = ant_data_dict[ddi][scan0].dims["pol"]
-
+        
         if holog_chunk_params["chan_average"]:
             reference_scaling_frequency = holog_chunk_params["reference_scaling_frequency"]
 
@@ -343,15 +345,39 @@ def _holog_chunk(holog_chunk_params):
         console.info("[_holog_chunk] Applying phase correction ...")
 
         wavelength = scipy.constants.speed_of_light/freq_chan[0]
+        
+        print(meta_data["ant_map"])
+        
+        ant_name = 'EA24' #meta_data["ant_map"]['holog_grid_0']['ant']
+
+        if  ant_name.__contains__('DV'):
+            telescope_name = "_".join((meta_data['telescope_name'], 'DV'))
+
+        elif  ant_name.__contains__('DA'):
+            telescope_name = "_".join((meta_data['telescope_name'], 'DA'))
+            
+        elif  ant_name.__contains__('EA'):
+            telescope_name = 'VLA'
+
+        else:
+            raise Exception("Antenna type not found: {}".format(meta_data['ant_name']))
+        
+        
+        '''
+        print(meta_data["ant_map"])
 
         if meta_data["ant_map"][str(holog_chunk_params["ant_id"])].__contains__('DV'):
             telescope_name = "_".join((meta_data['telescope_name'], 'DV'))
 
         elif meta_data["ant_map"][str(holog_chunk_params["ant_id"])].__contains__('DA'):
             telescope_name = "_".join((meta_data['telescope_name'], 'DA'))
+            
+        elif meta_data["ant_map"][str(holog_chunk_params["ant_id"])].__contains__('EA'):
+            telescope_name = 'VLA'
 
         else:
             raise Exception("Antenna type not found: {}".format(meta_data['ant_name']))
+        '''
 
         telescope = Telescope(telescope_name)
 
@@ -403,7 +429,7 @@ def _holog_chunk(holog_chunk_params):
         xds["ANGLE"] = xr.DataArray(phase_corrected_angle, dims=["time-centroid", "chan", "pol", "u_prime", "v_prime"])
 
         xds.attrs["ant_id"] = holog_chunk_params["ant_id"]
-        xds.attrs["ant_name"] = meta_data["ant_map"][str(holog_chunk_params["ant_id"])]
+        xds.attrs["ant_name"] = ant_name
         xds.attrs["telescope_name"] = meta_data['telescope_name']
         xds.attrs["time_centroid"] = np.array(time_centroid)
 
@@ -423,14 +449,15 @@ def _holog_chunk(holog_chunk_params):
 
         holog_base_name = holog_chunk_params["holog_file"].split(".holog.zarr")[0]
 
-        xds.to_zarr("{name}.image.zarr/{ant}/{ddi}".format(name=holog_base_name, ant=holog_chunk_params["ant_id"], ddi=ddi_index), mode="w", compute=True, consolidated=True)
+        xds.to_zarr("{name}.image.zarr/{ant}/{ddi}".format(name=holog_base_name, ant=holog_chunk_params["ant_id"], ddi=ddi), mode="w", compute=True, consolidated=True)
+   
 
 def holog(
     holog_file,
+    grid_size,
+    cell_size=None,
     padding_factor=50,
     parallel=True,
-    cell_size=None,
-    grid_size=None,
     grid_interpolation_mode="nearest",
     chan_average=True,
     chan_tolerance_factor=0.005,
@@ -449,7 +476,8 @@ def holog(
     """
     console.info("Loading holography file {holog_file} ...".format(holog_file=holog_file))
 
-    try:
+    #try:
+    if True:
         if os.path.exists(holog_file):
             json_data = "/".join((holog_file, ".holog_json"))
             meta_data = "/".join((holog_file, ".holog_attr"))
@@ -471,11 +499,12 @@ def holog(
             holog_chunk_params["chan_tolerance_factor"] = chan_tolerance_factor
             holog_chunk_params["reference_scaling_frequency"] = reference_scaling_frequency
             holog_chunk_params["scan_average"] = scan_average
+
             
-            if (cell_size is None) or (grid_size is None):
+            if (cell_size is None):
                 ###To Do: Calculate one gridsize and cell_size for all ddi's, antennas, ect. Fix meta data ant_holog_dict gets overwritten for more than one ddi.
                 
-                n_points = int(np.sqrt(meta_data["n_time"]))
+                #n_points = int(np.sqrt(meta_data["n_time"])), Not always true
 
                 l_min_extent = meta_data["extent"]["l"]["min"]
                 l_max_extent = meta_data["extent"]["l"]["max"]
@@ -483,10 +512,10 @@ def holog(
                 m_min_extent = meta_data["extent"]["m"]["min"]
                 m_max_extent = meta_data["extent"]["m"]["max"]
 
-                grid_size = np.array([n_points, n_points])
+                #grid_size = np.array([n_points, n_points])
 
-                step_l = (l_max_extent - l_min_extent) / n_points
-                step_m = (m_max_extent - m_min_extent) / n_points
+                step_l = (l_max_extent - l_min_extent) / grid_size[0]
+                step_m = (m_max_extent - m_min_extent) / grid_size[1]
 
                 cell_size = np.array([step_l, step_m])
 
@@ -498,9 +527,12 @@ def holog(
                 holog_chunk_params["grid_size"] = grid_size
 
             delayed_list = []
+            
+            
 
             for ant_id in ant_list:
                 holog_chunk_params["ant_id"] = ant_id
+                print(grid_size,cell_size,ant_id)
 
                 if parallel:
                     delayed_list.append(
@@ -520,8 +552,8 @@ def holog(
                 )
             )
             raise FileNotFoundError()
-    except Exception as error:
-        console.error("[holog] {error}".format(error=error))
+#    except Exception as error:
+#        console.error("[holog] {error}".format(error=error))
 
 
 def _find_nearest(array, value):
