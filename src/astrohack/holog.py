@@ -400,7 +400,7 @@ def _holog_chunk(holog_chunk_params):
 
         amplitude = np.absolute(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()])
 
-        phase = np.angle(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()], deg=True)
+        phase = np.angle(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()])
         phase_corrected_angle = np.empty_like(phase)
 
         for time in range(amplitude.shape[0]):
