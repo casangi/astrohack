@@ -451,30 +451,26 @@ def _holog_chunk(holog_chunk_params):
         v_prime = v[cut.min():cut.max()]
 
         amplitude = np.absolute(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()])
+        phase = np.angle(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()])
+        phase_corrected_angle = np.empty_like(phase)
 
-        phase = np.angle(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()], deg=True)
-        phase_corrected_angle = np.zeros_like(phase)
-        '''
-        try:
-            for time in range(amplitude.shape[0]):
-                for chan in range(amplitude.shape[1]):
-                    for pol in range(amplitude.shape[2]):
-                        
-                        _, _, phase_corrected_angle[time, chan, pol, ...], _, _, _ = phase_fitting(
-                            wavelength=wavelength,
-                            telescope=telescope,
-                            cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
-                            amplitude_image=amplitude[time, chan, pol, ...],
-                            phase_image=phase[time, chan, pol, ...],
-                            pointing_offset=False,
-                            focus_xy_offsets=False,
-                            focus_z_offset=False,
-                            subreflector_tilt=False,
-                            cassegrain_offset=True
-                        )
-        except:
-            console.info("[_holog_chunk] Could not apply corrections to ddi " + str(ddi))
-        '''
+        for time in range(amplitude.shape[0]):
+            for chan in range(amplitude.shape[1]):
+                for pol in range(amplitude.shape[2]):
+                    
+                    _, _, phase_corrected_angle[time, chan, pol, ...], _, _, _ = phase_fitting(
+                        wavelength=wavelength, 
+                        telescope=telescope, 
+                        cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
+                        amplitude_image=amplitude[time, chan, pol, ...], 
+                        phase_image=phase[time, chan, pol, ...], 
+                        pointing_offset=False, 
+                        focus_xy_offsets=False, 
+                        focus_z_offset=False,
+                        subreflector_tilt=False, 
+                        cassegrain_offset=True
+                    )
+
 
         # Masking Aperture image
         image_slice = aperture_grid[0, 0, 0, ...]
