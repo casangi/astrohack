@@ -98,12 +98,11 @@ def _panel_chunk(panel_chunk_params):
         inputxds.attrs['AIPS'] = False
         inputxds.attrs['antenna_name'] = panel_chunk_params['antenna']
         
-        
         if inputxds.attrs['telescope_name'] == "ALMA":
             tname = inputxds.attrs['telescope_name']+'_'+inputxds.attrs['ant_name'][0:2]
             telescope = Telescope(tname)
-        elif inputxds.attrs['telescope_name'] == "VLA":
-            tname = inputxds.attrs['telescope_name']
+        elif inputxds.attrs['telescope_name'] == "EVLA":
+            tname = "VLA"#inputxds.attrs['telescope_name']
             telescope = Telescope(tname)
             
         suffix = '_' + inputxds.attrs['ant_name'] + '/' + panel_chunk_params['ddi']
