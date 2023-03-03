@@ -473,7 +473,7 @@ def _holog_chunk(holog_chunk_params):
                         focus_xy_offsets=True,
                         focus_z_offset=True,
                         subreflector_tilt=True,
-                        cassegrain_offset=False
+                        cassegrain_offset=True
                     )
 
 #        # Masking Aperture image
@@ -497,7 +497,7 @@ def _holog_chunk(holog_chunk_params):
         xds["APERTURE"] = xr.DataArray(aperture_grid, dims=["time-centroid", "chan", "pol", "u", "v"])
         xds["AMPLITUDE"] = xr.DataArray(amplitude, dims=["time-centroid", "chan", "pol", "u_prime", "v_prime"])
 
-        xds["ANGLE"] = xr.DataArray(phase_corrected_angle, dims=["time-centroid", "chan", "pol", "u_prime", "v_prime"])*(180/np.pi)
+        xds["ANGLE"] = xr.DataArray(phase_corrected_angle, dims=["time-centroid", "chan", "pol", "u_prime", "v_prime"])
 
         xds.attrs["ant_id"] = holog_chunk_params["ant_id"]
         xds.attrs["ant_name"] = ant_name
