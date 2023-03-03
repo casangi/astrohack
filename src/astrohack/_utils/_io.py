@@ -632,6 +632,7 @@ def _create_holog_file(
     scan,
     ddi,
     ms_name,
+    ant_names,
     overwrite,
 ):
     """Create holog-structured, formatted output file and save to zarr.
@@ -689,6 +690,7 @@ def _create_holog_file(
             xds.attrs["ddi"] = ddi
             xds.attrs["parallactic_samples"] = parallactic_samples
             xds.attrs["telescope_name"] = telescope_name
+            xds.attrs["antenna_name"] = ant_names[map_ant_index]
 
             holog_file = "{base}.{suffix}".format(base=holog_name, suffix="holog.zarr")
 
@@ -738,6 +740,7 @@ def _extract_holog_chunk(extract_holog_params):
     data_col = extract_holog_params["data_col"]
     ddi = extract_holog_params["ddi"]
     scans = extract_holog_params["scans"]
+    ant_names = extract_holog_params["ant_names"]
     #map_ant_ids = extract_holog_params["map_ant_ids"]
     #ref_ant_ids = extract_holog_params["ref_ant_ids"]
     #map_ref_ant_dict = extract_holog_params["map_ref_ant_dict"]
@@ -838,6 +841,7 @@ def _extract_holog_chunk(extract_holog_params):
         holog_scan_id,
         ddi,
         ms_name,
+        ant_names,
         overwrite=overwrite,
     )
 

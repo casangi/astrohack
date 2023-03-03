@@ -109,22 +109,26 @@ class AntennaSurface:
                 raise Exception("Only single channel holographies supported")
             self.wavelength = clight / inputxds.chan.values[0]
 
-            if inputxds.dims['pol'] != 1:
-                if self.telescope.name == 'VLA':
-                    rramp = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
-                    llamp = inputxds["AMPLITUDE"].values[0, 0, 1, :, :]
-                    rrpha = inputxds["ANGLE"].values[0, 0, 0, :, :]
-                    llpha = inputxds["ANGLE"].values[0, 0, 1, :, :]
-                    self.amplitude, self.phase = _circular_to_stokes_i(rramp, llamp, rrpha, llpha)
-                elif 'ALMA' in self.telescope.name:
-                    # This is a place holder for the moment as it is not clear yet what is the polarization of ALMA data
-                    self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
-                    self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
-                else:
-                    raise Exception("Not possible to handle polarizations from an unknown telescope")
-            else:
-                self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
-                self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
+#            if inputxds.dims['pol'] != 1:
+#                if self.telescope.name == 'VLA':
+#                    rramp = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
+#                    llamp = inputxds["AMPLITUDE"].values[0, 0, 1, :, :]
+#                    rrpha = inputxds["ANGLE"].values[0, 0, 0, :, :]
+#                    llpha = inputxds["ANGLE"].values[0, 0, 1, :, :]
+#                    self.amplitude, self.phase = _circular_to_stokes_i(rramp, llamp, rrpha, llpha)
+#                elif 'ALMA' in self.telescope.name:
+#                    # This is a place holder for the moment as it is not clear yet what is the polarization of ALMA data
+#                    self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
+#                    self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
+#                else:
+#                    raise Exception("Not possible to handle polarizations from an unknown telescope")
+#            else:
+#                self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
+#                self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
+            
+            
+            self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
+            self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
 
             self.npoint = np.sqrt(inputxds.dims['l']**2 + inputxds.dims['m']**2)
             self.amp_unit = 'V'
