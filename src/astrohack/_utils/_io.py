@@ -798,6 +798,33 @@ def _extract_holog_chunk(extract_holog_params):
     pnt_ant_dict = _load_pnt_dict(pnt_name, map_ant_tuple, dask_load=False)
 
     pnt_map_dict = _extract_pointing_chunk(map_ant_tuple, time_vis, pnt_ant_dict)
+    
+    ################### Average multiple repeated samples
+    over_flow_protector_constant = float("%.5g" % time_vis[0])  # For example 5076846059.4 -> 5076800000.0
+    time_vis = time_vis - over_flow_protector_constant
+
+    time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict)
+    
+    time_vis = time_vis + over_flow_protector_constant
+
+#    ant_id = 24
+#    print('****9',ant_id,vis_map_dict[ant_id].shape,pnt_map_dict[ant_id].shape,weight_map_dict[ant_id].shape, flagged_mapping_antennas,time_vis.shape)
+#
+#    import matplotlib.pyplot as plt
+#    diff = np.diff(pnt_map_dict[ant_id],axis=0)
+#    r_diff = np.sqrt(np.abs(diff[:,0]**2 + diff[:,1]**2))
+#
+#    plt.figure()
+#    plt.plot(r_diff,linestyle="None",marker='*')
+#    plt.show()
+#
+#    plt.figure()
+#    plt.scatter(pnt_map_dict[24][:,0],pnt_map_dict[24][:,1])
+#    plt.show()
+    
+    ##################
+    
+    
 
     holog_dict = _create_holog_file(
         holog_name,
@@ -819,3 +846,72 @@ def _extract_holog_chunk(extract_holog_params):
             ddi=ddi, holog_scan_id=holog_scan_id
         )
     )
+
+
+
+def _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict):
+    
+    for ant_id in vis_map_dict.keys():
+        #print(ant_id,vis_map_dict[ant_id].shape,pnt_map_dict[ant_id].shape,weight_map_dict[ant_id].shape, flagged_mapping_antennas,time_vis.shape)
+        diff = np.diff(pnt_map_dict[ant_id],axis=0)
+        r_diff = np.sqrt(np.abs(diff[:,0]**2 + diff[:,1]**2))
+    
+        max_dis = np.max(r_diff)/1000
+        n_avg = np.sum([r_diff > max_dis]) + 1
+    
+        vis_map_avg, weight_map_avg, time_vis_avg, pnt_map_avg = _average_repeated_pointings_jit(vis_map_dict[ant_id], weight_map_dict[ant_id],time_vis,pnt_map_dict[ant_id],n_avg,max_dis,r_diff)
+        
+        vis_map_dict[ant_id] = vis_map_avg
+        weight_map_dict[ant_id] = weight_map_avg
+        pnt_map_dict[ant_id] = pnt_map_avg
+        
+    return time_vis_avg
+        
+ 
+        
+@njit(cache=jit_cache, nogil=True)
+def _average_repeated_pointings_jit(vis_map, weight_map,time_vis,pnt_map,n_avg,max_dis,r_diff):
+
+    vis_map_avg = np.zeros((n_avg,)+ vis_map.shape[1:], dtype=vis_map.dtype)
+    weight_map_avg = np.zeros((n_avg,)+ weight_map.shape[1:], dtype=weight_map.dtype)
+    time_vis_avg = np.zeros((n_avg,), dtype=time_vis.dtype)
+    pnt_map_avg = np.zeros((n_avg,)+ pnt_map.shape[1:], dtype=pnt_map.dtype)
+    
+    
+    k = 0
+    n_samples = 1
+    
+    vis_map_avg[0,:,:] = vis_map_avg[k,:,:] + weight_map[0,:,:]*vis_map[0,:,:]
+    weight_map_avg[0,:,:] = weight_map_avg[k,:,:] + weight_map[0,:,:]
+    time_vis_avg[0] = time_vis_avg[k] + time_vis[0]
+    pnt_map_avg[0,:] = pnt_map_avg[k,:] + pnt_map[0,:]
+
+    for i in range(vis_map.shape[0]-1):
+        
+        point_dis = r_diff[i]
+        
+        if point_dis < max_dis:
+            n_samples = n_samples + 1
+        else:
+            vis_map_avg[k,:,:] = vis_map_avg[k,:,:]/weight_map_avg[k,:,:]
+            weight_map_avg[k,:,:] = weight_map_avg[k,:,:]/n_samples
+            time_vis_avg[k] = time_vis_avg[k]/n_samples
+            pnt_map_avg[k,:] = pnt_map_avg[k,:]/n_samples
+        
+            k=k+1
+            n_samples = 1
+            
+        vis_map_avg[k,:,:] = vis_map_avg[k,:,:] + weight_map[i+1,:,:]*vis_map[i+1,:,:]
+        weight_map_avg[k,:,:] = weight_map_avg[k,:,:] + weight_map[i+1,:,:]
+        time_vis_avg[k] = time_vis_avg[k] + time_vis[i+1]
+        pnt_map_avg[k,:] = pnt_map_avg[k,:] + pnt_map[i+1,:]
+        
+    vis_map_avg[-1,:,:] = vis_map_avg[1,:,:]/weight_map_avg[-1,:,:]
+    weight_map_avg[-1,:,:] = weight_map_avg[-1,:,:]/n_samples
+    time_vis_avg[-1] = time_vis_avg[-1]/n_samples
+    pnt_map_avg[-1,:] = pnt_map_avg[-1,:]/n_samples
+
+    return vis_map_avg, weight_map_avg, time_vis_avg, pnt_map_avg
+
+    
+

@@ -284,8 +284,8 @@ def _holog_chunk(holog_chunk_params):
     
     #print(ant_data_dict)
 
-    #for ddi in ant_data_dict.keys():
-    for ddi in [1]:
+    for ddi in ant_data_dict.keys():
+    #for ddi in [1]:
         n_scan = len(ant_data_dict[ddi].keys())
         
         # For a fixed ddi the frequency axis should not change over scans, consequently we only have to consider the first scan.
@@ -319,6 +319,7 @@ def _holog_chunk(holog_chunk_params):
 
             # Grid the data
             vis = ant_xds.VIS.values
+            vis[vis==np.nan] = 0.0
             lm = ant_xds.DIRECTIONAL_COSINES.values
             weight = ant_xds.WEIGHT.values
 
@@ -327,34 +328,40 @@ def _holog_chunk(holog_chunk_params):
                 lm_freq_scaled = lm[:, :, None] * (avg_freq / reference_scaling_frequency)
 
                 n_chan = avg_freq.shape[0]
-
+                
+                print('$$$$$$$$$$ n_chan', ddi, n_chan, avg_freq, reference_scaling_frequency, (avg_freq / reference_scaling_frequency))
+                
                 # Unavoidable for loop because lm change over frequency.
                 for chan_index in range(n_chan):
+                
+                    
                     
                     # Average scaled beams.
-                    beam_grid[scan_index, 0, :, :, :] = (beam_grid[scan_index, 0, :, :, :] + np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index], vis_avg[:, chan_index, :], (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"],),(2),(0)))
+                    beam_grid[scan_index, 0, :, :, :] = (beam_grid[scan_index, 0, :, :, :] + np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index], vis_avg[:, chan_index, :], (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"],fill_value=0.0),(2),(0)))
 
                 # Avergaing now complete
                 n_chan =  1 
                 
                 freq_chan = [np.mean(avg_freq)]
             else:
-                beam_grid[scan_index, ...] = np.moveaxis(griddata(lm, vis, (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"]), (0,1), (2,3))
+                beam_grid[scan_index, ...] = np.moveaxis(griddata(lm, vis, (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"],fill_value=0.0), (0,1), (2,3))
 
 
             time_centroid_index = ant_data_dict[ddi][scan].dims["time"] // 2
 
             time_centroid.append(ant_data_dict[ddi][scan].coords["time"][time_centroid_index].values)
 
+
             for chan in range(n_chan): ### Todo: Vectorize scan and channel axis
-                xx_peak = _find_peak_beam_value(beam_grid[scan_index, chan, 0, ...], scaling=0.25)
+                xx_peak = np.abs(_find_peak_beam_value(beam_grid[scan_index, chan, 0, ...], scaling=0.25))
                 
-                yy_peak = _find_peak_beam_value(beam_grid[scan_index, chan, 3, ...], scaling=0.25)
+                yy_peak = np.abs(_find_peak_beam_value(beam_grid[scan_index, chan, 3, ...], scaling=0.25))
 
                 normalization = np.abs(0.5 * (xx_peak + yy_peak))
                 beam_grid[scan_index, chan, ...] /= normalization
-            
-        beam_grid = _parallactic_derotation(data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi])
+                print('####normalization ', normalization)
+
+        #beam_grid = _parallactic_derotation(data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi])
 
         if holog_chunk_params["scan_average"]:          
             beam_grid = np.mean(beam_grid,axis=0)[None,...]
@@ -365,12 +372,31 @@ def _holog_chunk(holog_chunk_params):
             delta=holog_chunk_params["cell_size"],
             padding_factor=holog_chunk_params["padding_factor"],
         )
+        
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.imshow(np.abs(aperture_grid[0,0,0,:,:]))
+        plt.show()
+        
+        plt.figure()
+        plt.imshow(np.angle(aperture_grid[0,0,0,:,:]))
+        plt.show()
+        
+        plt.figure()
+        plt.imshow(np.abs(beam_grid[0,0,0,:,:]))
+        plt.show()
+        
+        plt.figure()
+        plt.imshow(np.angle(beam_grid[0,0,0,:,:]))
+        plt.show()
+        
+        print('*'*100)
 
         console.info("[_holog_chunk] Applying phase correction ...")
 
         wavelength = scipy.constants.speed_of_light/freq_chan[0]
         
-        print(meta_data["ant_map"])
+        #print(meta_data["ant_map"])
         
         ant_name = 'EA24' #meta_data["ant_map"]['holog_grid_0']['ant']
 
@@ -427,24 +453,28 @@ def _holog_chunk(holog_chunk_params):
         amplitude = np.absolute(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()])
 
         phase = np.angle(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()], deg=True)
-        phase_corrected_angle = np.empty_like(phase)
-
-        for time in range(amplitude.shape[0]):
-            for chan in range(amplitude.shape[1]):
-                for pol in range(amplitude.shape[2]):
-                    
-                    _, _, phase_corrected_angle[time, chan, pol, ...], _, _, _ = phase_fitting(
-                        wavelength=wavelength, 
-                        telescope=telescope, 
-                        cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
-                        amplitude_image=amplitude[time, chan, pol, ...], 
-                        phase_image=phase[time, chan, pol, ...], 
-                        pointing_offset=False, 
-                        focus_xy_offsets=False, 
-                        focus_z_offset=False,
-                        subreflector_tilt=False, 
-                        cassegrain_offset=True
-                    )
+        phase_corrected_angle = np.zeros_like(phase)
+        '''
+        try:
+            for time in range(amplitude.shape[0]):
+                for chan in range(amplitude.shape[1]):
+                    for pol in range(amplitude.shape[2]):
+                        
+                        _, _, phase_corrected_angle[time, chan, pol, ...], _, _, _ = phase_fitting(
+                            wavelength=wavelength,
+                            telescope=telescope,
+                            cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
+                            amplitude_image=amplitude[time, chan, pol, ...],
+                            phase_image=phase[time, chan, pol, ...],
+                            pointing_offset=False,
+                            focus_xy_offsets=False,
+                            focus_z_offset=False,
+                            subreflector_tilt=False,
+                            cassegrain_offset=True
+                        )
+        except:
+            console.info("[_holog_chunk] Could not apply corrections to ddi " + str(ddi))
+        '''
 
         # Masking Aperture image
         image_slice = aperture_grid[0, 0, 0, ...]
@@ -575,7 +605,7 @@ def holog(
 
             for ant_id in ant_list:
                 holog_chunk_params["ant_id"] = ant_id
-                print(grid_size,cell_size,ant_id)
+                #print(grid_size,cell_size,ant_id)
 
                 if parallel:
                     delayed_list.append(
