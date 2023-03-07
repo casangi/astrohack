@@ -46,6 +46,16 @@ def convert_to_db(val: float):
 
 
 def convert_unit(unitin, unitout, kind):
+    """
+    Convert between unit of the same kind
+    Args:
+        unitin: Origin unit
+        unitout: Destiny unit
+        kind: 'trigonometric' or 'length'
+
+    Returns:
+        Convertion factor to go from unitin to unitout
+    """
     try:
         unitlist = unit_dict[kind]
         factorlist = fact_dict[kind]
@@ -59,6 +69,15 @@ def convert_unit(unitin, unitout, kind):
 
 
 def test_unit(unit, unitlist):
+    """
+    Test if a unit is known
+    Args:
+        unit: unit name
+        unitlist: List containing unit names
+
+    Returns:
+        Unit index in unitlist
+    """
     try:
         idx = unitlist.index(unit)
     except ValueError:
