@@ -489,16 +489,20 @@ class BasePanel:
         Returns:
         String with screw adjustments for this panel
         """
-        if unit == 'mm':
-            fac = m2mm
-        elif unit == 'miliinches':
-            fac = m2mils
-        else:
-            raise Exception("Unknown unit: " + unit)
+        fac = convert_unit('m', unit, 'length')
         string = self.label
         for screw in self.screws[:, ]:
             string += ' {0:10.2f}'.format(fac * self.corr_point(*screw))
         return string
+
+    def export_screws_float(self, unit='mm'):
+        fac = convert_unit('m', unit, 'length')
+        nscrew = len(self.screws)
+        screw_corr = np.zeros(nscrew)
+        for iscrew in range(nscrew):
+            screw = self.screws[iscrew, :]
+            screw_corr[iscrew] = self.corr_point(*screw)
+        return screw_corr
 
     def plot_label(self, ax, rotate=True):
         """
@@ -508,7 +512,7 @@ class BasePanel:
             rotate: Rotate label for better display
         """
         if rotate:
-            angle = (-self.zeta % pi - pi/2)*rad2deg
+            angle = (-self.zeta % pi - pi/2)*convert_unit('rad', 'deg', 'trigonometric')
         else:
             angle = 0
         ax.text(self.center[1], self.center[0], self.label, fontsize=self.fontsize, ha='center', va='center',

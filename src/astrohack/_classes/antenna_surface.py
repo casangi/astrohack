@@ -87,7 +87,7 @@ class AntennaSurface:
         # Common elements
         self.unpix = self.u_axis.shape[0]
         self.vnpix = self.v_axis.shape[0]
-        self.antenna_name = inputxds.attrs['ant_name']
+        self.antenna_name = inputxds.attrs['antenna_name']
         return computephase
 
     def _nullify(self):
@@ -306,17 +306,18 @@ class AntennaSurface:
         gain = thgain * np.sqrt(np.sum(np.cos(arr[self.mask]))**2 + np.sum(np.sin(arr[self.mask]))**2)/np.sum(self.mask)
         return convert_to_db(gain), convert_to_db(thgain)
 
-    def get_rms(self):
+    def get_rms(self, unit='mm'):
         """
         Computes antenna surface RMS before and after panel surface fitting
         Returns:
         RMS before panel fitting OR RMS before and after panel fitting
         """
-        self.inrms = m2mm * self._compute_rms_array(self.deviation)
+        fac = convert_unit('m', unit, 'length')
+        self.inrms = fac * self._compute_rms_array(self.deviation)
         if self.residuals is None:
             return self.inrms
         else:
-            self.ourms = m2mm * self._compute_rms_array(self.residuals)
+            self.ourms = fac * self._compute_rms_array(self.residuals)
         return self.inrms, self.ourms
 
     def _compute_rms_array(self, array):
@@ -362,7 +363,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.print_misc()
 
-    def plot_surface(self, filename=None, mask=False, screws=False, dpi=300, plotphase=False):
+    def plot_surface(self, filename=None, mask=False, screws=False, dpi=300, plotphase=False, unit=None):
         """
         Do plots of the antenna surface
         Args:
@@ -371,6 +372,7 @@ class AntennaSurface:
             plotphase: plot phase images rather than deviation images
             screws: Display the screws on the panels
             dpi: Plot resolution in DPI
+            unit: To do deviation/phase plots, defaults to mm for deviations and degrees for phase
         """
 
         if mask:
@@ -387,10 +389,16 @@ class AntennaSurface:
             )
         else:
             if plotphase:
-                self._plot_three_surfaces(self.phase, self.phase_corrections, self.phase_residuals, 'degress',
-                                          rad2deg, screws, 'Antenna surface phase')
+                if unit is None:
+                    unit = 'deg'
+                fac = convert_unit('rad', unit, 'trigonometric')
+                self._plot_three_surfaces(self.phase, self.phase_corrections, self.phase_residuals, unit,
+                                          fac, screws, 'Antenna surface phase')
             else:
-                self._plot_three_surfaces(self.deviation, self.corrections, self.residuals, 'mm', m2mm, screws,
+                if unit is None:
+                    unit = 'mm'
+                fac = convert_unit('m', unit, 'length')
+                self._plot_three_surfaces(self.deviation, self.corrections, self.residuals, unit, fac, screws,
                                           'Antenna surface')
         if filename is None:
             plt.show()

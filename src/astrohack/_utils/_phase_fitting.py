@@ -2,7 +2,7 @@ import numpy as np
 
 from numba import njit
 from astrohack._utils._linear_algebra import _least_squares_fit
-from astrohack._utils._globals import rad2deg, deg2rad
+from astrohack._utils._globals import convert_unit
 
 from memory_profiler import profile
 
@@ -170,6 +170,7 @@ def _internal_to_external_parameters(parameters, wavelength, telescope, cellxy):
     scaling = wavelength / 0.36
     results[3:] *= scaling
     # Sub-reflector tilt to degrees
+    rad2deg = convert_unit('rad', 'deg', 'trigonometric')
     results[6:8] *= rad2deg / (1000.0 * telescope.secondary_dist)
     # rescale phase ramp to pointing offset
     results[1:3] *= wavelength * rad2deg / 6. / cellxy
@@ -193,10 +194,11 @@ def _external_to_internal_parameters(exparameters, wavelength, telescope, cellxy
     scaling = wavelength / 0.36
     inparameters[3:] /= scaling
     # Sub-reflector tilt from degrees
+    rad2deg = convert_unit('rad', 'deg', 'trigonometric')
     inparameters[6:8] /= rad2deg / (1000.0 * telescope.secondary_dist)
     # rescale phase ramp to pointing offset
     inparameters[1:3] /= wavelength * rad2deg / 6. / cellxy
-    inparameters *= deg2rad
+    inparameters /= rad2deg
     return inparameters
 
 
