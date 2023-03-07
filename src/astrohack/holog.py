@@ -71,7 +71,7 @@ def _apply_mask(data, scaling=0.5):
     start = int(x // 2 - mask // 2)
     return data[start : (start + mask), start : (start + mask)]
 
-def _mask_circular_disk(center, radius, array, mask_value=1):
+def _mask_circular_disk(center, radius, array, mask_value=1,make_nan=True):
 
     if center == None:
         image_slice = array[0, 0, 0, ...]
@@ -86,6 +86,9 @@ def _mask_circular_disk(center, radius, array, mask_value=1):
     mask[r, c] = mask_value
     
     mask = np.tile(mask, reps=(n_time, n_chan, n_pol, 1, 1))
+    
+    if make_nan:
+        mask[mask==0] = np.nan
     
     return mask
 
@@ -286,6 +289,8 @@ def _holog_chunk(holog_chunk_params):
     l, m = _calc_coords(holog_chunk_params["grid_size"], holog_chunk_params["cell_size"])
     grid_l, grid_m = list(map(np.transpose, np.meshgrid(l, m)))
     
+    to_stokes = holog_chunk_params["to_stokes"]
+    
     #print(ant_data_dict)
 
     for ddi in ant_data_dict.keys():
@@ -378,6 +383,7 @@ def _holog_chunk(holog_chunk_params):
 
                 #print(xx_peak,yy_peak,beam_grid[scan_index, chan, 0, ...][15,15],beam_grid[scan_index, chan, 3, ...][15,15])
                 #print(np.abs(xx_peak),np.abs(yy_peak),np.abs(beam_grid[scan_index, chan, 0, ...][15,15]),np.abs(beam_grid[scan_index, chan, 3, ...][15,15]))
+                #print(np.angle(xx_peak)*180/np.pi,np.angle(yy_peak)*180/np.pi)
                 
                 normalization = np.abs(0.5 * (xx_peak + yy_peak))
                 beam_grid[scan_index, chan, ...] /= normalization
@@ -387,7 +393,8 @@ def _holog_chunk(holog_chunk_params):
         
 
         ###############
-        #beam_grid = _to_stokes(beam_grid,ant_data_dict[ddi][scan].pol.values)
+        if to_stokes:
+            beam_grid = _to_stokes(beam_grid,ant_data_dict[ddi][scan].pol.values)
         ###############
         
         if holog_chunk_params["scan_average"]:          
@@ -428,7 +435,8 @@ def _holog_chunk(holog_chunk_params):
         mask = _mask_circular_disk(
             center=None,
             radius=np.abs(outer_pixel - center_pixel[0])+1, # Let's not be too aggresive
-            array=aperture_grid
+            array=aperture_grid,
+            make_nan=True
         )
 
         aperture_grid = mask*aperture_grid
@@ -536,7 +544,8 @@ def holog(
     chan_tolerance_factor=0.005,
     reference_scaling_frequency=None,
     scan_average = True,
-    ant_list = None
+    ant_list = None,
+    to_stokes = False
 ):
     """Process holography data
 
@@ -572,6 +581,7 @@ def holog(
             holog_chunk_params["chan_tolerance_factor"] = chan_tolerance_factor
             holog_chunk_params["reference_scaling_frequency"] = reference_scaling_frequency
             holog_chunk_params["scan_average"] = scan_average
+            holog_chunk_params["to_stokes"] = to_stokes
 
             
             if (cell_size is None) and (grid_size is None):
@@ -607,7 +617,7 @@ def holog(
 
             for ant_id in ant_list:
                 holog_chunk_params["ant_id"] = ant_id
-                #print(grid_size,cell_size,ant_id)
+                #print('****',grid_size,cell_size,ant_id)
 
                 if parallel:
                     delayed_list.append(

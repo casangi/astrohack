@@ -105,9 +105,12 @@ class AntennaSurface:
             self.v_axis = inputxds.v.values
             computephase = True
         else:
-            if inputxds.dims['chan'] != 1:
-                raise Exception("Only single channel holographies supported")
-            self.wavelength = clight / inputxds.chan.values[0]
+            if  ('chan' in inputxds.dims):
+                if (inputxds.dims['chan'] != 1):
+                    raise Exception("Only single channel holographies supported")
+                self.wavelength = clight / inputxds.chan.values[0]
+            else:
+                self.wavelength = inputxds.attrs['wavelength']
 
 #            if inputxds.dims['pol'] != 1:
 #                if self.telescope.name == 'VLA':
@@ -129,6 +132,7 @@ class AntennaSurface:
             
             self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
             self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
+            #print('Using 3')
 
             self.npoint = np.sqrt(inputxds.dims['l']**2 + inputxds.dims['m']**2)
             self.amp_unit = 'V'
@@ -139,7 +143,7 @@ class AntennaSurface:
         # Common elements
         self.unpix = self.u_axis.shape[0]
         self.vnpix = self.v_axis.shape[0]
-        self.antenna_name = inputxds.attrs['antenna_name']
+        self.antenna_name = inputxds.attrs['ant_name']
         return computephase
 
     def _nullify(self):

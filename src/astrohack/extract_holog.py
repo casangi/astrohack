@@ -64,7 +64,7 @@ def extract_holog(
     except:
         pnt_dict = _make_ant_pnt_dict(ms_name, pnt_name, parallel=parallel)
     
-    #print(pnt_dict)
+    #print(pnt_name,pnt_dict)
     
 
     ''' VLA datasets causeing issues.
@@ -178,7 +178,7 @@ def extract_holog(
         ack=False,
     )
     
-    
+    telescope_name = obs_ctb.getcol("TELESCOPE_NAME")[0]
 
     delayed_list = []
     #for ddi in [holog_obs_dict['ddi'][0]]: #### NBNBNB: Chnage to all ddi's
@@ -197,7 +197,7 @@ def extract_holog(
             "data_col": data_col,
             "chan_setup": {},
             "pol_setup": {},
-            "telescope_name": "",
+            "telescope_name": telescope_name,
             "overwrite": overwrite,
         }
 

@@ -747,6 +747,7 @@ def _extract_holog_chunk(extract_holog_params):
     ref_ant_per_map_ant_tuple = extract_holog_params["ref_ant_per_map_ant_tuple"]
     map_ant_tuple = extract_holog_params["map_ant_tuple"]
     holog_scan_id = extract_holog_params["holog_scan_id"]
+    telescope_name = extract_holog_params["telescope_name"]
     
     assert len(ref_ant_per_map_ant_tuple) == len(map_ant_tuple), "ref_ant_per_map_ant_tuple and map_ant_tuple should have same length."
     
@@ -758,8 +759,10 @@ def _extract_holog_chunk(extract_holog_params):
     pol = extract_holog_params["pol_setup"]["pol"]
 
     if sel_state_ids:
+        #print('&&&&',data_col, ms_name, ddi, scans, sel_state_ids,'&&&&')
+    
         ctb = ctables.taql(
-            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER == %s AND STATE_ID in %s"
+            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
             % (data_col, ms_name, ddi, scans, sel_state_ids)
         )
     else:
@@ -803,12 +806,14 @@ def _extract_holog_chunk(extract_holog_params):
     pnt_map_dict = _extract_pointing_chunk(map_ant_tuple, time_vis, pnt_ant_dict)
     
     ################### Average multiple repeated samples
-    over_flow_protector_constant = float("%.5g" % time_vis[0])  # For example 5076846059.4 -> 5076800000.0
-    time_vis = time_vis - over_flow_protector_constant
+    if telescope_name != "ALMA":
+        over_flow_protector_constant = float("%.5g" % time_vis[0])  # For example 5076846059.4 -> 5076800000.0
+        time_vis = time_vis - over_flow_protector_constant
 
-    time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict)
-    
-    time_vis = time_vis + over_flow_protector_constant
+        
+        time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict)
+        
+        time_vis = time_vis + over_flow_protector_constant
 
 #    ant_id = 24
 #    print('****9',ant_id,vis_map_dict[ant_id].shape,pnt_map_dict[ant_id].shape,weight_map_dict[ant_id].shape, flagged_mapping_antennas,time_vis.shape)
