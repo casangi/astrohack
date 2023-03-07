@@ -496,12 +496,20 @@ class BasePanel:
         return string
 
     def export_screws_float(self, unit='mm'):
+        """
+        Export screw adjustments to a numpy array in unit
+        Args:
+            unit: Unit for the screw adjustments
+
+        Returns:
+            Numpy array with screw adjustments
+        """
         fac = convert_unit('m', unit, 'length')
         nscrew = len(self.screws)
         screw_corr = np.zeros(nscrew)
         for iscrew in range(nscrew):
             screw = self.screws[iscrew, :]
-            screw_corr[iscrew] = self.corr_point(*screw)
+            screw_corr[iscrew] = fac*self.corr_point(*screw)
         return screw_corr
 
     def plot_label(self, ax, rotate=True):
