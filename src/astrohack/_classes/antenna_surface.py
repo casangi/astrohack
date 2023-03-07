@@ -8,44 +8,6 @@ from astrohack._utils._globals import *
 lnbr = "\n"
 
 
-def _circular_to_stokes_i(rramp, llamp, rrpha, llpha):
-    """
-    Convert amplitude and phase in circular polarization to Stokes I amplitude and phase
-    Args:
-        rramp: RR amplitude
-        llamp: LL amplitude
-        rrpha: RR phase
-        llpha: LL phase
-
-    Returns:
-        amp: Stokes I amplitude
-        phase: Stokes I phase
-    """
-    rrcomp = rramp * np.cos(rrpha) + 1j * rramp * np.sin(rrpha)
-    llcomp = llamp * np.cos(llpha) + 1j * llamp * np.sin(llpha)
-    iicomp = rrcomp**2 + llcomp**2
-    return np.absolute(iicomp), np.angle(iicomp)
-
-
-def _linear_to_stokes_i(xxamp, yyamp, xxpha, yypha):
-    """
-    Convert amplitude and phase in linear polarization to Stokes I amplitude and phase
-    Args:
-        xxamp: XX amplitude
-        yyamp: YY amplitude
-        xxpha: XX phase
-        yypha: YY phase
-
-    Returns:
-        amp: Stokes I amplitude
-        phase: Stokes I phase
-    """
-    xxcomp = xxamp * np.cos(xxpha) + 1j * xxamp * np.sin(xxpha)
-    yycomp = yyamp * np.cos(yypha) + 1j * yyamp * np.sin(yypha)
-    iicomp = xxcomp**2 + yycomp**2
-    return np.absolute(iicomp), np.angle(iicomp)
-
-
 class AntennaSurface:
     def __init__(self, inputxds, telescope, cutoff=None, pkind=None, crop=False, panel_margins=0.05):
         """
@@ -112,24 +74,6 @@ class AntennaSurface:
             else:
                 self.wavelength = inputxds.attrs['wavelength']
 
-#            if inputxds.dims['pol'] != 1:
-#                if self.telescope.name == 'VLA':
-#                    rramp = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
-#                    llamp = inputxds["AMPLITUDE"].values[0, 0, 1, :, :]
-#                    rrpha = inputxds["ANGLE"].values[0, 0, 0, :, :]
-#                    llpha = inputxds["ANGLE"].values[0, 0, 1, :, :]
-#                    self.amplitude, self.phase = _circular_to_stokes_i(rramp, llamp, rrpha, llpha)
-#                elif 'ALMA' in self.telescope.name:
-#                    # This is a place holder for the moment as it is not clear yet what is the polarization of ALMA data
-#                    self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
-#                    self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
-#                else:
-#                    raise Exception("Not possible to handle polarizations from an unknown telescope")
-#            else:
-#                self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
-#                self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
-            
-            
             self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
             self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
             #print('Using 3')
