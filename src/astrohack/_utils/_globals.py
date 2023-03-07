@@ -1,4 +1,5 @@
 import numpy as np
+from astrohack._utils._system_message import error
 
 
 # Physical constants
@@ -9,6 +10,21 @@ mm2m = 1/1000.
 m2mm = 1000.
 m2mils = 1e6 / 25.4
 mils2m = 1. / m2mils
+
+# Length units
+length_units = ['km', 'mi', 'm', 'cm', 'mm', 'um', 'mils']
+# From m to unit
+length_factors = [1e3, 1609.34, 1.0, 1e-2, 1e-3, 1e-6, 25.4/1e6]
+
+# Trigonometric units
+trigo_units = ['rad', 'deg']
+# from rad to unit
+trigo_factors = [1.0, np.pi/180.]
+
+unit_dict = {'length': length_units,
+             'trigonometric': trigo_units}
+fact_dict = {'length': length_factors,
+             'trigonometric': trigo_factors}
 
 
 # Trigonometric unit conversions
@@ -35,3 +51,25 @@ def convert_to_db(val: float):
         Value in decibels
     """
     return 10.0 * np.log10(val)
+
+
+def convert_unit(unitin, unitout, kind):
+    try:
+        unitlist = unit_dict[kind]
+        factorlist = fact_dict[kind]
+    except KeyError:
+        error("Unrecognized unit kind: " + kind)
+        raise KeyError('Unrecogized unit kind')
+    inidx = test_unit(unitin, unitlist)
+    ouidx = test_unit(unitout, unitlist)
+    factor = factorlist[inidx]/factorlist[ouidx]
+    return factor
+
+
+def test_unit(unit, unitlist):
+    try:
+        idx = unitlist.index(unit)
+    except ValueError:
+        error("Unrecognized unit: " + unit)
+        raise ValueError('Unit not in list')
+    return idx
