@@ -313,12 +313,12 @@ class AntennaSurface:
         RMS before panel fitting OR RMS before and after panel fitting
         """
         fac = convert_unit('m', unit, 'length')
-        self.inrms = fac * self._compute_rms_array(self.deviation)
+        self.inrms = self._compute_rms_array(self.deviation)
         if self.residuals is None:
-            return self.inrms
+            return fac*self.inrms
         else:
-            self.ourms = fac * self._compute_rms_array(self.residuals)
-        return self.inrms, self.ourms
+            self.ourms = self._compute_rms_array(self.residuals)
+        return fac*self.inrms, fac*self.ourms
 
     def _compute_rms_array(self, array):
         """
@@ -475,6 +475,25 @@ class AntennaSurface:
         for panel in self.panels:
             panel.plot(ax, screws=screws)
 
+    def _build_panel_data_arrays(self):
+        """
+        Build arrays with data from the panels so that they can be stored on the XDS
+        Returns:
+            List with panel labels, panel fitting parameters, screw_adjustments
+        """
+        npanels = len(self.panels)
+        npar = self.panels[0].npar
+        nscrews = self.panels[0].screws.shape[0]
+        panel_labels = np.ndarray([npanels], dtype=object)
+        panel_pars = np.ndarray((npanels, npar), dtype=float)
+        screw_adjustments = np.ndarray((npanels, nscrews), dtype=float)
+        for ipanel in range(npanels):
+            panel_labels[ipanel] = self.panels[ipanel].label
+            print(self.panels[ipanel].label, panel_labels[ipanel])
+            panel_pars[ipanel, :] = self.panels[ipanel].par
+            screw_adjustments[ipanel, :] = self.panels[ipanel].export_screws_float(unit='m')
+        return panel_labels, panel_pars, screw_adjustments
+
     def export_screw_adjustments(self, filename, unit="mm"):
         """
         Export screw adjustments for all panels onto an ASCII file
@@ -505,12 +524,15 @@ class AntennaSurface:
         """
         xds = xr.Dataset()
         gains = self.gains()
-        rms = self.get_rms()
+        rms = self.get_rms(unit='m')
         xds.attrs['telescope_name'] = self.telescope.name
         xds.attrs['antenna_name'] = self.antenna_name
         xds.attrs['wavelength'] = self.wavelength
         xds.attrs['AIPS'] = False
         xds.attrs['amp_unit'] = self.amp_unit
+        xds.attrs['panel_kind'] = self.panelkind
+        xds.attrs['panel_margin'] = self.panel_margins
+        xds.attrs['cutoff'] = self.cut
         xds['AMPLITUDE'] = xr.DataArray(self.amplitude, dims=["u", "v"])
         xds['PHASE'] = xr.DataArray(self.phase, dims=["u", "v"])
         xds['DEVIATION'] = xr.DataArray(self.deviation, dims=["u", "v"])
@@ -530,6 +552,14 @@ class AntennaSurface:
             xds.attrs['input_gain'] = gains[0]
             xds.attrs['theoretical_gain'] = gains[1]
 
-        coords = {"u": self.u_axis, "v": self.v_axis}
+        if self.solved:
+            labels, pars, screws = self._build_panel_data_arrays()
+            xds['PANEL_PARAMETERS'] = xr.DataArray(pars, dims=['labels', 'pars'])
+            xds['PANEL_SCREWS'] = xr.DataArray(screws, dims=['labels', 'screws'])
+            coords = {"u": self.u_axis, "v": self.v_axis, 'labels': labels, 'screws': self.telescope.screw_description,
+                      'pars': np.arange(pars.shape[1])}
+        else:
+            coords = {"u": self.u_axis, "v": self.v_axis}
+
         xds = xds.assign_coords(coords)
         return xds
