@@ -267,16 +267,17 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         ant_id (int): Antenna id
         pnt_name (str): Name of output poitning dictinary file name.
     """
-    
     ant_id = pnt_parms['ant_id']
     pnt_name = pnt_parms['pnt_name']
     scan_time_dict = pnt_parms['scan_time_dict']
-    
+    print('0')
     tb = ctables.taql(
         "select DIRECTION, TIME, TARGET, ENCODER, ANTENNA_ID, POINTING_OFFSET from %s WHERE ANTENNA_ID == %s"
         % (os.path.join(ms_name, "POINTING"), ant_id)
     )
 
+    
+    #print('1')
     #print('tb.getcol("DIRECTION").shape',tb.getcol("DIRECTION").shape,ant_id)
     ### NB: Add check if directions refrence frame is Azemuth Elevation (AZELGEO)
     try:
@@ -293,6 +294,8 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
 
         return 0
     tb.close()
+    
+    #print('2')
 
     pnt_xds = xr.Dataset()
     coords = {"time": direction_time}
@@ -301,7 +304,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     # Measurement set v2 definition: https://drive.google.com/file/d/1IapBTsFYnUT1qPu_UK09DIFGM81EIZQr/view?usp=sharing
     # DIRECTION: Antenna pointing direction
     pnt_xds["DIRECTION"] = xr.DataArray(direction, dims=("time", "az_el"))
-
+    #print('3')
     # ENCODER: The current encoder values on the primary axes of the mount type for the antenna, expressed as a Direction
     # Measure.
     pnt_xds["ENCODER"] = xr.DataArray(encoder, dims=("time", "az_el"))
@@ -331,7 +334,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     )
     
     ###############
-    
+    #print('4')
     mapping_scans = {}
     time_tree = spatial.KDTree(direction_time[:,None]) #Use for nearest interpolation
     
@@ -345,9 +348,9 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
                 scan_list.append(scan_id)
         mapping_scans[ddi_id] = scan_list
             
-    pnt_xds.attrs['mapping_scans'] = mapping_scans
+    pnt_xds.attrs['mapping_scans'] = [mapping_scans]
     ###############
-
+    #print('5')
     pnt_xds.attrs['ant_name'] = pnt_parms['ant_name']
     
     
@@ -356,6 +359,11 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
             file=os.path.join(pnt_name, str(ant_id))
         )
     )
+    
+    #print('***')
+    #print(os.path.join(pnt_name, str(ant_id)), pnt_xds)
+    #print('***')
+    #print('6')
     pnt_xds.to_zarr(
         os.path.join(pnt_name, str(ant_id)), mode="w", compute=True, consolidated=True
     )
@@ -404,6 +412,10 @@ def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
     ###########################################################################################
     pnt_parms = {'pnt_name':pnt_name,'scan_time_dict':scan_time_dict}
     
+    #print('scan_time_dict',scan_time_dict)
+    #import json
+    #print(pnt_parms)
+    #print(json.dumps(pnt_parms, indent=2, default=str))
     
     if parallel:
         delayed_pnt_list = []
@@ -833,7 +845,7 @@ def _extract_holog_chunk(extract_holog_params):
     ##################
     
     
-
+    
     holog_dict = _create_holog_file(
         holog_name,
         vis_map_dict,

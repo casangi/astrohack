@@ -15,11 +15,11 @@ from astrohack._utils._io import _extract_holog_chunk, _open_no_dask_zarr
 from astrohack._utils._io import _create_holog_meta_data, _read_data_from_holog_json
 from astrohack._utils._io import _read_meta_data
 from astrohack.dio import _load_holog_file
-from memory_profiler import profile
+#from memory_profiler import profile
 
 
 fp=open('extract_holog.log','w+')
-@profile(stream=fp)
+#@profile(stream=fp)
 def extract_holog(
     ms_name,
     holog_name,

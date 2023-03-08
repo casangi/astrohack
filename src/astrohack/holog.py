@@ -531,8 +531,8 @@ def _holog_chunk(holog_chunk_params):
         xds.to_zarr("{name}.image.zarr/{ant}/{ddi}".format(name=holog_base_name, ant=holog_chunk_params["ant_id"], ddi=ddi), mode="w", compute=True, consolidated=True)
    
 
-fp=open('holog.log','w+')
-@profile(stream=fp)
+#fp=open('holog.log','w+')
+#@profile(stream=fp)
 def holog(
     holog_file,
     grid_size,
@@ -616,6 +616,7 @@ def holog(
             
 
             for ant_id in ant_list:
+                console.info("Processing ant_id: " + str(ant_id))
                 holog_chunk_params["ant_id"] = ant_id
                 #print('****',grid_size,cell_size,ant_id)
 
