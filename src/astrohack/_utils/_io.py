@@ -31,6 +31,20 @@ DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 jit_cache = False
 
 def _load_image_xds(file_stem, ant, ddi):
+    """ Load specific image xds
+
+    Args:
+        file_stem (str): File directory
+        ant (int): Antenna ID
+        ddi (int): DDI 
+
+    Raises:
+        FileNotFoundError: FileNotFoundError
+
+    Returns:
+        zarr: zarr image file
+    """
+
     image_path = "{image}.image.zarr/{ant}/{ddi}".format(image=file_stem, ant=ant, ddi=ddi)
 
     if os.path.isdir(image_path):
@@ -270,15 +284,12 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     ant_id = pnt_parms['ant_id']
     pnt_name = pnt_parms['pnt_name']
     scan_time_dict = pnt_parms['scan_time_dict']
-    print('0')
+    
     tb = ctables.taql(
         "select DIRECTION, TIME, TARGET, ENCODER, ANTENNA_ID, POINTING_OFFSET from %s WHERE ANTENNA_ID == %s"
         % (os.path.join(ms_name, "POINTING"), ant_id)
     )
 
-    
-    #print('1')
-    #print('tb.getcol("DIRECTION").shape',tb.getcol("DIRECTION").shape,ant_id)
     ### NB: Add check if directions refrence frame is Azemuth Elevation (AZELGEO)
     try:
         direction = tb.getcol("DIRECTION")[:, 0, :]
@@ -295,8 +306,6 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         return 0
     tb.close()
     
-    #print('2')
-
     pnt_xds = xr.Dataset()
     coords = {"time": direction_time}
     pnt_xds = pnt_xds.assign_coords(coords)
@@ -304,7 +313,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     # Measurement set v2 definition: https://drive.google.com/file/d/1IapBTsFYnUT1qPu_UK09DIFGM81EIZQr/view?usp=sharing
     # DIRECTION: Antenna pointing direction
     pnt_xds["DIRECTION"] = xr.DataArray(direction, dims=("time", "az_el"))
-    #print('3')
+
     # ENCODER: The current encoder values on the primary axes of the mount type for the antenna, expressed as a Direction
     # Measure.
     pnt_xds["ENCODER"] = xr.DataArray(encoder, dims=("time", "az_el"))
@@ -334,7 +343,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     )
     
     ###############
-    #print('4')
+
     mapping_scans = {}
     time_tree = spatial.KDTree(direction_time[:,None]) #Use for nearest interpolation
     
@@ -350,7 +359,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
             
     pnt_xds.attrs['mapping_scans'] = [mapping_scans]
     ###############
-    #print('5')
+
     pnt_xds.attrs['ant_name'] = pnt_parms['ant_name']
     
     
@@ -360,10 +369,6 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         )
     )
     
-    #print('***')
-    #print(os.path.join(pnt_name, str(ant_id)), pnt_xds)
-    #print('***')
-    #print('6')
     pnt_xds.to_zarr(
         os.path.join(pnt_name, str(ant_id)), mode="w", compute=True, consolidated=True
     )
@@ -411,11 +416,6 @@ def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
     scan_time_dict = _exstract_scan_time_dict(time,scan_ids,ddi)
     ###########################################################################################
     pnt_parms = {'pnt_name':pnt_name,'scan_time_dict':scan_time_dict}
-    
-    #print('scan_time_dict',scan_time_dict)
-    #import json
-    #print(pnt_parms)
-    #print(json.dumps(pnt_parms, indent=2, default=str))
     
     if parallel:
         delayed_pnt_list = []
@@ -503,8 +503,6 @@ def _extract_holog_chunk_jit(
     time_vis,
     flag,
     flag_row,
-    #map_ant_ids,
-    #ref_ant_ids,
     ref_ant_per_map_ant_tuple,
     map_ant_tuple,
 ):
@@ -519,8 +517,6 @@ def _extract_holog_chunk_jit(
         time_vis (numpy.ndarray): Array of unique time values from time_vis_row
         flag (numpy.ndarray): Array of data quality flags to apply to data
         flag_row (numpy.ndarray): Array indicating when a full row of data should be flagged
-        map_ant_ids (numpy.ndarray): Array of antenna_ids for mapping data
-        ref_ant_ids (numpy.ndarray): Array of antenna_ids for reference data
 
     Returns:
         dict: Antenna_id referenced (key) dictionary containing the visibility data selected by (time, channel, polarization)
@@ -753,9 +749,6 @@ def _extract_holog_chunk(extract_holog_params):
     ddi = extract_holog_params["ddi"]
     scans = extract_holog_params["scans"]
     ant_names = extract_holog_params["ant_names"]
-    #map_ant_ids = extract_holog_params["map_ant_ids"]
-    #ref_ant_ids = extract_holog_params["ref_ant_ids"]
-    #map_ref_ant_dict = extract_holog_params["map_ref_ant_dict"]
     ref_ant_per_map_ant_tuple = extract_holog_params["ref_ant_per_map_ant_tuple"]
     map_ant_tuple = extract_holog_params["map_ant_tuple"]
     holog_scan_id = extract_holog_params["holog_scan_id"]
@@ -770,9 +763,7 @@ def _extract_holog_chunk(extract_holog_params):
     chan_freq = extract_holog_params["chan_setup"]["chan_freq"]
     pol = extract_holog_params["pol_setup"]["pol"]
 
-    if sel_state_ids:
-        #print('&&&&',data_col, ms_name, ddi, scans, sel_state_ids,'&&&&')
-    
+    if sel_state_ids:    
         ctb = ctables.taql(
             "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
             % (data_col, ms_name, ddi, scans, sel_state_ids)
@@ -873,7 +864,6 @@ def _extract_holog_chunk(extract_holog_params):
 def _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict):
     
     for ant_id in vis_map_dict.keys():
-        #print(ant_id,vis_map_dict[ant_id].shape,pnt_map_dict[ant_id].shape,weight_map_dict[ant_id].shape, flagged_mapping_antennas,time_vis.shape)
         diff = np.diff(pnt_map_dict[ant_id],axis=0)
         r_diff = np.sqrt(np.abs(diff[:,0]**2 + diff[:,1]**2))
     

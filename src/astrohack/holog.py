@@ -71,7 +71,19 @@ def _apply_mask(data, scaling=0.5):
     start = int(x // 2 - mask // 2)
     return data[start : (start + mask), start : (start + mask)]
 
-def _mask_circular_disk(center, radius, array, mask_value=1,make_nan=True):
+def _mask_circular_disk(center, radius, array, mask_value=1, make_nan=True):
+    """ Create a mask to trim an image
+
+    Args:
+        center (tuple): tuple describing the center of the image
+        radius (int): disk radius
+        array (numpy.ndarray): data array to mask
+        mask_value (int, optional): Value to set masked value to. Defaults to 1.
+        make_nan (bool, optional): Set maked values to NaN. Defaults to True.
+
+    Returns:
+        _type_: _description_
+    """
 
     if center == None:
         image_slice = array[0, 0, 0, ...]
@@ -88,7 +100,7 @@ def _mask_circular_disk(center, radius, array, mask_value=1,make_nan=True):
     mask = np.tile(mask, reps=(n_time, n_chan, n_pol, 1, 1))
     
     if make_nan:
-        mask[mask==0] = np.nan
+        mask[mask==0] = np.nan # Why not just do this with mask value ... this seems un-needed.
     
     return mask
 
@@ -199,9 +211,6 @@ def _parallactic_derotation(data, parallactic_angle_dict):
     for scan, scan_value in enumerate(scans):
         median_angular_offset = median_angular_reference - parallactic_angle_dict[scan_value].parallactic_samples[median_index]
         median_angular_offset *= 180/np.pi
-        
-        
-        #print(median_angular_offset)
             
         data[scan] = scipy.ndimage.rotate(input=data[scan, ...], angle=median_angular_offset, axes=(3, 2), reshape=False)
         
@@ -249,10 +258,6 @@ def _chunked_average(data, weight, avg_map, avg_freq):
             # Most probably will have to unravel assigment
             data_avg[:, avg_index, :] = (data_avg[:, avg_index, :] + weight[:, index, :] * data[:, index, :])
             weight_sum[:, avg_index, :] = weight_sum[:, avg_index, :] + weight[:, index, :]
-            #for time in n_time:
-            #    for pol in n_pol:
-            #        data_avg[time, avg_index, pol] = (data_avg[time, avg_index, pol] + weight[time, index, pol] * data[time, index, pol])
-            #        weight_sum[time, avg_index, pol] = weight_sum[time, avg_index, pol] + weight[time, index, pol]
             
             index = index + 1
 
@@ -290,8 +295,6 @@ def _holog_chunk(holog_chunk_params):
     grid_l, grid_m = list(map(np.transpose, np.meshgrid(l, m)))
     
     to_stokes = holog_chunk_params["to_stokes"]
-    
-    #print(ant_data_dict)
 
     for ddi in ant_data_dict.keys():
     #for ddi in [1]: #### NB NB NB remove
@@ -338,13 +341,9 @@ def _holog_chunk(holog_chunk_params):
 
                 n_chan = avg_freq.shape[0]
                 
-                #print('$$$$$$$$$$ n_chan', ddi, n_chan, avg_freq, reference_scaling_frequency, (avg_freq / reference_scaling_frequency))
-                
                 # Unavoidable for loop because lm change over frequency.
                 for chan_index in range(n_chan):
-                
-                    
-                    
+    
                     # Average scaled beams.
                     beam_grid[scan_index, 0, :, :, :] = (beam_grid[scan_index, 0, :, :, :] + np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index], vis_avg[:, chan_index, :], (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"],fill_value=0.0),(2),(0)))
 
@@ -535,7 +534,7 @@ def _holog_chunk(holog_chunk_params):
 #@profile(stream=fp)
 def holog(
     holog_file,
-    grid_size,
+    grid_size=None,
     cell_size=None,
     padding_factor=50,
     parallel=True,
@@ -618,7 +617,6 @@ def holog(
             for ant_id in ant_list:
                 console.info("Processing ant_id: " + str(ant_id))
                 holog_chunk_params["ant_id"] = ant_id
-                #print('****',grid_size,cell_size,ant_id)
 
                 if parallel:
                     delayed_list.append(
@@ -638,9 +636,6 @@ def holog(
                 )
             )
             raise FileNotFoundError()
-#    except Exception as error:
-#        console.error("[holog] {error}".format(error=error))
-
 
 def _find_nearest(array, value):
     """ Find the nearest entry in array to that of value.
@@ -694,7 +689,6 @@ def _to_stokes(grid,pol):
     grid_stokes = np.zeros_like(grid)
     
     if 'RR' in pol:
-        #print('In RRR',grid.shape,grid_stokes.shape)
         grid_stokes[:,:,0,:,:] = (grid[:,:,0,:,:] + grid[:,:,3,:,:])/2
         grid_stokes[:,:,1,:,:] = (grid[:,:,1,:,:] + grid[:,:,2,:,:])/2
         grid_stokes[:,:,2,:,:] = 1j*(grid[:,:,1,:,:] - grid[:,:,2,:,:])/2

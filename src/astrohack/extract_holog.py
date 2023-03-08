@@ -9,6 +9,7 @@ from casacore import tables as ctables
 
 from prettytable import PrettyTable
 
+from astrohack._utils._globals import pol_str
 from astrohack._utils import _system_message as console
 from astrohack._utils._io import _load_pnt_dict, _make_ant_pnt_dict
 from astrohack._utils._io import _extract_holog_chunk, _open_no_dask_zarr
@@ -63,8 +64,6 @@ def extract_holog(
         pnt_dict = _load_pnt_dict(pnt_name)
     except:
         pnt_dict = _make_ant_pnt_dict(ms_name, pnt_name, parallel=parallel)
-    
-    #print(pnt_name,pnt_dict)
     
 
     ''' VLA datasets causeing issues.
@@ -180,12 +179,20 @@ def extract_holog(
     
     telescope_name = obs_ctb.getcol("TELESCOPE_NAME")[0]
 
+    extract_holog_params = {}
+
     delayed_list = []
     #for ddi in [holog_obs_dict['ddi'][0]]: #### NBNBNB: Chnage to all ddi's
     if sel_ddi is None:
+        if holog_obs_dict['ddi'] is None:
+            console.error("[extract_holog]: No DDI given found.")
+            raise Exception()
+
+        console.info("[extract_holog]: Processing DDI: {}".format(holog_obs_dict['ddi']))
         sel_ddi = holog_obs_dict['ddi']
     
     for ddi in sel_ddi:
+        console.info("[extract_holog]: Processing select DDI: {}".format(ddi))
         spw_setup_id = ddi_spw[ddi]
         pol_setup_id = ddpol_indexol[ddi]
 
@@ -207,7 +214,6 @@ def extract_holog(
         extract_holog_params["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[0]
         extract_holog_params["chan_setup"]["total_bw"] = spw_ctb.getcol("TOTAL_BANDWIDTH", startrow=spw_setup_id, nrow=1)[0]
 
-        from astrohack._utils._globals import pol_str
         extract_holog_params["pol_setup"]["pol"] = pol_str[pol_ctb.getcol("CORR_TYPE", startrow=pol_setup_id, nrow=1)[0, :]]
                 
         
@@ -219,17 +225,15 @@ def extract_holog(
                 scans = holog_obs_dict[holog_scan_id]["scans"]
                 console.info("Processing ddi: {ddi}, scans: {scans}".format(ddi=ddi, scans=scans))
             
-                #map_ref_ant_dict = {}
                 map_ant_list = []
                 ref_ant_per_map_ant_list = [] #
                 for map_ant_str in holog_obs_dict[holog_scan_id]['ant'].keys():
                     ref_ant_ids = np.array(_convert_ant_name_to_id(ant_names,list(holog_obs_dict[holog_scan_id]['ant'][map_ant_str])))
                     map_ant_id = _convert_ant_name_to_id(ant_names,map_ant_str)[0]
-                    #map_ref_ant_dict[map_ant_id] = ref_ant_ids
+
                     ref_ant_per_map_ant_list.append(ref_ant_ids)
                     map_ant_list.append(map_ant_id)
                     
-                #extract_holog_params["map_ref_ant_dict"] = map_ref_ant_dict
                 extract_holog_params["ref_ant_per_map_ant_tuple"] = tuple(ref_ant_per_map_ant_list)
                 extract_holog_params["map_ant_tuple"] = tuple(map_ant_list)
                 extract_holog_params["scans"] = scans
@@ -250,7 +254,7 @@ def extract_holog(
     pol_ctb.close()
 
     if parallel:
-        dask.compute(delayed_list)
+        dask.compute(delayed_list)    
 
     extract_holog_params["holog_obs_dict"] = {}
 
