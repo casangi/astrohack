@@ -47,15 +47,18 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
 
     for ddi in os.listdir(holog_file):
         if ddi.isnumeric():
-            holog_dict[int(ddi)] = {}
+            if int(ddi) not in holog_dict:
+                holog_dict[int(ddi)] = {}
             for scan in os.listdir(os.path.join(holog_file, ddi)):
                 if scan.isnumeric():
-                    holog_dict[int(ddi)][int(scan)] = {}
+                    if int(scan) not in holog_dict[int(ddi)]:
+                        holog_dict[int(ddi)][int(scan)] = {}
                     for ant in os.listdir(os.path.join(holog_file, ddi + "/" + scan)):
                         if ant.isnumeric():
                             mapping_ant_vis_holog_data_name = os.path.join(
                                 holog_file, ddi + "/" + scan + "/" + ant
                             )
+                            
 
                             if dask_load:
                                 holog_dict[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(
@@ -66,227 +69,12 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
                                     int(ant)
                                 ] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
 
+    
     if ant_id == None:
         return holog_dict
+        
 
     return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id)
-
-fp=open('extract_holog.log','w+')
-@profile(stream=fp)
-def extract_holog(
-    ms_name,
-    holog_name,
-    holog_obs_dict=None,
-    data_col="DATA",
-    subscan_intent="MIXED",
-    parallel=True,
-    overwrite=False,
-):
-    """Extract holography data and create beam maps.
-            subscan_intent: 'MIXED' or 'REFERENCE'
-
-    Args:
-        ms_name (string): Measurement file name
-        holog_name (string): Basename of holog file to create.
-        holog_obs_dict (dict): Nested dictionary ordered by ddi:{ scan: { map:[ant names], ref:[ant names] } } }
-        data_col (str, optional): Data column from measurement set to acquire. Defaults to 'DATA'.
-        subscan_intent (str, optional): Subscan intent, can be MIXED or REFERENCE; MIXED refers to a pointing measurement with half ON(OFF) source. Defaults to 'MIXED'.
-        parallel (bool, optional): Boolean for whether to process in parallel. Defaults to True.
-        overwrite (bool, optional): Boolean for whether to overwrite current holography file.
-    """
-
-    holog_file = "{base}.{suffix}".format(base=holog_name, suffix="holog.zarr")
-
-    if os.path.exists(holog_file) is True and overwrite is False:
-        console.error(
-            "[_create_holog_file] holog file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(
-                file=holog_file
-            )
-        )
-        raise FileExistsError
-    else:
-        console.warning(
-            "[extract_holog] Warning, current holography files will be overwritten."
-        )
-
-    pnt_name = "{base}.{pointing}".format(base=holog_name, pointing="point.zarr")
-
-    #pnt_dict = _load_pnt_dict(pnt_name)
-    pnt_dict = _make_ant_pnt_dict(ms_name, pnt_name, parallel=parallel)
-    
-    if holog_obs_dict is None:
-        ant_names_list = []
-        #Create mapping antennas
-        holog_obs_dict = {}
-        for ant_id,pnt_xds in pnt_dict.items():
-            ant_name = pnt_xds.attrs['ant_name']
-            mapping_scans = pnt_xds.attrs['mapping_scans']
-            ant_names_list.append(ant_name)
-            for ddi,scans in  mapping_scans.items():
-                ddi = int(ddi)
-                for s in scans:
-                    try:
-                        holog_obs_dict[ddi][s]['map'].append(ant_name)
-                    except:
-                        holog_obs_dict.setdefault(ddi,{})[s] = {'map':[ant_name]}#dict(zip(scans, [ant_name]*len(scans)))
-       
-       
-        #Create reference antennas
-        
-        ant_names_set = set(ant_names_list)
-        for ddi,scan in holog_obs_dict.items():
-            for scan_id,ant_types in scan.items():
-                holog_obs_dict[ddi][scan_id]['ref'] = ant_names_set - set(holog_obs_dict[ddi][scan_id]['map'])
-            
-    print(holog_obs_dict)
-
-
-    ######## Get Spectral Windows ########
-
-    # nomodify=True when using CASA tables.
-    # print(os.path.join(ms_name,"DATA_DESCRIPTION"))
-    console.info(
-        "Opening measurement file {ms}".format(
-            ms=os.path.join(ms_name, "DATA_DESCRIPTION")
-        )
-    )
-
-    ctb = ctables.table(
-        os.path.join(ms_name, "DATA_DESCRIPTION"),
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-        ack=False,
-    )
-    ddi_spw = ctb.getcol("SPECTRAL_WINDOW_ID")
-    ddpol_indexol = ctb.getcol("POLARIZATION_ID")
-    ddi = np.arange(len(ddi_spw))
-    ctb.close()
-
-    ######## Get Antenna IDs and Names ########
-    ctb = ctables.table(
-        os.path.join(ms_name, "ANTENNA"),
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-        ack=False,
-    )
-
-    ant_name = ctb.getcol("NAME")
-    ant_id = np.arange(len(ant_name))
-
-    ctb.close()
-
-    ######## Get Scan and Subscan IDs ########
-    # SDM Tables Short Description (https://drive.google.com/file/d/16a3g0GQxgcO7N_ZabfdtexQ8r2jRbYIS/view)
-    # 2.54 ScanIntent (p. 150)
-    # MAP ANTENNA SURFACE : Holography calibration scan
-
-    # 2.61 SubscanIntent (p. 152)
-    # MIXED : Pointing measurement, some antennas are on -ource, some off-source
-    # REFERENCE : reference measurement (used for boresight in holography).
-    # Undefined : ?
-
-    ctb = ctables.table(
-        os.path.join(ms_name, "STATE"),
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-        ack=False,
-    )
-
-    # scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE subtable.
-    obs_modes = ctb.getcol("OBS_MODE")
-    ctb.close()
-
-    scan_intent = "MAP_ANTENNA_SURFACE"
-    state_ids = []
-
-    for i, mode in enumerate(obs_modes):
-        if (scan_intent in mode) and (subscan_intent in mode):
-            state_ids.append(i)
-
-    spw_ctb = ctables.table(
-        os.path.join(ms_name, "SPECTRAL_WINDOW"),
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-        ack=False,
-    )
-    pol_ctb = ctables.table(
-        os.path.join(ms_name, "POLARIZATION"),
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-        ack=False,
-    )
-
-    obs_ctb = ctables.table(
-        os.path.join(ms_name, "OBSERVATION"),
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-        ack=False,
-    )
-
-    delayed_list = []
-    for ddi in holog_obs_dict:
-
-        spw_setup_id = ddi_spw[ddi]
-        pol_setup_id = ddpol_indexol[ddi]
-
-        extract_holog_params = {
-            "ms_name": ms_name,
-            "holog_name": holog_name,
-            "pnt_name": pnt_name,
-            "ddi": ddi,
-            "data_col": data_col,
-            "chan_setup": {},
-            "pol_setup": {},
-            "telescope_name": "",
-            "overwrite": overwrite,
-        }
-
-        extract_holog_params["chan_setup"]["chan_freq"] = spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0, :]
-        extract_holog_params["chan_setup"]["chan_width"] = spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[0, :]
-        extract_holog_params["chan_setup"]["eff_bw"] = spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0, :]
-        extract_holog_params["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[0]
-        extract_holog_params["chan_setup"]["total_bw"] = spw_ctb.getcol("TOTAL_BANDWIDTH", startrow=spw_setup_id, nrow=1)[0]
-
-        extract_holog_params["pol_setup"]["pol"] = pol_ctb.getcol("CORR_TYPE", startrow=spw_setup_id, nrow=1)[0, :]
-        
-        extract_holog_params["telescope_name"] = obs_ctb.getcol("TELESCOPE_NAME")[0]
-
-        for scan in holog_obs_dict[ddi].keys():
-            console.info("Processing ddi: {ddi}, scan: {scan}".format(ddi=ddi, scan=scan))
-
-            map_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]["map"]))[0]
-            ref_ant_ids = np.nonzero(np.in1d(ant_name, holog_obs_dict[ddi][scan]["ref"]))[0]
-
-            extract_holog_params["map_ant_ids"] = map_ant_ids
-            extract_holog_params["ref_ant_ids"] = ref_ant_ids
-            extract_holog_params["sel_state_ids"] = state_ids
-            extract_holog_params["scan"] = scan
-
-            if parallel:
-                delayed_list.append(
-                    dask.delayed(_extract_holog_chunk)(
-                        dask.delayed(extract_holog_params)
-                    )
-                )
-            else:
-                _extract_holog_chunk(extract_holog_params)
-
-    spw_ctb.close()
-    pol_ctb.close()
-
-    if parallel:
-        dask.compute(delayed_list)
-
-    extract_holog_params["holog_obs_dict"] = {}
-
-    for id in ant_id:
-        extract_holog_params["holog_obs_dict"][str(id)] = ant_name[id]
-
-    holog_file = "{base}.{suffix}".format(base=extract_holog_params["holog_name"], suffix="holog.zarr")
-
-    holog_dict = _load_holog_file(holog_file=holog_file, dask_load=True, load_pnt_dict=False)
-
-    _create_holog_meta_data(holog_file=holog_file, holog_dict=holog_dict, holog_params=extract_holog_params)
 
 class AstrohackDataFile:
     def __init__(self, file_stem, path='./'):

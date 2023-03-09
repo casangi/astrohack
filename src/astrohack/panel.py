@@ -8,7 +8,7 @@ from astrohack._utils._io import _load_image_xds
 
 
 def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, panel_kind=None, basename=None, unit='mm',
-          panel_margins=0.05, save_mask=False, save_deviations=True, save_phase=False, parallel=True):
+          panel_margins=0.05, save_mask=False, save_deviations=True, save_phase=False, parallel=True, ddis=None):
     """
     Process holographies to produce screw adjustments for panels, several data products are also produced in the process
     Args:
@@ -60,15 +60,21 @@ def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, pan
         antennae = os.listdir(fullname)
         
         for antenna in antennae:
-            panel_chunk_params['antenna'] = antenna
-            ddis = os.listdir(fullname+'/'+antenna)
-        
-            for ddi in ddis:
-                panel_chunk_params['ddi'] = ddi
-                if parallel:
-                    delayed_list.append(dask.delayed(_panel_chunk)(dask.delayed(panel_chunk_params)))
-                else:
-                    _panel_chunk(panel_chunk_params)
+            if antenna.isnumeric():
+                #print('antenna',antenna)
+                panel_chunk_params['antenna'] = antenna
+                
+                if ddis is None:
+                    ddis = os.listdir(fullname+'/'+antenna)
+            
+                for ddi in ddis:
+                    if ddi.isnumeric():
+                        #print('ddi',ddi)
+                        panel_chunk_params['ddi'] = ddi
+                        if parallel:
+                            delayed_list.append(dask.delayed(_panel_chunk)(dask.delayed(panel_chunk_params)))
+                        else:
+                            _panel_chunk(panel_chunk_params)
         if parallel:
             dask.compute(delayed_list)
 
@@ -86,19 +92,23 @@ def _panel_chunk(panel_chunk_params):
         suffix = ''
 
     else:
+        #print('**',panel_chunk_params['antenna'],panel_chunk_params['ddi'])
         inputxds = _load_image_xds(panel_chunk_params['holog_image'],
                                    panel_chunk_params['antenna'],
                                    panel_chunk_params['ddi'])
+                                   
+        #print(panel_chunk_params['holog_image'],inputxds)
+                                   
+        #print(inputxds)
         
         inputxds.attrs['AIPS'] = False
-        inputxds.attrs['antenna_name'] = panel_chunk_params['antenna']
-
-        if panel_chunk_params['telescope'] is None:
+        
+        if inputxds.attrs['telescope_name'] == "ALMA":
             tname = inputxds.attrs['telescope_name']+'_'+inputxds.attrs['ant_name'][0:2]
             telescope = Telescope(tname)
-
-        else:
-            telescope = Telescope(panel_chunk_params['telescope'])
+        elif inputxds.attrs['telescope_name'] == "EVLA":
+            tname = "VLA"#inputxds.attrs['telescope_name']
+            telescope = Telescope(tname)
             
         suffix = '_' + inputxds.attrs['ant_name'] + '/' + panel_chunk_params['ddi']
 
