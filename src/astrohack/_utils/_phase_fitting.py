@@ -2,7 +2,9 @@ import numpy as np
 
 from numba import njit
 from astrohack._utils._linear_algebra import _least_squares_fit
+from astrohack._utils._globals import rad2deg, deg2rad
 
+from memory_profiler import profile
 
 npar = 10
 i_x_pnt_off = 1
@@ -14,9 +16,9 @@ i_x_subref_tilt = 6
 i_y_subref_tilt = 7
 i_x_cass_off = 8
 i_y_cass_off = 9
-rad2dg = 180./np.pi
 
-
+fp=open('phase_fitting.log','w+')
+@profile(stream=fp)
 def phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
                   focus_xy_offsets, focus_z_offset, subreflector_tilt,
                   cassegrain_offset):
@@ -55,11 +57,11 @@ def phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, p
         cellxy: Map cell spacing, in meters
         amplitude_image: Grading amplitude map
         phase_image: Grading phase map
-        pointing_offset: Disable phase slope (pointing offset)
-        focus_xy_offsets: Disable subreflector offset model
-        focus_z_offset: Disable subreflector focus (z) model
+        pointing_offset: enable phase slope (pointing offset)
+        focus_xy_offsets: enable subreflector offset model
+        focus_z_offset: enable subreflector focus (z) model
         subreflector_tilt: Enable subreflector rotation model
-        cassegrain_offset: Disable Cassegrain offsets (X, Y, Z)
+        cassegrain_offset: enable Cassegrain offsets (X, Y, Z)
 
     Returns:
         results: Array containining the fit results in convenient units
@@ -168,10 +170,10 @@ def _internal_to_external_parameters(parameters, wavelength, telescope, cellxy):
     scaling = wavelength / 0.36
     results[3:] *= scaling
     # Sub-reflector tilt to degrees
-    results[6:8] *= rad2dg / (1000.0 * telescope.secondary_dist)
+    results[6:8] *= rad2deg / (1000.0 * telescope.secondary_dist)
     # rescale phase ramp to pointing offset
-    results[1:3] *= wavelength * rad2dg / 6. / cellxy
-    return results
+    results[1:3] *= wavelength * rad2deg / 6. / cellxy
+    return results * rad2deg
 
 
 def _external_to_internal_parameters(exparameters, wavelength, telescope, cellxy):
@@ -191,9 +193,10 @@ def _external_to_internal_parameters(exparameters, wavelength, telescope, cellxy
     scaling = wavelength / 0.36
     inparameters[3:] /= scaling
     # Sub-reflector tilt from degrees
-    inparameters[6:8] /= rad2dg / (1000.0 * telescope.secondary_dist)
+    inparameters[6:8] /= rad2deg / (1000.0 * telescope.secondary_dist)
     # rescale phase ramp to pointing offset
-    inparameters[1:3] /= wavelength * rad2dg / 6. / cellxy
+    inparameters[1:3] /= wavelength * rad2deg / 6. / cellxy
+    inparameters *= deg2rad
     return inparameters
 
 
