@@ -200,7 +200,9 @@ def _get_attrs(zarr_obj):
     Returns:
         dict: a group of zarr attibutes
     """
-    return {k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")}
+    return {
+        k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")
+    }
 
 
 def _open_no_dask_zarr(zarr_name, slice_dict={}):
@@ -816,26 +818,7 @@ def _extract_holog_chunk(extract_holog_params):
         
         time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict)
         
-        time_vis = time_vis + over_flow_protector_constant
-
-#    ant_id = 24
-#    print('****9',ant_id,vis_map_dict[ant_id].shape,pnt_map_dict[ant_id].shape,weight_map_dict[ant_id].shape, flagged_mapping_antennas,time_vis.shape)
-#
-#    import matplotlib.pyplot as plt
-#    diff = np.diff(pnt_map_dict[ant_id],axis=0)
-#    r_diff = np.sqrt(np.abs(diff[:,0]**2 + diff[:,1]**2))
-#
-#    plt.figure()
-#    plt.plot(r_diff,linestyle="None",marker='*')
-#    plt.show()
-#
-#    plt.figure()
-#    plt.scatter(pnt_map_dict[24][:,0],pnt_map_dict[24][:,1])
-#    plt.show()
-    
-    ##################
-    
-    
+        time_vis = time_vis + over_flow_protector_constant  
     
     holog_dict = _create_holog_file(
         holog_name,
@@ -858,8 +841,6 @@ def _extract_holog_chunk(extract_holog_params):
             ddi=ddi, holog_scan_id=holog_scan_id
         )
     )
-
-
 
 def _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict):
     
@@ -923,6 +904,3 @@ def _average_repeated_pointings_jit(vis_map, weight_map,time_vis,pnt_map,n_avg,m
     pnt_map_avg[-1,:] = pnt_map_avg[-1,:]/n_samples
 
     return vis_map_avg, weight_map_avg, time_vis_avg, pnt_map_avg
-
-    
-

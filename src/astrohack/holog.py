@@ -71,7 +71,7 @@ def _apply_mask(data, scaling=0.5):
     start = int(x // 2 - mask // 2)
     return data[start : (start + mask), start : (start + mask)]
 
-def _mask_circular_disk(center, radius, array, mask_value=1, make_nan=True):
+def _mask_circular_disk(center, radius, array, mask_value=np.nan):
     """ Create a mask to trim an image
 
     Args:
@@ -95,12 +95,11 @@ def _mask_circular_disk(center, radius, array, mask_value=1, make_nan=True):
     
     r, c = disk(center, radius, shape=shape)
     mask = np.zeros(shape, dtype=array.dtype)   
-    mask[r, c] = mask_value
+    mask[r, c] = 1
     
     mask = np.tile(mask, reps=(n_time, n_chan, n_pol, 1, 1))
     
-    if make_nan:
-        mask[mask==0] = np.nan # Why not just do this with mask value ... this seems un-needed.
+    mask[mask==0] = mask_value
     
     return mask
 
@@ -422,23 +421,23 @@ def _holog_chunk(holog_chunk_params):
     
         telescope = Telescope(telescope_name)
 
-        
-        # Masking Aperture image
         wavelength = scipy.constants.speed_of_light/freq_chan[-1]
         aperture_radius = (0.5*telescope.diam)/wavelength
-        image_slice = aperture_grid[0, 0, 0, ...]
-        center_pixel = (image_slice.shape[0]//2, image_slice.shape[1]//2)
 
-        outer_pixel = np.where(np.abs(u) < aperture_radius)[0].max()
+        if holog_chunk_params['apply_mask']:
+        # Masking Aperture image
+            image_slice = aperture_grid[0, 0, 0, ...]
+            center_pixel = (image_slice.shape[0]//2, image_slice.shape[1]//2)
 
-        mask = _mask_circular_disk(
-            center=None,
-            radius=np.abs(outer_pixel - center_pixel[0])+1, # Let's not be too aggresive
-            array=aperture_grid,
-            make_nan=True
-        )
+            outer_pixel = np.where(np.abs(u) < aperture_radius)[0].max()
 
-        aperture_grid = mask*aperture_grid
+            mask = _mask_circular_disk(
+                center=None,
+                radius=np.abs(outer_pixel - center_pixel[0])+1, # Let's not be too aggresive
+                array=aperture_grid,
+            )
+
+            aperture_grid = mask*aperture_grid
         
         console.info("[_holog_chunk] Applying phase correction ...")
         
@@ -482,20 +481,6 @@ def _holog_chunk(holog_chunk_params):
                         subreflector_tilt=True,
                         cassegrain_offset=True
                     )
-
-#        # Masking Aperture image
-#        image_slice = aperture_grid[0, 0, 0, ...]
-#        center_pixel = (image_slice.shape[0]//2, image_slice.shape[1]//2)
-#
-#        outer_pixel = np.where(np.abs(u) < aperture_radius)[0].max()
-#
-#        mask = _mask_circular_disk(
-#            center=None,
-#            radius=np.abs(outer_pixel - center_pixel[0])+1, # Let's not be too aggresive
-#            array=aperture_grid
-#        )
-#
-#        aperture_grid = mask*aperture_grid
         
         ###To Do: Add Paralactic angle as a non-dimension coordinate dependant on time.
         xds = xr.Dataset()
@@ -544,7 +529,8 @@ def holog(
     reference_scaling_frequency=None,
     scan_average = True,
     ant_list = None,
-    to_stokes = False
+    to_stokes = False,
+    apply_mask=False
 ):
     """Process holography data
 
@@ -581,6 +567,7 @@ def holog(
             holog_chunk_params["reference_scaling_frequency"] = reference_scaling_frequency
             holog_chunk_params["scan_average"] = scan_average
             holog_chunk_params["to_stokes"] = to_stokes
+            holog_chunk_params["apply_mask"] = apply_mask
 
             
             if (cell_size is None) and (grid_size is None):
