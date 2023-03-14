@@ -3,6 +3,7 @@ import os
 import json
 import zarr
 import copy
+import numba
 import numbers
 
 import numpy as np
@@ -14,21 +15,181 @@ import astropy
 import astropy.units as u
 import astropy.coordinates as coord
 
-import numba
+from astropy.io import fits
+
+from scipy import spatial
+
 from numba import njit
 from numba.core import types
 from numba.typed import Dict
+
 from datetime import datetime
 
 from casacore import tables as ctables
 
 from astrohack._utils import _system_message as console
-from astrohack._utils._parallactic_angle import _calculate_parallactic_angle_chunk
-from scipy import spatial
-
+from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
-jit_cache = False
+
+def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None, holog_dict=None):
+    """Loads holog file from disk
+
+    Args:
+        holog_name (str): holog file name
+
+    Returns:
+        hologfile (nested-dict): {
+                            'point.dict':{}, 'ddi':
+                                                {'scan':
+                                                    {'antenna':
+                                                        {
+                                                            xarray.DataArray
+                                                        }
+                                                    }
+                                                }
+                        }
+    """
+
+    if holog_dict is None:
+        holog_dict = {}
+
+    if load_pnt_dict == True:
+        console.info("Loading pointing dictionary to holog ...")
+        holog_dict["pnt_dict"] = _load_pnt_dict(
+            file=holog_file, ant_list=None, dask_load=dask_load
+        )
+
+    for ddi in os.listdir(holog_file):
+        if ddi.isnumeric():
+            if int(ddi) not in holog_dict:
+                holog_dict[int(ddi)] = {}
+            for scan in os.listdir(os.path.join(holog_file, ddi)):
+                if scan.isnumeric():
+                    if int(scan) not in holog_dict[int(ddi)]:
+                        holog_dict[int(ddi)][int(scan)] = {}
+                    for ant in os.listdir(os.path.join(holog_file, ddi + "/" + scan)):
+                        if ant.isnumeric():
+                            mapping_ant_vis_holog_data_name = os.path.join(
+                                holog_file, ddi + "/" + scan + "/" + ant
+                            )
+                            
+
+                            if dask_load:
+                                holog_dict[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(
+                                    mapping_ant_vis_holog_data_name
+                                )
+                            else:
+                                holog_dict[int(ddi)][int(scan)][
+                                    int(ant)
+                                ] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
+
+    
+    if ant_id == None:
+        return holog_dict
+        
+
+    return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id)
+
+def _read_fits(filename):
+    """
+    Reads a square FITS file and do sanity checks on its dimensionality
+    Args:
+        filename: a string containing the FITS file name/path
+
+    Returns:
+    The FITS header and the associated data array
+    """
+    hdul = fits.open(filename)
+    head = hdul[0].header
+    data = hdul[0].data[0, 0, :, :]
+    hdul.close()
+    if head["NAXIS"] != 1:
+        if head["NAXIS"] < 1:
+            raise Exception(filename + " is not bi-dimensional")
+        elif head["NAXIS"] > 1:
+            for iax in range(2, head["NAXIS"]):
+                if head["NAXIS" + str(iax + 1)] != 1:
+                    raise Exception(filename + " is not bi-dimensional")
+    if head["NAXIS1"] != head["NAXIS2"]:
+        raise Exception(filename + " does not have the same amount of pixels in the x and y axes")
+    return head, data
+
+
+def _write_fits(head, data, filename):
+    """
+    Write a dictionary and a dataset to a FITS file
+    Args:
+        head: The dictionary containing the header
+        data: The dataset
+        filename: The name of the output file
+    """
+    hdu = fits.PrimaryHDU(data)
+    hdu.header = head
+    hdu.header["ORIGIN"] = "Astrohack"
+    hdu.writeto(filename, overwrite=True)
+    return
+
+
+def _aips_holog_to_xds(ampname, devname):
+    """
+    Read amplitude and deviation FITS files onto a common Xarray dataset
+    Args:
+        ampname: Name of the amplitude FITS file
+        devname: Name of the deviation FITS file
+
+    Returns:
+    Xarray dataset
+    """
+    amphead, ampdata = _read_fits(ampname)
+    devhead, devdata = _read_fits(devname)
+
+    if amphead["NAXIS1"] != devhead["NAXIS1"]:
+        raise Exception(ampname+' and '+devname+' have different dimensions')
+    if amphead["CRPIX1"] != devhead["CRPIX1"] or amphead["CRVAL1"] != devhead["CRVAL1"] \
+            or amphead["CDELT1"] != devhead["CDELT1"]:
+        raise Exception(ampname+' and '+devname+' have different axes descriptions')
+
+    npoint, wavelength = _get_aips_headpars(devhead)
+    u = np.arange(-amphead["CRPIX1"], amphead["NAXIS1"] - amphead["CRPIX1"]) * amphead["CDELT1"]
+    v = np.arange(-amphead["CRPIX2"], amphead["NAXIS2"] - amphead["CRPIX2"]) * amphead["CDELT2"]
+
+    xds = xr.Dataset()
+    xds.attrs['npix'] = amphead["NAXIS1"]
+    xds.attrs['cell_size'] = amphead["CDELT1"]
+    xds.attrs['ref_pixel'] = amphead["CRPIX1"]
+    xds.attrs['ref_value'] = amphead["CRVAL1"]
+    xds.attrs['npoint'] = npoint
+    xds.attrs['wavelength'] = wavelength
+    xds.attrs['amp_unit'] = amphead["BUNIT"].strip()
+    xds.attrs['AIPS'] = True
+    xds.attrs['antenna_name'] = amphead["TELESCOP"].strip()
+    xds['AMPLITUDE'] = xr.DataArray(ampdata, dims=["u", "v"])
+    xds['DEVIATION'] = xr.DataArray(devdata, dims=["u", "v"])
+    coords = {"u": u, "v": v}
+    xds = xds.assign_coords(coords)
+    return xds
+
+
+def _get_aips_headpars(head):
+    """
+    Fetch number of points used in holography and wavelength stored by AIPS on a FITS header
+    Args:
+        head: AIPS FITS header
+
+    Returns:
+    npoint, wavelength
+    """
+    npoint = np.nan
+    wavelength = np.nan
+    for line in head["HISTORY"]:
+        wrds = line.split()
+        if wrds[1] == "Visibilities":
+            npoint = np.sqrt(int(wrds[-1]))
+        elif wrds[1] == "Observing":
+            wavelength = float(wrds[-2])
+    return npoint, wavelength
+
 
 def _load_image_xds(file_stem, ant, ddi):
     """ Load specific image xds
@@ -102,107 +263,6 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
             ant_data_dict.setdefault(int(ddi), {})[int(scan)] = holog_dict[int(ddi)][int(scan)][int(ant_id)]
 
     return ant_data_dict
-
-
-def _create_holog_meta_data(holog_file, holog_dict, holog_params):
-    """Save holog file meta information to json file with the transformation
-        of the ordering (ddi, scan, ant) --> (ant, ddi, scan).
-
-    Args:
-        holog_name (str): holog file name.
-        holog_dict (dict): Dictionary containing msdx data.
-    """
-    data_extent = []
-    lm_extent = {"l": {"min": [], "max": []}, "m": {"min": [], "max": []}}
-    ant_holog_dict = {}
-
-    for ddi, scan_dict in holog_dict.items():
-        if isinstance(ddi, numbers.Number):
-            for scan, ant_dict in scan_dict.items():
-                for ant, xds in ant_dict.items():
-                    
-                    if ant not in ant_holog_dict:
-                        ant_holog_dict[ant] = {ddi:{scan:{}}}
-                    elif ddi not in ant_holog_dict[ant]:
-                        ant_holog_dict[ant][ddi] = {scan:{}}
-                    
-                    ant_holog_dict[ant][ddi][scan] = xds.to_dict(data=False)
-                
-                    #ant_sub_dict.setdefault(ddi, {})
-                    #ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
-
-                    # Find the average (l, m) extent for each antenna, over (ddi, scan) and write the meta data to file.
-                    dims = xds.dims
-                    
-                    lm_extent["l"]["min"].append(
-                        np.min(xds.DIRECTIONAL_COSINES.values[:, 0])
-                    )
-                    lm_extent["l"]["max"].append(
-                        np.max(xds.DIRECTIONAL_COSINES.values[:, 0])
-                    )
-
-                    lm_extent["m"]["min"].append(
-                        np.min(xds.DIRECTIONAL_COSINES.values[:, 1])
-                    )
-                    lm_extent["m"]["max"].append(
-                        np.max(xds.DIRECTIONAL_COSINES.values[:, 1])
-                    )
-                    
-                    data_extent.append(dims["time"])
-
-
-    
-    max_value = int(np.array(data_extent).max())
-
-    max_extent = {
-        "n_time": max_value,
-        "telescope_name": holog_params['telescope_name'],
-        "ant_map": holog_params['holog_obs_dict'],
-        "extent": {
-            "l": {
-                "min": np.array(lm_extent["l"]["min"]).mean(),
-                "max": np.array(lm_extent["l"]["max"]).mean(),
-            },
-            "m": {
-                "min": np.array(lm_extent["m"]["min"]).mean(),
-                "max": np.array(lm_extent["m"]["max"]).mean(),
-            },
-        },
-    }
-
-    output_attr_file = "{name}/{ext}".format(name=holog_file, ext=".holog_attr")
-
-    try:
-        with open(output_attr_file, "w") as json_file:
-            json.dump(max_extent, json_file)
-
-    except Exception as error:
-        console.error("[_create_holog_meta_data] {error}".format(error=error))
-    
-
-    
-    output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
-    
-    try:
-        with open(output_meta_file, "w") as json_file:
-            json.dump(ant_holog_dict, json_file)
-
-    except Exception as error:
-        console.error("[_create_holog_meta_data] {error}".format(error=error))
-
-
-def _get_attrs(zarr_obj):
-    """Get attributes of zarr obj (groups or arrays)
-
-    Args:
-        zarr_obj (zarr): a zarr_group object
-
-    Returns:
-        dict: a group of zarr attibutes
-    """
-    return {
-        k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")
-    }
 
 
 def _open_no_dask_zarr(zarr_name, slice_dict={}):
@@ -375,72 +435,9 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         os.path.join(pnt_name, str(ant_id)), mode="w", compute=True, consolidated=True
     )
 
-
-def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
-    """Top level function to extract subset of pointing table data into a dictionary of xarray dataarrays.
-
-    Args:
-        ms_name (str): Measurement file name.
-        pnt_name (str): Output pointing dictionary file name.
-        parallel (bool, optional): Process in parallel. Defaults to True.
-
-    Returns:
-        dict: pointing dictionary of xarray dataarrays
-    """
-
-    #Get antenna names and ids
-    ctb = ctables.table(
-        os.path.join(ms_name, "ANTENNA"),
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-    )
-
-    antenna_name = ctb.getcol("NAME")
-    antenna_id = np.arange(len(antenna_name))
-
-    ctb.close()
     
-
-    
-    ###########################################################################################
-    #Get scans with start and end times.
-    ctb = ctables.table(
-        ms_name,
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-    )
-
-    scan_ids = ctb.getcol("SCAN_NUMBER")
-    time = ctb.getcol("TIME")
-    ddi = ctb.getcol("DATA_DESC_ID")
-    ctb.close()
-
-    scan_time_dict = _exstract_scan_time_dict(time,scan_ids,ddi)
-    ###########################################################################################
-    pnt_parms = {'pnt_name':pnt_name,'scan_time_dict':scan_time_dict}
-    
-    if parallel:
-        delayed_pnt_list = []
-        for id in antenna_id:
-            pnt_parms['ant_id'] = id
-            pnt_parms['ant_name'] = antenna_name[id]
-            delayed_pnt_list.append(
-                dask.delayed(_make_ant_pnt_chunk)(
-                    dask.delayed(ms_name), dask.delayed(pnt_parms)
-                )
-            )
-        dask.compute(delayed_pnt_list)
-    else:
-        for id in antenna_id:
-            pnt_parms['ant_id'] = id
-            pnt_parms['ant_name'] = antenna_name[id]
-            _make_ant_pnt_chunk(ms_name, pnt_parms)
-
-    return _load_pnt_dict(pnt_name)
-    
-    
-@njit(cache=jit_cache, nogil=True)
-def _exstract_scan_time_dict(time,scan_ids,ddi_ids):
+@njit(cache=False, nogil=True)
+def _extract_scan_time_dict(time,scan_ids,ddi_ids):
     d1 = Dict.empty(
         key_type=types.int64,
         value_type=np.zeros(2,dtype=types.float64),
@@ -495,7 +492,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     return pnt_map_dict
 
 
-@njit(cache=jit_cache, nogil=True)
+@njit(cache=False, nogil=True)
 def _extract_holog_chunk_jit(
     vis_data,
     weight,
@@ -841,66 +838,3 @@ def _extract_holog_chunk(extract_holog_params):
             ddi=ddi, holog_scan_id=holog_scan_id
         )
     )
-
-def _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict):
-    
-    for ant_id in vis_map_dict.keys():
-        diff = np.diff(pnt_map_dict[ant_id],axis=0)
-        r_diff = np.sqrt(np.abs(diff[:,0]**2 + diff[:,1]**2))
-    
-        max_dis = np.max(r_diff)/1000
-        n_avg = np.sum([r_diff > max_dis]) + 1
-    
-        vis_map_avg, weight_map_avg, time_vis_avg, pnt_map_avg = _average_repeated_pointings_jit(vis_map_dict[ant_id], weight_map_dict[ant_id],time_vis,pnt_map_dict[ant_id],n_avg,max_dis,r_diff)
-        
-        vis_map_dict[ant_id] = vis_map_avg
-        weight_map_dict[ant_id] = weight_map_avg
-        pnt_map_dict[ant_id] = pnt_map_avg
-        
-    return time_vis_avg
-        
- 
-        
-@njit(cache=jit_cache, nogil=True)
-def _average_repeated_pointings_jit(vis_map, weight_map,time_vis,pnt_map,n_avg,max_dis,r_diff):
-
-    vis_map_avg = np.zeros((n_avg,)+ vis_map.shape[1:], dtype=vis_map.dtype)
-    weight_map_avg = np.zeros((n_avg,)+ weight_map.shape[1:], dtype=weight_map.dtype)
-    time_vis_avg = np.zeros((n_avg,), dtype=time_vis.dtype)
-    pnt_map_avg = np.zeros((n_avg,)+ pnt_map.shape[1:], dtype=pnt_map.dtype)
-    
-    
-    k = 0
-    n_samples = 1
-    
-    vis_map_avg[0,:,:] = vis_map_avg[k,:,:] + weight_map[0,:,:]*vis_map[0,:,:]
-    weight_map_avg[0,:,:] = weight_map_avg[k,:,:] + weight_map[0,:,:]
-    time_vis_avg[0] = time_vis_avg[k] + time_vis[0]
-    pnt_map_avg[0,:] = pnt_map_avg[k,:] + pnt_map[0,:]
-
-    for i in range(vis_map.shape[0]-1):
-        
-        point_dis = r_diff[i]
-        
-        if point_dis < max_dis:
-            n_samples = n_samples + 1
-        else:
-            vis_map_avg[k,:,:] = vis_map_avg[k,:,:]/weight_map_avg[k,:,:]
-            weight_map_avg[k,:,:] = weight_map_avg[k,:,:]/n_samples
-            time_vis_avg[k] = time_vis_avg[k]/n_samples
-            pnt_map_avg[k,:] = pnt_map_avg[k,:]/n_samples
-        
-            k=k+1
-            n_samples = 1
-            
-        vis_map_avg[k,:,:] = vis_map_avg[k,:,:] + weight_map[i+1,:,:]*vis_map[i+1,:,:]
-        weight_map_avg[k,:,:] = weight_map_avg[k,:,:] + weight_map[i+1,:,:]
-        time_vis_avg[k] = time_vis_avg[k] + time_vis[i+1]
-        pnt_map_avg[k,:] = pnt_map_avg[k,:] + pnt_map[i+1,:]
-        
-    vis_map_avg[-1,:,:] = vis_map_avg[1,:,:]/weight_map_avg[-1,:,:]
-    weight_map_avg[-1,:,:] = weight_map_avg[-1,:,:]/n_samples
-    time_vis_avg[-1] = time_vis_avg[-1]/n_samples
-    pnt_map_avg[-1,:] = pnt_map_avg[-1,:]/n_samples
-
-    return vis_map_avg, weight_map_avg, time_vis_avg, pnt_map_avg

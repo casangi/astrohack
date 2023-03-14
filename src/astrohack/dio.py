@@ -10,71 +10,17 @@ from casacore import tables as ctables
 from prettytable import PrettyTable
 
 from astrohack._utils import _system_message as console
-from astrohack._utils._io import _load_pnt_dict, _make_ant_pnt_dict
-from astrohack._utils._io import _extract_holog_chunk, _open_no_dask_zarr
-from astrohack._utils._io import _create_holog_meta_data, _read_data_from_holog_json
+
+from astrohack._utils._holog import _create_holog_meta_data 
+from astrohack._utils._holog import _make_ant_pnt_dict
+
+from astrohack._utils._io import _load_pnt_dict 
+from astrohack._utils._io import _extract_holog_chunk
+from astrohack._utils._io import _open_no_dask_zarr
+from astrohack._utils._io import _read_data_from_holog_json
 from astrohack._utils._io import _read_meta_data
 
 from memory_profiler import profile
-
-def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None, holog_dict=None):
-    """Loads holog file from disk
-
-    Args:
-        holog_name (str): holog file name
-
-    Returns:
-        hologfile (nested-dict): {
-                            'point.dict':{}, 'ddi':
-                                                {'scan':
-                                                    {'antenna':
-                                                        {
-                                                            xarray.DataArray
-                                                        }
-                                                    }
-                                                }
-                        }
-    """
-
-    if holog_dict is None:
-        holog_dict = {}
-
-    if load_pnt_dict == True:
-        console.info("Loading pointing dictionary to holog ...")
-        holog_dict["pnt_dict"] = _load_pnt_dict(
-            file=holog_file, ant_list=None, dask_load=dask_load
-        )
-
-    for ddi in os.listdir(holog_file):
-        if ddi.isnumeric():
-            if int(ddi) not in holog_dict:
-                holog_dict[int(ddi)] = {}
-            for scan in os.listdir(os.path.join(holog_file, ddi)):
-                if scan.isnumeric():
-                    if int(scan) not in holog_dict[int(ddi)]:
-                        holog_dict[int(ddi)][int(scan)] = {}
-                    for ant in os.listdir(os.path.join(holog_file, ddi + "/" + scan)):
-                        if ant.isnumeric():
-                            mapping_ant_vis_holog_data_name = os.path.join(
-                                holog_file, ddi + "/" + scan + "/" + ant
-                            )
-                            
-
-                            if dask_load:
-                                holog_dict[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(
-                                    mapping_ant_vis_holog_data_name
-                                )
-                            else:
-                                holog_dict[int(ddi)][int(scan)][
-                                    int(ant)
-                                ] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
-
-    
-    if ant_id == None:
-        return holog_dict
-        
-
-    return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id)
 
 class AstrohackDataFile:
     def __init__(self, file_stem, path='./'):

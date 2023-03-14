@@ -139,3 +139,24 @@ def _panel_chunk(panel_chunk_params):
     
     if panel_chunk_params['save_phase']:
         surface.plot_surface(filename=basename + "phase.png", plotphase=True)
+
+
+def create_phase_model(npix, parameters, wavelength, telescope, cellxy):
+    """
+    Create a phase model with npix by npix size according to the given parameters
+    Args:
+        npix: Number of pixels in each size of the model
+        parameters: Parameters for the phase model in the units described in _phase_fitting
+        wavelength: Observing wavelength, in meters
+        telescope: Telescope object containing the optics parameters
+        cellxy: Map cell spacing, in meters
+
+    Returns:
+
+    """
+    iNPARameters = _external_to_internal_parameters(parameters, wavelength, telescope, cellxy)
+    dummyphase = np.zeros((npix, npix))
+
+    _, model = _correct_phase(dummyphase, cellxy, iNPARameters, telescope.magnification, telescope.focus,
+                              telescope.surp_slope)
+    return model

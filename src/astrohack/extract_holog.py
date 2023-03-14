@@ -9,13 +9,19 @@ from casacore import tables as ctables
 
 from prettytable import PrettyTable
 
-from astrohack._utils._globals import pol_str
 from astrohack._utils import _system_message as console
-from astrohack._utils._io import _load_pnt_dict, _make_ant_pnt_dict
-from astrohack._utils._io import _extract_holog_chunk, _open_no_dask_zarr
-from astrohack._utils._io import _create_holog_meta_data, _read_data_from_holog_json
+
+from astrohack._utils._constants import pol_str
+
+from astrohack._utils._holog import _create_holog_meta_data
+from astrohack._utils._holog import _make_ant_pnt_dict
+
+from astrohack._utils._io import _load_pnt_dict 
+from astrohack._utils._io import _extract_holog_chunk 
+from astrohack._utils._io import _open_no_dask_zarr
+from astrohack._utils._io import _read_data_from_holog_json
 from astrohack._utils._io import _read_meta_data
-from astrohack.dio import _load_holog_file
+from astrohack._utils._io import _load_holog_file
 #from memory_profiler import profile
 
 
@@ -266,6 +272,3 @@ def extract_holog(
     holog_dict = _load_holog_file(holog_file=holog_file, dask_load=True, load_pnt_dict=False)
 
     _create_holog_meta_data(holog_file=holog_file, holog_dict=holog_dict, holog_params=extract_holog_params)
-                
-def _convert_ant_name_to_id(ant_names,ant_name_to_convert):
-    return np.nonzero(np.in1d(ant_names,ant_name_to_convert))[0]

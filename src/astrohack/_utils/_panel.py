@@ -1,25 +1,15 @@
 import numpy as np
 
 from numba import njit
-from astrohack._utils._linear_algebra import _least_squares_fit
-from astrohack._utils._globals import convert_unit
+
+from astrohack._utils._conversion import _convert_unit
+from astrohack._utils._algorithms import _least_squares_fit
 
 from memory_profiler import profile
 
-npar = 10
-i_x_pnt_off = 1
-i_y_pnt_off = 2
-i_x_focus_off = 3
-i_y_focus_off = 4
-i_z_focus_off = 5
-i_x_subref_tilt = 6
-i_y_subref_tilt = 7
-i_x_cass_off = 8
-i_y_cass_off = 9
-
-fp=open('phase_fitting.log','w+')
+fp=open('_phase_fitting.log','w+')
 @profile(stream=fp)
-def phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
+def _phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
                   focus_xy_offsets, focus_z_offset, subreflector_tilt,
                   cassegrain_offset):
     """
@@ -98,130 +88,6 @@ def phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, p
     
     return results, errors, corrected_phase, phase_model, inrms, ourms
 
-
-def _ignore_non_fitted(pointing_offset, focus_xy_offsets, focus_z_offset,
-                       subreflector_tilt, cassegrain_offset, matrix, vector):
-    """
-    Disable the fitting of certain parameters by removing rows and columns from the design matrix and its associated
-    vector
-    Args:
-        pointing_offset: Remove rows and columns related to pointing offsets
-        focus_xy_offsets: Remove rows and columns related to XY focus offsets
-        focus_z_offset: Remove the row and column related to Z focus offsets
-        subreflector_tilt: Remove the rows and columns related to subreflector tilt
-        cassegrain_offset: Remove the rows and columns related to cassegrain offsets
-        matrix: The design matrix
-        vector: the vector associated with the design matrix
-
-    Returns:
-        The design matrix and its associated vector minus the rows and columns disabled
-    """
-    ignored = np.array([True, pointing_offset, pointing_offset, focus_xy_offsets,
-                        focus_xy_offsets, focus_z_offset, subreflector_tilt,
-                        subreflector_tilt, cassegrain_offset, cassegrain_offset])
-    ndeleted = 0
-    for ipar in range(npar):
-        if ignored[ipar] is False:
-            vector = np.delete(vector, ipar-ndeleted, 0)
-            for axis in range(2):
-                matrix = np.delete(matrix, ipar-ndeleted, axis)
-            ndeleted += 1
-
-    return matrix, vector, ~ignored
-
-
-def _reconstruct_full_results(results, variances, ignored):
-    """
-    Reconstruct the complete results and variances vectors from the ignored parameters
-    Args:
-        results: The output results from the least squares fit
-        variances: The output variances from the least squares fit
-        ignored: The array containing the information on which parameters were ignored
-
-    Returns:
-        reconstructed_results: full length result array, non fitted parameters replaced by zero
-        reconstructed_variances: full length variance array, nan means unfitted parameter
-    """
-    reconstructed_results = np.zeros(npar)
-    reconstructed_variances = np.full(npar, np.nan)
-    jpar = 0
-    for ipar in range(npar):
-        if not ignored[ipar]:
-            reconstructed_results[ipar] = results[jpar]
-            reconstructed_variances[ipar] = variances[jpar]
-            jpar += 1
-    return reconstructed_results, reconstructed_variances
-
-
-def _internal_to_external_parameters(parameters, wavelength, telescope, cellxy):
-    """
-    Convert internal parameter array to convenient external units
-    Args:
-        parameters: Array in internal units
-        wavelength: Observing wavelength, in meters
-        telescope: Telescope object containing the optics parameters
-        cellxy: Map cell spacing, in meters
-
-    Returns:
-        Array in convenient units, see phase_fitting for more details
-    """
-    results = parameters
-    # Convert to mm
-    scaling = wavelength / 0.36
-    results[3:] *= scaling
-    # Sub-reflector tilt to degrees
-    rad2deg = convert_unit('rad', 'deg', 'trigonometric')
-    results[6:8] *= rad2deg / (1000.0 * telescope.secondary_dist)
-    # rescale phase ramp to pointing offset
-    results[1:3] *= wavelength * rad2deg / 6. / cellxy
-    return results * rad2deg
-
-
-def _external_to_internal_parameters(exparameters, wavelength, telescope, cellxy):
-    """
-    Convert external parameter array to internal units
-    Args:
-        exparameters: Array in external units
-        wavelength: Observing wavelength, in meters
-        telescope: Telescope object containing the optics parameters
-        cellxy: Map cell spacing, in meters
-
-    Returns:
-        Array in internal units, see phase_fitting for more details
-    """
-    inparameters = exparameters
-    # convert from mm
-    scaling = wavelength / 0.36
-    inparameters[3:] /= scaling
-    # Sub-reflector tilt from degrees
-    rad2deg = convert_unit('rad', 'deg', 'trigonometric')
-    inparameters[6:8] /= rad2deg / (1000.0 * telescope.secondary_dist)
-    # rescale phase ramp to pointing offset
-    inparameters[1:3] /= wavelength * rad2deg / 6. / cellxy
-    inparameters /= rad2deg
-    return inparameters
-
-
-def create_phase_model(npix, parameters, wavelength, telescope, cellxy):
-    """
-    Create a phase model with npix by npix size according to the given parameters
-    Args:
-        npix: Number of pixels in each size of the model
-        parameters: Parameters for the phase model in the units described in phase_fitting
-        wavelength: Observing wavelength, in meters
-        telescope: Telescope object containing the optics parameters
-        cellxy: Map cell spacing, in meters
-
-    Returns:
-
-    """
-    inparameters = _external_to_internal_parameters(parameters, wavelength, telescope, cellxy)
-    dummyphase = np.zeros((npix, npix))
-
-    _, model = _correct_phase(dummyphase, cellxy, inparameters, telescope.magnification, telescope.focus,
-                              telescope.surp_slope)
-    return model
-
 @njit(cache=False, nogil=True)
 def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, magnification, phase_slope, focal_length):
     """
@@ -247,8 +113,8 @@ def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, mag
     ix0 = npix//2
     iy0 = npix//2
 
-    matrix = np.zeros((npar, npar))
-    vector = np.zeros(npar)
+    matrix = np.zeros((NPAR, NPAR))
+    vector = np.zeros(NPAR)
     ixymin = abs(xymin/cellxy)
     ixymax = abs(xymax/cellxy)
     min_squared_pix_radius = (xymin*xymin)/(cellxy*cellxy)
@@ -367,6 +233,108 @@ def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, mag
     return matrix, vector
 
 
+def _reconstruct_full_results(results, variances, ignored):
+    """
+    Reconstruct the complete results and variances vectors from the ignored parameters
+    Args:
+        results: The output results from the least squares fit
+        variances: The output variances from the least squares fit
+        ignored: The array containing the information on which parameters were ignored
+
+    Returns:
+        reconstructed_results: full length result array, non fitted parameters replaced by zero
+        reconstructed_variances: full length variance array, nan means unfitted parameter
+    """
+    reconstructed_results = np.zeros(NPAR)
+    reconstructed_variances = np.full(NPAR, np.nan)
+    jpar = 0
+    for ipar in range(NPAR):
+        if not ignored[ipar]:
+            reconstructed_results[ipar] = results[jpar]
+            reconstructed_variances[ipar] = variances[jpar]
+            jpar += 1
+    return reconstructed_results, reconstructed_variances
+
+
+def _internal_to_external_parameters(parameters, wavelength, telescope, cellxy):
+    """
+    Convert internal parameter array to convenient external units
+    Args:
+        parameters: Array in internal units
+        wavelength: Observing wavelength, in meters
+        telescope: Telescope object containing the optics parameters
+        cellxy: Map cell spacing, in meters
+
+    Returns:
+        Array in convenient units, see _phase_fitting for more details
+    """
+    results = parameters
+    # Convert to mm
+    scaling = wavelength / 0.36
+    results[3:] *= scaling
+    # Sub-reflector tilt to degrees
+    rad2deg = _convert_unit('rad', 'deg', 'trigonometric')
+    results[6:8] *= rad2deg / (1000.0 * telescope.secondary_dist)
+    # rescale phase ramp to pointing offset
+    results[1:3] *= wavelength * rad2deg / 6. / cellxy
+    return results * rad2deg
+
+
+def _external_to_internal_parameters(exparameters, wavelength, telescope, cellxy):
+    """
+    Convert external parameter array to internal units
+    Args:
+        exparameters: Array in external units
+        wavelength: Observing wavelength, in meters
+        telescope: Telescope object containing the optics parameters
+        cellxy: Map cell spacing, in meters
+
+    Returns:
+        Array in internal units, see _phase_fitting for more details
+    """
+    iNPARameters = exparameters
+    # convert from mm
+    scaling = wavelength / 0.36
+    iNPARameters[3:] /= scaling
+    # Sub-reflector tilt from degrees
+    rad2deg = _convert_unit('rad', 'deg', 'trigonometric')
+    iNPARameters[6:8] /= rad2deg / (1000.0 * telescope.secondary_dist)
+    # rescale phase ramp to pointing offset
+    iNPARameters[1:3] /= wavelength * rad2deg / 6. / cellxy
+    iNPARameters /= rad2deg
+    
+    return iNPARameters
+
+def _ignore_non_fitted(pointing_offset, focus_xy_offsets, focus_z_offset,
+                       subreflector_tilt, cassegrain_offset, matrix, vector):
+    """
+    Disable the fitting of certain parameters by removing rows and columns from the design matrix and its associated
+    vector
+    Args:
+        pointing_offset: Remove rows and columns related to pointing offsets
+        focus_xy_offsets: Remove rows and columns related to XY focus offsets
+        focus_z_offset: Remove the row and column related to Z focus offsets
+        subreflector_tilt: Remove the rows and columns related to subreflector tilt
+        cassegrain_offset: Remove the rows and columns related to cassegrain offsets
+        matrix: The design matrix
+        vector: the vector associated with the design matrix
+
+    Returns:
+        The design matrix and its associated vector minus the rows and columns disabled
+    """
+    ignored = np.array([True, pointing_offset, pointing_offset, focus_xy_offsets,
+                        focus_xy_offsets, focus_z_offset, subreflector_tilt,
+                        subreflector_tilt, cassegrain_offset, cassegrain_offset])
+    ndeleted = 0
+    for ipar in range(NPAR):
+        if ignored[ipar] is False:
+            vector = np.delete(vector, ipar-ndeleted, 0)
+            for axis in range(2):
+                matrix = np.delete(matrix, ipar-ndeleted, axis)
+            ndeleted += 1
+
+    return matrix, vector, ~ignored
+
 def _correct_phase(phase_image, cellxy, parameters, magnification, focal_length, phase_slope):
     """
     Corrects a phase image by using the phase model with the given parameters
@@ -388,6 +356,7 @@ def _correct_phase(phase_image, cellxy, parameters, magnification, focal_length,
     corrected_phase = np.zeros((npix, npix))
     phase_offset, x_pnt_off, y_pnt_off, x_focus_off, y_focus_off, z_focus_off, x_subref_tilt, y_subref_tilt, \
         x_cass_off, y_cass_off = parameters
+
     for iy in range(npix):
         for ix in range(npix):
             if not np.isnan(phase_image[ix, iy]):

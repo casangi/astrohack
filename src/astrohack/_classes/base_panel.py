@@ -1,6 +1,7 @@
 from scipy import optimize as opt
-from astrohack._utils._linear_algebra import _gauss_elimination_numpy, _least_squares_fit
-from astrohack._utils._globals import *
+
+from astrohack._utils._algorithms import _gauss_elimination_numpy, _least_squares_fit
+from astrohack._utils._constants import *
 from astrohack._utils._system_message import warning, error
 
 panelkinds = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
@@ -115,14 +116,14 @@ class BasePanel:
             warning("Experimental kind: "+self.kind)
             set_warned(True)
 
-    def _associate_scipy(self, fitting_function, npar):
+    def _associate_scipy(self, fitting_function, NPAR):
         """
         Associate the proper methods to enable scipy fitting
         Args:
             fitting_function: The fitting function to be used by scipy
-            npar: Number of paramenters in the fitting function
+            NPAR: Number of paramenters in the fitting function
         """
-        self.npar = npar
+        self.NPAR = NPAR
         self._solve_sub = self._solve_scipy
         self.corr_point = self._corr_point_scipy
         self._fitting_function = fitting_function
@@ -133,7 +134,7 @@ class BasePanel:
         Returns:
 
         """
-        self.npar = 3
+        self.NPAR = 3
         self._solve_sub = self._solve_robust
         self.corr_point = self._corr_point_corotated_lst_sq
         self._fitting_function = self._corotated_paraboloid
@@ -142,7 +143,7 @@ class BasePanel:
         """
         Associate the proper methods to enable the rigid panel Linear algebra fitting
         """
-        self.npar = 3
+        self.NPAR = 3
         self._solve_sub = self._solve_rigid
         self.corr_point = self._corr_point_rigid
 
@@ -150,7 +151,7 @@ class BasePanel:
         """
         Associate the proper methods to enable fitting by mean determination
         """
-        self.npar = 1
+        self.NPAR = 1
         self._solve_sub = self._solve_mean
         self.corr_point = self._corr_point_mean
 
@@ -158,7 +159,7 @@ class BasePanel:
         """
         Associate the proper methods to enable least squares fitting of a fully fledged 9 parameter paraboloid
         """
-        self.npar = 9
+        self.NPAR = 9
         self._solve_sub = self._solve_least_squares_paraboloid
         self.corr_point = self._corr_point_least_squares_paraboloid
 
@@ -166,7 +167,7 @@ class BasePanel:
         """
         Associate the proper methods to enable least squares fitting of a corotated paraboloid
         """
-        self.npar = 3
+        self.NPAR = 3
         self._solve_sub = self._solve_corotated_lst_sq
         self.corr_point = self._corr_point_corotated_lst_sq
 
@@ -191,7 +192,7 @@ class BasePanel:
         Wrapping method around fitting to allow for a fallback to mean fitting in the case of an impossible fit
         """
         # fallback behaviour for impossible fits
-        if len(self.samples) < self.npar:
+        if len(self.samples) < self.NPAR:
             warning("Impossible fit, falling back to mean")
             self._fallback_solve()
         else:
@@ -216,7 +217,7 @@ class BasePanel:
         """
         # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
         data = np.array(self.samples)
-        system = np.full((len(self.samples), self.npar), 1.0)
+        system = np.full((len(self.samples), self.NPAR), 1.0)
         system[:, 0] = data[:, 0]**2 * data[:, 1]**2
         system[:, 1] = data[:, 0]**2 * data[:, 1]
         system[:, 2] = data[:, 1]**2 * data[:, 0]
@@ -263,7 +264,7 @@ class BasePanel:
         """
         # a*u**2 + b*v**2 + c
         data = np.array(self.samples)
-        system = np.full((len(self.samples), self.npar), 1.0)
+        system = np.full((len(self.samples), self.NPAR), 1.0)
         xc, yc = self.center
         system[:, 0] = ((data[:, 0] - xc) * np.cos(self.zeta) + (data[:, 1] - yc) * np.sin(self.zeta))**2  # U
         system[:, 1] = ((data[:, 0] - xc) * np.sin(self.zeta) + (data[:, 1] - yc) * np.cos(self.zeta))**2  # V
@@ -390,8 +391,8 @@ class BasePanel:
         """
         Fit panel surface using AIPS gaussian elimination model for rigid panels
         """
-        system = np.zeros([self.npar, self.npar])
-        vector = np.zeros(self.npar)
+        system = np.zeros([self.NPAR, self.NPAR])
+        vector = np.zeros(self.NPAR)
         for ipoint in range(len(self.samples)):
             if self.samples[ipoint][-1] != 0:
                 system[0, 0] += self.samples[ipoint][0] * self.samples[ipoint][0]
@@ -489,7 +490,7 @@ class BasePanel:
         Returns:
         String with screw adjustments for this panel
         """
-        fac = convert_unit('m', unit, 'length')
+        fac = _convert_unit('m', unit, 'length')
         string = self.label
         for screw in self.screws[:, ]:
             string += ' {0:10.2f}'.format(fac * self.corr_point(*screw))
@@ -504,7 +505,7 @@ class BasePanel:
         Returns:
             Numpy array with screw adjustments
         """
-        fac = convert_unit('m', unit, 'length')
+        fac = _convert_unit('m', unit, 'length')
         nscrew = len(self.screws)
         screw_corr = np.zeros(nscrew)
         for iscrew in range(nscrew):
@@ -520,7 +521,7 @@ class BasePanel:
             rotate: Rotate label for better display
         """
         if rotate:
-            angle = (-self.zeta % pi - pi/2)*convert_unit('rad', 'deg', 'trigonometric')
+            angle = (-self.zeta % pi - pi/2)*_convert_unit('rad', 'deg', 'trigonometric')
         else:
             angle = 0
         ax.text(self.center[1], self.center[0], self.label, fontsize=self.fontsize, ha='center', va='center',

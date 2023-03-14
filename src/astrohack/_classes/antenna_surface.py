@@ -1,9 +1,10 @@
 import xarray as xr
+
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astrohack._classes.base_panel import panelkinds, icorrob, ixypara
 from astrohack._classes.ring_panel import RingPanel
-from astrohack._utils._globals import *
+from astrohack._utils._constants import *
 
 lnbr = "\n"
 
@@ -304,7 +305,7 @@ class AntennaSurface:
         """
         thgain = fourpi * (1000.0 * self.reso / self.wavelength) ** 2
         gain = thgain * np.sqrt(np.sum(np.cos(arr[self.mask]))**2 + np.sum(np.sin(arr[self.mask]))**2)/np.sum(self.mask)
-        return convert_to_db(gain), convert_to_db(thgain)
+        return _convert_to_db(gain), _convert_to_db(thgain)
 
     def get_rms(self, unit='mm'):
         """
@@ -312,7 +313,7 @@ class AntennaSurface:
         Returns:
         RMS before panel fitting OR RMS before and after panel fitting
         """
-        fac = convert_unit('m', unit, 'length')
+        fac = _convert_unit('m', unit, 'length')
         self.inrms = self._compute_rms_array(self.deviation)
         if self.residuals is None:
             return fac*self.inrms
@@ -391,13 +392,13 @@ class AntennaSurface:
             if plotphase:
                 if unit is None:
                     unit = 'deg'
-                fac = convert_unit('rad', unit, 'trigonometric')
+                fac = _convert_unit('rad', unit, 'trigonometric')
                 self._plot_three_surfaces(self.phase, self.phase_corrections, self.phase_residuals, unit,
                                           fac, screws, 'Antenna surface phase')
             else:
                 if unit is None:
                     unit = 'mm'
-                fac = convert_unit('m', unit, 'length')
+                fac = _convert_unit('m', unit, 'length')
                 self._plot_three_surfaces(self.deviation, self.corrections, self.residuals, unit, fac, screws,
                                           'Antenna surface')
         if filename is None:
@@ -482,10 +483,10 @@ class AntennaSurface:
             List with panel labels, panel fitting parameters, screw_adjustments
         """
         npanels = len(self.panels)
-        npar = self.panels[0].npar
+        NPAR = self.panels[0].NPAR
         nscrews = self.panels[0].screws.shape[0]
         panel_labels = np.ndarray([npanels], dtype=object)
-        panel_pars = np.ndarray((npanels, npar), dtype=float)
+        panel_pars = np.ndarray((npanels, NPAR), dtype=float)
         screw_adjustments = np.ndarray((npanels, nscrews), dtype=float)
         for ipanel in range(npanels):
             panel_labels[ipanel] = self.panels[ipanel].label
