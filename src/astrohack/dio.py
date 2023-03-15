@@ -85,15 +85,16 @@ class AstrohackImageFile(dict):
         if file is None:
             file = self.file
 
-        ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
+        #ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
         
         try:
-            for ant in ant_list:
-                ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
-                self[int(ant)] = {}
-                for ddi in ddi_list:
-                    self[int(ant)][int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
-
+#            for ant in ant_list:
+#                ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
+#                self[int(ant)] = {}
+#                for ddi in ddi_list:
+#                    self[int(ant)][int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
+            _load_image_file(file)
+            
             self._open = True
 
         except Exception as e:

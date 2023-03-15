@@ -1,5 +1,5 @@
 import numpy as np
-import scipy.constants
+import scipy.constants as constants
 
 # Physical constants
 clight = constants.speed_of_light

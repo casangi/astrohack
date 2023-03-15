@@ -1,5 +1,7 @@
 import numpy as np
 
+from astrohack._utils._constants import *
+
 def _convert_ant_name_to_id(ant_list, ant_names):
   """_summary_
 

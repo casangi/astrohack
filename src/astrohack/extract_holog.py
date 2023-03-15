@@ -13,6 +13,8 @@ from astrohack._utils import _system_message as console
 
 from astrohack._utils._constants import pol_str
 
+from astrohack._utils._conversion import _convert_ant_name_to_id
+
 from astrohack._utils._holog import _create_holog_meta_data
 from astrohack._utils._holog import _make_ant_pnt_dict
 

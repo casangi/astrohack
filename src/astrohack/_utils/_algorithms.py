@@ -3,21 +3,49 @@ import numba
 
 import numpy as np
 
-from astrohack._utils._imaging import _apply_mask
+def _apply_mask(data, scaling=0.5):
+    """ Applies a cropping mask to the input data according to the scale factor
 
+    Args:
+        data (numpy,ndarray): numpy array containing the aperture grid.
+        scaling (float, optional): Scale factor which is used to determine the amount of the data to crop, ex. scale=0.5 
+                                   means to crop the data by 50%. Defaults to 0.5.
 
-# global constants
-NPAR = 10
+    Returns:
+        numpy.ndarray: cropped aperture grid data
+    """
 
-I_X_PNT_OFF = 1
-I_Y_PNT_OFF = 2
-I_X_FOCUS_OFF = 3
-I_Y_FOCUS_OFF = 4
-I_Z_FOCUS_OFF = 5
-I_X_SUBREF_TILT = 6
-I_Y_SUBREF_TILT = 7
-I_X_CASS_OFF = 8
-I_Y_CASS_OFF = 9
+    x, y = data.shape
+    assert scaling > 0, console.error("Scaling must be > 0")
+
+    mask = int(x // (1 // scaling))
+
+    assert mask > 0, console.error(
+        "Scaling values too small. Minimum values is:{}, though search may still fail due to lack of poitns.".format(
+            1 / x
+        )
+    )
+
+    start = int(x // 2 - mask // 2)
+    return data[start : (start + mask), start : (start + mask)]
+
+def _calc_coords(image_size, cell_size):
+    """Calculate the center pixel of the image given a cell and image size
+
+    Args:
+        image_size (float): image size
+        cell_size (float): cell size
+
+    Returns:
+        float, float: center pixel location in coordinates x, y
+    """
+    image_center = image_size // 2
+
+    x = np.arange(-image_center[0], image_size[0] - image_center[0]) * cell_size[0]
+    y = np.arange(-image_center[1], image_size[1] - image_center[1]) * cell_size[1]
+    
+    return x, y
+
 
 def _find_nearest(array, value):
     """ Find the nearest entry in array to that of value.

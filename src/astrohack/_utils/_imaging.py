@@ -1,4 +1,5 @@
 import math
+import scipy
 
 import numpy as np
 
@@ -6,6 +7,9 @@ import astropy.units as u
 import astropy.coordinates as coord
 
 from skimage.draw import disk
+
+from astrohack._utils import _system_message as console
+from astrohack._utils._algorithms import _calc_coords
 
 from memory_profiler import profile
 
@@ -40,33 +44,6 @@ def _parallactic_derotation(data, parallactic_angle_dict):
         data[scan] = scipy.ndimage.rotate(input=data[scan, ...], angle=median_angular_offset, axes=(3, 2), reshape=False)
         
     return data
-
-
-def _apply_mask(data, scaling=0.5):
-    """ Applies a cropping mask to the input data according to the scale factor
-
-    Args:
-        data (numpy,ndarray): numpy array containing the aperture grid.
-        scaling (float, optional): Scale factor which is used to determine the amount of the data to crop, ex. scale=0.5 
-                                   means to crop the data by 50%. Defaults to 0.5.
-
-    Returns:
-        numpy.ndarray: cropped aperture grid data
-    """
-
-    x, y = data.shape
-    assert scaling > 0, console.error("Scaling must be > 0")
-
-    mask = int(x // (1 // scaling))
-
-    assert mask > 0, console.error(
-        "Scaling values too small. Minimum values is:{}, though search may still fail due to lack of poitns.".format(
-            1 / x
-        )
-    )
-
-    start = int(x // 2 - mask // 2)
-    return data[start : (start + mask), start : (start + mask)]
 
 def _mask_circular_disk(center, radius, array, mask_value=np.nan):
     """ Create a mask to trim an image

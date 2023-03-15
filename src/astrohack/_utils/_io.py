@@ -28,9 +28,37 @@ from datetime import datetime
 from casacore import tables as ctables
 
 from astrohack._utils import _system_message as console
+
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
+
+def _load_image_file(file=None):
+        """ Open hologgraphy file.
+
+        Args:s
+            file (str, optional): Path to holography file. Defaults to None.
+
+        Returns:
+            bool: bool describing whether the file was opened properly
+        """
+        ant_data_dict = {}
+
+        ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
+        
+        try:
+            for ant in ant_list:
+                ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
+                ant_data_dict[int(ant)] = {}
+                for ddi in ddi_list:
+                    ant_data_dict[int(ant)][int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
+
+        except Exception as e:
+            console.error("[_load_image_file]: {}".format(e))
+
+        return ant_data_dict
+
+
 
 def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None, holog_dict=None):
     """Loads holog file from disk
@@ -838,3 +866,16 @@ def _extract_holog_chunk(extract_holog_params):
             ddi=ddi, holog_scan_id=holog_scan_id
         )
     )
+
+def _get_attrs(zarr_obj):
+    """Get attributes of zarr obj (groups or arrays)
+
+    Args:
+        zarr_obj (zarr): a zarr_group object
+
+    Returns:
+        dict: a group of zarr attibutes
+    """
+    return {
+        k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")
+    }

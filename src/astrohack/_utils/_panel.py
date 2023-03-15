@@ -7,6 +7,19 @@ from astrohack._utils._algorithms import _least_squares_fit
 
 from memory_profiler import profile
 
+# global constants
+NPAR = 10
+
+I_X_PNT_OFF = 1
+I_Y_PNT_OFF = 2
+I_X_FOCUS_OFF = 3
+I_Y_FOCUS_OFF = 4
+I_Z_FOCUS_OFF = 5
+I_X_SUBREF_TILT = 6
+I_Y_SUBREF_TILT = 7
+I_X_CASS_OFF = 8
+I_Y_CASS_OFF = 9
+
 fp=open('_phase_fitting.log','w+')
 @profile(stream=fp)
 def _phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
