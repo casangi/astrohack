@@ -7,8 +7,6 @@ import numpy as np
 
 from casacore import tables as ctables
 
-from prettytable import PrettyTable
-
 from astrohack._utils import _system_message as console
 
 from astrohack._utils._constants import pol_str

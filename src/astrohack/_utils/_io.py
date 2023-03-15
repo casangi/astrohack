@@ -33,6 +33,34 @@ from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
+def _load_panel_file(file=None):
+    """ Open panel file.
+
+    Args:
+        file (str, optional): Path to panel file. Defaults to None.
+
+    Returns:
+        bool: Nested dictionary containing panel data xds.
+    """
+    panel_data_dict = {}
+    
+    ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
+    
+    try:
+        for ant in ant_list:
+            ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
+            panel_data_dict[ant] = {}
+            
+            for ddi in ddi_list:
+                panel_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}/xds.zarr".format(name=file, ant=ant, ddi=ddi))                
+    
+    except Exception as e:
+            console.error("[_load_panel_file]: {}".format(e))
+
+    
+    return panel_data_dict
+
+
 def _load_image_file(file=None):
         """ Open hologgraphy file.
 
@@ -49,9 +77,10 @@ def _load_image_file(file=None):
         try:
             for ant in ant_list:
                 ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
-                ant_data_dict[int(ant)] = {}
+                ant_data_dict[ant] = {}
+                
                 for ddi in ddi_list:
-                    ant_data_dict[int(ant)][int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
+                    ant_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
 
         except Exception as e:
             console.error("[_load_image_file]: {}".format(e))
@@ -89,28 +118,26 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
         )
 
     for ddi in os.listdir(holog_file):
-        if ddi.isnumeric():
-            if int(ddi) not in holog_dict:
-                holog_dict[int(ddi)] = {}
+        if "ddi_" in ddi:
+            if ddi not in holog_dict:
+                holog_dict[ddi] = {}
             for scan in os.listdir(os.path.join(holog_file, ddi)):
-                if scan.isnumeric():
-                    if int(scan) not in holog_dict[int(ddi)]:
-                        holog_dict[int(ddi)][int(scan)] = {}
+                if "scan_" in scan:
+                    if scan not in holog_dict[ddi]:
+                        holog_dict[ddi][scan] = {}
                     for ant in os.listdir(os.path.join(holog_file, ddi + "/" + scan)):
-                        if ant.isnumeric():
+                        if "ant_" in ant:
                             mapping_ant_vis_holog_data_name = os.path.join(
                                 holog_file, ddi + "/" + scan + "/" + ant
                             )
                             
 
                             if dask_load:
-                                holog_dict[int(ddi)][int(scan)][int(ant)] = xr.open_zarr(
+                                holog_dict[ddi][scan][ant] = xr.open_zarr(
                                     mapping_ant_vis_holog_data_name
                                 )
                             else:
-                                holog_dict[int(ddi)][int(scan)][
-                                    int(ant)
-                                ] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
+                                holog_dict[ddi][scan][ant] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
 
     
     if ant_id == None:
@@ -714,12 +741,15 @@ def _create_holog_file(
             xds["VIS"] = xr.DataArray(
                 vis_map_dict[map_ant_index], dims=["time", "chan", "pol"]
             )
+
             xds["WEIGHT"] = xr.DataArray(
                 weight_map_dict[map_ant_index], dims=["time", "chan", "pol"]
             )
+
             xds["DIRECTIONAL_COSINES"] = xr.DataArray(
                 pnt_map_dict[map_ant_index], dims=["time", "lm"]
             )
+
             xds.attrs["scan"] = scan
             xds.attrs["ant_id"] = map_ant_index
             xds.attrs["ddi"] = ddi
@@ -742,7 +772,7 @@ def _create_holog_file(
             )
             xds.to_zarr(
                 os.path.join(
-                    holog_file, str(ddi) + "/" + str(scan) + "/" + str(map_ant_index)
+                    holog_file, 'ddi_' + str(ddi) + "/" + "scan_" + str(scan) + "/" + "ant_" + str(map_ant_index)
                 ),
                 mode="w",
                 compute=True,

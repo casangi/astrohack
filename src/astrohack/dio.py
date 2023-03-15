@@ -84,17 +84,10 @@ class AstrohackImageFile(dict):
 
         if file is None:
             file = self.file
-
-        #ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
         
         try:
-#            for ant in ant_list:
-#                ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
-#                self[int(ant)] = {}
-#                for ddi in ddi_list:
-#                    self[int(ant)][int(ddi)] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
             _load_image_file(file)
-            
+
             self._open = True
 
         except Exception as e:
@@ -194,8 +187,8 @@ class AstrohackHologFile(dict):
         table.align = "l"
         
         for ddi in self.keys():
-            for scan in self[int(ddi)].keys():
-                table.add_row([ddi, scan, list(self[int(ddi)][int(scan)].keys())])
+            for scan in self[ddi].keys():
+                table.add_row([ddi, scan, list(self[ddi][scan].keys())])
         
         print(table)
 

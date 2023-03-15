@@ -323,38 +323,41 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
     ant_holog_dict = {}
 
     for ddi, scan_dict in holog_dict.items():
-        if isinstance(ddi, numbers.Number):
+        if "ddi_" in ddi:
             for scan, ant_dict in scan_dict.items():
-                for ant, xds in ant_dict.items():
+                if "scan_" in scan:
+                    for ant, xds in ant_dict.items():
+                        if "ant_" in ant:
+                            if ant not in ant_holog_dict:
+                                ant_holog_dict[ant] = {ddi:{scan:{}}}
+                            elif ddi not in ant_holog_dict[ant]:
+                                ant_holog_dict[ant][ddi] = {scan:{}}
                     
-                    if ant not in ant_holog_dict:
-                        ant_holog_dict[ant] = {ddi:{scan:{}}}
-                    elif ddi not in ant_holog_dict[ant]:
-                        ant_holog_dict[ant][ddi] = {scan:{}}
-                    
-                    ant_holog_dict[ant][ddi][scan] = xds.to_dict(data=False)
+                            ant_holog_dict[ant][ddi][scan] = xds.to_dict(data=False)
                 
-                    #ant_sub_dict.setdefault(ddi, {})
-                    #ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
+                            #ant_sub_dict.setdefault(ddi, {})
+                            #ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
 
-                    # Find the average (l, m) extent for each antenna, over (ddi, scan) and write the meta data to file.
-                    dims = xds.dims
+                            # Find the average (l, m) extent for each antenna, over (ddi, scan) and write the meta data to file.
+                            dims = xds.dims
                     
-                    lm_extent["l"]["min"].append(
-                        np.min(xds.DIRECTIONAL_COSINES.values[:, 0])
-                    )
-                    lm_extent["l"]["max"].append(
-                        np.max(xds.DIRECTIONAL_COSINES.values[:, 0])
-                    )
+                            lm_extent["l"]["min"].append(
+                                np.min(xds.DIRECTIONAL_COSINES.values[:, 0])
+                            )
 
-                    lm_extent["m"]["min"].append(
-                        np.min(xds.DIRECTIONAL_COSINES.values[:, 1])
-                    )
-                    lm_extent["m"]["max"].append(
-                        np.max(xds.DIRECTIONAL_COSINES.values[:, 1])
-                    )
+                            lm_extent["l"]["max"].append(
+                                np.max(xds.DIRECTIONAL_COSINES.values[:, 0])
+                            )
+
+                            lm_extent["m"]["min"].append(
+                                np.min(xds.DIRECTIONAL_COSINES.values[:, 1])
+                            )
+
+                            lm_extent["m"]["max"].append(
+                                np.max(xds.DIRECTIONAL_COSINES.values[:, 1])
+                            )
                     
-                    data_extent.append(dims["time"])
+                            data_extent.append(dims["time"])
 
 
     

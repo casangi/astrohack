@@ -5,6 +5,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astrohack._classes.base_panel import panelkinds, icorrob, ixypara
 from astrohack._classes.ring_panel import RingPanel
 from astrohack._utils._constants import *
+from astrohack._utils._conversion import _convert_to_db
+from astrohack._utils._conversion import _convert_unit
 
 lnbr = "\n"
 
@@ -88,7 +90,8 @@ class AntennaSurface:
         # Common elements
         self.unpix = self.u_axis.shape[0]
         self.vnpix = self.v_axis.shape[0]
-        self.antenna_name = inputxds.attrs['antenna_name']
+        self.antenna_name = inputxds.attrs['ant_name']
+
         return computephase
 
     def _nullify(self):
