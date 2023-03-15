@@ -79,7 +79,6 @@ class AntennaSurface:
 
             self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
             self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
-            #print('Using 3')
 
             self.npoint = np.sqrt(inputxds.dims['l']**2 + inputxds.dims['m']**2)
             self.amp_unit = 'V'
@@ -90,7 +89,7 @@ class AntennaSurface:
         # Common elements
         self.unpix = self.u_axis.shape[0]
         self.vnpix = self.v_axis.shape[0]
-        self.antenna_name = inputxds.attrs['ant_name']
+        self.antenna_name = inputxds.attrs['antenna_name']
 
         return computephase
 
@@ -493,7 +492,6 @@ class AntennaSurface:
         screw_adjustments = np.ndarray((npanels, nscrews), dtype=float)
         for ipanel in range(npanels):
             panel_labels[ipanel] = self.panels[ipanel].label
-            print(self.panels[ipanel].label, panel_labels[ipanel])
             panel_pars[ipanel, :] = self.panels[ipanel].par
             screw_adjustments[ipanel, :] = self.panels[ipanel].export_screws_float(unit='m')
         return panel_labels, panel_pars, screw_adjustments
