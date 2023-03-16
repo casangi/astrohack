@@ -12,7 +12,7 @@ lnbr = "\n"
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pkind=None, crop=False, panel_margins=0.05):
+    def __init__(self, inputxds, telescope, cutoff=None, pkind=None, crop=False, panel_margins=0.2):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -243,6 +243,7 @@ class AntennaSurface:
                     self.telescope.ourad[iring],
                     margin=self.panel_margins,
                     screw_scheme=self.telescope.screw_description,
+                    screw_offset=self.telescope.screw_offset
                 )
                 self.panels.append(panel)
         return
