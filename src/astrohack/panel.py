@@ -124,7 +124,7 @@ def _panel_chunk(panel_chunk_params):
     surface.correct_surface()
 
     if panel_chunk_params['basename'] is None:
-        basename = panel_chunk_params['outfile'] + '/' + tname + suffix
+        basename = panel_chunk_params['outfile'] + '/' + panel_chunk_params['antenna']
 
     else:
         basename = panel_chunk_params['outfile'] + '/' + panel_chunk_params['basename'] + suffix
