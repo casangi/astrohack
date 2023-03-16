@@ -11,7 +11,7 @@ import numpy as np
 
 
 def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, panel_kind=None, basename=None, unit='mm',
-          panel_margins=0.2, save_mask=False, save_deviations=True, save_phase=False, parallel=True, ddis=None):
+          panel_margins=0.2, save_mask=False, save_deviations=False, save_phase=False, parallel=True, ddis=None):
     """
     Process holographies to produce screw adjustments for panels, several data products are also produced in the process
     Args:
