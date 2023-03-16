@@ -89,3 +89,15 @@ def _to_stokes(grid,pol):
         raise Exception("Pol not supported " + str(pol))
     
     return grid_stokes
+
+def convert_dict_from_numba(func):
+    def wrapper(*args, **kwargs):
+        numba_dict = func(*args, **kwargs)
+
+        converted_dict = dict(numba_dict)
+    
+        for key, _ in numba_dict.items():
+            converted_dict[key] = dict(converted_dict[key])
+
+        return converted_dict
+    return wrapper

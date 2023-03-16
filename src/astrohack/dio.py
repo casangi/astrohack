@@ -12,7 +12,6 @@ from prettytable import PrettyTable
 from astrohack._utils import _system_message as console
 
 from astrohack._utils._holog import _create_holog_meta_data 
-from astrohack._utils._holog import _make_ant_pnt_dict
 
 from astrohack._utils._io import _load_pnt_dict 
 from astrohack._utils._io import _extract_holog_chunk

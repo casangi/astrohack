@@ -438,18 +438,23 @@ def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
     ddi = ctb.getcol("DATA_DESC_ID")
     ctb.close()
 
-    scan_time_dict = _extract_scan_time_dict(time,scan_ids,ddi)
+    scan_time_dict = _extract_scan_time_dict(time, scan_ids, ddi)
     ###########################################################################################
-    pnt_parms = {'pnt_name':pnt_name,'scan_time_dict':scan_time_dict}
-    
+    pnt_parms = {
+        'pnt_name': pnt_name,
+        'scan_time_dict': scan_time_dict
+    }
+
     if parallel:
         delayed_pnt_list = []
         for id in antenna_id:
             pnt_parms['ant_id'] = id
             pnt_parms['ant_name'] = antenna_name[id]
+
             delayed_pnt_list.append(
                 dask.delayed(_make_ant_pnt_chunk)(
-                    dask.delayed(ms_name), dask.delayed(pnt_parms)
+                    ms_name, 
+                    pnt_parms
                 )
             )
         dask.compute(delayed_pnt_list)
@@ -457,6 +462,7 @@ def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
         for id in antenna_id:
             pnt_parms['ant_id'] = id
             pnt_parms['ant_name'] = antenna_name[id]
+
             _make_ant_pnt_chunk(ms_name, pnt_parms)
 
     return _load_pnt_dict(pnt_name)

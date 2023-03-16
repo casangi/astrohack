@@ -31,6 +31,8 @@ from astrohack._utils import _system_message as console
 
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 
+from astrohack._utils._conversion import convert_dict_from_numba
+
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 def _load_panel_file(file=None):
@@ -492,20 +494,20 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     
     pnt_xds.to_zarr(os.path.join(pnt_name, "ant_{}".format(str(ant_id)) ), mode="w", compute=True, consolidated=True)
 
-    
+@convert_dict_from_numba
 @njit(cache=False, nogil=True)
-def _extract_scan_time_dict(time,scan_ids,ddi_ids):
+def _extract_scan_time_dict(time, scan_ids, ddi_ids):
     d1 = Dict.empty(
         key_type=types.int64,
-        value_type=np.zeros(2,dtype=types.float64),
+        value_type=np.zeros(2, dtype=types.float64),
     )
     
     scan_time_dict = Dict.empty(
         key_type=types.int64,
-        value_type=d1, # base the scan_time_dict instance values of the type of d1
+        value_type=d1, 
     )
     
-    for i,s in enumerate(scan_ids):
+    for i, s in enumerate(scan_ids):
         s = types.int64(s)
         t = time[i]
         ddi = ddi_ids[i]
