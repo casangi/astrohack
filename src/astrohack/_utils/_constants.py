@@ -5,10 +5,10 @@ import scipy.constants as constants
 clight = constants.speed_of_light
 
 # Length units
-length_units = ['km', 'mi', 'm', 'cm', 'mm', 'um', 'mils']
+length_units = ['km', 'mi', 'm', 'yd', 'ft', 'in', 'cm', 'mm', 'um', 'mils']
 
 # From m to unit
-length_factors = [1e3, 1609.34, 1.0, 1e-2, 1e-3, 1e-6, 25.4/1e6]
+length_factors = [1e3, 1609.34, 1.0, 0.9144, 0.3048, 0.0254, 1e-2, 1e-3, 1e-6, 25.4/1e6]
 
 # Trigonometric units
 trigo_units = ['rad', 'deg']
