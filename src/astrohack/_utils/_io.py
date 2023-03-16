@@ -117,9 +117,7 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
 
     if load_pnt_dict == True:
         console.info("Loading pointing dictionary to holog ...")
-        holog_dict["pnt_dict"] = _load_pnt_dict(
-            file=holog_file, ant_list=None, dask_load=dask_load
-        )
+        holog_dict["pnt_dict"] = _load_pnt_dict(file=holog_file, ant_list=None, dask_load=dask_load)
 
     for ddi in os.listdir(holog_file):
         if "ddi_" in ddi:
@@ -384,13 +382,13 @@ def _load_pnt_dict(file, ant_list=None, dask_load=True):
     """
     pnt_dict = {}
 
-    for f in os.listdir(file):
-        if f.isnumeric():
-            if (ant_list is None) or (int(f) in ant_list):
+    for ant in os.listdir(file):
+        if "ant_" in ant:
+            if (ant_list is None) or (ant in ant_list):
                 if dask_load:
-                    pnt_dict[int(f)] = xr.open_zarr(os.path.join(file, f))
+                    pnt_dict[ant] = xr.open_zarr(os.path.join(file, ant))
                 else:
-                    pnt_dict[int(f)] = _open_no_dask_zarr(os.path.join(file, f))
+                    pnt_dict[ant] = _open_no_dask_zarr(os.path.join(file, ant))
 
     return pnt_dict
 
@@ -488,13 +486,11 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     
     console.info(
         "[_make_ant_pnt_xds_chunk] Writing pointing xds to {file}".format(
-            file=os.path.join(pnt_name, str(ant_id))
+            file=os.path.join(pnt_name, "ant_" + str(ant_id))
         )
     )
     
-    pnt_xds.to_zarr(
-        os.path.join(pnt_name, str(ant_id)), mode="w", compute=True, consolidated=True
-    )
+    pnt_xds.to_zarr(os.path.join(pnt_name, "ant_{}".format(str(ant_id)) ), mode="w", compute=True, consolidated=True)
 
     
 @njit(cache=False, nogil=True)
@@ -541,7 +537,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     n_time_vis = time_vis.shape[0]
 
     pnt_map_dict = {}
-
+    
     for antenna in map_ant_ids:
         pnt_map_dict[antenna] = np.zeros((n_time_vis, 2))
         pnt_map_dict[antenna] = (
@@ -734,7 +730,9 @@ def _create_holog_file(
 
     for map_ant_index in vis_map_dict.keys():
         if map_ant_index not in flagged_mapping_antennas:
-            direction = np.take(pnt_map_dict[map_ant_index], indicies, axis=0)
+            map_ant_tag = 'ant_' + str(map_ant_index)
+
+            direction = np.take(pnt_map_dict[map_ant_tag], indicies, axis=0)
 
             parallactic_samples = _calculate_parallactic_angle_chunk(
                 time_samples=time_samples,
@@ -753,11 +751,11 @@ def _create_holog_file(
             )
 
             xds["DIRECTIONAL_COSINES"] = xr.DataArray(
-                pnt_map_dict[map_ant_index], dims=["time", "lm"]
+                pnt_map_dict[map_ant_tag], dims=["time", "lm"]
             )
 
             xds.attrs["scan"] = scan
-            xds.attrs["ant_id"] = map_ant_index
+            xds.attrs["ant_id"] = map_ant_tag
             xds.attrs["ddi"] = ddi
             xds.attrs["parallactic_samples"] = parallactic_samples
             xds.attrs["telescope_name"] = telescope_name
@@ -768,10 +766,7 @@ def _create_holog_file(
             if overwrite is False:
                 if os.path.exists(holog_file):
                     console.warning(
-                        "[_create_holog_file] holog file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(
-                            file=holog_file
-                        )
-                    )
+                        "[_create_holog_file] holog file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(file=holog_file))
 
             console.info(
                 "[_create_holog_file] Writing holog file to {file}".format(file=holog_file)
@@ -867,9 +862,13 @@ def _extract_holog_chunk(extract_holog_params):
 
     del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row
 
-    pnt_ant_dict = _load_pnt_dict(pnt_name, map_ant_tuple, dask_load=False)
+    map_ant_list = list(map(str, map_ant_tuple))
 
-    pnt_map_dict = _extract_pointing_chunk(map_ant_tuple, time_vis, pnt_ant_dict)
+    map_ant_list = ['ant_' + i for i in map_ant_list]
+
+    pnt_ant_dict = _load_pnt_dict(pnt_name, map_ant_list, dask_load=False)
+
+    pnt_map_dict = _extract_pointing_chunk(map_ant_list, time_vis, pnt_ant_dict)
     
     ################### Average multiple repeated samples
     if telescope_name != "ALMA":
