@@ -70,8 +70,8 @@ class AntennaSurface:
             self.v_axis = inputxds.v.values
             computephase = True
         else:
-            if  ('chan' in inputxds.dims):
-                if (inputxds.dims['chan'] != 1):
+            if 'chan' in inputxds.dims:
+                if inputxds.dims['chan'] != 1:
                     raise Exception("Only single channel holographies supported")
                 self.wavelength = clight / inputxds.chan.values[0]
             else:
@@ -89,7 +89,7 @@ class AntennaSurface:
         # Common elements
         self.unpix = self.u_axis.shape[0]
         self.vnpix = self.v_axis.shape[0]
-        self.antenna_name = inputxds.attrs['antenna_name']
+        self.antenna_name = inputxds.attrs['ant_name']
 
         return computephase
 

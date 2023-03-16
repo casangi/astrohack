@@ -220,7 +220,7 @@ def _aips_holog_to_xds(ampname, devname):
     xds.attrs['wavelength'] = wavelength
     xds.attrs['amp_unit'] = amphead["BUNIT"].strip()
     xds.attrs['AIPS'] = True
-    xds.attrs['antenna_name'] = amphead["TELESCOP"].strip()
+    xds.attrs['ant_name'] = amphead["TELESCOP"].strip()
     xds['AMPLITUDE'] = xr.DataArray(ampdata, dims=["u", "v"])
     xds['DEVIATION'] = xr.DataArray(devdata, dims=["u", "v"])
     coords = {"u": u, "v": v}
