@@ -20,6 +20,7 @@ from astrohack._utils._io import _read_data_from_holog_json
 from astrohack._utils._io import _read_meta_data
 from astrohack._utils._io import _load_holog_file
 from astrohack._utils._io import _load_image_file
+from astrohack._utils._io import _load_panel_file
 
 from memory_profiler import profile
 
@@ -52,6 +53,13 @@ class AstrohackDataFile:
             console.info("Found {stem}.image.zarr directory ...".format(stem=file_stem))
             self._image_path = file_path
             self.image = AstrohackImageFile(file_path)
+
+        file_path = "{path}/{stem}.panel.zarr".format(path=path, stem=file_stem)
+
+        if os.path.isdir(file_path):
+            console.info("Found {stem}.panel.zarr directory ...".format(stem=file_stem))
+            self._image_path = file_path
+            self.panel = AstrohackPanelFile(file_path)
 
 class AstrohackImageFile(dict):
     """
@@ -218,3 +226,60 @@ class AstrohackHologFile(dict):
         """
 
         return self._meta_data
+
+class AstrohackPanelFile(dict):
+    """
+        Data class for holography panel data.
+    """
+    def __init__(self, file):
+        super().__init__()
+
+        self.file = file
+        self._open = False
+
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+    
+    def __setitem__(self, key, value):
+        return super().__setitem__(key, value)
+        
+    def is_open(self):
+        return self._open
+
+    def open(self, file=None):
+        """ Open panel file.
+
+        Args:self =_
+            file (str, optional): Path to holography file. Defaults to None.
+
+        Returns:
+            bool: bool describing whether the file was opened properly
+        """
+
+        if file is None:
+            file = self.file
+        
+        try:
+            _load_panel_file(file, panel_dict=self)
+
+            self._open = True
+
+        except Exception as e:
+            console.error("[AstroHackPanelFile.open()]: {}".format(e))
+            self._open = False
+
+        return self._open
+
+#    def summary(self):
+#        """
+#           Prints summary table of panel image file. 
+#        """
+
+#        table = PrettyTable()
+#        table.field_names = ["antenna", "ddi"]
+#        table.align = "l"
+        
+#        for ant in self.keys():
+#            table.add_row([ant, list(self[int(ant)].keys())])
+        
+#        print(table)

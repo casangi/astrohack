@@ -35,7 +35,7 @@ from astrohack._utils._conversion import convert_dict_from_numba
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
-def _load_panel_file(file=None):
+def _load_panel_file(file=None, panel_dict=None):
     """ Open panel file.
 
     Args:
@@ -45,6 +45,9 @@ def _load_panel_file(file=None):
         bool: Nested dictionary containing panel data xds.
     """
     panel_data_dict = {}
+
+    if panel_dict is not None:
+            panel_data_dict = panel_dict
     
     ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
     
