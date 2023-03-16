@@ -5,7 +5,7 @@ import xarray as xr
 from astrohack._classes.antenna_surface import AntennaSurface
 from astrohack._classes.telescope import Telescope
 from astrohack._utils._io import _load_image_xds
-from astrohack._utils._system_message import info
+from astrohack._utils._system_message import info, warning
 from astrohack._utils._panel import _external_to_internal_parameters, _correct_phase
 import numpy as np
 
@@ -62,7 +62,7 @@ def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, pan
         delayed_list = []
         fullname = holog_image+'.image.zarr'
         antennae = os.listdir(fullname)
-        
+        count = 0
         for antenna in antennae:
             if 'ant_' in antenna:
                 panel_chunk_params['antenna'] = antenna
@@ -78,8 +78,12 @@ def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, pan
                             delayed_list.append(dask.delayed(_panel_chunk)(dask.delayed(panel_chunk_params)))
                         else:
                             _panel_chunk(panel_chunk_params)
+                        count += 1
         if parallel:
             dask.compute(delayed_list)
+
+        if count == 0:
+            warning("No data to process")
 
 
 def _panel_chunk(panel_chunk_params):
