@@ -19,6 +19,8 @@ from astrohack._utils._io import _extract_holog_chunk
 from astrohack._utils._io import _open_no_dask_zarr
 from astrohack._utils._io import _read_data_from_holog_json
 from astrohack._utils._io import _read_meta_data
+from astrohack._utils._io import _load_holog_file
+from astrohack._utils._io import _load_image_file
 
 from memory_profiler import profile
 
@@ -80,13 +82,12 @@ class AstrohackImageFile(dict):
         Returns:
             bool: bool describing whether the file was opened properly
         """
-        from astrohack._utils._io import _load_image_xds
 
         if file is None:
             file = self.file
         
         try:
-            _load_image_file(file)
+            _load_image_file(file, image_dict=self)
 
             self._open = True
 

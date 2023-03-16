@@ -61,7 +61,7 @@ def _load_panel_file(file=None):
     return panel_data_dict
 
 
-def _load_image_file(file=None):
+def _load_image_file(file=None, image_dict=None):
         """ Open hologgraphy file.
 
         Args:s
@@ -70,7 +70,11 @@ def _load_image_file(file=None):
         Returns:
             bool: bool describing whether the file was opened properly
         """
+
         ant_data_dict = {}
+
+        if image_dict is not None:
+            ant_data_dict = image_dict
 
         ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
         
@@ -314,8 +318,10 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
     ant_data_dict = {}
 
     for ddi in holog_json[ant_id_str].keys():
-        for scan in holog_json[ant_id_str][ddi].keys():
-            ant_data_dict.setdefault(int(ddi), {})[int(scan)] = holog_dict[int(ddi)][int(scan)][int(ant_id)]
+        if "ddi_" in ddi:
+            for scan in holog_json[ant_id_str][ddi].keys():
+                if "scan_" in scan:
+                    ant_data_dict.setdefault(ddi, {})[scan] = holog_dict[ddi][scan][ant_id]
 
     return ant_data_dict
 

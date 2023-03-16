@@ -262,7 +262,7 @@ def _holog_chunk(holog_chunk_params):
 
         coords = {}
         coords["time_centroid"] = np.array(time_centroid)
-        coords["ddi"] = list(map(int, ant_data_dict.keys()))
+        coords["ddi"] = list(ant_data_dict.keys())
         coords["pol"] = [i for i in range(n_pol)]
         coords["l"] = l
         coords["m"] = m

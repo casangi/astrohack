@@ -7,7 +7,9 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 
 from matplotlib.figure import Figure
+
 from astrohack.dio import AstrohackDataFile
+
 from panel.template.theme import DarkTheme
 
 pn.extension('plotly', sizing_mode='stretch_width')
