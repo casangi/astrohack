@@ -38,7 +38,7 @@ class TestClassAntennaSurface:
         """
         Tests the initialization of a AntennaSurface object
         """
-        assert np.isnan(self.testantenna.inrms), 'RMS is not properly initialized'
+        assert np.isnan(self.testantenna.in_rms), 'RMS is not properly initialized'
         assert np.isnan(self.testantenna.ingains), 'Gains are not properly initialized'
         assert self.testantenna.telescope.ringed, 'Currently only ringed telescopes supported'
         assert self.testantenna.panelkind == 'fixedtheta', 'Default panel kind should be fixedtheta'
