@@ -54,7 +54,14 @@ def holog(
     Args:
         holog_name (str): holog file name
         parallel (bool, optional): Run in parallel with Dask or in serial. Defaults to True.
-
+        
+        phase_fit (bool or bool np.array 5x1): if a boolean array is given each element controls one aspect of  
+        phase fitting: 0 -> pointing offset; 
+                       1 -> focus xy offsets; 
+                       2 -> focus z offset; 
+                       3 -> subreflector tilt; (This one is off by default except for VLA and VLBA)
+                       4 -> cassegrain offset
+         
         cell_size: float np.array 2x1
         grid_size: int np.array 2X1
     """
