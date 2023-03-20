@@ -38,6 +38,7 @@
         "or",
         "c"
     ],
+    "screw_offset": null,
     "secondary_dist": 0.16825275532696526,
     "surp_slope": 0.0
 }

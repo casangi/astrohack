@@ -7,7 +7,7 @@ class RingPanel(BasePanel):
     # This class describes and treats panels that are arranged in
     # rings on the Antenna surface
 
-    def __init__(self, kind, angle, ipanel, label, inrad, ourad, margin=0.20, screw_scheme=None):
+    def __init__(self, kind, angle, ipanel, label, inrad, ourad, margin=0.20, screw_scheme=None, screw_offset=None):
         """
         Initializes a panel that is a section of a ring in a circular antenna
         Fitting method kinds are:
@@ -46,38 +46,44 @@ class RingPanel(BasePanel):
         zeta = (ipanel + 0.5) * angle
         rt = (self.inrad + self.ourad) / 2
         self.center = [rt * np.cos(zeta), rt * np.sin(zeta)]
-        screws = self._init_screws(screw_scheme)
+        screws = self._init_screws(screw_scheme, screw_offset)
         # Now we are ready to initialize the base object
         super().__init__(kind, screws, label, center=self.center, zeta=zeta)
 
-    def _init_screws(self, scheme, offset=0.05):
+    def _init_screws(self, scheme, offset):
         """
         Initialize screws according to the scheme
         Args:
             scheme: Tuple of strings containing the positioning of the screws
-            offset: How far from the edge of the panel are corner screws
+            offset: How far from the edge of the panel are corner screws (meters)
 
         Returns:
             numpy array with the positions of the screws
         """
         if scheme is None:
             scheme = ['il', 'ir', 'ol', 'or']
+        if offset is None:
+            offset = 1e-2  # 1 cm
         nscrews = len(scheme)
         screws = np.ndarray([nscrews, 2])
-        roffset = offset*(self.ourad-self.inrad)
-        toffset = offset*(self.theta2-self.theta1)
+
         for iscrew in range(nscrews):
             if scheme[iscrew] == 'c':
                 screws[iscrew, :] = self.center
-                continue
-            if scheme[iscrew][1] == 'l':
-                screws[iscrew, :] = np.cos(self.theta1 + toffset), np.sin(self.theta1 + toffset)
             else:
-                screws[iscrew, :] = np.cos(self.theta2 - toffset), np.sin(self.theta2 - toffset)
-            if scheme[iscrew][0] == 'i':
-                screws[iscrew, :] *= self.inrad + roffset
-            else:
-                screws[iscrew, :] *= self.ourad - roffset
+                if scheme[iscrew][1] == 'l':
+                    screws[iscrew, :] = np.cos(self.theta1), np.sin(self.theta1)
+                    xoff = offset
+                else:
+                    screws[iscrew, :] = np.cos(self.theta2), np.sin(self.theta2)
+                    xoff = -offset
+                if scheme[iscrew][0] == 'i':
+                    screws[iscrew, :] *= self.inrad
+                    yoff = offset
+                else:
+                    screws[iscrew, :] *= self.ourad
+                    yoff = -offset
+                screws[iscrew, :] += xoff, yoff
         return screws
 
     def is_inside(self, rad, phi):

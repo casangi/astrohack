@@ -1,5 +1,5 @@
 {
-    "comment": "Data taken from AIPS source code and EVLA memo 212",
+    "comment": "Data taken from AIPS source code and EVLA memo 212, Screw offset taken from measurements done insitu by VSM on March 14 2023",
     "diam": 25.0,
     "focus": 8.8,
     "inlim": 2.0,
@@ -40,6 +40,7 @@
         "ol",
         "or"
     ],
+    "screw_offset": 0.0635,
     "secondary_dist": 0.522,
     "surp_slope": 0.7
 }
