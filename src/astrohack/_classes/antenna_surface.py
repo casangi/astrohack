@@ -106,8 +106,8 @@ class AntennaSurface:
         self.solved = False
         self.ingains = np.nan
         self.ougains = np.nan
-        self.inrms = np.nan
-        self.ourms = np.nan
+        self.in_rms = np.nan
+        self.out_rms = np.nan
 
     def _init_ringed(self):
         """
@@ -316,12 +316,12 @@ class AntennaSurface:
         RMS before panel fitting OR RMS before and after panel fitting
         """
         fac = _convert_unit('m', unit, 'length')
-        self.inrms = self._compute_rms_array(self.deviation)
+        self.in_rms = self._compute_rms_array(self.deviation)
         if self.residuals is None:
-            return fac*self.inrms
+            return fac*self.in_rms
         else:
-            self.ourms = self._compute_rms_array(self.residuals)
-        return fac*self.inrms, fac*self.ourms
+            self.out_rms = self._compute_rms_array(self.residuals)
+        return fac*self.in_rms, fac*self.out_rms
 
     def _compute_rms_array(self, array):
         """
@@ -424,19 +424,19 @@ class AntennaSurface:
         """
         vmax = np.nanmax(np.abs(conversion*original))
         vmin = -vmax
-        inrms = conversion * self._compute_rms_array(original)
+        in_rms = conversion * self._compute_rms_array(original)
         if self.residuals is None:
             fig, ax = plt.subplots()
-            title = "Before correction\nRMS = {0:8.5} ".format(inrms)+unit
+            title = "Before correction\nRMS = {0:8.5} ".format(in_rms)+unit
             self._plot_surface(conversion * original, title, fig, ax, vmin, vmax, screws=screws, unit=unit)
         else:
             fig, ax = plt.subplots(1, 3, figsize=[15, 5])
-            ourms = conversion * self._compute_rms_array(residuals)
-            title = "Before correction\nRMS = {0:.3} ".format(inrms)+unit
+            out_rms = conversion * self._compute_rms_array(residuals)
+            title = "Before correction\nRMS = {0:.3} ".format(in_rms)+unit
             self._plot_surface(conversion * original, title, fig, ax[0], vmin, vmax, screws=screws, unit=unit)
             title = "Corrections"
             self._plot_surface(conversion * corrections, title, fig, ax[1], vmin, vmax, screws=screws, unit=unit)
-            title = "After correction\nRMS = {0:.3} ".format(ourms)+unit
+            title = "After correction\nRMS = {0:.3} ".format(out_rms)+unit
             self._plot_surface(conversion * residuals, title, fig, ax[2], vmin, vmax, screws=screws, unit=unit)
         fig.suptitle(suptitle)
         fig.tight_layout()

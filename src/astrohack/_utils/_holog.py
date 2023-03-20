@@ -227,24 +227,26 @@ def _holog_chunk(holog_chunk_params):
         
         results = {}
         errors = {}
-        inrms = {}
-        ourms = {}
+        in_rms = {}
+        out_rms = {}
 
-        for time in range(amplitude.shape[0]):
-            for chan in range(amplitude.shape[1]):
-                for pol in [0,3]:
-                    results[pol], errors[pol], phase_corrected_angle[time, chan, pol, ...], _, inrms[pol], ourms[pol] = _phase_fitting(
-                        wavelength=wavelength,
-                        telescope=telescope,
-                        cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
-                        amplitude_image=amplitude[time, chan, pol, ...],
-                        phase_image=phase[time, chan, pol, ...],
-                        pointing_offset=True,
-                        focus_xy_offsets=True,
-                        focus_z_offset=True,
-                        subreflector_tilt=True,
-                        cassegrain_offset=True
-                    )
+
+        if holog_chunk_params["phase_fit"]:
+            for time in range(amplitude.shape[0]):
+                for chan in range(amplitude.shape[1]):
+                    for pol in [0,3]:
+                        results[pol], errors[pol], phase_corrected_angle[time, chan, pol, ...], _, in_rms[pol], out_rms[pol] = _phase_fitting(
+                            wavelength=wavelength,
+                            telescope=telescope,
+                            cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
+                            amplitude_image=amplitude[time, chan, pol, ...],
+                            phase_image=phase[time, chan, pol, ...],
+                            pointing_offset=True,
+                            focus_xy_offsets=True,
+                            focus_z_offset=True,
+                            subreflector_tilt=True,
+                            cassegrain_offset=True
+                        )
         
         ###To Do: Add Paralactic angle as a non-dimension coordinate dependant on time.
         xds = xr.Dataset()

@@ -70,8 +70,8 @@ def _phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, 
         errors: Array containing the fit errors in convenient units
         corrected_phase: Phase map corrected for fitted parameters
         phase_model: Phase model used for the correction
-        inrms: Phase RMS before fitting
-        ourms: Phase RMS after fitting
+        in_rms: Phase RMS before fitting
+        out_rms: Phase RMS after fitting
     """
     
     matrix, vector = _build_design_matrix(-telescope.inlim, -telescope.diam/2, cellxy, phase_image, amplitude_image,
@@ -91,14 +91,14 @@ def _phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, 
     corrected_phase, phase_model = _correct_phase(phase_image, cellxy, results, telescope.magnification,
                                                   telescope.focus, telescope.surp_slope)
     # get RMSes before and after the fit
-    inrms = _compute_phase_rms(phase_image)
-    ourms = _compute_phase_rms(corrected_phase)
+    in_rms = _compute_phase_rms(phase_image)
+    out_rms = _compute_phase_rms(corrected_phase)
     
     # Convert output to convenient units
     results = _internal_to_external_parameters(results, wavelength, telescope, cellxy)
     errors  = _internal_to_external_parameters(np.sqrt(variances), wavelength, telescope, cellxy)
     
-    return results, errors, corrected_phase, phase_model, inrms, ourms
+    return results, errors, corrected_phase, phase_model, in_rms, out_rms
 
 @njit(cache=False, nogil=True)
 def _build_design_matrix(xymin, xymax, cellxy, phase_image, amplitude_image, magnification, phase_slope, focal_length):
