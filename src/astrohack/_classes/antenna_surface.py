@@ -2,7 +2,7 @@ import xarray as xr
 
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from astrohack._classes.base_panel import panelkinds, icorrob, ixypara
+from astrohack._classes.base_panel import panelkinds, irigid
 from astrohack._classes.ring_panel import RingPanel
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
@@ -33,10 +33,7 @@ class AntennaSurface:
         else:
             self.cut = cutoff * np.max(self.amplitude)
         if pkind is None:
-            if self.telescope.ringed:
-                self.panelkind = panelkinds[icorrob]
-            else:
-                self.panelkind = panelkinds[ixypara]
+            self.panelkind = panelkinds[irigid]
         else:
             self.panelkind = pkind
         if panel_margins is None:
