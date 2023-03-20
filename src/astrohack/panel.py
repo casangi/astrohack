@@ -19,7 +19,7 @@ def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, pan
         outfile: Name for the output directory structure containing the products
         aipsdata: Is input data from AIPS, if so ony a single antenna can be processed at a time
         telescope: Name of the telescope used, can be derived from the holography dataset
-        cutoff: Cut off in amplitude for the physical deviation fitting, default is 21%
+        cutoff: Cut off in amplitude for the physical deviation fitting, None means 20%
         panel_kind: Type of fitting function used to fit panel surfaces, defaults to corotated_paraboloid for ringed
                     telescopes
         basename: Name for subfolders in the directory structure, defaults to telescope name if None
@@ -29,7 +29,7 @@ def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, pan
         save_phase: Save plot of phases to a png file
         parallel: Run chunks of processing in parallel
         panel_margins: Margin to be ignored at edges of panels when fitting
-        ddis: Which DDIs are to be processed by panel
+        ddis: Which DDIs are to be processed by panel, None means all of them
     """
 
     outfile += '.panel.zarr'

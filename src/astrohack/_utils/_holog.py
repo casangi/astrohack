@@ -202,9 +202,8 @@ def _holog_chunk(holog_chunk_params):
             )
 
             aperture_grid = mask*aperture_grid
-        
-        console.info("[_holog_chunk] Applying phase correction ...")
-        
+
+
         phase_corrected_angle = np.empty_like(aperture_grid)
         # We don't want the crop to be overly aggresive but I want the aperture radius to be just that
         # so we multiply by (3/4)/(1/2) --> 3/2 to scale the crop up a bit.
@@ -230,8 +229,33 @@ def _holog_chunk(holog_chunk_params):
         in_rms = {}
         out_rms = {}
 
+        phase_fit_par = holog_chunk_params["phase_fit"]
+        if isinstance(phase_fit_par, bool):
+            do_phase_fit = phase_fit_par
+            do_pnt_off = True
+            do_xy_foc_off = True
+            do_z_foc_off = True
+            do_cass_off = True
+            if telescope.name == 'VLA' or telescope.name == 'VLBA':
+                do_sub_til = True
+            else:
+                do_sub_til = False
+        elif isinstance(phase_fit_par, (np.ndarray, list, tuple)):
+            if len(phase_fit_par) != 5:
+                console.error("Phase fit parameter must have 5 elements")
+                raise Exception
+            else:
+                if np.sum(phase_fit_par) == 0:
+                    do_phase_fit = False
+                else:
+                    do_phase_fit = True
+                    do_pnt_off, do_xy_foc_off, do_z_foc_off, do_sub_til, do_cass_off = phase_fit_par
+        else:
+            console.error("Phase fit parameter is neither a boolean nor an array of booleans")
+            raise Exception
 
-        if holog_chunk_params["phase_fit"]:
+        if do_phase_fit:
+            console.info("[_holog_chunk] Applying phase correction ...")
             for time in range(amplitude.shape[0]):
                 for chan in range(amplitude.shape[1]):
                     for pol in [0,3]:
@@ -241,12 +265,15 @@ def _holog_chunk(holog_chunk_params):
                             cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
                             amplitude_image=amplitude[time, chan, pol, ...],
                             phase_image=phase[time, chan, pol, ...],
-                            pointing_offset=True,
-                            focus_xy_offsets=True,
-                            focus_z_offset=True,
-                            subreflector_tilt=True,
-                            cassegrain_offset=True
+                            pointing_offset=do_pnt_off,
+                            focus_xy_offsets=do_xy_foc_off,
+                            focus_z_offset=do_z_foc_off,
+                            subreflector_tilt=do_sub_til,
+                            cassegrain_offset=do_cass_off
                         )
+        else:
+            console.info("[_holog_chunk] Skipping phase correction ...")
+
         
         ###To Do: Add Paralactic angle as a non-dimension coordinate dependant on time.
         xds = xr.Dataset()

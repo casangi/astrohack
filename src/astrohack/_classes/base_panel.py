@@ -419,7 +419,8 @@ class BasePanel:
         """
         if len(self.samples) > 0:
             # Solve panel adjustments for rigid vertical shift only panels
-            self.par = [np.mean(self.samples)]
+            data = np.array(self.samples)[:, -1]
+            self.par = [np.mean(data)]
         else:
             self.par = [0]
         self.solved = True

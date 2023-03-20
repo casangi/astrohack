@@ -2,7 +2,7 @@ import xarray as xr
 
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from astrohack._classes.base_panel import panelkinds, icorrob, ixypara
+from astrohack._classes.base_panel import panelkinds, irigid
 from astrohack._classes.ring_panel import RingPanel
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
@@ -12,34 +12,34 @@ lnbr = "\n"
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pkind=None, crop=False, panel_margins=0.2):
+    def __init__(self, inputxds, telescope, cutoff=None, pkind=None, crop=False, panel_margins=None):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
             inputxds: Input xarray dataset
             telescope: Telescope object
             cutoff: fractional cutoff on the amplitude image to exclude regions with weak amplitude from the panel,
-            defaults to 21%
+                    defaults to 20% if None
             pkind: Kind of panel surface fitting, if is None defaults to telescope default
             crop: Crop apertures to slightly larger frames than the antenna diameter
-            panel_margins: Margin to be ignored at edges of panels when fitting
+            panel_margins: Margin to be ignored at edges of panels when fitting, defaults to 20% if None
         """
         self._nullify()
         self.telescope = telescope
         computephase = self._read_xds(inputxds)
 
         if cutoff is None:
-            self.cut = 0.21 * np.max(self.amplitude)
+            self.cut = 0.2 * np.max(self.amplitude)
         else:
             self.cut = cutoff * np.max(self.amplitude)
         if pkind is None:
-            if self.telescope.ringed:
-                self.panelkind = panelkinds[icorrob]
-            else:
-                self.panelkind = panelkinds[ixypara]
+            self.panelkind = panelkinds[irigid]
         else:
             self.panelkind = pkind
-        self.panel_margins = panel_margins
+        if panel_margins is None:
+            self.panel_margins = 0.2
+        else:
+            self.panel_margins = panel_margins
         self.reso = self.telescope.diam / self.npoint
 
         if crop:
