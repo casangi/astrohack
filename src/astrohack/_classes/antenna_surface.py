@@ -265,6 +265,8 @@ class AntennaSurface:
                                 panel.add_sample([xc, yc, ix, iy, self.deviation[ix, iy]])
                             else:
                                 panel.add_margin([xc, yc, ix, iy, self.deviation[ix, iy]])
+                            # A pixel can only belong to one panel, this is a simple optimization
+                            break
 
     def _fetch_panel_ringed(self, ring, panel):
         """

@@ -92,7 +92,6 @@ def _panel_chunk(panel_chunk_params):
     Args:
         panel_chunk_params: dictionary of inputs
     """
-
     if panel_chunk_params['origin'] == 'AIPS':
         telescope = Telescope(panel_chunk_params['telescope'])
         inputxds = xr.open_zarr(panel_chunk_params['holog_image'])
@@ -122,10 +121,10 @@ def _panel_chunk(panel_chunk_params):
     surface.compile_panel_points()
     surface.fit_surface()
     surface.correct_surface()
+    info('inrms:{0:f}; ourms:{1:f}'.format(*surface.get_rms(unit='mm')))
 
     if panel_chunk_params['basename'] is None:
         basename = panel_chunk_params['outfile'] + '/' + panel_chunk_params['antenna']
-
     else:
         basename = panel_chunk_params['outfile'] + '/' + panel_chunk_params['basename'] + suffix
 
