@@ -270,6 +270,7 @@ class AntennaSurface:
                             panel.add_sample([xc, yc, ix, iy, self.deviation[ix, iy]])
                         else:
                             panel.add_margin([xc, yc, ix, iy, self.deviation[ix, iy]])
+        self.panel_distribution = panels
 
     def _fetch_panel_ringed(self, ring, panel):
         """
@@ -377,7 +378,7 @@ class AntennaSurface:
         Do plots of the antenna surface
         Args:
             filename: Save plot to a file rather than displaying it with matplotlib widgets
-            mask: Display mask and amplitudes rather than deviation/phase images
+            mask: Display mask, amplitudes and panel assignment rather than deviation/phase images
             plotphase: plot phase images rather than deviation images
             screws: Display the screws on the panels
             dpi: Plot resolution in DPI
@@ -385,7 +386,7 @@ class AntennaSurface:
         """
 
         if mask:
-            fig, ax = plt.subplots(1, 2, figsize=[10, 5])
+            fig, ax = plt.subplots(1, 3, figsize=[15, 5])
             title = "Mask"
             self._plot_surface(
                 self.mask, title, fig, ax[0], 0, 1, screws=screws, mask=mask
@@ -396,6 +397,10 @@ class AntennaSurface:
                 self.amplitude, title, fig, ax[1], vmin, vmax, screws=screws,
                 unit=self.amp_unit,
             )
+            title = "Panel assignments"
+            paneldist = np.where(self.panel_distribution >= 0, self.panel_distribution, np.nan)
+            self._plot_surface(paneldist, title, fig, ax[2], 0, np.max(self.panel_distribution), unit='Panel #')
+            fig.tight_layout()
         else:
             if plotphase:
                 if unit is None:
@@ -545,6 +550,7 @@ class AntennaSurface:
         xds['PHASE'] = xr.DataArray(self.phase, dims=["u", "v"])
         xds['DEVIATION'] = xr.DataArray(self.deviation, dims=["u", "v"])
         xds['MASK'] = xr.DataArray(self.mask, dims=["u", "v"])
+        xds['PANEL_DISTRIBUTION'] = xr.DataArray(self.panel_distribution, dims=["u", "v"])
         if self.residuals is not None:
             xds['PHASE_RESIDUALS'] = xr.DataArray(self.phase_residuals, dims=["u", "v"])
             xds['RESIDUALS'] = xr.DataArray(self.residuals, dims=["u", "v"])
