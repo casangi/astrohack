@@ -307,6 +307,28 @@ class AntennaSurface:
                                 else:
                                     panel.add_margin([xc, yc, ix, iy, self.deviation[ix, iy]])
 
+    def _compile_panel_points_geom_numpy(self):
+        panels = np.zeros(self.rad.shape)
+        panelsum = 0
+        for iring in range(self.telescope.nrings):
+            angle = twopi/self.telescope.npanel[iring]
+            panels = np.where(self.rad >= self.telescope.inrad[iring], np.floor(self.phi/angle) + panelsum, panels)
+            panelsum += self.telescope.npanel[iring]
+        panels = np.where(self.mask, panels, -1).astype("int32")
+        for ix in range(self.unpix):
+            xc = self.u_axis[ix]
+            for iy in range(self.vnpix):
+                ipanel = panels[ix, iy]
+                if ipanel >= 0:
+                    yc = self.v_axis[iy]
+                    panel = self.panels[ipanel]
+                    issample, inpanel = panel.is_inside(self.rad[ix, iy], self.phi[ix, iy])
+                    if inpanel:
+                        if issample:
+                            panel.add_sample([xc, yc, ix, iy, self.deviation[ix, iy]])
+                        else:
+                            panel.add_margin([xc, yc, ix, iy, self.deviation[ix, iy]])
+
     def _fetch_panel_ringed(self, ring, panel):
         """
         Fetch a panel object from the panel list using its ring and panel numbers,

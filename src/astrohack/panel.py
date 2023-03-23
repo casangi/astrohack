@@ -128,12 +128,13 @@ def _panel_chunk(panel_chunk_params):
         surface._compile_panel_points_ringed_break()
     elif opt == 2:
         surface._compile_panel_points_ringed_geometry()
+    elif opt == 3:
+        surface._compile_panel_points_geom_numpy()
     else:
         raise Exception
 
     surface.fit_surface()
     surface.correct_surface()
-    info('inrms:{0:f}; ourms:{1:f}'.format(*surface.get_rms(unit='mm')))
 
     if panel_chunk_params['basename'] is None:
         basename = panel_chunk_params['outfile'] + '/' + panel_chunk_params['antenna']
