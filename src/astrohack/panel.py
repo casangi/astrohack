@@ -8,11 +8,11 @@ from astrohack._utils._io import _load_image_xds
 from astrohack._utils._system_message import info, warning
 from astrohack._utils._panel import _external_to_internal_parameters, _correct_phase
 import numpy as np
+import time
 
 
 def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, panel_kind=None, basename=None, unit='mm',
-          panel_margins=0.2, save_mask=False, save_deviations=False, save_phase=False, parallel=True, ddis=None,
-          optimize=0):
+          panel_margins=0.2, save_mask=False, save_deviations=False, save_phase=False, parallel=True, ddis=None):
     """
     Process holographies to produce screw adjustments for panels, several data products are also produced in the process
     Args:
@@ -45,7 +45,6 @@ def panel(holog_image, outfile, aipsdata=False, telescope=None, cutoff=None, pan
                           'basename': basename,
                           'outfile': outfile,
                           'panel_margins': panel_margins,
-                          'optimize': optimize,
                           }
     os.makedirs(name=outfile,  exist_ok=True)
 
@@ -121,18 +120,7 @@ def _panel_chunk(panel_chunk_params):
     surface = AntennaSurface(inputxds, telescope, panel_chunk_params['cutoff'], panel_chunk_params['panel_kind'],
                              panel_margins=panel_chunk_params['panel_margins'])
 
-    opt = panel_chunk_params['optimize']
-    if opt == 0:
-        surface.compile_panel_points()
-    elif opt == 1:
-        surface._compile_panel_points_ringed_break()
-    elif opt == 2:
-        surface._compile_panel_points_ringed_geometry()
-    elif opt == 3:
-        surface._compile_panel_points_geom_numpy()
-    else:
-        raise Exception
-
+    surface.compile_panel_points()
     surface.fit_surface()
     surface.correct_surface()
 

@@ -250,64 +250,6 @@ class AntennaSurface:
         return
 
     def _compile_panel_points_ringed(self):
-        """
-        Loops through the points in the antenna surface and checks to which panels it belongs,
-        specific for circular antennas with panels arranged in rings
-        """
-        for ix in range(self.unpix):
-            xc = self.u_axis[ix]
-            for iy in range(self.vnpix):
-                if self.mask[ix, iy]:
-                    yc = self.v_axis[iy]
-                    for panel in self.panels:
-                        issample, inpanel = panel.is_inside(self.rad[ix, iy], self.phi[ix, iy])
-                        if inpanel:
-                            if issample:
-                                panel.add_sample([xc, yc, ix, iy, self.deviation[ix, iy]])
-                            else:
-                                panel.add_margin([xc, yc, ix, iy, self.deviation[ix, iy]])
-
-    def _compile_panel_points_ringed_break(self):
-        """
-        Loops through the points in the antenna surface and checks to which panels it belongs,
-        specific for circular antennas with panels arranged in rings
-        """
-        for ix in range(self.unpix):
-            xc = self.u_axis[ix]
-            for iy in range(self.vnpix):
-                if self.mask[ix, iy]:
-                    yc = self.v_axis[iy]
-                    for panel in self.panels:
-                        issample, inpanel = panel.is_inside(self.rad[ix, iy], self.phi[ix, iy])
-                        if inpanel:
-                            if issample:
-                                panel.add_sample([xc, yc, ix, iy, self.deviation[ix, iy]])
-                            else:
-                                panel.add_margin([xc, yc, ix, iy, self.deviation[ix, iy]])
-                            break
-
-    def _compile_panel_points_ringed_geometry(self):
-        for ix in range(self.unpix):
-            xc = self.u_axis[ix]
-            for iy in range(self.vnpix):
-                if self.mask[ix, iy]:
-                    yc = self.v_axis[iy]
-                    rc = self.rad[ix, iy]
-                    tc = self.phi[ix, iy]
-                    for ir in range(self.telescope.nrings):
-                        if self.telescope.inrad[ir] <= rc < self.telescope.ourad[ir]:
-                            npan = self.telescope.npanel[ir]
-                            angle = twopi/npan
-                            ipanel = int(np.floor(tc/angle))
-                            panel = self.fetch_panel(ir+1, ipanel+1)
-                            issample, inpanel = panel.is_inside(rc, tc)
-                            if inpanel:
-                                if issample:
-                                    panel.add_sample([xc, yc, ix, iy, self.deviation[ix, iy]])
-                                else:
-                                    panel.add_margin([xc, yc, ix, iy, self.deviation[ix, iy]])
-
-    def _compile_panel_points_geom_numpy(self):
         panels = np.zeros(self.rad.shape)
         panelsum = 0
         for iring in range(self.telescope.nrings):
