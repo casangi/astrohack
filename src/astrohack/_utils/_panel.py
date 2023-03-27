@@ -77,29 +77,28 @@ def _phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, 
     matrix, vector = _build_design_matrix(-telescope.inlim, -telescope.diam/2, cellxy, phase_image, amplitude_image,
                                           telescope.magnification, telescope.surp_slope, telescope.focus)
 
-    # matrix, vector, ignored = _ignore_non_fitted(pointing_offset, focus_xy_offsets,
-    #                                              focus_z_offset, subreflector_tilt,
-    #                                              cassegrain_offset, matrix, vector)
-    #
-    # #   compute the least squares solution.
+    matrix, vector, ignored = _ignore_non_fitted(pointing_offset, focus_xy_offsets,
+                                                 focus_z_offset, subreflector_tilt,
+                                                 cassegrain_offset, matrix, vector)
+
+    #   compute the least squares solution.
     results, variances, residuals = _least_squares_fit(matrix, vector)
-    #
-    # # Reconstruct full output for ignored parameters
-    # results, variances = _reconstruct_full_results(results, variances, ignored)
-    #
-    # #   apply the correction.
+
+    # Reconstruct full output for ignored parameters
+    results, variances = _reconstruct_full_results(results, variances, ignored)
+
+    #   apply the correction.
     corrected_phase, phase_model = _correct_phase(phase_image, cellxy, results, telescope.magnification,
                                                   telescope.focus, telescope.surp_slope)
-    # # get RMSes before and after the fit
-    # in_rms = _compute_phase_rms(phase_image)
-    # out_rms = _compute_phase_rms(corrected_phase)
-    #
-    # # Convert output to convenient units
-    # results = _internal_to_external_parameters(results, wavelength, telescope, cellxy)
-    # errors  = _internal_to_external_parameters(np.sqrt(variances), wavelength, telescope, cellxy)
-    #
-    # return results, errors, corrected_phase, phase_model, in_rms, out_rms
-    return results, 1, corrected_phase, phase_model, 4, 5
+    # get RMSes before and after the fit
+    in_rms = _compute_phase_rms(phase_image)
+    out_rms = _compute_phase_rms(corrected_phase)
+
+    # Convert output to convenient units
+    results = _internal_to_external_parameters(results, wavelength, telescope, cellxy)
+    errors  = _internal_to_external_parameters(np.sqrt(variances), wavelength, telescope, cellxy)
+
+    return results, errors, corrected_phase, phase_model, in_rms, out_rms
 
 
 @njit(cache=False, nogil=True)
@@ -445,7 +444,7 @@ def _compute_phase_rms(phase_image):
     return np.sqrt(np.nanmean(phase_image ** 2))
 
 
-def _phase_fitting_block(wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
+def _phase_fitting_block(pols, wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
                          focus_xy_offsets, focus_z_offset, subreflector_tilt, cassegrain_offset):
     """
     Corrects the grading phase for pointing, focus, and feed offset errors using the least squares method, and a model
@@ -496,22 +495,26 @@ def _phase_fitting_block(wavelength, telescope, cellxy, amplitude_image, phase_i
         in_rms: Phase RMS before fitting
         out_rms: Phase RMS after fitting
     """
+    ntime = amplitude_image.shape[0]
+    nchan = amplitude_image.shape[1]
+    npol = len(pols)
 
-    matrix, vector = _build_design_matrix_block(-telescope.inlim, -telescope.diam/2, cellxy, phase_image, 
+    matrix, vector = _build_design_matrix_block(pols, -telescope.inlim, -telescope.diam/2, cellxy, phase_image,
                                                 amplitude_image, telescope.magnification, telescope.surp_slope, 
                                                 telescope.focus)
 
-    # matrix, vector, ignored = _ignore_non_fitted_block(pointing_offset, focus_xy_offsets, focus_z_offset,
-    #                                                    subreflector_tilt, cassegrain_offset, matrix, vector)
-    #
+    matrix, vector, ignored = _ignore_non_fitted_block(ntime, nchan, npol, pointing_offset, focus_xy_offsets,
+                                                       focus_z_offset, subreflector_tilt, cassegrain_offset, matrix,
+                                                       vector)
+
     # #   compute the least squares solution.
     results, variances = _least_squares_fit_block(matrix, vector)
     #
     # # Reconstruct full output for ignored parameters
-    # results, variances = _reconstruct_full_results_block(results, variances, ignored)
+    results, variances = _reconstruct_full_results_block(ntime, nchan, npol, results, variances, ignored)
     #
     # #   apply the correction.
-    corrected_phase, phase_model = _correct_phase_block(phase_image, cellxy, results, telescope.magnification,
+    corrected_phase, phase_model = _correct_phase_block(pols, phase_image, cellxy, results, telescope.magnification,
                                                         telescope.focus, telescope.surp_slope)
     # # get RMSes before and after the fit
     # in_rms = _compute_phase_rms_block(phase_image)
@@ -526,7 +529,7 @@ def _phase_fitting_block(wavelength, telescope, cellxy, amplitude_image, phase_i
 
 
 @njit(cache=False, nogil=True)
-def _build_design_matrix_block(xymin, xymax, cellxy, phase_image, amplitude_image, magnification, phase_slope, focal_length):
+def _build_design_matrix_block(pols, xymin, xymax, cellxy, phase_image, amplitude_image, magnification, phase_slope, focal_length):
     """
     Builds the design matrix to be used on the least squares fitting
     Args:
@@ -545,12 +548,10 @@ def _build_design_matrix_block(xymin, xymax, cellxy, phase_image, amplitude_imag
         Design matrix and associated vector
     """
 
-
     #   focal length in cellular units
     ntime = amplitude_image.shape[0]
     nchan = amplitude_image.shape[1]
     npix = phase_image.shape[3]
-    pols = [0, 3]
     npols = len(pols)
     ipol = 0
     ix0 = npix // 2
@@ -682,7 +683,7 @@ def _build_design_matrix_block(xymin, xymax, cellxy, phase_image, amplitude_imag
     return matrix, vector
 
 
-def _reconstruct_full_results_block(ntime, nchan, npols, results, variances, ignored):
+def _reconstruct_full_results_block(ntime, nchan, npol, results, variances, ignored):
     """
     Reconstruct the complete results and variances vectors from the ignored parameters
     Args:
@@ -694,14 +695,17 @@ def _reconstruct_full_results_block(ntime, nchan, npols, results, variances, ign
         reconstructed_results: full length result array, non fitted parameters replaced by zero
         reconstructed_variances: full length variance array, nan means unfitted parameter
     """
-    reconstructed_results = np.zeros(ntime, nchan, npols,NPAR)
-    reconstructed_variances = np.full(ntime, nchan, npols, NPAR, np.nan)
-    jpar = 0
-    for ipar in range(NPAR):
-        if not ignored[ipar]:
-            reconstructed_results[ipar] = results[jpar]
-            reconstructed_variances[ipar] = variances[jpar]
-            jpar += 1
+    reconstructed_results = np.zeros((ntime, nchan, npol, NPAR))
+    reconstructed_variances = np.full((ntime, nchan, npol, NPAR), np.nan)
+    for time in range(ntime):
+        for chan in range(nchan):
+            for pol in range(npol):
+                jpar = 0
+                for ipar in range(NPAR):
+                    if not ignored[ipar]:
+                        reconstructed_results[time, chan, pol, ipar] = results[time, chan, pol, jpar]
+                        reconstructed_variances[time, chan, pol, ipar] = variances[time, chan, pol, jpar]
+                        jpar += 1
     return reconstructed_results, reconstructed_variances
 
 
@@ -755,7 +759,7 @@ def _external_to_internal_parameters_block(exparameters, wavelength, telescope, 
     return iNPARameters
 
 
-def _ignore_non_fitted_block(pointing_offset, focus_xy_offsets, focus_z_offset,
+def _ignore_non_fitted_block(ntime, nchan, npol, pointing_offset, focus_xy_offsets, focus_z_offset,
                              subreflector_tilt, cassegrain_offset, matrix, vector):
     """
     Disable the fitting of certain parameters by removing rows and columns from the design matrix and its associated
@@ -775,18 +779,29 @@ def _ignore_non_fitted_block(pointing_offset, focus_xy_offsets, focus_z_offset,
     ignored = np.array([True, pointing_offset, pointing_offset, focus_xy_offsets,
                         focus_xy_offsets, focus_z_offset, subreflector_tilt,
                         subreflector_tilt, cassegrain_offset, cassegrain_offset])
-    ndeleted = 0
-    for ipar in range(NPAR):
-        if ignored[ipar] is False:
-            vector = np.delete(vector, ipar-ndeleted, 0)
-            for axis in range(2):
-                matrix = np.delete(matrix, ipar-ndeleted, axis)
-            ndeleted += 1
+    newnpar = int(round(np.sum(ignored)))
+    if newnpar == NPAR:
+        return matrix, vector, ~ignored
+
+    else:
+        newmatrix = np.zeros((ntime, nchan, npol, newnpar, newnpar))
+        newvector = np.zeros((ntime, nchan, npol, newnpar))
+        for time in range(ntime):
+            for chan in range(nchan):
+                for pol in range(npol):
+                    ndeleted = 0
+                    for ipar in range(NPAR):
+                        if ignored[ipar] is False:
+                            newvector[time, chan, pol] = np.delete(vector[time, chan, pol, ...], ipar-ndeleted, 0)
+                            for axis in range(2):
+                                newmatrix[time, chan, pol] = np.delete(matrix[time, chan, pol], ipar-ndeleted, axis)
+                            ndeleted += 1
 
     return matrix, vector, ~ignored
 
+
 @njit(cache=False, nogil=True)
-def _correct_phase_block(phase_image, cellxy, parameters, magnification, focal_length, phase_slope):
+def _correct_phase_block(pols, phase_image, cellxy, parameters, magnification, focal_length, phase_slope):
     """
     Corrects a phase image by using the phase model with the given parameters
     Args:
@@ -803,8 +818,6 @@ def _correct_phase_block(phase_image, cellxy, parameters, magnification, focal_l
     npix = phase_image.shape[-1]
     ntime = phase_image.shape[0]
     nchan = phase_image.shape[1]
-    pols = [0, 3]
-    npols = len(pols)
     ipol = 0
     ix0 = npix//2
     iy0 = npix//2
