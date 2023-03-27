@@ -47,8 +47,8 @@ def holog(
     ant_list = None,
     to_stokes = False,
     phase_fit=True,
-    apply_mask=False
-):
+    apply_mask=False,
+        block=False):
     """Process holography data
 
     Args:
@@ -93,6 +93,7 @@ def holog(
             holog_chunk_params["to_stokes"] = to_stokes
             holog_chunk_params["apply_mask"] = apply_mask
             holog_chunk_params["phase_fit"] = phase_fit
+            holog_chunk_params["block_fit"] = block
 
             
             if (cell_size is None) and (grid_size is None):

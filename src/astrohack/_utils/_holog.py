@@ -19,6 +19,7 @@ from astrohack._utils._io import _make_ant_pnt_chunk
 from astrohack._utils._io import _load_pnt_dict
 
 from astrohack._utils._panel import _phase_fitting
+from astrohack._utils._panel import _phase_fitting_block
 
 from astrohack._utils._algorithms import _chunked_average
 from astrohack._utils._algorithms import _find_peak_beam_value
@@ -256,21 +257,36 @@ def _holog_chunk(holog_chunk_params):
 
         if do_phase_fit:
             console.info("[_holog_chunk] Applying phase correction ...")
-            for time in range(amplitude.shape[0]):
-                for chan in range(amplitude.shape[1]):
-                    for pol in [0,3]:
-                        results[pol], errors[pol], phase_corrected_angle[time, chan, pol, ...], _, in_rms[pol], out_rms[pol] = _phase_fitting(
-                            wavelength=wavelength,
-                            telescope=telescope,
-                            cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
-                            amplitude_image=amplitude[time, chan, pol, ...],
-                            phase_image=phase[time, chan, pol, ...],
-                            pointing_offset=do_pnt_off,
-                            focus_xy_offsets=do_xy_foc_off,
-                            focus_z_offset=do_z_foc_off,
-                            subreflector_tilt=do_sub_til,
-                            cassegrain_offset=do_cass_off
-                        )
+            block = holog_chunk_params["block_fit"]
+            if block:
+                results, errors, phase_corrected_angle, _, in_rms, out_rms = \
+                    _phase_fitting_block(wavelength=wavelength,
+                                   telescope=telescope,
+                                   cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
+                                   amplitude_image=amplitude,
+                                   phase_image=phase,
+                                   pointing_offset=do_pnt_off,
+                                   focus_xy_offsets=do_xy_foc_off,
+                                   focus_z_offset=do_z_foc_off,
+                                   subreflector_tilt=do_sub_til,
+                                   cassegrain_offset=do_cass_off
+                                   )
+            else:
+                for time in range(amplitude.shape[0]):
+                    for chan in range(amplitude.shape[1]):
+                        for pol in [0,3]:
+                            results[pol], errors[pol], phase_corrected_angle[time, chan, pol, ...], _, in_rms[pol], out_rms[pol] = _phase_fitting(
+                                wavelength=wavelength,
+                                telescope=telescope,
+                                cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
+                                amplitude_image=amplitude[time, chan, pol, ...],
+                                phase_image=phase[time, chan, pol, ...],
+                                pointing_offset=do_pnt_off,
+                                focus_xy_offsets=do_xy_foc_off,
+                                focus_z_offset=do_z_foc_off,
+                                subreflector_tilt=do_sub_til,
+                                cassegrain_offset=do_cass_off
+                            )
         else:
             console.info("[_holog_chunk] Skipping phase correction ...")
 
