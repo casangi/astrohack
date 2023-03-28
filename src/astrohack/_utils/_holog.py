@@ -272,7 +272,7 @@ def _holog_chunk(holog_chunk_params):
                         focus_z_offset=do_z_foc_off,
                         subreflector_tilt=do_sub_til,
                         cassegrain_offset=do_cass_off)
-                print(results)
+                print(results,errors)
             else:
                 for time in range(amplitude.shape[0]):
                     for chan in range(amplitude.shape[1]):
@@ -289,7 +289,7 @@ def _holog_chunk(holog_chunk_params):
                                 subreflector_tilt=do_sub_til,
                                 cassegrain_offset=do_cass_off
                             )
-                            print(results[pol])
+                            print(results[pol], errors[pol])
         else:
             console.info("[_holog_chunk] Skipping phase correction ...")
 

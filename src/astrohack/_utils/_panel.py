@@ -77,9 +77,9 @@ def _phase_fitting(wavelength, telescope, cellxy, amplitude_image, phase_image, 
     matrix, vector = _build_design_matrix(-telescope.inlim, -telescope.diam/2, cellxy, phase_image, amplitude_image,
                                           telescope.magnification, telescope.surp_slope, telescope.focus)
 
-    matrix, vector, ignored = _ignore_non_fitted(pointing_offset, focus_xy_offsets,
-                                                 focus_z_offset, subreflector_tilt,
-                                                 cassegrain_offset, matrix, vector)
+    ignored = _build_ignored_array(pointing_offset, focus_xy_offsets, focus_z_offset, subreflector_tilt,
+                                   cassegrain_offset)
+    matrix, vector = _ignore_non_fitted(ignored, matrix, vector)
 
     #   compute the least squares solution.
     results, variances, residuals = _least_squares_fit(matrix, vector)
@@ -319,8 +319,7 @@ def _external_to_internal_parameters(exparameters, wavelength, telescope, cellxy
     return iNPARameters
 
 
-def _ignore_non_fitted(pointing_offset, focus_xy_offsets, focus_z_offset,
-                       subreflector_tilt, cassegrain_offset, matrix, vector):
+def _ignore_non_fitted(ignored, matrix, vector):
     """
     Disable the fitting of certain parameters by removing rows and columns from the design matrix and its associated
     vector
@@ -336,18 +335,15 @@ def _ignore_non_fitted(pointing_offset, focus_xy_offsets, focus_z_offset,
     Returns:
         The design matrix and its associated vector minus the rows and columns disabled
     """
-    ignored = np.array([True, pointing_offset, pointing_offset, focus_xy_offsets,
-                        focus_xy_offsets, focus_z_offset, subreflector_tilt,
-                        subreflector_tilt, cassegrain_offset, cassegrain_offset])
     ndeleted = 0
     for ipar in range(NPAR):
-        if ignored[ipar] is False:
+        if ignored[ipar]:
             vector = np.delete(vector, ipar-ndeleted, 0)
             for axis in range(2):
                 matrix = np.delete(matrix, ipar-ndeleted, axis)
             ndeleted += 1
 
-    return matrix, vector, ~ignored
+    return matrix, vector
 
 
 def _correct_phase(phase_image, cellxy, parameters, magnification, focal_length, phase_slope):
@@ -503,29 +499,29 @@ def _phase_fitting_block(pols, wavelength, telescope, cellxy, amplitude_image, p
                                                 amplitude_image, telescope.magnification, telescope.surp_slope, 
                                                 telescope.focus)
 
-    matrix, vector, ignored = _ignore_non_fitted_block(ntime, nchan, npol, pointing_offset, focus_xy_offsets,
-                                                       focus_z_offset, subreflector_tilt, cassegrain_offset, matrix,
-                                                       vector)
+    ignored = _build_ignored_array(pointing_offset, focus_xy_offsets, focus_z_offset, subreflector_tilt,
+                                   cassegrain_offset)
+    matrix, vector = _ignore_non_fitted_block(ignored, matrix, vector)
 
     # #   compute the least squares solution.
     results, variances = _least_squares_fit_block(matrix, vector)
     #
-    # # Reconstruct full output for ignored parameters
+    # Reconstruct full output for ignored parameters
     results, variances = _reconstruct_full_results_block(ntime, nchan, npol, results, variances, ignored)
     #
-    # #   apply the correction.
+    # apply the correction.
     corrected_phase, phase_model = _correct_phase_block(pols, phase_image, cellxy, results, telescope.magnification,
                                                         telescope.focus, telescope.surp_slope)
-    # # get RMSes before and after the fit
-    # in_rms = _compute_phase_rms_block(phase_image)
-    # out_rms = _compute_phase_rms_block(corrected_phase)
+    # get RMSes before and after the fit
+    in_rms = _compute_phase_rms_block(phase_image)
+    out_rms = _compute_phase_rms_block(corrected_phase)
     #
     # # Convert output to convenient units
-    # results = _internal_to_external_parameters_block(results, wavelength, telescope, cellxy)
-    # errors  = _internal_to_external_parameters_block(np.sqrt(variances), wavelength, telescope, cellxy)
+    results = _internal_to_external_parameters_block(results, wavelength, telescope, cellxy)
+    errors  = _internal_to_external_parameters_block(np.sqrt(variances), wavelength, telescope, cellxy)
     #
-    # return results, errors, corrected_phase, phase_model, in_rms, out_rms
-    return results, 1, corrected_phase, phase_model, 4, 5
+    # return results, errors, corrected_phase, phase_model,
+    return results, errors, corrected_phase, phase_model, in_rms, out_rms
 
 
 @njit(cache=False, nogil=True)
@@ -721,46 +717,17 @@ def _internal_to_external_parameters_block(parameters, wavelength, telescope, ce
     Returns:
         Array in convenient units, see _phase_fitting for more details
     """
-    results = parameters
-    # Convert to mm
-    scaling = wavelength / 0.36
-    results[3:] *= scaling
-    # Sub-reflector tilt to degrees
-    rad2deg = _convert_unit('rad', 'deg', 'trigonometric')
-    results[6:8] *= rad2deg / (1000.0 * telescope.secondary_dist)
-    # rescale phase ramp to pointing offset
-    results[1:3] *= wavelength * rad2deg / 6. / cellxy
-    return results * rad2deg
+    ntime, nchan, npol = parameters.shape[:3]
+    results = np.empty_like(parameters)
+    for time in range(ntime):
+        for chan in range(nchan):
+            for pol in range(npol):
+                results[time, chan, pol] = _internal_to_external_parameters(parameters[time, chan, pol],
+                                                                            wavelength, telescope, cellxy)
+    return results
 
 
-def _external_to_internal_parameters_block(exparameters, wavelength, telescope, cellxy):
-    """
-    Convert external parameter array to internal units
-    Args:
-        exparameters: Array in external units
-        wavelength: Observing wavelength, in meters
-        telescope: Telescope object containing the optics parameters
-        cellxy: Map cell spacing, in meters
-
-    Returns:
-        Array in internal units, see _phase_fitting for more details
-    """
-    iNPARameters = exparameters
-    # convert from mm
-    scaling = wavelength / 0.36
-    iNPARameters[3:] /= scaling
-    # Sub-reflector tilt from degrees
-    rad2deg = _convert_unit('rad', 'deg', 'trigonometric')
-    iNPARameters[6:8] /= rad2deg / (1000.0 * telescope.secondary_dist)
-    # rescale phase ramp to pointing offset
-    iNPARameters[1:3] /= wavelength * rad2deg / 6. / cellxy
-    iNPARameters /= rad2deg
-    
-    return iNPARameters
-
-
-def _ignore_non_fitted_block(ntime, nchan, npol, pointing_offset, focus_xy_offsets, focus_z_offset,
-                             subreflector_tilt, cassegrain_offset, matrix, vector):
+def _ignore_non_fitted_block(ignored, matrix, vector):
     """
     Disable the fitting of certain parameters by removing rows and columns from the design matrix and its associated
     vector
@@ -776,28 +743,21 @@ def _ignore_non_fitted_block(ntime, nchan, npol, pointing_offset, focus_xy_offse
     Returns:
         The design matrix and its associated vector minus the rows and columns disabled
     """
-    ignored = np.array([True, pointing_offset, pointing_offset, focus_xy_offsets,
-                        focus_xy_offsets, focus_z_offset, subreflector_tilt,
-                        subreflector_tilt, cassegrain_offset, cassegrain_offset])
-    newnpar = int(round(np.sum(ignored)))
+
+    newnpar = NPAR - int(round(np.sum(ignored)))
     if newnpar == NPAR:
-        return matrix, vector, ~ignored
+        return matrix, vector
 
     else:
+        ntime, nchan, npol = matrix.shape[:3]
         newmatrix = np.zeros((ntime, nchan, npol, newnpar, newnpar))
         newvector = np.zeros((ntime, nchan, npol, newnpar))
         for time in range(ntime):
             for chan in range(nchan):
                 for pol in range(npol):
-                    ndeleted = 0
-                    for ipar in range(NPAR):
-                        if ignored[ipar] is False:
-                            newvector[time, chan, pol] = np.delete(vector[time, chan, pol, ...], ipar-ndeleted, 0)
-                            for axis in range(2):
-                                newmatrix[time, chan, pol] = np.delete(matrix[time, chan, pol], ipar-ndeleted, axis)
-                            ndeleted += 1
-
-    return matrix, vector, ~ignored
+                    newmatrix[time, chan, pol], newvector[time, chan, pol] = \
+                        _ignore_non_fitted(ignored, matrix[time, chan, pol], vector[time, chan, pol])
+    return newmatrix, newvector
 
 
 @njit(cache=False, nogil=True)
@@ -849,6 +809,12 @@ def _correct_phase_block(pols, phase_image, cellxy, parameters, magnification, f
     return corrected_phase, phase_model
 
 
+def _build_ignored_array(pointing_offset, focus_xy_offsets, focus_z_offset, subreflector_tilt, cassegrain_offset):
+    relevant = np.array([True, pointing_offset, pointing_offset, focus_xy_offsets, focus_xy_offsets, focus_z_offset,
+                        subreflector_tilt, subreflector_tilt, cassegrain_offset, cassegrain_offset])
+    return ~relevant
+
+
 def _compute_phase_rms_block(phase_image):
     """
     Computes the RMS of the phase_image in a simple way
@@ -858,4 +824,10 @@ def _compute_phase_rms_block(phase_image):
     Returns:
         RMS of the phase_image
     """
-    return np.sqrt(np.nanmean(phase_image ** 2))
+    ntime, nchan, npol = phase_image.shape[:3]
+    rms = np.zeros((ntime, nchan, npol))
+    for time in range(ntime):
+        for chan in range(nchan):
+            for pol in range(npol):
+                rms[time, chan, pol] = np.sqrt(np.nanmean(phase_image[time, chan, pol] ** 2))
+    return rms
