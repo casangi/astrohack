@@ -8,16 +8,6 @@ from astrohack._utils._algorithms import _least_squares_fit_block
 # global constants
 NPAR = 10
 
-I_X_PNT_OFF = 1
-I_Y_PNT_OFF = 2
-I_X_FOCUS_OFF = 3
-I_Y_FOCUS_OFF = 4
-I_Z_FOCUS_OFF = 5
-I_X_SUBREF_TILT = 6
-I_Y_SUBREF_TILT = 7
-I_X_CASS_OFF = 8
-I_Y_CASS_OFF = 9
-
 
 def _phase_fitting_block(pols, wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
                          focus_xy_offsets, focus_z_offset, subreflector_tilt, cassegrain_offset):
@@ -51,6 +41,7 @@ def _phase_fitting_block(pols, wavelength, telescope, cellxy, amplitude_image, p
         RAP, 27/05/08
 
     Args:
+        pols: Indices of the polarizations to be used for phase fitting
         wavelength: Observing wavelength, in meters
         telescope: Telescope object containing the optics parameters
         cellxy: Map cell spacing, in meters
@@ -154,11 +145,7 @@ def _ignore_non_fitted(ignored, matrix, vector):
     Disable the fitting of certain parameters by removing rows and columns from the design matrix and its associated
     vector
     Args:
-        pointing_offset: Remove rows and columns related to pointing offsets
-        focus_xy_offsets: Remove rows and columns related to XY focus offsets
-        focus_z_offset: Remove the row and column related to Z focus offsets
-        subreflector_tilt: Remove the rows and columns related to subreflector tilt
-        cassegrain_offset: Remove the rows and columns related to cassegrain offsets
+        ignored: Array description of parameters to be ignored
         matrix: The design matrix
         vector: the vector associated with the design matrix
 
@@ -259,10 +246,12 @@ def _matrix_coeffs(x_delta_pix, y_delta_pix, magnification, focal_length, cellxy
 
 
 @njit(cache=False, nogil=True)
-def _build_design_matrix_block(pols, xymin, xymax, cellxy, phase_image, amplitude_image, magnification, phase_slope, focal_length):
+def _build_design_matrix_block(pols, xymin, xymax, cellxy, phase_image, amplitude_image, magnification, phase_slope,
+                               focal_length):
     """
     Builds the design matrix to be used on the least squares fitting
     Args:
+        pols: Indices of the polarizations to be used for phase fitting
         xymin: minimum of |x| and |y| used in correcting for pointing, focus, and feed offset. Negative values denote a
         range of SQRT(x*x + y*y)
         xymax: maximum of |x| and |y| used in correcting for pointing, focus, and feed offset. Negative values denote a
@@ -467,11 +456,7 @@ def _ignore_non_fitted_block(ignored, matrix, vector):
     Disable the fitting of certain parameters by removing rows and columns from the design matrix and its associated
     vector
     Args:
-        pointing_offset: Remove rows and columns related to pointing offsets
-        focus_xy_offsets: Remove rows and columns related to XY focus offsets
-        focus_z_offset: Remove the row and column related to Z focus offsets
-        subreflector_tilt: Remove the rows and columns related to subreflector tilt
-        cassegrain_offset: Remove the rows and columns related to cassegrain offsets
+        ignored: Array description of parameters to be ignored
         matrix: The design matrix
         vector: the vector associated with the design matrix
 
@@ -522,8 +507,8 @@ def _correct_phase_block(pols, phase_image, cellxy, parameters, magnification, f
     for time in range(ntime):
         for chan in range(nchan):
             for pol in pols:
-                phase_offset, x_pnt_off, y_pnt_off, x_focus_off, y_focus_off, z_focus_off, x_subref_tilt, y_subref_tilt,\
-                    x_cass_off, y_cass_off = parameters[time, chan, ipol]
+                phase_offset, x_pnt_off, y_pnt_off, x_focus_off, y_focus_off, z_focus_off, x_subref_tilt, \
+                    y_subref_tilt, x_cass_off, y_cass_off = parameters[time, chan, ipol]
                 for iy in range(npix):
                     for ix in range(npix):
                         phase = phase_image[time, chan, pol, ix, iy]
@@ -532,12 +517,13 @@ def _correct_phase_block(pols, phase_image, cellxy, parameters, magnification, f
                             x_delta_pix = ix - ix0
                             y_delta_pix = iy - iy0
 
-                            x_focus, y_focus, z_focus, x_tilt, y_tilt, x_cass, y_cass = _matrix_coeffs(x_delta_pix, y_delta_pix,
-                                                                                                       magnification, focal_length,
-                                                                                                       cellxy, phase_slope)
-                            corr = phase_offset + x_pnt_off * x_delta_pix + y_pnt_off * y_delta_pix + x_focus_off * x_focus
-                            corr += y_focus_off * y_focus + z_focus_off * z_focus + x_subref_tilt * x_tilt + y_subref_tilt * y_tilt
-                            corr += x_cass_off * x_cass + y_cass_off * y_cass
+                            x_focus, y_focus, z_focus, x_tilt, y_tilt, x_cass, y_cass = \
+                                _matrix_coeffs(x_delta_pix, y_delta_pix, magnification, focal_length, cellxy,
+                                               phase_slope)
+                            corr = phase_offset + x_pnt_off * x_delta_pix + y_pnt_off * y_delta_pix
+                            corr += x_focus_off * x_focus + y_focus_off * y_focus + z_focus_off * z_focus
+                            corr += x_subref_tilt * x_tilt + y_subref_tilt * y_tilt + x_cass_off * x_cass
+                            corr += y_cass_off * y_cass
                             corrected_phase[time, chan, pol, ix, iy] = phase - corr
                             phase_model[time, chan, pol, ix, iy] = corr
                 ipol += 1
@@ -545,6 +531,18 @@ def _correct_phase_block(pols, phase_image, cellxy, parameters, magnification, f
 
 
 def _build_ignored_array(pointing_offset, focus_xy_offsets, focus_z_offset, subreflector_tilt, cassegrain_offset):
+    """
+
+    Args:
+        pointing_offset: Remove rows and columns related to pointing offsets
+        focus_xy_offsets: Remove rows and columns related to XY focus offsets
+        focus_z_offset: Remove the row and column related to Z focus offsets
+        subreflector_tilt: Remove the rows and columns related to subreflector tilt
+        cassegrain_offset: Remove the rows and columns related to cassegrain offsets
+
+    Returns:
+        Bool array contaning with True for the parameters to fitted and False for the rest
+    """
     relevant = np.array([True, pointing_offset, pointing_offset, focus_xy_offsets, focus_xy_offsets, focus_z_offset,
                         subreflector_tilt, subreflector_tilt, cassegrain_offset, cassegrain_offset])
     return ~relevant
