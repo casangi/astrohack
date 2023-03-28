@@ -224,11 +224,6 @@ def _holog_chunk(holog_chunk_params):
         amplitude = np.absolute(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()])
         phase = np.angle(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()])
         phase_corrected_angle = np.zeros_like(phase)
-        
-        results = {}
-        errors = {}
-        in_rms = {}
-        out_rms = {}
 
         phase_fit_par = holog_chunk_params["phase_fit"]
         if isinstance(phase_fit_par, bool):
@@ -257,10 +252,7 @@ def _holog_chunk(holog_chunk_params):
 
         if do_phase_fit:
             console.info("[_holog_chunk] Applying phase correction ...")
-            block = holog_chunk_params["block_fit"]
-            if block:
-                results, errors, phase_corrected_angle, _, in_rms, out_rms = \
-                    _phase_fitting_block(
+            results, errors, phase_corrected_angle, _, in_rms, out_rms = _phase_fitting_block(
                         pols=(0, 3),
                         wavelength=wavelength,
                         telescope=telescope,
@@ -272,24 +264,6 @@ def _holog_chunk(holog_chunk_params):
                         focus_z_offset=do_z_foc_off,
                         subreflector_tilt=do_sub_til,
                         cassegrain_offset=do_cass_off)
-                print(results,errors)
-            else:
-                for time in range(amplitude.shape[0]):
-                    for chan in range(amplitude.shape[1]):
-                        for pol in [0, 3]:
-                            results[pol], errors[pol], phase_corrected_angle[time, chan, pol, ...], _, in_rms[pol], out_rms[pol] = _phase_fitting(
-                                wavelength=wavelength,
-                                telescope=telescope,
-                                cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
-                                amplitude_image=amplitude[time, chan, pol, ...],
-                                phase_image=phase[time, chan, pol, ...],
-                                pointing_offset=do_pnt_off,
-                                focus_xy_offsets=do_xy_foc_off,
-                                focus_z_offset=do_z_foc_off,
-                                subreflector_tilt=do_sub_til,
-                                cassegrain_offset=do_cass_off
-                            )
-                            print(results[pol], errors[pol])
         else:
             console.info("[_holog_chunk] Skipping phase correction ...")
 
