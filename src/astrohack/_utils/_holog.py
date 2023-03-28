@@ -1,7 +1,6 @@
 import os
 import dask
 import json
-import numbers
 import scipy
 
 import numpy as np
@@ -18,7 +17,6 @@ from astrohack._utils._io import _extract_scan_time_dict
 from astrohack._utils._io import _make_ant_pnt_chunk
 from astrohack._utils._io import _load_pnt_dict
 
-from astrohack._utils._panel import _phase_fitting
 from astrohack._utils._panel import _phase_fitting_block
 
 from astrohack._utils._algorithms import _chunked_average
@@ -27,7 +25,6 @@ from astrohack._utils._algorithms import _find_nearest
 from astrohack._utils._algorithms import _calc_coords
 
 from astrohack._utils._conversion import _to_stokes
-from astrohack._utils._conversion import _convert_ant_name_to_id
 
 from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk

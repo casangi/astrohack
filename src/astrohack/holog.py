@@ -26,7 +26,6 @@ from astrohack._utils._io import _read_meta_data
 from astrohack._utils._holog import _load_holog_file
 from astrohack._utils._holog import _holog_chunk
 
-from astrohack._utils._panel import _phase_fitting
 
 from memory_profiler import profile
    
