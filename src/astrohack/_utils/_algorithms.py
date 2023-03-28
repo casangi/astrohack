@@ -157,7 +157,6 @@ def _gauss_elimination_numpy(system, vector):
     inverse = np.linalg.inv(system)
     return np.dot(inverse, vector)
 
-
 def _least_squares_fit(system, vector):
     """
     Least squares fitting of a system of linear equations
@@ -183,7 +182,6 @@ def _least_squares_fit(system, vector):
     
     return result, variances, residuals
 
-
 def _least_squares_fit_block(system, vector):
     """
     Least squares fitting of a system of linear equations
@@ -193,25 +191,20 @@ def _least_squares_fit_block(system, vector):
         vector: Vector that represents the right hand side of the system
 
     Returns:
-    The solved system, the variances of the system solution and the sum of the residuals
+    The solved system and the variances of the system solution
     """
-    # if len(system.shape) != 2:
-    #     raise Exception('System must have 2 dimensions')
-    # if system.shape[0] < system.shape[1]:
-    #     raise Exception('System must have at least the same number of rows as it has of columns')
+    if len(system.shape) < 2:
+        raise Exception('System block must have at least 2 dimensions')
+    if system.shape[-2] < system.shape[-1]:
+        raise Exception('Systems must have at least the same number of rows as they have of columns')
     shape = system.shape
-    results = np.zeros((shape[0], shape[1], shape[2], shape[-1]))
-    variances = np.zeros((shape[0], shape[1], shape[2], shape[-1]))
-    for it0 in range(shape[0]):
-        for it1 in range(shape[1]):
-            for it2 in range(shape[2]):
-                sys = system[it0, it1, it2, ...]
-                vec = vector[it0, it1, it2, ...]
-                fit = np.linalg.lstsq(sys, vec, rcond=None)
-                results[it0, it1, it2] = fit[0]
-                covar = np.matrix(np.dot(sys.T, sys)).I
-                variances[it0, it1, it2] = np.diagonal(covar)
-
+    results = np.zeros_like(vector)
+    variances = np.zeros_like(vector)
+    if len(shape) > 2:
+        for it0 in range(shape[0]):
+            results[it0], variances[it0] = _least_squares_fit_block(system[it0], vector[it0])
+    else:
+        results, variances, _ = _least_squares_fit(system, vector)
     return results, variances
 
 def _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict):
