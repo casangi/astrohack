@@ -5,8 +5,6 @@ from numba import njit
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit_block
 
-from memory_profiler import profile
-
 # global constants
 NPAR = 10
 
