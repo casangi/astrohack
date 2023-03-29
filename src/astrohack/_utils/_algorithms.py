@@ -187,23 +187,25 @@ def _least_squares_fit(system, vector):
 def _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict):
     
     for ant_id in vis_map_dict.keys():
-        diff = np.diff(pnt_map_dict[ant_id],axis=0)
+        diff = np.diff(pnt_map_dict['ant_'+str(ant_id)],axis=0)
         r_diff = np.sqrt(np.abs(diff[:,0]**2 + diff[:,1]**2))
     
         max_dis = np.max(r_diff)/1000
         n_avg = np.sum([r_diff > max_dis]) + 1
     
-        vis_map_avg, weight_map_avg, time_vis_avg, pnt_map_avg = _average_repeated_pointings_jit(vis_map_dict[ant_id], weight_map_dict[ant_id],time_vis,pnt_map_dict[ant_id],n_avg,max_dis,r_diff)
+        vis_map_avg, weight_map_avg, time_vis_avg, pnt_map_avg = _average_repeated_pointings_jit(vis_map_dict[ant_id], weight_map_dict[ant_id],time_vis,pnt_map_dict['ant_'+str(ant_id)],n_avg,max_dis,r_diff)
         
         vis_map_dict[ant_id] = vis_map_avg
         weight_map_dict[ant_id] = weight_map_avg
-        pnt_map_dict[ant_id] = pnt_map_avg
+        pnt_map_dict['ant_'+str(ant_id)] = pnt_map_avg
+        
+        #print('$$$',vis_map_avg.shape,weight_map_avg.shape,pnt_map_avg.shape)
         
     return time_vis_avg
         
  
         
-@numba.njit(cache=False, nogil=True)
+#@numba.njit(cache=False, nogil=True)
 def _average_repeated_pointings_jit(vis_map, weight_map,time_vis,pnt_map,n_avg,max_dis,r_diff):
 
     vis_map_avg = np.zeros((n_avg,)+ vis_map.shape[1:], dtype=vis_map.dtype)
@@ -227,8 +229,10 @@ def _average_repeated_pointings_jit(vis_map, weight_map,time_vis,pnt_map,n_avg,m
         if point_dis < max_dis:
             n_samples = n_samples + 1
         else:
-            vis_map_avg[k,:,:] = vis_map_avg[k,:,:]/weight_map_avg[k,:,:]
+            #vis_map_avg[k,:,:] = vis_map_avg[k,:,:]/weight_map_avg[k,:,:]
+            vis_map_avg[k,:,:] = np.divide(vis_map_avg[k,:,:],weight_map_avg[k,:,:],out=np.zeros_like(vis_map_avg[k,:,:]),where=weight_map_avg[k,:,:]!=0)
             weight_map_avg[k,:,:] = weight_map_avg[k,:,:]/n_samples
+            
             time_vis_avg[k] = time_vis_avg[k]/n_samples
             pnt_map_avg[k,:] = pnt_map_avg[k,:]/n_samples
         

@@ -33,6 +33,8 @@ from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 
 from astrohack._utils._conversion import convert_dict_from_numba
 
+from astrohack._utils._algorithms import _average_repeated_pointings
+
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 def _load_panel_file(file=None, panel_dict=None):
@@ -745,6 +747,10 @@ def _create_holog_file(
                 direction=direction
             )
 
+            print('(*(*(',map_ant_index,vis_map_dict[map_ant_index].shape)
+            print(weight_map_dict[map_ant_index].shape)
+            print(pnt_map_dict[map_ant_tag].shape)
+            
             xds = xr.Dataset()
             xds = xds.assign_coords(coords)
             xds["VIS"] = xr.DataArray(
@@ -837,8 +843,7 @@ def _extract_holog_chunk(extract_holog_params):
             % (data_col, ms_name, ddi, scans)
         )
         
-
-    vis_data = ctb.getcol("DATA")
+    vis_data = ctb.getcol(data_col)
     weight = ctb.getcol("WEIGHT")
     ant1 = ctb.getcol("ANTENNA1")
     ant2 = ctb.getcol("ANTENNA2")
@@ -876,6 +881,7 @@ def _extract_holog_chunk(extract_holog_params):
     pnt_map_dict = _extract_pointing_chunk(map_ant_list, time_vis, pnt_ant_dict)
     
     ################### Average multiple repeated samples
+    '''
     if telescope_name != "ALMA":
         over_flow_protector_constant = float("%.5g" % time_vis[0])  # For example 5076846059.4 -> 5076800000.0
         time_vis = time_vis - over_flow_protector_constant
@@ -883,7 +889,10 @@ def _extract_holog_chunk(extract_holog_params):
         
         time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict)
         
-        time_vis = time_vis + over_flow_protector_constant  
+        time_vis = time_vis + over_flow_protector_constant
+        
+        #print('shape',pnt_map_dict.keys(),pnt_map_dict[1].shape,pnt_map_dict['ant_1'].shape)
+    '''
     
     holog_dict = _create_holog_file(
         holog_name,
