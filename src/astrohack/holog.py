@@ -1,32 +1,14 @@
-import math
 import json
 import os
 
 import dask
 import dask.distributed
-import scipy.fftpack
-import scipy.constants
-import scipy.signal
-import matplotlib.pyplot as plt
-
-import dask.array as da
 import numpy as np
-import xarray as xr
-import scipy
-import scipy.constants
-
-from numba import njit
-
-from skimage.draw import disk
-from scipy.interpolate import griddata
 
 from astrohack._utils import _system_message as console
-from astrohack._utils._io import _read_meta_data
 
-from astrohack._utils._holog import _load_holog_file
 from astrohack._utils._holog import _holog_chunk
 
-from astrohack._utils._panel import _phase_fitting
 
 from memory_profiler import profile
    
@@ -47,8 +29,7 @@ def holog(
     ant_list = None,
     to_stokes = False,
     phase_fit=True,
-    apply_mask=False
-):
+    apply_mask=False):
     """Process holography data
 
     Args:
@@ -93,7 +74,6 @@ def holog(
             holog_chunk_params["to_stokes"] = to_stokes
             holog_chunk_params["apply_mask"] = apply_mask
             holog_chunk_params["phase_fit"] = phase_fit
-
             
             if (cell_size is None) and (grid_size is None):
                 ###To Do: Calculate one gridsize and cell_size for all ddi's, antennas, ect. Fix meta data ant_holog_dict gets overwritten for more than one ddi.
