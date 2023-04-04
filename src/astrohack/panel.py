@@ -17,7 +17,7 @@ from astrohack._utils._utils import _remove_suffix
 
 
 def panel(image_name, panel_name=None, cutoff=0.2, panel_kind=None, unit='mm', panel_margins=0.2, save_mask=False,
-          save_deviations=False, save_phase=False, parallel=False, sel_ddi=None, overwrite=False):
+          save_deviations=True, save_phase=False, parallel=False, sel_ddi=None, overwrite=False):
     """
     Process holographies to produce screw adjustments for panels, several data products are also produced in the process
     Args:
