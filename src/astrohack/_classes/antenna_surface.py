@@ -54,6 +54,10 @@ class AntennaSurface:
         else:
             self.deviation = self._phase_to_deviation(self.phase)
 
+        self.phase = self._nan_out_of_bounds(self.phase)
+        self.amplitude = self._nan_out_of_bounds(self.amplitude)
+        self.deviation = self._nan_out_of_bounds(self.deviation)
+
     def _read_xds(self, inputxds):
         """
         Read input XDS, distinguishing what is derived from AIPS data and what was created by astrohack.holog
@@ -125,6 +129,7 @@ class AntennaSurface:
         self._build_ring_mask()
         self.fetch_panel = self._fetch_panel_ringed
         self.compile_panel_points = self._compile_panel_points_ringed
+        self._nan_out_of_bounds = self._nan_out_of_bounds_ringed
 
     @staticmethod
     def _vla_panel_labeling(iring, ipanel):
@@ -216,6 +221,11 @@ class AntennaSurface:
         self.mask = np.where(self.rad < self.telescope.oulim, self.mask, False)
         self.mask = np.where(np.isnan(self.amplitude), False, self.mask)
         self.mask = np.where(self.deviation != self.deviation, False, self.mask)
+
+    def _nan_out_of_bounds_ringed(self, data):
+        ouradius = np.where(self.rad > self.telescope.diam/2., np.nan, data)
+        inradius = np.where(self.rad < self.telescope.inlim, np.nan, ouradius)
+        return inradius
 
     def _build_polar(self):
         """
