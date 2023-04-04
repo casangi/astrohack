@@ -27,15 +27,44 @@ from datetime import datetime
 
 from casacore import tables as ctables
 
-from astrohack._utils import _system_message as console
-
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 
 from astrohack._utils._conversion import convert_dict_from_numba
 
 from astrohack._utils._algorithms import _average_repeated_pointings
 
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
+
+
+def check_if_file_exists(file):
+    logger = _get_astrohack_logger()
+
+    if os.path.exists(file) is False:
+        logger.error(
+            " File " + file + " does not exists."
+            )
+        raise FileNotFoundError
+
+        
+        
+def check_if_file_will_be_overwritten(file,overwrite):
+    logger = _get_astrohack_logger()
+    if (os.path.exists(file) is True) and (overwrite is False):
+        logger.error(
+            " {file} already exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(
+                file=file
+            )
+        )
+        raise FileExistsError
+    elif  (os.path.exists(file) is True) and (overwrite is True):
+        logger.warning(
+            file + " will be overwritten."
+        )
+
+
+
 
 def _load_panel_file(file=None, panel_dict=None):
     """ Open panel file.
@@ -46,6 +75,7 @@ def _load_panel_file(file=None, panel_dict=None):
     Returns:
         bool: Nested dictionary containing panel data xds.
     """
+    logger = _get_astrohack_logger()
     panel_data_dict = {}
 
     if panel_dict is not None:
@@ -62,7 +92,8 @@ def _load_panel_file(file=None, panel_dict=None):
                 panel_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}/xds.zarr".format(name=file, ant=ant, ddi=ddi))                
     
     except Exception as e:
-            console.error("[_load_panel_file]: {}".format(e))
+            logger.error(str(e))
+            raise
 
     
     return panel_data_dict
@@ -77,7 +108,7 @@ def _load_image_file(file=None, image_dict=None):
         Returns:
             bool: bool describing whether the file was opened properly
         """
-
+        logger = _get_astrohack_logger()
         ant_data_dict = {}
 
         if image_dict is not None:
@@ -94,7 +125,8 @@ def _load_image_file(file=None, image_dict=None):
                     ant_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
 
         except Exception as e:
-            console.error("[_load_image_file]: {}".format(e))
+            logger.error(str(e))
+            raise
 
         return ant_data_dict
 
@@ -118,12 +150,13 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
                                                 }
                         }
     """
-
+    logger = _get_astrohack_logger()
+    
     if holog_dict is None:
         holog_dict = {}
 
     if load_pnt_dict == True:
-        console.info("Loading pointing dictionary to holog ...")
+        logger.info("Loading pointing dictionary to holog ...")
         holog_dict["pnt_dict"] = _load_pnt_dict(file=holog_file, ant_list=None, dask_load=dask_load)
 
     for ddi in os.listdir(holog_file):
@@ -259,7 +292,7 @@ def _load_image_xds(file_stem, ant, ddi):
     """ Load specific image xds
 
     Args:
-        file_stem (str): File directory
+        file_name (str): File directory
         ant (int): Antenna ID
         ddi (int): DDI 
 
@@ -270,7 +303,7 @@ def _load_image_xds(file_stem, ant, ddi):
         zarr: zarr image file
     """
 
-    image_path = "{image}.image.zarr/{ant}/{ddi}".format(image=file_stem, ant=ant, ddi=ddi)
+    image_path = "{image}/{ant}/{ddi}".format(image=file_stem, ant=ant, ddi=ddi)
 
     if os.path.isdir(image_path):
         return xr.open_zarr(image_path)
@@ -287,12 +320,14 @@ def _read_meta_data(holog_file):
     Returns:
         dict: dictionary containing dimension data.
     """
+    logger = _get_astrohack_logger()
     try:
         with open("{name}/{file}".format(name=holog_file, file="/.holog_attr")) as json_file:
             json_dict = json.load(json_file)
 
     except Exception as error:
-        console.error("[_read_meta_data] {error}".format(error=error))
+        logger.error(str(error))
+        raise
 
     return json_dict
 
@@ -308,7 +343,7 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
     Returns:
         nested dict: nested dictionary (ddi, scan, xds) with xds data embedded in it.
     """
-
+    logger = _get_astrohack_logger()
     ant_id_str = str(ant_id)
 
     holog_meta_data = "/".join((holog_file, ".holog_json"))
@@ -318,7 +353,8 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
             holog_json = json.load(json_file)
 
     except Exception as error:
-        console.error("[_read_data_from_holog_json] {error}".format(error=error))
+        logger.error(str(error))
+        raise
 
     ant_data_dict = {}
 
@@ -409,6 +445,8 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         ant_id (int): Antenna id
         pnt_name (str): Name of output poitning dictinary file name.
     """
+    logger = _get_astrohack_logger()
+    
     ant_id = pnt_parms['ant_id']
     pnt_name = pnt_parms['pnt_name']
     scan_time_dict = pnt_parms['scan_time_dict']
@@ -427,9 +465,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         pointing_offset = tb.getcol("POINTING_OFFSET")[:, 0, :]
     except Exception as e:
         tb.close()
-        print('Skipping antenna ' + str(ant_id) + ' no pointing info')
-        
-        console.warning("[_make_ant_pnt_chunk] Skipping antenna " + str(ant_id) + " no pointing info")
+        logger.warning("Skipping antenna " + str(ant_id) + " no pointing info")
 
         return 0
     tb.close()
@@ -491,8 +527,8 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     pnt_xds.attrs['ant_name'] = pnt_parms['ant_name']
     
     
-    console.info(
-        "[_make_ant_pnt_xds_chunk] Writing pointing xds to {file}".format(
+    logger.info(
+        "Writing pointing xds to {file}".format(
             file=os.path.join(pnt_name, "ant_" + str(ant_id))
         )
     )
@@ -720,6 +756,7 @@ def _create_holog_file(
         scan (numpy.ndarray): scan number
         ddi (numpy.ndarray): data description id; a combination of polarization and spectral window
     """
+    logger = _get_astrohack_logger()
 
     ctb = ctables.table("/".join((ms_name, "ANTENNA")))
     observing_location = ctb.getcol("POSITION")
@@ -747,10 +784,6 @@ def _create_holog_file(
                 direction=direction
             )
 
-            print('(*(*(',map_ant_index,vis_map_dict[map_ant_index].shape)
-            print(weight_map_dict[map_ant_index].shape)
-            print(pnt_map_dict[map_ant_tag].shape)
-            
             xds = xr.Dataset()
             xds = xds.assign_coords(coords)
             xds["VIS"] = xr.DataArray(
@@ -772,15 +805,16 @@ def _create_holog_file(
             xds.attrs["telescope_name"] = telescope_name
             xds.attrs["antenna_name"] = ant_names[map_ant_index]
 
-            holog_file = "{base}.{suffix}".format(base=holog_name, suffix="holog.zarr")
+            holog_file = holog_name
 
             if overwrite is False:
                 if os.path.exists(holog_file):
-                    console.warning(
-                        "[_create_holog_file] holog file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(file=holog_file))
+                    logger.error(
+                        "Holog file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(file=holog_file))
+                    raise
 
-            console.info(
-                "[_create_holog_file] Writing holog file to {file}".format(file=holog_file)
+            logger.info(
+                "Writing holog file to {file}".format(file=holog_file)
             )
             xds.to_zarr(
                 os.path.join(
@@ -792,8 +826,8 @@ def _create_holog_file(
             )
 
         else:
-            console.warning(
-                "[_create_holog_file] [FLAGGED DATA] scan: {scan} mapping antenna index {index}".format(
+            logger.warning(
+                "[FLAGGED DATA] scan: {scan} mapping antenna index {index}".format(
                     scan=scan, index=map_ant_index
                 )
             )
@@ -811,6 +845,7 @@ def _extract_holog_chunk(extract_holog_params):
         ref_ant_ids (numpy.narray): Arry of antenna_id values corresponding to reference data.
         sel_state_ids (list): List pf state_ids corresponding to holography data/
     """
+    logger = _get_astrohack_logger()
 
     ms_name = extract_holog_params["ms_name"]
     pnt_name = extract_holog_params["pnt_name"]
@@ -880,8 +915,8 @@ def _extract_holog_chunk(extract_holog_params):
 
     pnt_map_dict = _extract_pointing_chunk(map_ant_list, time_vis, pnt_ant_dict)
     
+    ''' Removing for now. Code struggles with VLA pointing errors
     ################### Average multiple repeated samples
-    '''
     if telescope_name != "ALMA":
         over_flow_protector_constant = float("%.5g" % time_vis[0])  # For example 5076846059.4 -> 5076800000.0
         time_vis = time_vis - over_flow_protector_constant
@@ -890,9 +925,8 @@ def _extract_holog_chunk(extract_holog_params):
         time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict)
         
         time_vis = time_vis + over_flow_protector_constant
-        
-        #print('shape',pnt_map_dict.keys(),pnt_map_dict[1].shape,pnt_map_dict['ant_1'].shape)
     '''
+    
     
     holog_dict = _create_holog_file(
         holog_name,
@@ -910,7 +944,7 @@ def _extract_holog_chunk(extract_holog_params):
         overwrite=overwrite,
     )
 
-    console.info(
+    logger.info(
         "Finished extracting holography chunk for ddi: {ddi} holog_scan_id: {holog_scan_id}".format(
             ddi=ddi, holog_scan_id=holog_scan_id
         )

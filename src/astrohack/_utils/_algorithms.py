@@ -213,7 +213,9 @@ def _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_a
         diff = np.diff(pnt_map_dict['ant_'+str(ant_id)],axis=0)
         r_diff = np.sqrt(np.abs(diff[:,0]**2 + diff[:,1]**2))
     
-        max_dis = np.max(r_diff)/1000
+        max_dis = np.max(r_diff)/100
+        
+        print('max_dis',max_dis)
         n_avg = np.sum([r_diff > max_dis]) + 1
     
         vis_map_avg, weight_map_avg, time_vis_avg, pnt_map_avg = _average_repeated_pointings_jit(vis_map_dict[ant_id], weight_map_dict[ant_id],time_vis,pnt_map_dict['ant_'+str(ant_id)],n_avg,max_dis,r_diff)

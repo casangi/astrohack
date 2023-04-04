@@ -30,7 +30,7 @@ from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk
 from astrohack._utils._imaging import _calculate_aperture_pattern
 
-from astrohack._utils import _system_message as console
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 
 def _holog_chunk(holog_chunk_params):
@@ -40,6 +40,8 @@ def _holog_chunk(holog_chunk_params):
     Args:
         holog_chunk_params (dict): Dictionary containing holography parameters.
     """
+    logger = _get_astrohack_logger()
+    
     c = scipy.constants.speed_of_light
 
     holog_file, ant_data_dict = _load_holog_file(
@@ -169,13 +171,14 @@ def _holog_chunk(holog_chunk_params):
         
         # Get telescope info
         ant_name = ant_data_dict[ddi][scan].attrs["antenna_name"]
-        if  ant_name.__contains__('DV'):
+        
+        if  ant_name.upper().__contains__('DV'):
             telescope_name = "_".join((meta_data['telescope_name'], 'DV'))
 
-        elif  ant_name.__contains__('DA'):
+        elif  ant_name.upper().__contains__('DA'):
             telescope_name = "_".join((meta_data['telescope_name'], 'DA'))
             
-        elif  ant_name.__contains__('EA'):
+        elif  ant_name.upper().__contains__('EA'):
             telescope_name = 'VLA'
 
         else:
@@ -183,44 +186,39 @@ def _holog_chunk(holog_chunk_params):
     
         telescope = Telescope(telescope_name)
 
-        wavelength = scipy.constants.speed_of_light/freq_chan[-1]
-        aperture_radius = (0.5*telescope.diam)/wavelength
+        min_wavelength = scipy.constants.speed_of_light/freq_chan[0]
+        max_aperture_radius = (0.5*telescope.diam)/min_wavelength
+        
+        image_slice = aperture_grid[0, 0, 0, ...]
+        center_pixel = np.array(image_slice.shape[0:2])//2
+        radius_u = int(np.where(np.abs(u) < max_aperture_radius*1.1)[0].max() - center_pixel[0]) # Factor of 1.1: Let's not be too aggresive
+        radius_v = int(np.where(np.abs(v) < max_aperture_radius*1.1)[0].max() - center_pixel[1]) # Factor of 1.1: Let's not be too aggresive
+            
+        if radius_v > radius_u:
+            radius = radius_v
+        else:
+            radius = radius_u
 
         if holog_chunk_params['apply_mask']:
         # Masking Aperture image
-            image_slice = aperture_grid[0, 0, 0, ...]
-            center_pixel = (image_slice.shape[0]//2, image_slice.shape[1]//2)
-
-            outer_pixel = np.where(np.abs(u) < aperture_radius)[0].max()
 
             mask = _mask_circular_disk(
                 center=None,
-                radius=np.abs(outer_pixel - center_pixel[0])+1, # Let's not be too aggresive
+                radius=radius,
                 array=aperture_grid,
             )
 
             aperture_grid = mask*aperture_grid
 
+        start_cut = center_pixel - radius
+        end_cut = center_pixel + radius
 
-        phase_corrected_angle = np.empty_like(aperture_grid)
-        # We don't want the crop to be overly aggresive but I want the aperture radius to be just that
-        # so we multiply by (3/4)/(1/2) --> 3/2 to scale the crop up a bit.
-
-        i = np.where(np.abs(u) < (3/2)*aperture_radius)[0]
-        j = np.where(np.abs(v) < (3/2)*aperture_radius)[0]
-
-        # Ensure the cut is square by using the smaller dimension. Phase correction fails otherwise.
-        if i.shape[0] < j.shape[0]: 
-            cut = i
-        else:
-            cut = j
-
-        u_prime = u[cut.min():cut.max()]
-        v_prime = v[cut.min():cut.max()]
-
-        amplitude = np.absolute(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()])
-        phase = np.angle(aperture_grid[..., cut.min():cut.max(), cut.min():cut.max()])
+        amplitude = np.absolute(aperture_grid[..., start_cut[0]:end_cut[0], start_cut[1]:end_cut[1]])
+        phase = np.angle(aperture_grid[..., start_cut[0]:end_cut[0], start_cut[1]:end_cut[1]])
         phase_corrected_angle = np.zeros_like(phase)
+        u_prime = u[start_cut[0]:end_cut[0]]
+        v_prime = v[start_cut[1]:end_cut[1]]
+        
 
         phase_fit_par = holog_chunk_params["phase_fit"]
         if isinstance(phase_fit_par, bool):
@@ -235,7 +233,7 @@ def _holog_chunk(holog_chunk_params):
                 do_sub_til = False
         elif isinstance(phase_fit_par, (np.ndarray, list, tuple)):
             if len(phase_fit_par) != 5:
-                console.error("Phase fit parameter must have 5 elements")
+                logger.error("Phase fit parameter must have 5 elements")
                 raise Exception
             else:
                 if np.sum(phase_fit_par) == 0:
@@ -244,16 +242,25 @@ def _holog_chunk(holog_chunk_params):
                     do_phase_fit = True
                     do_pnt_off, do_xy_foc_off, do_z_foc_off, do_sub_til, do_cass_off = phase_fit_par
         else:
-            console.error("Phase fit parameter is neither a boolean nor an array of booleans")
+            logger.error("Phase fit parameter is neither a boolean nor an array of booleans")
             raise Exception
 
         if do_phase_fit:
-            console.info("[_holog_chunk] Applying phase correction ...")
+            logger.info("Applying phase correction ...")
+            
+            if to_stokes:
+                pols=(0,)
+            else:
+                pols=(0, 3)
+            
+            #? Wavelength
+            max_wavelength = scipy.constants.speed_of_light/freq_chan[-1]
+            
             results, errors, phase_corrected_angle, _, in_rms, out_rms = _phase_fitting_block(
-                        pols=(0, 3),
-                        wavelength=wavelength,
+                        pols=pols,
+                        wavelength=max_wavelength,
                         telescope=telescope,
-                        cellxy=uv_cell_size[0]*wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
+                        cellxy=uv_cell_size[0]*max_wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
                         amplitude_image=amplitude,
                         phase_image=phase,
                         pointing_offset=do_pnt_off,
@@ -262,7 +269,7 @@ def _holog_chunk(holog_chunk_params):
                         subreflector_tilt=do_sub_til,
                         cassegrain_offset=do_cass_off)
         else:
-            console.info("[_holog_chunk] Skipping phase correction ...")
+            logger.info("Skipping phase correction ...")
 
         
         ###To Do: Add Paralactic angle as a non-dimension coordinate dependant on time.
@@ -270,8 +277,8 @@ def _holog_chunk(holog_chunk_params):
 
         xds["BEAM"] = xr.DataArray(beam_grid, dims=["time-centroid", "chan", "pol", "l", "m"])
         xds["APERTURE"] = xr.DataArray(aperture_grid, dims=["time-centroid", "chan", "pol", "u", "v"])
+        
         xds["AMPLITUDE"] = xr.DataArray(amplitude, dims=["time-centroid", "chan", "pol", "u_prime", "v_prime"])
-
         xds["ANGLE"] = xr.DataArray(phase_corrected_angle, dims=["time-centroid", "chan", "pol", "u_prime", "v_prime"])
 
         xds.attrs["ant_id"] = holog_chunk_params["ant_id"]
@@ -293,9 +300,7 @@ def _holog_chunk(holog_chunk_params):
 
         xds = xds.assign_coords(coords)
 
-        holog_base_name = holog_chunk_params["holog_file"].split(".holog.zarr")[0]
-
-        xds.to_zarr("{name}.image.zarr/{ant}/{ddi}".format(name=holog_base_name, ant=holog_chunk_params["ant_id"], ddi=ddi), mode="w", compute=True, consolidated=True)
+        xds.to_zarr("{name}/{ant}/{ddi}".format(name= holog_chunk_params["image_file"], ant=holog_chunk_params["ant_id"], ddi=ddi), mode="w", compute=True, consolidated=True)
 
 
 def _create_average_chan_map(freq_chan, chan_tolerance_factor):
@@ -405,7 +410,7 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
             json.dump(max_extent, json_file)
 
     except Exception as error:
-        console.error("[_create_holog_meta_data] {error}".format(error=error))
+        logger.error("[_create_holog_meta_data] {error}".format(error=error))
     
 
     
@@ -416,7 +421,7 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
             json.dump(ant_holog_dict, json_file)
 
     except Exception as error:
-        console.error("[_create_holog_meta_data] {error}".format(error=error))
+        logger.error("[_create_holog_meta_data] {error}".format(error=error))
 
 def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
     """Top level function to extract subset of pointing table data into a dictionary of xarray dataarrays.

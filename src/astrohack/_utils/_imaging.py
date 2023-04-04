@@ -8,10 +8,11 @@ import astropy.coordinates as coord
 
 from skimage.draw import disk
 
-from astrohack._utils import _system_message as console
 from astrohack._utils._algorithms import _calc_coords
 
 from memory_profiler import profile
+
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 def _parallactic_derotation(data, parallactic_angle_dict):
     """ Uses samples of parallactic angle (PA) values to correct differences in PA between scans. The reference PA is selected 
@@ -38,10 +39,13 @@ def _parallactic_derotation(data, parallactic_angle_dict):
     median_angular_reference = parallactic_angle_dict[scans[0]].parallactic_samples[median_index]
     
     for scan, scan_value in enumerate(scans):
-        median_angular_offset = median_angular_reference - parallactic_angle_dict[scan_value].parallactic_samples[median_index]
-        median_angular_offset *= 180/np.pi
-            
-        data[scan] = scipy.ndimage.rotate(input=data[scan, ...], angle=median_angular_offset, axes=(3, 2), reshape=False)
+        print(scan,scan_value)
+        #median_angular_offset = median_angular_reference - parallactic_angle_dict[scan_value].parallactic_samples[median_index]
+        #median_angular_offset *= 180/np.pi
+        
+        #parallactic_angle = 360 - parallactic_angle_dict[scan_value].parallactic_samples[median_index]*180/np.pi
+        
+        data[scan] = scipy.ndimage.rotate(input=data[scan, ...], angle=90, axes=(3, 2), reshape=False)
         
     return data
 
@@ -58,27 +62,21 @@ def _mask_circular_disk(center, radius, array, mask_value=np.nan):
     Returns:
         _type_: _description_
     """
+    shape = np.array(array.shape[-2:])
 
     if center == None:
-        image_slice = array[0, 0, 0, ...]
-        center = (image_slice.shape[0]//2, image_slice.shape[1]//2)
+        center = shape//2
 
-    n_time, n_chan, n_pol, m, n = array.shape
-    
-    shape = tuple((m, n))
-    
     r, c = disk(center, radius, shape=shape)
     mask = np.zeros(shape, dtype=array.dtype)   
     mask[r, c] = 1
     
-    mask = np.tile(mask, reps=(n_time, n_chan, n_pol, 1, 1))
+    mask = np.tile(mask, reps=(array.shape[:-2] + (1, 1)))
     
     mask[mask==0] = mask_value
     
     return mask
 
-fp=open('aperture_pattern.log','w+')
-@profile(stream=fp)
 def _calculate_aperture_pattern(grid, delta, padding_factor=50):
     """ Calcualtes the aperture illumination pattern from the beam data.
 
@@ -92,7 +90,8 @@ def _calculate_aperture_pattern(grid, delta, padding_factor=50):
     Returns:
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
-    console.info("[_calculate_aperture_pattern] Calculating aperture illumination pattern ...")
+    logger = _get_astrohack_logger()
+    logger.info("Calculating aperture illumination pattern ...")
 
     assert grid.shape[-1] == grid.shape[-2] ###To do: why is this expected that l.shape == m.shape
     initial_dimension = grid.shape[-1]
