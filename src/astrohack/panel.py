@@ -34,6 +34,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_kind=None, unit='mm', p
         parallel: Run chunks of processing in parallel
         panel_margins: Margin to be ignored at edges of panels when fitting
         sel_ddi: Which DDIs are to be processed by panel, None means all of them
+        overwrite: Overwrite previous hack_file of same name?
     """
     
     logger = _get_astrohack_logger()
@@ -153,6 +154,18 @@ def create_phase_model(npix, parameters, wavelength, telescope, cellxy):
 
 
 def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, overwrite=False):
+    """
+    Convert AIPS HOLOG amplitude and deviation FITS files to a proper .zarr file
+    Args:
+        amp_image: Full path to amplitude image
+        dev_image: Full path to deviation image
+        telescope_name: Telescope name to be added to the .zarr file
+        holog_name: Name of the output .zarr file
+        overwrite: Overwrite previous file of same name?
+
+    Returns:
+
+    """
     check_if_file_exists(amp_image)
     check_if_file_exists(dev_image)
     check_if_file_will_be_overwritten(holog_name, overwrite)
@@ -168,6 +181,24 @@ def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, ov
 
 def check_panel_parms(image_name, panel_name, cutoff, panel_kind, unit, panel_margins, save_mask, save_deviations,
                       save_phase, parallel, sel_ddi, overwrite):
+    """
+    Tests inputs to panel function
+    Args:
+        image_name: Input holography data, can be from astrohack.holog, but also preprocessed AIPS data
+        panel_name: Name for the output directory structure containing the products
+
+        cutoff: Cut off in amplitude for the physical deviation fitting, None means 20%
+        panel_kind: Type of fitting function used to fit panel surfaces, defaults to corotated_paraboloid for ringed
+                    telescopes
+        unit: Unit for panel adjustments
+        save_mask: Save plot of the mask derived from amplitude cutoff to a png file
+        save_deviations: Save plot of physical deviations to a png file
+        save_phase: Save plot of phases to a png file
+        parallel: Run chunks of processing in parallel
+        panel_margins: Margin to be ignored at edges of panels when fitting
+        sel_ddi: Which DDIs are to be processed by panel, None means all of them
+        overwrite: Overwrite previous hack_file of same name?
+    """
 
     panel_params = {'image_name': image_name,
                     'panel_name': panel_name,
