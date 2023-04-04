@@ -224,8 +224,8 @@ class AntennaSurface:
         u2d = self.u_axis.reshape(self.unpix, 1)
         v2d = self.v_axis.reshape(1, self.vnpix)
         self.rad = np.sqrt(u2d**2 + v2d**2)
-        self.phi = np.arctan2(u2d, v2d)
-        self.phi = np.where(self.phi < 0, self.phi+twopi, self.phi).T
+        self.phi = np.arctan2(u2d, -v2d)-pi/2
+        self.phi = np.where(self.phi < 0, self.phi+twopi, self.phi)
 
     def _build_ring_panels(self):
         """
@@ -399,7 +399,8 @@ class AntennaSurface:
             )
             title = "Panel assignments"
             paneldist = np.where(self.panel_distribution >= 0, self.panel_distribution, np.nan)
-            self._plot_surface(paneldist, title, fig, ax[2], 0, np.max(self.panel_distribution), unit='Panel #')
+            #self._plot_surface(paneldist, title, fig, ax[2], 0, np.max(self.panel_distribution), unit='Panel #')
+            self._plot_surface(self.phi, title, fig, ax[2], 0, twopi, unit='Radians')
             fig.tight_layout()
         else:
             if plotphase:
@@ -472,14 +473,12 @@ class AntennaSurface:
         xmax = np.max(self.u_axis)
         ymin = np.min(self.v_axis)
         ymax = np.max(self.v_axis)
-        im = ax.imshow(
-            np.flipud(data),
-            cmap="viridis",
-            interpolation="nearest",
-            extent=[xmin, xmax, ymin, ymax],
-            vmin=vmin,
-            vmax=vmax,
-        )
+        im = ax.imshow(data,
+                       cmap="viridis",
+                       interpolation="nearest",
+                       extent=[xmin, xmax, ymin, ymax],
+                       vmin=vmin,
+                       vmax=vmax,)
         divider = make_axes_locatable(ax)
         if not mask:
             cax = divider.append_axes("right", size="5%", pad=0.05)
