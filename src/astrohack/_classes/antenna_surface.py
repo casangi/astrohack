@@ -66,8 +66,8 @@ class AntennaSurface:
         """
         # Origin dependant Reading
         if inputxds.attrs['AIPS']:
-            self.amplitude = inputxds["AMPLITUDE"].values
-            self.deviation = inputxds["DEVIATION"].values
+            self.amplitude = np.flipud(inputxds["AMPLITUDE"].values)
+            self.deviation = np.flipud(inputxds["DEVIATION"].values)
             self.npoint = inputxds.attrs['npoint']
             self.wavelength = inputxds.attrs['wavelength']
             self.amp_unit = inputxds.attrs['amp_unit']
