@@ -30,9 +30,9 @@ class AntennaSurface:
         computephase = self._read_xds(inputxds)
 
         if cutoff is None:
-            self.cut = 0.2 * np.max(self.amplitude)
+            self.cut = 0.2 * np.nanmax(self.amplitude)
         else:
-            self.cut = cutoff * np.max(self.amplitude)
+            self.cut = cutoff * np.nanmax(self.amplitude)
         if pkind is None:
             self.panelkind = panelkinds[irigid]
         else:
