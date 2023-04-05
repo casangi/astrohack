@@ -39,7 +39,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_kind=None, unit='mm', p
     
     logger = _get_astrohack_logger()
     
-    panel_params = check_panel_parms(image_name, panel_name, cutoff, panel_kind, unit, panel_margins, save_mask,
+    panel_params = _check_panel_parms(image_name, panel_name, cutoff, panel_kind, unit, panel_margins, save_mask,
                                      save_deviations, save_phase, parallel, sel_ddi, overwrite)
           
     check_if_file_exists(panel_params['image_name'])
@@ -179,7 +179,7 @@ def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, ov
     aips_mark.close()
 
 
-def check_panel_parms(image_name, panel_name, cutoff, panel_kind, unit, panel_margins, save_mask, save_deviations,
+def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, unit, panel_margins, save_mask, save_deviations,
                       save_phase, parallel, sel_ddi, overwrite):
     """
     Tests inputs to panel function

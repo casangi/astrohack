@@ -35,7 +35,8 @@ def holog(
     apply_mask=True,
     phase_fit=True,
     overwrite=False):
-    """Process holography data
+    """
+    Process holography data
 
     Args:
         holog_name (str): holog file name
@@ -54,7 +55,7 @@ def holog(
     
     logger = _get_astrohack_logger()
     
-    holog_params = check_holog_parms(holog_name,grid_size,cell_size,image_name,padding_factor,parallel,grid_interpolation_mode,chan_average,chan_tolerance_factor,reference_scaling_frequency,scan_average,ant_list,to_stokes,apply_mask,phase_fit,overwrite)
+    holog_params = _check_holog_parms(holog_name,grid_size,cell_size,image_name,padding_factor,parallel,grid_interpolation_mode,chan_average,chan_tolerance_factor,reference_scaling_frequency,scan_average,ant_list,to_stokes,apply_mask,phase_fit,overwrite)
     
     check_if_file_exists(holog_params['holog_file'])
     check_if_file_will_be_overwritten(holog_params['image_file'],holog_params['overwrite'])
@@ -121,7 +122,7 @@ def holog(
         dask.compute(delayed_list)
 
 
-def check_holog_parms(holog_name,grid_size,cell_size,image_name,
+def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
                       padding_factor,parallel,grid_interpolation_mode,
                       chan_average,chan_tolerance_factor,
                       reference_scaling_frequency,scan_average,

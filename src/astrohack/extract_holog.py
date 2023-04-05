@@ -38,69 +38,60 @@ def extract_holog(
     data_col="DATA",
     parallel=False,
     overwrite=False,
-    sel_ddi=None
 ):
-    """Extract holography data and create beam maps.
-
-    Args:
-        ms_name (string): Measurement file name.
-        holog_name (string, optional): Name of holog.zarr file to create.
-        point_name (string, optional): Name of point.zarr file to create.
-        holog_obs_dict (dict): Nested dictionary ordered by ddi:{ scan: { map:[ant names], ref:[ant names] } } }
-        data_col (str, optional): Data column from measurement set to acquire. Defaults to 'DATA'.
-        parallel (bool, optional): Boolean for whether to process in parallel. Defaults to True.
-        overwrite (bool, optional): Boolean for whether to overwrite current holog.zarr file.
-        sel_ddi (int np.array, optional): A list of ddi's to processes.
     """
-    
-    #### Parameter Checking ####
+    From a measurement set with holography data extract the pointing information (saved into a folder with a .point.zarr extension) and holography data (saved into a folder with an extension .holog.zarr).
+
+    Parameters
+    ----------
+    ms_name (string):
+        Measurement file name.
+    holog_obs_dict (dict):
+        The holog_obs_dict describes which scans and antennas's data to exstract from the ms.
+        For example:
+        scans=[8,9,10,12,13,14,16,17,18,23,24,25,27,28,29,31,32,33,38,39,40,42,43,44,46,47,48,53,54,55,57]
+        holog_obs_description = {0 :{'scans':scans,'ant':{'ea25':['ea04']}}}
+        holog_obs_description['ddi'] = [0]
+    holog_obs_dict[holog_mapping_id] (dict):
+        A dictionary where each key is a holog_mapping_id. The holog_mapping_ids can be any numbers chosen arbiterily and represent one complete mapping of the beam. The holog_mapping_id is needed since the mapping of a beam can take more than one scan and an ms can have more than one mapping of the beam.
+    holog_obs_dict[holog_mapping_id]['scans'] (int np.ndarray/list):
+        All the scans in the ms that form part of the holog_mapping_id.
+    holog_obs_dict[holog_mapping_id]['ant'] (dict):
+        The keys are the mapping antenna names and the values lists of the reference antennas.
+    holog_obs_dict[ddi] (int np.ndarray/list):
+        All the ddi's in the ms from which data should be exstracted.
+    holog_name (string, default= ms name with holog.zarr extension):
+        Name of holog.zarr file to create.
+    point_name (string, default= ms name with point.zarr extension):
+        Name of point.zarr file to create.
+    data_col (str, default='DATA'):
+        Data column from measurement set to acquire.
+    parallel (bool, default=False):
+        Boolean for whether to process in parallel. If parallel processing is
+    overwrite (bool, optional):
+        Boolean for whether to overwrite current holog.zarr and point.zarr files.
+    """
     logger = _get_astrohack_logger()
-    parms_passed = True
     
-    parm_check,_ = _check_parm(ms_name, 'ms_name', [str],default=None)
-    parms_passed = parms_passed and  parm_check
     
-    base_name = _remove_suffix(ms_name,'.ms')
-    parm_check, holog_name = _check_parm(holog_name,'holog_name', [str],default=base_name+'.holog.zarr')
-    parms_passed = parms_passed and  parm_check
+    extract_holog_parms = _check_extract_holog_parms(ms_name,
+                                holog_obs_dict,
+                                holog_name,
+                                point_name,
+                                data_col,
+                                parallel,
+                                overwrite)
     
-    point_base_name = _remove_suffix(holog_name,'.holog.zarr')
-    parm_check, point_name = _check_parm(point_name,'point_name', [str],default=point_base_name+'.point.zarr')
-    parms_passed = parms_passed and  parm_check
-    
-    #To Do: special function needed to check holog_obs_dict.
-    parm_check = isinstance(holog_obs_dict,dict)
-    parms_passed = parms_passed and parm_check
-    if not parm_check:
-        logger.error('Parameter holog_obs_dict must be of type '+ str(dict))
-        
-    parm_check, data_col = _check_parm(data_col,'data_col', [str],default='DATA')
-    parms_passed = parms_passed and  parm_check
-    
-    parm_check,parallel = _check_parm(parallel, 'parallel', [bool],default=False)
-    parms_passed = parms_passed and  parm_check
-    
-    parm_check, overwrite = _check_parm(overwrite, 'overwrite', [bool],default=False)
-    parms_passed = parms_passed and  parm_check
-    
-    parm_check, sel_ddi = parms_passed and _check_parm(sel_ddi, 'sel_ddi', [list,np.array], list_acceptable_data_types=[int,np.int], default='all')
-    parms_passed = parms_passed and  parm_check
-    
-    if not parms_passed:
-        logger.error("extract_holog parameter checking failed.")
-        raise Exception("extract_holog parameter checking failed.")
-    #### End Parameter Checking ####
-    
-    check_if_file_exists(ms_name)
-    check_if_file_will_be_overwritten(holog_name,overwrite)
-    check_if_file_will_be_overwritten(point_name,overwrite)
+    check_if_file_exists(extract_holog_parms['ms_name'])
+    check_if_file_will_be_overwritten(extract_holog_parms['holog_name'],extract_holog_parms['overwrite'])
+    check_if_file_will_be_overwritten(extract_holog_parms['point_name'],extract_holog_parms['overwrite'])
 
 #    try:
 #        pnt_dict = _load_pnt_dict(point_name)
 #    except:
 #        pnt_dict = _make_ant_pnt_dict(ms_name, point_name, parallel=parallel)
     
-    pnt_dict = _make_ant_pnt_dict(ms_name, point_name, parallel=parallel)
+    pnt_dict = _make_ant_pnt_dict(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
 
     ''' VLA datasets causeing issues.
     if holog_obs_dict is None:
@@ -133,7 +124,7 @@ def extract_holog(
 
     ######## Get Spectral Windows ########
     ctb = ctables.table(
-        os.path.join(ms_name, "DATA_DESCRIPTION"),
+        os.path.join(extract_holog_parms['ms_name'], "DATA_DESCRIPTION"),
         readonly=True,
         lockoptions={"option": "usernoread"},
         ack=False,
@@ -145,7 +136,7 @@ def extract_holog(
 
     ######## Get Antenna IDs and Names ########
     ctb = ctables.table(
-        os.path.join(ms_name, "ANTENNA"),
+        os.path.join(extract_holog_parms['ms_name'], "ANTENNA"),
         readonly=True,
         lockoptions={"option": "usernoread"},
         ack=False,
@@ -167,7 +158,7 @@ def extract_holog(
     # Undefined : ?
 
     ctb = ctables.table(
-        os.path.join(ms_name, "STATE"),
+        os.path.join(extract_holog_parms['ms_name'], "STATE"),
         readonly=True,
         lockoptions={"option": "usernoread"},
         ack=False,
@@ -185,20 +176,20 @@ def extract_holog(
             state_ids.append(i)
 
     spw_ctb = ctables.table(
-        os.path.join(ms_name, "SPECTRAL_WINDOW"),
+        os.path.join(extract_holog_parms['ms_name'], "SPECTRAL_WINDOW"),
         readonly=True,
         lockoptions={"option": "usernoread"},
         ack=False,
     )
     pol_ctb = ctables.table(
-        os.path.join(ms_name, "POLARIZATION"),
+        os.path.join(extract_holog_parms['ms_name'], "POLARIZATION"),
         readonly=True,
         lockoptions={"option": "usernoread"},
         ack=False,
     )
 
     obs_ctb = ctables.table(
-        os.path.join(ms_name, "OBSERVATION"),
+        os.path.join(extract_holog_parms['ms_name'], "OBSERVATION"),
         readonly=True,
         lockoptions={"option": "usernoread"},
         ack=False,
@@ -210,31 +201,19 @@ def extract_holog(
 
     ## DDI selection
     if holog_obs_dict['ddi'] is None:
-        logger.error("No DDIs in ms.")
+        logger.error("No DDIs in holog_obs_dict.")
         raise Exception()
 
-    if sel_ddi == 'all':
-        sel_ddi = default=holog_obs_dict['ddi']
-    
     delayed_list = []
     
-        
-    for ddi in sel_ddi:
+    for ddi in holog_obs_dict['ddi']:
         spw_setup_id = ddi_spw[ddi]
         pol_setup_id = ddpol_indexol[ddi]
-
-        extract_holog_params = {
-            "ms_name": ms_name,
-            "holog_name": holog_name,
-            "pnt_name": point_name,
-            "ddi": ddi,
-            "data_col": data_col,
-            "chan_setup": {},
-            "pol_setup": {},
-            "telescope_name": telescope_name,
-            "overwrite": overwrite,
-        }
-
+        
+        extract_holog_params["ddi"] = ddi
+        extract_holog_params["chan_setup"] = {}
+        extract_holog_params["pol_setup"] = {}
+        
         extract_holog_params["chan_setup"]["chan_freq"] = spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0, :]
         extract_holog_params["chan_setup"]["chan_width"] = spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[0, :]
         extract_holog_params["chan_setup"]["eff_bw"] = spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0, :]
@@ -291,3 +270,52 @@ def extract_holog(
     holog_dict = _load_holog_file(holog_file=holog_name, dask_load=True, load_pnt_dict=False)
 
     _create_holog_meta_data(holog_file=holog_name, holog_dict=holog_dict, holog_params=extract_holog_params)
+
+
+def _check_extract_holog_parms(    ms_name,
+    holog_obs_dict,
+    holog_name,
+    point_name,
+    data_col,
+    parallel,
+    overwrite):
+    
+    extract_holog_params = {}
+    extract_holog_params["ms_name"] = ms_name
+    extract_holog_params["holog_name"] = holog_name
+    extract_holog_params["point_name"] = point_name
+    extract_holog_params["parallel"] = parallel
+    extract_holog_params["overwrite"] = overwrite
+
+    
+    #### Parameter Checking ####
+    logger = _get_astrohack_logger()
+    parms_passed = True
+    
+    parms_passed = parms_passed and _check_parms(extract_holog_params, 'ms_name', [str],default=None)
+
+    base_name = _remove_suffix(ms_name,'.ms')
+    parms_passed = parms_passed and _check_parms(extract_holog_params,'holog_name', [str],default=base_name+'.holog.zarr')
+  
+    
+    point_base_name = _remove_suffix(holog_name,'.holog.zarr')
+    parms_passed = parms_passed and _check_parms(extract_holog_params,'point_name', [str],default=point_base_name+'.point.zarr')
+  
+    #To Do: special function needed to check holog_obs_dict.
+    parm_check = isinstance(holog_obs_dict,dict)
+    parms_passed = parms_passed and parm_check
+    if not parm_check:
+        logger.error('Parameter holog_obs_dict must be of type '+ str(dict))
+        
+    parms_passed = parms_passed and _check_parms(extract_holog_params,'data_col', [str],default='DATA')
+
+    parms_passed = parms_passed and _check_parms(extract_holog_params, 'parallel', [bool],default=False)
+
+    parms_passed = parms_passed and _check_parms(extract_holog_params, 'overwrite', [bool],default=False)
+
+    if not parms_passed:
+        logger.error("extract_holog parameter checking failed.")
+        raise Exception("extract_holog parameter checking failed.")
+    
+    
+    return extract_holog_params
