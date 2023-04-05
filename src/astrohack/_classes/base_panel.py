@@ -2,8 +2,8 @@ from scipy import optimize as opt
 
 from astrohack._utils._algorithms import _gauss_elimination_numpy, _least_squares_fit
 from astrohack._utils._constants import *
-from astrohack._utils._system_message import warning, error
 from astrohack._utils._conversion import _convert_unit
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 panelkinds = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
               "rotated_paraboloid", "full_paraboloid_lst_sq"]
@@ -83,10 +83,11 @@ class BasePanel:
         """
         Does the fitting method associations according to the kind chosen by the user
         """
+        logger = _get_astrohack_logger()
         try:
             ikind = panelkinds.index(self.kind)
         except ValueError:
-            error("Unknown panel kind: "+self.kind)
+            logger.error("Unknown panel kind: "+self.kind)
             raise ValueError('Panel kind not in list')
         if ikind > icorrob:
             self._warn_experimental_method()
@@ -114,7 +115,8 @@ class BasePanel:
         if warned:
             return
         else:
-            warning("Experimental kind: "+self.kind)
+            logger = _get_astrohack_logger()
+            logger.warning("Experimental kind: "+self.kind)
             set_warned(True)
 
     def _associate_scipy(self, fitting_function, NPAR):
@@ -192,15 +194,16 @@ class BasePanel:
         """
         Wrapping method around fitting to allow for a fallback to mean fitting in the case of an impossible fit
         """
+        logger = _get_astrohack_logger()
         # fallback behaviour for impossible fits
         if len(self.samples) < self.NPAR:
-            warning("Impossible fit, falling back to mean")
+            logger.warning("Impossible fit, falling back to mean")
             self._fallback_solve()
         else:
             try:
                 self._solve_sub()
             except np.linalg.LinAlgError:
-                warning("Fit diverged, falling back to mean")
+                logger.warning("Fit diverged, falling back to mean")
                 self._fallback_solve()
         return
 
@@ -294,6 +297,7 @@ class BasePanel:
         Args:
             verbose: Increase verbosity in the fitting process
         """
+        logger = _get_astrohack_logger()
         devia = np.ndarray([len(self.samples)])
         coords = np.ndarray([2, len(self.samples)])
         for i in range(len(self.samples)):
@@ -319,13 +323,13 @@ class BasePanel:
                                        maxfev=maxfev)
             except RuntimeError:
                 if verbose:
-                    print("Increasing number of iterations")
+                    logger.info("Increasing number of iterations")
                 continue
             else:
                 self.par = result[0]
                 self.solved = True
                 if verbose:
-                    print("Converged with less than {0:d} iterations".format(maxfev))
+                    logger.info("Converged with less than {0:d} iterations".format(maxfev))
                 break
 
     def _xyaxes_paraboloid(self, coords, ucurv, vcurv, zoff):
