@@ -1,5 +1,4 @@
-import numpy as np
-from astrohack._utils._system_message import error
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._constants import *
 
 def _convert_ant_name_to_id(ant_list, ant_names):
@@ -43,7 +42,8 @@ def _convert_unit(unitin, unitout, kind):
         factorlist = fact_dict[kind]
         
     except KeyError:
-        error("Unrecognized unit kind: " + kind)
+        logger = _get_astrohack_logger()
+        logger.error("Unrecognized unit kind: " + kind)
         raise KeyError('Unrecogized unit kind')
 
     inidx = _test_unit(unitin, unitlist)
@@ -66,7 +66,8 @@ def _test_unit(unit, unitlist):
     try:
         idx = unitlist.index(unit)
     except ValueError:
-        error("Unrecognized unit: " + unit)
+        logger = _get_astrohack_logger()
+        logger.error("Unrecognized unit: " + unit)
         raise ValueError('Unit not in list')
 
     return idx
