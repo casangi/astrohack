@@ -1,6 +1,4 @@
-import numpy as np
 import xarray as xr
-
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astrohack._classes.base_panel import panelkinds, irigid
@@ -66,8 +64,8 @@ class AntennaSurface:
         """
         # Origin dependant Reading
         if inputxds.attrs['AIPS']:
-            self.amplitude = inputxds["AMPLITUDE"].values
-            self.deviation = inputxds["DEVIATION"].values
+            self.amplitude = np.flipud(inputxds["AMPLITUDE"].values)
+            self.deviation = np.flipud(inputxds["DEVIATION"].values)
             self.npoint = inputxds.attrs['npoint']
             self.wavelength = inputxds.attrs['wavelength']
             self.amp_unit = inputxds.attrs['amp_unit']
@@ -223,6 +221,14 @@ class AntennaSurface:
         self.mask = np.where(self.deviation != self.deviation, False, self.mask)
 
     def _nan_out_of_bounds_ringed(self, data):
+        """
+        Replace by NaNs all data that is beyond the edges of the antenna surface
+        Args:
+            data: The array to be transformed
+
+        Returns:
+            Transformed array with nans outside the antenna valid limits
+        """
         ouradius = np.where(self.rad > self.telescope.diam/2., np.nan, data)
         inradius = np.where(self.rad < self.telescope.inlim, np.nan, ouradius)
         return inradius
@@ -409,8 +415,7 @@ class AntennaSurface:
             )
             title = "Panel assignments"
             paneldist = np.where(self.panel_distribution >= 0, self.panel_distribution, np.nan)
-            #self._plot_surface(paneldist, title, fig, ax[2], 0, np.max(self.panel_distribution), unit='Panel #')
-            self._plot_surface(self.phi, title, fig, ax[2], 0, twopi, unit='Radians')
+            self._plot_surface(paneldist, title, fig, ax[2], 0, np.max(self.panel_distribution), unit='Panel #')
             fig.tight_layout()
         else:
             if plotphase:

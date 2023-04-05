@@ -1,38 +1,19 @@
-import dask
 import os
 import json
 import zarr
 import copy
-import numba
-import numbers
-
 import numpy as np
-
 import xarray as xr
-import dask.array as da
-
 import astropy
-import astropy.units as u
-import astropy.coordinates as coord
-
 from astropy.io import fits
-
 from scipy import spatial
-
 from numba import njit
 from numba.core import types
 from numba.typed import Dict
 
-from datetime import datetime
-
 from casacore import tables as ctables
-
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
-
 from astrohack._utils._conversion import convert_dict_from_numba
-
-from astrohack._utils._algorithms import _average_repeated_pointings
-
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -47,8 +28,7 @@ def check_if_file_exists(file):
             )
         raise FileNotFoundError
 
-        
-        
+
 def check_if_file_will_be_overwritten(file,overwrite):
     logger = _get_astrohack_logger()
     if (os.path.exists(file) is True) and (overwrite is False):
@@ -62,8 +42,6 @@ def check_if_file_will_be_overwritten(file,overwrite):
         logger.warning(
             file + " will be overwritten."
         )
-
-
 
 
 def _load_panel_file(file=None, panel_dict=None):
@@ -131,7 +109,6 @@ def _load_image_file(file=None, image_dict=None):
         return ant_data_dict
 
 
-
 def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None, holog_dict=None):
     """Loads holog file from disk
 
@@ -187,6 +164,7 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
         
 
     return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id)
+
 
 def _read_fits(filename):
     """
