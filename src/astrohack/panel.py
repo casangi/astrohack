@@ -120,6 +120,8 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, unit='mm', 
 
         if count == 0:
             logger.warning("No data to process")
+        else:
+            logger.info("Panel finished processing")
 
 
 def _panel_chunk(panel_chunk_params):
