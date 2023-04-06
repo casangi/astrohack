@@ -13,4 +13,4 @@ The index.
 
    introduction
    api
-   tutorial
+   tutorial_vla
