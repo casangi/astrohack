@@ -121,7 +121,7 @@ class TestBasePanel:
         nside = 32
         xyparapanel = BasePanel(panelkinds[ixypara], screws, 'test')
         assert xyparapanel._solve_sub == xyparapanel._solve_scipy, 'Incorrect overloading of scipy solving method'
-        assert xyparapanel.corr_point == xyparapanel._corr_point_scipy, 'Incorrect overloading of rigid point ' \
+        assert xyparapanel.corr_point == xyparapanel._corr_point_scipy, 'Incorrect overloading of scipy point ' \
                                                                         'correction method'
         assert xyparapanel._fitting_function == xyparapanel._xyaxes_paraboloid, 'Incorrect overloading of XY '\
                                                                                 'paraboloid function'
@@ -154,7 +154,7 @@ class TestBasePanel:
         nside = 32
         rotparapanel = BasePanel(panelkinds[irotpara], screws, 'test')
         assert rotparapanel._solve_sub == rotparapanel._solve_scipy, 'Incorrect overloading of scipy solving method'
-        assert rotparapanel.corr_point == rotparapanel._corr_point_scipy, 'Incorrect overloading of rigid point ' \
+        assert rotparapanel.corr_point == rotparapanel._corr_point_scipy, 'Incorrect overloading of scipy point ' \
                                                                           'correction method'
         assert rotparapanel._fitting_function == rotparapanel._rotated_paraboloid, 'Incorrect overloading of paraboloid' \
                                                                                    ' function'
@@ -181,20 +181,20 @@ class TestBasePanel:
 
     def test_corotatedparaboloid_scipy_kind(self):
         """
-        Tests the whole usage of a panel of the corotatedparaboloid kind
+        Tests the whole usage of a panel of the corotatedparaboloid kind solved with scipy
         """
         expectedpar = [75, 5, -2.0]
         screws = np.zeros([4, 2])
         nside = 32
         corotparapanel = BasePanel(panelkinds[icorscp], screws, 'test')
-        assert corotparapanel._solve_sub == corotparapanel._solve_scipy, 'Incorrect overloading of rigid solving method'
-        assert corotparapanel.corr_point == corotparapanel._corr_point_scipy, 'Incorrect overloading of rigid point ' \
+        assert corotparapanel._solve_sub == corotparapanel._solve_scipy, 'Incorrect overloading of scipy solving method'
+        assert corotparapanel.corr_point == corotparapanel._corr_point_scipy, 'Incorrect overloading of scipy point ' \
                                                                               'correction method'
         assert corotparapanel._fitting_function == corotparapanel._corotated_paraboloid, 'Incorrect overloading of ' \
                                                                                          'paraboloid function'
         for ix in range(nside):
             for iy in range(nside):
-                value = expectedpar[0]*ix**2 + expectedpar[1]*iy**2 + expectedpar[2]
+                value = expectedpar[0] * ix ** 2 + expectedpar[1] * iy ** 2 + expectedpar[2]
                 corotparapanel.add_sample([ix, iy, ix, iy, value])
         corotparapanel.solve()
         for ipar in range(3):
@@ -203,10 +203,116 @@ class TestBasePanel:
         corotparapanel.get_corrections()
         assert len(corotparapanel.corr) == nside ** 2, 'Number of corrected points do not match number of samples'
         onecorr = corotparapanel.corr_point(0, 0)
-        assert abs(onecorr - expectedpar[2]) / expectedpar[2] < self.tolerance, 'Correction for a point did not match '\
+        assert abs(onecorr - expectedpar[2]) / expectedpar[2] < self.tolerance, 'Correction for a point did not match ' \
                                                                                 'the expected value'
         mmscrews = corotparapanel.export_screws_float()
         fac = _convert_unit('m', 'mm', 'length')
         for screw in mmscrews:
-            assert abs(screw - fac*expectedpar[2]) < self.tolerance, 'mm screw adjustments not within 0.1% ' \
-                                                                        'tolerance of the expected value'
+            assert abs(screw - fac * expectedpar[2]) < self.tolerance, 'mm screw adjustments not within 0.1% ' \
+                                                                       'tolerance of the expected value'
+
+    def test_corotatedparaboloid_lst_kind(self):
+        """
+        Tests the whole usage of a panel of the corotatedparaboloid kind
+        """
+        expectedpar = [75, 5, -2.0]
+        screws = np.zeros([4, 2])
+        nside = 32
+        corotparapanel = BasePanel(panelkinds[icorlst], screws, 'test')
+        assert corotparapanel._solve_sub == corotparapanel._solve_corotated_lst_sq, 'Incorrect overloading of ' \
+                                                                                    'corotated least squares solving ' \
+                                                                                    'method'
+        assert corotparapanel.corr_point == corotparapanel._corr_point_corotated_lst_sq, 'Incorrect overloading of ' \
+                                                                                         'corotated least squares ' \
+                                                                                         'point correction method'
+        for ix in range(nside):
+            for iy in range(nside):
+                value = expectedpar[0] * ix ** 2 + expectedpar[1] * iy ** 2 + expectedpar[2]
+                corotparapanel.add_sample([ix, iy, ix, iy, value])
+        corotparapanel.solve()
+        for ipar in range(3):
+            feedback = '{0:d}-eth parameter does not match its expected value'.format(ipar)
+            assert abs(corotparapanel.par[ipar] - expectedpar[ipar]) / abs(expectedpar[ipar]) < self.tolerance, feedback
+        corotparapanel.get_corrections()
+        assert len(corotparapanel.corr) == nside ** 2, 'Number of corrected points do not match number of samples'
+        onecorr = corotparapanel.corr_point(0, 0)
+        assert abs(onecorr - expectedpar[2]) / expectedpar[2] < self.tolerance, 'Correction for a point did not match ' \
+                                                                                'the expected value'
+        mmscrews = corotparapanel.export_screws_float()
+        fac = _convert_unit('m', 'mm', 'length')
+        for screw in mmscrews:
+            assert abs(screw - fac * expectedpar[2]) < self.tolerance, 'mm screw adjustments not within 0.1% ' \
+                                                                       'tolerance of the expected value'
+
+    def test_corotatedparaboloid_robust_kind(self):
+        """
+        Tests the whole usage of a panel of the corotatedparaboloid kind
+        """
+        expectedpar = [75, 5, -2.0]
+        screws = np.zeros([4, 2])
+        nside = 32
+        corotparapanel = BasePanel(panelkinds[icorrob], screws, 'test')
+        assert corotparapanel._solve_sub == corotparapanel._solve_robust, 'Incorrect overloading of robust solving ' \
+                                                                          'method'
+        assert corotparapanel.corr_point == corotparapanel._corr_point_corotated_lst_sq, 'Incorrect overloading of ' \
+                                                                                         'corotated least squares ' \
+                                                                                         'correction method'
+        assert corotparapanel._fitting_function == corotparapanel._corotated_paraboloid, 'Incorrect overloading of ' \
+                                                                                         'paraboloid function'
+        for ix in range(nside):
+            for iy in range(nside):
+                value = expectedpar[0] * ix ** 2 + expectedpar[1] * iy ** 2 + expectedpar[2]
+                corotparapanel.add_sample([ix, iy, ix, iy, value])
+        corotparapanel.solve()
+        for ipar in range(3):
+            feedback = '{0:d}-eth parameter does not match its expected value'.format(ipar)
+            assert abs(corotparapanel.par[ipar] - expectedpar[ipar]) / abs(expectedpar[ipar]) < self.tolerance, feedback
+        corotparapanel.get_corrections()
+        assert len(corotparapanel.corr) == nside ** 2, 'Number of corrected points do not match number of samples'
+        onecorr = corotparapanel.corr_point(0, 0)
+        assert abs(onecorr - expectedpar[2]) / expectedpar[2] < self.tolerance, 'Correction for a point did not match ' \
+                                                                                'the expected value'
+        mmscrews = corotparapanel.export_screws_float()
+        fac = _convert_unit('m', 'mm', 'length')
+        for screw in mmscrews:
+            assert abs(screw - fac * expectedpar[2]) < self.tolerance, 'mm screw adjustments not within 0.1% ' \
+                                                                       'tolerance of the expected value'
+
+    def test_fullparaboloid_lst_kind(self):
+        """
+        Tests the whole usage of a panel of the corotatedparaboloid kind
+        """
+        expectedpar = [75, 5, -2.0, 3, -6, 8, 16, -3.5, 8]
+        expectedscrew = 8000
+        screws = np.zeros([4, 2])
+        nside = 32
+        corotparapanel = BasePanel(panelkinds[ifulllst], screws, 'test')
+        assert corotparapanel._solve_sub == corotparapanel._solve_least_squares_paraboloid, 'Incorrect overloading of ' \
+                                                                                            'full least squares ' \
+                                                                                            'solving method'
+        assert corotparapanel.corr_point == corotparapanel._corr_point_least_squares_paraboloid, 'Incorrect ' \
+                                                                                                 'overloading of full' \
+                                                                                                 ' least squares ' \
+                                                                                                 'point correction ' \
+                                                                                                 'method'
+        for ix in range(nside):
+            for iy in range(nside):          
+                xsq = ix**2
+                ysq = iy**2
+                value = expectedpar[0]*xsq*ysq + expectedpar[1]*xsq*iy + expectedpar[2]*ysq*ix
+                value += expectedpar[3]*xsq + expectedpar[4]*ysq + expectedpar[5]*ix*iy
+                value += expectedpar[6]*ix + expectedpar[7]*iy + expectedpar[8]
+                corotparapanel.add_sample([ix, iy, ix, iy, value])
+        corotparapanel.solve()
+        for ipar in range(len(expectedpar)):
+            feedback = '{0:d}-eth parameter does not match its expected value'.format(ipar)
+            assert abs(corotparapanel.par[ipar] - expectedpar[ipar]) / abs(expectedpar[ipar]) < self.tolerance, feedback
+        corotparapanel.get_corrections()
+        assert len(corotparapanel.corr) == nside ** 2, 'Number of corrected points do not match number of samples'
+        onecorr = corotparapanel.corr_point(0, 0)
+        assert abs(onecorr - expectedpar[2]) / expectedpar[2] < self.tolerance, 'Correction for a point did not match ' \
+                                                                                'the expected value'
+        mmscrews = corotparapanel.export_screws_float()
+        for screw in mmscrews:
+            assert abs(screw - expectedscrew) < 1e3*self.tolerance, 'mm screw adjustments not within 0.1% ' \
+                                                                          'tolerance of the expected value'
