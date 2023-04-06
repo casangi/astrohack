@@ -1,4 +1,5 @@
 import scipy
+import scipy.signal as scisig
 import numba
 
 import numpy as np
@@ -134,7 +135,7 @@ def _find_peak_beam_value(data, height=0.5, scaling=0.5):
     array = masked_data.flatten()
     cutoff = np.abs(array).max() * height
 
-    index, _ = scipy.signal.find_peaks(np.abs(array), height=cutoff)
+    index, _ = scisig.find_peaks(np.abs(array), height=cutoff)
     x, y = np.unravel_index(index, masked_data.shape)
 
     center = (masked_data.shape[0] // 2, masked_data.shape[1] // 2)
