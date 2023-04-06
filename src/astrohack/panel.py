@@ -198,16 +198,19 @@ def _create_phase_model(npix, parameters, wavelength, telescope, cellxy):
 
 def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, overwrite=False):
     """
-    Convert AIPS HOLOG amplitude and deviation FITS files to a proper .zarr file
+    Package AIPS HOLOG products in a .image.zarr file compatible with astrohack.panel.panel
+
+    This function reads amplitude and deviation FITS files produced by AIPS's HOLOG task and transfers their data onto a
+    .image.zarr file that can be read by panel.
+    Most of the meta data can be inferred from the FITS headers, but it remains necessary to specify the telescope name
+    to be included on the .image.zarr file
+
     Args:
         amp_image: Full path to amplitude image
         dev_image: Full path to deviation image
         telescope_name: Telescope name to be added to the .zarr file
         holog_name: Name of the output .zarr file
         overwrite: Overwrite previous file of same name?
-
-    Returns:
-
     """
     check_if_file_exists(amp_image)
     check_if_file_exists(dev_image)
@@ -223,7 +226,7 @@ def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, ov
 
 
 def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, unit, panel_margins, save_mask, save_deviations,
-                      save_phase, parallel, sel_ddi, overwrite):
+                       save_phase, parallel, sel_ddi, overwrite):
     """
     Tests inputs to panel function
     Args:
