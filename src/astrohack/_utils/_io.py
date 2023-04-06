@@ -826,7 +826,7 @@ def _extract_holog_chunk(extract_holog_params):
     logger = _get_astrohack_logger()
 
     ms_name = extract_holog_params["ms_name"]
-    pnt_name = extract_holog_params["pnt_name"]
+    pnt_name = extract_holog_params["point_name"]
     data_col = extract_holog_params["data_col"]
     ddi = extract_holog_params["ddi"]
     scans = extract_holog_params["scans"]

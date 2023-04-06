@@ -25,7 +25,7 @@ from astrohack._utils._io import  check_if_file_will_be_overwritten,check_if_fil
 
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from  astrohack._utils._parm_utils._check_parms import _check_parm
+from  astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._utils import _remove_suffix
 
 
@@ -197,8 +197,6 @@ def extract_holog(
     
     telescope_name = obs_ctb.getcol("TELESCOPE_NAME")[0]
 
-    extract_holog_params = {}
-
     ## DDI selection
     if holog_obs_dict['ddi'] is None:
         logger.error("No DDIs in holog_obs_dict.")
@@ -210,20 +208,20 @@ def extract_holog(
         spw_setup_id = ddi_spw[ddi]
         pol_setup_id = ddpol_indexol[ddi]
         
-        extract_holog_params["ddi"] = ddi
-        extract_holog_params["chan_setup"] = {}
-        extract_holog_params["pol_setup"] = {}
+        extract_holog_parms["ddi"] = ddi
+        extract_holog_parms["chan_setup"] = {}
+        extract_holog_parms["pol_setup"] = {}
         
-        extract_holog_params["chan_setup"]["chan_freq"] = spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0, :]
-        extract_holog_params["chan_setup"]["chan_width"] = spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[0, :]
-        extract_holog_params["chan_setup"]["eff_bw"] = spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0, :]
-        extract_holog_params["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[0]
-        extract_holog_params["chan_setup"]["total_bw"] = spw_ctb.getcol("TOTAL_BANDWIDTH", startrow=spw_setup_id, nrow=1)[0]
+        extract_holog_parms["chan_setup"]["chan_freq"] = spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0, :]
+        extract_holog_parms["chan_setup"]["chan_width"] = spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[0, :]
+        extract_holog_parms["chan_setup"]["eff_bw"] = spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0, :]
+        extract_holog_parms["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[0]
+        extract_holog_parms["chan_setup"]["total_bw"] = spw_ctb.getcol("TOTAL_BANDWIDTH", startrow=spw_setup_id, nrow=1)[0]
 
-        extract_holog_params["pol_setup"]["pol"] = pol_str[pol_ctb.getcol("CORR_TYPE", startrow=pol_setup_id, nrow=1)[0, :]]
+        extract_holog_parms["pol_setup"]["pol"] = pol_str[pol_ctb.getcol("CORR_TYPE", startrow=pol_setup_id, nrow=1)[0, :]]
                 
         
-        extract_holog_params["telescope_name"] = obs_ctb.getcol("TELESCOPE_NAME")[0]
+        extract_holog_parms["telescope_name"] = obs_ctb.getcol("TELESCOPE_NAME")[0]
         
 
         for holog_scan_id in holog_obs_dict.keys(): #loop over all beam_scan_ids, a beam_scan_id can conist out of more than one scan in an ms (this is the case for the VLA pointed mosiacs).
@@ -240,21 +238,21 @@ def extract_holog(
                     ref_ant_per_map_ant_list.append(ref_ant_ids)
                     map_ant_list.append(map_ant_id)
                     
-                extract_holog_params["ref_ant_per_map_ant_tuple"] = tuple(ref_ant_per_map_ant_list)
-                extract_holog_params["map_ant_tuple"] = tuple(map_ant_list)
-                extract_holog_params["scans"] = scans
-                extract_holog_params["sel_state_ids"] = state_ids
-                extract_holog_params["holog_scan_id"] = holog_scan_id
-                extract_holog_params["ant_names"] = ant_names
+                extract_holog_parms["ref_ant_per_map_ant_tuple"] = tuple(ref_ant_per_map_ant_list)
+                extract_holog_parms["map_ant_tuple"] = tuple(map_ant_list)
+                extract_holog_parms["scans"] = scans
+                extract_holog_parms["sel_state_ids"] = state_ids
+                extract_holog_parms["holog_scan_id"] = holog_scan_id
+                extract_holog_parms["ant_names"] = ant_names
                 
                 if parallel:
                     delayed_list.append(
                         dask.delayed(_extract_holog_chunk)(
-                            dask.delayed(extract_holog_params)
+                            dask.delayed(extract_holog_parms)
                         )
                     )
                 else:
-                    _extract_holog_chunk(extract_holog_params)
+                    _extract_holog_chunk(extract_holog_parms)
 
     spw_ctb.close()
     pol_ctb.close()
@@ -262,14 +260,14 @@ def extract_holog(
     if parallel:
         dask.compute(delayed_list)    
 
-    extract_holog_params["holog_obs_dict"] = {}
+    extract_holog_parms["holog_obs_dict"] = {}
 
     for id in ant_id:
-        extract_holog_params["holog_obs_dict"][str(id)] = ant_names[id]
+        extract_holog_parms["holog_obs_dict"][str(id)] = ant_names[id]
 
     holog_dict = _load_holog_file(holog_file=holog_name, dask_load=True, load_pnt_dict=False)
 
-    _create_holog_meta_data(holog_file=holog_name, holog_dict=holog_dict, holog_params=extract_holog_params)
+    _create_holog_meta_data(holog_file=holog_name, holog_dict=holog_dict, holog_params=extract_holog_parms)
 
 
 def _check_extract_holog_parms(    ms_name,
@@ -280,26 +278,26 @@ def _check_extract_holog_parms(    ms_name,
     parallel,
     overwrite):
     
-    extract_holog_params = {}
-    extract_holog_params["ms_name"] = ms_name
-    extract_holog_params["holog_name"] = holog_name
-    extract_holog_params["point_name"] = point_name
-    extract_holog_params["parallel"] = parallel
-    extract_holog_params["overwrite"] = overwrite
+    extract_holog_parms = {}
+    extract_holog_parms["ms_name"] = ms_name
+    extract_holog_parms["holog_name"] = holog_name
+    extract_holog_parms["point_name"] = point_name
+    extract_holog_parms["parallel"] = parallel
+    extract_holog_parms["overwrite"] = overwrite
 
     
     #### Parameter Checking ####
     logger = _get_astrohack_logger()
     parms_passed = True
     
-    parms_passed = parms_passed and _check_parms(extract_holog_params, 'ms_name', [str],default=None)
+    parms_passed = parms_passed and _check_parms(extract_holog_parms, 'ms_name', [str],default=None)
 
     base_name = _remove_suffix(ms_name,'.ms')
-    parms_passed = parms_passed and _check_parms(extract_holog_params,'holog_name', [str],default=base_name+'.holog.zarr')
+    parms_passed = parms_passed and _check_parms(extract_holog_parms,'holog_name', [str],default=base_name+'.holog.zarr')
   
     
     point_base_name = _remove_suffix(holog_name,'.holog.zarr')
-    parms_passed = parms_passed and _check_parms(extract_holog_params,'point_name', [str],default=point_base_name+'.point.zarr')
+    parms_passed = parms_passed and _check_parms(extract_holog_parms,'point_name', [str],default=point_base_name+'.point.zarr')
   
     #To Do: special function needed to check holog_obs_dict.
     parm_check = isinstance(holog_obs_dict,dict)
@@ -307,15 +305,15 @@ def _check_extract_holog_parms(    ms_name,
     if not parm_check:
         logger.error('Parameter holog_obs_dict must be of type '+ str(dict))
         
-    parms_passed = parms_passed and _check_parms(extract_holog_params,'data_col', [str],default='DATA')
+    parms_passed = parms_passed and _check_parms(extract_holog_parms,'data_col', [str],default='DATA')
 
-    parms_passed = parms_passed and _check_parms(extract_holog_params, 'parallel', [bool],default=False)
+    parms_passed = parms_passed and _check_parms(extract_holog_parms, 'parallel', [bool],default=False)
 
-    parms_passed = parms_passed and _check_parms(extract_holog_params, 'overwrite', [bool],default=False)
+    parms_passed = parms_passed and _check_parms(extract_holog_parms, 'overwrite', [bool],default=False)
 
     if not parms_passed:
         logger.error("extract_holog parameter checking failed.")
         raise Exception("extract_holog parameter checking failed.")
     
     
-    return extract_holog_params
+    return extract_holog_parms
