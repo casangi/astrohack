@@ -88,12 +88,12 @@ def extract_holog(
     check_if_file_will_be_overwritten(extract_holog_parms['holog_name'],extract_holog_parms['overwrite'])
     check_if_file_will_be_overwritten(extract_holog_parms['point_name'],extract_holog_parms['overwrite'])
 
-    try:
-        pnt_dict = _load_pnt_dict(extract_holog_parms['point_name'])
-    except:
-        pnt_dict = _make_ant_pnt_dict(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
+#    try:
+#        pnt_dict = _load_pnt_dict(extract_holog_parms['point_name'])
+#    except:
+#        pnt_dict = _make_ant_pnt_dict(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
     
-    #pnt_dict = _make_ant_pnt_dict(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
+    pnt_dict = _make_ant_pnt_dict(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
 
     ''' VLA datasets causeing issues.
     if holog_obs_dict is None:
