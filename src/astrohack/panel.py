@@ -17,31 +17,74 @@ from astrohack._utils._utils import _remove_suffix
 
 from astrohack._utils._dio_classes import AstrohackPanelFile
 
-def panel(image_name, panel_name=None, cutoff=0.2, panel_kind=None, unit='mm', panel_margins=0.2, save_mask=False,
+def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, unit='mm', panel_margins=0.2, save_mask=False,
           save_deviations=True, save_phase=False, parallel=False, sel_ddi=None, overwrite=False):
     """
-    Process holographies to produce screw adjustments for panels, several data products are also produced in the process
+    Analyse holography images to derive panel adjustments
+
+    Results are stored in a .panel.zarr file
+
+    Each holography in the input holog image file is processed in the following steps:
+        1- Phase image is converted to a physical surface deviation image (deviation image)
+        2- A mask of valid signal is created by using the relative cutoff on the amplitude image
+        3- From the telescope panel layout information an image describing the panel assignment of each pixel is created
+        4- The image created in step 3 and the mask are used to create a list of pixels in each panel
+        5- Pixels in each panel are divided into two groups: margin pixels and internal pixels
+        6- For each panel:
+            6a- Internal pixels are fitted to a surface model
+            6b- The fitted surface model is used to derive corrections for all pixels in the panel, internal and margins
+            6c- The fitted surface model is used to derive corrections for the positions of the screws
+        7- A corrected deviation image is produced
+        8- RMS is computed for both the corrected and uncorrected deviation images
+        9- All images produced are stored in the output .panel.zarr file
+       10- Optional plots can be produced (Plot production may impact performance):
+           10a- A plot with the mask derived from the amplitude image, the amplitude image and the map of the panels
+                (To activate this plot set :save_mask: to True)
+           10b- A plot with the original deviation image, the corrections applied to the deviation image and the
+                corrected deviation image (To activate this plot set :save_deviations: to True)
+           10c- A plot with the original phase image, the corrections applied to the phase image and the corrected phase
+                image (To activate this plot set :save_phase: to True)
+        11- An ASCII file containing the adjustments to be applied to the panel screws is saved inside the .panel.zarr
+            file
+
+    Available panel surface models are:
+        AIPS fitting models:
+            mean: The panel is corrected by the mean of its samples
+            rigid: The panel samples are fitted to a rigid surface (DEFAULT model)
+        Corotated Paraboloids (the two bending axes of the paraboloid are parallel and perpendicular to a radius of the
+        antenna crossing the middle point of the panel):
+            corotated_scipy: Paraboloid is fitted using scipy.optimize, robust but slow
+            corotated_lst_sq: Paraboloid is fitted using the linear algebra least squares method, fast but unreliable
+            corotated_robust: Tries corotated_lst_sq, if it diverges falls back to corotated_scipy, fast and robust
+        Experimental fitting models:
+            xy_paraboloid: fitted using scipy.optimize, bending axes are parallel to the x and y axes
+            rotated_paraboloid: fitted using scipy.optimize, bending axes can be rotated by any arbitrary angle
+            full_paraboloid_lst_sq: Full 9 parameter paraboloid fitted using least_squares method, tends to heavily
+                                    overfit surface irregularities
+
     Args:
-        image_name: Input holography data, can be from astrohack.holog, but also preprocessed AIPS data
-        panel_name: Name for the output directory structure containing the products
-        
-        cutoff: Cut off in amplitude for the physical deviation fitting, None means 20%
-        panel_kind: Type of fitting function used to fit panel surfaces, defaults to corotated_paraboloid for ringed
-                    telescopes
-        unit: Unit for panel adjustments
-        save_mask: Save plot of the mask derived from amplitude cutoff to a png file
-        save_deviations: Save plot of physical deviations to a png file
-        save_phase: Save plot of phases to a png file
-        parallel: Run chunks of processing in parallel
-        panel_margins: Margin to be ignored at edges of panels when fitting
+        image_name: Input holography data, Accepted data formats are the output from astrohack.holog.holog and AIPS
+                    holography data prepackaged using astrohack.panel.aips_holog_to_astrohack
+        panel_name: Name for the output .panel.zarr file
+        cutoff: Relative cut off in amplitude to define the fitting mask (step 2), None means 0.2
+        panel_model: model of surface fitting function used to fit panel surfaces, None means "rigid" possible models are
+                    listed above
+        unit: Unit to be used in physical deviation plots and screw adjustments, several length units are available,
+              recommended units are: 'm' (meters); 'mm' (millimeters); 'mils' (milliinches) OR 'um' (microns)
+        save_mask: Save plot described in step 10a
+        save_deviations: Save plot described in step 10b
+        save_phase: Save plot described in step 10c
+        parallel: Process holographies for available antennas in parallel
+        panel_margins: Relative margin from the edge of panel used to decide which points are margin points or internal
+                       points of each panel
         sel_ddi: Which DDIs are to be processed by panel, None means all of them
-        overwrite: Overwrite previous hack_file of same name?
+        overwrite: Overwrite previous .panel.zarr file of same name?
     """
     
     logger = _get_astrohack_logger()
     
-    panel_params = _check_panel_parms(image_name, panel_name, cutoff, panel_kind, unit, panel_margins, save_mask,
-                                     save_deviations, save_phase, parallel, sel_ddi, overwrite)
+    panel_params = _check_panel_parms(image_name, panel_name, cutoff, panel_model, unit, panel_margins, save_mask,
+                                      save_deviations, save_phase, parallel, sel_ddi, overwrite)
           
     check_if_file_exists(panel_params['image_name'])
     check_if_file_will_be_overwritten(panel_params['panel_name'], panel_params['overwrite'])
@@ -78,10 +121,13 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_kind=None, unit='mm', p
 
         if count == 0:
             logger.warning("No data to process")
+        else:
+            logger.info("Panel finished processing")
             
-        panel_mds = AstrohackPanelFile(panel_chunk_params['panel_name'])
-        panel_mds.open()
-        return panel_mds
+            panel_mds = AstrohackPanelFile(panel_chunk_params['panel_name'])
+            panel_mds.open()
+            return panel_mds
+
 
 
 def _panel_chunk(panel_chunk_params):
@@ -137,7 +183,7 @@ def _panel_chunk(panel_chunk_params):
         surface.plot_surface(filename=base_name + "phase.png", plotphase=True)
 
 
-def create_phase_model(npix, parameters, wavelength, telescope, cellxy):
+def _create_phase_model(npix, parameters, wavelength, telescope, cellxy):
     """
     Create a phase model with npix by npix size according to the given parameters
     Args:
@@ -160,16 +206,19 @@ def create_phase_model(npix, parameters, wavelength, telescope, cellxy):
 
 def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, overwrite=False):
     """
-    Convert AIPS HOLOG amplitude and deviation FITS files to a proper .zarr file
+    Package AIPS HOLOG products in a .image.zarr file compatible with astrohack.panel.panel
+
+    This function reads amplitude and deviation FITS files produced by AIPS's HOLOG task and transfers their data onto a
+    .image.zarr file that can be read by panel.
+    Most of the meta data can be inferred from the FITS headers, but it remains necessary to specify the telescope name
+    to be included on the .image.zarr file
+
     Args:
         amp_image: Full path to amplitude image
         dev_image: Full path to deviation image
         telescope_name: Telescope name to be added to the .zarr file
         holog_name: Name of the output .zarr file
         overwrite: Overwrite previous file of same name?
-
-    Returns:
-
     """
     check_if_file_exists(amp_image)
     check_if_file_exists(dev_image)
@@ -185,7 +234,7 @@ def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, ov
 
 
 def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, unit, panel_margins, save_mask, save_deviations,
-                      save_phase, parallel, sel_ddi, overwrite):
+                       save_phase, parallel, sel_ddi, overwrite):
     """
     Tests inputs to panel function
     Args:

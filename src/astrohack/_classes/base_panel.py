@@ -270,7 +270,7 @@ class BasePanel:
         data = np.array(self.samples)
         system = np.full((len(self.samples), self.NPAR), 1.0)
         xc, yc = self.center
-        system[:, 0] = ((data[:, 0] - xc) * np.cos(self.zeta) + (data[:, 1] - yc) * np.sin(self.zeta))**2  # U
+        system[:, 0] = ((data[:, 0] - xc) * np.cos(self.zeta) - (data[:, 1] - yc) * np.sin(self.zeta))**2  # U
         system[:, 1] = ((data[:, 0] - xc) * np.sin(self.zeta) + (data[:, 1] - yc) * np.cos(self.zeta))**2  # V
         vector = data[:, -1]
         self.par, _, _ = _least_squares_fit(system, vector)
@@ -287,7 +287,7 @@ class BasePanel:
         """
         # a*u**2 + b*v**2 + c
         xc, yc = self.center
-        usq = ((xcoor - xc) * np.cos(self.zeta) + (ycoor - yc) * np.sin(self.zeta))**2
+        usq = ((xcoor - xc) * np.cos(self.zeta) - (ycoor - yc) * np.sin(self.zeta))**2
         vsq = ((xcoor - xc) * np.sin(self.zeta) + (ycoor - yc) * np.cos(self.zeta))**2
         return self.par[0]*usq + self.par[1]*vsq + self.par[2]
 
@@ -367,7 +367,7 @@ class BasePanel:
         """
         x, y = coords
         xc, yc = self.center
-        u = (x - xc) * np.cos(theta) + (y - yc) * np.sin(theta)
+        u = (x - xc) * np.cos(theta) - (y - yc) * np.sin(theta)
         v = (x - xc) * np.sin(theta) + (y - yc) * np.cos(theta)
         return ucurv * u**2 + vcurv * v**2 + zoff
 
@@ -388,7 +388,7 @@ class BasePanel:
         """
         x, y = coords
         xc, yc = self.center
-        u = (x - xc) * np.cos(self.zeta) + (y - yc) * np.sin(self.zeta)
+        u = (x - xc) * np.cos(self.zeta) - (y - yc) * np.sin(self.zeta)
         v = (x - xc) * np.sin(self.zeta) + (y - yc) * np.cos(self.zeta)
         return ucurv * u**2 + vcurv * v**2 + zoff
 
