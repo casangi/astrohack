@@ -218,6 +218,8 @@ def _aips_holog_to_xds(ampname, devname):
     """
     amphead, ampdata = _read_fits(ampname)
     devhead, devdata = _read_fits(devname)
+    ampdata = np.flipud(ampdata)
+    devdata = np.flipud(devdata)
 
     if amphead["NAXIS1"] != devhead["NAXIS1"]:
         raise Exception(ampname+' and '+devname+' have different dimensions')
