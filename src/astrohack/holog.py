@@ -8,54 +8,111 @@ import numbers
 
 from astrohack._utils._holog import _holog_chunk
 
-from memory_profiler import profile
-
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from  astrohack._utils._parm_utils._check_parms import _check_parms
+from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._utils import _remove_suffix
    
-from astrohack._utils._io import  check_if_file_will_be_overwritten,check_if_file_exists
+from astrohack._utils._io import check_if_file_will_be_overwritten, check_if_file_exists
 
-#fp=open('holog.log','w+')
-#@profile(stream=fp)
+
 def holog(
     holog_name,
     grid_size,
     cell_size,
     image_name=None,
     padding_factor=50,
-    parallel=True,
     grid_interpolation_mode="nearest",
     chan_average=True,
     chan_tolerance_factor=0.005,
     reference_scaling_frequency=None,
-    scan_average = True,
-    ant_list = None,
-    to_stokes = True,
+    scan_average=True,
+    ant_list=None,
+    to_stokes=True,
     apply_mask=True,
     phase_fit=True,
-    overwrite=False):
-    """
-    Process holography data
+    overwrite=False,
+    parallel=True):
+    """ Process holography data.
 
-    Args:
-        holog_name (str): holog file name
-        parallel (bool, optional): Run in parallel with Dask or in serial. Defaults to True.
-        
-        phase_fit (bool or bool np.ndarray 5x1): if a boolean array is given each element controls one aspect of
+    :param holog_name: Name of holography .holog.zarr file to process.
+    :type holog_name: str
+
+    :param grid_size: Numpy array specifying the dimensions of the grid used in data gridding.
+    :type grid_size: numpy.ndarray, dtype int
+
+    :param cell_size: Numpy array defining the cell size of each grid bin.
+    :type cell_size: numpy.ndarray, dtype float
+
+    :param image_name: Defines the name of the output image name. If value is None, the name will be set to <base_name>.image.zarr, defaults to None
+    :type image_name: str, optional
+
+    :param padding_factor: Padding factor applied to beam grid before computing the fast-fourier transform. The default has been set for operation
+    on most systems. The user should be aware of memory constraints before increasing this parameter significatly., defaults to 50
+    :type padding_factor: int, optional
+
+    :param parallel: Run in parallel with Dask or in serial., defaults to True
+    :type parallel: bool, optional
+
+    :param grid_interpolation_mode: Method of interpolation used when gridding data. This is done using the `scipy.interpolate.griddata` method. For 
+    more information on the interpolation see https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html#scipy.interpolate.griddata, defaults to "nearest"
+    :type grid_interpolation_mode: str, optional
+
+    :param chan_average: Boolean dictating whether the channel average is computed and written to the output holog file., defaults to True
+    :type chan_average: bool, optional
+
+    :param chan_tolerance_factor: Tolerance used in channel averaging to determine the number of primary beam channels: 
+    n_pb_chan = int(np.floor((np.max(freq_chan) - np.min(freq_chan)) / np.max(freq_chan) * chan_tolerance_factor) + 0.5), defaults to 0.005
+    :type chan_tolerance_factor: float, optional
+
+    :param reference_scaling_frequency: When computing the channel average the lm frequency values are scaled by frequency. If the default None is used, the scaling is simply unity, 
+    however if `reference_scaling_frequency` is set then the scaling is done according to (average_frequency/reference_scaling_frequency)., defaults to None
+    :type reference_scaling_frequency: _type_, optional
+
+    :param scan_average: Boolean dicating whether averagin is done over scan., defaults to True
+    :type scan_average: bool, optional
+
+    :param ant_list: Optional list of sub-antennas to use when the user doesn't to do holography for all antennas, defaults to None
+    :type ant_list: list, optional
+
+    :param to_stokes: Dictates whether polarization is computed according to stokes values., defaults to True
+    :type to_stokes: bool, optional
+
+    :param apply_mask: If True applies a mask to the aperture setting values outside of the aperture to zero., defaults to True
+    :type apply_mask: bool, optional
+
+    :param phase_fit: If a boolean array is given each element controls one aspect of
         phase fitting: 0 -> pointing offset; 
                        1 -> focus xy offsets; 
                        2 -> focus z offset; 
                        3 -> subreflector tilt; (This one is off by default except for VLA and VLBA)
                        4 -> cassegrain offset
-         
-        cell_size: float np.ndarray 2x1
-        grid_size: int np.ndarray 2X1
+        defaults to True
+    :type phase_fit: bool, optional
+
+    :param overwrite: Overwrite existing files on disk, defaults to False
+    :type overwrite: bool, optional
     """
     
     logger = _get_astrohack_logger()
     
-    holog_params = _check_holog_parms(holog_name,grid_size,cell_size,image_name,padding_factor,parallel,grid_interpolation_mode,chan_average,chan_tolerance_factor,reference_scaling_frequency,scan_average,ant_list,to_stokes,apply_mask,phase_fit,overwrite)
+    holog_params = _check_holog_parms(
+        holog_name, 
+        grid_size,
+        cell_size, 
+        image_name, 
+        padding_factor, 
+        parallel, 
+        grid_interpolation_mode, 
+        chan_average, 
+        chan_tolerance_factor, 
+        reference_scaling_frequency, 
+        scan_average,
+        ant_list, 
+        to_stokes, 
+        apply_mask, 
+        phase_fit,
+        overwrite
+    )
     
     check_if_file_exists(holog_params['holog_file'])
     check_if_file_will_be_overwritten(holog_params['image_file'],holog_params['overwrite'])
@@ -68,7 +125,7 @@ def holog(
     
     with open(meta_data, "r") as meta_file:
         meta_data = json.load(meta_file)
-        
+        image_name=None,
 
     if  holog_params['ant_list'] == 'all':
         holog_params['ant_list'] = list(holog_json.keys())
