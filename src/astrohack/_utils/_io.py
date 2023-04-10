@@ -113,23 +113,14 @@ def _load_image_file(file=None, image_dict=None):
         return ant_data_dict
 
 
-def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None, holog_dict=None):
+def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None, ddi_id=None, holog_dict=None):
     """Loads holog file from disk
 
     Args:
         holog_name (str): holog file name
 
     Returns:
-        hologfile (nested-dict): {
-                            'point.dict':{}, 'ddi':
-                                                {'scan':
-                                                    {'antenna':
-                                                        {
-                                                            xarray.DataArray
-                                                        }
-                                                    }
-                                                }
-                        }
+
     """
     logger = _get_astrohack_logger()
     
@@ -142,32 +133,41 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
 
     for ddi in os.listdir(holog_file):
         if "ddi_" in ddi:
-            if ddi not in holog_dict:
-                holog_dict[ddi] = {}
+            
+            if ddi_id is None:
+                if ddi not in holog_dict:
+                    holog_dict[ddi] = {}
+            else:
+                if (ddi == ddi_id):
+                    holog_dict[ddi] = {}
+                else:
+                    continue
+                
             for map in os.listdir(os.path.join(holog_file, ddi)):
                 if "map_" in map:
                     if map not in holog_dict[ddi]:
                         holog_dict[ddi][map] = {}
                     for ant in os.listdir(os.path.join(holog_file, ddi + "/" + map)):
                         if "ant_" in ant:
-                            mapping_ant_vis_holog_data_name = os.path.join(
-                                holog_file, ddi + "/" + map + "/" + ant
-                            )
-                            
-
-                            if dask_load:
-                                holog_dict[ddi][map][ant] = xr.open_zarr(
-                                    mapping_ant_vis_holog_data_name
+                            if (ant_id is None) or (ant_id in ant):
+                                mapping_ant_vis_holog_data_name = os.path.join(
+                                    holog_file, ddi + "/" + map + "/" + ant
                                 )
-                            else:
-                                holog_dict[ddi][map][ant] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
+                                
+
+                                if dask_load:
+                                    holog_dict[ddi][map][ant] = xr.open_zarr(
+                                        mapping_ant_vis_holog_data_name
+                                    )
+                                else:
+                                    holog_dict[ddi][map][ant] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
 
     
-    if ant_id == None:
+    if ant_id is None:
         return holog_dict
         
 
-    return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id)
+    return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id, ddi_id=ddi_id)
 
 
 def _read_fits(filename):
@@ -272,7 +272,7 @@ def _get_aips_headpars(head):
     return npoint, wavelength
 
 
-def _load_image_xds(file_stem, ant, ddi):
+def _load_image_xds(file_stem, ant, ddi, dask_load=True):
     """ Load specific image xds
 
     Args:
@@ -290,7 +290,10 @@ def _load_image_xds(file_stem, ant, ddi):
     image_path = "{image}/{ant}/{ddi}".format(image=file_stem, ant=ant, ddi=ddi)
 
     if os.path.isdir(image_path):
-        return xr.open_zarr(image_path)
+        if dask_load:
+            return xr.open_zarr(image_path)
+        else:
+            return _open_no_dask_zarr(image_path)
     else:
         raise FileNotFoundError("Image file: {} not found".format(image_path))
 
@@ -316,7 +319,7 @@ def _read_meta_data(holog_file):
     return json_dict
 
 
-def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
+def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
     """Read holog file meta data and extract antenna based xds information for each (ddi, map)
 
     Args:
@@ -344,9 +347,13 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
 
     for ddi in holog_json[ant_id_str].keys():
         if "ddi_" in ddi:
+            if (ddi_id is not None) and (ddi not in ddi_id):
+                continue
+                
             for map in holog_json[ant_id_str][ddi].keys():
                 if "map_" in map:
                     ant_data_dict.setdefault(ddi, {})[map] = holog_dict[ddi][map][ant_id]
+
 
     return ant_data_dict
 

@@ -105,20 +105,25 @@ def holog(
         holog_chunk_params["cell_size"] = cell_size
         holog_chunk_params["grid_size"] = grid_size
     '''
+
+    
     holog_chunk_params =  holog_params
     delayed_list = []
-
+    
+    
     for ant_id in holog_chunk_params['ant_list']:
-        logger.info("Processing ant_id: " + str(ant_id))
-        holog_chunk_params["ant_id"] = ant_id
+        for ddi in list(holog_json[ant_id].keys()):
+            logger.info("Processing ant_id: " + str(ant_id)  + " and " + ddi)
+            holog_chunk_params["ant_id"] = ant_id
+            holog_chunk_params["ddi_id"] = ddi
+            
+            if parallel:
+                delayed_list.append(
+                    dask.delayed(_holog_chunk)(dask.delayed(holog_chunk_params))
+                )
 
-        if parallel:
-            delayed_list.append(
-                dask.delayed(_holog_chunk)(dask.delayed(holog_chunk_params))
-            )
-
-        else:
-            _holog_chunk(holog_chunk_params)
+            else:
+                _holog_chunk(holog_chunk_params)
 
     if holog_chunk_params['parallel']:
         dask.compute(delayed_list)
@@ -127,6 +132,7 @@ def holog(
     image_mds.open()
     
     return image_mds
+
 
 
 def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
