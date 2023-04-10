@@ -345,26 +345,32 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
     data_extent = []
     lm_extent = {"l": {"min": [], "max": []}, "m": {"min": [], "max": []}}
     ant_holog_dict = {}
-
-    for ddi, scan_dict in holog_dict.items():
+    
+    for ddi, map_dict in holog_dict.items():
         if "ddi_" in ddi:
-            for scan, ant_dict in scan_dict.items():
-                if "scan_" in scan:
+            for map, ant_dict in map_dict.items():
+                if "map_" in map:
                     for ant, xds in ant_dict.items():
                         if "ant_" in ant:
                             if ant not in ant_holog_dict:
-                                ant_holog_dict[ant] = {ddi:{scan:{}}}
+                                ant_holog_dict[ant] = {ddi:{map:{}}}
                             elif ddi not in ant_holog_dict[ant]:
-                                ant_holog_dict[ant][ddi] = {scan:{}}
+                                ant_holog_dict[ant][ddi] = {map:{}}
                     
-                            ant_holog_dict[ant][ddi][scan] = xds.to_dict(data=False)
+                            ant_holog_dict[ant][ddi][map] = xds.to_dict(data=False)
                 
                             #ant_sub_dict.setdefault(ddi, {})
-                            #ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][scan] = xds.to_dict(data=False)
+                            #ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][map] = xds.to_dict(data=False)
 
-                            # Find the average (l, m) extent for each antenna, over (ddi, scan) and write the meta data to file.
+                            # Find the average (l, m) extent for each antenna, over (ddi, map) and write the meta data to file.
                             dims = xds.dims
-                    
+                            
+                            lm_extent["l"]["min"].append(xds.attrs["l_min"])
+                            lm_extent["l"]["max"].append(xds.attrs["l_max"])
+                            lm_extent["m"]["min"].append(xds.attrs["m_min"])
+                            lm_extent["m"]["max"].append(xds.attrs["m_max"])
+                            
+                            '''
                             lm_extent["l"]["min"].append(
                                 np.min(xds.DIRECTIONAL_COSINES.values[:, 0])
                             )
@@ -380,11 +386,11 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
                             lm_extent["m"]["max"].append(
                                 np.max(xds.DIRECTIONAL_COSINES.values[:, 1])
                             )
+                            '''
                     
                             data_extent.append(dims["time"])
 
 
-    
     max_value = int(np.array(data_extent).max())
 
     max_extent = {

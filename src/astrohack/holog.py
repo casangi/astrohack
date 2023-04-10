@@ -16,6 +16,8 @@ from astrohack._utils._utils import _remove_suffix
    
 from astrohack._utils._io import  check_if_file_will_be_overwritten,check_if_file_exists
 
+from astrohack._utils._dio_classes import AstrohackImageFile
+
 #fp=open('holog.log','w+')
 #@profile(stream=fp)
 def holog(
@@ -120,6 +122,11 @@ def holog(
 
     if holog_chunk_params['parallel']:
         dask.compute(delayed_list)
+        
+    image_mds = AstrohackImageFile(holog_chunk_params['image_file'])
+    image_mds.open()
+    
+    return image_mds
 
 
 def _check_holog_parms(holog_name,grid_size,cell_size,image_name,

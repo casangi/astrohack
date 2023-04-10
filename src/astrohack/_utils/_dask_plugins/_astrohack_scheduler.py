@@ -53,7 +53,7 @@ class astrohack_schedular(SchedulerPlugin):
     def update_graph(self, scheduler, dsk=None, keys=None, restrictions=None,
                      **kw):
         if self.autorestrictor:
-            print('Using autorestrictor')
+            #print('Using autorestrictor')
             """Processes dependencies to assign tasks to specific workers."""
             workers = list(scheduler.workers.keys())
             n_worker = len(workers)

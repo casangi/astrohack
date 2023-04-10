@@ -4,7 +4,7 @@ from astrohack._utils._logger._astrohack_logger import _setup_astrohack_worker_l
 
 class _astrohack_worker():
     def __init__(self,local_cache,log_parms):
-        print('init local cache')
+        #print('init local cache')
         self.local_cache = local_cache
         
         #print('log_parms',log_parms)

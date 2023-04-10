@@ -71,6 +71,8 @@ def _setup_astrohack_logger(log_to_term=False,log_to_file=True,log_file='astroha
     logger = logging.getLogger(name)
     logger.setLevel(logging.getLevelName(log_level))
     
+    logger.handlers.clear()
+    
     if log_to_term:
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(astrohack_formatter())

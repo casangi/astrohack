@@ -61,13 +61,17 @@ def _load_panel_file(file=None, panel_dict=None):
     
     ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
     
+    print('file',file)
+    
     try:
         for ant in ant_list:
-            ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
-            panel_data_dict[ant] = {}
-            
-            for ddi in ddi_list:
-                panel_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}/xds.zarr".format(name=file, ant=ant, ddi=ddi))                
+            if 'ant' in ant:
+                ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
+                panel_data_dict[ant] = {}
+                
+                for ddi in ddi_list:
+                    if 'ddi' in ddi:
+                        panel_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}/xds.zarr".format(name=file, ant=ant, ddi=ddi))
     
     except Exception as e:
             logger.error(str(e))
@@ -96,11 +100,13 @@ def _load_image_file(file=None, image_dict=None):
         
         try:
             for ant in ant_list:
-                ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
-                ant_data_dict[ant] = {}
-                
-                for ddi in ddi_list:
-                    ant_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
+                if 'ant' in ant:
+                    ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
+                    ant_data_dict[ant] = {}
+                    
+                    for ddi in ddi_list:
+                        if 'ddi' in ddi:
+                            ant_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
 
         except Exception as e:
             logger.error(str(e))
@@ -140,23 +146,23 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
         if "ddi_" in ddi:
             if ddi not in holog_dict:
                 holog_dict[ddi] = {}
-            for scan in os.listdir(os.path.join(holog_file, ddi)):
-                if "scan_" in scan:
-                    if scan not in holog_dict[ddi]:
-                        holog_dict[ddi][scan] = {}
-                    for ant in os.listdir(os.path.join(holog_file, ddi + "/" + scan)):
+            for map in os.listdir(os.path.join(holog_file, ddi)):
+                if "map_" in map:
+                    if map not in holog_dict[ddi]:
+                        holog_dict[ddi][map] = {}
+                    for ant in os.listdir(os.path.join(holog_file, ddi + "/" + map)):
                         if "ant_" in ant:
                             mapping_ant_vis_holog_data_name = os.path.join(
-                                holog_file, ddi + "/" + scan + "/" + ant
+                                holog_file, ddi + "/" + map + "/" + ant
                             )
                             
 
                             if dask_load:
-                                holog_dict[ddi][scan][ant] = xr.open_zarr(
+                                holog_dict[ddi][map][ant] = xr.open_zarr(
                                     mapping_ant_vis_holog_data_name
                                 )
                             else:
-                                holog_dict[ddi][scan][ant] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
+                                holog_dict[ddi][map][ant] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
 
     
     if ant_id == None:
@@ -311,7 +317,7 @@ def _read_meta_data(holog_file):
 
 
 def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
-    """Read holog file meta data and extract antenna based xds information for each (ddi, scan)
+    """Read holog file meta data and extract antenna based xds information for each (ddi, map)
 
     Args:
         holog_file (str): holog file name.
@@ -319,7 +325,7 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
         ant_id (int): Antenna id
 
     Returns:
-        nested dict: nested dictionary (ddi, scan, xds) with xds data embedded in it.
+        nested dict: nested dictionary (ddi, map, xds) with xds data embedded in it.
     """
     logger = _get_astrohack_logger()
     ant_id_str = str(ant_id)
@@ -338,9 +344,9 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id):
 
     for ddi in holog_json[ant_id_str].keys():
         if "ddi_" in ddi:
-            for scan in holog_json[ant_id_str][ddi].keys():
-                if "scan_" in scan:
-                    ant_data_dict.setdefault(ddi, {})[scan] = holog_dict[ddi][scan][ant_id]
+            for map in holog_json[ant_id_str][ddi].keys():
+                if "map_" in map:
+                    ant_data_dict.setdefault(ddi, {})[map] = holog_dict[ddi][map][ant_id]
 
     return ant_data_dict
 
@@ -406,6 +412,7 @@ def _load_pnt_dict(file, ant_list=None, dask_load=True):
     for ant in os.listdir(file):
         if "ant_" in ant:
             if (ant_list is None) or (ant in ant_list):
+                print('3.',os.path.join(file, ant))
                 if dask_load:
                     pnt_dict[ant] = xr.open_zarr(os.path.join(file, ant))
                 else:
@@ -426,6 +433,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     logger = _get_astrohack_logger()
     
     ant_id = pnt_parms['ant_id']
+    ant_name = pnt_parms['ant_name']
     pnt_name = pnt_parms['pnt_name']
     scan_time_dict = pnt_parms['scan_time_dict']
     
@@ -507,11 +515,11 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     
     logger.info(
         "Writing pointing xds to {file}".format(
-            file=os.path.join(pnt_name, "ant_" + str(ant_id))
+            file=os.path.join(pnt_name, "ant_" + str(ant_name))
         )
     )
     
-    pnt_xds.to_zarr(os.path.join(pnt_name, "ant_{}".format(str(ant_id)) ), mode="w", compute=True, consolidated=True)
+    pnt_xds.to_zarr(os.path.join(pnt_name, "ant_{}".format(str(ant_name)) ), mode="w", compute=True, consolidated=True)
 
 @convert_dict_from_numba
 @njit(cache=False, nogil=True)
@@ -714,7 +722,7 @@ def _create_holog_file(
     chan,
     pol,
     flagged_mapping_antennas,
-    scan,
+    holog_map_key,
     ddi,
     ms_name,
     ant_names,
@@ -731,7 +739,7 @@ def _create_holog_file(
         chan (numpy.ndarray): channel values
         pol (numpy.ndarray): polarization values
         flagged_mapping_antennas (numpy.ndarray): list of mapping antennas that have been flagged.
-        scan (numpy.ndarray): scan number
+        holog_map_key(string): holog map id string
         ddi (numpy.ndarray): data description id; a combination of polarization and spectral window
     """
     logger = _get_astrohack_logger()
@@ -752,7 +760,7 @@ def _create_holog_file(
 
     for map_ant_index in vis_map_dict.keys():
         if map_ant_index not in flagged_mapping_antennas:
-            map_ant_tag = 'ant_' + str(map_ant_index)
+            map_ant_tag = 'ant_' + ant_names[map_ant_index] #'ant_' + str(map_ant_index)
 
             direction = np.take(pnt_map_dict[map_ant_tag], indicies, axis=0)
 
@@ -776,12 +784,19 @@ def _create_holog_file(
                 pnt_map_dict[map_ant_tag], dims=["time", "lm"]
             )
 
-            xds.attrs["scan"] = scan
-            xds.attrs["ant_id"] = map_ant_tag
+            xds.attrs["holog_map_key"] = holog_map_key
+            #xds.attrs["ant_id"] = map_ant_tag
             xds.attrs["ddi"] = ddi
             xds.attrs["parallactic_samples"] = parallactic_samples
             xds.attrs["telescope_name"] = telescope_name
             xds.attrs["antenna_name"] = ant_names[map_ant_index]
+            
+            xds.attrs["l_max"] = np.max(xds["DIRECTIONAL_COSINES"][:,0].values)
+            xds.attrs["l_min"] = np.min(xds["DIRECTIONAL_COSINES"][:,0].values)
+            xds.attrs["m_max"] = np.max(xds["DIRECTIONAL_COSINES"][:,1].values)
+            xds.attrs["m_min"] = np.min(xds["DIRECTIONAL_COSINES"][:,1].values)
+            
+            #print(xds)
 
             holog_file = holog_name
 
@@ -796,7 +811,7 @@ def _create_holog_file(
             )
             xds.to_zarr(
                 os.path.join(
-                    holog_file, 'ddi_' + str(ddi) + "/" + "scan_" + str(scan) + "/" + "ant_" + str(map_ant_index)
+                    holog_file, 'ddi_' + str(ddi) + "/" + str(holog_map_key) + "/" + "ant_" + str(ant_names[map_ant_index])
                 ),
                 mode="w",
                 compute=True,
@@ -833,7 +848,13 @@ def _extract_holog_chunk(extract_holog_params):
     ant_names = extract_holog_params["ant_names"]
     ref_ant_per_map_ant_tuple = extract_holog_params["ref_ant_per_map_ant_tuple"]
     map_ant_tuple = extract_holog_params["map_ant_tuple"]
-    holog_scan_id = extract_holog_params["holog_scan_id"]
+    ref_ant_per_map_ant_name_tuple = extract_holog_params["ref_ant_per_map_ant_name_tuple"]
+    map_ant_name_tuple = extract_holog_params["map_ant_name_tuple"]
+    
+    print('1.',map_ant_name_tuple,map_ant_tuple)
+    print('2.',ref_ant_per_map_ant_name_tuple,ref_ant_per_map_ant_tuple)
+    
+    holog_map_key = extract_holog_params["holog_map_key"]
     telescope_name = extract_holog_params["telescope_name"]
     
     assert len(ref_ant_per_map_ant_tuple) == len(map_ant_tuple), "ref_ant_per_map_ant_tuple and map_ant_tuple should have same length."
@@ -885,13 +906,13 @@ def _extract_holog_chunk(extract_holog_params):
 
     del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row
 
-    map_ant_list = list(map(str, map_ant_tuple))
+    map_ant_name_list = list(map(str, map_ant_name_tuple))
 
-    map_ant_list = ['ant_' + i for i in map_ant_list]
+    map_ant_name_list = ['ant_' + i for i in map_ant_name_list]
 
-    pnt_ant_dict = _load_pnt_dict(pnt_name, map_ant_list, dask_load=False)
+    pnt_ant_dict = _load_pnt_dict(pnt_name, map_ant_name_list, dask_load=False)
 
-    pnt_map_dict = _extract_pointing_chunk(map_ant_list, time_vis, pnt_ant_dict)
+    pnt_map_dict = _extract_pointing_chunk(map_ant_name_list, time_vis, pnt_ant_dict)
     
     ''' Removing for now. Code struggles with VLA pointing errors
     ################### Average multiple repeated samples
@@ -915,7 +936,7 @@ def _extract_holog_chunk(extract_holog_params):
         chan_freq,
         pol,
         flagged_mapping_antennas,
-        holog_scan_id,
+        holog_map_key,
         ddi,
         ms_name,
         ant_names,
@@ -923,8 +944,8 @@ def _extract_holog_chunk(extract_holog_params):
     )
 
     logger.info(
-        "Finished extracting holography chunk for ddi: {ddi} holog_scan_id: {holog_scan_id}".format(
-            ddi=ddi, holog_scan_id=holog_scan_id
+        "Finished extracting holography chunk for ddi: {ddi} holog_map_key: {holog_map_key}".format(
+            ddi=ddi, holog_map_key=holog_map_key
         )
     )
 
