@@ -61,8 +61,6 @@ def _load_panel_file(file=None, panel_dict=None):
     
     ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
     
-    print('file',file)
-    
     try:
         for ant in ant_list:
             if 'ant' in ant:
@@ -412,7 +410,6 @@ def _load_pnt_dict(file, ant_list=None, dask_load=True):
     for ant in os.listdir(file):
         if "ant_" in ant:
             if (ant_list is None) or (ant in ant_list):
-                print('3.',os.path.join(file, ant))
                 if dask_load:
                     pnt_dict[ant] = xr.open_zarr(os.path.join(file, ant))
                 else:
@@ -851,9 +848,6 @@ def _extract_holog_chunk(extract_holog_params):
     ref_ant_per_map_ant_name_tuple = extract_holog_params["ref_ant_per_map_ant_name_tuple"]
     map_ant_name_tuple = extract_holog_params["map_ant_name_tuple"]
     
-    print('1.',map_ant_name_tuple,map_ant_tuple)
-    print('2.',ref_ant_per_map_ant_name_tuple,ref_ant_per_map_ant_tuple)
-    
     holog_map_key = extract_holog_params["holog_map_key"]
     telescope_name = extract_holog_params["telescope_name"]
     
@@ -890,6 +884,8 @@ def _extract_holog_chunk(extract_holog_params):
     time_vis, unique_index = np.unique(
         time_vis_row, return_index=True
     )  # Note that values are sorted.
+    
+    #print(vis_data.shape,weight.shape,ant1.shape,ant2.shape,time_vis_row.shape,time_vis.shape,flag.shape,flag_row.shape,ref_ant_per_map_ant_tuple,map_ant_tuple,)
     
     vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(
         vis_data,

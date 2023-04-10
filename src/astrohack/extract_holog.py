@@ -303,6 +303,7 @@ def _check_extract_holog_parms(    ms_name,
     extract_holog_parms["ms_name"] = ms_name
     extract_holog_parms["holog_name"] = holog_name
     extract_holog_parms["point_name"] = point_name
+    extract_holog_parms["data_col"] = data_col
     extract_holog_parms["parallel"] = parallel
     extract_holog_parms["overwrite"] = overwrite
 
