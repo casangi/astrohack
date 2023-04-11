@@ -144,7 +144,8 @@ def _panel_chunk(panel_chunk_params):
     else:
         inputxds = _load_image_xds(panel_chunk_params['image_name'],
                                    panel_chunk_params['antenna'],
-                                   panel_chunk_params['ddi'])
+                                   panel_chunk_params['ddi'],
+                                   dask_load=False)
 
         inputxds.attrs['AIPS'] = False
 

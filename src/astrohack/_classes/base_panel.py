@@ -38,7 +38,7 @@ class BasePanel:
     markersize = 2
     linecolor = 'black'
 
-    def __init__(self, kind, screws, label, center=None, zeta=None):
+    def __init__(self, kind, screws, label, panel_meta, center=None, zeta=None):
         """
         Initializes the base panel with the appropriated fitting methods and providing basic functionality
         Fitting method kinds are:
@@ -68,6 +68,7 @@ class BasePanel:
         self.samples = []
         self.margins = []
         self.corr = None
+        self.panel_meta = panel_meta
 
         if center is None:
             self.center = [0, 0]
@@ -197,13 +198,13 @@ class BasePanel:
         logger = _get_astrohack_logger()
         # fallback behaviour for impossible fits
         if len(self.samples) < self.NPAR:
-            logger.warning("Impossible fit, falling back to mean")
+            logger.warning("Impossible fit, falling back to mean: " + str(self.panel_meta))
             self._fallback_solve()
         else:
             try:
                 self._solve_sub()
             except np.linalg.LinAlgError:
-                logger.warning("Fit diverged, falling back to mean")
+                logger.warning("Fit diverged, falling back to mean: " + str(self.panel_meta))
                 self._fallback_solve()
         return
 

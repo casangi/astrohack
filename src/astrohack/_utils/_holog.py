@@ -43,10 +43,11 @@ def _holog_chunk(holog_chunk_params):
     logger = _get_astrohack_logger()
     
     c = scipy.constants.speed_of_light
+    
 
     holog_file, ant_data_dict = _load_holog_file(
         holog_chunk_params["holog_file"],
-        dask_load=True,
+        dask_load=False,
         load_pnt_dict=False,
         ant_id=holog_chunk_params["ant_id"],
         ddi_id=holog_chunk_params["ddi_id"]
@@ -61,9 +62,9 @@ def _holog_chunk(holog_chunk_params):
     to_stokes = holog_chunk_params["to_stokes"]
 
     ddi = holog_chunk_params["ddi_id"]
-    n_scan = len(ant_data_dict[ddi].keys())
+    n_holog_map = len(ant_data_dict[ddi].keys())
     
-    # For a fixed ddi the frequency axis should not change over scans, consequently we only have to consider the first scan.
+    # For a fixed ddi the frequency axis should not change over holog_maps, consequently we only have to consider the first holog_map.
     map0 = list(ant_data_dict[ddi].keys())[0]
     
     freq_chan = ant_data_dict[ddi][map0].chan.values
@@ -79,16 +80,16 @@ def _holog_chunk(holog_chunk_params):
         avg_chan_map, avg_freq = _create_average_chan_map(freq_chan, holog_chunk_params["chan_tolerance_factor"])
         
         # Only a single channel left after averaging.
-        beam_grid = np.zeros((n_scan,) + (1, n_pol) + grid_l.shape, dtype=np.complex)
+        beam_grid = np.zeros((n_holog_map,) + (1, n_pol) + grid_l.shape, dtype=np.complex)
         
         
     else:
-        beam_grid = np.zeros((n_scan,) + (n_chan, n_pol) + grid_l.shape, dtype=np.complex)
+        beam_grid = np.zeros((n_holog_map,) + (n_chan, n_pol) + grid_l.shape, dtype=np.complex)
 
     time_centroid = []
 
-    for scan_index, scan in enumerate(ant_data_dict[ddi].keys()):
-        ant_xds = ant_data_dict[ddi][scan]
+    for holog_map_index, holog_map in enumerate(ant_data_dict[ddi].keys()):
+        ant_xds = ant_data_dict[ddi][holog_map]
         
         ###To Do: Add flagging code
 
@@ -108,19 +109,19 @@ def _holog_chunk(holog_chunk_params):
             for chan_index in range(n_chan):
 
                 # Average scaled beams.
-                beam_grid[scan_index, 0, :, :, :] = (beam_grid[scan_index, 0, :, :, :] + np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index], vis_avg[:, chan_index, :], (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"],fill_value=0.0),(2),(0)))
+                beam_grid[holog_map_index, 0, :, :, :] = (beam_grid[holog_map_index, 0, :, :, :] + np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index], vis_avg[:, chan_index, :], (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"],fill_value=0.0),(2),(0)))
 
             # Avergaing now complete
             n_chan =  1
             
             freq_chan = [np.mean(avg_freq)]
         else:
-            beam_grid[scan_index, ...] = np.moveaxis(griddata(lm, vis, (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"],fill_value=0.0), (0,1), (2,3))
+            beam_grid[holog_map_index, ...] = np.moveaxis(griddata(lm, vis, (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"],fill_value=0.0), (0,1), (2,3))
 
 
-        time_centroid_index = ant_data_dict[ddi][scan].dims["time"] // 2
+        time_centroid_index = ant_data_dict[ddi][holog_map].dims["time"] // 2
 
-        time_centroid.append(ant_data_dict[ddi][scan].coords["time"][time_centroid_index].values)
+        time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
         
         
         ###########
@@ -138,17 +139,17 @@ def _holog_chunk(holog_chunk_params):
 #            print(np.angle(beam_grid[0, 0, 0, 15, 15]),np.angle(beam_grid[0, 0, 3, 15, 15]))
 #            #beam_grid[0, 0, 3, ...] = -1*beam_grid[0, 0, 3, ...]
 
-        for chan in range(n_chan): ### Todo: Vectorize scan and channel axis
-            xx_peak = _find_peak_beam_value(beam_grid[scan_index, chan, 0, ...], scaling=0.25)
+        for chan in range(n_chan): ### Todo: Vectorize holog_map and channel axis
+            xx_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
             
-            yy_peak = _find_peak_beam_value(beam_grid[scan_index, chan, 3, ...], scaling=0.25)
+            yy_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
 
-            #print(xx_peak,yy_peak,beam_grid[scan_index, chan, 0, ...][15,15],beam_grid[scan_index, chan, 3, ...][15,15])
-            #print(np.abs(xx_peak),np.abs(yy_peak),np.abs(beam_grid[scan_index, chan, 0, ...][15,15]),np.abs(beam_grid[scan_index, chan, 3, ...][15,15]))
+            #print(xx_peak,yy_peak,beam_grid[holog_map_index, chan, 0, ...][15,15],beam_grid[holog_map_index, chan, 3, ...][15,15])
+            #print(np.abs(xx_peak),np.abs(yy_peak),np.abs(beam_grid[holog_map_index, chan, 0, ...][15,15]),np.abs(beam_grid[holog_map_index, chan, 3, ...][15,15]))
             #print(np.angle(xx_peak)*180/np.pi,np.angle(yy_peak)*180/np.pi)
             
             normalization = np.abs(0.5 * (xx_peak + yy_peak))
-            beam_grid[scan_index, chan, ...] /= normalization
+            beam_grid[holog_map_index, chan, ...] /= normalization
             #print('####normalization ', normalization)
 
     beam_grid = _parallactic_derotation(data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi])
@@ -156,7 +157,7 @@ def _holog_chunk(holog_chunk_params):
 
     ###############
     if to_stokes:
-        beam_grid = _to_stokes(beam_grid,ant_data_dict[ddi][scan].pol.values)
+        beam_grid = _to_stokes(beam_grid,ant_data_dict[ddi][holog_map].pol.values)
     ###############
     
     if holog_chunk_params["scan_average"]:
@@ -170,7 +171,7 @@ def _holog_chunk(holog_chunk_params):
     )
     
     # Get telescope info
-    ant_name = ant_data_dict[ddi][scan].attrs["antenna_name"]
+    ant_name = ant_data_dict[ddi][holog_map].attrs["antenna_name"]
     
     if  ant_name.upper().__contains__('DV'):
         telescope_name = "_".join((meta_data['telescope_name'], 'DV'))
@@ -285,6 +286,7 @@ def _holog_chunk(holog_chunk_params):
     xds.attrs["ant_name"] = ant_name
     xds.attrs["telescope_name"] = meta_data['telescope_name']
     xds.attrs["time_centroid"] = np.array(time_centroid)
+    xds.attrs["ddi"] = ddi
 
     coords = {}
     coords["time_centroid"] = np.array(time_centroid)
@@ -336,7 +338,7 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
 
 def _create_holog_meta_data(holog_file, holog_dict, holog_params):
     """Save holog file meta information to json file with the transformation
-        of the ordering (ddi, scan, ant) --> (ant, ddi, scan).
+        of the ordering (ddi, holog_map, ant) --> (ant, ddi, holog_map).
 
     Args:
         holog_name (str): holog file name.

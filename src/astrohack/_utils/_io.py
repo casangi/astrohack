@@ -44,7 +44,7 @@ def check_if_file_will_be_overwritten(file,overwrite):
         )
 
 
-def _load_panel_file(file=None, panel_dict=None):
+def _load_panel_file(file=None, panel_dict=None, dask_load=True):
     """ Open panel file.
 
     Args:
@@ -69,7 +69,10 @@ def _load_panel_file(file=None, panel_dict=None):
                 
                 for ddi in ddi_list:
                     if 'ddi' in ddi:
-                        panel_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}/xds.zarr".format(name=file, ant=ant, ddi=ddi))
+                        if dask_load:
+                            panel_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}/xds.zarr".format(name=file, ant=ant, ddi=ddi))
+                        else:
+                            panel_data_dict[ant][ddi] = _open_no_dask_zarr("{name}/{ant}/{ddi}/xds.zarr".format(name=file, ant=ant, ddi=ddi))
     
     except Exception as e:
             logger.error(str(e))
@@ -79,7 +82,7 @@ def _load_panel_file(file=None, panel_dict=None):
     return panel_data_dict
 
 
-def _load_image_file(file=None, image_dict=None):
+def _load_image_file(file=None, image_dict=None,  dask_load=True):
         """ Open hologgraphy file.
 
         Args:s
@@ -104,7 +107,10 @@ def _load_image_file(file=None, image_dict=None):
                     
                     for ddi in ddi_list:
                         if 'ddi' in ddi:
-                            ant_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi) )
+                            if dask_load:
+                                ant_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                            else:
+                                ant_data_dict[ant][ddi] = _open_no_dask_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
 
         except Exception as e:
             logger.error(str(e))
@@ -122,6 +128,7 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
     Returns:
 
     """
+    
     logger = _get_astrohack_logger()
     
     if holog_dict is None:
@@ -143,30 +150,29 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
                 else:
                     continue
                 
-            for map in os.listdir(os.path.join(holog_file, ddi)):
-                if "map_" in map:
-                    if map not in holog_dict[ddi]:
-                        holog_dict[ddi][map] = {}
-                    for ant in os.listdir(os.path.join(holog_file, ddi + "/" + map)):
+            for holog_map in os.listdir(os.path.join(holog_file, ddi)):
+                if "map_" in holog_map:
+                    if holog_map not in holog_dict[ddi]:
+                        holog_dict[ddi][holog_map] = {}
+                    for ant in os.listdir(os.path.join(holog_file, ddi + "/" + holog_map)):
                         if "ant_" in ant:
                             if (ant_id is None) or (ant_id in ant):
                                 mapping_ant_vis_holog_data_name = os.path.join(
-                                    holog_file, ddi + "/" + map + "/" + ant
+                                    holog_file, ddi + "/" + holog_map + "/" + ant
                                 )
                                 
 
                                 if dask_load:
-                                    holog_dict[ddi][map][ant] = xr.open_zarr(
+                                    holog_dict[ddi][holog_map][ant] = xr.open_zarr(
                                         mapping_ant_vis_holog_data_name
                                     )
                                 else:
-                                    holog_dict[ddi][map][ant] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
+                                    holog_dict[ddi][holog_map][ant] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
 
     
     if ant_id is None:
         return holog_dict
         
-
     return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id, ddi_id=ddi_id)
 
 
@@ -320,7 +326,7 @@ def _read_meta_data(holog_file):
 
 
 def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
-    """Read holog file meta data and extract antenna based xds information for each (ddi, map)
+    """Read holog file meta data and extract antenna based xds information for each (ddi, holog_map)
 
     Args:
         holog_file (str): holog file name.
@@ -328,10 +334,11 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
         ant_id (int): Antenna id
 
     Returns:
-        nested dict: nested dictionary (ddi, map, xds) with xds data embedded in it.
+        nested dict: nested dictionary (ddi, holog_map, xds) with xds data embedded in it.
     """
     logger = _get_astrohack_logger()
     ant_id_str = str(ant_id)
+    
 
     holog_meta_data = "/".join((holog_file, ".holog_json"))
 
@@ -347,12 +354,12 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
 
     for ddi in holog_json[ant_id_str].keys():
         if "ddi_" in ddi:
-            if (ddi_id is not None) and (ddi not in ddi_id):
+            if (ddi_id is not None) and (ddi != ddi_id):
                 continue
                 
-            for map in holog_json[ant_id_str][ddi].keys():
-                if "map_" in map:
-                    ant_data_dict.setdefault(ddi, {})[map] = holog_dict[ddi][map][ant_id]
+            for holog_map in holog_json[ant_id_str][ddi].keys():
+                if "map_" in holog_map:
+                    ant_data_dict.setdefault(ddi, {})[holog_map] = holog_dict[ddi][holog_map][ant_id]
 
 
     return ant_data_dict
@@ -443,9 +450,10 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     pnt_name = pnt_parms['pnt_name']
     scan_time_dict = pnt_parms['scan_time_dict']
     
+    table_obj = ctables.table(os.path.join(ms_name, "POINTING"), readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     tb = ctables.taql(
-        "select DIRECTION, TIME, TARGET, ENCODER, ANTENNA_ID, POINTING_OFFSET from %s WHERE ANTENNA_ID == %s"
-        % (os.path.join(ms_name, "POINTING"), ant_id)
+        "select DIRECTION, TIME, TARGET, ENCODER, ANTENNA_ID, POINTING_OFFSET from $table_obj WHERE ANTENNA_ID == %s"
+        % (ant_id)
     )
 
     ### NB: Add check if directions refrence frame is Azemuth Elevation (AZELGEO)
@@ -461,6 +469,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
 
         return 0
     tb.close()
+    table_obj.close()
     
     pnt_xds = xr.Dataset()
     coords = {"time": direction_time}
@@ -868,16 +877,18 @@ def _extract_holog_chunk(extract_holog_params):
 
     chan_freq = extract_holog_params["chan_setup"]["chan_freq"]
     pol = extract_holog_params["pol_setup"]["pol"]
+    
+    table_obj = ctables.table(ms_name, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
 
     if sel_state_ids:    
         ctb = ctables.taql(
-            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
-            % (data_col, ms_name, ddi, scans, sel_state_ids)
+            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
+            % (data_col, ddi, scans, sel_state_ids)
         )
     else:
         ctb = ctables.taql(
-            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from %s WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
-            % (data_col, ms_name, ddi, scans)
+            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
+            % (data_col, ddi, scans)
         )
         
     vis_data = ctb.getcol(data_col)
@@ -889,6 +900,7 @@ def _extract_holog_chunk(extract_holog_params):
     flag = ctb.getcol("FLAG")
     flag_row = ctb.getcol("FLAG_ROW")
     ctb.close()
+    table_obj.close()
     
     time_vis, unique_index = np.unique(
         time_vis_row, return_index=True

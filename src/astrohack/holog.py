@@ -124,6 +124,7 @@ def holog(
 
             else:
                 _holog_chunk(holog_chunk_params)
+            
 
     if holog_chunk_params['parallel']:
         dask.compute(delayed_list)

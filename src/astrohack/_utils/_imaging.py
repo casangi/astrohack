@@ -111,6 +111,7 @@ def _calculate_aperture_pattern(grid, delta, padding_factor=50):
         mode="constant",
     )
 
+    import scipy.fftpack
     shifted = scipy.fftpack.ifftshift(padded_grid)
 
     grid_fft = scipy.fftpack.fft2(shifted)
