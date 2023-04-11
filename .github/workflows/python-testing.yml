@@ -8,6 +8,7 @@ on:
     paths-ignore:
       - '**.md'
       - '**.rst'
+      - 'disabled_tests/*.py'
 
 jobs:
   build:
