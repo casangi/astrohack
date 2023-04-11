@@ -1,6 +1,6 @@
 [project]
 name = "astrohack"
-version = "0.0.3"
+version = "0.0.1"
 description = "Holography Antenna Commissioning Kit"
 authors = [
     {name = "Jan-Willem Steeb", email="jsteeb@nrao.edu"},
@@ -33,6 +33,7 @@ dependencies = [
 'Shapely==2.0.1',
 'xarray==2022.12.0',
 'zarr==2.13.3',
+'bokeh==2.4.3',
 'jupyterlab',
 'python_casacore==3.5.2; sys_platform != "darwin" '
 ]

@@ -25,7 +25,10 @@ from astrohack._utils._io import  check_if_file_will_be_overwritten,check_if_fil
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._utils import _remove_suffix
+from astrohack._utils._io import _load_holog_file
 
+
+from astrohack._utils._dio_classes import AstrohackHologFile
 def extract_holog(
     ms_name,
     holog_obs_dict,
@@ -86,7 +89,7 @@ def extract_holog(
     
         .. parsed-literal::
             holog_obs_description = {
-                0 :{
+                'map_0' :{
                     'scans':[2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22],
                     'ant':{
                         'DA44':[
@@ -119,9 +122,9 @@ def extract_holog(
     check_if_file_will_be_overwritten(extract_holog_parms['point_name'],extract_holog_parms['overwrite'])
 
 #    try:
-#        pnt_dict = _load_pnt_dict(point_name)
+#        pnt_dict = _load_pnt_dict(extract_holog_parms['point_name'])
 #    except:
-#        pnt_dict = _make_ant_pnt_dict(ms_name, point_name, parallel=parallel)
+#        pnt_dict = _make_ant_pnt_dict(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
     
     pnt_dict = _make_ant_pnt_dict(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
 
@@ -256,25 +259,38 @@ def extract_holog(
         extract_holog_parms["telescope_name"] = obs_ctb.getcol("TELESCOPE_NAME")[0]
         
 
-        for holog_scan_id in holog_obs_dict.keys(): #loop over all beam_scan_ids, a beam_scan_id can conist out of more than one scan in an ms (this is the case for the VLA pointed mosiacs).
-            if isinstance(holog_scan_id,int):
-                scans = holog_obs_dict[holog_scan_id]["scans"]
+        for holog_map_key in holog_obs_dict.keys(): #loop over all beam_scan_ids, a beam_scan_id can conist out of more than one scan in an ms (this is the case for the VLA pointed mosiacs).
+            #if isinstance(holog_map_key,int):
+            if 'map' in holog_map_key:
+                scans = holog_obs_dict[holog_map_key]["scans"]
                 logger.info("Processing ddi: {ddi}, scans: {scans}".format(ddi=ddi, scans=scans))
             
                 map_ant_list = []
                 ref_ant_per_map_ant_list = [] #
-                for map_ant_str in holog_obs_dict[holog_scan_id]['ant'].keys():
-                    ref_ant_ids = np.array(_convert_ant_name_to_id(ant_names,list(holog_obs_dict[holog_scan_id]['ant'][map_ant_str])))
+                
+                map_ant_name_list = []
+                ref_ant_per_map_ant_name_list = [] #
+                for map_ant_str in holog_obs_dict[holog_map_key]['ant'].keys():
+                    ref_ant_ids = np.array(_convert_ant_name_to_id(ant_names,list(holog_obs_dict[holog_map_key]['ant'][map_ant_str])))
                     map_ant_id = _convert_ant_name_to_id(ant_names,map_ant_str)[0]
 
                     ref_ant_per_map_ant_list.append(ref_ant_ids)
                     map_ant_list.append(map_ant_id)
                     
+                    ref_ant_per_map_ant_name_list.append(list(holog_obs_dict[holog_map_key]['ant'][map_ant_str]))
+                    map_ant_name_list.append(map_ant_str) #
+                    
+                    
+                    
                 extract_holog_parms["ref_ant_per_map_ant_tuple"] = tuple(ref_ant_per_map_ant_list)
                 extract_holog_parms["map_ant_tuple"] = tuple(map_ant_list)
+                
+                extract_holog_parms["ref_ant_per_map_ant_name_tuple"] = tuple(ref_ant_per_map_ant_name_list)
+                extract_holog_parms["map_ant_name_tuple"] = tuple(map_ant_name_list)
+                
                 extract_holog_parms["scans"] = scans
                 extract_holog_parms["sel_state_ids"] = state_ids
-                extract_holog_parms["holog_scan_id"] = holog_scan_id
+                extract_holog_parms["holog_map_key"] = holog_map_key
                 extract_holog_parms["ant_names"] = ant_names
                 
                 if parallel:
@@ -297,9 +313,15 @@ def extract_holog(
     for id in ant_id:
         extract_holog_parms["holog_obs_dict"][str(id)] = ant_names[id]
 
-    holog_dict = _load_holog_file(holog_file=holog_name, dask_load=True, load_pnt_dict=False)
+    holog_dict = _load_holog_file(holog_file=extract_holog_parms["holog_name"], dask_load=True, load_pnt_dict=False)
 
-    _create_holog_meta_data(holog_file=holog_name, holog_dict=holog_dict, holog_params=extract_holog_parms)
+    _create_holog_meta_data(holog_file=extract_holog_parms['holog_name'], holog_dict=holog_dict, holog_params=extract_holog_parms)
+    
+    holog_mds = AstrohackHologFile(extract_holog_parms['holog_name'])
+    holog_mds.open()
+    
+    return holog_mds
+    
 
 
 def _check_extract_holog_parms(    ms_name,
@@ -314,6 +336,7 @@ def _check_extract_holog_parms(    ms_name,
     extract_holog_parms["ms_name"] = ms_name
     extract_holog_parms["holog_name"] = holog_name
     extract_holog_parms["point_name"] = point_name
+    extract_holog_parms["data_col"] = data_col
     extract_holog_parms["parallel"] = parallel
     extract_holog_parms["overwrite"] = overwrite
 
@@ -328,7 +351,7 @@ def _check_extract_holog_parms(    ms_name,
     parms_passed = parms_passed and _check_parms(extract_holog_parms,'holog_name', [str],default=base_name+'.holog.zarr')
   
     
-    point_base_name = _remove_suffix(holog_name,'.holog.zarr')
+    point_base_name = _remove_suffix(extract_holog_parms['holog_name'],'.holog.zarr')
     parms_passed = parms_passed and _check_parms(extract_holog_parms,'point_name', [str],default=point_base_name+'.point.zarr')
   
     #To Do: special function needed to check holog_obs_dict.

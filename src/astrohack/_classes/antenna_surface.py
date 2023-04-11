@@ -93,6 +93,8 @@ class AntennaSurface:
         self.unpix = self.u_axis.shape[0]
         self.vnpix = self.v_axis.shape[0]
         self.antenna_name = inputxds.attrs['ant_name']
+        
+        self.panel_meta = [inputxds.attrs['ant_name'],inputxds.attrs['ddi']]
 
         return computephase
 
@@ -258,6 +260,7 @@ class AntennaSurface:
                     self._panel_label(iring, ipanel),
                     self.telescope.inrad[iring],
                     self.telescope.ourad[iring],
+                    panel_meta=self.panel_meta,
                     margin=self.panel_margins,
                     screw_scheme=self.telescope.screw_description,
                     screw_offset=self.telescope.screw_offset

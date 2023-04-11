@@ -15,6 +15,7 @@ from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._utils import _remove_suffix
 
+from astrohack._utils._dio_classes import AstrohackPanelFile
 
 def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, unit='mm', panel_margins=0.2, save_mask=False,
           save_deviations=True, save_phase=False, parallel=False, sel_ddi=None, overwrite=False):
@@ -124,6 +125,11 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, unit='mm', 
             logger.warning("No data to process")
         else:
             logger.info("Panel finished processing")
+            
+            panel_mds = AstrohackPanelFile(panel_chunk_params['panel_name'])
+            panel_mds.open()
+            return panel_mds
+
 
 
 def _panel_chunk(panel_chunk_params):
@@ -140,7 +146,8 @@ def _panel_chunk(panel_chunk_params):
     else:
         inputxds = _load_image_xds(panel_chunk_params['image_name'],
                                    panel_chunk_params['antenna'],
-                                   panel_chunk_params['ddi'])
+                                   panel_chunk_params['ddi'],
+                                   dask_load=False)
 
         inputxds.attrs['AIPS'] = False
 
@@ -160,7 +167,7 @@ def _panel_chunk(panel_chunk_params):
     surface.fit_surface()
     surface.correct_surface()
     
-    base_name = panel_chunk_params['panel_name'] + '/' + panel_chunk_params['antenna']
+    base_name = panel_chunk_params['panel_name'] + '/' + panel_chunk_params['antenna'] + '/' + panel_chunk_params['ddi']
 
     os.makedirs(name=base_name, exist_ok=True)
 

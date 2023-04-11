@@ -7,7 +7,7 @@ class RingPanel(BasePanel):
     # This class describes and treats panels that are arranged in
     # rings on the Antenna surface
 
-    def __init__(self, kind, angle, ipanel, label, inrad, ourad, margin=0.20, screw_scheme=None, screw_offset=None):
+    def __init__(self, kind, angle, ipanel, label, inrad, ourad, panel_meta, margin=0.20, screw_scheme=None, screw_offset=None):
         """
         Initializes a panel that is a section of a ring in a circular antenna
         Fitting method kinds are:
@@ -46,9 +46,10 @@ class RingPanel(BasePanel):
         zeta = (ipanel + 0.5) * angle
         rt = (self.inrad + self.ourad) / 2
         self.center = [rt * np.cos(zeta), rt * np.sin(zeta)]
+        self.panel_meta = panel_meta
         screws = self._init_screws(screw_scheme, screw_offset)
         # Now we are ready to initialize the base object
-        super().__init__(kind, screws, label, center=self.center, zeta=zeta)
+        super().__init__(kind, screws, label, panel_meta, center=self.center, zeta=zeta)
 
     def _init_screws(self, scheme, offset):
         """
