@@ -7,27 +7,38 @@ class TestRingPanel:
     inrad = 2.0
     ourad = 3.0
     angle = np.pi / 2
-    position = 1
+    ipanel = 1
     deviation = 2.0
     point = [2.5, -2.5, 1, 1, deviation]
-    corotatedpan = RingPanel('corotatedparaboloid', angle, position, position, inrad, ourad)
+    label = 'test'
+    meta  = 'test_ant'
+    margin = 0.2
+    panel = RingPanel('rigid', angle, ipanel, label, inrad, ourad, meta, margin=margin)
 
     def test_init(self):
         """
         Tests the correct initialization of a RingPanel object, not all parameters tested
         """
-        assert self.corotatedpan.theta1 == self.angle, 'Panel initial angle is incorrect'
-        assert self.corotatedpan.theta2 == 2 * self.angle, 'Panel final angle is incorrect'
-        assert self.corotatedpan.zeta == 1.5 * self.angle, 'Panel central angle is incorrect'
-        assert self.corotatedpan.iring == self.position+1, 'Panel ring numbering is incorrect'
-
+        theta_margin = self.margin*self.angle
+        radius_margin = self.margin*(self.ourad-self.inrad)
+        assert self.panel.theta1 == self.angle, 'Panel initial angle is incorrect'
+        assert self.panel.theta2 == 2 * self.angle, 'Panel final angle is incorrect'
+        assert self.panel.zeta == 1.5 * self.angle, 'Panel central angle is incorrect'
+        assert self.panel.margin_theta1 == self.angle + theta_margin
+        assert self.panel.margin_theta2 == 2*self.angle - theta_margin
+        assert self.panel.margin_inrad == self.inrad + radius_margin
+        assert self.panel.margin_ourad == self.ourad - radius_margin
+        #assert self.panel.center == 0.0
+        assert not self.panel.first
+        
+        
     def test_is_inside(self):
         """
         Test over the is_inside test for a point
         """
-        assert self.corotatedpan.is_inside((self.inrad + self.ourad) / 2, 1.5 * self.angle), 'Point that should be ' \
+        assert self.panel.is_inside((self.inrad + self.ourad) / 2, 1.5 * self.angle), 'Point that should be ' \
                                                                                              'inside the panel isn\'t'
-        assert not self.corotatedpan.is_inside((self.inrad + self.ourad) / 2, 3.5 * self.angle), 'Point that should ' \
+        assert not self.panel.is_inside((self.inrad + self.ourad) / 2, 3.5 * self.angle), 'Point that should ' \
                                                                                                  'be outside the ' \
                                                                                                  'panel isn\'t'
 
@@ -37,10 +48,10 @@ class TestRingPanel:
         """
         npoints = 200
         for i in range(npoints):
-            self.corotatedpan.add_point(self.point)
-        self.corotatedpan.solve()
-        self.corotatedpan.get_corrections()
-        exportedstr = self.corotatedpan.export_adjustments().split()
+            self.panel.add_point(self.point)
+        self.panel.solve()
+        self.panel.get_corrections()
+        exportedstr = self.panel.export_adjustments().split()
 
         assert float(exportedstr[0]) == self.position + 1, 'Panel ring numbering is wrong when exported'
         assert float(exportedstr[1]) == self.position + 1, 'Panel numbering is wrong when exported'
