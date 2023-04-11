@@ -32,7 +32,7 @@ def holog(
     phase_fit=True,
     overwrite=False,
     parallel=True):
-    """ Process holography data.
+    """ Process holography data and derive aperture illumination pattern.
 
     :param holog_name: Name of holography .holog.zarr file to process.
     :type holog_name: str
@@ -46,26 +46,22 @@ def holog(
     :param image_name: Defines the name of the output image name. If value is None, the name will be set to <base_name>.image.zarr, defaults to None
     :type image_name: str, optional
 
-    :param padding_factor: Padding factor applied to beam grid before computing the fast-fourier transform. The default has been set for operation
-    on most systems. The user should be aware of memory constraints before increasing this parameter significatly., defaults to 50
+    :param padding_factor: Padding factor applied to beam grid before computing the fast-fourier transform. The default has been set for operation on most systems. The user should be aware of memory constraints before increasing this parameter significatly., defaults to 50
     :type padding_factor: int, optional
 
     :param parallel: Run in parallel with Dask or in serial., defaults to True
     :type parallel: bool, optional
 
-    :param grid_interpolation_mode: Method of interpolation used when gridding data. This is done using the `scipy.interpolate.griddata` method. For 
-    more information on the interpolation see https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html#scipy.interpolate.griddata, defaults to "nearest"
+    :param grid_interpolation_mode: Method of interpolation used when gridding data. This is done using the `scipy.interpolate.griddata` method. For more information on the interpolation see `scipy.interploate <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html#scipy.interpolate.griddata>`_, defaults to "nearest"
     :type grid_interpolation_mode: str, optional
 
     :param chan_average: Boolean dictating whether the channel average is computed and written to the output holog file., defaults to True
     :type chan_average: bool, optional
 
-    :param chan_tolerance_factor: Tolerance used in channel averaging to determine the number of primary beam channels: 
-    n_pb_chan = int(np.floor((np.max(freq_chan) - np.min(freq_chan)) / np.max(freq_chan) * chan_tolerance_factor) + 0.5), defaults to 0.005
+    :param chan_tolerance_factor: Tolerance used in channel averaging to determine the number of primary beam channels., defaults to 0.005
     :type chan_tolerance_factor: float, optional
 
-    :param reference_scaling_frequency: When computing the channel average the lm frequency values are scaled by frequency. If the default None is used, the scaling is simply unity, 
-    however if `reference_scaling_frequency` is set then the scaling is done according to (average_frequency/reference_scaling_frequency)., defaults to None
+    :param reference_scaling_frequency: When computing the channel average the lm frequency values are scaled by frequency. If the default None is used, the scaling is simply unity, however if `reference_scaling_frequency` is set then the scaling is done according to (average_frequency/reference_scaling_frequency)., defaults to None
     :type reference_scaling_frequency: _type_, optional
 
     :param scan_average: Boolean dicating whether averagin is done over scan., defaults to True
@@ -80,17 +76,21 @@ def holog(
     :param apply_mask: If True applies a mask to the aperture setting values outside of the aperture to zero., defaults to True
     :type apply_mask: bool, optional
 
-    :param phase_fit: If a boolean array is given each element controls one aspect of
-        phase fitting: 0 -> pointing offset; 
-                       1 -> focus xy offsets; 
-                       2 -> focus z offset; 
-                       3 -> subreflector tilt; (This one is off by default except for VLA and VLBA)
-                       4 -> cassegrain offset
-        defaults to True
+    :param phase_fit: If a boolean array is given each element controls one aspect of phase fitting. defaults to True.
+        
+        Phase fitting:
+        
+        - [0]: pointing offset; 
+        - [1]: focus xy offsets; 
+        - [2]: focus z offset; 
+        - [3]: subreflector tilt (off by default except for VLA and VLBA)
+        - [4]: cassegrain offset
+
     :type phase_fit: bool, optional
 
     :param overwrite: Overwrite existing files on disk, defaults to False
     :type overwrite: bool, optional
+
     """
     
     logger = _get_astrohack_logger()

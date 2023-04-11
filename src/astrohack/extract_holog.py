@@ -36,26 +36,24 @@ def extract_holog(
     overwrite=False,
 ):
     """
-    This function extracts the holography reltaed information from the given measurement file. The data is restructured into an astrohack file format and saved into a file in the form of ``<holog_name>.holog.zarr``. The extension ``.holog.zarr`` is used for all holography files.
-
-    In addition, the pointing information is recorded into a holography file of format ``<pointing_name>.point.zarr``. The extension ``.point.zarr`` is used for all holography pointing files. 
+    Extract holography and optionally pointing data, from measurement set. Creates holography output file.
 
     :param ms_name: Name of input measurement file name.
     :type ms_name: str
 
-    :param holog_obs_dict: The holog_obs_dict describes which scans and antennas's data to extract from the ms. As detailed below, this compound dictionary also includes important meta data needed for preocessing ans extraction of the holography data from the measurement set.
+    :param holog_obs_dict: The *holog_obs_dict* describes which scan and antenna data to extract from the measurement set. As detailed below, this compound dictionary also includes important meta data needed for preprocessing and extraction of the holography data from the measurement set.
     :type holog_obs_dict: dict        
 
-    :param holog_name: Name of <holog_name>.holog.zarr file to create., defaults to measurement set name with holog.zarr extension.
+    :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with *holog.zarr* extension.
     :type holog_name: str, optional
 
-    :param point_name: Name of <point_name>.point.zarr file to create., defaults to measurement set name with point.zarr extension.
+    :param point_name: Name of *<point_name>.point.zarr* file to create. Defaults to measurement set name with *point.zarr* extension.
     :type point_name: str, optional
 
-    :param data_col: Variable determines the data column to pull from the measurement set., defaults to "DATA"
+    :param data_col: Determines the data column to pull from the measurement set. Defaults to "DATA"
     :type data_col: str, optional
 
-    :param parallel: Boolean for whether to process in parallel., defaults to False
+    :param parallel: Boolean for whether to process in parallel. Defaults to False
     :type parallel: bool, optional
 
     :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files., defaults to False
@@ -65,23 +63,25 @@ def extract_holog(
 
     **Additional Information**
 
-        ``holog_obs_dict[holog_mapping_id] (dict):``
-        ``holog_mapping_id`` is a unique, arbitrary, user-defined integer assigned to the data that describes a single complete mapping of the beam.
+        This function extracts the holography related information from the given measurement file. The data is restructured into an astrohack file format and saved into a file in the form of *<holog_name>.holog.zarr*. The extension *.holog.zarr* is used for all holography files. In addition, the pointing information is recorded into a holography file of format *<pointing_name>.point.zarr*. The extension *.point.zarr* is used for all holography pointing files. 
 
-        This is needed for two reasons:
-        1. A complete mapping of the beam can be done over more than one scan. (for example the VLA data)
-        2. An ms can contain more than one mapping of the beam. (for example the ALMA data)
+        **holog_obs_dict[holog_mapping_id] (dict):**
+        *holog_mapping_id* is a unique, arbitrary, user-defined integer assigned to the data that describes a single complete mapping of the beam.
+        
+        .. rubric:: This is needed for two reasons:
+        * A complete mapping of the beam can be done over more than one scan (for example the VLA data). 
+        * A measurement set can contain more than one mapping of the beam (for example the ALMA data).
     
-        holog_obs_dict[holog_mapping_id][scans] (int | numpy.ndarray | list):
-        All the scans in the measurement set the `holog_mapping_id`.
+        **holog_obs_dict[holog_mapping_id][scans] (int | numpy.ndarray | list):**
+        All the scans in the measurement set the *holog_mapping_id*.
     
-        holog_obs_dict[holog_mapping_id][ant] (dict):
-        The dictionary keys are the mapping antenna names and the values lists of the reference antennas. See example below.
+        **holog_obs_dict[holog_mapping_id][ant] (dict):**
+        The dictionary keys are the mapping antenna names and the values a list of the reference antennas. See example below.
     
-        holog_obs_dict[ddi] (int | numpy.ndarray | list):
+        **holog_obs_dict[ddi] (int | numpy.ndarray | list):**
         Value(s) of DDI that should be extracted from the measurement set.
 
-        The below example shows how the `holog_obs_description` dictionary should be laid out. For each `holog_mapping_id` the relevant scans 
+        The below example shows how the *holog_obs_description* dictionary should be laid out. For each *holog_mapping_id* the relevant scans 
         and antennas must be provided. For the `ant` key, an entry is required for each mapping antenna and the accompanying reference antenna(s).
     
         .. parsed-literal::

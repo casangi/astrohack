@@ -18,66 +18,68 @@ from astrohack._utils._utils import _remove_suffix
 
 def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, unit='mm', panel_margins=0.2, save_mask=False,
           save_deviations=True, save_phase=False, parallel=False, sel_ddi=None, overwrite=False):
-    """
-    Analyse holography images to derive panel adjustments
+    """Analyze holography images to derive panel adjustments
 
-    Results are stored in a .panel.zarr file
+    :param image_name: Input holography data file name. Accepted data formats are the output from ``astrohack.holog.holog`` and AIPS holography data prepackaged using ``astrohack.panel.aips_holog_to_astrohack``.
+    :type image_name: str
+    :param panel_name: Name of output file; File name will be appended with suffix *.panel.zarr*. Defaults to *basename* of input file plus holography panel file suffix.
+    :type panel_name: str, optional
+    :param cutoff: Relative amplitude cut-off which defines fitting mask. Defaults to 0.2.
+    :type cutoff: float, optional
+    :param panel_model: Model of surface fitting function used to fit panel surfaces, None will default to "rigid". Possible models are listed below.
+    :type panel_model: str, optional
+    :param unit: Unit used in deviation plots and screw adjustments. Several units are available: "m" (meters); "mm" (millimeters); "mils" (milliinches) OR "um" (microns). Defaults to "mm".
+    :type unit: str, optional
+    :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.2.
+    :type panel_margins: float, optional
+    :param save_mask: Save mask plot derived from the amplitude image and the map of the panels. Defaults to False.
+    :type save_mask: bool, optional
+    :param save_deviations: Save plot with the uncorrected deviation image, applied corrections and the corrected deviation image. Defaults to True.
+    :type save_deviations: bool, optional
+    :param save_phase: Save plot with the uncorrected phase image, applied corrections and the corrected phase image. Defaults to False.
+    :type save_phase: bool, optional
+    :param parallel: Run in parallel. Defaults to False.
+    :type parallel: bool, optional
+    :param sel_ddi: List of DDIs to be processed. None will use all DDIs. Defaults to None.
+    :type sel_ddi: list, optional
+    :param overwrite: Overwrite files on disk. Defaults to False.
+    :type overwrite: bool, optional
 
-    Each holography in the input holog image file is processed in the following steps:
-        1- Phase image is converted to a physical surface deviation image (deviation image)
-        2- A mask of valid signal is created by using the relative cutoff on the amplitude image
-        3- From the telescope panel layout information an image describing the panel assignment of each pixel is created
-        4- The image created in step 3 and the mask are used to create a list of pixels in each panel
-        5- Pixels in each panel are divided into two groups: margin pixels and internal pixels
-        6- For each panel:
-            6a- Internal pixels are fitted to a surface model
-            6b- The fitted surface model is used to derive corrections for all pixels in the panel, internal and margins
-            6c- The fitted surface model is used to derive corrections for the positions of the screws
-        7- A corrected deviation image is produced
-        8- RMS is computed for both the corrected and uncorrected deviation images
-        9- All images produced are stored in the output .panel.zarr file
-       10- Optional plots can be produced (Plot production may impact performance):
-           10a- A plot with the mask derived from the amplitude image, the amplitude image and the map of the panels
-                (To activate this plot set :save_mask: to True)
-           10b- A plot with the original deviation image, the corrections applied to the deviation image and the
-                corrected deviation image (To activate this plot set :save_deviations: to True)
-           10c- A plot with the original phase image, the corrections applied to the phase image and the corrected phase
-                image (To activate this plot set :save_phase: to True)
-        11- An ASCII file containing the adjustments to be applied to the panel screws is saved inside the .panel.zarr
-            file
+    .. _Description:
 
-    Available panel surface models are:
-        AIPS fitting models:
-            mean: The panel is corrected by the mean of its samples
-            rigid: The panel samples are fitted to a rigid surface (DEFAULT model)
-        Corotated Paraboloids (the two bending axes of the paraboloid are parallel and perpendicular to a radius of the
-        antenna crossing the middle point of the panel):
-            corotated_scipy: Paraboloid is fitted using scipy.optimize, robust but slow
-            corotated_lst_sq: Paraboloid is fitted using the linear algebra least squares method, fast but unreliable
-            corotated_robust: Tries corotated_lst_sq, if it diverges falls back to corotated_scipy, fast and robust
-        Experimental fitting models:
-            xy_paraboloid: fitted using scipy.optimize, bending axes are parallel to the x and y axes
-            rotated_paraboloid: fitted using scipy.optimize, bending axes can be rotated by any arbitrary angle
-            full_paraboloid_lst_sq: Full 9 parameter paraboloid fitted using least_squares method, tends to heavily
-                                    overfit surface irregularities
+    **Additional Information**
+        Each holography in the input holog image file is processed in the following steps:
+        
+        .. rubric:: Code Outline
+        - Phase image is converted to a physical surface deviation image.
+        - A mask of valid signals is created by using the relative cutoff on the amplitude image.
+        - From the telescope panel and layout information, an image describing the panel assignment of each pixel is created.
+        - Using panel image and mask, a list of pixels in each panel is created.
+        - Pixels in each panel are divided into two groups: margin pixels and internal pixels.
+        - For each panel:
+            * Internal pixels are fitted to a surface model.
+            * The fitted surface model is used to derive corrections for all pixels in the panel, internal and margins.
+            * The fitted surface model is used to derive corrections for the positions of the screws.
+        - A corrected deviation image is produced.
+        - RMS is computed for both the corrected and uncorrected deviation images.
+        - All images produced are stored in the output *.panel.zarr file*.
+        - Optional plots can be produced (plot production may impact performance).
+        - An ASCII file containing the adjustments to be applied to the panel screws is saved inside the *.panel.zarr* file.
 
-    Args:
-        image_name: Input holography data, Accepted data formats are the output from astrohack.holog.holog and AIPS
-                    holography data prepackaged using astrohack.panel.aips_holog_to_astrohack
-        panel_name: Name for the output .panel.zarr file
-        cutoff: Relative cut off in amplitude to define the fitting mask (step 2), None means 0.2
-        panel_model: model of surface fitting function used to fit panel surfaces, None means "rigid" possible models are
-                    listed above
-        unit: Unit to be used in physical deviation plots and screw adjustments, several length units are available,
-              recommended units are: 'm' (meters); 'mm' (millimeters); 'mils' (milliinches) OR 'um' (microns)
-        save_mask: Save plot described in step 10a
-        save_deviations: Save plot described in step 10b
-        save_phase: Save plot described in step 10c
-        parallel: Process holographies for available antennas in parallel
-        panel_margins: Relative margin from the edge of panel used to decide which points are margin points or internal
-                       points of each panel
-        sel_ddi: Which DDIs are to be processed by panel, None means all of them
-        overwrite: Overwrite previous .panel.zarr file of same name?
+        .. rubric:: Available panel surface models:
+        * AIPS fitting models:
+            - *mean*: The panel is corrected by the mean of its samples.
+            - *rigid*: The panel samples are fitted to a rigid surface (DEFAULT model).
+        * Corotated Paraboloids: (the two bending axes of the paraboloid are parallel and perpendicular to a radius of the antenna crossing the middle point of the panel):
+            - *corotated_scipy*: Paraboloid is fitted using scipy.optimize, robust but slow.
+            - *corotated_lst_sq*: Paraboloid is fitted using the linear algebra least squares method, fast but unreliable.
+            - *corotated_robust*: Tries corotated_lst_sq, if it diverges falls back to corotated_scipy, fast and robust.
+        * Experimental fitting models:
+            - *xy_paraboloid*: fitted using scipy.optimize, bending axes are parallel to the x and y axes.
+            - *rotated_paraboloid*: fitted using scipy.optimize, bending axes can be rotated by any arbitrary angle.
+            - *full_paraboloid_lst_sq*: Full 9 parameter paraboloid fitted using least_squares method, tends to heavily overfit surface irregularities.
+
+
     """
     
     logger = _get_astrohack_logger()
