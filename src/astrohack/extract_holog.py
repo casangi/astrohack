@@ -21,17 +21,14 @@ from astrohack._utils._io import _read_data_from_holog_json
 from astrohack._utils._io import _read_meta_data
 from astrohack._utils._io import _load_holog_file
 from astrohack._utils._io import  check_if_file_will_be_overwritten,check_if_file_exists
-#from memory_profiler import profile
-
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from  astrohack._utils._parm_utils._check_parms import _check_parms
+from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._utils import _remove_suffix
 from astrohack._utils._io import _load_holog_file
 
-from astrohack._utils._dio_classes import AstrohackHologFile
 
-#@profile(stream=fp)
+from astrohack._utils._dio_classes import AstrohackHologFile
 def extract_holog(
     ms_name,
     holog_obs_dict,
@@ -42,36 +39,72 @@ def extract_holog(
     overwrite=False,
 ):
     """
-    From a measurement set with holography data extract the pointing information (saved into a folder with a .point.zarr extension) and holography data (saved into a folder with an extension .holog.zarr).
+    Extract holography and optionally pointing data, from measurement set. Creates holography output file.
 
-    Parameters
-    ----------
-    ms_name (string):
-        Measurement file name.
-    holog_obs_dict (dict):
-        The holog_obs_dict describes which scans and antennas's data to exstract from the ms.
-        For example:
-        scans=[8,9,10,12,13,14,16,17,18,23,24,25,27,28,29,31,32,33,38,39,40,42,43,44,46,47,48,53,54,55,57]
-        holog_obs_description = {0 :{'scans':scans,'ant':{'ea25':['ea04']}}}
-        holog_obs_description['ddi'] = [0]
-    holog_obs_dict[holog_mapping_id] (dict):
-        A dictionary where each key is a holog_mapping_id. The holog_mapping_ids can be any numbers chosen arbiterily and represent one complete mapping of the beam. The holog_mapping_id is needed since the mapping of a beam can take more than one scan and an ms can have more than one mapping of the beam.
-    holog_obs_dict[holog_mapping_id]['scans'] (int np.ndarray/list):
-        All the scans in the ms that form part of the holog_mapping_id.
-    holog_obs_dict[holog_mapping_id]['ant'] (dict):
-        The keys are the mapping antenna names and the values lists of the reference antennas.
-    holog_obs_dict[ddi] (int np.ndarray/list):
-        All the ddi's in the ms from which data should be exstracted.
-    holog_name (string, default= ms name with holog.zarr extension):
-        Name of holog.zarr file to create.
-    point_name (string, default= ms name with point.zarr extension):
-        Name of point.zarr file to create.
-    data_col (str, default='DATA'):
-        Data column from measurement set to acquire.
-    parallel (bool, default=False):
-        Boolean for whether to process in parallel. If parallel processing is
-    overwrite (bool, optional):
-        Boolean for whether to overwrite current holog.zarr and point.zarr files.
+    :param ms_name: Name of input measurement file name.
+    :type ms_name: str
+
+    :param holog_obs_dict: The *holog_obs_dict* describes which scan and antenna data to extract from the measurement set. As detailed below, this compound dictionary also includes important meta data needed for preprocessing and extraction of the holography data from the measurement set.
+    :type holog_obs_dict: dict        
+
+    :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with *holog.zarr* extension.
+    :type holog_name: str, optional
+
+    :param point_name: Name of *<point_name>.point.zarr* file to create. Defaults to measurement set name with *point.zarr* extension.
+    :type point_name: str, optional
+
+    :param data_col: Determines the data column to pull from the measurement set. Defaults to "DATA"
+    :type data_col: str, optional
+
+    :param parallel: Boolean for whether to process in parallel. Defaults to False
+    :type parallel: bool, optional
+
+    :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files., defaults to False
+    :type overwrite: bool, optional
+
+    .. _Description:
+
+    **Additional Information**
+
+        This function extracts the holography related information from the given measurement file. The data is restructured into an astrohack file format and saved into a file in the form of *<holog_name>.holog.zarr*. The extension *.holog.zarr* is used for all holography files. In addition, the pointing information is recorded into a holography file of format *<pointing_name>.point.zarr*. The extension *.point.zarr* is used for all holography pointing files. 
+
+        **holog_obs_dict[holog_mapping_id] (dict):**
+        *holog_mapping_id* is a unique, arbitrary, user-defined integer assigned to the data that describes a single complete mapping of the beam.
+        
+        .. rubric:: This is needed for two reasons:
+        * A complete mapping of the beam can be done over more than one scan (for example the VLA data). 
+        * A measurement set can contain more than one mapping of the beam (for example the ALMA data).
+    
+        **holog_obs_dict[holog_mapping_id][scans] (int | numpy.ndarray | list):**
+        All the scans in the measurement set the *holog_mapping_id*.
+    
+        **holog_obs_dict[holog_mapping_id][ant] (dict):**
+        The dictionary keys are the mapping antenna names and the values a list of the reference antennas. See example below.
+    
+        **holog_obs_dict[ddi] (int | numpy.ndarray | list):**
+        Value(s) of DDI that should be extracted from the measurement set.
+
+        The below example shows how the *holog_obs_description* dictionary should be laid out. For each *holog_mapping_id* the relevant scans 
+        and antennas must be provided. For the `ant` key, an entry is required for each mapping antenna and the accompanying reference antenna(s).
+    
+        .. parsed-literal::
+            holog_obs_description = {
+                'map_0' :{
+                    'scans':[2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22],
+                    'ant':{
+                        'DA44':[
+                            'DV02', 'DV03', 'DV04', 
+                            'DV11', 'DV12', 'DV13', 
+                            'DV14', 'DV15', 'DV16', 
+                            'DV17', 'DV18', 'DV19', 
+                            'DV20', 'DV21', 'DV22', 
+                            'DV23', 'DV24', 'DV25'
+                        ]
+                    }
+                }
+            }
+            holog_obs_description['ddi'] = [0]
+
     """
     logger = _get_astrohack_logger()
     
