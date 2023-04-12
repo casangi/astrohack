@@ -164,6 +164,7 @@ def _holog_chunk(holog_chunk_params):
     
     if holog_chunk_params["scan_average"]:
         beam_grid = np.mean(beam_grid,axis=0)[None,...]
+        time_centroid = np.mean(np.array(time_centroid))
     
     # Current bottleneck
     aperture_grid, u, v, uv_cell_size = _calculate_aperture_pattern(
@@ -291,7 +292,7 @@ def _holog_chunk(holog_chunk_params):
     xds.attrs["ddi"] = ddi
 
     coords = {}
-    coords["time"] = np.array(time_centroid)
+    #coords["time"] = np.array(time_centroid)
     coords["ddi"] = list(ant_data_dict.keys())
     coords["pol"] = pol
     coords["l"] = l
