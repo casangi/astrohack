@@ -156,8 +156,10 @@ def _holog_chunk(holog_chunk_params):
     
 
     ###############
+    pol = beam_grid,ant_data_dict[ddi][holog_map].pol.values
     if to_stokes:
         beam_grid = _to_stokes(beam_grid,ant_data_dict[ddi][holog_map].pol.values)
+        pol=['I','Q','U','V']
     ###############
     
     if holog_chunk_params["scan_average"]:
@@ -276,11 +278,11 @@ def _holog_chunk(holog_chunk_params):
     ###To Do: Add Paralactic angle as a non-dimension coordinate dependant on time.
     xds = xr.Dataset()
 
-    xds["BEAM"] = xr.DataArray(beam_grid, dims=["time-centroid", "chan", "pol", "l", "m"])
-    xds["APERTURE"] = xr.DataArray(aperture_grid, dims=["time-centroid", "chan", "pol", "u", "v"])
+    xds["BEAM"] = xr.DataArray(beam_grid, dims=["time", "chan", "pol", "l", "m"])
+    xds["APERTURE"] = xr.DataArray(aperture_grid, dims=["time", "chan", "pol", "u", "v"])
     
-    xds["AMPLITUDE"] = xr.DataArray(amplitude, dims=["time-centroid", "chan", "pol", "u_prime", "v_prime"])
-    xds["ANGLE"] = xr.DataArray(phase_corrected_angle, dims=["time-centroid", "chan", "pol", "u_prime", "v_prime"])
+    xds["AMPLITUDE"] = xr.DataArray(amplitude, dims=["time", "chan", "pol", "u_prime", "v_prime"])
+    xds["ANGLE"] = xr.DataArray(phase_corrected_angle, dims=["time", "chan", "pol", "u_prime", "v_prime"])
 
     xds.attrs["ant_id"] = holog_chunk_params["ant_id"]
     xds.attrs["ant_name"] = ant_name
@@ -289,9 +291,9 @@ def _holog_chunk(holog_chunk_params):
     xds.attrs["ddi"] = ddi
 
     coords = {}
-    coords["time_centroid"] = np.array(time_centroid)
+    coords["time"] = np.array(time_centroid)
     coords["ddi"] = list(ant_data_dict.keys())
-    coords["pol"] = [i for i in range(n_pol)]
+    coords["pol"] = pol
     coords["l"] = l
     coords["m"] = m
     coords["u"] = u

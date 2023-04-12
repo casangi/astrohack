@@ -883,12 +883,12 @@ def _extract_holog_chunk(extract_holog_params):
     if sel_state_ids:    
         ctb = ctables.taql(
             "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
-            % (data_col, ddi, scans, sel_state_ids)
+            % (data_col, ddi, list(scans), list(sel_state_ids))
         )
     else:
         ctb = ctables.taql(
             "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
-            % (data_col, ddi, scans)
+            % (data_col, ddi, list(scans))
         )
         
     vis_data = ctb.getcol(data_col)
