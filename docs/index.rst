@@ -1,7 +1,5 @@
 Holography Antenna Commissioning Kit
-===========================================================
-
-The index.
+====================================
 
 .. image:: _media/astrohack_logo.png
    :width: 250px
