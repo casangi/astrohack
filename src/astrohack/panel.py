@@ -5,7 +5,7 @@ import shutil
 
 from astrohack._classes.antenna_surface import AntennaSurface
 from astrohack._classes.telescope import Telescope
-from astrohack._classes.base_panel import panelkinds
+from astrohack._classes.base_panel import panel_models
 from astrohack._utils._io import _load_image_xds, _aips_holog_to_xds, check_if_file_will_be_overwritten, check_if_file_exists
 from astrohack._utils._panel import _external_to_internal_parameters, _correct_phase
 import numpy as np
@@ -245,7 +245,7 @@ def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, panel_margins
     base_name = _remove_suffix(panel_params['image_name'], '.image.zarr')
     parms_passed = parms_passed and _check_parms(panel_params, 'panel_name', [str], default=base_name+'.panel.zarr')
     parms_passed = parms_passed and _check_parms(panel_params, 'cutoff', [float], acceptable_range=[0, 1], default=0.2)
-    parms_passed = parms_passed and _check_parms(panel_params, 'panel_kind', [str], acceptable_data=panelkinds, default="rigid")
+    parms_passed = parms_passed and _check_parms(panel_params, 'panel_kind', [str], acceptable_data=panel_models, default="rigid")
     parms_passed = parms_passed and _check_parms(panel_params, 'panel_margins', [float], acceptable_range=[0, 0.5], default=0.2)
     parms_passed = parms_passed and _check_parms(panel_params, 'parallel', [bool], default=False)
     parms_passed = parms_passed and _check_parms(panel_params, 'sel_ddi', [list, np.array], list_acceptable_data_types=[int, np.int], default='all')

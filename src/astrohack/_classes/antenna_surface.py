@@ -1,7 +1,7 @@
 import xarray as xr
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from astrohack._classes.base_panel import panelkinds, irigid
+from astrohack._classes.base_panel import panel_models, irigid
 from astrohack._classes.ring_panel import RingPanel
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
@@ -11,7 +11,7 @@ lnbr = "\n"
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pkind=None, crop=False, panel_margins=None):
+    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, panel_margins=None):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -19,7 +19,7 @@ class AntennaSurface:
             telescope: Telescope object
             cutoff: fractional cutoff on the amplitude image to exclude regions with weak amplitude from the panel,
                     defaults to 20% if None
-            pkind: Kind of panel surface fitting, if is None defaults to telescope default
+            pmodel: model of panel surface fitting, if is None defaults to telescope default
             crop: Crop apertures to slightly larger frames than the antenna diameter
             panel_margins: Margin to be ignored at edges of panels when fitting, defaults to 20% if None
         """
@@ -31,10 +31,10 @@ class AntennaSurface:
             self.cut = 0.2 * np.nanmax(self.amplitude)
         else:
             self.cut = cutoff * np.nanmax(self.amplitude)
-        if pkind is None:
-            self.panelkind = panelkinds[irigid]
+        if pmodel is None:
+            self.panelmodel = panel_models[irigid]
         else:
-            self.panelkind = pkind
+            self.panelmodel = pmodel
         if panel_margins is None:
             self.panel_margins = 0.2
         else:
@@ -254,7 +254,7 @@ class AntennaSurface:
             angle = 2.0 * np.pi / self.telescope.npanel[iring]
             for ipanel in range(self.telescope.npanel[iring]):
                 panel = RingPanel(
-                    self.panelkind,
+                    self.panelmodel,
                     angle,
                     ipanel,
                     self._panel_label(iring, ipanel),
@@ -560,7 +560,7 @@ class AntennaSurface:
         xds.attrs['wavelength'] = self.wavelength
         xds.attrs['AIPS'] = False
         xds.attrs['amp_unit'] = self.amp_unit
-        xds.attrs['panel_kind'] = self.panelkind
+        xds.attrs['panel_model'] = self.panelmodel
         xds.attrs['panel_margin'] = self.panel_margins
         xds.attrs['cutoff'] = self.cut
         xds['AMPLITUDE'] = xr.DataArray(self.amplitude, dims=["u", "v"])
