@@ -835,8 +835,7 @@ def _create_holog_file(
 
         else:
             logger.warning(
-                "[FLAGGED DATA] scan: {scan} mapping antenna index {index}".format(
-                    scan=scan, index=map_ant_index
+                "[FLAGGED DATA] mapping antenna index {index}".format(index=map_ant_index
                 )
             )
 
