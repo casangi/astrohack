@@ -489,21 +489,7 @@ class BasePanel:
         """
         return self.par[0]
 
-    def export_adjustments(self, unit='mm'):
-        """
-        Exports panel screw adjustments to a string
-        Args:
-            unit: Unit for screw adjustments ['mm','miliinches']
-        Returns:
-        String with screw adjustments for this panel
-        """
-        fac = _convert_unit('m', unit, 'length')
-        string = self.label
-        for screw in self.screws[:, ]:
-            string += ' {0:10.2f}'.format(fac * self.corr_point(*screw))
-        return string
-
-    def export_screws_float(self, unit='mm'):
+    def export_screws(self, unit='mm'):
         """
         Export screw adjustments to a numpy array in unit
         Args:
