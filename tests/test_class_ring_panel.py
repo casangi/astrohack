@@ -11,9 +11,8 @@ class TestRingPanel:
     deviation = 2.0
     point = [2.5, -2.5, 1, 1, deviation]
     label = 'test'
-    meta  = 'test_ant'
     margin = 0.2
-    panel = RingPanel('rigid', angle, ipanel, label, inrad, ourad, meta, margin=margin)
+    panel = RingPanel('rigid', angle, ipanel, label, inrad, ourad, margin=margin)
 
     def test_init(self):
         """

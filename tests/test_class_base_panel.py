@@ -8,7 +8,6 @@ import numpy as np
 
 class TestBasePanel:
     tolerance = 1e-6
-    meta = ['test','test']
 
     def test_gauss_elimination_numpy(self):
         """
@@ -23,7 +22,7 @@ class TestBasePanel:
     def test_init(self):
         screws = np.zeros([4, 2])
         label = 'TEST'
-        lepanel = BasePanel(panel_models[imean], screws, label, self.meta)
+        lepanel = BasePanel(panel_models[imean], screws, label)
         assert lepanel.label == label, "Internal panel label not what expected"
         assert lepanel.model == panel_models[imean], "Internal model does not match input"
         assert lepanel.samples == [], 'List of samples should be empty'
@@ -31,7 +30,7 @@ class TestBasePanel:
         assert lepanel.corr is None, 'List of corrections should be None'
         assert not lepanel.solved, 'Panel cannot be solved at creation'
         with pytest.raises(Exception):
-            lepanel = BasePanel('xxx', screws, label, self.meta)
+            lepanel = BasePanel('xxx', screws, label)
 
     def test_add_point(self):
         """
@@ -39,7 +38,7 @@ class TestBasePanel:
         """
         screws = np.zeros([4, 2])
         ipanel = 0
-        lepanel = BasePanel(panel_models[imean], ipanel, screws, self.meta)
+        lepanel = BasePanel(panel_models[imean], ipanel, screws)
         nsamp = 30
         point = [0, 0, 0, 0, 0]
         for i in range(nsamp):
@@ -59,7 +58,7 @@ class TestBasePanel:
         point = [0, 0, 0, 0, expectedmean]
         screws = np.zeros([4, 2])
         nsamp = 30
-        meanpanel = BasePanel(panel_models[imean], screws, 'test', self.meta)
+        meanpanel = BasePanel(panel_models[imean], screws, 'test')
         assert meanpanel._solve_sub == meanpanel._solve_mean, 'Incorrect overloading of mean solving method'
         assert meanpanel.corr_point == meanpanel._corr_point_mean, 'Incorrect overloading of mean point correction ' \
                                                                    'method'
@@ -90,7 +89,7 @@ class TestBasePanel:
         expectedpar = [3.5, -2, 1]
         screws = np.zeros([4, 2])
         nside = 32
-        rigidpanel = BasePanel(panel_models[irigid], screws, 'test', self.meta)
+        rigidpanel = BasePanel(panel_models[irigid], screws, 'test')
         assert rigidpanel._solve_sub == rigidpanel._solve_rigid, 'Incorrect overloading of rigid solving method'
         assert rigidpanel.corr_point == rigidpanel._corr_point_rigid, 'Incorrect overloading of rigid point ' \
                                                                       'correction method'
@@ -120,7 +119,7 @@ class TestBasePanel:
         expectedpar = [150, 10, 2.5]
         screws = np.zeros([4, 2])
         nside = 32
-        xyparapanel = BasePanel(panel_models[ixypara], screws, 'test', self.meta)
+        xyparapanel = BasePanel(panel_models[ixypara], screws, 'test')
         assert xyparapanel._solve_sub == xyparapanel._solve_scipy, 'Incorrect overloading of scipy solving method'
         assert xyparapanel.corr_point == xyparapanel._corr_point_scipy, 'Incorrect overloading of scipy point ' \
                                                                         'correction method'
@@ -153,7 +152,7 @@ class TestBasePanel:
         expectedpar = [39, 10, 2.5, theta]
         screws = np.zeros([4, 2])
         nside = 32
-        rotparapanel = BasePanel(panel_models[irotpara], screws, 'test', self.meta)
+        rotparapanel = BasePanel(panel_models[irotpara], screws, 'test')
         assert rotparapanel._solve_sub == rotparapanel._solve_scipy, 'Incorrect overloading of scipy solving method'
         assert rotparapanel.corr_point == rotparapanel._corr_point_scipy, 'Incorrect overloading of scipy point ' \
                                                                           'correction method'
@@ -187,7 +186,7 @@ class TestBasePanel:
         expectedpar = [75, 5, -2.0]
         screws = np.zeros([4, 2])
         nside = 32
-        corotparapanel = BasePanel(panel_models[icorscp], screws, 'test', self.meta)
+        corotparapanel = BasePanel(panel_models[icorscp], screws, 'test')
         assert corotparapanel._solve_sub == corotparapanel._solve_scipy, 'Incorrect overloading of scipy solving method'
         assert corotparapanel.corr_point == corotparapanel._corr_point_scipy, 'Incorrect overloading of scipy point ' \
                                                                               'correction method'
@@ -219,7 +218,7 @@ class TestBasePanel:
         expectedpar = [75, 5, -2.0]
         screws = np.zeros([4, 2])
         nside = 32
-        corotparapanel = BasePanel(panel_models[icorlst], screws, 'test', self.meta)
+        corotparapanel = BasePanel(panel_models[icorlst], screws, 'test')
         assert corotparapanel._solve_sub == corotparapanel._solve_corotated_lst_sq, 'Incorrect overloading of ' \
                                                                                     'corotated least squares solving ' \
                                                                                     'method'
@@ -252,7 +251,7 @@ class TestBasePanel:
         expectedpar = [75, 5, -2.0]
         screws = np.zeros([4, 2])
         nside = 32
-        corotparapanel = BasePanel(panel_models[icorrob], screws, 'test', self.meta)
+        corotparapanel = BasePanel(panel_models[icorrob], screws, 'test')
         assert corotparapanel._solve_sub == corotparapanel._solve_robust, 'Incorrect overloading of robust solving ' \
                                                                           'method'
         assert corotparapanel.corr_point == corotparapanel._corr_point_corotated_lst_sq, 'Incorrect overloading of ' \
@@ -287,7 +286,7 @@ class TestBasePanel:
         expectedscrew = 8000
         screws = np.zeros([4, 2])
         nside = 32
-        corotparapanel = BasePanel(panel_models[ifulllst], screws, 'test', self.meta)
+        corotparapanel = BasePanel(panel_models[ifulllst], screws, 'test')
         assert corotparapanel._solve_sub == corotparapanel._solve_least_squares_paraboloid, 'Incorrect overloading of ' \
                                                                                             'full least squares ' \
                                                                                             'solving method'
