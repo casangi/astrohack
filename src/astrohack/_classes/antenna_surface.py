@@ -6,6 +6,7 @@ from astrohack._classes.ring_panel import RingPanel
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 lnbr = "\n"
 
@@ -295,7 +296,6 @@ class AntennaSurface:
                     self._panel_label(iring, ipanel),
                     self.telescope.inrad[iring],
                     self.telescope.ourad[iring],
-                    panel_meta=[self.antenna_name, self.ddi],
                     margin=self.panel_margins,
                     screw_scheme=self.telescope.screw_description,
                     screw_offset=self.telescope.screw_offset
@@ -399,9 +399,18 @@ class AntennaSurface:
         """
         Loops over the panels to fit the panel surfaces
         """
+        panels = []
         for panel in self.panels:
-            panel.solve()
+            if not panel.solve():
+                panels.append(panel.label)
         self.fitted = True
+        if len(panels) > 0:
+            msg = f'Fit failed with the {self.panelmodel} model and a simple mean has been used instead for the ' \
+                  f'following panels: ' + str([self.antenna_name, self.ddi])
+            logger = _get_astrohack_logger()
+            logger.warning(msg)
+            msg = str(panels)
+            logger.warning(msg)
 
     def correct_surface(self):
         """
