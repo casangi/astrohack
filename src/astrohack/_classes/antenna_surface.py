@@ -6,6 +6,7 @@ from astrohack._classes.ring_panel import RingPanel
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 lnbr = "\n"
 
@@ -295,7 +296,6 @@ class AntennaSurface:
                     self._panel_label(iring, ipanel),
                     self.telescope.inrad[iring],
                     self.telescope.ourad[iring],
-                    panel_meta=[self.antenna_name, self.ddi],
                     margin=self.panel_margins,
                     screw_scheme=self.telescope.screw_description,
                     screw_offset=self.telescope.screw_offset
@@ -399,9 +399,18 @@ class AntennaSurface:
         """
         Loops over the panels to fit the panel surfaces
         """
+        panels = []
         for panel in self.panels:
-            panel.solve()
+            if not panel.solve():
+                panels.append(panel.label)
         self.fitted = True
+        if len(panels) > 0:
+            msg = f'Fit failed with the {self.panelmodel} model and a simple mean has been used instead for the ' \
+                  f'following panels: ' + str([self.antenna_name, self.ddi])
+            logger = _get_astrohack_logger()
+            logger.warning(msg)
+            msg = str(panels)
+            logger.warning(msg)
 
     def correct_surface(self):
         """
@@ -558,31 +567,15 @@ class AntennaSurface:
         for ipanel in range(npanels):
             self.panel_labels[ipanel] = self.panels[ipanel].label
             self.panel_pars[ipanel, :] = self.panels[ipanel].par
-            self.screw_adjustments[ipanel, :] = self.panels[ipanel].export_screws_float(unit='m')
+            self.screw_adjustments[ipanel, :] = self.panels[ipanel].export_screws(unit='m')
 
-    def export_screw_adjustments(self, filename, unit="mm"):
+    def export_screws(self, filename, unit="mm"):
         """
         Export screw adjustments for all panels onto an ASCII file
         Args:
             filename: ASCII file name/path
             unit: unit for panel screw adjustments ['mm','miliinches']
         """
-        spc = " "
-        outfile = "Screw adjustments for {0:s} {1:s} antenna\n".format(
-            self.telescope.name, self.antenna_name
-        )
-        outfile += "Adjustments are in " + unit + lnbr
-        outfile += 2 * lnbr
-        outfile += 25 * spc + "{0:22s}{1:22s}".format("Inner Edge", "Outer Edge") + lnbr
-        outfile += 5 * spc + "{0:8s}{1:8s}".format("Ring", "panel")
-        outfile += 2 * spc + 2 * "{0:11s}{1:11s}".format("left", "right") + lnbr
-        for panel in self.panels:
-            outfile += panel.export_adjustments(unit=unit) + lnbr
-        lefile = open(filename, "w")
-        lefile.write(outfile)
-        lefile.close()
-
-    def export_screws(self, filename, unit="mm"):
         outfile = "Screw adjustments for {0:s} {1:s} antenna\n".format(self.telescope.name, self.antenna_name)
         outfile += "Adjustments are in " + unit + lnbr
         outfile += 2 * lnbr
