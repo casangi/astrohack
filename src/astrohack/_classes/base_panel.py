@@ -5,8 +5,8 @@ from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
-panelkinds = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
-              "rotated_paraboloid", "full_paraboloid_lst_sq"]
+panel_models = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
+                "rotated_paraboloid", "full_paraboloid_lst_sq"]
 imean = 0
 irigid = 1
 icorscp = 2
@@ -38,11 +38,11 @@ class BasePanel:
     markersize = 2
     linecolor = 'black'
 
-    def __init__(self, kind, screws, label, panel_meta, center=None, zeta=None):
+    def __init__(self, model, screws, label, panel_meta, center=None, zeta=None):
         """
         Initializes the base panel with the appropriated fitting methods and providing basic functionality
-        Fitting method kinds are:
-        AIPS fitting kinds:
+        Fitting method models are:
+        AIPS fitting models:
             mean: The panel is corrected by the mean of its samples
             rigid: The panel samples are fitted to a rigid surface
         Corotated Paraboloids (the two bending axes are parallel and perpendicular to the radius of the antenna crossing
@@ -50,18 +50,18 @@ class BasePanel:
             corotated_scipy: Paraboloid is fitted using scipy.optimize, robust but slow
             corotated_lst_sq: Paraboloid is fitted using the linear algebra least squares method, fast but unreliable
             corotated_robust: Tries corotated_lst_sq, if it diverges falls back to corotated_scipy
-        Experimental fitting kinds:
+        Experimental fitting models:
             xy_paraboloid: fitted using scipy.optimize, bending axes are parallel to the x and y axes
             rotated_paraboloid: fitted using scipy.optimize, bending axes can be rotated by an arbitrary angle
             full_paraboloid_lst_sq: Full 9 parameter paraboloid fitted using least_squares method, heavily overfits
         Args:
-            kind: What kind of surface fitting method to be used
+            model: What model of surface fitting method to be used
             label: Panel label
             screws: position of the screws
             center: Panel center
             zeta: panel center angle
         """
-        self.kind = kind
+        self.model = model
         self.solved = False
         self.label = label
         self.screws = screws
@@ -82,31 +82,31 @@ class BasePanel:
 
     def _associate(self):
         """
-        Does the fitting method associations according to the kind chosen by the user
+        Does the fitting method associations according to the model chosen by the user
         """
         logger = _get_astrohack_logger()
         try:
-            ikind = panelkinds.index(self.kind)
+            imodel = panel_models.index(self.model)
         except ValueError:
-            logger.error("Unknown panel kind: "+self.kind)
-            raise ValueError('Panel kind not in list')
-        if ikind > icorrob:
+            logger.error("Unknown panel model: "+self.model)
+            raise ValueError('Panel model not in list')
+        if imodel > icorrob:
             self._warn_experimental_method()
-        if ikind == irigid:
+        if imodel == irigid:
             self._associate_rigid()
-        elif ikind == imean:
+        elif imodel == imean:
             self._associate_mean()
-        elif ikind == ixypara:
+        elif imodel == ixypara:
             self._associate_scipy(self._xyaxes_paraboloid, 3)
-        elif ikind == irotpara:
+        elif imodel == irotpara:
             self._associate_scipy(self._rotated_paraboloid, 4)
-        elif ikind == icorscp:
+        elif imodel == icorscp:
             self._associate_scipy(self._corotated_paraboloid, 3)
-        elif ikind == ifulllst:
+        elif imodel == ifulllst:
             self._associate_least_squares()
-        elif ikind == icorlst:
+        elif imodel == icorlst:
             self._associate_corotated_lst_sq()
-        elif ikind == icorrob:
+        elif imodel == icorrob:
             self._associate_robust()
         
     def _warn_experimental_method(self):
@@ -117,7 +117,7 @@ class BasePanel:
             return
         else:
             logger = _get_astrohack_logger()
-            logger.warning("Experimental kind: "+self.kind)
+            logger.warning("Experimental model: "+self.model)
             set_warned(True)
 
     def _associate_scipy(self, fitting_function, NPAR):
@@ -134,7 +134,7 @@ class BasePanel:
 
     def _associate_robust(self):
         """
-        Associate fitting method for the corotated_robust kind
+        Associate fitting method for the corotated_robust model
         Returns:
 
         """
@@ -311,7 +311,7 @@ class BasePanel:
             p0 = [1e2, 1e2, np.mean(devia)]
         else:
             p0 = x0
-        if self.kind == panelkinds[irotpara]:
+        if self.model == panel_models[irotpara]:
             liminf.append(0.0)
             limsup.append(np.pi)
             p0.append(0)

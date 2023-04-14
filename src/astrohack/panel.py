@@ -5,8 +5,7 @@ import shutil
 
 from astrohack._classes.antenna_surface import AntennaSurface
 from astrohack._classes.telescope import Telescope
-from astrohack._classes.base_panel import panelkinds
-from astrohack._utils._constants import length_units
+from astrohack._classes.base_panel import panel_models
 from astrohack._utils._io import _load_image_xds, _aips_holog_to_xds, check_if_file_will_be_overwritten, check_if_file_exists
 from astrohack._utils._panel import _external_to_internal_parameters, _correct_phase
 import numpy as np
@@ -17,8 +16,9 @@ from astrohack._utils._utils import _remove_suffix
 
 from astrohack._utils._dio_classes import AstrohackPanelFile
 
-def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, unit='mm', panel_margins=0.2, save_mask=False,
-          save_deviations=True, save_phase=False, parallel=False, sel_ddi=None, overwrite=False):
+
+def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margins=0.2, parallel=False, sel_ddi=None,
+          overwrite=False):
     """Analyze holography images to derive panel adjustments
 
     :param image_name: Input holography data file name. Accepted data formats are the output from ``astrohack.holog.holog`` and AIPS holography data prepackaged using ``astrohack.panel.aips_holog_to_astrohack``.
@@ -29,16 +29,8 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, unit='mm', 
     :type cutoff: float, optional
     :param panel_model: Model of surface fitting function used to fit panel surfaces, None will default to "rigid". Possible models are listed below.
     :type panel_model: str, optional
-    :param unit: Unit used in deviation plots and screw adjustments. Several units are available: "m" (meters); "mm" (millimeters); "mils" (milliinches) OR "um" (microns). Defaults to "mm".
-    :type unit: str, optional
     :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.2.
     :type panel_margins: float, optional
-    :param save_mask: Save mask plot derived from the amplitude image and the map of the panels. Defaults to False.
-    :type save_mask: bool, optional
-    :param save_deviations: Save plot with the uncorrected deviation image, applied corrections and the corrected deviation image. Defaults to True.
-    :type save_deviations: bool, optional
-    :param save_phase: Save plot with the uncorrected phase image, applied corrections and the corrected phase image. Defaults to False.
-    :type save_phase: bool, optional
     :param parallel: Run in parallel. Defaults to False.
     :type parallel: bool, optional
     :param sel_ddi: List of DDIs to be processed. None will use all DDIs. Defaults to None.
@@ -64,8 +56,6 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, unit='mm', 
         - A corrected deviation image is produced.
         - RMS is computed for both the corrected and uncorrected deviation images.
         - All images produced are stored in the output *.panel.zarr file*.
-        - Optional plots can be produced (plot production may impact performance).
-        - An ASCII file containing the adjustments to be applied to the panel screws is saved inside the *.panel.zarr* file.
 
         .. rubric:: Available panel surface models:
         * AIPS fitting models:
@@ -85,8 +75,8 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, unit='mm', 
     
     logger = _get_astrohack_logger()
     
-    panel_params = _check_panel_parms(image_name, panel_name, cutoff, panel_model, unit, panel_margins, save_mask,
-                                      save_deviations, save_phase, parallel, sel_ddi, overwrite)
+    panel_params = _check_panel_parms(image_name, panel_name, cutoff, panel_model, panel_margins, parallel, sel_ddi,
+                                      overwrite)
           
     check_if_file_exists(panel_params['image_name'])
     check_if_file_will_be_overwritten(panel_params['panel_name'], panel_params['overwrite'])
@@ -131,7 +121,6 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, unit='mm', 
             return panel_mds
 
 
-
 def _panel_chunk(panel_chunk_params):
     """
     Process a chunk of the holographies, usually a chunk consists of an antenna over a ddi
@@ -167,23 +156,9 @@ def _panel_chunk(panel_chunk_params):
     surface.fit_surface()
     surface.correct_surface()
     
-    base_name = panel_chunk_params['panel_name'] + '/' + panel_chunk_params['antenna'] + '/' + panel_chunk_params['ddi']
-
-    os.makedirs(name=base_name, exist_ok=True)
-
-    base_name += "/"
+    xds_name = panel_chunk_params['panel_name'] + '/' + panel_chunk_params['antenna'] + '/' + panel_chunk_params['ddi']
     xds = surface.export_xds()
-    xds.to_zarr(base_name+'xds.zarr', mode='w')
-    surface.export_screw_adjustments(base_name + "screws.txt", unit=panel_chunk_params['unit'])
-    
-    if panel_chunk_params['save_mask']:
-        surface.plot_surface(filename=base_name + "mask.png", mask=True, screws=True)
-    
-    if panel_chunk_params['save_deviations']:
-        surface.plot_surface(filename=base_name + "surface.png")
-    
-    if panel_chunk_params['save_phase']:
-        surface.plot_surface(filename=base_name + "phase.png", plotphase=True)
+    xds.to_zarr(xds_name, mode='w')
 
 
 def _create_phase_model(npix, parameters, wavelength, telescope, cellxy):
@@ -236,8 +211,7 @@ def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, ov
     aips_mark.close()
 
 
-def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, unit, panel_margins, save_mask, save_deviations,
-                       save_phase, parallel, sel_ddi, overwrite):
+def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, panel_margins, parallel, sel_ddi, overwrite):
     """
     Tests inputs to panel function
     Args:
@@ -247,10 +221,6 @@ def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, unit, panel_m
         cutoff: Cut off in amplitude for the physical deviation fitting, None means 20%
         panel_kind: Type of fitting function used to fit panel surfaces, defaults to corotated_paraboloid for ringed
                     telescopes
-        unit: Unit for panel adjustments
-        save_mask: Save plot of the mask derived from amplitude cutoff to a png file
-        save_deviations: Save plot of physical deviations to a png file
-        save_phase: Save plot of phases to a png file
         parallel: Run chunks of processing in parallel
         panel_margins: Margin to be ignored at edges of panels when fitting
         sel_ddi: Which DDIs are to be processed by panel, None means all of them
@@ -261,11 +231,7 @@ def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, unit, panel_m
                     'panel_name': panel_name,
                     'cutoff': cutoff,
                     'panel_kind': panel_kind,
-                    'unit': unit,
                     'panel_margins': panel_margins,
-                    'save_mask': save_mask,
-                    'save_deviations': save_deviations,
-                    'save_phase': save_phase,
                     'parallel': parallel,
                     'sel_ddi': sel_ddi,
                     'overwrite': overwrite
@@ -279,12 +245,8 @@ def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, unit, panel_m
     base_name = _remove_suffix(panel_params['image_name'], '.image.zarr')
     parms_passed = parms_passed and _check_parms(panel_params, 'panel_name', [str], default=base_name+'.panel.zarr')
     parms_passed = parms_passed and _check_parms(panel_params, 'cutoff', [float], acceptable_range=[0, 1], default=0.2)
-    parms_passed = parms_passed and _check_parms(panel_params, 'panel_kind', [str], acceptable_data=panelkinds, default="rigid")
-    parms_passed = parms_passed and _check_parms(panel_params, 'unit', [str], acceptable_data=length_units, default="mm")
+    parms_passed = parms_passed and _check_parms(panel_params, 'panel_kind', [str], acceptable_data=panel_models, default="rigid")
     parms_passed = parms_passed and _check_parms(panel_params, 'panel_margins', [float], acceptable_range=[0, 0.5], default=0.2)
-    parms_passed = parms_passed and _check_parms(panel_params, 'save_mask', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(panel_params, 'save_deviations', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(panel_params, 'save_phase', [bool], default=False)
     parms_passed = parms_passed and _check_parms(panel_params, 'parallel', [bool], default=False)
     parms_passed = parms_passed and _check_parms(panel_params, 'sel_ddi', [list, np.array], list_acceptable_data_types=[int, np.int], default='all')
     parms_passed = parms_passed and _check_parms(panel_params, 'overwrite', [bool], default=False)

@@ -1,7 +1,7 @@
 import xarray as xr
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from astrohack._classes.base_panel import panelkinds, irigid
+from astrohack._classes.base_panel import panel_models, irigid
 from astrohack._classes.ring_panel import RingPanel
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
@@ -11,7 +11,7 @@ lnbr = "\n"
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pkind=None, crop=False, panel_margins=None):
+    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, panel_margins=None, reread=False):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -19,42 +19,97 @@ class AntennaSurface:
             telescope: Telescope object
             cutoff: fractional cutoff on the amplitude image to exclude regions with weak amplitude from the panel,
                     defaults to 20% if None
-            pkind: Kind of panel surface fitting, if is None defaults to telescope default
+            pmodel: model of panel surface fitting, if is None defaults to telescope default
             crop: Crop apertures to slightly larger frames than the antenna diameter
             panel_margins: Margin to be ignored at edges of panels when fitting, defaults to 20% if None
+            reread: Read a previously processed holography
         """
+        self.reread = reread
         self._nullify()
+        self._read_xds(inputxds)
         self.telescope = telescope
-        computephase = self._read_xds(inputxds)
 
-        if cutoff is None:
-            self.cut = 0.2 * np.nanmax(self.amplitude)
-        else:
-            self.cut = cutoff * np.nanmax(self.amplitude)
-        if pkind is None:
-            self.panelkind = panelkinds[irigid]
-        else:
-            self.panelkind = pkind
-        if panel_margins is None:
-            self.panel_margins = 0.2
-        else:
-            self.panel_margins = panel_margins
-        self.reso = self.telescope.diam / self.npoint
+        if not self.reread:
+            if cutoff is None:
+                self.cut = 0.2 * np.nanmax(self.amplitude)
+            else:
+                self.cut = cutoff * np.nanmax(self.amplitude)
+            if pmodel is None:
+                self.panelmodel = panel_models[irigid]
+            else:
+                self.panelmodel = pmodel
+            if panel_margins is None:
+                self.panel_margins = 0.2
+            else:
+                self.panel_margins = panel_margins
+            self.reso = self.telescope.diam / self.npoint
 
-        if crop:
-            self._crop_maps()
-
+            if crop:
+                self._crop_maps()
         if self.telescope.ringed:
             self._init_ringed()
+        if not self.reread:
+            if self.computephase:
+                self.phase = self._deviation_to_phase(self.deviation)
+            else:
+                self.deviation = self._phase_to_deviation(self.phase)
 
-        if computephase:
-            self.phase = self._deviation_to_phase(self.deviation)
+            self.phase = self._nan_out_of_bounds(self.phase)
+            self.amplitude = self._nan_out_of_bounds(self.amplitude)
+            self.deviation = self._nan_out_of_bounds(self.deviation)
+
+    def _read_aips_xds(self, inputxds):
+        self.amplitude = np.flipud(inputxds["AMPLITUDE"].values)
+        self.deviation = np.flipud(inputxds["DEVIATION"].values)
+        self.npoint = inputxds.attrs['npoint']
+        self.wavelength = inputxds.attrs['wavelength']
+        self.amp_unit = inputxds.attrs['amp_unit']
+        self.u_axis = inputxds.u.values
+        self.v_axis = inputxds.v.values
+        self.computephase = True
+        self.processed = False
+
+    def _read_holog_xds(self, inputxds):
+        if 'chan' in inputxds.dims:
+            if inputxds.dims['chan'] != 1:
+                raise Exception("Only single channel holographies supported")
+            self.wavelength = clight / inputxds.chan.values[0]
         else:
-            self.deviation = self._phase_to_deviation(self.phase)
+            self.wavelength = inputxds.attrs['wavelength']
 
-        self.phase = self._nan_out_of_bounds(self.phase)
-        self.amplitude = self._nan_out_of_bounds(self.amplitude)
-        self.deviation = self._nan_out_of_bounds(self.deviation)
+        self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
+        self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
+
+        self.npoint = np.sqrt(inputxds.dims['l'] ** 2 + inputxds.dims['m'] ** 2)
+        self.amp_unit = 'V'
+        self.u_axis = inputxds.u_prime.values * self.wavelength
+        self.v_axis = inputxds.v_prime.values * self.wavelength
+        self.computephase = False
+
+    def _read_panel_xds(self, inputxds):
+        self.wavelength = inputxds.attrs['wavelength']
+        self.amp_unit = inputxds.attrs['amp_unit']
+        self.panelmodel = inputxds.attrs['panel_model']
+        self.panel_margins = inputxds.attrs['panel_margin']
+        self.cut = inputxds.attrs['cutoff']
+        self.solved = inputxds.attrs['solved']
+        self.fitted = inputxds.attrs['fitted']
+        # Arrays
+        self.amplitude = inputxds['AMPLITUDE'].values
+        self.phase = inputxds['PHASE'].values
+        self.deviation = inputxds['DEVIATION'].values
+        self.mask = inputxds['MASK']
+        self.u_axis = inputxds.u.values
+        self.v_axis = inputxds.u.values
+
+        if self.solved:
+            self.phase_residuals = inputxds['PHASE_RESIDUALS'].values
+            self.residuals = inputxds['RESIDUALS'].values
+            self.phase_corrections = inputxds['PHASE_CORRECTIONS'].values
+            self.corrections = inputxds['CORRECTIONS'].values
+            self.panel_pars = inputxds['PANEL_PARAMETERS'].values
+            self.screw_adjustments = inputxds['PANEL_SCREWS'].values
+            self.panel_labels = inputxds.labels.values
 
     def _read_xds(self, inputxds):
         """
@@ -62,41 +117,20 @@ class AntennaSurface:
         Args:
             inputxds: X array dataset
         """
-        # Origin dependant Reading
-        if inputxds.attrs['AIPS']:
-            self.amplitude = np.flipud(inputxds["AMPLITUDE"].values)
-            self.deviation = np.flipud(inputxds["DEVIATION"].values)
-            self.npoint = inputxds.attrs['npoint']
-            self.wavelength = inputxds.attrs['wavelength']
-            self.amp_unit = inputxds.attrs['amp_unit']
-            self.u_axis = inputxds.u.values
-            self.v_axis = inputxds.v.values
-            computephase = True
+        # Origin dependant reading
+        if self.reread:
+            self._read_panel_xds(inputxds)
         else:
-            if 'chan' in inputxds.dims:
-                if inputxds.dims['chan'] != 1:
-                    raise Exception("Only single channel holographies supported")
-                self.wavelength = clight / inputxds.chan.values[0]
+            if inputxds.attrs['AIPS']:
+                self._read_aips_xds(inputxds)
             else:
-                self.wavelength = inputxds.attrs['wavelength']
-
-            self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
-            self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
-
-            self.npoint = np.sqrt(inputxds.dims['l']**2 + inputxds.dims['m']**2)
-            self.amp_unit = 'V'
-            self.u_axis = inputxds.u_prime.values * self.wavelength
-            self.v_axis = inputxds.v_prime.values * self.wavelength
-            computephase = False
+                self._read_holog_xds(inputxds)
 
         # Common elements
         self.unpix = self.u_axis.shape[0]
         self.vnpix = self.v_axis.shape[0]
         self.antenna_name = inputxds.attrs['ant_name']
-        
-        self.panel_meta = [inputxds.attrs['ant_name'],inputxds.attrs['ddi']]
-
-        return computephase
+        self.ddi = inputxds.attrs['ddi']
 
     def _nullify(self):
         """
@@ -113,6 +147,7 @@ class AntennaSurface:
         self.ougains = np.nan
         self.in_rms = np.nan
         self.out_rms = np.nan
+        self.fitted = False
 
     def _init_ringed(self):
         """
@@ -254,13 +289,13 @@ class AntennaSurface:
             angle = 2.0 * np.pi / self.telescope.npanel[iring]
             for ipanel in range(self.telescope.npanel[iring]):
                 panel = RingPanel(
-                    self.panelkind,
+                    self.panelmodel,
                     angle,
                     ipanel,
                     self._panel_label(iring, ipanel),
                     self.telescope.inrad[iring],
                     self.telescope.ourad[iring],
-                    panel_meta=self.panel_meta,
+                    panel_meta=[self.antenna_name, self.ddi],
                     margin=self.panel_margins,
                     screw_scheme=self.telescope.screw_description,
                     screw_offset=self.telescope.screw_offset
@@ -366,13 +401,13 @@ class AntennaSurface:
         """
         for panel in self.panels:
             panel.solve()
-        self.solved = True
+        self.fitted = True
 
     def correct_surface(self):
         """
         Apply corrections determined by the panel surface fitting methods to the antenna surface
         """
-        if not self.solved:
+        if not self.fitted:
             raise Exception("Panels must be fitted before atempting a correction")
         self.corrections = np.where(self.mask, 0, np.nan)
         self.residuals = np.copy(self.deviation)
@@ -384,6 +419,8 @@ class AntennaSurface:
                 self.corrections[ix, iy] = -corr[-1]
         self.phase_corrections = self._deviation_to_phase(self.corrections)
         self.phase_residuals = self._deviation_to_phase(self.residuals)
+        self._build_panel_data_arrays()
+        self.solved = True
 
     def print_misc(self):
         """
@@ -515,14 +552,13 @@ class AntennaSurface:
         npanels = len(self.panels)
         NPAR = self.panels[0].NPAR
         nscrews = self.panels[0].screws.shape[0]
-        panel_labels = np.ndarray([npanels], dtype=object)
-        panel_pars = np.ndarray((npanels, NPAR), dtype=float)
-        screw_adjustments = np.ndarray((npanels, nscrews), dtype=float)
+        self.panel_labels = np.ndarray([npanels], dtype=object)
+        self.panel_pars = np.ndarray((npanels, NPAR), dtype=float)
+        self.screw_adjustments = np.ndarray((npanels, nscrews), dtype=float)
         for ipanel in range(npanels):
-            panel_labels[ipanel] = self.panels[ipanel].label
-            panel_pars[ipanel, :] = self.panels[ipanel].par
-            screw_adjustments[ipanel, :] = self.panels[ipanel].export_screws_float(unit='m')
-        return panel_labels, panel_pars, screw_adjustments
+            self.panel_labels[ipanel] = self.panels[ipanel].label
+            self.panel_pars[ipanel, :] = self.panels[ipanel].par
+            self.screw_adjustments[ipanel, :] = self.panels[ipanel].export_screws_float(unit='m')
 
     def export_screw_adjustments(self, filename, unit="mm"):
         """
@@ -546,6 +582,26 @@ class AntennaSurface:
         lefile.write(outfile)
         lefile.close()
 
+    def export_screws(self, filename, unit="mm"):
+        outfile = "Screw adjustments for {0:s} {1:s} antenna\n".format(self.telescope.name, self.antenna_name)
+        outfile += "Adjustments are in " + unit + lnbr
+        outfile += 2 * lnbr
+        outfile += "{0:8s}".format('Panel')
+        nscrews = len(self.telescope.screw_description)
+        for screw in self.telescope.screw_description:
+            outfile += "{0:11s}".format(screw)
+        outfile += lnbr
+        fac = _convert_unit('m', unit, 'length')
+        for ipanel in range(len(self.panel_labels)):
+            outfile += "{0:8s}".format(self.panel_labels[ipanel])
+            for iscrew in range(nscrews):
+                outfile += " {0:10.2f}".format(fac*self.screw_adjustments[ipanel, iscrew])
+            outfile += lnbr
+
+        lefile = open(filename, "w")
+        lefile.write(outfile)
+        lefile.close()
+
     def export_xds(self):
         """
         Export all the data to Xarray dataset
@@ -556,19 +612,21 @@ class AntennaSurface:
         gains = self.gains()
         rms = self.get_rms(unit='m')
         xds.attrs['telescope_name'] = self.telescope.name
-        xds.attrs['antenna_name'] = self.antenna_name
+        xds.attrs['ant_name'] = self.antenna_name
+        xds.attrs['ddi'] = self.ddi
         xds.attrs['wavelength'] = self.wavelength
-        xds.attrs['AIPS'] = False
         xds.attrs['amp_unit'] = self.amp_unit
-        xds.attrs['panel_kind'] = self.panelkind
+        xds.attrs['panel_model'] = self.panelmodel
         xds.attrs['panel_margin'] = self.panel_margins
         xds.attrs['cutoff'] = self.cut
+        xds.attrs['solved'] = self.solved
+        xds.attrs['fitted'] = self.fitted
         xds['AMPLITUDE'] = xr.DataArray(self.amplitude, dims=["u", "v"])
         xds['PHASE'] = xr.DataArray(self.phase, dims=["u", "v"])
         xds['DEVIATION'] = xr.DataArray(self.deviation, dims=["u", "v"])
         xds['MASK'] = xr.DataArray(self.mask, dims=["u", "v"])
         xds['PANEL_DISTRIBUTION'] = xr.DataArray(self.panel_distribution, dims=["u", "v"])
-        if self.residuals is not None:
+        if self.solved:
             xds['PHASE_RESIDUALS'] = xr.DataArray(self.phase_residuals, dims=["u", "v"])
             xds['RESIDUALS'] = xr.DataArray(self.residuals, dims=["u", "v"])
             xds['PHASE_CORRECTIONS'] = xr.DataArray(self.phase_corrections, dims=["u", "v"])
@@ -578,18 +636,14 @@ class AntennaSurface:
             xds.attrs['input_gain'] = gains[0][0]
             xds.attrs['output_gain'] = gains[1][0]
             xds.attrs['theoretical_gain'] = gains[0][1]
+            xds['PANEL_PARAMETERS'] = xr.DataArray(self.panel_pars, dims=['labels', 'pars'])
+            xds['PANEL_SCREWS'] = xr.DataArray(self.screw_adjustments, dims=['labels', 'screws'])
+            coords = {"u": self.u_axis, "v": self.v_axis, 'labels': self.panel_labels,
+                      'screws': self.telescope.screw_description, 'pars': np.arange(self.panel_pars.shape[1])}
         else:
             xds.attrs['input_rms'] = rms
             xds.attrs['input_gain'] = gains[0]
             xds.attrs['theoretical_gain'] = gains[1]
-
-        if self.solved:
-            labels, pars, screws = self._build_panel_data_arrays()
-            xds['PANEL_PARAMETERS'] = xr.DataArray(pars, dims=['labels', 'pars'])
-            xds['PANEL_SCREWS'] = xr.DataArray(screws, dims=['labels', 'screws'])
-            coords = {"u": self.u_axis, "v": self.v_axis, 'labels': labels, 'screws': self.telescope.screw_description,
-                      'pars': np.arange(pars.shape[1])}
-        else:
             coords = {"u": self.u_axis, "v": self.v_axis}
 
         xds = xds.assign_coords(coords)

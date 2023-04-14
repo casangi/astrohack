@@ -1,28 +1,16 @@
 import os
-import dask
-import sys
-
-import xarray as xr
 import numpy as np
-
-from casacore import tables as ctables
-
+from astrohack._utils._io import _load_image_xds
 from prettytable import PrettyTable
-
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-
-from astrohack._utils._holog import _create_holog_meta_data 
-
-from astrohack._utils._io import _load_pnt_dict 
-from astrohack._utils._io import _extract_holog_chunk
-from astrohack._utils._io import _open_no_dask_zarr
-from astrohack._utils._io import _read_data_from_holog_json
 from astrohack._utils._io import _read_meta_data
 from astrohack._utils._io import _load_holog_file
 from astrohack._utils._io import _load_image_file
 from astrohack._utils._io import _load_panel_file
 
-from memory_profiler import profile
+from astrohack._classes.antenna_surface import AntennaSurface
+from astrohack._classes.telescope import Telescope
+
 
 class AstrohackDataFile:
     def __init__(self, file_stem, path='./'):
@@ -290,3 +278,17 @@ class AstrohackPanelFile(dict):
             table.add_row([ant, list(self[ant].keys())])
         
         print(table)
+
+    def review_antenna(self, antenna, ddi):
+        """
+        Return an AntennaSurface object for interaction
+        Args:
+            antenna: Which antenna in to be used
+            ddi: Which ddi is to be used
+
+        Returns:
+            AntennaSurface object contaning relevant information for panel adjustments
+        """
+        xds = _load_image_xds(self.file, antenna, ddi)
+        telescope = Telescope(xds.attrs['telescope_name'])
+        return AntennaSurface(xds, telescope, reread=True)

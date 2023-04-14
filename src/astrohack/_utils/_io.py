@@ -70,9 +70,9 @@ def _load_panel_file(file=None, panel_dict=None, dask_load=True):
                 for ddi in ddi_list:
                     if 'ddi' in ddi:
                         if dask_load:
-                            panel_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}/xds.zarr".format(name=file, ant=ant, ddi=ddi))
+                            panel_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
                         else:
-                            panel_data_dict[ant][ddi] = _open_no_dask_zarr("{name}/{ant}/{ddi}/xds.zarr".format(name=file, ant=ant, ddi=ddi))
+                            panel_data_dict[ant][ddi] = _open_no_dask_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
     
     except Exception as e:
             logger.error(str(e))

@@ -1,22 +1,22 @@
 from shapely import Polygon, Point
 from shapely.plotting import plot_polygon
-from astrohack._classes.base_panel import BasePanel, panelkinds, icorpara
+from astrohack._classes.base_panel import BasePanel, panel_models, icorpara
 
 
 class PolygonPanel(BasePanel):
 
-    def __init__(self, kind, ipanel, polygon, screws):
+    def __init__(self, model, ipanel, polygon, screws):
         """
         Initializes a polygon based panel based on a polygon shape and the screw positions
         Args:
-            kind: What kind of surface to be used in fitting ["rigid", "mean", "xyparaboloid", "rotatedparaboloid"]
+            model: What model of surface to be used in fitting ["rigid", "mean", "xyparaboloid", "rotatedparaboloid"]
             ipanel: Panel number
             polygon: Polygon describing the panel shape
             screws: Positions of the screw over the panel
         """
-        if kind == panelkinds[icorpara]:
+        if model == panel_models[icorpara]:
             raise Exception('corotatedparaboloid not supported for Polygon based panels')
-        super().__init__(kind, ipanel, screws)
+        super().__init__(model, ipanel, screws)
         self.polygon = Polygon(polygon)
         if not self.polygon.is_simple:
             raise Exception('Polygon must not intersect itself')
@@ -51,7 +51,7 @@ class PolygonPanel(BasePanel):
         """
         print("########################################")
         print("{0:20s}={1:8d}".format("ipanel", self.ipanel))
-        print("{0:20s}={1:8s}".format("kind", " " + self.kind))
+        print("{0:20s}={1:8s}".format("model", " " + self.model))
         print("{0:20s}={1:8d}".format("nsamp", self.nsamp))
         if verbose:
             for isamp in range(self.nsamp):
