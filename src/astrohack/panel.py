@@ -252,8 +252,8 @@ def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, panel_margins
     parms_passed = parms_passed and _check_parms(panel_params, 'overwrite', [bool], default=False)
 
     if not parms_passed:
-        logger.error("extract_holog parameter checking failed.")
-        raise Exception("extract_holog parameter checking failed.")
+        logger.error("panel parameter checking failed.")
+        raise Exception("panel parameter checking failed.")
     
     return panel_params
 
