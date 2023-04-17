@@ -28,7 +28,7 @@ from astrohack._utils._utils import _remove_suffix
 from astrohack._utils._io import _load_holog_file
 
 
-from astrohack._utils._dio_classes import AstrohackHologFile
+from astrohack._utils._dio import AstrohackHologFile
 def extract_holog(
     ms_name,
     holog_obs_dict,
