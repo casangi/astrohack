@@ -279,7 +279,7 @@ class AstrohackPanelFile(dict):
         
         print(table)
 
-    def review_antenna(self, antenna, ddi):
+    def get_antenna(self, antenna, ddi):
         """
         Return an AntennaSurface object for interaction
         Args:
