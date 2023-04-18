@@ -20,6 +20,8 @@ from astrohack._utils._dio import AstrohackHologFile
 from astrohack._utils._dio import AstrohackPanelFile
 from astrohack._utils._dio import AstrohackPointFile
 
+from astrohack._utils._panel import _plot_antenna_chunk
+
 
 plot_types = ['deviation', 'phase', 'ancillary']
 
@@ -176,26 +178,6 @@ def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type
 
     if parallel:
         dask.compute(delayed_list)
-
-
-def _plot_antenna_chunk(parm_dict):
-    antenna = parm_dict['this_antenna']
-    ddi = parm_dict['this_ddi']
-    destination = parm_dict['destination']
-    plot_type = parm_dict['plot_type']
-    plot_name = f'{destination}/{plot_type}_{antenna}_{ddi}.png'
-
-    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi)
-    if plot_type == plot_types[0]:  # deviation plot
-        surface.plot_surface(filename=plot_name, mask=False, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
-                             plotphase=False, unit=parm_dict['unit'])
-    elif plot_type == plot_types[1]:  # phase plot
-        surface.plot_surface(filename=plot_name, mask=False, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
-                             plotphase=True, unit=parm_dict['unit'])
-    else:  # Ancillary plot
-        surface.plot_surface(filename=plot_name, mask=True, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
-                             plotphase=False, unit=None)
-
 
 def open_holog(file):
   """Method to return an instance of the holography data object.
