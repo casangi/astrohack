@@ -12,6 +12,24 @@ plot_types = ['deviation', 'phase', 'ancillary']
 
 
 def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='mm'):
+    """Export screws adjustments from a panel_mds file
+
+    :param panel_mds_name: Input panel_mds file
+    :type panel_mds_name: str
+    :param destination: Name of the destination folder to contain exported screw adjustments
+    :type destination: str
+    :param ant_name: List of antennae/antenna to be exported, defaults to "all" when None
+    :type ant_name: list or str, optional
+    :param ddi: List of ddis/ddi to be exported, defaults to "all" when None
+    :type ddi: list or str, optional
+    :param unit: Unit for screws adjustments, most length units supported, defaults to "mm"
+    :type unit: str
+
+    .. _Description:
+
+    Produce the screw adjustments from ``astrohack.panel`` results to be used at the antenna site to improve the antenna surface
+
+    """
     logger = _get_astrohack_logger()
     parm_dict = {'filename': panel_mds_name,
                  'ant_name': ant_name,
@@ -50,6 +68,43 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
 
 def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type='deviation', plot_screws=False,
                  dpi=300, unit=None, parallel=True):
+    """Plot Antenna surfaces from a panel_mds file
+
+    :param panel_mds_name: Input panel_mds file
+    :type panel_mds_name: str
+    :param destination: Name of the destination folder to contain plots
+    :type destination: str
+    :param ant_name: List of antennae/antenna to be plotted, defaults to "all" when None
+    :type ant_name: list or str, optional
+    :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
+    :type ddi: list or str, optional
+    :param plot_type: type of plot to be produced, deviation, phase or ancillary
+    :type plot_type: str
+    :param plot_screws: Add screw positions to plot
+    :type plot_screws: bool
+    :param dpi: dots per inch to be used in plots
+    :type dpi: int
+    :param unit: Unit for phase or deviation plots, defaults to "mm" for deviation and 'deg' for phase
+    :type unit: str
+    :param parallel: If True will use an existing astrohack client to produce plots in parallel
+    :type parallel: bool
+
+    .. _Description:
+
+    Produce plots from ``astrohack.panel`` results to be analyzed to judge the quality of the results
+
+    **Additional Information**
+        .. rubric:: Available plot types:
+        - *deviation*: Surface deviation estimated from phase and wavelength, three plots are produced for each antenna
+                       and ddi combination, surface before correction, the corrections applied and the corrected
+                       surface, most length units available
+        - *phase*: Phase deviations over the surface, three plots are produced for each antenna and ddi combination,
+                   phase before correction, the corrections applied and the corrected phase, deg and rad available as
+                   units
+        - *ancillary*: Three ancillary plots with useful information: The mask used to select data to be fitted, the
+                       amplitude data used to derive the mask and the panel assignments of each pixel, units are
+                       irrelevant for these plots
+    """
     logger = _get_astrohack_logger()
     parm_dict = {'filename': panel_mds_name,
                  'ant_name': ant_name,
