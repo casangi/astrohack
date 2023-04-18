@@ -578,7 +578,11 @@ class AntennaSurface:
             unit: unit for panel screw adjustments ['mm','miliinches']
         """
         outfile = "Screw adjustments for {0:s} {1:s} antenna\n".format(self.telescope.name, self.antenna_name)
-        outfile += "Adjustments are in " + unit + lnbr
+        outfile += "Adjustments are in " + unit + 2*lnbr
+        outfile += "Lower means away from subreflector" + lnbr
+        outfile += "Raise means toward the subreflector" + lnbr
+        outfile += "LOWER the panel if the number is POSITIVE" + lnbr
+        outfile += "RAISE the panel if the number is NEGATIVE" + lnbr
         outfile += 2 * lnbr
         outfile += "{0:8s}".format('Panel')
         nscrews = len(self.telescope.screw_description)
