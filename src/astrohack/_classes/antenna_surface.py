@@ -102,6 +102,7 @@ class AntennaSurface:
         self.mask = inputxds['MASK']
         self.u_axis = inputxds.u.values
         self.v_axis = inputxds.u.values
+        self.panel_distribution = inputxds['PANEL_DISTRIBUTION'].values
 
         if self.solved:
             self.phase_residuals = inputxds['PHASE_RESIDUALS'].values
