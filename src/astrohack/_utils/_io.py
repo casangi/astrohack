@@ -136,7 +136,7 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
 
     if load_pnt_dict == True:
         logger.info("Loading pointing dictionary to holog ...")
-        holog_dict["pnt_dict"] = _load_pnt_dict(file=holog_file, ant_list=None, dask_load=dask_load)
+        holog_dict["pnt_dict"] = _load_point_file(file=holog_file, ant_list=None, dask_load=dask_load)
 
     for ddi in os.listdir(holog_file):
         if "ddi_" in ddi:
@@ -412,7 +412,7 @@ def _open_no_dask_zarr(zarr_name, slice_dict={}):
     return xds
 
 
-def _load_pnt_dict(file, ant_list=None, dask_load=True):
+def _load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None):
     """Load pointing dictionary from disk.
 
     Args:
@@ -421,7 +421,8 @@ def _load_pnt_dict(file, ant_list=None, dask_load=True):
     Returns:
         dict: Pointing dictionary
     """
-    pnt_dict = {}
+    if pnt_dict is None:
+        pnt_dict = {}
 
     for ant in os.listdir(file):
         if "ant_" in ant:
@@ -926,7 +927,7 @@ def _extract_holog_chunk(extract_holog_params):
 
     map_ant_name_list = ['ant_' + i for i in map_ant_name_list]
 
-    pnt_ant_dict = _load_pnt_dict(pnt_name, map_ant_name_list, dask_load=False)
+    pnt_ant_dict = _load_point_file(pnt_name, map_ant_name_list, dask_load=False)
 
     pnt_map_dict = _extract_pointing_chunk(map_ant_name_list, time_vis, pnt_ant_dict)
     

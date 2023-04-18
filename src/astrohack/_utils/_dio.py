@@ -7,6 +7,7 @@ from astrohack._utils._io import _read_meta_data
 from astrohack._utils._io import _load_holog_file
 from astrohack._utils._io import _load_image_file
 from astrohack._utils._io import _load_panel_file
+from astrohack._utils._io import _load_point_file
 
 from astrohack._classes.antenna_surface import AntennaSurface
 from astrohack._classes.telescope import Telescope
@@ -17,9 +18,13 @@ class AstrohackDataFile:
                         
         self._image_path = None
         self._holog_path = None
+        self._panel_path = None
+        self._point_path = None
 
         self.holog = None
         self.image = None
+        self.panel = None
+        self.point = None
             
         self._verify_holog_files(file_stem, path)
             
@@ -32,6 +37,7 @@ class AstrohackDataFile:
             
         if os.path.isdir(file_path):
             logger.info("Found {stem}.holog.zarr directory ...".format(stem=file_stem))
+            
             self._holog_path = file_path
             self.holog = AstrohackHologFile(file_path)
                 
@@ -40,6 +46,7 @@ class AstrohackDataFile:
 
         if os.path.isdir(file_path):
             logger.info("Found {stem}.image.zarr directory ...".format(stem=file_stem))
+            
             self._image_path = file_path
             self.image = AstrohackImageFile(file_path)
 
@@ -47,8 +54,17 @@ class AstrohackDataFile:
 
         if os.path.isdir(file_path):
             logger.info("Found {stem}.panel.zarr directory ...".format(stem=file_stem))
+            
             self._image_path = file_path
             self.panel = AstrohackPanelFile(file_path)
+
+        file_path = "{path}/{stem}.point.zarr".format(path=path, stem=file_stem)
+
+        if os.path.isdir(file_path):
+            logger.info("Found {stem}.point.zarr directory ...".format(stem=file_stem))
+            
+            self._point_path = file_path
+            self.point = AstrohackPointFile(file_path)
 
 class AstrohackImageFile(dict):
     """
@@ -268,7 +284,7 @@ class AstrohackPanelFile(dict):
         
         print(table)
 
-    def review_antenna(self, antenna, ddi):
+    def get_antenna_surface(self, antenna, ddi):
         """
         Return an AntennaSurface object for interaction
         Args:
@@ -279,4 +295,64 @@ class AstrohackPanelFile(dict):
         """
         xds = _load_image_xds(self.file, antenna, ddi)
         telescope = Telescope(xds.attrs['telescope_name'])
+        
         return AntennaSurface(xds, telescope, reread=True)
+
+
+class AstrohackPointFile(dict):
+    """
+        Data Class to interact ith holography pointing data.
+    """
+    def __init__(self, file):
+        super().__init__()
+        
+        self.file = file
+        self._meta_data = None
+        self._open = False
+
+
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+    
+    def __setitem__(self, key, value):
+        return super().__setitem__(key, value)
+
+    def is_open(self):
+        return self._open
+
+    def open(self, file=None, dask_load=False):
+        """ Open pointing file.
+        Args:self =_
+            file (str, optional): Path to pointing file. Defaults to None.
+            dask_load (bool, optional): If True the file is loaded with Dask. Defaults to False.
+        Returns:
+            bool: bool describing whether the file was opened properly
+        """
+        logger = _get_astrohack_logger()
+
+        if file is None:
+            file = self.file
+
+        try:
+            _load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
+            self._open = True
+
+        except Exception as e:
+            logger.error("[AstrohackPointFile]: {}".format(e))
+            self._open = False
+        
+        return self._open
+
+    def summary(self):
+        """
+            Prints summary table of pointing file.
+        """
+
+        table = PrettyTable()
+        table.field_names = ["antenna"]
+        table.align = "l"
+        
+        for ant in self.keys():
+            table.add_row(ant)
+        
+        print(table)

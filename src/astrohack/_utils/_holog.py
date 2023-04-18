@@ -15,7 +15,7 @@ from astrohack._utils._io import _load_holog_file
 from astrohack._utils._io import _read_meta_data
 from astrohack._utils._io import _extract_scan_time_dict
 from astrohack._utils._io import _make_ant_pnt_chunk
-from astrohack._utils._io import _load_pnt_dict
+from astrohack._utils._io import _load_point_file
 
 from astrohack._utils._panel import _phase_fitting_block
 
@@ -500,5 +500,5 @@ def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
 
             _make_ant_pnt_chunk(ms_name, pnt_parms)
 
-    return _load_pnt_dict(pnt_name)
+    return _load_point_file(pnt_name)
     
