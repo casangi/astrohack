@@ -38,7 +38,7 @@ class BasePanel:
     markersize = 2
     linecolor = 'black'
 
-    def __init__(self, model, screws, label, panel_meta, center=None, zeta=None):
+    def __init__(self, model, screws, label, center=None, zeta=None):
         """
         Initializes the base panel with the appropriated fitting methods and providing basic functionality
         Fitting method models are:
@@ -68,7 +68,6 @@ class BasePanel:
         self.samples = []
         self.margins = []
         self.corr = None
-        self.panel_meta = panel_meta
 
         if center is None:
             self.center = [0, 0]
@@ -194,19 +193,23 @@ class BasePanel:
     def solve(self):
         """
         Wrapping method around fitting to allow for a fallback to mean fitting in the case of an impossible fit
+
+        Returns:
+            True: in case of successful fit
+            False: in case of fallback fit
         """
-        logger = _get_astrohack_logger()
         # fallback behaviour for impossible fits
         if len(self.samples) < self.NPAR:
-            logger.warning("Impossible fit, falling back to mean: " + str(self.panel_meta))
             self._fallback_solve()
+            status = False
         else:
             try:
                 self._solve_sub()
+                status = True
             except np.linalg.LinAlgError:
-                logger.warning("Fit diverged, falling back to mean: " + str(self.panel_meta))
                 self._fallback_solve()
-        return
+                status = False
+        return status
 
     def _fallback_solve(self):
         """
@@ -489,21 +492,7 @@ class BasePanel:
         """
         return self.par[0]
 
-    def export_adjustments(self, unit='mm'):
-        """
-        Exports panel screw adjustments to a string
-        Args:
-            unit: Unit for screw adjustments ['mm','miliinches']
-        Returns:
-        String with screw adjustments for this panel
-        """
-        fac = _convert_unit('m', unit, 'length')
-        string = self.label
-        for screw in self.screws[:, ]:
-            string += ' {0:10.2f}'.format(fac * self.corr_point(*screw))
-        return string
-
-    def export_screws_float(self, unit='mm'):
+    def export_screws(self, unit='mm'):
         """
         Export screw adjustments to a numpy array in unit
         Args:

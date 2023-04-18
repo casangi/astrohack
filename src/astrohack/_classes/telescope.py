@@ -3,7 +3,7 @@ import pkg_resources
 import os
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
-tel_data_path = pkg_resources.resource_filename("astrohack", "../../data/telescopes")
+tel_data_path = pkg_resources.resource_filename("astrohack", "data/telescopes")
 
 
 def _find_cfg_file(name, path):
