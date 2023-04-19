@@ -1,13 +1,12 @@
 import os
 import dask
 
-from astrohack._utils._constants import length_units, trigo_units
+from astrohack._utils._constants import length_units, trigo_units, plot_types
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._utils import _parm_to_list
 
-from astrohack._utils._io import _load_point_file 
-from astrohack._utils._io import _extract_holog_chunk
+from astrohack._utils._io import _load_point_file
 from astrohack._utils._io import _open_no_dask_zarr
 from astrohack._utils._io import _read_data_from_holog_json
 from astrohack._utils._io import _read_meta_data
@@ -21,9 +20,6 @@ from astrohack._utils._dio import AstrohackPanelFile
 from astrohack._utils._dio import AstrohackPointFile
 
 from astrohack._utils._panel import _plot_antenna_chunk
-
-
-plot_types = ['deviation', 'phase', 'ancillary']
 
 
 def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='mm'):
@@ -74,11 +70,13 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
 
     antennae = _parm_to_list(parm_dict['ant_name'], parm_dict['filename'])
     for antenna in antennae:
-        ddis = _parm_to_list(parm_dict['ddi'], parm_dict['filename']+'/'+antenna)
-        for ddi in ddis:
-            export_name = parm_dict['destination']+f'/screws_{antenna}_{ddi}.txt'
-            surface = panel_mds.get_antenna(antenna, ddi)
-            surface.export_screws(export_name, unit=unit)
+        if 'ant' in antenna:
+            ddis = _parm_to_list(parm_dict['ddi'], parm_dict['filename']+'/'+antenna)
+            for ddi in ddis:
+                if 'ddi' in ddi:
+                    export_name = parm_dict['destination']+f'/screws_{antenna}_{ddi}.txt'
+                    surface = panel_mds.get_antenna(antenna, ddi)
+                    surface.export_screws(export_name, unit=unit)
 
 
 def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type='deviation', plot_screws=False,
@@ -167,14 +165,16 @@ def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type
     delayed_list = []
     antennae = _parm_to_list(parm_dict['ant_name'], parm_dict['filename'])
     for antenna in antennae:
-        parm_dict['this_antenna'] = antenna
-        ddis = _parm_to_list(parm_dict['ddi'], parm_dict['filename']+'/'+antenna)
-        for ddi in ddis:
-            parm_dict['this_ddi'] = ddi
-            if parallel:
-                delayed_list.append(dask.delayed(_plot_antenna_chunk)(dask.delayed(parm_dict)))
-            else:
-                _plot_antenna_chunk(parm_dict)
+        if 'ant' in antenna:
+            parm_dict['this_antenna'] = antenna
+            ddis = _parm_to_list(parm_dict['ddi'], parm_dict['filename']+'/'+antenna)
+            for ddi in ddis:
+                if 'ddi' in ddi:
+                    parm_dict['this_ddi'] = ddi
+                    if parallel:
+                        delayed_list.append(dask.delayed(_plot_antenna_chunk)(dask.delayed(parm_dict)))
+                    else:
+                        _plot_antenna_chunk(parm_dict)
 
     if parallel:
         dask.compute(delayed_list)

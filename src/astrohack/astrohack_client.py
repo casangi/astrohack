@@ -35,7 +35,7 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
     :param log_parms['log_file']: If log_parms['log_to_file'] is True the log will be written to a file with the name log_parms['log_file'],
     :type log_parms['log_file']: bool, optional
    
-    :param worker_log_parms has the same keys as log_parms. However the defaults are {'log_to_term':False,'log_level':'INFO','log_to_file':False,'log_file':None}.
+    :param worker_log_parms: has the same keys as log_parms. However the defaults are {'log_to_term':False,'log_level':'INFO','log_to_file':False,'log_file':None}.
     :type dict
     """
     

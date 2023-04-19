@@ -4,6 +4,7 @@ from numba import njit
 
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit_block
+from astrohack._utils._constants import plot_types
 
 # global constants
 NPAR = 10

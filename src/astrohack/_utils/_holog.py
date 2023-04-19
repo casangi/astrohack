@@ -13,8 +13,6 @@ from astrohack._classes.telescope import Telescope
 
 from astrohack._utils._io import _load_holog_file
 from astrohack._utils._io import _read_meta_data
-from astrohack._utils._io import _extract_scan_time_dict
-from astrohack._utils._io import _make_ant_pnt_chunk
 from astrohack._utils._io import _load_point_file
 
 from astrohack._utils._panel import _phase_fitting_block
@@ -32,6 +30,7 @@ from astrohack._utils._imaging import _calculate_aperture_pattern
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
+from numba import njit
 
 def _holog_chunk(holog_chunk_params):
     """ Process chunk holography data along the antenna axis. Works with holography file to properly grid , normalize, average and correct data
@@ -434,71 +433,3 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
     except Exception as error:
         logger.error("[_create_holog_meta_data] {error}".format(error=error))
 
-def _make_ant_pnt_dict(ms_name, pnt_name, parallel=True):
-    """Top level function to extract subset of pointing table data into a dictionary of xarray dataarrays.
-
-    Args:
-        ms_name (str): Measurement file name.
-        pnt_name (str): Output pointing dictionary file name.
-        parallel (bool, optional): Process in parallel. Defaults to True.
-
-    Returns:
-        dict: pointing dictionary of xarray dataarrays
-    """
-
-    #Get antenna names and ids
-    ctb = ctables.table(
-        os.path.join(ms_name, "ANTENNA"),
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-    )
-
-    antenna_name = ctb.getcol("NAME")
-    antenna_id = np.arange(len(antenna_name))
-
-    ctb.close()
-    
-
-    
-    ###########################################################################################
-    #Get scans with start and end times.
-    ctb = ctables.table(
-        ms_name,
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-    )
-
-    scan_ids = ctb.getcol("SCAN_NUMBER")
-    time = ctb.getcol("TIME")
-    ddi = ctb.getcol("DATA_DESC_ID")
-    ctb.close()
-
-    scan_time_dict = _extract_scan_time_dict(time, scan_ids, ddi)
-    ###########################################################################################
-    pnt_parms = {
-        'pnt_name': pnt_name,
-        'scan_time_dict': scan_time_dict
-    }
-
-    if parallel:
-        delayed_pnt_list = []
-        for id in antenna_id:
-            pnt_parms['ant_id'] = id
-            pnt_parms['ant_name'] = antenna_name[id]
-
-            delayed_pnt_list.append(
-                dask.delayed(_make_ant_pnt_chunk)(
-                    ms_name, 
-                    pnt_parms
-                )
-            )
-        dask.compute(delayed_pnt_list)
-    else:
-        for id in antenna_id:
-            pnt_parms['ant_id'] = id
-            pnt_parms['ant_name'] = antenna_name[id]
-
-            _make_ant_pnt_chunk(ms_name, pnt_parms)
-
-    return _load_point_file(pnt_name)
-    
