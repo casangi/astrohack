@@ -9,10 +9,9 @@ from astrohack._utils._logger._astrohack_logger import  _setup_astrohack_logger,
 from astrohack._utils._dask_plugins._astrohack_worker import _astrohack_worker
 
 def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, log_parms={}, worker_log_parms={}):
-    '''
-     """ Setup dask cluster and astrohack logger.
+    """Setup dask cluster and astrohack logger.
 
-    :cores: Number of cores in Dask cluster.
+    :param cores: Number of cores in Dask cluster.
     :type cores: int
 
     :param memory_limit: Amount of memory per core. It is suggested to use '8GB'.
@@ -38,7 +37,7 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
    
     :param worker_log_parms has the same keys as log_parms. However the defaults are {'log_to_term':False,'log_level':'INFO','log_to_file':False,'log_file':None}.
     :type dict
-    '''
+    """
     
     #Secret parameters user do not need to know about.
     astrohack_autorestrictor=False
