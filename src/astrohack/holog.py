@@ -13,7 +13,7 @@ from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._utils import _remove_suffix
    
 from astrohack._utils._io import check_if_file_will_be_overwritten, check_if_file_exists
-from astrohack._utils._dio_classes import AstrohackImageFile
+from astrohack._utils._dio import AstrohackImageFile
 
 #fp=open('holog.log','w+')
 #@profile(stream=fp)

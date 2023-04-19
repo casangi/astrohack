@@ -14,7 +14,7 @@ from astrohack._utils._conversion import _convert_ant_name_to_id
 from astrohack._utils._holog import _create_holog_meta_data
 from astrohack._utils._holog import _make_ant_pnt_dict
 
-from astrohack._utils._io import _load_pnt_dict 
+from astrohack._utils._io import _load_point_file 
 from astrohack._utils._io import _extract_holog_chunk 
 from astrohack._utils._io import _open_no_dask_zarr
 from astrohack._utils._io import _read_data_from_holog_json
@@ -28,7 +28,7 @@ from astrohack._utils._utils import _remove_suffix
 from astrohack._utils._io import _load_holog_file
 
 
-from astrohack._utils._dio_classes import AstrohackHologFile
+from astrohack._utils._dio import AstrohackHologFile
 def extract_holog(
     ms_name,
     holog_obs_dict,
@@ -122,7 +122,7 @@ def extract_holog(
     check_if_file_will_be_overwritten(extract_holog_parms['point_name'],extract_holog_parms['overwrite'])
 
 #    try:
-#        pnt_dict = _load_pnt_dict(extract_holog_parms['point_name'])
+#        pnt_dict = _load_point_file(extract_holog_parms['point_name'])
 #    except:
 #        pnt_dict = _make_ant_pnt_dict(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
     
