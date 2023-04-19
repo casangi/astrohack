@@ -18,28 +18,26 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
     :param memory_limit: Amount of memory per core. It is suggested to use '8GB'.
     :type memory_limit: str
 
-    :param dask_local_dir: Where Dask should store temposrary files, defaults to None. If None Dask will use ./dask-worker-space.
+    :param dask_local_dir: Where Dask should store temporary files, defaults to None. If None Dask will use ./dask-worker-space.
     :type dask_local_dir: str
-    
-    :param log_parms: , 
-    :type log_parms: dict
-jjjjj    
-    :param log_parms['log_to_term']: , 
-    :type log_parms['log_to_term']: bool
-    
-    :param log_parms['log_level']: , 
-    :type log_parms['log_level']: 
-    
-    :param log_parms['log_to_file']: , 
-    :type log_parms['log_to_file']:
-    
-    :param log_parms['log_file']: , 
-    :type log_parms['log_file']:
-    
-    #log_parms = {'log_to_term':True,'log_level':'DEBUG','log_to_file':True,'log_file':'/users/jsteeb/astrohack/examples/logs/hack_'}
-    #worker_log_parms = {'log_to_term':False,'log_level':'DEBUG','log_to_file':True,'log_file':'/users/jsteeb/astrohack/examples/logs/hack_'}
-    
-    
+   
+    :param log_parms: The logger for the main process (code that does not run in parallel),
+    :type log_parms: dict, optional
+ 
+    :param log_parms['log_to_term']: Prints logging statements to the terminal, default to True.
+    :type log_parms['log_to_term']: bool, optional
+   
+    :param log_parms['log_level']: Log level options are: 'CRITICAL', 'ERROR', 'WARNING', 'INFO', and 'DEBUG'. With defaults of 'INFO'.
+    :type log_parms['log_level']: bool, optional
+   
+    :param log_parms['log_to_file']: Write log to file, defaults to False.
+    :type log_parms['log_to_file']: bool, optional
+   
+    :param log_parms['log_file']: If log_parms['log_to_file'] is True the log will be written to a file with the name log_parms['log_file'],
+    :type log_parms['log_file']: bool, optional
+   
+    :param worker_log_parms has the same keys as log_parms. However the defaults are {'log_to_term':False,'log_level':'INFO','log_to_file':False,'log_file':None}.
+    :type dict
     '''
     
     #Secret parameters user do not need to know about.
@@ -104,94 +102,6 @@ jjjjj
     logger.info('Created client ' + str(client))
     
     return client
-
-
-# def astrohack_slurm_cluster_client(workers_per_node, cores_per_node, memory_per_node, number_of_nodes, queue, interface, python_env_dir, dask_local_dir, dask_log_dir, exclude_nodes='nmpost090', dashboard_port=9000, astrohack_local_dir=None,astrohack_autorestrictor=False,wait_for_workers=True, log_parms={}, worker_log_parms={}):
-
-#     '''
-#     local_cache setting is only useful for testing since this function creates a local cluster. astrohack_slurm_cluster_client should be used for a multinode cluster.
-
-#     https://github.com/dask/dask/issues/5577
-#     log_parms['log_to_term'] = True/False
-#     log_parms['log_file'] = True/False
-#     log_parms['log_level'] =
-    
-#     interface eth0, ib0
-#     python "/mnt/condor/jsteeb/astrohack_py/bin/python"
-#     dask_local_dir "/mnt/condor/jsteeb"
-#     dask_log_dir "/.lustre/aoc/projects/ngvla/astrohack/ngvla_sim",
-#     '''
-    
-#     from dask_jobqueue import SLURMCluster
-#     from dask.distributed import Client, config, performance_report
-    
-#     _log_parms = copy.deepcopy(log_parms)
-#     _worker_log_parms = copy.deepcopy(worker_log_parms)
-    
-#     assert(_check_logger_parms(_log_parms)), "######### ERROR: initialize_processing log_parms checking failed."
-#     assert(_check_worker_logger_parms(_worker_log_parms)), "######### ERROR: initialize_processing log_parms checking failed."
-    
-#     if astrohack_local_dir:
-#         os.environ['ASTROHACK_LOCAL_DIR'] = astrohack_local_dir
-#         local_cache = True
-#     else:
-#         local_cache = False
-    
-#     #astrohack logger for code that is not part of the Dask graph. The worker logger is setup in the _astrohack_worker plugin.
-#     from astrohack._utils._astrohack_logger import _setup_astrohack_logger
-#     _setup_astrohack_logger(**_log_parms)
-#     logger = _get_astrohack_logger()
-
-#     _set_up_dask(dask_local_dir)
- 
-#     astrohack_path = astrohack.__path__.__dict__["_path"][0]
-#     if local_cache or astrohack_autorestrictor:
-#         dask.config.set({"distributed.scheduler.preload": os.path.join(astrohack_path,'_utils/_astrohack_scheduler.py')})
-#         dask.config.set({"distributed.scheduler.preload-argv": ["--local_cache",local_cache,"--autorestrictor",astrohack_autorestrictor]})
-    
-    
-#     ''' This method of assigning a worker plugin does not seem to work when using dask_jobqueue. Consequently using client.register_worker_plugin so that the method of assigning a worker plugin is the same for astrohack_local_client and astrohack_slurm_cluster_client.
-#     if local_cache or _worker_log_parms:
-#         dask.config.set({"distributed.worker.preload": os.path.join(astrohack_path,'_utils/_astrohack_worker.py')})
-#         dask.config.set({"distributed.worker.preload-argv": ["--local_cache",local_cache,"--log_to_term",_worker_log_parms['log_to_term'],"--log_to_file",_worker_log_parms['log_to_file'],"--log_file",_worker_log_parms['log_file'],"--log_level",_worker_log_parms['log_level']]})
-#     '''
-    
-#     cluster = SLURMCluster(
-#         processes=workers_per_node,
-#         cores=cores_per_node,
-#         interface=interface,
-#         memory=memory_per_node,
-#         walltime="24:00:00",
-#         queue=queue,
-#         name="astrohack",
-#         python=python_env_dir, #"/mnt/condor/jsteeb/astrohack_py/bin/python", #"/.lustre/aoc/projects/ngvla/astrohack/astrohack_py_env/bin/python",
-#         local_directory=dask_local_dir, #"/mnt/condor/jsteeb",
-#         log_directory=dask_log_dir,
-#         job_extra_directives=["--exclude="+exclude_nodes],
-#         #job_extra_directives=["--exclude=nmpost087,nmpost089,nmpost088"],
-#         scheduler_options={"dashboard_address": ":"+str(dashboard_port)}
-#     )  # interface='ib0'
-    
-#     client = Client(cluster)
-
-
-#     cluster.scale(workers_per_node*number_of_nodes)
-
-#     '''
-#     When constructing a graph that has local cache enabled all workers need to be up and running.
-#     '''
-#     if local_cache or wait_for_workers:
-#         client.wait_for_workers(n_workers=workers_per_node*number_of_nodes)
-
-#     if local_cache or _worker_log_parms:
-#         plugin = _astrohack_worker(local_cache,_worker_log_parms)
-#         client.register_worker_plugin(plugin,name='astrohack_worker')
-        
-#     logger.info('Created client ' + str(client))
-    
-#     return client
-    
-    
     
 def _set_up_dask(local_directory):
     if local_directory: dask.config.set({"temporary_directory": local_directory})
