@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from astrohack._classes.base_panel import BasePanel
+from astrohack._utils._constants import twopi
 
 
 class RingPanel(BasePanel):
@@ -71,19 +72,16 @@ class RingPanel(BasePanel):
             if scheme[iscrew] == 'c':
                 screws[iscrew, :] = self.center
             else:
-                if scheme[iscrew][1] == 'l':
-                    screws[iscrew, :] = np.cos(self.theta1), np.sin(self.theta1)
-                    xoff = offset
-                else:
-                    screws[iscrew, :] = np.cos(self.theta2), np.sin(self.theta2)
-                    xoff = -offset
                 if scheme[iscrew][0] == 'i':
-                    screws[iscrew, :] *= self.inrad
-                    yoff = offset
+                    radius = self.inrad + offset
                 else:
-                    screws[iscrew, :] *= self.ourad
-                    yoff = -offset
-                screws[iscrew, :] += xoff, yoff
+                    radius = self.ourad - offset
+                deltatheta = offset / radius
+                if scheme[iscrew][1] == 'l':
+                    theta = self.theta1 + deltatheta
+                else:
+                    theta = self.theta2 - deltatheta
+                screws[iscrew] = radius*np.cos(theta), radius*np.sin(theta)
         return screws
 
     def is_inside(self, rad, phi):
