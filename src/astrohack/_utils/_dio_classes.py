@@ -183,7 +183,7 @@ class AstrohackHologFile(dict):
         """
 
         table = PrettyTable()
-        table.field_names = ["ddi", "scan", "antenna"]
+        table.field_names = ["ddi", "map", "antenna"]
         table.align = "l"
         
         for ddi in self.keys():

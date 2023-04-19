@@ -79,7 +79,7 @@ class AntennaSurface:
             self.wavelength = inputxds.attrs['wavelength']
 
         self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
-        self.phase = inputxds["ANGLE"].values[0, 0, 0, :, :]
+        self.phase = inputxds["CORRECTED_PHASE"].values[0, 0, 0, :, :]
 
         self.npoint = np.sqrt(inputxds.dims['l'] ** 2 + inputxds.dims['m'] ** 2)
         self.amp_unit = 'V'
