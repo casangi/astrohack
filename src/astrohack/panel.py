@@ -38,6 +38,9 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     :param overwrite: Overwrite files on disk. Defaults to False.
     :type overwrite: bool, optional
 
+    :return: Holography panel object.
+    :rtype: AstrohackPanelFile
+
     .. _Description:
 
     **Additional Information**

@@ -64,6 +64,9 @@ def extract_holog(
     :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files., defaults to False
     :type overwrite: bool, optional
 
+    :return: Holography holog object.
+    :rtype: AstrohackHologFile
+
     .. _Description:
 
     **Additional Information**
