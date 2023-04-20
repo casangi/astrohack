@@ -93,6 +93,9 @@ def holog(
     :param overwrite: Overwrite existing files on disk, defaults to False
     :type overwrite: bool, optional
 
+    :return: Holography image object.
+    :rtype: AstrohackImageFile
+
     """
     
     logger = _get_astrohack_logger()
