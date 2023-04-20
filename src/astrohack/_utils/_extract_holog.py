@@ -389,16 +389,6 @@ def _create_holog_file(
                 )
             )
 
-
-
-
-
-
-
-
-
-
-
 ### To DO
 def _create_holog_obs_dict():
     '''

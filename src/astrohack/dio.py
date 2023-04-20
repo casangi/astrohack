@@ -188,6 +188,9 @@ def open_holog(file):
   :return: Holography holog object.
   :rtype: AstrohackHologFile
 
+  .. _Description:
+  Holog object allows the user to access holog data via compound dictionary keys with values, in order of depth, `ddi` -> `map` -> `ant`. The holog object also provides a `summary()` helper function to list available keys for each file. An outline of the holog object structure is show below:
+
   .. parsed-literal::
     holog_mds = 
       {
@@ -225,6 +228,9 @@ def open_image(file):
   :return: Holography image object.
   :rtype: AstrohackImageFile
 
+  .. _Description:
+  Image object allows the user to access image data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The image object also provides a `summary()` helper function to list available keys for each file. An outline of the image object structure is show below:
+
   .. parsed-literal::
     image_mds = 
       {
@@ -258,6 +264,9 @@ def open_panel(file):
   :return: Holography panel object.
   :rtype: AstrohackPanelFile
 
+  .. _Description:
+  Panel object allows the user to access panel data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The panel object also provides a `summary()` helper function to list available keys for each file. An outline of the panel object structure is show below:
+
   .. parsed-literal::
     panel_mds = 
       {
@@ -290,6 +299,9 @@ def open_pointing(file):
   
   :return: Holography pointing object.
   :rtype: AstrohackPointFile
+
+  .. _Description:
+  Pointing object allows the user to access pointing data via dictionary key with value based on `ant`. The pointing object also provides a `summary()` helper function to list available keys for each file. An outline of the pointing object structure is show below:
 
   .. parsed-literal::
     point_mds = 
