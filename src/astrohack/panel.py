@@ -34,7 +34,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     :param parallel: Run in parallel. Defaults to False.
     :type parallel: bool, optional
     :param sel_ddi: List of DDIs to be processed. None will use all DDIs. Defaults to None.
-    :type sel_ddi: list, optional
+    :type sel_ddi: list, optional, ex. [ddi_0 ... ddi_N]
     :param overwrite: Overwrite files on disk. Defaults to False.
     :type overwrite: bool, optional
 
@@ -73,6 +73,22 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
             - *rotated_paraboloid*: fitted using scipy.optimize, bending axes can be rotated by any arbitrary angle.
             - *full_paraboloid_lst_sq*: Full 9 parameter paraboloid fitted using least_squares method, tends to heavily overfit surface irregularities.
 
+
+    .. _Description:
+    **AstrohackPanelFile**
+    Panel object allows the user to access panel data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The panel object also provides a `summary()` helper function to list available keys for each file. An outline of the panel object structure is show below:
+
+    .. parsed-literal::
+        panel_mds = 
+        {
+            ant_0:{
+                ddi_0: panel_ds,
+                 ⋮               
+                ddi_m: panel_ds
+            },
+            ⋮
+            ant_n: …
+        }
 
     """
     

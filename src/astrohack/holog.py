@@ -15,8 +15,6 @@ from astrohack._utils._utils import _remove_suffix
 from astrohack._utils._io import check_if_file_will_be_overwritten, check_if_file_exists
 from astrohack._utils._dio import AstrohackImageFile
 
-#fp=open('holog.log','w+')
-#@profile(stream=fp)
 def holog(
     holog_name,
     grid_size,
@@ -55,7 +53,7 @@ def holog(
     :type parallel: bool, optional
 
     :param grid_interpolation_mode: Method of interpolation used when gridding data. This is done using the `scipy.interpolate.griddata` method. For more information on the interpolation see `scipy.interploate <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html#scipy.interpolate.griddata>`_, defaults to "nearest"
-    :type grid_interpolation_mode: str, optional
+    :type grid_interpolation_mode: str, optional. Available options: {"linear", "nearest", "cubic"} 
 
     :param chan_average: Boolean dictating whether the channel average is computed and written to the output holog file., defaults to True
     :type chan_average: bool, optional
@@ -64,7 +62,7 @@ def holog(
     :type chan_tolerance_factor: float, optional
 
     :param reference_scaling_frequency: When computing the channel average the lm frequency values are scaled by frequency. If the default None is used, the scaling is simply unity, however if `reference_scaling_frequency` is set then the scaling is done according to (average_frequency/reference_scaling_frequency)., defaults to None
-    :type reference_scaling_frequency: _type_, optional
+    :type reference_scaling_frequency: float, optional
 
     :param scan_average: Boolean dicating whether averagin is done over scan., defaults to True
     :type scan_average: bool, optional
@@ -95,6 +93,23 @@ def holog(
 
     :return: Holography image object.
     :rtype: AstrohackImageFile
+    
+    .. _Description:
+    **AstrohackImageFile**
+
+    Image object allows the user to access image data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The image object also provides a `summary()` helper function to list available keys for each file. An outline of the image object structure is show below:
+
+    .. parsed-literal::
+        image_mds = 
+            {
+            ant_0:{
+                ddi_0: image_ds,
+                 ⋮               
+                ddi_m: image_ds
+            },
+            ⋮
+            ant_n: …
+        }
 
     """
     

@@ -157,7 +157,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     ) * np.cos(target[:, 0] - direction[:, 0])
 
     pnt_xds["DIRECTIONAL_COSINES"] = xr.DataArray(
-        np.array([l, m]).T, dims=("time", "ra_dec")
+        np.array([l, m]).T, dims=("time", "lm")
     )
     
     ###############
@@ -176,6 +176,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         mapping_scans[ddi_id] = scan_list
             
     pnt_xds.attrs['mapping_scans'] = [mapping_scans]
+    
     ###############
 
     pnt_xds.attrs['ant_name'] = pnt_parms['ant_name']

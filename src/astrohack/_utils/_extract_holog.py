@@ -82,7 +82,6 @@ def _extract_holog_chunk(extract_holog_params):
         time_vis_row, return_index=True
     )  # Note that values are sorted.
     
-    #print(vis_data.shape,weight.shape,ant1.shape,ant2.shape,time_vis_row.shape,time_vis.shape,flag.shape,flag_row.shape,ref_ant_per_map_ant_tuple,map_ant_tuple,)
     
     vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(
         vis_data,
@@ -327,7 +326,7 @@ def _create_holog_file(
         if map_ant_index not in flagged_mapping_antennas:
             map_ant_tag = 'ant_' + ant_names[map_ant_index] #'ant_' + str(map_ant_index)
 
-            direction = np.take(pnt_map_dict[map_ant_tag], indicies, axis=0)
+            direction = np.take(pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, indicies, axis=0)
 
             parallactic_samples = _calculate_parallactic_angle_chunk(
                 time_samples=time_samples,
@@ -346,7 +345,11 @@ def _create_holog_file(
             )
 
             xds["DIRECTIONAL_COSINES"] = xr.DataArray(
-                pnt_map_dict[map_ant_tag], dims=["time", "lm"]
+                pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, dims=["time", "lm"]
+            )
+            
+            xds["POINTING_OFFSET"] = xr.DataArray(
+                pnt_map_dict[map_ant_tag]["POINTING_OFFSET"].values, dims=["time", "az_el"]
             )
 
             xds.attrs["holog_map_key"] = holog_map_key
@@ -389,7 +392,6 @@ def _create_holog_file(
                 )
             )
 
-### To DO
 def _create_holog_obs_dict():
     '''
     Code to automatically create holog_obs_dict
@@ -444,7 +446,6 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
         pnt_map_dict[antenna] = (
             pnt_ant_dict[antenna]
             .interp(time=time_vis, method="nearest")
-            .DIRECTIONAL_COSINES.values
         )
 
     return pnt_map_dict

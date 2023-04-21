@@ -23,16 +23,16 @@ from astrohack._utils._panel import _plot_antenna_chunk
 
 
 def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='mm'):
-    """Export screws adjustments from a panel_mds file
+    """ Export screw adjustment from panel to text file and save to disk.
 
     :param panel_mds_name: Input panel_mds file
     :type panel_mds_name: str
     :param destination: Name of the destination folder to contain exported screw adjustments
     :type destination: str
     :param ant_name: List of antennae/antenna to be exported, defaults to "all" when None
-    :type ant_name: list or str, optional
+    :type ant_name: list or str, optional, ex. ant_ea25
     :param ddi: List of ddis/ddi to be exported, defaults to "all" when None
-    :type ddi: list or str, optional
+    :type ddi: list or str, optional, ex. ddi_0
     :param unit: Unit for screws adjustments, most length units supported, defaults to "mm"
     :type unit: str
 
@@ -81,16 +81,16 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
 
 def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type='deviation', plot_screws=False,
                  dpi=300, unit=None, parallel=True):
-    """Plot Antenna surfaces from a panel_mds file
+    """ Create diagnostic plots of antenna surface deviations from panel data file. Available plots listed in additional information.
 
     :param panel_mds_name: Input panel_mds file
     :type panel_mds_name: str
     :param destination: Name of the destination folder to contain plots
     :type destination: str
     :param ant_name: List of antennae/antenna to be plotted, defaults to "all" when None
-    :type ant_name: list or str, optional
+    :type ant_name: list or str, optional, ex. ant_ea25
     :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
-    :type ddi: list or str, optional
+    :type ddi: list or str, optional, ex. ddi_0
     :param plot_type: type of plot to be produced, deviation, phase or ancillary
     :type plot_type: str
     :param plot_screws: Add screw positions to plot
@@ -180,7 +180,7 @@ def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type
         dask.compute(delayed_list)
 
 def open_holog(file):
-  """Method to return an instance of the holography data object.
+  """ Open holog file and return instance of the holog data object. Object includes summary function to list available dictionary keys.
 
   :param file: Path to holog file.
   :type file: str
@@ -189,6 +189,7 @@ def open_holog(file):
   :rtype: AstrohackHologFile
 
   .. _Description:
+  **AstrohackHologFile**
   Holog object allows the user to access holog data via compound dictionary keys with values, in order of depth, `ddi` -> `map` -> `ant`. The holog object also provides a `summary()` helper function to list available keys for each file. An outline of the holog object structure is show below:
 
   .. parsed-literal::
@@ -220,7 +221,7 @@ def open_holog(file):
     logger.error("Error opening holgraphy file: {file}".format(file))
 
 def open_image(file):
-  """Method to return an instance of the image data object.
+  """ Open image file and return instance of the image data object. Object includes summary function to list available dictionary keys.
 
   :param file: Path to image file.
   :type file: str
@@ -229,6 +230,7 @@ def open_image(file):
   :rtype: AstrohackImageFile
 
   .. _Description:
+  **AstrohackImageFile**
   Image object allows the user to access image data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The image object also provides a `summary()` helper function to list available keys for each file. An outline of the image object structure is show below:
 
   .. parsed-literal::
@@ -256,7 +258,7 @@ def open_image(file):
     logger.error("Error opening holgraphy image file: {file}".format(file))
 
 def open_panel(file):
-  """Method to return an instance of the holography panel object.
+  """ Open panel file and return instance of the panel data object. Object includes summary function to list available dictionary keys.
 
   :param file: Path ot panel file.
   :type file: str
@@ -265,6 +267,7 @@ def open_panel(file):
   :rtype: AstrohackPanelFile
 
   .. _Description:
+  **AstrohackPanelFile**
   Panel object allows the user to access panel data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The panel object also provides a `summary()` helper function to list available keys for each file. An outline of the panel object structure is show below:
 
   .. parsed-literal::
@@ -292,7 +295,7 @@ def open_panel(file):
     logger.error("Error opening holgraphy panel file: {file}".format(file))
 
 def open_pointing(file):
-  """Method to return an instance of the holography point object.
+  """ Open pointing file and return instance of the pointing data object. Object includes summary function to list available dictionary keys.
 
   :param file: Path to pointing file.
   :type file: str
@@ -301,6 +304,8 @@ def open_pointing(file):
   :rtype: AstrohackPointFile
 
   .. _Description:
+
+  **AstrohackPointFile**
   Pointing object allows the user to access pointing data via dictionary key with value based on `ant`. The pointing object also provides a `summary()` helper function to list available keys for each file. An outline of the pointing object structure is show below:
 
   .. parsed-literal::
