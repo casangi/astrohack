@@ -56,7 +56,7 @@ def extract_holog(
     :type point_name: str, optional
 
     :param data_col: Determines the data column to pull from the measurement set. Defaults to "DATA"
-    :type data_col: str, optional
+    :type data_col: str, optional, ex. DATA, CORRECTED_DATA
 
     :param parallel: Boolean for whether to process in parallel. Defaults to False
     :type parallel: bool, optional
@@ -68,6 +68,26 @@ def extract_holog(
     :rtype: AstrohackHologFile
 
     .. _Description:
+
+    **AstrohackHologFile**
+
+    Holog object allows the user to access holog data via compound dictionary keys with values, in order of depth, `ddi` -> `map` -> `ant`. The holog object also provides a `summary()` helper function to list available keys for each file. An outline of the holog object structure is show below:
+
+    .. parsed-literal::
+        holog_mds = 
+        {
+            ddi_0:{
+                map_0:{
+                 ant_0: holog_ds,
+                          ⋮
+                 ant_n: holog_ds
+                },
+                ⋮
+                map_p: …
+            },
+            ⋮
+            ddi_m: …
+        }
 
     **Additional Information**
 

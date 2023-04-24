@@ -82,7 +82,6 @@ def _extract_holog_chunk(extract_holog_params):
         time_vis_row, return_index=True
     )  # Note that values are sorted.
     
-    #print(vis_data.shape,weight.shape,ant1.shape,ant2.shape,time_vis_row.shape,time_vis.shape,flag.shape,flag_row.shape,ref_ant_per_map_ant_tuple,map_ant_tuple,)
     
     vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(
         vis_data,
@@ -393,17 +392,6 @@ def _create_holog_file(
                 )
             )
 
-
-
-
-
-
-
-
-
-
-
-### To DO
 def _create_holog_obs_dict():
     '''
     Code to automatically create holog_obs_dict
