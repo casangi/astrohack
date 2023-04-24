@@ -142,6 +142,7 @@ def extract_holog(
     # from astrohack._utils._extract_holog import _create_holog_obs_dict
 
 
+    '''
     ######## Get Spectral Windows ########
     ctb = ctables.table(
         os.path.join(extract_holog_parms['ms_name'], "DATA_DESCRIPTION"),
@@ -304,7 +305,7 @@ def extract_holog(
     holog_mds.open()
     
     return holog_mds
-    
+    '''
 
 
 def _check_extract_holog_parms(    ms_name,

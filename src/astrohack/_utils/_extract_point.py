@@ -29,6 +29,7 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
     Returns:
         dict: pointing dictionary of xarray dataarrays
     """
+    logger = _get_astrohack_logger()
 
     #Get antenna names and ids
     ctb = ctables.table(
@@ -45,19 +46,40 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
 
     
     ###########################################################################################
-    #Get scans with start and end times.
+    #Get Holography scans with start and end times.
     ctb = ctables.table(
         ms_name,
         readonly=True,
         lockoptions={"option": "usernoread"},
+        ack=False,
     )
-
     scan_ids = ctb.getcol("SCAN_NUMBER")
     time = ctb.getcol("TIME")
     ddi = ctb.getcol("DATA_DESC_ID")
+    state_ids = ctb.getcol("STATE_ID")
     ctb.close()
+    
+    #Get state ids where holography is done
+    ctb = ctables.table(
+        os.path.join(ms_name, "STATE"),
+        readonly=True,
+        lockoptions={"option": "usernoread"},
+        ack=False,
+    )
+    # scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE subtable.
+    obs_modes = ctb.getcol("OBS_MODE")
+    ctb.close()
+    scan_intent = "MAP_ANTENNA_SURFACE"
+    allowed_state_ids = []
+    for i, mode in enumerate(obs_modes):
+        if (scan_intent in mode) and ('REFERENCE' not in mode):
+            allowed_state_ids.append(i)
+    allowed_state_ids = np.array(allowed_state_ids)
 
-    scan_time_dict = _extract_scan_time_dict(time, scan_ids, ddi)
+    #For each ddi get holography scan start and end times:
+    scan_time_dict = _extract_scan_time_dict(time, scan_ids, state_ids, ddi, allowed_state_ids)
+    
+    logger.info('Holography Scans Times ' + str(scan_time_dict))
     ###########################################################################################
     pnt_parms = {
         'pnt_name': pnt_name,
@@ -143,6 +165,21 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     # POINTING_OFFSET: The a priori pointing corrections applied by the telescope in pointing to the DIRECTION position,
     # optionally expressed as polynomial coefficients.
     pnt_xds["POINTING_OFFSET"] = xr.DataArray(pointing_offset, dims=("time", "az_el"))
+    
+#    import matplotlib.pyplot as plt
+#
+#    plt.figure()
+#    plt.scatter(pnt_xds["POINTING_OFFSET"][:,0],pnt_xds["POINTING_OFFSET"][:,1])
+#
+#    r = np.sqrt(pnt_xds["POINTING_OFFSET"][:,0]**2 + pnt_xds["POINTING_OFFSET"][:,1]**2)
+#    plt.figure()
+#    plt.plot(r)
+#
+#
+#    plt.show()
+    
+    
+    
 
     # Calculate directional cosines (l,m) which are used as the gridding locations.
     # See equations 8,9 in https://library.nrao.edu/public/memos/evla/EVLAM_212.pdf.
@@ -152,31 +189,66 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     ### NB: Is VLA's definition of Azimuth the same for ALMA, MeerKAT, etc.? (positive for a clockwise rotation from north, viewed from above)
     ### NB: Compare with calulation using WCS in astropy.
     l = np.cos(target[:, 1]) * np.sin(target[:, 0] - direction[:, 0])
-    m = np.sin(target[:, 1]) * np.cos(direction[:, 1]) - np.cos(target[:, 1]) * np.sin(
-        direction[:, 1]
-    ) * np.cos(target[:, 0] - direction[:, 0])
+    m = np.sin(target[:, 1]) * np.cos(direction[:, 1]) - np.cos(target[:, 1]) * np.sin(direction[:, 1]) * np.cos(target[:, 0] - direction[:, 0])
 
     pnt_xds["DIRECTIONAL_COSINES"] = xr.DataArray(
         np.array([l, m]).T, dims=("time", "lm")
     )
     
+    
+    #    Kumar's old (2016) emails, here is how the filler works:
+    #    MS::Direction = ASDM::Target + ASDM::Offset + optionally(ASDM::Encoder - ASDM::Direction)
+    #    MS::Target = ASDM::Target
+    #    MS::Encoder = ASDM::Encoder
+    #    MS::Pointing_Offset = ASDM::Direction - ASDM::Target
+    #    Optional --with-pointing-corrections should be False for importasdm
+    
+    #Remove pointing errors. this will be used to determine the grid
+    direction_ideal = pointing_offset + target
+    l_ideal = np.cos(target[:, 1]) * np.sin(target[:, 0] - direction_ideal[:, 0])
+    m_ideal = np.sin(target[:, 1]) * np.cos(direction_ideal[:, 1]) - np.cos(target[:, 1]) * np.sin(direction_ideal[:, 1]) * np.cos(target[:, 0] - direction_ideal[:, 0])
+    
+    pnt_xds["IDEAL_DIRECTIONAL_COSINES"] = xr.DataArray(
+        np.array([l_ideal, m_ideal]).T, dims=("time", "lm")
+    )
+    
+#    plt.figure()
+#    plt.scatter(pnt_xds["POINTING_OFFSET"][:,0],pnt_xds["POINTING_OFFSET"][:,1])
+#    plt.scatter(pnt_xds["IDEAL_DIRECTIONAL_COSINES"][:,0],pnt_xds["IDEAL_DIRECTIONAL_COSINES"][:,1])
+#
+#    r1 = np.sqrt(pnt_xds["POINTING_OFFSET"][:,0]**2 + pnt_xds["POINTING_OFFSET"][:,1]**2)
+#    r2 = np.sqrt(pnt_xds["IDEAL_DIRECTIONAL_COSINES"][:,0]**2 + pnt_xds["IDEAL_DIRECTIONAL_COSINES"][:,1]**2)
+#    plt.figure()
+#    plt.plot(r1)
+#    plt.plot(r2)
+#
+#    plt.show()
+    
+    
     ###############
-
-    mapping_scans = {}
+    #mapping_scans = {}
+    holog_obs_dict={}
     time_tree = spatial.KDTree(direction_time[:,None]) #Use for nearest interpolation
     
     for ddi_id, ddi in scan_time_dict.items():
-        scan_list = []
+        map_scans_dict = {}
+        map_id = 0
+        
         for scan_id, scan_time in ddi.items():
             _, time_index = time_tree.query(scan_time[:,None])
-            sub_lm = np.abs(pnt_xds["DIRECTIONAL_COSINES"].isel(time=slice(time_index[0],time_index[1]))).mean()
+            sub_lm = np.abs(pnt_xds["IDEAL_DIRECTIONAL_COSINES"].isel(time=slice(time_index[0],time_index[1]))).mean()
             
             if sub_lm > 10**-12: #Antenna is mapping since lm is non-zero
-                scan_list.append(scan_id)
-        mapping_scans[ddi_id] = scan_list
+                if map_id in map_scans_dict:
+                    map_scans_dict[map_id].append(scan_id)
+                else:
+                    map_scans_dict[map_id] = [scan_id]
+            else:
+                map_id = map_id + 1
+                
+        holog_obs_dict[ddi_id] = map_scans_dict
             
-    pnt_xds.attrs['mapping_scans'] = [mapping_scans]
-    
+    pnt_xds.attrs['holog_obs_dict'] = [holog_obs_dict]
     ###############
 
     pnt_xds.attrs['ant_name'] = pnt_parms['ant_name']
@@ -194,7 +266,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
 
 @convert_dict_from_numba
 @njit(cache=False, nogil=True)
-def _extract_scan_time_dict(time, scan_ids, ddi_ids):
+def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, allowed_state_ids):
     d1 = Dict.empty(
         key_type=types.int64,
         value_type=np.zeros(2, dtype=types.float64),
@@ -205,19 +277,24 @@ def _extract_scan_time_dict(time, scan_ids, ddi_ids):
         value_type=d1,
     )
     
+    
     for i, s in enumerate(scan_ids):
         s = types.int64(s)
         t = time[i]
         ddi = ddi_ids[i]
-        if ddi in scan_time_dict:
-            if s in scan_time_dict[ddi]:
-                if  scan_time_dict[ddi][s][0] > t:
-                    scan_time_dict[ddi][s][0] = t
-                if  scan_time_dict[ddi][s][1] < t:
-                    scan_time_dict[ddi][s][1] = t
+        
+        state_id = state_ids[i]
+        
+        if state_id in allowed_state_ids:
+            if ddi in scan_time_dict:
+                if s in scan_time_dict[ddi]:
+                    if  scan_time_dict[ddi][s][0] > t:
+                        scan_time_dict[ddi][s][0] = t
+                    if  scan_time_dict[ddi][s][1] < t:
+                        scan_time_dict[ddi][s][1] = t
+                else:
+                    scan_time_dict[ddi][s] = np.array([t,t])
             else:
-                scan_time_dict[ddi][s] = np.array([t,t])
-        else:
-            scan_time_dict[ddi] = {s: np.array([t,t])}
-
+                scan_time_dict[ddi] = {s: np.array([t,t])}
+  
     return scan_time_dict
