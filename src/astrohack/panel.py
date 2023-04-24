@@ -118,7 +118,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
                 if panel_chunk_params['sel_ddi'] == "all":
                     panel_chunk_params['sel_ddi'] = os.listdir(panel_chunk_params['image_name']+'/'+antenna)
 
-                for ddi in panel_chunk_params['sel_ddi'] :
+                for ddi in panel_chunk_params['sel_ddi']:
                     if 'ddi_' in ddi:
                         logger.info(f"Processing {ddi} for {antenna}")
                         panel_chunk_params['ddi'] = ddi
