@@ -20,7 +20,7 @@ def build_folder_structure(dataname, resultname):
     create_folder(dataname)
     create_folder(resultname)
 
-def gdown_data(ms_name,download_folder='.'):
+def gdown_data(ms_name, download_folder='.'):
     assert ms_name in gdown_ids, "Measurement set not available. Available measurement sets are:" + str(gdown_ids.keys())
     
     id = gdown_ids[ms_name]
