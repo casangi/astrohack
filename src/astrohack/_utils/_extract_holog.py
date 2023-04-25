@@ -392,7 +392,54 @@ def _create_holog_file(
                 )
             )
 
-def _create_holog_obs_dict():
+def _create_holog_obs_dict(pnt_dict):
+
+    mapping_scans_dict = {}
+    holog_obs_dict = {}
+    map_id = 0
+    ant_names_set = set()
+    
+    for ant_name,ant_ds in pnt_dict.items():
+        if 'ant' in ant_name:
+            ant_names_set.add(ant_name)
+            for ddi, map_dict in ant_ds.attrs['mapping_scans_obs_dict'][0].items():
+                if ddi not in holog_obs_dict:
+                        holog_obs_dict[ddi] = {}
+                for ant_map_id, scan_list in map_dict.items():
+                    if scan_list:
+                        map_key = _check_if_array_in_dict(mapping_scans_dict,scan_list)
+                        if not map_key:
+                            map_key = 'map_' + str(map_id)
+                            mapping_scans_dict [map_key] = scan_list
+                            map_id = map_id+1
+                            
+                        if map_key not in holog_obs_dict[ddi]:
+                            holog_obs_dict[ddi][map_key] = {'scans':scan_list,'ant':{}}
+                                                    
+                        holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
+                        
+    for ddi, ddi_dict in holog_obs_dict.items():
+        for map_id, map_dict in ddi_dict.items():
+            map_ant_set = set(map_dict['ant'].keys())
+            ref_ant_set = ant_names_set - map_ant_set
+   
+            for ant_key in map_dict['ant'].keys():
+                #add code for distance from antenna
+                holog_obs_dict[ddi][map_id]['ant'][ant_key] = ref_ant_set
+    
+    return holog_obs_dict
+
+    
+
+def _check_if_array_in_dict(array_dict,array):
+    
+    for key,val in array_dict.items():
+        if np.array_equiv(val,array):
+            return key
+            
+    return False
+    
+
     '''
     Code to automatically create holog_obs_dict
     VLA datasets causeing issues.

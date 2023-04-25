@@ -70,16 +70,21 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
     obs_modes = ctb.getcol("OBS_MODE")
     ctb.close()
     scan_intent = "MAP_ANTENNA_SURFACE"
-    allowed_state_ids = []
+    mapping_state_ids = []
     for i, mode in enumerate(obs_modes):
         if (scan_intent in mode) and ('REFERENCE' not in mode):
-            allowed_state_ids.append(i)
-    allowed_state_ids = np.array(allowed_state_ids)
+            mapping_state_ids.append(i)
+    mapping_state_ids = np.array(mapping_state_ids)
 
     #For each ddi get holography scan start and end times:
-    scan_time_dict = _extract_scan_time_dict(time, scan_ids, state_ids, ddi, allowed_state_ids)
+    scan_time_dict = _extract_scan_time_dict(time, scan_ids, state_ids, ddi, mapping_state_ids)
     
     logger.info('Holography Scans Times ' + str(scan_time_dict))
+    
+    
+    point_meta_ds = xr.Dataset()
+    point_meta_ds.attrs['mapping_state_ids'] = mapping_state_ids
+    point_meta_ds.to_zarr(pnt_name,mode="w", compute=True, consolidated=True)
     ###########################################################################################
     pnt_parms = {
         'pnt_name': pnt_name,
@@ -227,7 +232,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     
     ###############
     #mapping_scans = {}
-    holog_obs_dict={}
+    mapping_scans_obs_dict={}
     time_tree = spatial.KDTree(direction_time[:,None]) #Use for nearest interpolation
     
     for ddi_id, ddi in scan_time_dict.items():
@@ -239,16 +244,16 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
             sub_lm = np.abs(pnt_xds["IDEAL_DIRECTIONAL_COSINES"].isel(time=slice(time_index[0],time_index[1]))).mean()
             
             if sub_lm > 10**-12: #Antenna is mapping since lm is non-zero
-                if map_id in map_scans_dict:
-                    map_scans_dict[map_id].append(scan_id)
+                if ('map_' + str(map_id)) in map_scans_dict:
+                    map_scans_dict['map_' + str(map_id)].append(scan_id)
                 else:
-                    map_scans_dict[map_id] = [scan_id]
+                    map_scans_dict['map_' + str(map_id)] = [scan_id]
             else:
                 map_id = map_id + 1
                 
-        holog_obs_dict[ddi_id] = map_scans_dict
+        mapping_scans_obs_dict['ddi_'+ str(ddi_id)] = map_scans_dict
             
-    pnt_xds.attrs['holog_obs_dict'] = [holog_obs_dict]
+    pnt_xds.attrs['mapping_scans_obs_dict'] = [mapping_scans_obs_dict]
     ###############
 
     pnt_xds.attrs['ant_name'] = pnt_parms['ant_name']
@@ -266,7 +271,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
 
 @convert_dict_from_numba
 @njit(cache=False, nogil=True)
-def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, allowed_state_ids):
+def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_ids):
     d1 = Dict.empty(
         key_type=types.int64,
         value_type=np.zeros(2, dtype=types.float64),
@@ -277,7 +282,7 @@ def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, allowed_state_id
         value_type=d1,
     )
     
-    
+    mapping_scans = set()
     for i, s in enumerate(scan_ids):
         s = types.int64(s)
         t = time[i]
@@ -285,7 +290,8 @@ def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, allowed_state_id
         
         state_id = state_ids[i]
         
-        if state_id in allowed_state_ids:
+        if state_id in mapping_state_ids:
+            mapping_scans.add(s)
             if ddi in scan_time_dict:
                 if s in scan_time_dict[ddi]:
                     if  scan_time_dict[ddi][s][0] > t:

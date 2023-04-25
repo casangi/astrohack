@@ -422,6 +422,8 @@ def _load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None):
     """
     if pnt_dict is None:
         pnt_dict = {}
+        
+    pnt_dict['point_meta_ds'] = xr.open_zarr(file)
 
     for ant in os.listdir(file):
         if "ant_" in ant:

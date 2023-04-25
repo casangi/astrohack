@@ -159,8 +159,12 @@ def extract_holog(
     
     
     #### To DO: automatically create holog_obs_dict
-    # from astrohack._utils._extract_holog import _create_holog_obs_dict
-
+    from astrohack._utils._extract_holog import _create_holog_obs_dict
+    holog_obs_dict = _create_holog_obs_dict(pnt_dict)
+    
+    #print(pnt_dict)
+    
+    print(holog_obs_dict)
 
     '''
     ######## Get Spectral Windows ########
