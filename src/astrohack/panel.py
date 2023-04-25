@@ -200,6 +200,7 @@ def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, panel_margins
     
     parms_passed = parms_passed and _check_parms(panel_params, 'image_name', [str], default=None)
     base_name = _remove_suffix(panel_params['image_name'], '.image.zarr')
+    base_name = _remove_suffix(base_name, '.combine.zarr')
     parms_passed = parms_passed and _check_parms(panel_params, 'panel_name', [str], default=base_name+'.panel.zarr')
     parms_passed = parms_passed and _check_parms(panel_params, 'cutoff', [float], acceptable_range=[0, 1], default=0.2)
     parms_passed = parms_passed and _check_parms(panel_params, 'panel_kind', [str], acceptable_data=panel_models, default="rigid")
