@@ -1,14 +1,15 @@
 import os
 import dask
-import xarray as xr
 import shutil
 
-from astrohack._classes.antenna_surface import AntennaSurface
+import numpy as np
+import xarray as xr
+
 from astrohack._classes.telescope import Telescope
 from astrohack._classes.base_panel import panel_models
-from astrohack._utils._io import _load_image_xds, _aips_holog_to_xds, check_if_file_will_be_overwritten, check_if_file_exists
-from astrohack._utils._panel import _external_to_internal_parameters, _correct_phase
-import numpy as np
+from astrohack._utils._io import _aips_holog_to_xds, check_if_file_will_be_overwritten, check_if_file_exists
+
+from astrohack._utils._panel import _panel_chunk
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
@@ -17,8 +18,7 @@ from astrohack._utils._utils import _remove_suffix
 from astrohack._utils._dio import AstrohackPanelFile
 
 
-def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margins=0.2, parallel=False, sel_ddi=None,
-          overwrite=False):
+def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margins=0.2, parallel=False, sel_ddi=None, overwrite=False):
     """Analyze holography images to derive panel adjustments
 
     :param image_name: Input holography data file name. Accepted data formats are the output from ``astrohack.holog.holog`` and AIPS holography data prepackaged using ``astrohack.panel.aips_holog_to_astrohack``.
@@ -138,68 +138,6 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
             panel_mds = AstrohackPanelFile(panel_chunk_params['panel_name'])
             panel_mds.open()
             return panel_mds
-
-
-def _panel_chunk(panel_chunk_params):
-    """
-    Process a chunk of the holographies, usually a chunk consists of an antenna over a ddi
-    Args:
-        panel_chunk_params: dictionary of inputs
-    """
-    if panel_chunk_params['origin'] == 'AIPS':
-        inputxds = xr.open_zarr(panel_chunk_params['image_name'])
-        telescope = Telescope(inputxds.attrs['telescope_name'])
-        panel_chunk_params['antenna'] = inputxds.attrs['ant_name']
-
-    else:
-        inputxds = _load_image_xds(panel_chunk_params['image_name'],
-                                   panel_chunk_params['antenna'],
-                                   panel_chunk_params['ddi'],
-                                   dask_load=False)
-
-        inputxds.attrs['AIPS'] = False
-
-        if inputxds.attrs['telescope_name'] == "ALMA":
-            tname = inputxds.attrs['telescope_name']+'_'+inputxds.attrs['ant_name'][0:2]
-            telescope = Telescope(tname)
-        elif inputxds.attrs['telescope_name'] == "EVLA":
-            tname = "VLA"
-            telescope = Telescope(tname)
-        else:
-            raise ValueError('Unsuported telescope {0:s}'.format(inputxds.attrs['telescope_name']))
-
-    surface = AntennaSurface(inputxds, telescope, panel_chunk_params['cutoff'], panel_chunk_params['panel_kind'],
-                             panel_margins=panel_chunk_params['panel_margins'])
-
-    surface.compile_panel_points()
-    surface.fit_surface()
-    surface.correct_surface()
-    
-    xds_name = panel_chunk_params['panel_name'] + '/' + panel_chunk_params['antenna'] + '/' + panel_chunk_params['ddi']
-    xds = surface.export_xds()
-    xds.to_zarr(xds_name, mode='w')
-
-
-def _create_phase_model(npix, parameters, wavelength, telescope, cellxy):
-    """
-    Create a phase model with npix by npix size according to the given parameters
-    Args:
-        npix: Number of pixels in each size of the model
-        parameters: Parameters for the phase model in the units described in _phase_fitting
-        wavelength: Observing wavelength, in meters
-        telescope: Telescope object containing the optics parameters
-        cellxy: Map cell spacing, in meters
-
-    Returns:
-
-    """
-    iNPARameters = _external_to_internal_parameters(parameters, wavelength, telescope, cellxy)
-    dummyphase = np.zeros((npix, npix))
-
-    _, model = _correct_phase(dummyphase, cellxy, iNPARameters, telescope.magnification, telescope.focus,
-                              telescope.surp_slope)
-    return model
-
 
 def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, overwrite=False):
     """

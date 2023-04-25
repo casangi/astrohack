@@ -9,20 +9,20 @@ from astrohack._utils._logger._astrohack_logger import  _setup_astrohack_logger,
 from astrohack._utils._dask_plugins._astrohack_worker import _astrohack_worker
 
 def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, log_parms={}, worker_log_parms={}):
-    """Setup dask cluster and astrohack logger.
+    """ Setup dask cluster and astrohack logger.
 
-    :param cores: Number of cores in Dask cluster.
-    :type cores: int
+    :param cores: Number of cores in Dask cluster, defaults to None
+    :type cores: int, optional
 
-    :param memory_limit: Amount of memory per core. It is suggested to use '8GB'.
-    :type memory_limit: str
+    :param memory_limit: Amount of memory per core. It is suggested to use '8GB', defaults to None
+    :type memory_limit: str, optional
+    
+    :param dask_local_dir: Where Dask should store temporary files, defaults to None. If None Dask will use `./dask-worker-space`, defaults to None
+    :type dask_local_dir: str, optional
 
-    :param dask_local_dir: Where Dask should store temporary files, defaults to None. If None Dask will use ./dask-worker-space.
-    :type dask_local_dir: str
-   
-    :param log_parms: The logger for the main process (code that does not run in parallel),
+    :param log_parms: The logger for the main process (code that does not run in parallel), defaults to {}
     :type log_parms: dict, optional
- 
+
     :param log_parms['log_to_term']: Prints logging statements to the terminal, default to True.
     :type log_parms['log_to_term']: bool, optional
    
@@ -34,9 +34,29 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
    
     :param log_parms['log_file']: If log_parms['log_to_file'] is True the log will be written to a file with the name log_parms['log_file'],
     :type log_parms['log_file']: bool, optional
-   
-    :param worker_log_parms: has the same keys as log_parms. However the defaults are {'log_to_term':False,'log_level':'INFO','log_to_file':False,'log_file':None}.
-    :type dict
+
+    :param worker_log_parms: worker_log_parms: Keys as same as log_parms, default values given in `Additional Information`_.
+    :type worker_log_parms: dict, optional
+
+    :return: Dask Distributed Client
+    :rtype: distributed.Client
+    
+    
+    .. _Additional Information:
+
+    **Additional Information**
+    
+    ``worker_log_params`` default values are set internally when there is not user input. The default values are given below.
+    
+    .. parsed-literal::
+        worker_log_parms =
+            {
+                'log_to_term':False,
+                'log_level':'INFO',
+                'log_to_file':False,
+                'log_file':None
+            }
+
     """
     
     #Secret parameters user do not need to know about.
@@ -48,7 +68,7 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
     _log_parms = copy.deepcopy(log_parms)
     _worker_log_parms = copy.deepcopy(worker_log_parms)
     
-    assert(_check_logger_parms(_log_parms)), "######### ERROR: initialize_processing log_parms checking failed."
+    assert(_check_logger_parms(_log_parms)),               "######### ERROR: initialize_processing log_parms checking failed."
     assert(_check_worker_logger_parms(_worker_log_parms)), "######### ERROR: initialize_processing log_parms checking failed."
     
     if astrohack_local_dir:
@@ -62,7 +82,6 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
     
     _set_up_dask(dask_local_dir)
     
-    #astrohack_path = astrohack.__path__.__dict__["_path"][0]
     astrohack_path = astrohack.__path__[0]
     
     if local_cache or astrohack_autorestrictor:
@@ -84,8 +103,6 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
     cluster = dask.distributed.LocalCluster(n_workers=cores, threads_per_worker=1, processes=True, memory_limit=memory_limit,silence_logs=logging.ERROR) #, silence_logs=logging.ERROR #,resources={'GPU': 2}
     client = dask.distributed.Client(cluster)
     client.get_versions(check=True)
-    
-    #print(client)
 
     '''
     When constructing a graph that has local cache enabled all workers need to be up and running.
@@ -109,12 +126,13 @@ def _set_up_dask(local_directory):
     dask.config.set({"distributed.scheduler.unknown-task-duration": '99m'})
     dask.config.set({"distributed.worker.memory.pause": False})
     dask.config.set({"distributed.worker.memory.terminate": False})
-    #dask.config.set({"distributed.worker.memory.recent-to-old-time": '999s'})
+    # dask.config.set({"distributed.worker.memory.recent-to-old-time": '999s'})
     dask.config.set({"distributed.comm.timeouts.connect": '3600s'})
     dask.config.set({"distributed.comm.timeouts.tcp": '3600s'})
     dask.config.set({"distributed.nanny.environ.OMP_NUM_THREADS": 1})
     dask.config.set({"distributed.nanny.environ.MKL_NUM_THREADS": 1})
-    #https://docs.dask.org/en/stable/how-to/customize-initialization.html
+    
+    # https://docs.dask.org/en/stable/how-to/customize-initialization.html
  
 
 
