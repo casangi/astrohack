@@ -39,7 +39,7 @@ def _combine_chunk(combine_chunk_params):
                                   ddi_list[0],
                                   dask_load=False)
         nddi = len(ddi_list)
-        shape = out_xds['CORRECTED_PHASE'].values.shape
+        shape = list(out_xds['CORRECTED_PHASE'].values.shape)
         shape.append(nddi)
         multi_ddi_phase = np.ndarray(shape)
         multi_ddi_amp = np.zeros_like(multi_ddi_phase)
@@ -49,8 +49,8 @@ def _combine_chunk(combine_chunk_params):
                                        combine_chunk_params['antenna'],
                                        ddi_list[iddi],
                                        dask_load=False)
-            multi_ddi_amp[iddi] = this_xds['AMPLITUDE']
-            multi_ddi_phase[iddi] = this_xds['CORRECTED_PHASE']
+            multi_ddi_amp[..., iddi] = this_xds['AMPLITUDE']
+            multi_ddi_phase[..., iddi] = this_xds['CORRECTED_PHASE']
 
         amplitude = np.mean(multi_ddi_amp, axis=-1)
         if combine_chunk_params['weighted']:

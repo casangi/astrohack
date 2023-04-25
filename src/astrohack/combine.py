@@ -10,7 +10,7 @@ from astrohack._utils._io import check_if_file_will_be_overwritten, check_if_fil
 from astrohack._utils._dio import AstrohackImageFile
 
 
-def combine_holog_ddi(image_name, combine_name, ant_list=None, ddi_list=None, weighted=False, parallel=False,
+def combine_image_ddi(image_name, combine_name=None, ant_list=None, ddi_list=None, weighted=False, parallel=False,
                       overwrite=False):
     """Combine DDIs in a Holography image to increase SNR
 
@@ -94,8 +94,8 @@ def _check_combine_parms(image_name, combine_name, ant_list, ddi_list, weighted,
     logger = _get_astrohack_logger()
 
     parms_passed = _check_parms(combine_params, 'image_file', [str], default=None)
-    base_name = _remove_suffix(combine_params['combine_file'], '.image.zarr')
-    parms_passed = parms_passed and _check_parms(combine_params, 'combine_name', [str], default=base_name+'.combine.zarr')
+    base_name = _remove_suffix(combine_params['image_file'], '.image.zarr')
+    parms_passed = parms_passed and _check_parms(combine_params, 'combine_file', [str], default=base_name+'.combine.zarr')
     parms_passed = parms_passed and _check_parms(combine_params, 'ant_list', [list, np.ndarray],
                                                  list_acceptable_data_types=[str], default='all')
     parms_passed = parms_passed and _check_parms(combine_params, 'ddi_list', [list, np.ndarray],
