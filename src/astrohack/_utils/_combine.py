@@ -4,6 +4,8 @@ import xarray as xr
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._io import _load_image_xds
+from scipy.interpolate import griddata
+from astrohack._utils._constants import clight
 
 
 def _combine_chunk(combine_chunk_params):
@@ -40,26 +42,51 @@ def _combine_chunk(combine_chunk_params):
                                   dask_load=False)
         nddi = len(ddi_list)
         shape = list(out_xds['CORRECTED_PHASE'].values.shape)
-        shape.append(nddi)
-        multi_ddi_phase = np.ndarray(shape)
-        multi_ddi_amp = np.zeros_like(multi_ddi_phase)
-
-        for iddi in range(nddi):
+        if out_xds.dims['chan'] != 1:
+            raise Exception("Only single channel holographies supported")
+        npol = shape[2]
+        npoints = shape[3]*shape[4]
+        amp_sum = np.zeros((npol, npoints))
+        pha_sum = np.zeros((npol, npoints))
+        for ipol in range(npol):
+            amp_sum[ipol, :] = out_xds['AMPLITUDE'].values[0, 0, ipol, :, :].ravel()
+            if combine_chunk_params['weighted']:
+                pha_sum[ipol, :] = out_xds['CORRECTED_PHASE'].values[0, 0, ipol, :, :].ravel()*amp_sum
+            else:
+                pha_sum[ipol, :] = out_xds['CORRECTED_PHASE'].values[0, 0, ipol, :, :].ravel()
+        wavelength = clight / out_xds.chan.values[0]
+        u, v = np.meshgrid(out_xds.u_prime.values * wavelength, out_xds.v_prime.values * wavelength)
+        dest_u_axis = u.ravel()
+        dest_v_axis = v.ravel()
+        for iddi in range(1, nddi):
+            print(iddi)
             this_xds = _load_image_xds(combine_chunk_params['image_file'],
                                        combine_chunk_params['antenna'],
                                        ddi_list[iddi],
                                        dask_load=False)
-            multi_ddi_amp[..., iddi] = this_xds['AMPLITUDE']
-            multi_ddi_phase[..., iddi] = this_xds['CORRECTED_PHASE']
+            wavelength = clight / this_xds.chan.values[0]
+            u, v = np.meshgrid(this_xds.u_prime.values * wavelength, this_xds.v_prime.values * wavelength)
+            loca_u_axis = u.ravel()
+            loca_v_axis = v.ravel()
+            for ipol in range(npol):
+                thispha = this_xds['CORRECTED_PHASE'].values[0, 0, ipol, :, :].ravel()
+                thisamp = this_xds['AMPLITUDE'].values[0, 0, ipol, :, :].ravel()
+                repha = griddata((loca_u_axis, loca_v_axis), thispha, (dest_u_axis, dest_v_axis), method='linear')
+                reamp = griddata((loca_u_axis, loca_v_axis), thisamp, (dest_u_axis, dest_v_axis), method='linear')
+                amp_sum[ipol, :] += reamp
+                if combine_chunk_params['weighted']:
+                    pha_sum[ipol, :] += repha*reamp
+                else:
+                    pha_sum[ipol, :] += repha
 
-        amplitude = np.mean(multi_ddi_amp, axis=-1)
         if combine_chunk_params['weighted']:
-            phase = np.average(multi_ddi_phase, axis=-1, weights=multi_ddi_amp)
+            phase = pha_sum / amp_sum
         else:
-            phase = np.mean(multi_ddi_phase, axis=-1)
+            phase = pha_sum / nddi
+        amplitude = amp_sum / nddi
 
-        out_xds['AMPLITUDE'] = xr.DataArray(amplitude, dims=["time", "chan", "pol", "u_prime", "v_prime"])
-        out_xds['CORRECTED_PHASE'] = xr.DataArray(phase, dims=["time", "chan", "pol", "u_prime", "v_prime"])
+        out_xds['AMPLITUDE'] = xr.DataArray(amplitude.reshape(shape), dims=["time", "chan", "pol", "u_prime", "v_prime"])
+        out_xds['CORRECTED_PHASE'] = xr.DataArray(phase.reshape(shape), dims=["time", "chan", "pol", "u_prime", "v_prime"])
 
         out_xds.to_zarr(out_xds_name, mode='w')
 
