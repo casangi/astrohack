@@ -160,7 +160,6 @@ def extract_holog(
     #### To DO: automatically create holog_obs_dict
     # from astrohack._utils._extract_holog import _create_holog_obs_dict
 
-
     ######## Get Spectral Windows ########
     ctb = ctables.table(
         os.path.join(extract_holog_parms['ms_name'], "DATA_DESCRIPTION"),
@@ -235,6 +234,16 @@ def extract_holog(
     )
     
     telescope_name = obs_ctb.getcol("TELESCOPE_NAME")[0]
+
+    ctb = ctables.table(
+        os.path.join(extract_holog_parms['ms_name'], "HISTORY"),
+        readonly=True,
+        lockoptions={"option": "usernoread"},
+        ack=False,
+    )
+
+    if telescope_name == "EVLA":
+        assert "pnt_tbl:fixed" in ctb.getcol("MESSAGE") == False, "Pointing table not corrected, users should apply function astrohack._utils._extract_pointing._fix_pointing_table() to remedy this."
 
     ## DDI selection
     if holog_obs_dict['ddi'] is None:

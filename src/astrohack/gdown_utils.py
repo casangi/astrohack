@@ -69,5 +69,3 @@ def list_datasets():
         table.add_row([str(key), description_string])
         
     print(table)
-
-
