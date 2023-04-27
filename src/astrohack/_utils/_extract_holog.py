@@ -10,6 +10,7 @@ from scipy import spatial
 from numba import njit
 from numba.core import types
 from numba.typed import Dict
+import copy
 
 from casacore import tables as ctables
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
@@ -392,8 +393,9 @@ def _create_holog_file(
                 )
             )
 
-def _create_holog_obs_dict(pnt_dict):
+def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos):
 
+    logger = _get_astrohack_logger()
     mapping_scans_dict = {}
     holog_obs_dict = {}
     map_id = 0
@@ -401,6 +403,7 @@ def _create_holog_obs_dict(pnt_dict):
     
     for ant_name,ant_ds in pnt_dict.items():
         if 'ant' in ant_name:
+            ant_name = ant_name.replace('ant_','')
             ant_names_set.add(ant_name)
             for ddi, map_dict in ant_ds.attrs['mapping_scans_obs_dict'][0].items():
                 if ddi not in holog_obs_dict:
@@ -414,18 +417,43 @@ def _create_holog_obs_dict(pnt_dict):
                             map_id = map_id+1
                             
                         if map_key not in holog_obs_dict[ddi]:
-                            holog_obs_dict[ddi][map_key] = {'scans':scan_list,'ant':{}}
+                            holog_obs_dict[ddi][map_key] = {'scans':np.array(scan_list),'ant':{}}
                                                     
                         holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
+       
+    if baseline_average_distance != 'ALL':
+        import pandas as pd
+        from scipy.spatial import distance_matrix
+        df = pd.DataFrame(ant_pos, columns=['x', 'y', 'z'], index=ant_names)
+        df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
+        logger.debug('Antenna distance matrix in meters: \n' + str(df_mat))
                         
     for ddi, ddi_dict in holog_obs_dict.items():
         for map_id, map_dict in ddi_dict.items():
             map_ant_set = set(map_dict['ant'].keys())
             ref_ant_set = ant_names_set - map_ant_set
-   
-            for ant_key in map_dict['ant'].keys():
+
+            map_ant_keys = list(map_dict['ant'].keys()) #Need a copy because of del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] below.
+            for map_ant_key in map_ant_keys:
                 #add code for distance from antenna
-                holog_obs_dict[ddi][map_id]['ant'][ant_key] = ref_ant_set
+                if baseline_average_distance != 'all':
+                    sub_ref_ant_set = []
+                    for ref_ant in ref_ant_set:
+                        if df_mat.loc[map_ant_key,ref_ant] < baseline_average_distance:
+                            sub_ref_ant_set.append(ref_ant)
+                        
+                    if (not sub_ref_ant_set) and (ref_ant_set):
+                        logger.warning('DDI ' + str(ddi) + ' and mapping antenna ' + str(map_ant_key) + ' has no reference antennas. If baseline_average_distance was specified increase this distance. See antenna distance matrix in log.')
+                     
+                    ref_ant_set = sub_ref_ant_set
+                
+                if ref_ant_set:
+                    holog_obs_dict[ddi][map_id]['ant'][map_ant_key] = np.array(list(ref_ant_set))
+                else:
+                    del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] #Don't want mapping antennas with no reference antennas.
+                    logger.warning('DDI ' + str(ddi) + ' and mapping antenna ' + str(map_ant_key) + ' has no reference antennas.')
+                     
+     
     
     return holog_obs_dict
 

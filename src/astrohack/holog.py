@@ -67,7 +67,7 @@ def holog(
     :param scan_average: Boolean dicating whether averagin is done over scan., defaults to True
     :type scan_average: bool, optional
 
-    :param ant_list: Optional list of sub-antennas to use when the user doesn't to do holography for all antennas, defaults to None
+    :param ant_list: Optional list of sub-antennas to use when the user doesn't to do holography for all antennas, defaults to all antennas.
     :type ant_list: list, optional
 
     :param to_stokes: Dictates whether polarization is computed according to stokes values., defaults to True
