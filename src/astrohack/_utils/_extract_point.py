@@ -5,18 +5,23 @@ import copy
 import numpy as np
 import xarray as xr
 import astropy
+import dask
+
 from numba import njit
 from numba.core import types
 from numba.typed import Dict
-import dask
 from scipy import spatial
 
-from astrohack._utils._conversion import convert_dict_from_numba
+from casacore import tables
 
-from casacore import tables as ctables
+from astropy.time import Time
+
+from astrohack._utils._conversion import convert_dict_from_numba
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 from astrohack._utils._io import _load_point_file
+
+from casacore import tables as ctables
 
 def _extract_pointing(ms_name, pnt_name, parallel=True):
     """Top level function to extract subset of pointing table data into a dictionary of xarray dataarrays.
@@ -294,3 +299,4 @@ def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_id
                 scan_time_dict[ddi] = {s: np.array([t,t])}
   
     return scan_time_dict
+

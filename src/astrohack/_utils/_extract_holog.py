@@ -561,3 +561,4 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
 
     except Exception as error:
         logger.error("[_create_holog_meta_data] {error}".format(error=error))
+
