@@ -7,6 +7,8 @@ import numpy as np
 
 from casacore import tables as ctables
 
+from astropy.time import Time
+
 from astrohack._utils._constants import pol_str
 
 from astrohack._utils._conversion import _convert_ant_name_to_id
@@ -29,8 +31,8 @@ from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._utils import _remove_suffix
 from astrohack._utils._io import _load_holog_file
 
-
 from astrohack._utils._dio import AstrohackHologFile
+
 def extract_holog(
     ms_name,
     holog_obs_dict,
@@ -234,6 +236,10 @@ def extract_holog(
     )
     
     telescope_name = obs_ctb.getcol("TELESCOPE_NAME")[0]
+    
+    # Convert from casa epoch to unix time
+    start_time_unix = obs_ctb.getcol('TIME_RANGE')[0][0] - 3506716800.0
+    time = Time(start_time_unix, format='unix').jyear
 
     ctb = ctables.table(
         os.path.join(extract_holog_parms['ms_name'], "HISTORY"),
@@ -242,8 +248,9 @@ def extract_holog(
         ack=False,
     )
 
-    if telescope_name == "EVLA":
-        assert "pnt_tbl:fixed" in ctb.getcol("MESSAGE") == False, "Pointing table not corrected, users should apply function astrohack._utils._extract_pointing._fix_pointing_table() to remedy this."
+    # If we have an EVLA run from before 2023 the pointing table needs to be fixed.
+    if telescope_name == "EVLA" and time < 2023:
+        assert "pnt_tbl:fixed" in ctb.getcol("MESSAGE") == False, "Pointing table not corrected, users should apply function astrohack.dio.fix_pointing_table() to remedy this."
 
     ## DDI selection
     if holog_obs_dict['ddi'] is None:

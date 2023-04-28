@@ -1,5 +1,9 @@
 import os
 import dask
+import numpy as np
+
+from astropy.time import Time
+from casacore import tables
 
 from astrohack._utils._constants import length_units, trigo_units, plot_types
 from astrohack._utils._parm_utils._check_parms import _check_parms
@@ -329,4 +333,37 @@ def open_pointing(file):
   else:
     logger.error("Error opening holgraphy pointing file: {file}".format(file))
 
+def fix_pointing_table(ms_name, reference_antenna):
+  """ Fix pointing table for a user defined subset of reference antennas.
 
+  Args:
+      ms_name (str): Measurement set.
+      reference_antenna (list): List of reference antennas.
+  """
+    
+  ms_table = "/".join((ms_name, 'ANTENNA'))
+
+  query = 'select NAME from {table}'.format(table=ms_table)
+
+  ant_names = np.array(tables.taql(query).getcol('NAME'))
+  ant_id = np.arange(len(ant_names))
+
+  query_ant = np.searchsorted(ant_names, reference_antenna)
+
+  ms_table = "/".join((ms_name, 'POINTING'))
+
+  query = 'select TARGET, DIRECTION, POINTING_OFFSET, ANTENNA_ID from {table} where {antenna_list}'.format(table=ms_table, antenna_list=" or ".join(["ANTENNA_ID=={ant}".format(ant=ant) for ant in query_ant]))
+
+  update = "update {table} set POINTING_OFFSET=0, TARGET=DIRECTION from [{query}]".format(table=ms_table, query=query)
+
+  tables.taql(update)
+
+  ms_table = "/".join((ms_name, "HISTORY"))
+  tb = tables.table(ms_table, readonly=False)
+    
+  message = tb.getcol("MESSAGE")
+    
+  if "pnt_tbl:fixed" not in message:
+    tb.addrows(nrows=1)
+    length = len(message)
+    tb.putcol(columnname="MESSAGE", value='pnt_tbl:fixed', startrow=length)

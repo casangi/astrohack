@@ -224,34 +224,3 @@ def _extract_scan_time_dict(time, scan_ids, ddi_ids):
             scan_time_dict[ddi] = {s: np.array([t,t])}
 
     return scan_time_dict
-
-def _fix_pointing_table(ms_name):
-    """ Fix pointing table
-
-    :param ms_name: Measurement set file 
-    :type ms_name: str
-    """
-
-    ms_table = "/".join((ms_name, "POINTING"))
-    
-    tb = tables.table(ms_table, readonly=False)
-
-    dims = tb.getcol("POINTING_OFFSET").shape
-    array = np.zeros(dims)
-    
-    tb.putcol(columnname="POINTING_OFFSET", value=array, startrow=0)
-    
-    target = tb.getcol("TARGET")
-    dims = target.shape
-    
-    tb.putcol(columnname="DIRECTION", value=target, startrow=0)
-    
-    ms_table = "/".join((ms_name, "HISTORY"))
-    tb = tables.table(ms_table, readonly=False)
-    
-    message = tb.getcol("MESSAGE")
-    
-    if "pnt_tbl:fixed" not in message:
-        tb.addrows(nrows=1)
-        length = len(message)
-        tb.putcol(columnname="MESSAGE", value='pnt_tbl:fixed', startrow=length)
