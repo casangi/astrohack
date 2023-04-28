@@ -7,8 +7,10 @@ from prettytable import PrettyTable
 from prettytable import DOUBLE_BORDER
 
 gdown_ids = {
-    'ea25_cal_small_spw1_4_60_ea04_before.ms':'1-v1foZ4G-kHTOS2idylx-3S4snKgRHmM',
-    'ea25_cal_small_spw1_4_60_ea04_after.ms':'1PmWvPA0rUtAfegVu9wOb4AGJXiQIp3Cp'
+    'ea25_cal_small_spw1_4_60_ea04_before.ms': '1-v1foZ4G-kHTOS2idylx-3S4snKgRHmM',
+    'ea25_cal_small_spw1_4_60_ea04_after.ms': '1PmWvPA0rUtAfegVu9wOb4AGJXiQIp3Cp',
+    'ea25_cal_small_spw1_4_60_ea04_before_fixed.ms': '1dV4e8FiVRdAw2NLNzSuPVvjwyqXPNXTf',
+    'ea25_cal_small_spw1_4_60_ea04_after_fixed.ms': '1Gn5GEJ3V43bl2vXxznHk6oXF5LtWOMzj'
 }
 
 def check_download(name, folder, id):
@@ -69,5 +71,3 @@ def list_datasets():
         table.add_row([str(key), description_string])
         
     print(table)
-
-
