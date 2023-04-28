@@ -352,9 +352,9 @@ def fix_pointing_table(ms_name, reference_antenna):
 
   ms_table = "/".join((ms_name, 'POINTING'))
 
-  query = 'select TARGET, DIRECTION, POINTING_OFFSET, ANTENNA_ID from {table} where {antenna_list}'.format(table=ms_table, antenna_list=" or ".join(["ANTENNA_ID=={ant}".format(ant=ant) for ant in query_ant]))
+  ant_list = " or ".join(["ANTENNA_ID=={ant}".format(ant=ant) for ant in query_ant])
 
-  update = "update {table} set POINTING_OFFSET=0, TARGET=DIRECTION from [{query}]".format(table=ms_table, query=query)
+  update = "update {table} set POINTING_OFFSET=0, TARGET=DIRECTION where {antennas}".format(table=ms_table, antennas=ant_list)
 
   tables.taql(update)
 
