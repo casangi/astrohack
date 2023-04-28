@@ -16,6 +16,8 @@ from casacore import tables as ctables
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
+from astrohack._utils._algorithms import _get_grid_parms
+
 from astrohack._utils._io import _load_point_file
 
 def _extract_holog_chunk(extract_holog_params):
@@ -104,21 +106,17 @@ def _extract_holog_chunk(extract_holog_params):
     map_ant_name_list = ['ant_' + i for i in map_ant_name_list]
 
     pnt_ant_dict = _load_point_file(pnt_name, map_ant_name_list, dask_load=False)
-
     pnt_map_dict = _extract_pointing_chunk(map_ant_name_list, time_vis, pnt_ant_dict)
+    grid_parms = _get_grid_parms(vis_map_dict,pnt_map_dict, ant_names)
     
-    ''' Removing for now. Code struggles with VLA pointing errors
     ### To DO:
     ################### Average multiple repeated samples
-    if telescope_name != "ALMA":
-        over_flow_protector_constant = float("%.5g" % time_vis[0])  # For example 5076846059.4 -> 5076800000.0
-        time_vis = time_vis - over_flow_protector_constant
-
-        
-        time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict)
-        
-        time_vis = time_vis + over_flow_protector_constant
-    '''
+    #over_flow_protector_constant = float("%.5g" % time_vis[0])  # For example 5076846059.4 -> 5076800000.0
+    #time_vis = time_vis - over_flow_protector_constant
+    #from astrohack._utils._algorithms import _average_repeated_pointings
+    #time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict,ant_names)
+    #time_vis = time_vis + over_flow_protector_constant
+    
     
     holog_dict = _create_holog_file(
         holog_name,
@@ -133,6 +131,7 @@ def _extract_holog_chunk(extract_holog_params):
         ddi,
         ms_name,
         ant_names,
+        grid_parms,
         overwrite=overwrite,
     )
 
@@ -291,6 +290,7 @@ def _create_holog_file(
     ddi,
     ms_name,
     ant_names,
+    grid_parms,
     overwrite,
 ):
     """Create holog-structured, formatted output file and save to zarr.
@@ -349,10 +349,6 @@ def _create_holog_file(
                 pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, dims=["time", "lm"]
             )
             
-            xds["POINTING_OFFSET"] = xr.DataArray(
-                pnt_map_dict[map_ant_tag]["POINTING_OFFSET"].values, dims=["time", "az_el"]
-            )
-
             xds.attrs["holog_map_key"] = holog_map_key
             #xds.attrs["ant_id"] = map_ant_tag
             xds.attrs["ddi"] = ddi
@@ -364,6 +360,8 @@ def _create_holog_file(
             xds.attrs["l_min"] = np.min(xds["DIRECTIONAL_COSINES"][:,0].values)
             xds.attrs["m_max"] = np.max(xds["DIRECTIONAL_COSINES"][:,1].values)
             xds.attrs["m_min"] = np.min(xds["DIRECTIONAL_COSINES"][:,1].values)
+            
+            xds.attrs["grid_parms"] = grid_parms[map_ant_tag]
             
             #print(xds)
 
@@ -466,38 +464,6 @@ def _check_if_array_in_dict(array_dict,array):
             return key
             
     return False
-    
-
-    '''
-    Code to automatically create holog_obs_dict
-    VLA datasets causeing issues.
-    if holog_obs_dict is None:
-        ant_names_list = []
-        #Create mapping antennas
-        holog_obs_dict = {}
-        for ant_id,pnt_xds in pnt_dict.items():
-            ant_name = pnt_xds.attrs['ant_name']
-            mapping_scans = pnt_xds.attrs['mapping_scans']
-            ant_names_list.append(ant_name)
-            for ddi,scans in  mapping_scans.items():
-                ddi = int(ddi)
-                for s in scans:
-                    try:
-                        holog_obs_dict[ddi][s]['map'].append(ant_name)
-                    except:
-                        holog_obs_dict.setdefault(ddi,{})[s] = {'map':[ant_name]}#dict(zip(scans, [ant_name]*len(scans)))
-       
-       
-        #Create reference antennas
-        
-        ant_names_set = set(ant_names_list)
-        for ddi,scan in holog_obs_dict.items():
-            for scan_id,ant_types in scan.items():
-                holog_obs_dict[ddi][scan_id]['ref'] = ant_names_set - set(holog_obs_dict[ddi][scan_id]['map'])
-            
-    '''
-    
-    return 0
 
 
 def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
@@ -524,3 +490,71 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
         )
 
     return pnt_map_dict
+
+
+
+def _create_holog_meta_data(holog_file, holog_dict, holog_params):
+    """Save holog file meta information to json file with the transformation
+        of the ordering (ddi, holog_map, ant) --> (ant, ddi, holog_map).
+
+    Args:
+        holog_name (str): holog file name.
+        holog_dict (dict): Dictionary containing msdx data.
+    """
+    logger = _get_astrohack_logger()
+    
+    ant_holog_dict = {}
+    cell_sizes = []
+    n_pixs = []
+    telescope_names = []
+    
+    for ddi, map_dict in holog_dict.items():
+        if "ddi_" in ddi:
+            for map, ant_dict in map_dict.items():
+                if "map_" in map:
+                    for ant, xds in ant_dict.items():
+                        if "ant_" in ant:
+                            if ant not in ant_holog_dict:
+                                ant_holog_dict[ant] = {ddi:{map:{}}}
+                            elif ddi not in ant_holog_dict[ant]:
+                                ant_holog_dict[ant][ddi] = {map:{}}
+                    
+                            ant_holog_dict[ant][ddi][map] = xds.to_dict(data=False)
+                            cell_sizes.append(xds.attrs["grid_parms"]["cell_size"])
+                            n_pixs.append(xds.attrs["grid_parms"]["n_pix"])
+                            telescope_names.append(xds.attrs['telescope_name'])
+
+
+    if not (len(set(cell_sizes)) == 1):
+        logger.error('Cell size not consistant: ' + str(cell_sizes))
+        raise
+        
+    if not (len(set(n_pixs)) == 1):
+        logger.error('Number of pixels not consistant: ' + str(n_pixs))
+        raise
+        
+    if not (len(set(telescope_names)) == 1):
+        logger.error('Telescope name not consistant: ' + str(telescope_names))
+        raise
+        
+    meta_data = {'cell_size':cell_sizes[0],'n_pix':n_pixs[0],'telescope_name':telescope_names[0]}
+
+    output_attr_file = "{name}/{ext}".format(name=holog_file, ext=".holog_attr")
+
+    try:
+        with open(output_attr_file, "w") as json_file:
+            json.dump(meta_data, json_file)
+
+    except Exception as error:
+        logger.error("[_create_holog_meta_data] {error}".format(error=error))
+    
+
+    
+    output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
+    
+    try:
+        with open(output_meta_file, "w") as json_file:
+            json.dump(ant_holog_dict, json_file)
+
+    except Exception as error:
+        logger.error("[_create_holog_meta_data] {error}".format(error=error))

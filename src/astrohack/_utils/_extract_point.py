@@ -200,38 +200,42 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         np.array([l, m]).T, dims=("time", "lm")
     )
     
+    '''
+    Notes from ASDM (https://drive.google.com/file/d/16a3g0GQxgcO7N_ZabfdtexQ8r2jRbYIS/view)
+    Science Data Model Binary Data Format:    https://drive.google.com/file/d/1PMrZFbkrMVfe57K6AAh1dR1FalS35jP2/view
+        
+    A - ASDM, MS - MS
     
-    #    Kumar's old (2016) emails, here is how the filler works:
-    #    MS::Direction = ASDM::Target + ASDM::Offset + optionally(ASDM::Encoder - ASDM::Direction)
-    #    MS::Target = ASDM::Target
-    #    MS::Encoder = ASDM::Encoder
-    #    MS::Pointing_Offset = ASDM::Direction - ASDM::Target
-    #    Optional --with-pointing-corrections should be False for importasdm
+    A_encoder = The values measured from the antenna. They may be however affected by metrology, if applied. Note
+                that for ALMA this column will contain positions obtained using the AZ POSN RSP and EL POSN RSP
+                monitor points of the ACU and not the GET AZ ENC and GET EL ENC monitor points (as these do not
+                include the metrology corrections). It is agreed that the the vendor pointing model will never be applied.
+                AZELNOWAntenna.position
+    A_pointing_direction : This is the commanded direction of the antenna. It is obtained by adding the target
+                and offset columns, and then applying the pointing model referenced by PointingModelId. The pointing
+                model can be the composition of the absolute pointing model and of a local pointing model. In that case
+                their coefficients will both be in the PointingModel table.
+    A_target : This is the field center direction (as given in the Field Table), possibly affected by the optional
+                antenna-based sourceOffset. This column is in horizontal coordinates. AZELNOWAntenna.position
+    A_offset : Additional offsets in horizontal coordinates (usually meant for measuring the pointing corrections,
+                mapping the antenna beam, ...). AZELNOWAntenna.positiontarget
+    A_sourceOffset : Optionally, the antenna-based mapping offsets in the field. These are in the equatorial system,
+                    and used, for instance, in on-the-fly mapping when the antennas are driven independently across the field.
+                    
+                    
+    M_direction = rotate(A_target,A_offset) #A_target is rotated to by A_offset
+    if withPointingCorrection:
+        M_target = rotate(A_target,A_offset) + (A_encoder - A_pointing_direction)
+        
+    M_target = A_target
+    M_poiting_offset = A_offset
+    M_encoder = A_encoder
     
-    #Remove pointing errors. this will be used to determine the grid
-    direction_ideal = pointing_offset + target
-    l_ideal = np.cos(target[:, 1]) * np.sin(target[:, 0] - direction_ideal[:, 0])
-    m_ideal = np.sin(target[:, 1]) * np.cos(direction_ideal[:, 1]) - np.cos(target[:, 1]) * np.sin(direction_ideal[:, 1]) * np.cos(target[:, 0] - direction_ideal[:, 0])
-    
-    pnt_xds["IDEAL_DIRECTIONAL_COSINES"] = xr.DataArray(
-        np.array([l_ideal, m_ideal]).T, dims=("time", "lm")
-    )
-    
-#    plt.figure()
-#    plt.scatter(pnt_xds["POINTING_OFFSET"][:,0],pnt_xds["POINTING_OFFSET"][:,1])
-#    plt.scatter(pnt_xds["IDEAL_DIRECTIONAL_COSINES"][:,0],pnt_xds["IDEAL_DIRECTIONAL_COSINES"][:,1])
-#
-#    r1 = np.sqrt(pnt_xds["POINTING_OFFSET"][:,0]**2 + pnt_xds["POINTING_OFFSET"][:,1]**2)
-#    r2 = np.sqrt(pnt_xds["IDEAL_DIRECTIONAL_COSINES"][:,0]**2 + pnt_xds["IDEAL_DIRECTIONAL_COSINES"][:,1]**2)
-#    plt.figure()
-#    plt.plot(r1)
-#    plt.plot(r2)
-#
-#    plt.show()
-    
+    From the above description I suspect encoder should be used instead of direction, however for the VLA mapping antenna data no grid pattern appears (ALMA data does not have this problem).
+    '''
+   
     
     ###############
-    #mapping_scans = {}
     mapping_scans_obs_dict={}
     time_tree = spatial.KDTree(direction_time[:,None]) #Use for nearest interpolation
     
@@ -241,7 +245,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         
         for scan_id, scan_time in ddi.items():
             _, time_index = time_tree.query(scan_time[:,None])
-            sub_lm = np.abs(pnt_xds["IDEAL_DIRECTIONAL_COSINES"].isel(time=slice(time_index[0],time_index[1]))).mean()
+            sub_lm = np.abs(pnt_xds["POINTING_OFFSET"].isel(time=slice(time_index[0],time_index[1]))).mean()
             
             if sub_lm > 10**-12: #Antenna is mapping since lm is non-zero
                 if ('map_' + str(map_id)) in map_scans_dict:

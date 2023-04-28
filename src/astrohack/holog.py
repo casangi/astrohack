@@ -17,8 +17,8 @@ from astrohack._utils._dio import AstrohackImageFile
 
 def holog(
     holog_name,
-    grid_size,
-    cell_size,
+    grid_size=None,
+    cell_size=None,
     image_name=None,
     padding_factor=50,
     grid_interpolation_mode="nearest",
@@ -152,34 +152,20 @@ def holog(
         
     logger.info('Mapping antennas ' + str(holog_params['ant_list']))
 
-    ''' VLA data sampling can be uneven so averging step in extracty_holog does not work consequntly int(np.sqrt(meta_data["n_time"])) is not correct.
+    
     if (cell_size is None) and (grid_size is None):
-        ###To Do: Calculate one gridsize and cell_size for all ddi's, antennas, ect. Fix meta data ant_holog_dict gets overwritten for more than one ddi.
+        n_pix = int(np.sqrt(meta_data["n_pix"]))
+        grid_size = np.array([n_pix, n_pix])
+        cell_size = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
+
+        holog_params["cell_size"] = cell_size
+        holog_params["grid_size"] = grid_size
         
-        n_points = int(np.sqrt(meta_data["n_time"]))
-        grid_size = np.array([n_points, n_points])
-
-        l_min_extent = meta_data["extent"]["l"]["min"]
-        l_max_extent = meta_data["extent"]["l"]["max"]
-
-        m_min_extent = meta_data["extent"]["m"]["min"]
-        m_max_extent = meta_data["extent"]["m"]["max"]
-
-        step_l = (l_max_extent - l_min_extent) / grid_size[0]
-        step_m = (m_max_extent - m_min_extent) / grid_size[1]
-        step_l = (step_l+step_m)/2
-        step_m = step_l
-
-        cell_size = np.array([step_l, step_m])
-
-        holog_chunk_params["cell_size"] = cell_size
-        holog_chunk_params["grid_size"] = grid_size
-
         logger.info("Cell size: " + str(cell_size) + " Grid size " + str(grid_size))
     else:
-        holog_chunk_params["cell_size"] = cell_size
-        holog_chunk_params["grid_size"] = grid_size
-    '''
+        holog_params["cell_size"] = cell_size
+        holog_params["grid_size"] = grid_size
+    
 
     
     holog_chunk_params =  holog_params
@@ -241,10 +227,12 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
     
     parms_passed = parms_passed and _check_parms(holog_params, 'holog_file', [str],default=None)
 
-    parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list,np.ndarray], list_acceptable_data_types=[np.int,np.int64], list_len=2, default=None)
+    parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list,np.ndarray], list_acceptable_data_types=[np.int,np.int64], list_len=2, default='None')
+    if holog_params['grid_size'] == 'None': holog_params['grid_size'] =  None
     holog_params['grid_size'] = np.array(holog_params['grid_size'])
 
-    parms_passed = parms_passed and _check_parms(holog_params, 'cell_size', [list,np.ndarray], list_acceptable_data_types=[numbers.Number], list_len=2, default=None)
+    parms_passed = parms_passed and _check_parms(holog_params, 'cell_size', [list,np.ndarray], list_acceptable_data_types=[numbers.Number], list_len=2, default='None')
+    if holog_params['cell_size'] == 'None': holog_params['cell_size'] =  None
     holog_params['cell_size'] = np.array(holog_params['cell_size'])
 
     

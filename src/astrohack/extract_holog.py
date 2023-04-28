@@ -12,8 +12,7 @@ from astrohack._utils._constants import pol_str
 
 from astrohack._utils._conversion import _convert_ant_name_to_id
 
-from astrohack._utils._holog import _create_holog_meta_data
-
+from astrohack._utils._extract_holog import _create_holog_meta_data
 from astrohack._utils._extract_point import _extract_pointing
 
 from astrohack._utils._io import _load_point_file
@@ -205,13 +204,13 @@ def extract_holog(
                     if ddi_id not in ddi_sel:
                         del holog_obs_dict[ddi_key]
     else:
+        holog_obs_dict_with_ddi = {}
         if ddi_sel == 'all':
-            holog_obs_dict_with_ddi = {}
             for ddi_id in ms_ddi:
-                holog_obs_dict_with_ddi['ddi_' + str(ddi)] = holog_obs_dict
+                holog_obs_dict_with_ddi['ddi_' + str(ddi_id)] = holog_obs_dict
         else:
             for ddi_id in ddi_sel:
-                holog_obs_dict_with_ddi['ddi_' + str(ddi)] = holog_obs_dict
+                holog_obs_dict_with_ddi['ddi_' + str(ddi_id)] = holog_obs_dict
         
         holog_obs_dict = holog_obs_dict_with_ddi
             
