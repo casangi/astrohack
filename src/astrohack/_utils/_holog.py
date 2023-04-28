@@ -121,34 +121,17 @@ def _holog_chunk(holog_chunk_params):
         time_centroid_index = ant_data_dict[ddi][holog_map].dims["time"] // 2
 
         time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
-        
-        ###########
-#            shape = np.array(beam_grid.shape[-2:])//2
-#            phase_diff = np.angle(beam_grid[:, :, 0, shape[0], shape[1]]) - np.angle(beam_grid[:, :, 3, shape[0], shape[1]])
-#            print('phase_diff',phase_diff)
-#            #beam_grid[:,:,0,:,:] = beam_grid[:,:,0,:,:]*(np.exp(-1j*phase_diff/2)[None,None,:,:])
-#            #beam_grid[:,:,3,:,:] = beam_grid[:,:,3,:,:]*(np.exp(1j*phase_diff/2)[None,None,:,:])
-#            #beam_grid[:,:,0,:,:] = beam_grid[:,:,0,:,:]*(np.exp(-1j*phase_diff/2)[None,None,:,:])
-#            beam_grid[:,:,3,:,:] = beam_grid[:,:,3,:,:]*(np.exp(1j*phase_diff)[None,None,:,:])
-#            #Not sure what to do with cross pol (RL, LR / XY, YX)
-#
-#            print(beam_grid[0, 0, 0, 15, 15],beam_grid[0, 0, 3, 15, 15])
-#            print(np.angle(beam_grid[0, 0, 0, 15, 15]-beam_grid[0, 0, 3, 15, 15]))
-#            print(np.angle(beam_grid[0, 0, 0, 15, 15]),np.angle(beam_grid[0, 0, 3, 15, 15]))
-#            #beam_grid[0, 0, 3, ...] = -1*beam_grid[0, 0, 3, ...]
 
         for chan in range(n_chan): ### Todo: Vectorize holog_map and channel axis
-            xx_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
-            
-            yy_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
-
-            #print(xx_peak,yy_peak,beam_grid[holog_map_index, chan, 0, ...][15,15],beam_grid[holog_map_index, chan, 3, ...][15,15])
-            #print(np.abs(xx_peak),np.abs(yy_peak),np.abs(beam_grid[holog_map_index, chan, 0, ...][15,15]),np.abs(beam_grid[holog_map_index, chan, 3, ...][15,15]))
-            #print(np.angle(xx_peak)*180/np.pi,np.angle(yy_peak)*180/np.pi)
-            
+            try:
+                xx_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
+                yy_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
+            except:
+                center_pixel = np.array(beam_grid.shape[0:2])//2
+                xx_peak = beam_grid[holog_map_index, chan, 0, center_pixel[0], center_pixel[1]]
+                yy_peak = beam_grid[holog_map_index, chan, 3, center_pixel[0], center_pixel[1]]
             normalization = np.abs(0.5 * (xx_peak + yy_peak))
             beam_grid[holog_map_index, chan, ...] /= normalization
-            #print('####normalization ', normalization)
 
     beam_grid = _parallactic_derotation(data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi])
     
@@ -203,7 +186,6 @@ def _holog_chunk(holog_chunk_params):
 
     if holog_chunk_params['apply_mask']:
     # Masking Aperture image
-
         mask = _mask_circular_disk(
             center=None,
             radius=radius,

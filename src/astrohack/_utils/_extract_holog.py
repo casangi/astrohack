@@ -363,8 +363,6 @@ def _create_holog_file(
             
             xds.attrs["grid_parms"] = grid_parms[map_ant_tag]
             
-            #print(xds)
-
             holog_file = holog_name
 
             if overwrite is False:
@@ -392,6 +390,9 @@ def _create_holog_file(
             )
 
 def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos):
+    '''
+    Generate holog_obs_dict.
+    '''
 
     logger = _get_astrohack_logger()
     mapping_scans_dict = {}
@@ -399,6 +400,7 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos)
     map_id = 0
     ant_names_set = set()
     
+    # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antenas are added because we first need to populate all mapping antennas.
     for ant_name,ant_ds in pnt_dict.items():
         if 'ant' in ant_name:
             ant_name = ant_name.replace('ant_','')
@@ -419,6 +421,7 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos)
                                                     
                         holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
        
+    # If users specifies a baseline_average_distance we need to create an antenna distance matrix.
     if baseline_average_distance != 'ALL':
         import pandas as pd
         from scipy.spatial import distance_matrix
@@ -426,6 +429,7 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos)
         df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
         logger.debug('Antenna distance matrix in meters: \n' + str(df_mat))
                         
+    #The reference antennas are then given by ref_ant_set = ant_names_set - map_ant_set.
     for ddi, ddi_dict in holog_obs_dict.items():
         for map_id, map_dict in ddi_dict.items():
             map_ant_set = set(map_dict['ant'].keys())
@@ -441,7 +445,7 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos)
                             sub_ref_ant_set.append(ref_ant)
                         
                     if (not sub_ref_ant_set) and (ref_ant_set):
-                        logger.warning('DDI ' + str(ddi) + ' and mapping antenna ' + str(map_ant_key) + ' has no reference antennas. If baseline_average_distance was specified increase this distance. See antenna distance matrix in log.')
+                        logger.warning('DDI ' + str(ddi) + ' and mapping antenna ' + str(map_ant_key) + ' has no reference antennas. If baseline_average_distance was specified increase this distance. See antenna distance matrix in log by setting debug level to DEBUG in astrohack_client function.')
                      
                     ref_ant_set = sub_ref_ant_set
                 
@@ -451,8 +455,6 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos)
                     del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] #Don't want mapping antennas with no reference antennas.
                     logger.warning('DDI ' + str(ddi) + ' and mapping antenna ' + str(map_ant_key) + ' has no reference antennas.')
                      
-     
-    
     return holog_obs_dict
 
     

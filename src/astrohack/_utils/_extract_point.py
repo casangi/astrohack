@@ -43,8 +43,6 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
 
     ctb.close()
     
-
-    
     ###########################################################################################
     #Get Holography scans with start and end times.
     ctb = ctables.table(
@@ -80,7 +78,6 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
     scan_time_dict = _extract_scan_time_dict(time, scan_ids, state_ids, ddi, mapping_state_ids)
     
     logger.info('Holography Scans Times ' + str(scan_time_dict))
-    
     
     point_meta_ds = xr.Dataset()
     point_meta_ds.attrs['mapping_state_ids'] = mapping_state_ids
@@ -220,8 +217,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     '''
    
     
-    ###############
-    mapping_scans_obs_dict={}
+    ############### Detect during which scans an antenna is mapping by averaging the POINTING_OFFSET radius.    mapping_scans_obs_dict={}
     time_tree = spatial.KDTree(direction_time[:,None]) #Use for nearest interpolation
     
     for ddi_id, ddi in scan_time_dict.items():
@@ -230,9 +226,12 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         
         for scan_id, scan_time in ddi.items():
             _, time_index = time_tree.query(scan_time[:,None])
-            sub_lm = np.abs(pnt_xds["POINTING_OFFSET"].isel(time=slice(time_index[0],time_index[1]))).mean()
+            pointing_offset_scan_slice = pnt_xds["POINTING_OFFSET"].isel(time=slice(time_index[0],time_index[1]))
+            r = (np.sqrt(pointing_offset_scan_slice.isel(az_el=0)**2 + pointing_offset_scan_slice.isel(az_el=1)**2)).mean()
             
-            if sub_lm > 10**-12: #Antenna is mapping since lm is non-zero
+            print(r)
+            
+            if r > 10**-12: #Antenna is mapping since lm is non-zero
                 if ('map_' + str(map_id)) in map_scans_dict:
                     map_scans_dict['map_' + str(map_id)].append(scan_id)
                 else:
@@ -261,6 +260,9 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
 @convert_dict_from_numba
 @njit(cache=False, nogil=True)
 def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_ids):
+    """For each ddi get holography scan start and end times. A holography scan is detected when a scan_ids appears in mapping_state_ids.
+
+    """
     d1 = Dict.empty(
         key_type=types.int64,
         value_type=np.zeros(2, dtype=types.float64),

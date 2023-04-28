@@ -191,11 +191,13 @@ def extract_holog(
     ctb.close()
     
     
+    # Create holog_obs_dict or modify user supplied holog_obs_dict.
     ddi_sel = extract_holog_parms['ddi_sel']
     if holog_obs_dict is None: #Automatically create holog_obs_dict
         from astrohack._utils._extract_holog import _create_holog_obs_dict
         holog_obs_dict = _create_holog_obs_dict(pnt_dict, extract_holog_parms['baseline_average_distance'],ant_names,ant_pos)
         
+        #From the generated holog_obs_dict subselect user supplied ddis.
         if ddi_sel != 'all':
             holog_obs_dict_keys = list(holog_obs_dict.keys())
             for ddi_key in holog_obs_dict_keys:
@@ -204,6 +206,7 @@ def extract_holog(
                     if ddi_id not in ddi_sel:
                         del holog_obs_dict[ddi_key]
     else:
+        #If a user defines a holog_obs_dict it needs to be duplicated for each ddi.
         holog_obs_dict_with_ddi = {}
         if ddi_sel == 'all':
             for ddi_id in ms_ddi:
@@ -344,11 +347,6 @@ def extract_holog(
 
     if parallel:
         dask.compute(delayed_list)    
-
-#    extract_holog_parms["holog_obs_dict"] = {}
-#
-#    for id in ant_id:
-#        extract_holog_parms["holog_obs_dict"][str(id)] = ant_names[id]
 
     holog_dict = _load_holog_file(holog_file=extract_holog_parms["holog_name"], dask_load=True, load_pnt_dict=False)
 
