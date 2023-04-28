@@ -58,7 +58,19 @@ def _get_astrohack_logger(name = hack_logger_name):
     try:
         worker = get_worker()
     except:
-        return logging.getLogger(name)
+        #Schedular processes
+        logger_dict = logging.Logger.manager.loggerDict
+        if name in logger_dict:
+            logger = logging.getLogger(name)
+        else:
+            #If main logger is not started using astrohack_client function it defaults to printing to term.
+            logger = logging.getLogger(name)
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setFormatter(astrohack_formatter())
+            logger.addHandler(handler)
+            logger.setLevel(logging.getLevelName('INFO'))
+        
+        return logger
     
     try:
         logger = worker.plugins['astrohack_worker'].get_logger()

@@ -121,35 +121,17 @@ def _holog_chunk(holog_chunk_params):
         time_centroid_index = ant_data_dict[ddi][holog_map].dims["time"] // 2
 
         time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
-        
-        
-        ###########
-#            shape = np.array(beam_grid.shape[-2:])//2
-#            phase_diff = np.angle(beam_grid[:, :, 0, shape[0], shape[1]]) - np.angle(beam_grid[:, :, 3, shape[0], shape[1]])
-#            print('phase_diff',phase_diff)
-#            #beam_grid[:,:,0,:,:] = beam_grid[:,:,0,:,:]*(np.exp(-1j*phase_diff/2)[None,None,:,:])
-#            #beam_grid[:,:,3,:,:] = beam_grid[:,:,3,:,:]*(np.exp(1j*phase_diff/2)[None,None,:,:])
-#            #beam_grid[:,:,0,:,:] = beam_grid[:,:,0,:,:]*(np.exp(-1j*phase_diff/2)[None,None,:,:])
-#            beam_grid[:,:,3,:,:] = beam_grid[:,:,3,:,:]*(np.exp(1j*phase_diff)[None,None,:,:])
-#            #Not sure what to do with cross pol (RL, LR / XY, YX)
-#
-#            print(beam_grid[0, 0, 0, 15, 15],beam_grid[0, 0, 3, 15, 15])
-#            print(np.angle(beam_grid[0, 0, 0, 15, 15]-beam_grid[0, 0, 3, 15, 15]))
-#            print(np.angle(beam_grid[0, 0, 0, 15, 15]),np.angle(beam_grid[0, 0, 3, 15, 15]))
-#            #beam_grid[0, 0, 3, ...] = -1*beam_grid[0, 0, 3, ...]
 
         for chan in range(n_chan): ### Todo: Vectorize holog_map and channel axis
-            xx_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
-            
-            yy_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
-
-            #print(xx_peak,yy_peak,beam_grid[holog_map_index, chan, 0, ...][15,15],beam_grid[holog_map_index, chan, 3, ...][15,15])
-            #print(np.abs(xx_peak),np.abs(yy_peak),np.abs(beam_grid[holog_map_index, chan, 0, ...][15,15]),np.abs(beam_grid[holog_map_index, chan, 3, ...][15,15]))
-            #print(np.angle(xx_peak)*180/np.pi,np.angle(yy_peak)*180/np.pi)
-            
+            try:
+                xx_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
+                yy_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
+            except:
+                center_pixel = np.array(beam_grid.shape[0:2])//2
+                xx_peak = beam_grid[holog_map_index, chan, 0, center_pixel[0], center_pixel[1]]
+                yy_peak = beam_grid[holog_map_index, chan, 3, center_pixel[0], center_pixel[1]]
             normalization = np.abs(0.5 * (xx_peak + yy_peak))
             beam_grid[holog_map_index, chan, ...] /= normalization
-            #print('####normalization ', normalization)
 
     beam_grid = _parallactic_derotation(data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi])
     
@@ -204,7 +186,6 @@ def _holog_chunk(holog_chunk_params):
 
     if holog_chunk_params['apply_mask']:
     # Masking Aperture image
-
         mask = _mask_circular_disk(
             center=None,
             radius=radius,
@@ -337,99 +318,4 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
         cf_chan_map[i], _ = _find_nearest(pb_freq, freq_chan[i])
 
     return cf_chan_map, pb_freq
-
-def _create_holog_meta_data(holog_file, holog_dict, holog_params):
-    """Save holog file meta information to json file with the transformation
-        of the ordering (ddi, holog_map, ant) --> (ant, ddi, holog_map).
-
-    Args:
-        holog_name (str): holog file name.
-        holog_dict (dict): Dictionary containing msdx data.
-    """
-    data_extent = []
-    lm_extent = {"l": {"min": [], "max": []}, "m": {"min": [], "max": []}}
-    ant_holog_dict = {}
-    
-    for ddi, map_dict in holog_dict.items():
-        if "ddi_" in ddi:
-            for map, ant_dict in map_dict.items():
-                if "map_" in map:
-                    for ant, xds in ant_dict.items():
-                        if "ant_" in ant:
-                            if ant not in ant_holog_dict:
-                                ant_holog_dict[ant] = {ddi:{map:{}}}
-                            elif ddi not in ant_holog_dict[ant]:
-                                ant_holog_dict[ant][ddi] = {map:{}}
-                    
-                            ant_holog_dict[ant][ddi][map] = xds.to_dict(data=False)
-                
-                            #ant_sub_dict.setdefault(ddi, {})
-                            #ant_holog_dict.setdefault(ant, ant_sub_dict)[ddi][map] = xds.to_dict(data=False)
-
-                            # Find the average (l, m) extent for each antenna, over (ddi, map) and write the meta data to file.
-                            dims = xds.dims
-                            
-                            lm_extent["l"]["min"].append(xds.attrs["l_min"])
-                            lm_extent["l"]["max"].append(xds.attrs["l_max"])
-                            lm_extent["m"]["min"].append(xds.attrs["m_min"])
-                            lm_extent["m"]["max"].append(xds.attrs["m_max"])
-                            
-                            '''
-                            lm_extent["l"]["min"].append(
-                                np.min(xds.DIRECTIONAL_COSINES.values[:, 0])
-                            )
-
-                            lm_extent["l"]["max"].append(
-                                np.max(xds.DIRECTIONAL_COSINES.values[:, 0])
-                            )
-
-                            lm_extent["m"]["min"].append(
-                                np.min(xds.DIRECTIONAL_COSINES.values[:, 1])
-                            )
-
-                            lm_extent["m"]["max"].append(
-                                np.max(xds.DIRECTIONAL_COSINES.values[:, 1])
-                            )
-                            '''
-                    
-                            data_extent.append(dims["time"])
-
-
-    max_value = int(np.array(data_extent).max())
-
-    max_extent = {
-        "n_time": max_value,
-        "telescope_name": holog_params['telescope_name'],
-        "ant_map": holog_params['holog_obs_dict'],
-        "extent": {
-            "l": {
-                "min": np.array(lm_extent["l"]["min"]).mean(),
-                "max": np.array(lm_extent["l"]["max"]).mean(),
-            },
-            "m": {
-                "min": np.array(lm_extent["m"]["min"]).mean(),
-                "max": np.array(lm_extent["m"]["max"]).mean(),
-            },
-        },
-    }
-
-    output_attr_file = "{name}/{ext}".format(name=holog_file, ext=".holog_attr")
-
-    try:
-        with open(output_attr_file, "w") as json_file:
-            json.dump(max_extent, json_file)
-
-    except Exception as error:
-        logger.error("[_create_holog_meta_data] {error}".format(error=error))
-    
-
-    
-    output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
-    
-    try:
-        with open(output_meta_file, "w") as json_file:
-            json.dump(ant_holog_dict, json_file)
-
-    except Exception as error:
-        logger.error("[_create_holog_meta_data] {error}".format(error=error))
 

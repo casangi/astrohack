@@ -162,11 +162,11 @@ class AstrohackHologFile(dict):
     def is_open(self):
         return self._open
 
-    def open(self, file=None, dask_load=False):
+    def open(self, file=None, dask_load=True):
         """ Open hologgraphy file.
         Args:self =_
             file (str, optional): Path to holography file. Defaults to None.
-            dask_load (bool, optional): If True the file is loaded with Dask. Defaults to False.
+            dask_load (bool, optional): If True the file is loaded with Dask. Defaults to True.
         Returns:
             bool: bool describing whether the file was opened properly
         """
@@ -320,11 +320,11 @@ class AstrohackPointFile(dict):
     def is_open(self):
         return self._open
 
-    def open(self, file=None, dask_load=False):
+    def open(self, file=None, dask_load=True):
         """ Open pointing file.
         Args:self =_
             file (str, optional): Path to pointing file. Defaults to None.
-            dask_load (bool, optional): If True the file is loaded with Dask. Defaults to False.
+            dask_load (bool, optional): If True the file is loaded with Dask. Defaults to True.
         Returns:
             bool: bool describing whether the file was opened properly
         """
