@@ -228,11 +228,11 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
     parms_passed = parms_passed and _check_parms(holog_params, 'holog_file', [str],default=None)
 
     parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list,np.ndarray], list_acceptable_data_types=[np.int,np.int64], list_len=2, default='None',log_default_setting=False)
-    if holog_params['grid_size'] == 'None': holog_params['grid_size'] =  None
+    if (isinstance(holog_params['grid_size'],str)) and (holog_params['grid_size'] == 'None'): holog_params['grid_size'] =  None
     holog_params['grid_size'] = np.array(holog_params['grid_size'])
 
     parms_passed = parms_passed and _check_parms(holog_params, 'cell_size', [list,np.ndarray], list_acceptable_data_types=[numbers.Number], list_len=2, default='None',log_default_setting=False)
-    if holog_params['cell_size'] == 'None': holog_params['cell_size'] =  None
+    if (isinstance(holog_params['cell_size'],str)) and (holog_params['cell_size'] == 'None'): holog_params['cell_size'] =  None
     holog_params['cell_size'] = np.array(holog_params['cell_size'])
 
     
@@ -255,7 +255,7 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
    
     
     parms_passed = parms_passed and _check_parms(holog_params, 'reference_scaling_frequency', [float,np.float],default='None',log_default_setting=False)
-    if holog_params['reference_scaling_frequency'] == 'None':
+    if (isinstance(holog_params['reference_scaling_frequency'],str)) and (holog_params['reference_scaling_frequency']) == 'None':
         holog_params['reference_scaling_frequency'] =  None
     
     parms_passed = parms_passed and _check_parms(holog_params, 'scan_average', [bool],default=True)

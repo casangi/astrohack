@@ -77,7 +77,7 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
     #For each ddi get holography scan start and end times:
     scan_time_dict = _extract_scan_time_dict(time, scan_ids, state_ids, ddi, mapping_state_ids)
     
-    logger.info('Holography Scans Times ' + str(scan_time_dict))
+    logger.debug('Holography Scans Times ' + str(scan_time_dict))
     
     point_meta_ds = xr.Dataset()
     point_meta_ds.attrs['mapping_state_ids'] = mapping_state_ids
@@ -217,7 +217,8 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     '''
    
     
-    ############### Detect during which scans an antenna is mapping by averaging the POINTING_OFFSET radius.    mapping_scans_obs_dict={}
+    ############### Detect during which scans an antenna is mapping by averaging the POINTING_OFFSET radius.
+    mapping_scans_obs_dict={}
     time_tree = spatial.KDTree(direction_time[:,None]) #Use for nearest interpolation
     
     for ddi_id, ddi in scan_time_dict.items():
@@ -228,8 +229,6 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
             _, time_index = time_tree.query(scan_time[:,None])
             pointing_offset_scan_slice = pnt_xds["POINTING_OFFSET"].isel(time=slice(time_index[0],time_index[1]))
             r = (np.sqrt(pointing_offset_scan_slice.isel(az_el=0)**2 + pointing_offset_scan_slice.isel(az_el=1)**2)).mean()
-            
-            print(r)
             
             if r > 10**-12: #Antenna is mapping since lm is non-zero
                 if ('map_' + str(map_id)) in map_scans_dict:

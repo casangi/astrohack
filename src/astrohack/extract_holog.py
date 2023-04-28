@@ -184,18 +184,33 @@ def extract_holog(
         ack=False,
     )
 
-    ant_names = ctb.getcol("NAME")
+    ant_names = np.array(ctb.getcol("NAME"))
     ant_id = np.arange(len(ant_names))
     ant_pos = ctb.getcol("POSITION")
 
     ctb.close()
     
     
+    ######## Get Antenna IDs that are in the main table########
+    ctb = ctables.table(
+        extract_holog_parms['ms_name'],
+        readonly=True,
+        lockoptions={"option": "usernoread"},
+        ack=False,
+    )
+
+    ant1 = np.unique(ctb.getcol("ANTENNA1"))
+    ant2 = np.unique(ctb.getcol("ANTENNA2"))
+    ant_id_main = np.unique(np.append(ant1,ant2))
+    
+    ant_names_main = ant_names[ant_id_main]
+    ctb.close()
+    
     # Create holog_obs_dict or modify user supplied holog_obs_dict.
     ddi_sel = extract_holog_parms['ddi_sel']
     if holog_obs_dict is None: #Automatically create holog_obs_dict
         from astrohack._utils._extract_holog import _create_holog_obs_dict
-        holog_obs_dict = _create_holog_obs_dict(pnt_dict, extract_holog_parms['baseline_average_distance'],ant_names,ant_pos)
+        holog_obs_dict = _create_holog_obs_dict(pnt_dict, extract_holog_parms['baseline_average_distance'],ant_names,ant_pos,ant_names_main)
         
         #From the generated holog_obs_dict subselect user supplied ddis.
         if ddi_sel != 'all':

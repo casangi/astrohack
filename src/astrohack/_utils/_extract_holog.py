@@ -385,11 +385,11 @@ def _create_holog_file(
 
         else:
             logger.warning(
-                "[FLAGGED DATA] mapping antenna index {index}".format(index=map_ant_index
+                "[FLAGGED DATA] mapping antenna index {index}".format(index=ant_names[map_ant_index]
                 )
             )
 
-def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos):
+def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos,ant_names_main):
     '''
     Generate holog_obs_dict.
     '''
@@ -402,24 +402,25 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos)
     
     # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antenas are added because we first need to populate all mapping antennas.
     for ant_name,ant_ds in pnt_dict.items():
-        if 'ant' in ant_name:
+        if ('ant' in ant_name):
             ant_name = ant_name.replace('ant_','')
-            ant_names_set.add(ant_name)
-            for ddi, map_dict in ant_ds.attrs['mapping_scans_obs_dict'][0].items():
-                if ddi not in holog_obs_dict:
-                        holog_obs_dict[ddi] = {}
-                for ant_map_id, scan_list in map_dict.items():
-                    if scan_list:
-                        map_key = _check_if_array_in_dict(mapping_scans_dict,scan_list)
-                        if not map_key:
-                            map_key = 'map_' + str(map_id)
-                            mapping_scans_dict [map_key] = scan_list
-                            map_id = map_id+1
-                            
-                        if map_key not in holog_obs_dict[ddi]:
-                            holog_obs_dict[ddi][map_key] = {'scans':np.array(scan_list),'ant':{}}
-                                                    
-                        holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
+            if ant_name in ant_names_main: #Check if antenna in main table.
+                ant_names_set.add(ant_name)
+                for ddi, map_dict in ant_ds.attrs['mapping_scans_obs_dict'][0].items():
+                    if ddi not in holog_obs_dict:
+                            holog_obs_dict[ddi] = {}
+                    for ant_map_id, scan_list in map_dict.items():
+                        if scan_list:
+                            map_key = _check_if_array_in_dict(mapping_scans_dict,scan_list)
+                            if not map_key:
+                                map_key = 'map_' + str(map_id)
+                                mapping_scans_dict [map_key] = scan_list
+                                map_id = map_id+1
+                                
+                            if map_key not in holog_obs_dict[ddi]:
+                                holog_obs_dict[ddi][map_key] = {'scans':np.array(scan_list),'ant':{}}
+                                                        
+                            holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
        
     # If users specifies a baseline_average_distance we need to create an antenna distance matrix.
     if baseline_average_distance != 'ALL':
