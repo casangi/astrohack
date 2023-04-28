@@ -37,11 +37,11 @@ def holog(
     :param holog_name: Name of holography .holog.zarr file to process.
     :type holog_name: str
 
-    :param grid_size: Numpy array specifying the dimensions of the grid used in data gridding.
-    :type grid_size: numpy.ndarray, dtype int
+    :param grid_size: Numpy array specifying the dimensions of the grid used in data gridding. If not specified grid_size is calculated using POINTING_OFFSET in pointing table.
+    :type grid_size: numpy.ndarray, dtype int, optional
 
-    :param cell_size: Numpy array defining the cell size of each grid bin.
-    :type cell_size: numpy.ndarray, dtype float
+    :param cell_size: Numpy array defining the cell size of each grid bin. If not specified cell_size is calculated using POINTING_OFFSET in pointing table.
+    :type cell_size: numpy.ndarray, dtype float, optional
 
     :param image_name: Defines the name of the output image name. If value is None, the name will be set to <base_name>.image.zarr, defaults to None
     :type image_name: str, optional
@@ -227,11 +227,11 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
     
     parms_passed = parms_passed and _check_parms(holog_params, 'holog_file', [str],default=None)
 
-    parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list,np.ndarray], list_acceptable_data_types=[np.int,np.int64], list_len=2, default='None')
+    parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list,np.ndarray], list_acceptable_data_types=[np.int,np.int64], list_len=2, default='None',log_default_setting=False)
     if holog_params['grid_size'] == 'None': holog_params['grid_size'] =  None
     holog_params['grid_size'] = np.array(holog_params['grid_size'])
 
-    parms_passed = parms_passed and _check_parms(holog_params, 'cell_size', [list,np.ndarray], list_acceptable_data_types=[numbers.Number], list_len=2, default='None')
+    parms_passed = parms_passed and _check_parms(holog_params, 'cell_size', [list,np.ndarray], list_acceptable_data_types=[numbers.Number], list_len=2, default='None',log_default_setting=False)
     if holog_params['cell_size'] == 'None': holog_params['cell_size'] =  None
     holog_params['cell_size'] = np.array(holog_params['cell_size'])
 
@@ -254,7 +254,7 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
     parms_passed = parms_passed and _check_parms(holog_params, 'chan_tolerance_factor', [float], acceptable_range=[0,1], default=0.005)
    
     
-    parms_passed = parms_passed and _check_parms(holog_params, 'reference_scaling_frequency', [float,np.float],default='None')
+    parms_passed = parms_passed and _check_parms(holog_params, 'reference_scaling_frequency', [float,np.float],default='None',log_default_setting=False)
     if holog_params['reference_scaling_frequency'] == 'None':
         holog_params['reference_scaling_frequency'] =  None
     

@@ -171,21 +171,6 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     # optionally expressed as polynomial coefficients.
     pnt_xds["POINTING_OFFSET"] = xr.DataArray(pointing_offset, dims=("time", "az_el"))
     
-#    import matplotlib.pyplot as plt
-#
-#    plt.figure()
-#    plt.scatter(pnt_xds["POINTING_OFFSET"][:,0],pnt_xds["POINTING_OFFSET"][:,1])
-#
-#    r = np.sqrt(pnt_xds["POINTING_OFFSET"][:,0]**2 + pnt_xds["POINTING_OFFSET"][:,1]**2)
-#    plt.figure()
-#    plt.plot(r)
-#
-#
-#    plt.show()
-    
-    
-    
-
     # Calculate directional cosines (l,m) which are used as the gridding locations.
     # See equations 8,9 in https://library.nrao.edu/public/memos/evla/EVLAM_212.pdf.
     # TARGET: A_s, E_s (target source position)

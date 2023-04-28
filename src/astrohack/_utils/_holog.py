@@ -122,7 +122,6 @@ def _holog_chunk(holog_chunk_params):
 
         time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
         
-        
         ###########
 #            shape = np.array(beam_grid.shape[-2:])//2
 #            phase_diff = np.angle(beam_grid[:, :, 0, shape[0], shape[1]]) - np.angle(beam_grid[:, :, 3, shape[0], shape[1]])

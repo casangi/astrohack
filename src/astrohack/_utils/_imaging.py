@@ -15,13 +15,13 @@ from memory_profiler import profile
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 def _parallactic_derotation(data, parallactic_angle_dict):
-    """ Uses samples of parallactic angle (PA) values to correct differences in PA between scans. The reference PA is selected 
-        to be the first scans median parallactic angle. All values are rotated to this PA value using scypi.ndimage.rotate(...)
+    """ Uses samples of parallactic angle (PA) values to correct differences in PA between maps. The reference PA is selected
+        to be the first maps median parallactic angle. All values are rotated to this PA value using scypi.ndimage.rotate(...)
 
     Args:
-        data (numpy.ndarray): beam data grid (scan, chan, pol, l, m)
+        data (numpy.ndarray): beam data grid (map, chan, pol, l, m)
         parallactic_angle_dict (dict): dictionary containing antenna selected xds from which the aprallactic angle samples 
-                                       are retrieved ==> [scan](xds), here the scan referres to the scan values not the scan index.
+                                       are retrieved ==> [map](xds), here the map referres to the map values not the map index.
 
     Returns:
         numpy.ndarray: rotation adjusted beam data grid
@@ -29,23 +29,22 @@ def _parallactic_derotation(data, parallactic_angle_dict):
     # Find the middle index of the array. This is calcualted because there might be a desire to change 
     # the array length at some point and I don't want to hard code the middle value.
     #
-    # It is assumed, and should be true, that the parallacitc angle array size is consistent over scan.
-    scans = list(parallactic_angle_dict.keys())
+    # It is assumed, and should be true, that the parallacitc angle array size is consistent over map.
+    maps = list(parallactic_angle_dict.keys())
 
-    # Get the median index for the first scan (this should be the same for every scan).
-    median_index = len(parallactic_angle_dict[scans[0]].parallactic_samples)//2
+    # Get the median index for the first map (this should be the same for every map).
+    median_index = len(parallactic_angle_dict[maps[0]].parallactic_samples)//2
     
-    # This is the angle we will rotated the scans to.
-    median_angular_reference = parallactic_angle_dict[scans[0]].parallactic_samples[median_index]
+    # This is the angle we will rotated the maps to.
+    median_angular_reference = parallactic_angle_dict[maps[0]].parallactic_samples[median_index]
     
-    for scan, scan_value in enumerate(scans):
-        print(scan,scan_value)
-        #median_angular_offset = median_angular_reference - parallactic_angle_dict[scan_value].parallactic_samples[median_index]
+    for map, map_value in enumerate(maps):
+        #median_angular_offset = median_angular_reference - parallactic_angle_dict[map_value].parallactic_samples[median_index]
         #median_angular_offset *= 180/np.pi
         
-        #parallactic_angle = 360 - parallactic_angle_dict[scan_value].parallactic_samples[median_index]*180/np.pi
+        #parallactic_angle = 360 - parallactic_angle_dict[map_value].parallactic_samples[median_index]*180/np.pi
         
-        data[scan] = scipy.ndimage.rotate(input=data[scan, ...], angle=90, axes=(3, 2), reshape=False)
+        data[map] = scipy.ndimage.rotate(input=data[map, ...], angle=90, axes=(3, 2), reshape=False)
         
     return data
 

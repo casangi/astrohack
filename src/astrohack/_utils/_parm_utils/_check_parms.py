@@ -25,7 +25,7 @@ def _check_parm(parm, parm_name, acceptable_data_types, acceptable_data = None, 
     
     return parm_passed, parm
 
-def _check_parms(parm_dict, string_key, acceptable_data_types, acceptable_data = None, acceptable_range = None, list_acceptable_data_types=None, list_len=None, default=None):
+def _check_parms(parm_dict, string_key, acceptable_data_types, acceptable_data = None, acceptable_range = None, list_acceptable_data_types=None, list_len=None, default=None, log_default_setting=True):
     """
 
     Parameters
@@ -86,7 +86,9 @@ def _check_parms(parm_dict, string_key, acceptable_data_types, acceptable_data =
                     if not(_check_parms(parm_dict[string_key], default_element, [type(default[default_element])], default=default[default_element])): parms_passed = False
                 else:
                     parm_dict[string_key][default_element] = default[default_element]
-                    logger.info('Setting default '+ str(string_key)+ '[\''+str(default_element)+'\']'+ ' to '+ str(default[default_element]))
+                    
+                    if log_default_setting:
+                        logger.info('Setting default '+ str(string_key)+ '[\''+str(default_element)+'\']'+ ' to '+ str(default[default_element]))
                     
             return parms_passed
                     
@@ -112,7 +114,9 @@ def _check_parms(parm_dict, string_key, acceptable_data_types, acceptable_data =
     else:
         if default is not None:
             parm_dict[string_key] =  default
-            logger.info('Setting default '+ str(string_key)+ ' to '+ str(parm_dict[string_key]))
+            
+            if log_default_setting:
+                logger.info('Setting default '+ str(string_key)+ ' to '+ str(parm_dict[string_key]))
         else:
             logger.error('Parameter '+ str(string_key)+ ' must be specified')
             return False
