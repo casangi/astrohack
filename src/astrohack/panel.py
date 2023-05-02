@@ -118,7 +118,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
                 if panel_chunk_params['sel_ddi'] == "all":
                     panel_chunk_params['sel_ddi'] = os.listdir(panel_chunk_params['image_name']+'/'+antenna)
 
-                for ddi in panel_chunk_params['sel_ddi'] :
+                for ddi in panel_chunk_params['sel_ddi']:
                     if 'ddi_' in ddi:
                         logger.info(f"Processing {ddi} for {antenna}")
                         panel_chunk_params['ddi'] = ddi
@@ -200,6 +200,7 @@ def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, panel_margins
     
     parms_passed = parms_passed and _check_parms(panel_params, 'image_name', [str], default=None)
     base_name = _remove_suffix(panel_params['image_name'], '.image.zarr')
+    base_name = _remove_suffix(base_name, '.combine.zarr')
     parms_passed = parms_passed and _check_parms(panel_params, 'panel_name', [str], default=base_name+'.panel.zarr')
     parms_passed = parms_passed and _check_parms(panel_params, 'cutoff', [float], acceptable_range=[0, 1], default=0.2)
     parms_passed = parms_passed and _check_parms(panel_params, 'panel_kind', [str], acceptable_data=panel_models, default="rigid")

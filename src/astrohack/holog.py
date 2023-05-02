@@ -24,7 +24,6 @@ def holog(
     grid_interpolation_mode="nearest",
     chan_average=True,
     chan_tolerance_factor=0.005,
-    reference_scaling_frequency=None,
     scan_average=True,
     ant_list=None,
     to_stokes=True,
@@ -60,9 +59,6 @@ def holog(
 
     :param chan_tolerance_factor: Tolerance used in channel averaging to determine the number of primary beam channels., defaults to 0.005
     :type chan_tolerance_factor: float, optional
-
-    :param reference_scaling_frequency: When computing the channel average the lm frequency values are scaled by frequency. If the default None is used, the scaling is simply unity, however if `reference_scaling_frequency` is set then the scaling is done according to (average_frequency/reference_scaling_frequency)., defaults to None
-    :type reference_scaling_frequency: float, optional
 
     :param scan_average: Boolean dicating whether averagin is done over scan., defaults to True
     :type scan_average: bool, optional
@@ -125,7 +121,6 @@ def holog(
         grid_interpolation_mode, 
         chan_average, 
         chan_tolerance_factor, 
-        reference_scaling_frequency, 
         scan_average,
         ant_list, 
         to_stokes, 
@@ -200,8 +195,7 @@ def holog(
 def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
                       padding_factor,parallel,grid_interpolation_mode,
                       chan_average,chan_tolerance_factor,
-                      reference_scaling_frequency,scan_average,
-                      ant_list,to_stokes,apply_mask,phase_fit,overwrite):
+                      scan_average,ant_list,to_stokes,apply_mask,phase_fit,overwrite):
 
     holog_params = {}
     holog_params["holog_file"] = holog_name
@@ -213,7 +207,6 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
     holog_params["grid_interpolation_mode"] = grid_interpolation_mode
     holog_params["chan_average"] = chan_average
     holog_params["chan_tolerance_factor"] = chan_tolerance_factor
-    holog_params["reference_scaling_frequency"] = reference_scaling_frequency
     holog_params["scan_average"] = scan_average
     holog_params["ant_list"] = ant_list
     holog_params["to_stokes"] = to_stokes
@@ -253,11 +246,7 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
     
     parms_passed = parms_passed and _check_parms(holog_params, 'chan_tolerance_factor', [float], acceptable_range=[0,1], default=0.005)
    
-    
-    parms_passed = parms_passed and _check_parms(holog_params, 'reference_scaling_frequency', [float,np.float],default='None',log_default_setting=False)
-    if (isinstance(holog_params['reference_scaling_frequency'],str)) and (holog_params['reference_scaling_frequency']) == 'None':
-        holog_params['reference_scaling_frequency'] =  None
-    
+
     parms_passed = parms_passed and _check_parms(holog_params, 'scan_average', [bool],default=True)
 
     parms_passed = parms_passed and _check_parms(holog_params, 'ant_list', [list,np.ndarray], list_acceptable_data_types=[str], default='all')

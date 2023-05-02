@@ -71,17 +71,13 @@ def _holog_chunk(holog_chunk_params):
     n_pol = ant_data_dict[ddi][map0].dims["pol"]
     
     if holog_chunk_params["chan_average"]:
-        reference_scaling_frequency = holog_chunk_params["reference_scaling_frequency"]
-
-        if reference_scaling_frequency is None:
-            reference_scaling_frequency = np.mean(freq_chan)
+        reference_scaling_frequency = np.mean(freq_chan)
 
         avg_chan_map, avg_freq = _create_average_chan_map(freq_chan, holog_chunk_params["chan_tolerance_factor"])
         
         # Only a single channel left after averaging.
         beam_grid = np.zeros((n_holog_map,) + (1, n_pol) + grid_l.shape, dtype=np.complex)
-        
-        
+
     else:
         beam_grid = np.zeros((n_holog_map,) + (n_chan, n_pol) + grid_l.shape, dtype=np.complex)
 
