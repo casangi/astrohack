@@ -1,5 +1,6 @@
 import xarray as xr
 from matplotlib import pyplot as plt
+from matplotlib import colormaps as cmaps
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astrohack._classes.base_panel import panel_models, irigid
 from astrohack._classes.ring_panel import RingPanel
@@ -292,6 +293,7 @@ class AntennaSurface:
         for iring in range(self.telescope.nrings):
             angle = 2.0 * np.pi / self.telescope.npanel[iring]
             for ipanel in range(self.telescope.npanel[iring]):
+
                 panel = RingPanel(
                     self.panelmodel,
                     angle,
@@ -301,7 +303,8 @@ class AntennaSurface:
                     self.telescope.ourad[iring],
                     margin=self.panel_margins,
                     screw_scheme=self.telescope.screw_description,
-                    screw_offset=self.telescope.screw_offset
+                    screw_offset=self.telescope.screw_offset,
+                    plot_screw_size=0.006 * self.telescope.diam
                 )
                 self.panels.append(panel)
         return
@@ -538,6 +541,34 @@ class AntennaSurface:
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
             panel.plot(ax, screws=screws)
+        fig.tight_layout()
+        plt.savefig(filename, dpi=dpi)
+        plt.close()
+
+    def plot_screw_adjustments(self, filename, unit, dpi=300, colormap='jet'):
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        ax.set_title('Screw corrections')
+        # set the limits of the plot to the limits of the data
+        xmin = np.min(self.u_axis)
+        xmax = np.max(self.u_axis)
+        ymin = np.min(self.v_axis)
+        ymax = np.max(self.v_axis)
+        fakedata = np.full_like(self.deviation, fill_value=np.nan)
+        fac = _convert_unit('m', unit, 'length')
+        vmin = np.nanmin(fac*self.screw_adjustments)
+        vmax = np.nanmax(fac*self.screw_adjustments)
+        cmap = cmaps[colormap]
+        im = ax.imshow(fakedata, cmap=cmap, interpolation="nearest", extent=[xmin, xmax, ymin, ymax],
+                       vmin=vmin, vmax=vmax)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        fig.colorbar(im, label="Z Scale [" + unit + "]", cax=cax)
+        ax.set_xlabel("X axis [m]")
+        ax.set_ylabel("Y axis [m]")
+
+        for ipanel in range(len(self.panels)):
+            self.panels[ipanel].plot(ax, screws=False)
+            self.panels[ipanel].plot_corrections(ax, cmap, fac*self.screw_adjustments[ipanel])
         fig.tight_layout()
         plt.savefig(filename, dpi=dpi)
         plt.close()
