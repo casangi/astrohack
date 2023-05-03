@@ -641,7 +641,11 @@ def _plot_antenna_chunk(parm_dict):
         surface.plot_deviation(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
     elif plot_type == plot_types[1]:  # phase plot
         surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
-    else:  # Ancillary plot
+    elif plot_type == plot_types[2]:  # Ancillary plot
         surface.plot_mask(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
         surface.plot_amplitude(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
-
+    else: # all plots
+        surface.plot_deviation(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
+        surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
+        surface.plot_mask(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
+        surface.plot_amplitude(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])

@@ -36,4 +36,4 @@ pol_codes_XY = np.array([9, 10, 11, 12]) #['XX','XY','YX','YY']
 pol_str = np.array(['0','I','Q','U','V','RR','RL','LR','LL','XX','XY','YX','YY'])
 
 #Plot types
-plot_types = ['deviation', 'phase', 'ancillary']
+plot_types = ['deviation', 'phase', 'ancillary', 'all']
