@@ -9,6 +9,7 @@ from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 lnbr = "\n"
+figsize = [5, 4]
 
 
 class AntennaSurface:
@@ -438,6 +439,23 @@ class AntennaSurface:
         """
         for panel in self.panels:
             panel.print_misc()
+
+    def plot_mask(self, filename, screws=False, dpi=300):
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        plotmask = np.where(self.mask, 1, np.nan)
+        self._plot_surface(plotmask, 'Mask', fig, ax, 0, 1, screws=screws, mask=True)
+        fig.tight_layout()
+        plt.savefig(filename, dpi=dpi)
+        plt.close()
+
+    def plot_amplitude(self, filename, screws=False, dpi=300):
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        vmin, vmax = np.nanmin(self.amplitude), np.nanmax(self.amplitude)
+        title = "Amplitude min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
+        self._plot_surface(self.amplitude, title, fig, ax, vmin, vmax, screws=screws, unit=self.amp_unit)
+        fig.tight_layout()
+        plt.savefig(filename, dpi=dpi)
+        plt.close()
 
     def plot_surface(self, filename=None, mask=False, screws=False, dpi=300, plotphase=False, unit=None):
         """
