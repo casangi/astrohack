@@ -26,7 +26,7 @@ from astrohack._utils._dio import AstrohackPointFile
 from astrohack._utils._panel import _plot_antenna_chunk
 
 
-def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='mm'):
+def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='mm', plot_map=False):
     """ Export screw adjustment from panel to text file and save to disk.
 
     :param panel_mds_name: Input panel_mds file
@@ -39,6 +39,8 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
     :type ddi: list or str, optional, ex. ddi_0
     :param unit: Unit for screws adjustments, most length units supported, defaults to "mm"
     :type unit: str
+    :param plot_map: Plot the map of screw adjustments, default is False
+    :type plot_map: bool
 
     .. _Description:
 
@@ -50,7 +52,8 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
                  'ant_name': ant_name,
                  'ddi': ddi,
                  'destination': destination,
-                 'unit': unit}
+                 'unit': unit,
+                 'plot_map': plot_map}
 
     parms_passed = _check_parms(parm_dict, 'filename', [str], default=None)
     parms_passed = parms_passed and _check_parms(parm_dict, 'ant_name', [list], list_acceptable_data_types=[str],
@@ -59,6 +62,7 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
                                                  default='all')
     parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
     parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=length_units, default='mm')
+    parms_passed = parms_passed and _check_parms(parm_dict, 'plot_map', [bool], default=False)
 
     if not parms_passed:
         logger.error("export_scews parameter checking failed.")
@@ -78,9 +82,11 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
             ddis = _parm_to_list(parm_dict['ddi'], parm_dict['filename']+'/'+antenna)
             for ddi in ddis:
                 if 'ddi' in ddi:
-                    export_name = parm_dict['destination']+f'/screws_{antenna}_{ddi}.txt'
+                    export_name = parm_dict['destination']+f'/screws_{antenna}_{ddi}.'
                     surface = panel_mds.get_antenna(antenna, ddi)
-                    surface.export_screws(export_name, unit=unit)
+                    surface.export_screws(export_name+'txt', unit=unit)
+                    if parm_dict['plot_map']:
+                        surface.plot_screw_adjustments(export_name+'png', unit=unit)
 
 
 def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type='deviation', plot_screws=False,
