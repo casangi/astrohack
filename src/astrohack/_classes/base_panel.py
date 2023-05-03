@@ -1,4 +1,5 @@
 from scipy import optimize as opt
+from matplotlib import pyplot as plt
 
 from astrohack._utils._algorithms import _gauss_elimination_numpy, _least_squares_fit
 from astrohack._utils._constants import *
@@ -38,7 +39,7 @@ class BasePanel:
     markersize = 2
     linecolor = 'black'
 
-    def __init__(self, model, screws, label, center=None, zeta=None):
+    def __init__(self, model, screws, plot_screw_pos, plot_screw_size, label, center=None, zeta=None):
         """
         Initializes the base panel with the appropriated fitting methods and providing basic functionality
         Fitting method models are:
@@ -65,6 +66,8 @@ class BasePanel:
         self.solved = False
         self.label = label
         self.screws = screws
+        self.plot_screw_pos = plot_screw_pos
+        self.plot_screw_size = plot_screw_size
         self.samples = []
         self.margins = []
         self.corr = None
@@ -533,3 +536,10 @@ class BasePanel:
             screw = self.screws[iscrew, ]
             ax.scatter(screw[1], screw[0], marker=self.markers[iscrew], lw=self.linewidth, s=self.markersize,
                        color=self.colors[iscrew])
+
+    def plot_corrections(self, ax, cmap, corrections):
+        for iscrew in range(self.plot_screw_pos.shape[0]):
+            screw = self.plot_screw_pos[iscrew, ]
+            circle = plt.Circle((screw[1], screw[0]), self.plot_screw_size, color=cmap(corrections[iscrew]), fill=True)
+            ax.add_artist(circle)
+
