@@ -442,17 +442,39 @@ class AntennaSurface:
             panel.print_misc()
 
     def plot_mask(self, basename, screws=False, dpi=300):
+        """
+        Plot mask used in the selection of points to be fitted
+        Args:
+            basename: basename for the plot, the prefix 'ancillary_mask' will be added to it
+            screws: Are screw positions to be shown in plot?
+            dpi: Plot resolution
+        """
         plotmask = np.where(self.mask, 1, np.nan)
         plotname = _add_prefix(basename, 'ancillary_mask')
         self._plot_map(plotname, plotmask, 'Mask', 0, 1, None, screws=screws, dpi=dpi, colorbar=False)
 
     def plot_amplitude(self, basename, screws=False, dpi=300):
+        """
+        Plot Amplitude map
+        Args:
+            basename: basename for the plot, the prefix 'ancillary_amplitude' will be added to it
+            screws: Are screw positions to be shown in plot?
+            dpi: Plot resolution
+        """
         vmin, vmax = np.nanmin(self.amplitude), np.nanmax(self.amplitude)
         title = "Amplitude min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
         plotname = _add_prefix(basename, 'ancillary_amplitude')
         self._plot_map(plotname, self.amplitude, title, vmin, vmax, self.amp_unit, screws=screws, dpi=dpi)
 
     def plot_phase(self, basename, screws=False, dpi=300, unit=None):
+        """
+        Plot phase map(s)
+        Args:
+            basename: basename for the plot(s), the prefix 'phase_{original|corrections|residuals}' will be added to it/them
+            screws: Are screw positions to be shown in plot(s)?
+            dpi: Plot resolution
+            unit: Angle unit for plot(s)
+        """
         if unit is None:
             unit = 'deg'
         fac = _convert_unit('rad', unit, 'trigonometric')
@@ -466,6 +488,14 @@ class AntennaSurface:
         self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, dpi)
 
     def plot_deviation(self, basename, screws=False, dpi=300, unit=None):
+        """
+        Plot deviation map(s)
+        Args:
+            basename: basename for the plot(s), the prefix 'deviation_{original|corrections|residuals}' will be added to it/them
+            screws: Are screw positions to be shown in plot(s)?
+            dpi: Plot resolution
+            unit: Length unit for plot(s)
+        """
         if unit is None:
             unit = 'mm'
         fac = _convert_unit('m', unit, 'length')
