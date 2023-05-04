@@ -596,7 +596,7 @@ class AntennaSurface:
 
         for ipanel in range(len(self.panels)):
             self.panels[ipanel].plot(ax, screws=False)
-            self.panels[ipanel].plot_corrections(ax, cmap, fac*self.screw_adjustments[ipanel])
+            self.panels[ipanel].plot_corrections(ax, cmap, fac*self.screw_adjustments[ipanel], vmin, vmax)
         fig.tight_layout()
         plt.savefig(filename, dpi=dpi)
         plt.close()

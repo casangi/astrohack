@@ -1,5 +1,6 @@
 from scipy import optimize as opt
 from matplotlib import pyplot as plt
+from matplotlib.colors import Normalize
 
 from astrohack._utils._algorithms import _gauss_elimination_numpy, _least_squares_fit
 from astrohack._utils._constants import *
@@ -537,7 +538,7 @@ class BasePanel:
             ax.scatter(screw[1], screw[0], marker=self.markers[iscrew], lw=self.linewidth, s=self.markersize,
                        color=self.colors[iscrew])
 
-    def plot_corrections(self, ax, cmap, corrections):
+    def plot_corrections(self, ax, cmap, corrections, vmin, vmax):
         """
         Plot screw corrections onto an axis
         Args:
@@ -545,8 +546,10 @@ class BasePanel:
             cmap: Colormap of the corrections
             corrections: the screw corrections
         """
+        norm = Normalize(vmin=vmin, vmax=vmax)
         for iscrew in range(self.plot_screw_pos.shape[0]):
             screw = self.plot_screw_pos[iscrew, ]
-            circle = plt.Circle((screw[1], screw[0]), self.plot_screw_size, color=cmap(corrections[iscrew]), fill=True)
+            circle = plt.Circle((screw[1], screw[0]), self.plot_screw_size, color=cmap(norm(corrections[iscrew])),
+                                fill=True)
             ax.add_artist(circle)
 
