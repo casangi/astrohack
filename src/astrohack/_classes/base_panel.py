@@ -538,6 +538,13 @@ class BasePanel:
                        color=self.colors[iscrew])
 
     def plot_corrections(self, ax, cmap, corrections):
+        """
+        Plot screw corrections onto an axis
+        Args:
+            ax: axis for plot
+            cmap: Colormap of the corrections
+            corrections: the screw corrections
+        """
         for iscrew in range(self.plot_screw_pos.shape[0]):
             screw = self.plot_screw_pos[iscrew, ]
             circle = plt.Circle((screw[1], screw[0]), self.plot_screw_size, color=cmap(corrections[iscrew]), fill=True)
