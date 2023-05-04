@@ -1,3 +1,4 @@
+import numpy as np
 import xarray as xr
 from matplotlib import pyplot as plt
 from matplotlib import colormaps as cmaps
@@ -561,7 +562,7 @@ class AntennaSurface:
         plt.savefig(filename, dpi=dpi)
         plt.close()
 
-    def plot_screw_adjustments(self, filename, unit, colormap='jet', figuresize=None, dpi=300):
+    def plot_screw_adjustments(self, filename, unit, colormap='seismic', figuresize=None, dpi=300):
         """
         Plot screw adjustments as circles over a blank canvas with the panel layout
         Args:
@@ -583,8 +584,9 @@ class AntennaSurface:
         ymax = np.max(self.v_axis)
         fakedata = np.full_like(self.deviation, fill_value=np.nan)
         fac = _convert_unit('m', unit, 'length')
-        vmin = np.nanmin(fac*self.screw_adjustments)
-        vmax = np.nanmax(fac*self.screw_adjustments)
+        vmax = np.nanmax(np.absolute(fac*self.screw_adjustments))
+        vmin = -vmax
+
         cmap = cmaps[colormap]
         im = ax.imshow(fakedata, cmap=cmap, interpolation="nearest", extent=[xmin, xmax, ymin, ymax],
                        vmin=vmin, vmax=vmax)

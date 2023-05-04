@@ -19,7 +19,7 @@ from astrohack._utils._dio import AstrohackPointFile
 from astrohack._utils._panel import _plot_antenna_chunk
 
 
-def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='mm', plot_map=False, colormap='jet',
+def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='mm', plot_map=False, colormap='seismic',
                   figuresize=None, dpi=300):
     """ Export screw adjustment from panel to text file and save to disk.
 
