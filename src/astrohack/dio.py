@@ -70,7 +70,7 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
     parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=length_units, default='mm')
     parms_passed = parms_passed and _check_parms(parm_dict, 'threshold', [numbers.Number], default=None)
     parms_passed = parms_passed and _check_parms(parm_dict, 'plot_map', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(parm_dict, 'colormap', [str], acceptable_data=cmaps, default='jet')
+    parms_passed = parms_passed and _check_parms(parm_dict, 'colormap', [str], acceptable_data=cmaps, default='RdBu_r')
     parms_passed = parms_passed and _check_parms(parm_dict, 'figuresize', [list, np.ndarray],
                                                  list_acceptable_data_types=[numbers.Number], list_len=2,
                                                  default='None', log_default_setting=False)

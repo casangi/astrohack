@@ -562,7 +562,7 @@ class AntennaSurface:
         plt.savefig(filename, dpi=dpi)
         plt.close()
 
-    def plot_screw_adjustments(self, filename, unit, threshold=None, colormap='seismic', figuresize=None, dpi=300):
+    def plot_screw_adjustments(self, filename, unit, threshold=None, colormap=None, figuresize=None, dpi=300):
         """
         Plot screw adjustments as circles over a blank canvas with the panel layout
         Args:
@@ -573,7 +573,10 @@ class AntennaSurface:
             figuresize: 2 element array with the image sizes in inches
             dpi: Resolution in pixels per inch
         """
-        cmap = cmaps[colormap]
+        if colormap is None:
+            cmap = cmaps['RdBu_r']
+        else:
+            cmap = cmaps[colormap]
         if figuresize is None or figuresize == 'None':
             fig, ax = plt.subplots(1, 1, figsize=figsize)
         else:
@@ -598,11 +601,12 @@ class AntennaSurface:
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
         colorbar = fig.colorbar(im, label="Screw adjustments [" + unit + "]", cax=cax)
-        line = threshold
-        while line < vmax:
-            colorbar.ax.axhline(y=line, color='black', linestyle='-', lw=0.2)
-            colorbar.ax.axhline(y=-line, color='black', linestyle='-', lw=0.2)
-            line += threshold
+        if threshold>0:
+            line = threshold
+            while line < vmax:
+                colorbar.ax.axhline(y=line, color='black', linestyle='-', lw=0.2)
+                colorbar.ax.axhline(y=-line, color='black', linestyle='-', lw=0.2)
+                line += threshold
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
 
