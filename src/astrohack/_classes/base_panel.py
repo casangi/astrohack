@@ -538,18 +538,25 @@ class BasePanel:
             ax.scatter(screw[1], screw[0], marker=self.markers[iscrew], lw=self.linewidth, s=self.markersize,
                        color=self.colors[iscrew])
 
-    def plot_corrections(self, ax, cmap, corrections, vmin, vmax):
+    def plot_corrections(self, ax, cmap, corrections, threshold, vmin, vmax):
         """
         Plot screw corrections onto an axis
         Args:
             ax: axis for plot
             cmap: Colormap of the corrections
             corrections: the screw corrections
+            threshold: Threshold below which data is considered negligable
+            vmin: bottom of the colormap
+            vmax: top of the colormap
         """
         norm = Normalize(vmin=vmin, vmax=vmax)
         for iscrew in range(self.plot_screw_pos.shape[0]):
             screw = self.plot_screw_pos[iscrew, ]
-            circle = plt.Circle((screw[1], screw[0]), self.plot_screw_size, color=cmap(norm(corrections[iscrew])),
+            if np.abs(corrections[iscrew]) < threshold:
+                corr = 0
+            else:
+                corr = corrections[iscrew]
+            circle = plt.Circle((screw[1], screw[0]), self.plot_screw_size, color=cmap(norm(corr)),
                                 fill=True)
             ax.add_artist(circle)
 

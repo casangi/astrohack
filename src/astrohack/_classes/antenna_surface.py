@@ -562,43 +562,53 @@ class AntennaSurface:
         plt.savefig(filename, dpi=dpi)
         plt.close()
 
-    def plot_screw_adjustments(self, filename, unit, colormap='seismic', figuresize=None, dpi=300):
+    def plot_screw_adjustments(self, filename, unit, threshold=None, colormap='seismic', figuresize=None, dpi=300):
         """
         Plot screw adjustments as circles over a blank canvas with the panel layout
         Args:
             filename: Name of the output filename for the plot
             unit: Unit to display the screw adjustments
+            threshold: Threshold below which data is considered negligable, value is assumed to be in the same unit as the plot, if not given defaults to 10% of the maximal deviation
             colormap: Colormap to display the screw adjustments
             figuresize: 2 element array with the image sizes in inches
             dpi: Resolution in pixels per inch
         """
-        if figuresize is None or figuresize=='None':
+        cmap = cmaps[colormap]
+        if figuresize is None or figuresize == 'None':
             fig, ax = plt.subplots(1, 1, figsize=figsize)
         else:
             fig, ax = plt.subplots(1, 1, figsize=figuresize)
-        ax.set_title('Screw corrections')
+        fac = _convert_unit('m', unit, 'length')
+        vmax = np.nanmax(np.abs(fac * self.screw_adjustments))
+        vmin = -vmax
+        if threshold is None:
+            threshold = 0.1*vmax
+        else:
+            threshold = np.abs(threshold)
+
+        fig.suptitle('Screw corrections', y=0.92, fontsize='large')
+        ax.set_title(f'\nThreshold = {threshold:.2f} {unit}', fontsize='small')
         # set the limits of the plot to the limits of the data
         xmin = np.min(self.u_axis)
         xmax = np.max(self.u_axis)
         ymin = np.min(self.v_axis)
         ymax = np.max(self.v_axis)
-        fakedata = np.full_like(self.deviation, fill_value=np.nan)
-        fac = _convert_unit('m', unit, 'length')
-        vmax = np.nanmax(np.absolute(fac*self.screw_adjustments))
-        vmin = -vmax
-
-        cmap = cmaps[colormap]
-        im = ax.imshow(fakedata, cmap=cmap, interpolation="nearest", extent=[xmin, xmax, ymin, ymax],
-                       vmin=vmin, vmax=vmax)
+        im = ax.imshow(np.full_like(self.deviation, fill_value=np.nan), cmap=cmap, interpolation="nearest",
+                       extent=[xmin, xmax, ymin, ymax], vmin=vmin, vmax=vmax)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
-        fig.colorbar(im, label="Screw adjustments [" + unit + "]", cax=cax)
+        colorbar = fig.colorbar(im, label="Screw adjustments [" + unit + "]", cax=cax)
+        line = threshold
+        while line < vmax:
+            colorbar.ax.axhline(y=line, color='black', linestyle='-', lw=0.2)
+            colorbar.ax.axhline(y=-line, color='black', linestyle='-', lw=0.2)
+            line += threshold
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
 
         for ipanel in range(len(self.panels)):
             self.panels[ipanel].plot(ax, screws=False)
-            self.panels[ipanel].plot_corrections(ax, cmap, fac*self.screw_adjustments[ipanel], vmin, vmax)
+            self.panels[ipanel].plot_corrections(ax, cmap, fac*self.screw_adjustments[ipanel], threshold, vmin, vmax)
         fig.tight_layout()
         plt.savefig(filename, dpi=dpi)
         plt.close()
