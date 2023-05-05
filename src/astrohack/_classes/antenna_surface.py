@@ -1,5 +1,7 @@
+import numpy as np
 import xarray as xr
 from matplotlib import pyplot as plt
+from matplotlib import colormaps as cmaps
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astrohack._classes.base_panel import panel_models, irigid
 from astrohack._classes.ring_panel import RingPanel
@@ -7,8 +9,10 @@ from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+from astrohack._utils._utils import _add_prefix
 
 lnbr = "\n"
+figsize = [5, 4]
 
 
 class AntennaSurface:
@@ -290,6 +294,7 @@ class AntennaSurface:
         for iring in range(self.telescope.nrings):
             angle = 2.0 * np.pi / self.telescope.npanel[iring]
             for ipanel in range(self.telescope.npanel[iring]):
+
                 panel = RingPanel(
                     self.panelmodel,
                     angle,
@@ -299,7 +304,8 @@ class AntennaSurface:
                     self.telescope.ourad[iring],
                     margin=self.panel_margins,
                     screw_scheme=self.telescope.screw_description,
-                    screw_offset=self.telescope.screw_offset
+                    screw_offset=self.telescope.screw_offset,
+                    plot_screw_size=0.006 * self.telescope.diam
                 )
                 self.panels.append(panel)
         return
@@ -439,119 +445,177 @@ class AntennaSurface:
         for panel in self.panels:
             panel.print_misc()
 
-    def plot_surface(self, filename=None, mask=False, screws=False, dpi=300, plotphase=False, unit=None):
+    def plot_mask(self, basename, screws=False, colormap=None, figuresize=None, dpi=300):
         """
-        Do plots of the antenna surface
+        Plot mask used in the selection of points to be fitted
         Args:
-            filename: Save plot to a file rather than displaying it with matplotlib widgets
-            mask: Display mask, amplitudes and panel assignment rather than deviation/phase images
-            plotphase: plot phase images rather than deviation images
-            screws: Display the screws on the panels
-            dpi: Plot resolution in DPI
-            unit: To do deviation/phase plots, defaults to mm for deviations and degrees for phase
+            basename: basename for the plot, the prefix 'ancillary_mask' will be added to it
+            screws: Are screw positions to be shown in plot?
+            colormap: Colormap for amplitude plot
+            figuresize: 2 element array with the image sizes in inches
+            dpi: Plot resolution
         """
+        plotmask = np.where(self.mask, 1, np.nan)
+        plotname = _add_prefix(basename, 'mask')
+        self._plot_map(plotname, plotmask, 'Mask', 0, 1, None, screws=screws, colormap=colormap, figuresize=figuresize,
+                       dpi=dpi, colorbar=False)
 
-        if mask:
-            fig, ax = plt.subplots(1, 3, figsize=[15, 5])
-            title = "Mask"
-            self._plot_surface(
-                self.mask, title, fig, ax[0], 0, 1, screws=screws, mask=mask
-            )
-            vmin, vmax = np.nanmin(self.amplitude), np.nanmax(self.amplitude)
-            title = "Amplitude min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
-            self._plot_surface(
-                self.amplitude, title, fig, ax[1], vmin, vmax, screws=screws,
-                unit=self.amp_unit,
-            )
-            title = "Panel assignments"
-            paneldist = np.where(self.panel_distribution >= 0, self.panel_distribution, np.nan)
-            self._plot_surface(paneldist, title, fig, ax[2], 0, np.max(self.panel_distribution), unit='Panel #')
-            fig.tight_layout()
-        else:
-            if plotphase:
-                if unit is None:
-                    unit = 'deg'
-                fac = _convert_unit('rad', unit, 'trigonometric')
-                self._plot_three_surfaces(self.phase, self.phase_corrections, self.phase_residuals, unit,
-                                          fac, screws, 'Antenna surface phase')
-            else:
-                if unit is None:
-                    unit = 'mm'
-                fac = _convert_unit('m', unit, 'length')
-                self._plot_three_surfaces(self.deviation, self.corrections, self.residuals, unit, fac, screws,
-                                          'Antenna surface')
-        if filename is None:
-            plt.show()
-            plt.close()
-        else:
-            plt.savefig(filename, dpi=dpi)
-            plt.close()
-
-    def _plot_three_surfaces(self, original, corrections, residuals, unit, conversion, screws, suptitle):
+    def plot_amplitude(self, basename, screws=False, colormap=None, figuresize=None, dpi=300):
         """
-        Factorizes the plot of the combination of 3 maps
+        Plot Amplitude map
         Args:
-            original: Original dataset
-            corrections: Corrections applied to the dataset
-            residuals: Residuals after correction
-            unit: Unit of the output data
-            conversion: Conversion factor between internal units and unit
-            screws: show screws (Bool)
-            suptitle: Superior title to be displayed on top of the figure
+            basename: basename for the plot, the prefix 'ancillary_amplitude' will be added to it
+            screws: Are screw positions to be shown in plot?
+            colormap: Colormap for amplitude plot
+            figuresize: 2 element array with the image sizes in inches
+            dpi: Plot resolution
         """
-        vmax = np.nanmax(np.abs(conversion*original))
-        vmin = -vmax
-        in_rms = conversion * self._compute_rms_array(original)
+        vmin, vmax = np.nanmin(self.amplitude), np.nanmax(self.amplitude)
+        title = "Amplitude min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
+        plotname = _add_prefix(basename, 'amplitude')
+        self._plot_map(plotname, self.amplitude, title, vmin, vmax, self.amp_unit, screws=screws, colormap=colormap,
+                       figuresize=figuresize, dpi=dpi)
+
+    def plot_phase(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None):
+        """
+        Plot phase map(s)
+        Args:
+            basename: basename for the plot(s), the prefix 'phase_{original|corrections|residuals}' will be added to it/them
+            screws: Are screw positions to be shown in plot(s)?
+            colormap: Colormap for phase plots
+            figuresize: 2 element array with the image sizes in inches
+            dpi: Plot resolution
+            unit: Angle unit for plot(s)
+        """
+        if unit is None:
+            unit = 'deg'
+        fac = _convert_unit('rad', unit, 'trigonometric')
+        prefix = 'phase'
         if self.residuals is None:
-            fig, ax = plt.subplots()
-            title = "Before correction\nRMS = {0:8.5} ".format(in_rms)+unit
-            self._plot_surface(conversion * original, title, fig, ax, vmin, vmax, screws=screws, unit=unit)
+            maps = [self.phase]
+            labels = ['original']
         else:
-            fig, ax = plt.subplots(1, 3, figsize=[15, 5])
-            out_rms = conversion * self._compute_rms_array(residuals)
-            title = "Before correction\nRMS = {0:.3} ".format(in_rms)+unit
-            self._plot_surface(conversion * original, title, fig, ax[0], vmin, vmax, screws=screws, unit=unit)
-            title = "Corrections"
-            self._plot_surface(conversion * corrections, title, fig, ax[1], vmin, vmax, screws=screws, unit=unit)
-            title = "After correction\nRMS = {0:.3} ".format(out_rms)+unit
-            self._plot_surface(conversion * residuals, title, fig, ax[2], vmin, vmax, screws=screws, unit=unit)
-        fig.suptitle(suptitle)
-        fig.tight_layout()
+            maps = [self.phase, self.phase_corrections, self.phase_residuals]
+            labels = ['original', 'corrections', 'residuals']
+        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi)
 
-    def _plot_surface(self, data, title, fig, ax, vmin, vmax, screws=False, mask=False, unit="mm"):
+    def plot_deviation(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None):
         """
-        Does the plotting of a data array in a figure's subplot
+        Plot deviation map(s)
         Args:
-            data: The array to be plotted
-            title: Title of the subplot
-            fig: Global figure containing the subplots
-            ax: matplotlib axes instance describing the subplot
-            vmin: minimum to the color scale
-            vmax: maximum to the color scale
-            screws: Display screws
-            mask: do not add colorbar if plotting a mask
-            unit: Unit of the data in the color scale
+            basename: basename for the plot(s), the prefix 'deviation_{original|corrections|residuals}' will be added to it/them
+            screws: Are screw positions to be shown in plot(s)?
+            colormap: Colormap for deviation plots
+            figuresize: 2 element array with the image sizes in inches
+            dpi: Plot resolution
+            unit: Length unit for plot(s)
         """
+        if unit is None:
+            unit = 'mm'
+        fac = _convert_unit('m', unit, 'length')
+        prefix = 'deviation'
+        if self.residuals is None:
+            maps = [self.deviation]
+            labels = ['original']
+        else:
+            maps = [self.deviation, self.corrections, self.residuals]
+            labels = ['original', 'corrections', 'residuals']
+        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi)
+
+    def _multi_plot(self, maps, labels, prefix, basename, unit, conversion, screws, colormap=None, figuresize=None,
+                    dpi=300):
+        if len(maps) != len(labels):
+            raise Exception('Map list and label list must be of the same size')
+        nplots = len(maps)
+        vmax = np.nanmax(np.abs(conversion*maps[0]))
+        vmin = -vmax
+        for iplot in range(nplots):
+            title = f'{prefix.capitalize()} {labels[iplot]}'
+            plotname = _add_prefix(basename, labels[iplot])
+            plotname = _add_prefix(plotname, prefix)
+            self._plot_map(plotname, conversion*maps[iplot], title, vmin, vmax, unit, screws=screws, dpi=dpi)
+
+    def _plot_map(self, filename, data, title, vmin, vmax, unit, screws=False, colormap=None, figuresize=None, dpi=300,
+                  colorbar=True):
+        if colormap is None:
+            colormap = 'viridis'
+        if figuresize is None:
+            figuresize = figsize
+        fig, ax = plt.subplots(1, 1, figsize=figuresize)
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
         xmin = np.min(self.u_axis)
         xmax = np.max(self.u_axis)
         ymin = np.min(self.v_axis)
         ymax = np.max(self.v_axis)
-        im = ax.imshow(data,
-                       cmap="viridis",
-                       interpolation="nearest",
-                       extent=[xmin, xmax, ymin, ymax],
-                       vmin=vmin,
-                       vmax=vmax,)
-        divider = make_axes_locatable(ax)
-        if not mask:
+        im = ax.imshow(data, cmap=colormap, interpolation="nearest", extent=[xmin, xmax, ymin, ymax],
+                       vmin=vmin, vmax=vmax,)
+        if colorbar:
+            divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="5%", pad=0.05)
             fig.colorbar(im, label="Z Scale [" + unit + "]", cax=cax)
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
             panel.plot(ax, screws=screws)
+        fig.tight_layout()
+        plt.savefig(filename, dpi=dpi)
+        plt.close()
+
+    def plot_screw_adjustments(self, filename, unit, threshold=None, colormap=None, figuresize=None, dpi=300):
+        """
+        Plot screw adjustments as circles over a blank canvas with the panel layout
+        Args:
+            filename: Name of the output filename for the plot
+            unit: Unit to display the screw adjustments
+            threshold: Threshold below which data is considered negligable, value is assumed to be in the same unit as the plot, if not given defaults to 10% of the maximal deviation
+            colormap: Colormap to display the screw adjustments
+            figuresize: 2 element array with the image sizes in inches
+            dpi: Resolution in pixels per inch
+        """
+        if colormap is None:
+            cmap = cmaps['RdBu_r']
+        else:
+            cmap = cmaps[colormap]
+        if figuresize is None or figuresize == 'None':
+            fig, ax = plt.subplots(1, 1, figsize=figsize)
+        else:
+            fig, ax = plt.subplots(1, 1, figsize=figuresize)
+        fac = _convert_unit('m', unit, 'length')
+        vmax = np.nanmax(np.abs(fac * self.screw_adjustments))
+        vmin = -vmax
+        if threshold is None:
+            threshold = 0.1*vmax
+        else:
+            threshold = np.abs(threshold)
+
+        fig.suptitle('Screw corrections', y=0.92, fontsize='large')
+        ax.set_title(f'\nThreshold = {threshold:.2f} {unit}', fontsize='small')
+        # set the limits of the plot to the limits of the data
+        xmin = np.min(self.u_axis)
+        xmax = np.max(self.u_axis)
+        ymin = np.min(self.v_axis)
+        ymax = np.max(self.v_axis)
+        im = ax.imshow(np.full_like(self.deviation, fill_value=np.nan), cmap=cmap, interpolation="nearest",
+                       extent=[xmin, xmax, ymin, ymax], vmin=vmin, vmax=vmax)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        colorbar = fig.colorbar(im, label="Screw adjustments [" + unit + "]", cax=cax)
+        if threshold>0:
+            line = threshold
+            while line < vmax:
+                colorbar.ax.axhline(y=line, color='black', linestyle='-', lw=0.2)
+                colorbar.ax.axhline(y=-line, color='black', linestyle='-', lw=0.2)
+                line += threshold
+        ax.set_xlabel("X axis [m]")
+        ax.set_ylabel("Y axis [m]")
+
+        for ipanel in range(len(self.panels)):
+            self.panels[ipanel].plot(ax, screws=False)
+            self.panels[ipanel].plot_corrections(ax, cmap, fac*self.screw_adjustments[ipanel], threshold, vmin, vmax)
+        fig.tight_layout()
+        plt.savefig(filename, dpi=dpi)
+        plt.close()
 
     def _build_panel_data_arrays(self):
         """
@@ -584,7 +648,7 @@ class AntennaSurface:
         outfile += "LOWER the panel if the number is POSITIVE" + lnbr
         outfile += "RAISE the panel if the number is NEGATIVE" + lnbr
         outfile += 2 * lnbr
-        outfile += "{0:8s}".format('Panel')
+        outfile += "{0:16s}".format('Panel')
         nscrews = len(self.telescope.screw_description)
         for screw in self.telescope.screw_description:
             outfile += "{0:11s}".format(screw)

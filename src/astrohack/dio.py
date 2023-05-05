@@ -1,22 +1,15 @@
 import os
 import dask
+import numbers
 import numpy as np
+from matplotlib import colormaps as cmaps
 
-from astropy.time import Time
 from casacore import tables
 
 from astrohack._utils._constants import length_units, trigo_units, plot_types
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._utils import _parm_to_list
-
-from astrohack._utils._io import _load_point_file
-from astrohack._utils._io import _open_no_dask_zarr
-from astrohack._utils._io import _read_data_from_holog_json
-from astrohack._utils._io import _read_meta_data
-from astrohack._utils._io import _load_holog_file
-from astrohack._utils._io import _load_image_file
-from astrohack._utils._io import _load_panel_file
 
 from astrohack._utils._dio import AstrohackImageFile
 from astrohack._utils._dio import AstrohackHologFile
@@ -26,7 +19,8 @@ from astrohack._utils._dio import AstrohackPointFile
 from astrohack._utils._panel import _plot_antenna_chunk
 
 
-def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='mm'):
+def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='mm', threshold=None, plot_map=False,
+                  colormap='seismic', figuresize=None, dpi=300):
     """ Export screw adjustment from panel to text file and save to disk.
 
     :param panel_mds_name: Input panel_mds file
@@ -39,6 +33,16 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
     :type ddi: list or str, optional, ex. ddi_0
     :param unit: Unit for screws adjustments, most length units supported, defaults to "mm"
     :type unit: str
+    :param threshold: Threshold below which data is considered negligable, value is assumed to be in the same unit as the plot, if not given defaults to 10% of the maximal deviation
+    :type threshold: float, optional
+    :param plot_map: Plot the map of screw adjustments, default is False
+    :type plot_map: bool
+    :param colormap: Colormap for screw adjustment map
+    :type colormap: str
+    :param figuresize: 2 element array/list/tuple with the screw adjustment map size in inches
+    :type figuresize: numpy.ndarray, list, tuple, optional
+    :param dpi: Screw adjustment map resolution in pixels per inch
+    :type dpi: int
 
     .. _Description:
 
@@ -50,7 +54,12 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
                  'ant_name': ant_name,
                  'ddi': ddi,
                  'destination': destination,
-                 'unit': unit}
+                 'unit': unit,
+                 'threshold': threshold,
+                 'plot_map': plot_map,
+                 'colormap': colormap,
+                 'figuresize': figuresize,
+                 'dpi': dpi}
 
     parms_passed = _check_parms(parm_dict, 'filename', [str], default=None)
     parms_passed = parms_passed and _check_parms(parm_dict, 'ant_name', [list], list_acceptable_data_types=[str],
@@ -59,9 +68,16 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
                                                  default='all')
     parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
     parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=length_units, default='mm')
+    parms_passed = parms_passed and _check_parms(parm_dict, 'threshold', [numbers.Number], default=None)
+    parms_passed = parms_passed and _check_parms(parm_dict, 'plot_map', [bool], default=False)
+    parms_passed = parms_passed and _check_parms(parm_dict, 'colormap', [str], acceptable_data=cmaps, default='RdBu_r')
+    parms_passed = parms_passed and _check_parms(parm_dict, 'figuresize', [list, np.ndarray],
+                                                 list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                 default='None', log_default_setting=False)
+    parms_passed = parms_passed and _check_parms(parm_dict, 'dpi', [int], default=300)
 
     if not parms_passed:
-        logger.error("export_scews parameter checking failed.")
+        logger.error("export_screws parameter checking failed.")
         raise Exception("export_screws parameter checking failed.")
 
     panel_mds = AstrohackPanelFile(panel_mds_name)
@@ -78,13 +94,17 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
             ddis = _parm_to_list(parm_dict['ddi'], parm_dict['filename']+'/'+antenna)
             for ddi in ddis:
                 if 'ddi' in ddi:
-                    export_name = parm_dict['destination']+f'/screws_{antenna}_{ddi}.txt'
+                    export_name = parm_dict['destination']+f'/screws_{antenna}_{ddi}.'
                     surface = panel_mds.get_antenna(antenna, ddi)
-                    surface.export_screws(export_name, unit=unit)
+                    surface.export_screws(export_name+'txt', unit=unit)
+                    if parm_dict['plot_map']:
+                        surface.plot_screw_adjustments(export_name+'png', unit=unit, threshold=parm_dict['threshold'],
+                                                       colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'],
+                                                       dpi=parm_dict['dpi'])
 
 
 def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type='deviation', plot_screws=False,
-                 dpi=300, unit=None, parallel=True):
+                 unit=None, colormap='viridis', figuresize=None, dpi=300, parallel=True):
     """ Create diagnostic plots of antenna surface deviations from panel data file. Available plots listed in additional information.
 
     :param panel_mds_name: Input panel_mds file
@@ -99,10 +119,14 @@ def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type
     :type plot_type: str
     :param plot_screws: Add screw positions to plot
     :type plot_screws: bool
-    :param dpi: dots per inch to be used in plots
-    :type dpi: int
     :param unit: Unit for phase or deviation plots, defaults to "mm" for deviation and 'deg' for phase
     :type unit: str
+    :param colormap: Colormap for plots
+    :type colormap: str
+    :param figuresize: 2 element array/list/tuple with the plot sizes in inches
+    :type figuresize: numpy.ndarray, list, tuple, optional
+    :param dpi: dots per inch to be used in plots
+    :type dpi: int
     :param parallel: If True will use an existing astrohack client to produce plots in parallel
     :type parallel: bool
 
@@ -130,6 +154,8 @@ def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type
                  'unit': unit,
                  'plot_type': plot_type,
                  'plot_screws': plot_screws,
+                 'colormap': colormap,
+                 'figuresize': figuresize,
                  'dpi': dpi,
                  'parallel': parallel}
 
@@ -151,11 +177,15 @@ def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type
         logger.info('Unit ignored for ancillary plots')
     parms_passed = parms_passed and _check_parms(parm_dict, 'parallel', [bool], default=True)
     parms_passed = parms_passed and _check_parms(parm_dict, 'plot_screws', [bool], default=False)
+    parms_passed = parms_passed and _check_parms(parm_dict, 'colormap', [str], acceptable_data=cmaps, default='viridis')
+    parms_passed = parms_passed and _check_parms(parm_dict, 'figuresize', [list, np.ndarray],
+                                                 list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                 default='None', log_default_setting=False)
     parms_passed = parms_passed and _check_parms(parm_dict, 'dpi', [int], default=300)
 
     if not parms_passed:
-        logger.error("export_scews parameter checking failed.")
-        raise Exception("export_screws parameter checking failed.")
+        logger.error("plot_antenna parameter checking failed.")
+        raise Exception("plot_antenna parameter checking failed.")
 
     panel_mds = AstrohackPanelFile(panel_mds_name)
     panel_mds.open()

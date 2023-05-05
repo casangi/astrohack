@@ -629,21 +629,23 @@ def _compute_phase_rms_block(phase_image):
                 rms[time, chan, pol] = np.sqrt(np.nanmean(phase_image[time, chan, pol] ** 2))
     return rms
 
+
 def _plot_antenna_chunk(parm_dict):
     antenna = parm_dict['this_antenna']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
     plot_type = parm_dict['plot_type']
-    plot_name = f'{destination}/{plot_type}_{antenna}_{ddi}.png'
-
+    basename = f'{destination}/{antenna}_{ddi}'
     surface = parm_dict['panel_mds'].get_antenna(antenna, ddi)
     if plot_type == plot_types[0]:  # deviation plot
-        surface.plot_surface(filename=plot_name, mask=False, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
-                             plotphase=False, unit=parm_dict['unit'])
+        surface.plot_deviation(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
     elif plot_type == plot_types[1]:  # phase plot
-        surface.plot_surface(filename=plot_name, mask=False, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
-                             plotphase=True, unit=parm_dict['unit'])
-    else:  # Ancillary plot
-        surface.plot_surface(filename=plot_name, mask=True, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
-                             plotphase=False, unit=None)
-
+        surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
+    elif plot_type == plot_types[2]:  # Ancillary plot
+        surface.plot_mask(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
+        surface.plot_amplitude(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
+    else: # all plots
+        surface.plot_deviation(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
+        surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
+        surface.plot_mask(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
+        surface.plot_amplitude(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
