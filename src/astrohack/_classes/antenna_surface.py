@@ -648,7 +648,7 @@ class AntennaSurface:
         outfile += "LOWER the panel if the number is POSITIVE" + lnbr
         outfile += "RAISE the panel if the number is NEGATIVE" + lnbr
         outfile += 2 * lnbr
-        outfile += "{0:8s}".format('Panel')
+        outfile += "{0:16s}".format('Panel')
         nscrews = len(self.telescope.screw_description)
         for screw in self.telescope.screw_description:
             outfile += "{0:11s}".format(screw)
