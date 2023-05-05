@@ -28,7 +28,7 @@ from astrohack._utils._extract_holog import _extract_holog_chunk
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
-from astrohack._utils._utils import _remove_suffix
+from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._io import _load_holog_file
 
 from astrohack._utils._dio import AstrohackHologFile
@@ -236,7 +236,7 @@ def extract_holog(
         holog_obs_dict = holog_obs_dict_with_ddi
             
     from pprint import pformat
-    logger.info("holog_obs_dict: \n%s", pformat(holog_obs_dict,indent=1,width=1))
+    logger.info("holog_obs_dict: \n%s", pformat(holog_obs_dict, indent=1, width=1))
         
     ######## Get Scan and Subscan IDs ########
     # SDM Tables Short Description (https://drive.google.com/file/d/16a3g0GQxgcO7N_ZabfdtexQ8r2jRbYIS/view)

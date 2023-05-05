@@ -9,7 +9,7 @@ from astrohack._utils._io import _aips_holog_to_xds, check_if_file_will_be_overw
 from astrohack._utils._panel import _panel_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
-from astrohack._utils._utils import _remove_suffix
+from astrohack._utils._tools import _remove_suffix
 
 from astrohack._utils._dio import AstrohackPanelFile
 
@@ -215,5 +215,3 @@ def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, panel_margins
         raise Exception("panel parameter checking failed.")
     
     return panel_params
-
-
