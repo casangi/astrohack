@@ -1,6 +1,7 @@
 import os
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
+import json
 
 
 def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
@@ -14,6 +15,27 @@ def _remove_suffix(input_string, suffix):
         return input_string[:-len(suffix)]
     return input_string
 
+def _jsonify(holog_obj):
+    """ Convert holog_obs_description dictionay to json format. This just means converting numpy.ndarry
+        entries to string lists.
+
+    :param holog_obj: holog_obs_description dictionary.
+    :type holog_obj: dict
+    :param holog_obj: holog_obs_description dictionary.
+    :type holog_obj: dict
+    """
+    for ddi_key, ddi_value in holog_obj.items():
+        for map_key, map_value in holog_obj[ddi_key].items():
+            for attr_key, attr_value in holog_obj[ddi_key][map_key].items():
+                if "scans" in attr_key:
+                    holog_obj[ddi_key][map_key][attr_key] = list(map(str, attr_value))
+                
+                elif "ant" in attr_key:
+                    for ant_key, ant_value in holog_obj[ddi_key][map_key][attr_key].items():
+                        holog_obj[ddi_key][map_key][attr_key][ant_key] = list(map(str, ant_value))
+
+                else:
+                    pass
 
 def _add_prefix(input_string, prefix):
     wrds = input_string.split('/')
