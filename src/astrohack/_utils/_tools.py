@@ -42,6 +42,47 @@ def _add_prefix(input_string, prefix):
     wrds[-1] = prefix+'_'+wrds[-1]
     return '/'.join(wrds)
 
+def _print_holog_obs_dict(holog_obj):
+    OPEN_DICT  = ":{"
+    CLOSE_DICT = "}"
+    
+    OPEN_LIST  = ":["
+    CLOSE_LIST = "]"
+
+    print("\n\n| ********************************************************** |")
+    print("|                 HOLOG OBSERVATION DICTIONARY               |")
+    print("| ********************************************************** |\n\n")
+    
+    for ddi_key, ddi_value in holog_obj.items():
+        print("{ddi_key} {open_bracket}".format(ddi_key=ddi_key, open_bracket=OPEN_DICT))
+        for map_key, map_value in holog_obj[ddi_key].items():
+            print("{map_key: >10} {open_bracket}".format(map_key=map_key, open_bracket=OPEN_DICT))
+            for attr_key, attr_value in holog_obj[ddi_key][map_key].items():
+                if "scans" in attr_key:
+                    print("{attr_key: >12}: {open_list}".format(attr_key=attr_key, open_list=OPEN_LIST))
+    
+                    for value in holog_obj[ddi_key][map_key][attr_key]:
+                        print("{scan: >18}".format(scan=value))
+                    
+                    print("{close_bracket: >10}".format(close_bracket=CLOSE_LIST))
+                
+                elif "ant" in attr_key:
+                    print("{attr_key: >12} {open_bracket}".format(attr_key=attr_key, open_bracket=OPEN_DICT))
+                    for ant_key, ant_value in holog_obj[ddi_key][map_key][attr_key].items():
+                        print("{ant_key: >18} {open_list}".format(ant_key=ant_key, open_list=OPEN_LIST))
+                        
+                        for value in holog_obj[ddi_key][map_key][attr_key][ant_key]:
+                            print("{antenna: >25}".format(antenna=value))
+                        
+                        print("{close_list: >15}".format(close_list=CLOSE_LIST))
+                    
+                    print("{close_bracket: >10}".format(close_bracket=CLOSE_DICT))
+
+                else:
+                    pass
+        print("{close_bracket: >5}".format(close_bracket=CLOSE_DICT))
+        
+    print("{close_bracket}".format(close_bracket=CLOSE_DICT))
 
 def _parm_to_list(parm, path):
     if parm == 'all':
