@@ -251,6 +251,7 @@ class AstrohackPanelFile(dict):
 
         self.file = file
         self._open = False
+        self._meta_data = None
 
     def __getitem__(self, key):
         return super().__getitem__(key)
@@ -272,12 +273,12 @@ class AstrohackPanelFile(dict):
 
         if file is None:
             file = self.file
-        
+
+        self._meta_data = _read_meta_data(file, 'panel')
+
         try:
             _load_panel_file(file, panel_dict=self)
-
             self._open = True
-
         except Exception as e:
             logger.error("[AstroHackPanelFile.open()]: {}".format(e))
             self._open = False
@@ -289,13 +290,18 @@ class AstrohackPanelFile(dict):
            Prints summary table of panel image file.
         """
 
+        print("Atributes:")
+        for key in self._meta_data.keys():
+            print(f'{key:26s}= {self._meta_data[key]}')
+
         table = PrettyTable()
         table.field_names = ["antenna", "ddi"]
         table.align = "l"
         
         for ant in self.keys():
             table.add_row([ant, list(self[ant].keys())])
-        
+
+        print('\nContents:')
         print(table)
 
     def get_antenna(self, antenna, ddi):
