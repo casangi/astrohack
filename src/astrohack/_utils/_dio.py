@@ -66,6 +66,7 @@ class AstrohackDataFile:
             self._point_path = file_path
             self.point = AstrohackPointFile(file_path)
 
+
 class AstrohackImageFile(dict):
     """
         Data class for holography image data.
@@ -114,6 +115,7 @@ class AstrohackImageFile(dict):
            Prints summary table of holog image file. 
         """
 
+        print("Atributes:")
         for key in self._meta_data.keys():
             print(f'{key:26s}= {self._meta_data[key]}')
 
@@ -123,9 +125,9 @@ class AstrohackImageFile(dict):
         
         for ant in self.keys():
             table.add_row([ant, list(self[ant].keys())])
-        
-        print(table)
 
+        print('\nContents:')
+        print(table)
 
     def select(self, ant=None, ddi=None, polar=False):
         """Select data on the basis of ddi, scan, ant. This is a convenience function.
@@ -145,6 +147,7 @@ class AstrohackImageFile(dict):
                 return self[ant][ddi].apply(np.absolute), self[ant][ddi].apply(np.angle, deg=True)
 
             return self[ant][ddi]
+
 
 class AstrohackHologFile(dict):
     """
@@ -195,7 +198,7 @@ class AstrohackHologFile(dict):
         """
             Prints summary table of holog file.
         """
-
+        print("Atributes:")
         for key in self._meta_data.keys():
             if key == 'n_pix':
                 n_side = int(np.sqrt(self._meta_data[key]))
@@ -209,7 +212,7 @@ class AstrohackHologFile(dict):
         for ddi in self.keys():
             for scan in self[ddi].keys():
                 table.add_row([ddi, scan, list(self[ddi][scan].keys())])
-
+        print('\nContents:')
         print(table)
 
     def select(self, ddi=None, scan=None, ant=None):
@@ -237,6 +240,7 @@ class AstrohackHologFile(dict):
         """
 
         return self._meta_data
+
 
 class AstrohackPanelFile(dict):
     """
@@ -320,7 +324,6 @@ class AstrohackPointFile(dict):
         self._meta_data = None
         self._open = False
 
-
     def __getitem__(self, key):
         return super().__getitem__(key)
     
@@ -365,5 +368,4 @@ class AstrohackPointFile(dict):
         for ant in self.keys():
             table.add_row([ant])
 
-        
         print(table)
