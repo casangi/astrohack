@@ -303,18 +303,19 @@ def _load_image_xds(file_stem, ant, ddi, dask_load=True):
         raise FileNotFoundError("Image file: {} not found".format(image_path))
 
 
-def _read_meta_data(holog_file):
+def _read_meta_data(file_name, file_type):
     """Reads dimensional data from holog meta file.
 
     Args:
-        holog_file (str): holog file name.
+        file_name (str): astorhack file name.
+        file_type (str): astrohack file type
 
     Returns:
         dict: dictionary containing dimension data.
     """
     logger = _get_astrohack_logger()
     try:
-        with open("{name}/{file}".format(name=holog_file, file="/.holog_attr")) as json_file:
+        with open(f'{file_name}/.{file_type}_attr') as json_file:
             json_dict = json.load(json_file)
 
     except Exception as error:
@@ -434,7 +435,6 @@ def _load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None):
                     pnt_dict[ant] = _open_no_dask_zarr(os.path.join(file, ant))
 
     return pnt_dict
-
 
 
 def _get_attrs(zarr_obj):
