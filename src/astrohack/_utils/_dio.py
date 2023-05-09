@@ -192,6 +192,12 @@ class AstrohackHologFile(dict):
             Prints summary table of holog file.
         """
 
+        for key in self._meta_data.keys():
+            if key == 'n_pix':
+                n_side = int(np.sqrt(self._meta_data[key]))
+                print(f'{key:20s}= {n_side:d} x {n_side:d}')
+            else:
+                print(f'{key:20s}= {self._meta_data[key]}')
         table = PrettyTable()
         table.field_names = ["ddi", "map", "antenna"]
         table.align = "l"

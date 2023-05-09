@@ -1,21 +1,15 @@
 import os
 import json
-import zarr
-import copy
 import numpy as np
 import xarray as xr
 import astropy
-from astropy.io import fits
-from scipy import spatial
 from numba import njit
 from numba.core import types
-from numba.typed import Dict
-import copy
 
 from casacore import tables as ctables
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-
+from astrohack import __version__ as code_version
 from astrohack._utils._algorithms import _get_grid_parms
 
 from astrohack._utils._io import _load_point_file
@@ -540,7 +534,11 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
         logger.error('Telescope name not consistant: ' + str(telescope_names))
         raise
         
-    meta_data = {'cell_size':cell_sizes[0],'n_pix':n_pixs[0],'telescope_name':telescope_names[0]}
+    meta_data = {'version': code_version,
+                 'origin': 'extract_holog',
+                 'cell_size': cell_sizes[0],
+                 'n_pix': n_pixs[0],
+                 'telescope_name': telescope_names[0]}
 
     output_attr_file = "{name}/{ext}".format(name=holog_file, ext=".holog_attr")
 
@@ -550,8 +548,6 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
 
     except Exception as error:
         logger.error("[_create_holog_meta_data] {error}".format(error=error))
-    
-
     
     output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
     
