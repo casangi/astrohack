@@ -352,6 +352,7 @@ class AstrohackPointFile(dict):
         if file is None:
             file = self.file
 
+        self._meta_data = _read_meta_data(file, 'point')
         try:
             _load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
             self._open = True
@@ -366,6 +367,9 @@ class AstrohackPointFile(dict):
         """
             Prints summary table of pointing file.
         """
+        print("Atributes:")
+        for key in self._meta_data.keys():
+            print(f'{key:26s}= {self._meta_data[key]}')
 
         table = PrettyTable()
         table.field_names = ["antenna"]
@@ -374,4 +378,5 @@ class AstrohackPointFile(dict):
         for ant in self.keys():
             table.add_row([ant])
 
+        print('\nContents:')
         print(table)
