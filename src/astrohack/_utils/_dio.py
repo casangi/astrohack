@@ -72,7 +72,7 @@ class AstrohackImageFile(dict):
     """
     def __init__(self, file):
         super().__init__()
-
+        self._meta_data = None
         self.file = file
         self._open = False
 
@@ -95,7 +95,9 @@ class AstrohackImageFile(dict):
         logger = _get_astrohack_logger()
         if file is None:
             file = self.file
-        
+
+        self._meta_data = _read_meta_data(file, 'image')
+
         try:
             _load_image_file(file, image_dict=self)
 
@@ -111,6 +113,9 @@ class AstrohackImageFile(dict):
         """
            Prints summary table of holog image file. 
         """
+
+        for key in self._meta_data.keys():
+            print(f'{key:25s}= {self._meta_data[key]}')
 
         table = PrettyTable()
         table.field_names = ["antenna", "ddi"]
@@ -152,7 +157,6 @@ class AstrohackHologFile(dict):
         self._meta_data = None
         self._open = False
 
-
     def __getitem__(self, key):
         return super().__getitem__(key)
     
@@ -175,7 +179,7 @@ class AstrohackHologFile(dict):
         if file is None:
             file = self.file
 
-        self._meta_data = _read_meta_data(holog_file=file)
+        self._meta_data = _read_meta_data(file, 'holog')
 
         try:
             _load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
@@ -205,7 +209,7 @@ class AstrohackHologFile(dict):
         for ddi in self.keys():
             for scan in self[ddi].keys():
                 table.add_row([ddi, scan, list(self[ddi][scan].keys())])
-        
+
         print(table)
 
     def select(self, ddi=None, scan=None, ant=None):
@@ -359,6 +363,7 @@ class AstrohackPointFile(dict):
         table.align = "l"
         
         for ant in self.keys():
-            table.add_row(ant)
+            table.add_row([ant])
+
         
         print(table)
