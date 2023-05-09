@@ -13,7 +13,13 @@ def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%'
 def _remove_suffix(input_string, suffix):
     if suffix and input_string.endswith(suffix):
         return input_string[:-len(suffix)]
+    
     return input_string
+
+def _get_screw_data_frame(file):
+    import pandas as pd
+
+    return pd.read_csv(file, skip_blank_lines=True, delimiter="\s+", comment="#")
 
 def _jsonify(holog_obj):
     """ Convert holog_obs_description dictionay to json format. This just means converting numpy.ndarry

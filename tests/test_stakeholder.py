@@ -35,7 +35,7 @@ from astrohack.dio import open_panel
 def verify_panel_shifts(
   data_dir="",
   panel_list=['3-4', '5-27', '5-37', '5-38'], 
-  expected_shift=[np.array([-100, 75, 0, 150])],
+  expected_shift=np.array([-100, 75, 0, 150]),
   ref_mean_shift = np.array([-112.2325, 73.225, -1.455, 139.04  ]),
   antenna='ant_ea25',
   ddi='ddi_0'
@@ -58,13 +58,15 @@ def verify_panel_shifts(
         
     delta_shift = delta_mean_shift - delta_ref_shift  # New corrections - old corrections --> delta if delta < 0 ==> we improved.
     
-    if np.any(np.abs(delta_shift) > 0.0039): # This is approximately a micron shift
+    if np.any(np.abs(delta_shift) > 0.0039): # This is approximately a 0.1 micron shift
         print("There were changes!")
-        for i, delta in enumerate(delta_shift[0]):
+        for i, delta in enumerate(delta_shift):
             if delta < 0:
                 print("{panel}, improved by {delta} mils".format(panel=panel_list[i], delta=delta))
             else:
                 print("{panel}, got worse by {delta} mils".format(panel=panel_list[i], delta=delta))
+                
+        
 
 def verify_holog_obs_dictionary(holog_obs_dict):
 
@@ -77,8 +79,6 @@ def verify_holog_obs_dictionary(holog_obs_dict):
         holog_obj = json.load(json_file)
                           
     assert holog_obj == ref_holog_obj, "Error: holog_obs_descrition dictionary has changes unexpectedly."
-    
-    os.remove(".holog_obs_dict.json")   
 
 def verify_holog_diagnostics(cell_size, grid_size, number_of_digits=7):
     
