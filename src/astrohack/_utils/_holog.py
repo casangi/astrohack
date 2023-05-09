@@ -8,7 +8,7 @@ from scipy.interpolate import griddata
 from astrohack._classes.telescope import Telescope
 
 from astrohack._utils._io import _load_holog_file
-from astrohack._utils._io import _read_meta_data
+from astrohack._utils._io import _read_meta_data, _write_meta_data
 
 from astrohack._utils._panel import _phase_fitting_block
 
@@ -22,7 +22,6 @@ from astrohack._utils._conversion import _to_stokes
 from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk
 from astrohack._utils._imaging import _calculate_aperture_pattern
-from astrohack import __version__ as code_version
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
@@ -311,34 +310,12 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
     return cf_chan_map, pb_freq
 
 
-def _create_image_meta_data(image_file, holog_params):
+def _create_image_meta_data(image_file, input_params):
     """
     Save image meta data to a json file
     Args:
         image_file: image file
-        holog_params: holog input parameter dictionaire
+        input_params: holog input parameter dictionaire
     """
-    logger = _get_astrohack_logger()
-    meta_data = {'version': code_version,
-                 'origin': 'holog'}
-    for key in holog_params.keys():
-        if type(holog_params[key]) == str:
-            meta_data[key] = holog_params[key]
-        elif type(holog_params[key]) == np.ndarray:
-            keylen = len(holog_params[key])
-            for item in range(keylen):
-                newkey = f'{key}_{item}'
-                if type(item) == np.int or type(item) == np.int64:
-                    meta_data[newkey] = int(holog_params[key][item])
-                else:
-                    meta_data[newkey] = float(holog_params[key][item])
-        else:
-            meta_data[key] = holog_params[key]
-
     output_attr_file = "{name}/{ext}".format(name=image_file, ext=".image_attr")
-
-    try:
-        with open(output_attr_file, "w") as json_file:
-            json.dump(meta_data, json_file)
-    except Exception as error:
-        logger.error("[_create_holog_meta_data] {error}".format(error=error))
+    _write_meta_data('holog', output_attr_file, input_params)

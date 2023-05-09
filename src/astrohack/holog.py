@@ -128,6 +128,7 @@ def holog(
         phase_fit,
         overwrite
     )
+    input_params = holog_params.copy()
     
     check_if_file_exists(holog_params['holog_file'])
     check_if_file_will_be_overwritten(holog_params['image_file'],holog_params['overwrite'])
@@ -180,13 +181,12 @@ def holog(
     if holog_chunk_params['parallel']:
         dask.compute(delayed_list)
 
-    _create_image_meta_data(holog_params['image_file'], holog_params)
+    _create_image_meta_data(holog_params['image_file'], input_params)
         
     image_mds = AstrohackImageFile(holog_chunk_params['image_file'])
     image_mds.open()
     
     return image_mds
-
 
 
 def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
@@ -228,44 +228,26 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
     
     base_name = _remove_suffix(holog_params['holog_file'],'.holog.zarr')
     parms_passed = parms_passed and _check_parms(holog_params,'image_file', [str],default=base_name+'.image.zarr')
-    
     parms_passed = parms_passed and _check_parms(holog_params, 'padding_factor', [int], default=50)
-  
-    
     parms_passed = parms_passed and _check_parms(holog_params, 'parallel', [bool],default=False)
-
-    
     parms_passed = parms_passed and _check_parms(holog_params,'grid_interpolation_mode', [str],acceptable_data=["nearest","linear","cubic"],default="nearest")
-   
-    
     parms_passed = parms_passed and _check_parms(holog_params, 'chan_average', [bool],default=True)
-
-    
     parms_passed = parms_passed and _check_parms(holog_params, 'chan_tolerance_factor', [float], acceptable_range=[0,1], default=0.005)
-   
-
     parms_passed = parms_passed and _check_parms(holog_params, 'scan_average', [bool],default=True)
-
     parms_passed = parms_passed and _check_parms(holog_params, 'ant_list', [list,np.ndarray], list_acceptable_data_types=[str], default='all')
- 
     parms_passed = parms_passed and _check_parms(holog_params, 'to_stokes', [bool],default=True)
-   
- 
+
     if isinstance(holog_params['phase_fit'],list) or isinstance(holog_params['phase_fit'],type(np.ndarray)):
         parms_passed = parms_passed and _check_parms(holog_params, 'phase_fit', [list,type(np.ndarray)], list_acceptable_data_types=[bool], list_len=5)
     else:
         parms_passed = parms_passed and _check_parms(holog_params, 'phase_fit', [bool], default=True)
-  
-   
+
     parms_passed = parms_passed and _check_parms(holog_params, 'apply_mask', [bool],default=True)
-    
     parms_passed = parms_passed and _check_parms(holog_params, 'overwrite', [bool],default=False)
 
     if not parms_passed:
         logger.error("extract_holog parameter checking failed.")
         raise Exception("extract_holog parameter checking failed.")
-    #### End Parameter Checking ####
-    
-    
+
     return holog_params
 

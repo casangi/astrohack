@@ -155,6 +155,7 @@ def extract_holog(
                                 parallel,
                                 reuse_point_zarr,
                                 overwrite)
+    input_params = extract_holog_parms.copy()
     
     check_if_file_exists(extract_holog_parms['ms_name'])
     check_if_file_will_be_overwritten(extract_holog_parms['holog_name'],extract_holog_parms['overwrite'])
@@ -387,7 +388,8 @@ def extract_holog(
     holog_dict = _load_holog_file(holog_file=extract_holog_parms["holog_name"], dask_load=True, load_pnt_dict=False)
 
     extract_holog_parms['telescope_name'] = telescope_name
-    _create_holog_meta_data(holog_file=extract_holog_parms['holog_name'], holog_dict=holog_dict, holog_params=extract_holog_parms)
+    _create_holog_meta_data(holog_file=extract_holog_parms['holog_name'], holog_dict=holog_dict,
+                            input_params=input_params)
     
     holog_mds = AstrohackHologFile(extract_holog_parms['holog_name'])
     holog_mds.open()

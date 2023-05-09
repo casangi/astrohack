@@ -9,10 +9,11 @@ from numba.core import types
 from casacore import tables as ctables
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack import __version__ as code_version
+from astrohack._utils._io import _write_meta_data
 from astrohack._utils._algorithms import _get_grid_parms
 
 from astrohack._utils._io import _load_point_file
+
 
 def _extract_holog_chunk(extract_holog_params):
     """Perform data query on holography data chunk and get unique time and state_ids/
@@ -134,7 +135,8 @@ def _extract_holog_chunk(extract_holog_params):
             ddi=ddi, holog_map_key=holog_map_key
         )
     )
-    
+
+
 @njit(cache=False, nogil=True)
 def _extract_holog_chunk_jit(
     vis_data,
@@ -250,7 +252,6 @@ def _extract_holog_chunk_jit(
             flagged_mapping_antennas.append(map_ant_id)
 
     return vis_map_dict, sum_weight_map_dict, flagged_mapping_antennas
-
 
 
 def _get_time_samples(time_vis):
@@ -383,6 +384,7 @@ def _create_holog_file(
                 )
             )
 
+
 def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos,ant_names_main):
     '''
     Generate holog_obs_dict.
@@ -452,7 +454,6 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos,
                      
     return holog_obs_dict
 
-    
 
 def _check_if_array_in_dict(array_dict,array):
     
@@ -489,8 +490,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     return pnt_map_dict
 
 
-
-def _create_holog_meta_data(holog_file, holog_dict, holog_params):
+def _create_holog_meta_data(holog_file, holog_dict, input_params):
     """Save holog file meta information to json file with the transformation
         of the ordering (ddi, holog_map, ant) --> (ant, ddi, holog_map).
 
@@ -521,7 +521,6 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
                             n_pixs.append(xds.attrs["grid_parms"]["n_pix"])
                             telescope_names.append(xds.attrs['telescope_name'])
 
-
     if not (len(set(cell_sizes)) == 1):
         logger.error('Cell size not consistant: ' + str(cell_sizes))
         raise
@@ -533,24 +532,7 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
     if not (len(set(telescope_names)) == 1):
         logger.error('Telescope name not consistant: ' + str(telescope_names))
         raise
-        
-    meta_data = {'version': code_version,
-                 'origin': 'extract_holog',
-                 'cell_size': cell_sizes[0],
-                 'n_pix': n_pixs[0],
-                 'telescope_name': telescope_names[0]}
-
-    output_attr_file = "{name}/{ext}".format(name=holog_file, ext=".holog_attr")
-
-    try:
-        with open(output_attr_file, "w") as json_file:
-            json.dump(meta_data, json_file)
-
-    except Exception as error:
-        logger.error("[_create_holog_meta_data] {error}".format(error=error))
-    
     output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
-    
     try:
         with open(output_meta_file, "w") as json_file:
             json.dump(ant_holog_dict, json_file)
@@ -558,3 +540,9 @@ def _create_holog_meta_data(holog_file, holog_dict, holog_params):
     except Exception as error:
         logger.error("[_create_holog_meta_data] {error}".format(error=error))
 
+    meta_data = {'cell_size': cell_sizes[0],
+                 'n_pix': n_pixs[0],
+                 'telescope_name': telescope_names[0]}
+    meta_data.update(input_params)
+    output_attr_file = "{name}/{ext}".format(name=holog_file, ext=".holog_attr")
+    _write_meta_data('extract_holog', output_attr_file, meta_data)

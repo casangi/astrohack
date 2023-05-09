@@ -115,7 +115,7 @@ class AstrohackImageFile(dict):
         """
 
         for key in self._meta_data.keys():
-            print(f'{key:25s}= {self._meta_data[key]}')
+            print(f'{key:26s}= {self._meta_data[key]}')
 
         table = PrettyTable()
         table.field_names = ["antenna", "ddi"]
@@ -199,9 +199,9 @@ class AstrohackHologFile(dict):
         for key in self._meta_data.keys():
             if key == 'n_pix':
                 n_side = int(np.sqrt(self._meta_data[key]))
-                print(f'{key:20s}= {n_side:d} x {n_side:d}')
+                print(f'{key:26s}= {n_side:d} x {n_side:d}')
             else:
-                print(f'{key:20s}= {self._meta_data[key]}')
+                print(f'{key:26s}= {self._meta_data[key]}')
         table = PrettyTable()
         table.field_names = ["ddi", "map", "antenna"]
         table.align = "l"
