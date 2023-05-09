@@ -1,4 +1,11 @@
 import os
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+
+def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes(location, size=size, pad=pad)
+    return fig.colorbar(image, label=label, cax=cax)
 
 
 def _remove_suffix(input_string, suffix):

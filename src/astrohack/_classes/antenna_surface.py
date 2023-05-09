@@ -2,14 +2,14 @@ import numpy as np
 import xarray as xr
 from matplotlib import pyplot as plt
 from matplotlib import colormaps as cmaps
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 from astrohack._classes.base_panel import panel_models, irigid
 from astrohack._classes.ring_panel import RingPanel
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._utils import _add_prefix
+from astrohack._utils._utils import _add_prefix, _well_positioned_colorbar
 
 lnbr = "\n"
 figsize = [5, 4]
@@ -541,7 +541,10 @@ class AntennaSurface:
             colormap = 'viridis'
         if figuresize is None:
             figuresize = figsize
-        fig, ax = plt.subplots(1, 1, figsize=figuresize)
+        if figuresize is None or figuresize == 'None':
+            fig, ax = plt.subplots(1, 1, figsize=figsize)
+        else:
+            fig, ax = plt.subplots(1, 1, figsize=figuresize)
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
         xmin = np.min(self.u_axis)
@@ -551,9 +554,7 @@ class AntennaSurface:
         im = ax.imshow(data, cmap=colormap, interpolation="nearest", extent=[xmin, xmax, ymin, ymax],
                        vmin=vmin, vmax=vmax,)
         if colorbar:
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="5%", pad=0.05)
-            fig.colorbar(im, label="Z Scale [" + unit + "]", cax=cax)
+            _well_positioned_colorbar(ax, fig, im, "Z Scale [" + unit + "]")
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
@@ -598,10 +599,8 @@ class AntennaSurface:
         ymax = np.max(self.v_axis)
         im = ax.imshow(np.full_like(self.deviation, fill_value=np.nan), cmap=cmap, interpolation="nearest",
                        extent=[xmin, xmax, ymin, ymax], vmin=vmin, vmax=vmax)
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", size="5%", pad=0.05)
-        colorbar = fig.colorbar(im, label="Screw adjustments [" + unit + "]", cax=cax)
-        if threshold>0:
+        colorbar = _well_positioned_colorbar(ax, fig, im, "Screw adjustments [" + unit + "]")
+        if threshold > 0:
             line = threshold
             while line < vmax:
                 colorbar.ax.axhline(y=line, color='black', linestyle='-', lw=0.2)
