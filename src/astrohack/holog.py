@@ -6,13 +6,13 @@ import dask.distributed
 import numpy as np
 import numbers
 
-from astrohack._utils._holog import _holog_chunk
+from astrohack._utils._holog import _holog_chunk, _create_image_meta_data
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._utils import _remove_suffix
    
-from astrohack._utils._io import check_if_file_will_be_overwritten, check_if_file_exists
+from astrohack._utils._io import check_if_file_will_be_overwritten, check_if_file_exists, _read_meta_data
 from astrohack._utils._dio import AstrohackImageFile
 
 def holog(
@@ -133,14 +133,9 @@ def holog(
     check_if_file_will_be_overwritten(holog_params['image_file'],holog_params['overwrite'])
 
     json_data = "/".join((holog_params['holog_file'], ".holog_json"))
-    meta_data = "/".join((holog_params['holog_file'], ".holog_attr"))
-    
     with open(json_data, "r") as json_file:
         holog_json = json.load(json_file)
-    
-    with open(meta_data, "r") as meta_file:
-        meta_data = json.load(meta_file)
-        image_name=None,
+    meta_data = _read_meta_data(holog_params['holog_file'], 'holog')
 
     if  holog_params['ant_list'] == 'all':
         holog_params['ant_list'] = list(holog_json.keys())
@@ -184,6 +179,8 @@ def holog(
 
     if holog_chunk_params['parallel']:
         dask.compute(delayed_list)
+
+    _create_image_meta_data(holog_params['image_file'], holog_params)
         
     image_mds = AstrohackImageFile(holog_chunk_params['image_file'])
     image_mds.open()
