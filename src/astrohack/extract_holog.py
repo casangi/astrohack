@@ -48,7 +48,6 @@ def extract_holog(
     data_col="DATA",
     parallel=False,
     reuse_point_zarr=False,
-    test_mode=False,
     overwrite=False,
 ):
     """
@@ -247,13 +246,12 @@ def extract_holog(
     _print_holog_obs_dict(holog_obs_dict)
 
 
-    if test_mode:
-        outfile_obj = copy.deepcopy(holog_obs_dict)
+    outfile_obj = copy.deepcopy(holog_obs_dict)
 
-        _jsonify(outfile_obj)
+    _jsonify(outfile_obj)
 
-        with open("holog_obs_dict.json", "w") as outfile:
-            json.dump(outfile_obj, outfile)
+    with open(".holog_obs_dict.json", "w") as outfile:
+        json.dump(outfile_obj, outfile)
         
     ######## Get Scan and Subscan IDs ########
     # SDM Tables Short Description (https://drive.google.com/file/d/16a3g0GQxgcO7N_ZabfdtexQ8r2jRbYIS/view)
