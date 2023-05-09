@@ -30,7 +30,9 @@ def holog(
     apply_mask=True,
     phase_fit=True,
     overwrite=False,
-    parallel=True):
+    parallel=True, 
+    test_mode=False
+    ):
     """ Process holography data and derive aperture illumination pattern.
 
     :param holog_name: Name of holography .holog.zarr file to process.
@@ -157,6 +159,14 @@ def holog(
         holog_params["cell_size"] = cell_size
         holog_params["grid_size"] = grid_size
     
+    if test_mode:
+        json_data = {
+            "cell_size": list(map(float, cell_size)),
+            "grid_size": list(map(float, grid_size))
+        }
+
+        with open("holog_diagnostic.json", "w") as out_file:
+            json.dump(json_data, out_file)
 
     
     holog_chunk_params =  holog_params

@@ -48,7 +48,7 @@ def extract_holog(
     data_col="DATA",
     parallel=False,
     reuse_point_zarr=False,
-    write_holog_obs_dict=False,
+    test_mode=False,
     overwrite=False,
 ):
     """
@@ -81,7 +81,7 @@ def extract_holog(
     :param reuse_point_zarr: If true the point.zarr specified in point_name is reused.
     :type reuse_point_zarr: bool, optional
 
-    :param write_holog_obs_dict: Boolean for whether to writeholog dictionary to disk. This is solely for testing., defaults to False
+    :param test_mode: Boolean for whether to writeholog dictionary to disk. This is solely for testing., defaults to False
     :type overwrite: bool, optional
 
     :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files., defaults to False
@@ -247,7 +247,7 @@ def extract_holog(
     _print_holog_obs_dict(holog_obs_dict)
 
 
-    if write_holog_obs_dict:
+    if test_mode:
         outfile_obj = copy.deepcopy(holog_obs_dict)
 
         _jsonify(outfile_obj)
