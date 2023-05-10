@@ -1,4 +1,5 @@
-__version__ = "0.1.0"
+from importlib.metadata import version
+__version__ = version('astrohack')
 from .astrohack_client import *
 from .extract_holog import *
 from .holog import *
