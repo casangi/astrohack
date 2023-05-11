@@ -1,5 +1,6 @@
 import os
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import numpy as np
 
 
 def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
@@ -28,3 +29,10 @@ def _parm_to_list(parm, path):
     else:
         oulist = parm
     return oulist
+
+
+def _numpy_to_json(value):
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.floating):
+        return float(value)

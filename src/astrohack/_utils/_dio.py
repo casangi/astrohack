@@ -66,13 +66,14 @@ class AstrohackDataFile:
             self._point_path = file_path
             self.point = AstrohackPointFile(file_path)
 
+
 class AstrohackImageFile(dict):
     """
         Data class for holography image data.
     """
     def __init__(self, file):
         super().__init__()
-
+        self._meta_data = None
         self.file = file
         self._open = False
 
@@ -95,7 +96,9 @@ class AstrohackImageFile(dict):
         logger = _get_astrohack_logger()
         if file is None:
             file = self.file
-        
+
+        self._meta_data = _read_meta_data(file, 'image')
+
         try:
             _load_image_file(file, image_dict=self)
 
@@ -112,15 +115,19 @@ class AstrohackImageFile(dict):
            Prints summary table of holog image file. 
         """
 
+        print("Atributes:")
+        for key in self._meta_data.keys():
+            print(f'{key:26s}= {self._meta_data[key]}')
+
         table = PrettyTable()
         table.field_names = ["antenna", "ddi"]
         table.align = "l"
         
         for ant in self.keys():
             table.add_row([ant, list(self[ant].keys())])
-        
-        print(table)
 
+        print('\nContents:')
+        print(table)
 
     def select(self, ant=None, ddi=None, polar=False):
         """Select data on the basis of ddi, scan, ant. This is a convenience function.
@@ -141,6 +148,7 @@ class AstrohackImageFile(dict):
 
             return self[ant][ddi]
 
+
 class AstrohackHologFile(dict):
     """
         Data Class to interact ith holography imaging data.
@@ -151,7 +159,6 @@ class AstrohackHologFile(dict):
         self.file = file
         self._meta_data = None
         self._open = False
-
 
     def __getitem__(self, key):
         return super().__getitem__(key)
@@ -175,7 +182,7 @@ class AstrohackHologFile(dict):
         if file is None:
             file = self.file
 
-        self._meta_data = _read_meta_data(holog_file=file)
+        self._meta_data = _read_meta_data(file, 'holog')
 
         try:
             _load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
@@ -191,7 +198,13 @@ class AstrohackHologFile(dict):
         """
             Prints summary table of holog file.
         """
-
+        print("Atributes:")
+        for key in self._meta_data.keys():
+            if key == 'n_pix':
+                n_side = int(np.sqrt(self._meta_data[key]))
+                print(f'{key:26s}= {n_side:d} x {n_side:d}')
+            else:
+                print(f'{key:26s}= {self._meta_data[key]}')
         table = PrettyTable()
         table.field_names = ["ddi", "map", "antenna"]
         table.align = "l"
@@ -199,7 +212,7 @@ class AstrohackHologFile(dict):
         for ddi in self.keys():
             for scan in self[ddi].keys():
                 table.add_row([ddi, scan, list(self[ddi][scan].keys())])
-        
+        print('\nContents:')
         print(table)
 
     def select(self, ddi=None, scan=None, ant=None):
@@ -228,6 +241,7 @@ class AstrohackHologFile(dict):
 
         return self._meta_data
 
+
 class AstrohackPanelFile(dict):
     """
         Data class for holography panel data.
@@ -237,6 +251,7 @@ class AstrohackPanelFile(dict):
 
         self.file = file
         self._open = False
+        self._meta_data = None
 
     def __getitem__(self, key):
         return super().__getitem__(key)
@@ -258,12 +273,12 @@ class AstrohackPanelFile(dict):
 
         if file is None:
             file = self.file
-        
+
+        self._meta_data = _read_meta_data(file, 'panel')
+
         try:
             _load_panel_file(file, panel_dict=self)
-
             self._open = True
-
         except Exception as e:
             logger.error("[AstroHackPanelFile.open()]: {}".format(e))
             self._open = False
@@ -275,13 +290,18 @@ class AstrohackPanelFile(dict):
            Prints summary table of panel image file.
         """
 
+        print("Atributes:")
+        for key in self._meta_data.keys():
+            print(f'{key:26s}= {self._meta_data[key]}')
+
         table = PrettyTable()
         table.field_names = ["antenna", "ddi"]
         table.align = "l"
         
         for ant in self.keys():
             table.add_row([ant, list(self[ant].keys())])
-        
+
+        print('\nContents:')
         print(table)
 
     def get_antenna(self, antenna, ddi):
@@ -310,7 +330,6 @@ class AstrohackPointFile(dict):
         self._meta_data = None
         self._open = False
 
-
     def __getitem__(self, key):
         return super().__getitem__(key)
     
@@ -333,6 +352,7 @@ class AstrohackPointFile(dict):
         if file is None:
             file = self.file
 
+        self._meta_data = _read_meta_data(file, 'point')
         try:
             _load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
             self._open = True
@@ -347,12 +367,16 @@ class AstrohackPointFile(dict):
         """
             Prints summary table of pointing file.
         """
+        print("Atributes:")
+        for key in self._meta_data.keys():
+            print(f'{key:26s}= {self._meta_data[key]}')
 
         table = PrettyTable()
         table.field_names = ["antenna"]
         table.align = "l"
         
         for ant in self.keys():
-            table.add_row(ant)
-        
+            table.add_row([ant])
+
+        print('\nContents:')
         print(table)

@@ -4,16 +4,11 @@ import zarr
 import copy
 import numpy as np
 import xarray as xr
-import astropy
-from astropy.io import fits
-from numba import njit
-from numba.core import types
-from numba.typed import Dict
 
-from casacore import tables as ctables
-from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
-from astrohack._utils._conversion import convert_dict_from_numba
+from astropy.io import fits
+from astrohack import __version__ as code_version
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+from astrohack._utils._utils import _numpy_to_json
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
@@ -303,18 +298,19 @@ def _load_image_xds(file_stem, ant, ddi, dask_load=True):
         raise FileNotFoundError("Image file: {} not found".format(image_path))
 
 
-def _read_meta_data(holog_file):
+def _read_meta_data(file_name, file_type):
     """Reads dimensional data from holog meta file.
 
     Args:
-        holog_file (str): holog file name.
+        file_name (str): astorhack file name.
+        file_type (str): astrohack file type
 
     Returns:
         dict: dictionary containing dimension data.
     """
     logger = _get_astrohack_logger()
     try:
-        with open("{name}/{file}".format(name=holog_file, file="/.holog_attr")) as json_file:
+        with open(f'{file_name}/.{file_type}_attr') as json_file:
             json_dict = json.load(json_file)
 
     except Exception as error:
@@ -322,6 +318,39 @@ def _read_meta_data(holog_file):
         raise
 
     return json_dict
+
+
+def _write_meta_data(origin, file_name, input_dict):
+    """
+    Creates a metadata dictionary that is compatible with JSON and writes it to a file
+    Args:
+        origin: Which function created the mds
+        file_name: Output json file name
+        input_dict: Dictionary to be included in the metadata
+    """
+    logger = _get_astrohack_logger()
+    metadata = {'version': code_version,
+                'origin': origin}
+    for key in input_dict.keys():
+        if type(input_dict[key]) == np.ndarray:
+            try:
+                for item in range(len(input_dict[key])):
+                    newkey = f'{key}_{item}'
+                    metadata[newkey] = _numpy_to_json(input_dict[key][item])
+            except TypeError:
+                if len(input_dict['grid_size'].shape) == 0:
+                    metadata[key] = "None"
+                else:
+                    metadata[key] = input_dict[key]
+        elif input_dict[key] is None:
+            metadata[key] = "None"
+        else:
+            metadata[key] = input_dict[key]
+    try:
+        with open(file_name, "w") as json_file:
+            json.dump(metadata, json_file)
+    except Exception as error:
+        logger.error("[_write_meta_data] {error}".format(error=error))
 
 
 def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
@@ -434,7 +463,6 @@ def _load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None):
                     pnt_dict[ant] = _open_no_dask_zarr(os.path.join(file, ant))
 
     return pnt_dict
-
 
 
 def _get_attrs(zarr_obj):

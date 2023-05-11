@@ -3,14 +3,10 @@ import dask
 import shutil
 
 import numpy as np
-import xarray as xr
 
-from astrohack._classes.telescope import Telescope
 from astrohack._classes.base_panel import panel_models
-from astrohack._utils._io import _aips_holog_to_xds, check_if_file_will_be_overwritten, check_if_file_exists
-
+from astrohack._utils._io import _aips_holog_to_xds, check_if_file_will_be_overwritten, check_if_file_exists, _write_meta_data
 from astrohack._utils._panel import _panel_chunk
-
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._utils import _remove_suffix
@@ -96,6 +92,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     
     panel_params = _check_panel_parms(image_name, panel_name, cutoff, panel_model, panel_margins, parallel, sel_ddi,
                                       overwrite)
+    input_params = panel_params.copy()
           
     check_if_file_exists(panel_params['image_name'])
     check_if_file_will_be_overwritten(panel_params['panel_name'], panel_params['overwrite'])
@@ -132,12 +129,16 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
 
         if count == 0:
             logger.warning("No data to process")
+            return None
         else:
             logger.info("Panel finished processing")
-            
+
+            output_attr_file = "{name}/{ext}".format(name=panel_chunk_params['panel_name'], ext=".panel_attr")
+            _write_meta_data('panel', output_attr_file, input_params)
             panel_mds = AstrohackPanelFile(panel_chunk_params['panel_name'])
             panel_mds.open()
             return panel_mds
+
 
 def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, overwrite=False):
     """

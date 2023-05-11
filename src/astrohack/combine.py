@@ -6,7 +6,7 @@ from astrohack._utils._combine import _combine_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._utils import _remove_suffix
-from astrohack._utils._io import check_if_file_will_be_overwritten, check_if_file_exists
+from astrohack._utils._io import check_if_file_will_be_overwritten, check_if_file_exists, _write_meta_data
 from astrohack._utils._dio import AstrohackImageFile
 
 
@@ -52,6 +52,7 @@ def combine_image_ddi(image_name, combine_name=None, ant_list=None, ddi_list=Non
     logger = _get_astrohack_logger()
 
     combine_params = _check_combine_parms(image_name, combine_name, ant_list, ddi_list, weighted, parallel,  overwrite)
+    input_params = combine_params.copy()
 
     check_if_file_exists(combine_params['image_file'])
     check_if_file_will_be_overwritten(combine_params['combine_file'], combine_params['overwrite'])
@@ -73,6 +74,9 @@ def combine_image_ddi(image_name, combine_name=None, ant_list=None, ddi_list=Non
 
     if parallel:
         dask.compute(delayed_list)
+
+    output_attr_file = "{name}/{ext}".format(name=combine_params['combine_file'], ext=".image_attr")
+    _write_meta_data('combine', output_attr_file, input_params)
 
     combine_mds = AstrohackImageFile(combine_chunk_params['combine_file'])
     combine_mds.open()
