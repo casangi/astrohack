@@ -58,7 +58,7 @@ def verify_panel_shifts(
     delta_mean_shift = np.abs(mean_shift - expected_shift)
     delta_ref_shift = np.abs(ref_mean_shift - expected_shift)
         
-    delta_shift = delta_mean_shift - delta_ref_shift  # New corrections - old corrections --> delta if delta < 0 ==> we improved.
+    delta_shift = delta_mean_shift - delta_ref_shift   # New corrections - old corrections --> delta if delta < 0 ==> we improved.
     relative_shift = relative_difference(delta_mean_shift, delta_ref_shift)
     
     return np.all(relative_shift <= 1e-6)
