@@ -63,7 +63,7 @@ def verify_panel_shifts(
     
     return np.all(relative_shift <= 1e-6)
 
-def verify_center_pixels(file, reference_center_pixels):
+def verify_center_pixels(file, reference_center_pixels, number_of_digits=7):
     from astrohack.dio import open_image
     
     mds = open_image(file)['ant_ea25']['ddi_0']
@@ -74,8 +74,10 @@ def verify_center_pixels(file, reference_center_pixels):
     aperture_center_pixels = mds.APERTURE.values[..., aperture_shape[0]//2, aperture_shape[1]//2]
     beam_center_pixels = mds.BEAM.values[..., beam_shape[0]//2, beam_shape[1]//2]
     
-    #return  np.all(reference_center_pixels['aperture'] == aperture_center_pixels) and np.all(reference_center_pixels['beam'] == beam_center_pixels)
-    return  np.all( np.round(np.squeeze(reference_center_pixels['aperture'])[0], 2) == np.round(np.squeeze(aperture_center_pixels)[0], 2) ) #and np.all(reference_center_pixels['beam'] == beam_center_pixels)
+    return  np.all(
+      np.round(reference_center_pixels['aperture'], number_of_digits) == np.round(aperture_center_pixels), number_of_digits) and np.all(np.round(reference_center_pixels['beam'], number_of_digits) == np.round(beam_center_pixels, number_of_digits)
+    )
+    
                 
 def verify_holog_obs_dictionary(holog_obs_dict):
 
