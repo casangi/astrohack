@@ -74,9 +74,11 @@ def verify_center_pixels(file, reference_center_pixels, number_of_digits=7):
     aperture_center_pixels = mds.APERTURE.values[..., aperture_shape[0]//2, aperture_shape[1]//2]
     beam_center_pixels = mds.BEAM.values[..., beam_shape[0]//2, beam_shape[1]//2]
     
-    return  np.all(
-      np.round(reference_center_pixels['aperture'], number_of_digits) == np.round(aperture_center_pixels), number_of_digits) and np.all(np.round(reference_center_pixels['beam'], number_of_digits) == np.round(beam_center_pixels, number_of_digits)
-    )
+    aperture_check = np.all(np.round(reference_center_pixels['aperture'], number_of_digits) == np.round(aperture_center_pixels, number_of_digits))
+    beam_check = np.all(np.round(reference_center_pixels['beam'], number_of_digits) == np.round(beam_center_pixels, number_of_digits))
+
+    return aperture_check and beam_check
+    
     
                 
 def verify_holog_obs_dictionary(holog_obs_dict):
