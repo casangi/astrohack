@@ -226,7 +226,7 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
     
     parms_passed = parms_passed and _check_parms(holog_params, 'holog_file', [str],default=None)
 
-    parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list,np.ndarray], list_acceptable_data_types=[np.int,np.int64], list_len=2, default='None',log_default_setting=False)
+    parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list, np.ndarray], list_acceptable_data_types=[np.int64, np.int64], list_len=2, default='None',log_default_setting=False)
     if (isinstance(holog_params['grid_size'],str)) and (holog_params['grid_size'] == 'None'): holog_params['grid_size'] =  None
     holog_params['grid_size'] = np.array(holog_params['grid_size'])
 

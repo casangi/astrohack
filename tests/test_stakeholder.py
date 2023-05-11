@@ -40,6 +40,8 @@ def verify_panel_shifts(
   antenna='ant_ea25',
   ddi='ddi_0'
 ):
+    def relative_difference(mean, expected):  
+      return 2*np.abs(mean - expected)/(abs(mean) + abs(expected))
     
     M_TO_MILS = 39370.1
     
@@ -57,17 +59,23 @@ def verify_panel_shifts(
     delta_ref_shift = np.abs(ref_mean_shift - expected_shift)
         
     delta_shift = delta_mean_shift - delta_ref_shift  # New corrections - old corrections --> delta if delta < 0 ==> we improved.
+    relative_shift = relative_difference(delta_mean_shift, delta_ref_shift)
     
-    if np.any(np.abs(delta_shift) > 0.0039): # This is approximately a 0.1 micron shift
-        print("There were changes!")
-        for i, delta in enumerate(delta_shift):
-            if delta < 0:
-                print("{panel}, improved by {delta} mils".format(panel=panel_list[i], delta=delta))
-            else:
-                print("{panel}, got worse by {delta} mils".format(panel=panel_list[i], delta=delta))
-                
-        
+    return np.all(relative_shift <= 1e-6)
 
+def verify_center_pixels(file, reference_center_pixels):
+    from astrohack.dio import open_image
+    
+    mds = open_image(file)['ant_ea25']['ddi_0']
+    
+    aperture_shape = mds.APERTURE.values.shape[-2], mds.APERTURE.values.shape[-1]
+    beam_shape = mds.BEAM.values.shape[-2], mds.BEAM.values.shape[-1]    
+    
+    aperture_center_pixels = mds.APERTURE.values[..., aperture_shape[0]//2, aperture_shape[1]//2]
+    beam_center_pixels = mds.BEAM.values[..., beam_shape[0]//2, beam_shape[1]//2]
+    
+    return  np.all(reference_center_pixels['aperture'] == aperture_center_pixels) and np.all(reference_center_pixels['beam'] == beam_center_pixels)
+                
 def verify_holog_obs_dictionary(holog_obs_dict):
 
     ref_holog_obj = {}
@@ -78,17 +86,16 @@ def verify_holog_obs_dictionary(holog_obs_dict):
     with open(".holog_obs_dict.json") as json_file:
         holog_obj = json.load(json_file)
                           
-    assert holog_obj == ref_holog_obj, "Error: holog_obs_descrition dictionary has changes unexpectedly."
+    return  holog_obj == ref_holog_obj
 
 def verify_holog_diagnostics(cell_size, grid_size, number_of_digits=7):
     
     with open(".holog_diagnostic.json") as json_file:
         json_data = json.load(json_file)
         
-    json_data['cell_size'] = [round(x, number_of_digits) for x in json_data['cell_size']]
+    json_data['cell_size'] = np.array([round(x, number_of_digits) for x in json_data['cell_size']])
         
-    assert (json_data['cell_size'] == cell_size).all(), "Unexpected change in cell_size occured."
-    assert (json_data['grid_size'] == grid_size).all(), "Unexpected change in grid_size occured."
+    return np.all(json_data['cell_size'] == cell_size) and np.all(json_data['grid_size'] == grid_size)
 
 def test_holog_obs_dict(set_data):
     before_ms = str(set_data/"".join((base_name,"before_fixed.split.ms")))
@@ -123,7 +130,7 @@ def test_holog_obs_dict(set_data):
       reuse_point_zarr=False
     )
 
-    verify_holog_obs_dictionary(holog_obs_dict)
+    assert verify_holog_obs_dictionary(holog_obs_dict)
 
     holog_obs_dict = {
       'ddi_0': {
@@ -166,12 +173,60 @@ def test_holog_obs_dict(set_data):
         reuse_point_zarr=False
     )
 
-    verify_holog_obs_dictionary(holog_obs_dict)
+    assert verify_holog_obs_dictionary(holog_obs_dict)
 
 def test_holog(set_data):
+  reference_before_dict = {
+    'aperture': np.array([
+        [
+            [ 
+                0.225725131776915+0.12054326352090801j, 
+                0.016838151657196862-0.011171227001989446j, 
+                0.048663223170791664-0.024197325651061738j, 
+                -0.09340400975688747-0.045923630603716084j
+            ]
+        ]
+    ]),
+    'beam': np.array([
+        [
+            [ 
+                0.993988815582417+0.10948166283475885j,
+                0.005367471552903289+0.01583907120584613j,
+                0.014425807274417096+0.0059018780911659395j,
+                -0.004021223235578464+0.00040825140567029433j
+            ]
+        ]
+    ])
+  }
+
+  reference_after_dict = {
+    'aperture': np.array([
+        [
+            [ 
+                0.12300077664655817-0.06757802469840296j,
+                -0.062129865145786264+0.15643752202705213j,
+                0.012563562045357843+0.1010680231104541j,
+                0.016046659386512153-0.008623951102220646j
+            ]
+        ]
+    ]),
+    'beam': np.array([
+        [
+            [ 
+                0.9979274427989393+0.06434919509030099j,
+                0.00894231045479574+0.022065573193509103j,
+                0.02131330222465877+0.0051265326714060675j,
+                0.00271048218206843-0.005807650531399505j
+            ]
+        ]
+    ])
+  }
 
   before_holog = str(set_data/"before.split.holog.zarr")
   after_holog = str(set_data/"after.split.holog.zarr")
+
+  before_image = str(set_data/"before.split.image.zarr")
+  after_image = str(set_data/"after.split.image.zarr")
   
   holog(
     holog_name=before_holog, 
@@ -186,8 +241,10 @@ def test_holog(set_data):
     to_stokes=True,
     parallel=True
   )
+  
+  assert verify_center_pixels(file=before_image, reference_center_pixels=reference_before_dict)
 
-  verify_holog_diagnostics(
+  assert verify_holog_diagnostics(
     cell_size = np.array([-0.0006442, 0.0006442]),
     grid_size = np.array([31, 31]),
     number_of_digits=7
@@ -207,7 +264,9 @@ def test_holog(set_data):
     parallel=True
   )
 
-  verify_holog_diagnostics(
+  assert verify_center_pixels(file=after_image, reference_center_pixels=reference_after_dict)
+
+  assert verify_holog_diagnostics(
     cell_size = np.array([-0.0006442, 0.0006442]),
     grid_size = np.array([31, 31]),
     number_of_digits=7
@@ -230,4 +289,4 @@ def test_screw_adjustments(set_data):
     overwrite=True
   )
 
-  verify_panel_shifts(data_dir=str(set_data))
+  assert verify_panel_shifts(data_dir=str(set_data))

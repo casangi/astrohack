@@ -13,13 +13,7 @@ def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%'
 def _remove_suffix(input_string, suffix):
     if suffix and input_string.endswith(suffix):
         return input_string[:-len(suffix)]
-    
     return input_string
-
-def _get_screw_data_frame(file):
-    import pandas as pd
-
-    return pd.read_csv(file, skip_blank_lines=True, delimiter="\s+", comment="#")
 
 def _jsonify(holog_obj):
     """ Convert holog_obs_description dictionay to json format. This just means converting numpy.ndarry
@@ -67,19 +61,15 @@ def _print_holog_obs_dict(holog_obj):
                 if "scans" in attr_key:
                     print("{attr_key: >12}: {open_list}".format(attr_key=attr_key, open_list=OPEN_LIST))
     
-                    for value in holog_obj[ddi_key][map_key][attr_key]:
-                        print("{scan: >18}".format(scan=value))
-                    
+                    scan_list = ", ".join(list(map(str, holog_obj[ddi_key][map_key][attr_key])))
+                    print("{scan: >18}".format(scan=scan_list))                                   # The print just ification in notebook is weird on this and seems to move according to list length ...
                     print("{close_bracket: >10}".format(close_bracket=CLOSE_LIST))
                 
                 elif "ant" in attr_key:
                     print("{attr_key: >12} {open_bracket}".format(attr_key=attr_key, open_bracket=OPEN_DICT))
                     for ant_key, ant_value in holog_obj[ddi_key][map_key][attr_key].items():
                         print("{ant_key: >18} {open_list}".format(ant_key=ant_key, open_list=OPEN_LIST))
-                        
-                        for value in holog_obj[ddi_key][map_key][attr_key][ant_key]:
-                            print("{antenna: >25}".format(antenna=value))
-                        
+                        print("{antenna: >25}".format( antenna=", ".join(holog_obj[ddi_key][map_key][attr_key]) ))
                         print("{close_list: >15}".format(close_list=CLOSE_LIST))
                     
                     print("{close_bracket: >10}".format(close_bracket=CLOSE_DICT))
