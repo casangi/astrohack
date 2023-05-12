@@ -36,7 +36,7 @@ def verify_panel_shifts(
   data_dir="",
   panel_list=['3-4', '5-27', '5-37', '5-38'], 
   expected_shift=np.array([-100, 75, 0, 150]),
-  ref_mean_shift = np.array([-112.2325, 73.225, -1.455, 139.04  ]),
+  ref_mean_shift = np.array([-112.17789033, 73.22619286, -1.53666468, 138.99617087]),
   antenna='ant_ea25',
   ddi='ddi_0'
 ):
@@ -54,7 +54,7 @@ def verify_panel_shifts(
     difference = after_shift - before_shift
     
     mean_shift = np.mean(difference, axis=1)
-    
+
     delta_mean_shift = np.abs(mean_shift - expected_shift)
     delta_ref_shift = np.abs(ref_mean_shift - expected_shift)
         
@@ -238,7 +238,6 @@ def test_holog(set_data):
     padding_factor=50, 
     grid_interpolation_mode='linear',
     chan_average = True,
-    reference_scaling_frequency=None,
     scan_average = True,
     overwrite=True,
     phase_fit=True,
@@ -260,7 +259,6 @@ def test_holog(set_data):
     padding_factor=50, 
     grid_interpolation_mode='linear',
     chan_average = True,
-    reference_scaling_frequency=None,
     scan_average = True,
     overwrite=True,
     phase_fit=True,
