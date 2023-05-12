@@ -28,7 +28,7 @@ dependencies = [
 'zarr',
 'bokeh',
 'jupyterlab',
-'python_casacore>=3.5.2; sys_platform != "darwin" '
+'python_casacore>=3.5.3; sys_platform != "darwin" '
 ]
 
 
