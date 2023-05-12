@@ -1,6 +1,6 @@
 ![astrohack](docs/_media/astrohack_logo.png)
 
-[![Python 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
+[![Python 3.8 3.9 3.10 3.11](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11-blue)](https://www.python.org/downloads/release/python-380/)
 [![Documentation Status](https://readthedocs.org/projects/astrohack/badge/?version=latest)](https://astrohack.readthedocs.io/en/latest/?badge=latest)
 
 
@@ -11,7 +11,7 @@ astroHack (Holography Antenna Commissioning Kit) is a Python package that produc
 # Installing
 It is recommended to use the [conda](https://docs.conda.io/projects/conda/en/latest/) environment manager to create a clean, self-contained runtime where astrohack and all its dependencies can be installed:
 ```sh
-conda create --name astrohack python=3.8 --no-default-packages
+conda create --name astrohack python=3.11 --no-default-packages
 conda activate astrohack
 
 ```
