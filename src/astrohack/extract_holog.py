@@ -1,6 +1,8 @@
 import os
 import dask
 import sys
+import json
+import copy
 
 import xarray as xr
 import numpy as np
@@ -22,14 +24,17 @@ from astrohack._utils._io import _open_no_dask_zarr
 from astrohack._utils._io import _read_data_from_holog_json
 from astrohack._utils._io import _read_meta_data
 from astrohack._utils._io import _load_holog_file
-from astrohack._utils._io import  check_if_file_will_be_overwritten,check_if_file_exists
+from astrohack._utils._io import  check_if_file_will_be_overwritten, check_if_file_exists
+from astrohack._utils._io import _load_holog_file
 
 from astrohack._utils._extract_holog import _extract_holog_chunk
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
-from astrohack._utils._utils import _remove_suffix
-from astrohack._utils._io import _load_holog_file
+
+from astrohack._utils._tools import _remove_suffix
+from astrohack._utils._tools import _jsonify
+from astrohack._utils._tools import _print_holog_obs_dict
 
 from astrohack._utils._dio import AstrohackHologFile
 
@@ -74,6 +79,9 @@ def extract_holog(
     
     :param reuse_point_zarr: If true the point.zarr specified in point_name is reused.
     :type reuse_point_zarr: bool, optional
+
+    :param test_mode: Boolean for whether to writeholog dictionary to disk. This is solely for testing., defaults to False
+    :type overwrite: bool, optional
 
     :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files., defaults to False
     :type overwrite: bool, optional
@@ -235,8 +243,15 @@ def extract_holog(
         
         holog_obs_dict = holog_obs_dict_with_ddi
             
-    from pprint import pformat
-    logger.info("holog_obs_dict: \n%s", pformat(holog_obs_dict,indent=1,width=1))
+    _print_holog_obs_dict(holog_obs_dict)
+
+
+    outfile_obj = copy.deepcopy(holog_obs_dict)
+
+    _jsonify(outfile_obj)
+
+    with open(".holog_obs_dict.json", "w") as outfile:
+        json.dump(outfile_obj, outfile)
         
     ######## Get Scan and Subscan IDs ########
     # SDM Tables Short Description (https://drive.google.com/file/d/16a3g0GQxgcO7N_ZabfdtexQ8r2jRbYIS/view)

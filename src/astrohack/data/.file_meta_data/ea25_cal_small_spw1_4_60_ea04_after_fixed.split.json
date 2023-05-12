@@ -1,0 +1,19 @@
+{
+    "observer": "Bryan Butler",
+    "project": "uid://evla/pdb/4538748",
+    "elapsed time": "10792 seconds",
+    "observed": "13-Sep-2022/02:40:29.0 to 13-Sep-2022/05:40:21.0 (UTC)",
+    "spwID": 0,
+    "name": "EVLA_KU#A0C0#1",
+    "channels": 57,
+    "frame":"TOPO",
+    "chan0": 14112.0,  
+    "chan-width": 2000.0,
+    "total-bandwidth": 114000,
+    "center-frequency": 14168.0,
+    "ra": "22:53:57.747932",
+    "dec": "+16.08.53.56089",
+    "epoch": "J2000",  
+    "corrs":"RR RL LR LL",
+    "notes":"The pointing table for this measurement set has been corrected => for all reference antennas, pointing_offset=0; target=direction. In addition, this file has been split, including the pointing table, to include only antennas ea04, ea25, ea06"
+}

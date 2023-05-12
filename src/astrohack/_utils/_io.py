@@ -8,7 +8,7 @@ import xarray as xr
 from astropy.io import fits
 from astrohack import __version__ as code_version
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._utils import _numpy_to_json
+from astrohack._utils._tools import _numpy_to_json
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 

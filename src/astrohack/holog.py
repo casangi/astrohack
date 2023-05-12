@@ -10,7 +10,7 @@ from astrohack._utils._holog import _holog_chunk, _create_image_meta_data
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
-from astrohack._utils._utils import _remove_suffix
+from astrohack._utils._tools import _remove_suffix
    
 from astrohack._utils._io import check_if_file_will_be_overwritten, check_if_file_exists, _read_meta_data
 from astrohack._utils._dio import AstrohackImageFile
@@ -30,7 +30,8 @@ def holog(
     apply_mask=True,
     phase_fit=True,
     overwrite=False,
-    parallel=True):
+    parallel=True, 
+    ):
     """ Process holography data and derive aperture illumination pattern.
 
     :param holog_name: Name of holography .holog.zarr file to process.
@@ -157,6 +158,14 @@ def holog(
         holog_params["cell_size"] = cell_size
         holog_params["grid_size"] = grid_size
     
+    
+    json_data = {
+            "cell_size": list(map(float, cell_size)),
+            "grid_size": list(map(float, grid_size))
+    }
+
+    with open(".holog_diagnostic.json", "w") as out_file:
+        json.dump(json_data, out_file)
 
     
     holog_chunk_params =  holog_params
@@ -217,7 +226,7 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
     
     parms_passed = parms_passed and _check_parms(holog_params, 'holog_file', [str],default=None)
 
-    parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list,np.ndarray], list_acceptable_data_types=[np.int,np.int64], list_len=2, default='None',log_default_setting=False)
+    parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list, np.ndarray], list_acceptable_data_types=[np.int64, np.int64], list_len=2, default='None',log_default_setting=False)
     if (isinstance(holog_params['grid_size'],str)) and (holog_params['grid_size'] == 'None'): holog_params['grid_size'] =  None
     holog_params['grid_size'] = np.array(holog_params['grid_size'])
 

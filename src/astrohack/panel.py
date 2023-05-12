@@ -9,7 +9,7 @@ from astrohack._utils._io import _aips_holog_to_xds, check_if_file_will_be_overw
 from astrohack._utils._panel import _panel_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
-from astrohack._utils._utils import _remove_suffix
+from astrohack._utils._tools import _remove_suffix
 
 from astrohack._utils._dio import AstrohackPanelFile
 
@@ -207,7 +207,7 @@ def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, panel_margins
     parms_passed = parms_passed and _check_parms(panel_params, 'panel_kind', [str], acceptable_data=panel_models, default="rigid")
     parms_passed = parms_passed and _check_parms(panel_params, 'panel_margins', [float], acceptable_range=[0, 0.5], default=0.2)
     parms_passed = parms_passed and _check_parms(panel_params, 'parallel', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(panel_params, 'sel_ddi', [list, np.array], list_acceptable_data_types=[int, np.int], default='all')
+    parms_passed = parms_passed and _check_parms(panel_params, 'sel_ddi', [list, np.array], list_acceptable_data_types=[int, np.int64], default='all')
     parms_passed = parms_passed and _check_parms(panel_params, 'overwrite', [bool], default=False)
 
     if not parms_passed:
@@ -215,5 +215,3 @@ def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, panel_margins
         raise Exception("panel parameter checking failed.")
     
     return panel_params
-
-

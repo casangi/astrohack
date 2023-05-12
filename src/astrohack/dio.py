@@ -9,7 +9,7 @@ from casacore import tables
 from astrohack._utils._constants import length_units, trigo_units, plot_types
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._utils import _parm_to_list
+from astrohack._utils._tools import _parm_to_list
 
 from astrohack._utils._dio import AstrohackImageFile
 from astrohack._utils._dio import AstrohackHologFile
@@ -96,7 +96,7 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None,  unit='m
                 if 'ddi' in ddi:
                     export_name = parm_dict['destination']+f'/screws_{antenna}_{ddi}.'
                     surface = panel_mds.get_antenna(antenna, ddi)
-                    surface.export_screws(export_name+'txt', unit=unit)
+                    surface.export_screws(export_name+'csv', unit=unit)
                     if parm_dict['plot_map']:
                         surface.plot_screw_adjustments(export_name+'png', unit=unit, threshold=parm_dict['threshold'],
                                                        colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'],

@@ -9,7 +9,7 @@ from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._utils import _add_prefix, _well_positioned_colorbar
+from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar
 
 lnbr = "\n"
 figsize = [5, 4]
@@ -182,7 +182,7 @@ class AntennaSurface:
         Returns:
             The proper label for the panel at iring, ipanel
         """
-        return '{0:d}-{1:2d}'.format(iring+1, ipanel+1)
+        return '{0:d}-{1:d}'.format(iring+1, ipanel+1)
 
     def _alma_panel_labeling(self, iring, ipanel):
         """
@@ -640,12 +640,12 @@ class AntennaSurface:
             filename: ASCII file name/path
             unit: unit for panel screw adjustments ['mm','miliinches']
         """
-        outfile = "Screw adjustments for {0:s} {1:s} antenna\n".format(self.telescope.name, self.antenna_name)
-        outfile += "Adjustments are in " + unit + 2*lnbr
-        outfile += "Lower means away from subreflector" + lnbr
-        outfile += "Raise means toward the subreflector" + lnbr
-        outfile += "LOWER the panel if the number is POSITIVE" + lnbr
-        outfile += "RAISE the panel if the number is NEGATIVE" + lnbr
+        outfile =  "# Screw adjustments for {0:s} {1:s} antenna\n".format(self.telescope.name, self.antenna_name)
+        outfile += "# Adjustments are in " + unit + 2*lnbr
+        outfile += "# Lower means away from subreflector" + lnbr
+        outfile += "# Raise means toward the subreflector" + lnbr
+        outfile += "# LOWER the panel if the number is POSITIVE" + lnbr
+        outfile += "# RAISE the panel if the number is NEGATIVE" + lnbr
         outfile += 2 * lnbr
         outfile += "{0:16s}".format('Panel')
         nscrews = len(self.telescope.screw_description)

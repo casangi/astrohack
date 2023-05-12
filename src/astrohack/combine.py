@@ -5,7 +5,7 @@ import numpy as np
 from astrohack._utils._combine import _combine_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
-from astrohack._utils._utils import _remove_suffix
+from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._io import check_if_file_will_be_overwritten, check_if_file_exists, _write_meta_data
 from astrohack._utils._dio import AstrohackImageFile
 
