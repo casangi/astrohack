@@ -9,7 +9,7 @@ from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._utils import _add_prefix, _well_positioned_colorbar
+from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar
 
 lnbr = "\n"
 figsize = [5, 4]
