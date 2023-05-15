@@ -98,8 +98,6 @@ class AstrohackImageFile(dict):
         if file is None:
             file = self.file
 
-        self._meta_data = _read_meta_data(file, 'image')
-
         try:
             _load_image_file(file, image_dict=self)
 
@@ -108,6 +106,8 @@ class AstrohackImageFile(dict):
         except Exception as e:
             logger.error("[AstroHackImageFile.open()]: {}".format(e))
             self._open = False
+
+        self._meta_data = _read_meta_data(file, 'image', ['combine', 'holog'])
 
         return self._open
 
@@ -183,8 +183,6 @@ class AstrohackHologFile(dict):
         if file is None:
             file = self.file
 
-        self._meta_data = _read_meta_data(file, 'holog')
-
         try:
             _load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
             self._open = True
@@ -192,7 +190,9 @@ class AstrohackHologFile(dict):
         except Exception as e:
             logger.error("[AstrohackHologFile]: {}".format(e))
             self._open = False
-        
+
+        self._meta_data = _read_meta_data(file, 'holog', 'extract_holog')
+
         return self._open
 
     def summary(self):
@@ -275,14 +275,14 @@ class AstrohackPanelFile(dict):
         if file is None:
             file = self.file
 
-        self._meta_data = _read_meta_data(file, 'panel')
-
         try:
             _load_panel_file(file, panel_dict=self)
             self._open = True
         except Exception as e:
             logger.error("[AstroHackPanelFile.open()]: {}".format(e))
             self._open = False
+
+        self._meta_data = _read_meta_data(file, 'panel', 'panel')
 
         return self._open
 
@@ -353,7 +353,6 @@ class AstrohackPointFile(dict):
         if file is None:
             file = self.file
 
-        self._meta_data = _read_meta_data(file, 'point')
         try:
             _load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
             self._open = True
@@ -361,7 +360,9 @@ class AstrohackPointFile(dict):
         except Exception as e:
             logger.error("[AstrohackPointFile]: {}".format(e))
             self._open = False
-        
+
+        self._meta_data = _read_meta_data(file, 'point', 'extract_holog')
+
         return self._open
 
     def summary(self):

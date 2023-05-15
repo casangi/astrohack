@@ -137,7 +137,7 @@ def holog(
     json_data = "/".join((holog_params['holog_file'], ".holog_json"))
     with open(json_data, "r") as json_file:
         holog_json = json.load(json_file)
-    meta_data = _read_meta_data(holog_params['holog_file'], 'holog')
+    meta_data = _read_meta_data(holog_params['holog_file'], 'holog', 'extract_holog')
 
     if  holog_params['ant_list'] == 'all':
         holog_params['ant_list'] = list(holog_json.keys())

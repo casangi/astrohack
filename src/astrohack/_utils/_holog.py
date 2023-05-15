@@ -46,7 +46,7 @@ def _holog_chunk(holog_chunk_params):
         ddi_id=holog_chunk_params["ddi_id"]
     )
 
-    meta_data = _read_meta_data(holog_chunk_params["holog_file"], 'holog')
+    meta_data = _read_meta_data(holog_chunk_params["holog_file"], 'holog', 'extract_holog')
 
     # Calculate lm coordinates
     l, m = _calc_coords(holog_chunk_params["grid_size"], holog_chunk_params["cell_size"])

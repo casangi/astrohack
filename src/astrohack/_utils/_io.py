@@ -298,7 +298,7 @@ def _load_image_xds(file_stem, ant, ddi, dask_load=True):
         raise FileNotFoundError("Image file: {} not found".format(image_path))
 
 
-def _read_meta_data(file_name, file_type):
+def _read_meta_data(file_name, file_type, origin):
     """Reads dimensional data from holog meta file.
 
     Args:
@@ -316,6 +316,22 @@ def _read_meta_data(file_name, file_type):
     except Exception as error:
         logger.error(str(error))
         raise
+
+    try:
+        metadataorigin = json_dict['origin']
+    except KeyError:
+        logger.error("[_read_meta_data]: Badly formatted metadata in input file")
+        raise Exception('Bad metadata')
+    if isinstance(origin, str):
+        if metadataorigin != origin:
+            logger.error(f"[_read_meta_data]: Input file is not an Astrohack {file_type} file")
+            logger.error(f"Expected origin was {origin} but got {metadataorigin}")
+            raise TypeError('Incorrect file type')
+    elif isinstance(origin, (list, tuple)):
+        if metadataorigin not in origin:
+            logger.error(f"[_read_meta_data]: Input file is not an Astrohack {file_type} file")
+            logger.error(f"Expected origin was {origin} but got {metadataorigin}")
+            raise TypeError('Incorrect file type')
 
     return json_dict
 
