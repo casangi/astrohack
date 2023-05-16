@@ -1,6 +1,7 @@
 import os
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 import json
 
 
@@ -14,6 +15,7 @@ def _remove_suffix(input_string, suffix):
     if suffix and input_string.endswith(suffix):
         return input_string[:-len(suffix)]
     return input_string
+
 
 def _jsonify(holog_obj):
     """ Convert holog_obs_description dictionay to json format. This just means converting numpy.ndarry
@@ -37,10 +39,12 @@ def _jsonify(holog_obj):
                 else:
                     pass
 
+
 def _add_prefix(input_string, prefix):
     wrds = input_string.split('/')
     wrds[-1] = prefix+'_'+wrds[-1]
     return '/'.join(wrds)
+
 
 def _print_holog_obs_dict(holog_obj):
     OPEN_DICT  = ":{"
@@ -80,6 +84,7 @@ def _print_holog_obs_dict(holog_obj):
         
     print("{close_bracket}".format(close_bracket=CLOSE_DICT))
 
+
 def _parm_to_list(parm, path):
     if parm == 'all':
         oulist = os.listdir(path)
@@ -89,11 +94,13 @@ def _parm_to_list(parm, path):
         oulist = parm
     return oulist
 
+
 def _numpy_to_json(value):
     if isinstance(value, np.integer):
         return int(value)
     if isinstance(value, np.floating):
         return float(value)
+
 
 def _split_pointing_table(ms_name, antennas):
     """ Split pointing table to contain only specified antennas
@@ -138,3 +145,26 @@ def _split_pointing_table(ms_name, antennas):
         tablename="/".join((ms_name, 'REDUCED')), 
         newtablename="/".join((ms_name, 'POINTING'))
     )
+
+
+def _axis_to_fits_header(header, axis, iaxis, axistype):
+    logger = _get_astrohack_logger()
+    naxis = len(axis)
+    inc = axis[1] - axis[0]
+    if inc == 0:
+        logger.error('Axis increment is zero valued')
+        raise Exception
+    absdiff = abs((axis[-1]-axis[-2])-inc)/inc
+    if absdiff > 1e-7:
+        logger.error('Axis is not linear!')
+        raise Exception
+    ref = naxis//2
+    val = axis[ref]
+
+    header[f'NAXIS{iaxis}'] = naxis
+    header[f'CRVAL{iaxis}'] = val
+    header[f'CDELT{iaxis}'] = inc
+    header[f'CRPIX{iaxis}'] = ref
+    header[f'CROTA{iaxis}'] = 0.
+    header[f'CTYPE{iaxis}'] = axistype
+    return header
