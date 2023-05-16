@@ -53,7 +53,7 @@ def _load_panel_file(file=None, panel_dict=None, dask_load=True):
     if panel_dict is not None:
             panel_data_dict = panel_dict
     
-    ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
+    ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
     
     try:
         for ant in ant_list:
@@ -195,17 +195,22 @@ def _read_fits(filename):
     return head, data
 
 
-def _write_fits(head, data, filename):
+def _write_fits(header, imagetype, data, filename, unit):
     """
     Write a dictionary and a dataset to a FITS file
     Args:
-        head: The dictionary containing the header
+        header: The dictionary containing the header
+        imagetype: Type to be added to FITS header
         data: The dataset
         filename: The name of the output file
+        unit: to be set to bunit
     """
+
+    header['BUNIT'] = unit
+    header['TYPE'] = imagetype
     hdu = fits.PrimaryHDU(data)
-    hdu.header = head
-    hdu.header["ORIGIN"] = "Astrohack"
+    for key in header.keys():
+        hdu.header.set(key, header[key])
     hdu.writeto(filename, overwrite=True)
     return
 
@@ -356,10 +361,10 @@ def _check_mds_origin(file_name, file_type):
             with open(f'{file_name}/.{ftype}_attr') as json_file:
                 json_dict = json.load(json_file)
                 break
+        except FileNotFoundError:
+            json_dict = {}
+            continue
 
-        except Exception as error:
-            logger.error(str(error))
-            raise
     try:
         metadataorigin = json_dict['origin']
     except KeyError:
@@ -367,7 +372,6 @@ def _check_mds_origin(file_name, file_type):
         raise Exception('Bad metadata')
 
     return metadataorigin
-
 
 
 def _write_meta_data(origin, file_name, input_dict):
