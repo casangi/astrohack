@@ -6,7 +6,7 @@ from matplotlib import colormaps as cmaps
 
 from casacore import tables
 
-from astrohack._utils._io import _check_mds_origin
+from astrohack._utils._io import _check_mds_origin, check_if_file_exists
 from astrohack._utils._constants import length_units, trigo_units, plot_types
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
@@ -19,7 +19,6 @@ from astrohack._utils._dio import AstrohackPointFile
 
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk
-
 
 
 def open_holog(file):
@@ -272,6 +271,7 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None, unit='mm
         logger.error("export_screws parameter checking failed.")
         raise Exception("export_screws parameter checking failed.")
 
+    check_if_file_exists(panel_mds_name)
     panel_mds = AstrohackPanelFile(panel_mds_name)
     panel_mds.open()
 
@@ -380,6 +380,7 @@ def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type
         logger.error("plot_antenna parameter checking failed.")
         raise Exception("plot_antenna parameter checking failed.")
 
+    check_if_file_exists(panel_mds_name)
     panel_mds = AstrohackPanelFile(panel_mds_name)
     panel_mds.open()
     parm_dict['panel_mds'] = panel_mds
@@ -443,6 +444,7 @@ def export_to_fits(mds_name, destination, ant_name=None, ddi=None, parallel=True
         logger.error("export_screws parameter checking failed.")
         raise Exception("export_screws parameter checking failed.")
 
+    check_if_file_exists(mds_name)
     mds_origin = _check_mds_origin(mds_name, ['image', 'panel'])
 
     if mds_origin in ['combine', 'holog']:
@@ -455,6 +457,7 @@ def export_to_fits(mds_name, destination, ant_name=None, ddi=None, parallel=True
         panel_mds = AstrohackPanelFile(mds_name)
         panel_mds.open()
         parm_dict['panel_mds'] = panel_mds
+        logger.warning('Not yet functional!')
     else:
         logger.error(f"Cannot export mds_files created by {mds_origin} to FITS")
         return
@@ -466,6 +469,7 @@ def export_to_fits(mds_name, destination, ant_name=None, ddi=None, parallel=True
 
     delayed_list = []
     antennae = _parm_to_list(parm_dict['ant_name'], parm_dict['filename'])
+    count = 0
     for antenna in antennae:
         if 'ant' in antenna:
             parm_dict['this_antenna'] = antenna
@@ -477,6 +481,10 @@ def export_to_fits(mds_name, destination, ant_name=None, ddi=None, parallel=True
                         delayed_list.append(dask.delayed(chunk_function)(dask.delayed(parm_dict)))
                     else:
                         chunk_function(parm_dict)
+                    count += 1
 
     if parallel:
         dask.compute(delayed_list)
+
+    if count == 0:
+        logger.warning("No data to process")
