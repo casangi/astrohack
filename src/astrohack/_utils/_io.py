@@ -304,6 +304,7 @@ def _read_meta_data(file_name, file_type, origin):
     Args:
         file_name (str): astorhack file name.
         file_type (str): astrohack file type
+        origin (str, list): Astrohack expected origin(s)
 
     Returns:
         dict: dictionary containing dimension data.
@@ -334,6 +335,39 @@ def _read_meta_data(file_name, file_type, origin):
             raise TypeError('Incorrect file type')
 
     return json_dict
+
+
+def _check_mds_origin(file_name, file_type):
+    """
+
+    Args:
+        file_name(str): astrohack file name.
+        file_type(str, list): accepted astrohack file type
+
+    Returns: origin(str) the origin of the mds file
+
+    """
+    logger = _get_astrohack_logger()
+    if isinstance(file_type, str):
+        file_type = [file_type]
+
+    for ftype in file_type:
+        try:
+            with open(f'{file_name}/.{ftype}_attr') as json_file:
+                json_dict = json.load(json_file)
+                break
+
+        except Exception as error:
+            logger.error(str(error))
+            raise
+    try:
+        metadataorigin = json_dict['origin']
+    except KeyError:
+        logger.error("[_check_mds_origin]: Badly formatted metadata in input file")
+        raise Exception('Bad metadata')
+
+    return metadataorigin
+
 
 
 def _write_meta_data(origin, file_name, input_dict):

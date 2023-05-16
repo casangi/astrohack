@@ -651,3 +651,7 @@ def _plot_antenna_chunk(parm_dict):
         surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
         surface.plot_mask(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
         surface.plot_amplitude(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
+
+
+def _export_to_fits_panel_chunk(parm_dict):
+    return
