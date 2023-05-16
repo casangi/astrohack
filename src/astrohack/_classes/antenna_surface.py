@@ -9,7 +9,8 @@ from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar
+from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar, _axis_to_fits_header
+from astrohack._utils._io import _write_fits
 
 lnbr = "\n"
 figsize = [5, 4]
@@ -533,7 +534,8 @@ class AntennaSurface:
             title = f'{prefix.capitalize()} {labels[iplot]}'
             plotname = _add_prefix(basename, labels[iplot])
             plotname = _add_prefix(plotname, prefix)
-            self._plot_map(plotname, conversion*maps[iplot], title, vmin, vmax, unit, screws=screws, dpi=dpi)
+            self._plot_map(plotname, conversion*maps[iplot], title, vmin, vmax, unit, screws=screws, dpi=dpi,
+                           colormap=colormap, figuresize=figuresize)
 
     def _plot_map(self, filename, data, title, vmin, vmax, unit, screws=False, colormap=None, figuresize=None, dpi=300,
                   colorbar=True):
@@ -709,3 +711,34 @@ class AntennaSurface:
 
         xds = xds.assign_coords(coords)
         return xds
+
+    def export_to_fits(self, basename):
+        """
+        Data to export: Amplitude, mask, phase, phase_corrections, phase_residuals, deviations, deviation_corrections, deviation_residuals
+        conveniently all data are on the same grid!
+        Returns:
+        """
+
+        head = {
+            'PMODEL'  : self.panelmodel,
+            'PMARGIN' : self.panel_margins,
+            'CUTOFF'  : self.cut,
+            'TELESCOP': self.antenna_name,
+            'INSTRUME': self.telescope.name,
+            'WAVELENG': self.wavelength,
+            'FREQUENC': clight/self.wavelength,
+            'ORIGIN'  : 'Astrohack: panel',
+            'DATE'    : '2022-12-08'
+        }
+        head = _axis_to_fits_header(head, self.u_axis, 1, 'X')
+        head = _axis_to_fits_header(head, self.v_axis, 2, 'Y')
+
+        _write_fits(head, 'Amplitude', self.amplitude, basename + '_amplitude.fits', self.amp_unit)
+        _write_fits(head, 'Mask', np.where(self.mask, 1.0, 0), basename + '_mask.fits', '')
+        _write_fits(head, 'Original Phase', self.phase, basename + '_phase_original.fits', 'Radians')
+        _write_fits(head, 'Phase Corrections', self.phase_corrections, basename + '_phase_correction.fits', 'Radians')
+        _write_fits(head, 'Phase residuals', self.phase_residuals, basename + '_phase_residual.fits', 'Radians')
+        _write_fits(head, 'Original Deviation', self.deviation, basename + '_deviation_original.fits', 'meters')
+        _write_fits(head, 'Deviation Corrections', self.corrections, basename + '_deviation_correction.fits', 'meters')
+        _write_fits(head, 'Deviation residuals', self.residuals, basename + '_deviation_residual.fits', 'meters')
+

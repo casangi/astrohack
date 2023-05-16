@@ -654,4 +654,10 @@ def _plot_antenna_chunk(parm_dict):
 
 
 def _export_to_fits_panel_chunk(parm_dict):
+    antenna = parm_dict['this_antenna']
+    ddi = parm_dict['this_ddi']
+    destination = parm_dict['destination']
+    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi)
+    basename = f'{destination}/panel_{antenna}_{ddi}'
+    surface.export_to_fits(basename)
     return
