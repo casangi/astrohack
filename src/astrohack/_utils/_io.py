@@ -154,7 +154,6 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
                                 mapping_ant_vis_holog_data_name = os.path.join(
                                     holog_file, ddi + "/" + holog_map + "/" + ant
                                 )
-                                
 
                                 if dask_load:
                                     holog_dict[ddi][holog_map][ant] = xr.open_zarr(
@@ -360,10 +359,14 @@ def _check_mds_origin(file_name, file_type):
         try:
             with open(f'{file_name}/.{ftype}_attr') as json_file:
                 json_dict = json.load(json_file)
-                break
+                found = True
         except FileNotFoundError:
-            json_dict = {}
-            continue
+            found = False
+        if found:
+            break
+    if not found:
+        logger.error("[_check_mds_origin]: metadata not found")
+        raise Exception('Metadata not found')
 
     try:
         metadataorigin = json_dict['origin']

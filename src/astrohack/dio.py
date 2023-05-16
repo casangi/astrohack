@@ -445,7 +445,7 @@ def export_to_fits(mds_name, destination, ant_name=None, ddi=None, parallel=True
         raise Exception("export_screws parameter checking failed.")
 
     check_if_file_exists(mds_name)
-    mds_origin = _check_mds_origin(mds_name, ['image', 'panel'])
+    mds_origin = _check_mds_origin(mds_name, ['image', 'panel', 'point', 'holog'])
 
     if mds_origin in ['combine', 'holog']:
         chunk_function = _export_to_fits_holog_chunk
@@ -457,7 +457,6 @@ def export_to_fits(mds_name, destination, ant_name=None, ddi=None, parallel=True
         panel_mds = AstrohackPanelFile(mds_name)
         panel_mds.open()
         parm_dict['panel_mds'] = panel_mds
-        logger.warning('Not yet functional!')
     else:
         logger.error(f"Cannot export mds_files created by {mds_origin} to FITS")
         return

@@ -321,4 +321,6 @@ def _create_image_meta_data(image_file, input_params):
 
 
 def _export_to_fits_holog_chunk(parm_dict):
+    logger = _get_astrohack_logger()
+    logger.warning('HOLOG chunk Not yet functional!')
     return
