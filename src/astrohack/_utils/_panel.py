@@ -13,6 +13,7 @@ from astrohack._classes.antenna_surface import AntennaSurface
 # global constants
 NPAR = 10
 
+
 def _panel_chunk(panel_chunk_params):
     """
     Process a chunk of the holographies, usually a chunk consists of an antenna over a ddi
@@ -72,6 +73,7 @@ def _create_phase_model(npix, parameters, wavelength, telescope, cellxy):
     _, model = _correct_phase(dummyphase, cellxy, iNPARameters, telescope.magnification, telescope.focus,
                               telescope.surp_slope)
     return model
+
 
 def _phase_fitting_block(pols, wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
                          focus_xy_offsets, focus_z_offset, subreflector_tilt, cassegrain_offset):
