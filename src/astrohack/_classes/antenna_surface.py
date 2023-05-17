@@ -1,4 +1,3 @@
-import numpy as np
 import xarray as xr
 from matplotlib import pyplot as plt
 from matplotlib import colormaps as cmaps
@@ -726,19 +725,22 @@ class AntennaSurface:
             'TELESCOP': self.antenna_name,
             'INSTRUME': self.telescope.name,
             'WAVELENG': self.wavelength,
-            'FREQUENC': clight/self.wavelength,
-            'ORIGIN'  : 'Astrohack: panel',
-            'DATE'    : '2022-12-08'
+            'FREQUENC': clight/self.wavelength
         }
         head = _axis_to_fits_header(head, self.u_axis, 1, 'X')
         head = _axis_to_fits_header(head, self.v_axis, 2, 'Y')
 
-        _write_fits(head, 'Amplitude', self.amplitude, basename + '_amplitude.fits', self.amp_unit)
-        _write_fits(head, 'Mask', np.where(self.mask, 1.0, 0), basename + '_mask.fits', '')
-        _write_fits(head, 'Original Phase', self.phase, basename + '_phase_original.fits', 'Radians')
-        _write_fits(head, 'Phase Corrections', self.phase_corrections, basename + '_phase_correction.fits', 'Radians')
-        _write_fits(head, 'Phase residuals', self.phase_residuals, basename + '_phase_residual.fits', 'Radians')
-        _write_fits(head, 'Original Deviation', self.deviation, basename + '_deviation_original.fits', 'meters')
-        _write_fits(head, 'Deviation Corrections', self.corrections, basename + '_deviation_correction.fits', 'meters')
-        _write_fits(head, 'Deviation residuals', self.residuals, basename + '_deviation_residual.fits', 'meters')
+        _write_fits(head, 'Amplitude', self.amplitude, basename + '_amplitude.fits', self.amp_unit, 'panel')
+        _write_fits(head, 'Mask', np.where(self.mask, 1.0, np.nan), basename + '_mask.fits', '', 'panel')
+        _write_fits(head, 'Original Phase', self.phase, basename + '_phase_original.fits', 'Radians', 'panel')
+        _write_fits(head, 'Phase Corrections', self.phase_corrections, basename + '_phase_correction.fits', 'Radians',
+                    'panel')
+        _write_fits(head, 'Phase residuals', self.phase_residuals, basename + '_phase_residual.fits', 'Radians',
+                    'panel')
+        _write_fits(head, 'Original Deviation', self.deviation, basename + '_deviation_original.fits', 'meters',
+                    'panel')
+        _write_fits(head, 'Deviation Corrections', self.corrections, basename + '_deviation_correction.fits', 'meters',
+                    'panel')
+        _write_fits(head, 'Deviation residuals', self.residuals, basename + '_deviation_residual.fits', 'meters',
+                    'panel')
 

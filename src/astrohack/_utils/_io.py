@@ -4,6 +4,7 @@ import zarr
 import copy
 import numpy as np
 import xarray as xr
+import datetime
 
 from astropy.io import fits
 from astrohack import __version__ as code_version
@@ -194,7 +195,7 @@ def _read_fits(filename):
     return head, data
 
 
-def _write_fits(header, imagetype, data, filename, unit):
+def _write_fits(header, imagetype, data, filename, unit, origin):
     """
     Write a dictionary and a dataset to a FITS file
     Args:
@@ -207,6 +208,8 @@ def _write_fits(header, imagetype, data, filename, unit):
 
     header['BUNIT'] = unit
     header['TYPE'] = imagetype
+    header['ORIGIN'] = f'Astrohack v{code_version}: {origin}'
+    header['DATE'] = datetime.datetime.now().strftime('%b %d %Y, %H:%M:%S')
     hdu = fits.PrimaryHDU(data)
     for key in header.keys():
         hdu.header.set(key, header[key])
