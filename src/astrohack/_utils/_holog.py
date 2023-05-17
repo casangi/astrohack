@@ -368,40 +368,45 @@ def _export_to_fits_holog_chunk(parm_dict):
         logger.error("Data with multiple times not supported for FITS export")
         raise Exception("Data with multiple times not supported for FITS export")
 
-    baseheader = _axis_to_fits_header(baseheader, inputxds.chan.values, 1, 'Frequency')
-    baseheader = _axis_to_fits_header(baseheader, np.arange(len(inputxds.pol)), 2, 'Polarization')
+    carta_dim_order = (1, 0, 2, 3, )
 
-    beamheader = _axis_to_fits_header(baseheader, inputxds.l.values, 3, 'L')
-    beamheader = _axis_to_fits_header(beamheader, inputxds.m.values, 4, 'M')
+    baseheader = _axis_to_fits_header(baseheader, inputxds.chan.values, 3, 'Frequency', 'Hz')
+    baseheader = _axis_to_fits_header(baseheader, np.arange(len(inputxds.pol)), 4, 'Stokes', '')
+
+    beamheader = _axis_to_fits_header(baseheader, inputxds.l.values, 1, 'L', 'rad')
+    beamheader = _axis_to_fits_header(beamheader, inputxds.m.values, 2, 'M', 'rad')
+    transpobeam = np.transpose(inputxds['BEAM'][0, ...].values, carta_dim_order)
     if parm_dict['complex_split'] == 'cartesian':
-        _write_fits(beamheader, 'Complex beam real part', inputxds['BEAM'][0, ...].real, basename + '_beam_real.fits',
-                    'Normalized', 'image')
-        _write_fits(beamheader, 'Complex beam imag part', inputxds['BEAM'][0, ...].imag, basename + '_beam_imag.fits',
-                    'Normalized', 'image')
+        _write_fits(beamheader, 'Complex beam real part', transpobeam.real, basename + '_beam_real.fits', 'Normalized',
+                    'image')
+        _write_fits(beamheader, 'Complex beam imag part', transpobeam.imag, basename + '_beam_imag.fits', 'Normalized',
+                    'image')
     else:
-        _write_fits(beamheader, 'Complex beam amplitude', np.absolute(inputxds['BEAM'][0, ...]),
+        _write_fits(beamheader, 'Complex beam amplitude', np.absolute(transpobeam),
                     basename + '_beam_amplitude.fits', 'Normalized', 'image')
-        _write_fits(beamheader, 'Complex beam phase', np.angle(inputxds['BEAM'][0, ...]), basename + '_beam_phase.fits',
+        _write_fits(beamheader, 'Complex beam phase', np.angle(transpobeam), basename + '_beam_phase.fits',
                     'Radians', 'image')
 
-    apertureheader = _axis_to_fits_header(baseheader, inputxds.u.values, 3, 'X')
-    apertureheader = _axis_to_fits_header(apertureheader, inputxds.v.values, 4, 'Y')
+    apertureheader = _axis_to_fits_header(baseheader, inputxds.u.values, 1, 'X', 'm')
+    apertureheader = _axis_to_fits_header(apertureheader, inputxds.v.values, 2, 'Y', 'm')
+    transpoaper = np.transpose(inputxds['APERTURE'][0, ...].values, carta_dim_order)
     if parm_dict['complex_split'] == 'cartesian':
-        _write_fits(apertureheader, 'Complex aperture real part', inputxds['APERTURE'][0, ...].real,
+        _write_fits(apertureheader, 'Complex aperture real part', transpoaper.real,
                     basename + '_aperture_real.fits', 'Normalized', 'image')
-        _write_fits(apertureheader, 'Complex aperture imag part', inputxds['APERTURE'][0, ...].imag,
+        _write_fits(apertureheader, 'Complex aperture imag part', transpoaper.imag,
                     basename + '_aperture_imag.fits', 'Normalized', 'image')
     else:
-        _write_fits(apertureheader, 'Complex aperture amplitude', np.absolute(inputxds['APERTURE'][0, ...]),
+        _write_fits(apertureheader, 'Complex aperture amplitude', np.absolute(transpoaper),
                     basename + '_aperture_amplitude.fits', 'Normalized', 'image')
-        _write_fits(apertureheader, 'Complex aperture phase', np.angle(inputxds['APERTURE'][0, ...]),
-                    basename + '_aperture_phase.fits', 'Radians', 'image')
+        _write_fits(apertureheader, 'Complex aperture phase', np.angle(transpoaper),
+                    basename + '_aperture_phase.fits', 'rad', 'image')
 
-    phase_amp_header = _axis_to_fits_header(baseheader, inputxds.u_prime.values, 3, 'X')
-    phase_amp_header = _axis_to_fits_header(phase_amp_header, inputxds.v_prime.values, 4, 'Y')
-
-    _write_fits(phase_amp_header, 'Cropped aperture amplitude', inputxds['AMPLITUDE'][0, ...],
-                basename + '_amplitude.fits', 'Normalized', 'image')
-    _write_fits(phase_amp_header, 'Cropped aperture corrected phase', inputxds['CORRECTED_PHASE'][0, ...],
-                basename + '_corrected_phase.fits', 'Radians', 'image')
+    phase_amp_header = _axis_to_fits_header(baseheader, inputxds.u_prime.values, 1, 'X', 'm')
+    phase_amp_header = _axis_to_fits_header(phase_amp_header, inputxds.v_prime.values, 2, 'Y', 'm')
+    transpoamp = np.transpose(inputxds['AMPLITUDE'][0, ...].values, carta_dim_order)
+    _write_fits(phase_amp_header, 'Cropped aperture amplitude', transpoamp, basename + '_amplitude.fits',
+                'Normalized', 'image')
+    transpopha = np.transpose(inputxds['CORRECTED_PHASE'][0, ...].values, carta_dim_order)
+    _write_fits(phase_amp_header, 'Cropped aperture corrected phase', transpopha, basename + '_corrected_phase.fits',
+                'rad', 'image')
     return
