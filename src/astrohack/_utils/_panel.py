@@ -633,6 +633,11 @@ def _compute_phase_rms_block(phase_image):
 
 
 def _plot_antenna_chunk(parm_dict):
+    """
+    Chunk function for the user facing function plot_antenna
+    Args:
+        parm_dict: parameter dictionary
+    """
     antenna = parm_dict['this_antenna']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
@@ -654,6 +659,11 @@ def _plot_antenna_chunk(parm_dict):
 
 
 def _export_to_fits_panel_chunk(parm_dict):
+    """
+    Panel side chunk function for the user facing function export_to_fits
+    Args:
+        parm_dict: parameter dictionary
+    """
     antenna = parm_dict['this_antenna']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
