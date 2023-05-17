@@ -408,13 +408,15 @@ def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type
         dask.compute(delayed_list)
 
 
-def export_to_fits(mds_name, destination, ant_name=None, ddi=None, parallel=True):
+def export_to_fits(mds_name, destination, complex_split='cartesian', ant_name=None, ddi=None, parallel=True):
     """ Export contents of an Astrohack MDS file to several FITS files in the destination folder
 
     :param mds_name: Input panel_mds file
     :type mds_name: str
     :param destination: Name of the destination folder to contain plots
     :type destination: str
+    :param complex_split: How to split complex data, cartesian (real + imaginary) or polar (amplitude + phase)
+    :type complex_split: str
     :param ant_name: List of antennae/antenna to be plotted, defaults to "all" when None
     :type ant_name: list or str, optional, ex. ant_ea25
     :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
@@ -430,9 +432,12 @@ def export_to_fits(mds_name, destination, ant_name=None, ddi=None, parallel=True
                  'ant_name': ant_name,
                  'ddi': ddi,
                  'destination': destination,
+                 'complex_split': complex_split,
                  'parallel': parallel}
 
     parms_passed = _check_parms(parm_dict, 'filename', [str], default=None)
+    parms_passed = parms_passed and _check_parms(parm_dict, 'complex_split', [str],
+                                                 acceptable_data=['cartesian', 'polar'], default="cartesian")
     parms_passed = parms_passed and _check_parms(parm_dict, 'ant_name', [list], list_acceptable_data_types=[str],
                                                  default='all')
     parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list], list_acceptable_data_types=[str],
