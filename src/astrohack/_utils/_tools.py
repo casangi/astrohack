@@ -189,7 +189,7 @@ def _split_pointing_table(ms_name, antennas):
     )
 
 
-def _axis_to_fits_header(header, axis, iaxis, axistype):
+def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
     """
     Process an axis to create a FITS compatible linear axis description
     Args:
@@ -214,8 +214,12 @@ def _axis_to_fits_header(header, axis, iaxis, axistype):
         if absdiff > 1e-7:
             logger.error('Axis is not linear!')
             raise Exception
-    ref = naxis//2
-    val = axis[ref]
+    if axistype == 'Stokes':
+        ref = 0.0
+        val = 'I'
+    else:
+        ref = naxis//2
+        val = axis[ref]
 
     header[f'NAXIS{iaxis}'] = naxis
     header[f'CRVAL{iaxis}'] = val
@@ -223,6 +227,7 @@ def _axis_to_fits_header(header, axis, iaxis, axistype):
     header[f'CRPIX{iaxis}'] = ref
     header[f'CROTA{iaxis}'] = 0.
     header[f'CTYPE{iaxis}'] = axistype
+    header[f'CUNIT{iaxis}'] = unit
     return header
 
 
