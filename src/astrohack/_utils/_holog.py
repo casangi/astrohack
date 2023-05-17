@@ -1,5 +1,4 @@
 import scipy
-import json
 import numpy as np
 import xarray as xr
 
@@ -7,8 +6,8 @@ from scipy.interpolate import griddata
 
 from astrohack._classes.telescope import Telescope
 
-from astrohack._utils._io import _load_holog_file
-from astrohack._utils._io import _read_meta_data, _write_meta_data
+from astrohack._utils._io import _load_holog_file, _load_image_xds
+from astrohack._utils._io import _read_meta_data, _write_meta_data, _write_fits
 
 from astrohack._utils._panel import _phase_fitting_block
 
@@ -18,6 +17,8 @@ from astrohack._utils._algorithms import _find_nearest
 from astrohack._utils._algorithms import _calc_coords
 
 from astrohack._utils._conversion import _to_stokes
+from astrohack._utils._constants import clight
+from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header
 
 from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk
@@ -321,6 +322,54 @@ def _create_image_meta_data(image_file, input_params):
 
 
 def _export_to_fits_holog_chunk(parm_dict):
+    """
+    Holog side chunk function for the user facing function export_to_fits
+    Args:
+        parm_dict: parameter dictionary
+    """
     logger = _get_astrohack_logger()
     logger.warning('HOLOG chunk Not yet functional!')
+
+    inputxds = _load_image_xds(parm_dict['filename'], parm_dict['this_antenna'], parm_dict['this_ddi'], dask_load=False)
+    metadata = parm_dict['holog_mds']._meta_data
+
+    antenna = parm_dict['this_antenna']
+    ddi = parm_dict['this_ddi']
+    destination = parm_dict['destination']
+    basename = f'{destination}/image_{antenna}_{ddi}'
+
+    nchan = len(inputxds.chan)
+    if nchan == 1:
+        reffreq = inputxds.chan.values[0]
+    else:
+        reffreq = inputxds.chan.values[nchan//2]
+    telname = inputxds.attrs['telescope_name']
+    if telname in ['EVLA', 'VLA', 'JVLA']:
+        telname = 'VLA'
+    polist = []
+    for pol in inputxds.pol:
+        polist.append(str(pol.values))
+    baseheader = {
+        'STOKES'  : ", ".join(polist),
+        'WAVELENG': clight/reffreq,
+        'FREQUENC': reffreq,
+        'TELESCOP': inputxds.attrs['ant_name'],
+        'INSTRUME': telname,
+        'TIME_CEN': inputxds.attrs['time_centroid'],
+        'PADDING' : metadata['padding_factor'],
+        'GRD_INTR': metadata['grid_interpolation_mode'],
+        'CHAN_AVE': _bool_to_string(metadata['chan_average']),
+        'CHAN_TOL': metadata['chan_tolerance_factor'],
+        'SCAN_AVE': _bool_to_string(metadata['scan_average']),
+        'TO_STOKE': _bool_to_string(metadata['to_stokes']),
+    }
+    baseheader = _axis_to_fits_header(baseheader, inputxds.time.values, 1, 'Time')
+    baseheader = _axis_to_fits_header(baseheader, inputxds.chan.values, 2, 'Frequency')
+    baseheader = _axis_to_fits_header(baseheader, np.arange(len(inputxds.pol)), 3, 'Polarization')
+
+    beamheader = _axis_to_fits_header(baseheader, inputxds.l.values, 4, 'L')
+    beamheader = _axis_to_fits_header(beamheader, inputxds.m.values, 5, 'M')
+    _write_fits(beamheader, 'Complex beam', inputxds['BEAM'].real, basename + '_beam_real.fits', 'Normal', 'image')
+    _write_fits(beamheader, 'Complex beam', inputxds['BEAM'].imag, basename + '_beam_imag.fits', 'Normal', 'image')
+
     return
