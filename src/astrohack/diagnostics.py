@@ -1,5 +1,5 @@
-from astrohack._utils._diagnostics import _the_plotly_inspection_function
-from astrohack._utils._diagnostics import _the_matplotlib_inspection_function
+from astrohack._utils._diagnostics import _plotly_calibration_inspection_function
+from astrohack._utils._diagnostics import _matplotlib_calibration_inspection_function
 
 def inspect_calibration_plots(data, delta=0.01, pol='RR', width=1000, height=450, type='matplotlib'):
   """ Wrapper function around backend plotting functions for calibration inspection.
@@ -13,11 +13,12 @@ def inspect_calibration_plots(data, delta=0.01, pol='RR', width=1000, height=450
       type (str, optional): Plot package to use. Defaults to matplotlib.
   """
 
+
   if type == 'plotly':
-    return _the_plotly_inspection_function(data, delta=0.01, pol='RR', width=width, height=height)
+    return _plotly_calibration_inspection_function(data, delta=delta, pol=pol, width=width, height=height)
   
   else:
-    return _the_matplotlib_inspection_function(data, delta=0.01, pol='RR', width=width, height=height)
+    return _matplotlib_calibration_inspection_function(data, delta=delta, pol=pol, width=width, height=height)
   
   
 

@@ -20,7 +20,7 @@ def _extract_indicies(l, m, squared_radius):
             
     return np.array(indicies)
 
-def _the_matplotlib_inspection_function(data, delta=0.01, pol='RR', width=1000, height=450):
+def _matplotlib_calibration_inspection_function(data, delta=0.01, pol='RR', width=1000, height=450):
   import matplotlib.pyplot as plt
 
   pixels = 1/plt.rcParams['figure.dpi']
@@ -64,7 +64,7 @@ def _the_matplotlib_inspection_function(data, delta=0.01, pol='RR', width=1000, 
         
         axis[1].legend()    
     
-def _the_plotly_inspection_function(data, delta=0.01, pol='RR', width=1000, height=450):
+def _plotly_calibration_inspection_function(data, delta=0.01, pol='RR', width=1000, height=450):
     import plotly.graph_objects as go
     import plotly.express as px
     
