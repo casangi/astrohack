@@ -6,12 +6,35 @@ import json
 
 
 def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
+    """
+    Adds a well positioned colorbar to a plot
+    Args:
+        ax: Axes instance to add the colorbar
+        fig: Figure in which the axes are embedded
+        image: The plt.imshow instance associated to the colorbar
+        label: Colorbar label
+        location: Colorbar location
+        size: Colorbar size
+        pad: Colorbar padding
+
+    Returns: the well positioned colorbar
+
+    """
     divider = make_axes_locatable(ax)
     cax = divider.append_axes(location, size=size, pad=pad)
     return fig.colorbar(image, label=label, cax=cax)
 
 
 def _remove_suffix(input_string, suffix):
+    """
+    Removes extension suffixes from file names
+    Args:
+        input_string: filename string
+        suffix: The suffix to be removed
+
+    Returns: the input string minus suffix
+
+    """
     if suffix and input_string.endswith(suffix):
         return input_string[:-len(suffix)]
     return input_string
@@ -41,6 +64,16 @@ def _jsonify(holog_obj):
 
 
 def _add_prefix(input_string, prefix):
+    """
+    Adds a prefix to a string filename, if the filename is a path with /, adds the prefix to the actual filename at the
+    end of the path
+    Args:
+        input_string: filename or file path
+        prefix: prefix to be added to the filename
+
+    Returns: filename or path plus prefix added to the filename
+
+    """
     wrds = input_string.split('/')
     wrds[-1] = prefix+'_'+wrds[-1]
     return '/'.join(wrds)
@@ -86,6 +119,15 @@ def _print_holog_obs_dict(holog_obj):
 
 
 def _parm_to_list(parm, path):
+    """
+    Transforms a string parameter to a list if parameter is all or a single string
+    Args:
+        parm: string or list parameter
+        path: Path to complete parameter with values if parameter is 'all'
+
+    Returns: parameter value converter to a list
+
+    """
     if parm == 'all':
         oulist = os.listdir(path)
     elif isinstance(parm, str):
@@ -148,6 +190,17 @@ def _split_pointing_table(ms_name, antennas):
 
 
 def _axis_to_fits_header(header, axis, iaxis, axistype):
+    """
+    Process an axis to create a FITS compatible linear axis description
+    Args:
+        header: The header to add the axis description to
+        axis: The axis to be described in the header
+        iaxis: The position of the axis in the data
+        axistype: Axis type to be displayed in the fits header
+
+    Returns: The augmented header
+
+    """
     logger = _get_astrohack_logger()
     naxis = len(axis)
     inc = axis[1] - axis[0]
@@ -168,3 +221,18 @@ def _axis_to_fits_header(header, axis, iaxis, axistype):
     header[f'CROTA{iaxis}'] = 0.
     header[f'CTYPE{iaxis}'] = axistype
     return header
+
+
+def _bool_to_string(flag):
+    """
+    Converts a boolean to a yes or no string
+    Args:
+        flag: boolean to be converted to string
+
+    Returns: 'yes' or 'no'
+
+    """
+    if flag:
+        return 'yes'
+    else:
+        return 'no'
