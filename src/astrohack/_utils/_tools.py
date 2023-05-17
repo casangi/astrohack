@@ -203,14 +203,17 @@ def _axis_to_fits_header(header, axis, iaxis, axistype):
     """
     logger = _get_astrohack_logger()
     naxis = len(axis)
-    inc = axis[1] - axis[0]
-    if inc == 0:
-        logger.error('Axis increment is zero valued')
-        raise Exception
-    absdiff = abs((axis[-1]-axis[-2])-inc)/inc
-    if absdiff > 1e-7:
-        logger.error('Axis is not linear!')
-        raise Exception
+    if naxis == 1:
+        inc = axis[0]
+    else:
+        inc = axis[1] - axis[0]
+        if inc == 0:
+            logger.error('Axis increment is zero valued')
+            raise Exception
+        absdiff = abs((axis[-1]-axis[-2])-inc)/inc
+        if absdiff > 1e-7:
+            logger.error('Axis is not linear!')
+            raise Exception
     ref = naxis//2
     val = axis[ref]
 
