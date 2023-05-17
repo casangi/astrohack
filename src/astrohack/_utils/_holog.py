@@ -369,7 +369,23 @@ def _export_to_fits_holog_chunk(parm_dict):
 
     beamheader = _axis_to_fits_header(baseheader, inputxds.l.values, 4, 'L')
     beamheader = _axis_to_fits_header(beamheader, inputxds.m.values, 5, 'M')
-    _write_fits(beamheader, 'Complex beam', inputxds['BEAM'].real, basename + '_beam_real.fits', 'Normal', 'image')
-    _write_fits(beamheader, 'Complex beam', inputxds['BEAM'].imag, basename + '_beam_imag.fits', 'Normal', 'image')
+    _write_fits(beamheader, 'Complex beam real part', inputxds['BEAM'].real, basename + '_beam_real.fits', 'Normalized',
+                'image')
+    _write_fits(beamheader, 'Complex beam imag part', inputxds['BEAM'].imag, basename + '_beam_imag.fits', 'Normalized',
+                'image')
 
+    apertureheader = _axis_to_fits_header(baseheader, inputxds.u.values, 4, 'X')
+    apertureheader = _axis_to_fits_header(apertureheader, inputxds.v.values, 5, 'Y')
+    _write_fits(apertureheader, 'Complex aperture real part', inputxds['APERTURE'].real,
+                basename + '_aperture_real.fits', 'Normalized', 'image')
+    _write_fits(apertureheader, 'Complex aperture imag part', inputxds['APERTURE'].imag,
+                basename + '_aperture_imag.fits', 'Normalized', 'image')
+
+    phase_amp_header = _axis_to_fits_header(baseheader, inputxds.u_prime.values, 4, 'X')
+    phase_amp_header = _axis_to_fits_header(phase_amp_header, inputxds.v_prime.values, 5, 'Y')
+
+    _write_fits(phase_amp_header, 'Cropped aperture amplitude', inputxds['AMPLITUDE'],
+                basename + '_amplitude.fits', 'Normalized', 'image')
+    _write_fits(phase_amp_header, 'Cropped aperture corrected phase', inputxds['CORRECTED_PHASE'],
+                basename + '_corrected_phase.fits', 'Radians', 'image')
     return
