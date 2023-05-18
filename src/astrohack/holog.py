@@ -144,10 +144,10 @@ def holog(
         
     logger.info('Mapping antennas ' + str(holog_params['ant_list']))
 
-    
     if (holog_params["cell_size"] is None):
         cell_size = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
         holog_params["cell_size"] = cell_size
+        print('Hallo')
     
     if  (holog_params["grid_size"] is None):
         n_pix = int(np.sqrt(meta_data["n_pix"]))
@@ -155,12 +155,13 @@ def holog(
         holog_params["grid_size"] = grid_size
     
     
-    
     logger.info("Cell size: " + str(cell_size) + " Grid size " + str(grid_size))
     json_data = {
             "cell_size": holog_params["cell_size"].tolist(),
             "grid_size": holog_params["grid_size"].tolist()
     }
+    
+    print(holog_params["grid_size"])
     
     with open(".holog_diagnostic.json", "w") as out_file:
         json.dump(json_data, out_file)
@@ -225,12 +226,16 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
     parms_passed = parms_passed and _check_parms(holog_params, 'holog_file', [str],default=None)
 
     parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list, np.ndarray], list_acceptable_data_types=[np.int64, int], list_len=2, default='None',log_default_setting=False)
-    if (isinstance(holog_params['grid_size'],str)) and (holog_params['grid_size'] == 'None'): holog_params['grid_size'] =  None
-    holog_params['grid_size'] = np.array(holog_params['grid_size'])
+    if (isinstance(holog_params['grid_size'],str)) and (holog_params['grid_size'] == 'None'):
+        holog_params['grid_size'] =  None
+    else:
+        holog_params['grid_size'] = np.array(holog_params['grid_size'])
 
     parms_passed = parms_passed and _check_parms(holog_params, 'cell_size', [list,np.ndarray], list_acceptable_data_types=[numbers.Number], list_len=2, default='None',log_default_setting=False)
-    if (isinstance(holog_params['cell_size'],str)) and (holog_params['cell_size'] == 'None'): holog_params['cell_size'] =  None
-    holog_params['cell_size'] = np.array(holog_params['cell_size'])
+    if (isinstance(holog_params['cell_size'],str)) and (holog_params['cell_size'] == 'None'):
+        holog_params['cell_size'] =  None
+    else:
+        holog_params['cell_size'] = np.array(holog_params['cell_size'])
 
     
     base_name = _remove_suffix(holog_params['holog_file'],'.holog.zarr')
