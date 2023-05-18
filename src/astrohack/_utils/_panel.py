@@ -674,3 +674,20 @@ def _export_to_fits_panel_chunk(parm_dict):
     basename = f'{destination}/panel_{antenna}_{ddi}'
     surface.export_to_fits(basename)
     return
+
+
+def _export_screws_chunk(parm_dict):
+    """
+    Chunk function for the user facing function export_screws
+    Args:
+        parm_dict: parameter dictionary
+    """
+    antenna = parm_dict['this_antenna']
+    ddi = parm_dict['this_ddi']
+    export_name = parm_dict['destination'] + f'/screws_{antenna}_{ddi}.'
+    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi)
+    surface.export_screws(export_name + 'csv', unit=parm_dict['unit'])
+    if parm_dict['plot_map']:
+        surface.plot_screw_adjustments(export_name + 'png', unit=parm_dict['unit'], threshold=parm_dict['threshold'],
+                                       colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'],
+                                       dpi=parm_dict['dpi'])

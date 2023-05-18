@@ -17,7 +17,7 @@ from astrohack._utils._dio import AstrohackHologFile
 from astrohack._utils._dio import AstrohackPanelFile
 from astrohack._utils._dio import AstrohackPointFile
 
-from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk
+from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk
 
 
@@ -280,20 +280,7 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None, unit='mm
     except FileExistsError:
         logger.warning('Destination folder already exists, results may be overwritten')
 
-    antennae = _parm_to_list(parm_dict['ant_name'], parm_dict['filename'])
-    for antenna in antennae:
-        if 'ant' in antenna:
-            ddis = _parm_to_list(parm_dict['ddi'], parm_dict['filename'] + '/' + antenna)
-            for ddi in ddis:
-                if 'ddi' in ddi:
-                    export_name = parm_dict['destination'] + f'/screws_{antenna}_{ddi}.'
-                    surface = panel_mds.get_antenna(antenna, ddi)
-                    surface.export_screws(export_name + 'csv', unit=unit)
-                    if parm_dict['plot_map']:
-                        surface.plot_screw_adjustments(export_name + 'png', unit=unit, threshold=parm_dict['threshold'],
-                                                       colormap=parm_dict['colormap'],
-                                                       figuresize=parm_dict['figuresize'],
-                                                       dpi=parm_dict['dpi'])
+    _factorized_antenna_ddi_loop('export_screws', _export_screws_chunk, parm_dict, False)
 
 
 def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type='deviation', plot_screws=False,
