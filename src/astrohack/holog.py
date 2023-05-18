@@ -147,7 +147,6 @@ def holog(
     if (holog_params["cell_size"] is None):
         cell_size = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
         holog_params["cell_size"] = cell_size
-        print('Hallo')
     
     if  (holog_params["grid_size"] is None):
         n_pix = int(np.sqrt(meta_data["n_pix"]))
