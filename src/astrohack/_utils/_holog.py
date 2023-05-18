@@ -109,7 +109,6 @@ def _holog_chunk(holog_chunk_params):
 
 
         time_centroid_index = ant_data_dict[ddi][holog_map].dims["time"] // 2
-
         time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
 
         for chan in range(n_chan): ### Todo: Vectorize holog_map and channel axis
@@ -117,9 +116,10 @@ def _holog_chunk(holog_chunk_params):
                 xx_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
                 yy_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
             except:
-                center_pixel = np.array(beam_grid.shape[0:2])//2
+                center_pixel = np.array(beam_grid.shape[-2:])//2
                 xx_peak = beam_grid[holog_map_index, chan, 0, center_pixel[0], center_pixel[1]]
                 yy_peak = beam_grid[holog_map_index, chan, 3, center_pixel[0], center_pixel[1]]
+
             normalization = np.abs(0.5 * (xx_peak + yy_peak))
             beam_grid[holog_map_index, chan, ...] /= normalization
 
@@ -192,7 +192,6 @@ def _holog_chunk(holog_chunk_params):
     phase_corrected_angle = np.zeros_like(phase)
     u_prime = u[start_cut[0]:end_cut[0]]
     v_prime = v[start_cut[1]:end_cut[1]]
-    
 
     phase_fit_par = holog_chunk_params["phase_fit"]
     if isinstance(phase_fit_par, bool):
