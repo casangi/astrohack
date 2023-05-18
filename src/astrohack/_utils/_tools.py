@@ -1,8 +1,11 @@
 import os
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-import numpy as np
 import json
 
+import numpy as np
+
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
     divider = make_axes_locatable(ax)
@@ -43,42 +46,45 @@ def _add_prefix(input_string, prefix):
     return '/'.join(wrds)
 
 def _print_holog_obs_dict(holog_obj):
+    logger = _get_astrohack_logger()
+    
     OPEN_DICT  = ":{"
     CLOSE_DICT = "}"
     
     OPEN_LIST  = ":["
     CLOSE_LIST = "]"
 
-    print("\n\n| ********************************************************** |")
-    print("|                 HOLOG OBSERVATION DICTIONARY               |")
-    print("| ********************************************************** |\n\n")
+    logger.info("| ********************************************************** |")
+    logger.info("|                 HOLOG OBSERVATION DICTIONARY               |")
+    logger.info("| ********************************************************** |\n\n")
     
     for ddi_key, ddi_value in holog_obj.items():
-        print("{ddi_key} {open_bracket}".format(ddi_key=ddi_key, open_bracket=OPEN_DICT))
+        logger.info("{ddi_key} {open_bracket}".format(ddi_key=ddi_key, open_bracket=OPEN_DICT))
         for map_key, map_value in holog_obj[ddi_key].items():
-            print("{map_key: >10} {open_bracket}".format(map_key=map_key, open_bracket=OPEN_DICT))
+            logger.info("{map_key: >10} {open_bracket}".format(map_key=map_key, open_bracket=OPEN_DICT))
             for attr_key, attr_value in holog_obj[ddi_key][map_key].items():
                 if "scans" in attr_key:
-                    print("{attr_key: >12}: {open_list}".format(attr_key=attr_key, open_list=OPEN_LIST))
+                    logger.info("{attr_key: >12} {open_list}".format(attr_key=attr_key, open_list=OPEN_LIST))
     
                     scan_list = ", ".join(list(map(str, holog_obj[ddi_key][map_key][attr_key])))
-                    print("{scan: >18}".format(scan=scan_list))                                   # The print just ification in notebook is weird on this and seems to move according to list length ...
-                    print("{close_bracket: >10}".format(close_bracket=CLOSE_LIST))
+                    logger.info("{scan: >18}".format(scan=scan_list))                                   # The print just ification in notebook is weird on this and seems to move according to list length ...
+                    logger.info("{close_bracket: >10}".format(close_bracket=CLOSE_LIST))
                 
                 elif "ant" in attr_key:
-                    print("{attr_key: >12} {open_bracket}".format(attr_key=attr_key, open_bracket=OPEN_DICT))
+                    logger.info("{attr_key: >12} {open_bracket}".format(attr_key=attr_key, open_bracket=OPEN_DICT))
                     for ant_key, ant_value in holog_obj[ddi_key][map_key][attr_key].items():
-                        print("{ant_key: >18} {open_list}".format(ant_key=ant_key, open_list=OPEN_LIST))
-                        print("{antenna: >25}".format( antenna=", ".join(holog_obj[ddi_key][map_key][attr_key]) ))
-                        print("{close_list: >15}".format(close_list=CLOSE_LIST))
+                        logger.info("{ant_key: >18} {open_list}".format(ant_key=ant_key, open_list=OPEN_LIST))
+                        logger.info("{antenna: >25}".format( antenna=", ".join(ant_value) ))
+                        logger.info("{close_list: >15}".format(close_list=CLOSE_LIST))
                     
-                    print("{close_bracket: >10}".format(close_bracket=CLOSE_DICT))
+                    logger.info("{close_bracket: >10}".format(close_bracket=CLOSE_DICT))
 
                 else:
                     pass
-        print("{close_bracket: >5}".format(close_bracket=CLOSE_DICT))
+        logger.info("{close_bracket: >5}".format(close_bracket=CLOSE_DICT))
         
-    print("{close_bracket}".format(close_bracket=CLOSE_DICT))
+    logger.info("{close_bracket}".format(close_bracket=CLOSE_DICT))
+
 
 def _parm_to_list(parm, path):
     if parm == 'all':
