@@ -10,7 +10,7 @@ from casacore import tables as ctables
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._io import _write_meta_data
-from astrohack._utils._algorithms import _get_grid_parms
+from astrohack._utils._algorithms import _get_grid_parms, _significant_digits
 
 from astrohack._utils._io import _load_point_file
 
@@ -344,6 +344,10 @@ def _create_holog_file(
                 pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, dims=["time", "lm"]
             )
             
+            xds["IDEAL_DIRECTIONAL_COSINES"] = xr.DataArray(
+                pnt_map_dict[map_ant_tag]["POINTING_OFFSET"].values, dims=["time", "lm"]
+            )
+            
             xds.attrs["holog_map_key"] = holog_map_key
             #xds.attrs["ant_id"] = map_ant_tag
             xds.attrs["ddi"] = ddi
@@ -406,6 +410,7 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos,
                     if ddi not in holog_obs_dict:
                             holog_obs_dict[ddi] = {}
                     for ant_map_id, scan_list in map_dict.items():
+                        #logger.debug('ant name ' + ant_name + ' scan list' + str(scan_list))
                         if scan_list:
                             map_key = _check_if_array_in_dict(mapping_scans_dict,scan_list)
                             if not map_key:
@@ -417,7 +422,7 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos,
                                 holog_obs_dict[ddi][map_key] = {'scans':np.array(scan_list),'ant':{}}
                                                         
                             holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
-       
+
     # If users specifies a baseline_average_distance we need to create an antenna distance matrix.
     if baseline_average_distance != 'ALL':
         import pandas as pd
@@ -431,6 +436,8 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos,
         for map_id, map_dict in ddi_dict.items():
             map_ant_set = set(map_dict['ant'].keys())
             ref_ant_set = ant_names_set - map_ant_set
+            
+            #logger.debug('ant_names_set ' + str(ant_names_set) + 'map_ant_set ' + str(map_ant_set) + 'ref_ant_set ' + str(ref_ant_set))
 
             map_ant_keys = list(map_dict['ant'].keys()) #Need a copy because of del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] below.
             for map_ant_key in map_ant_keys:
@@ -451,7 +458,7 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos,
                 else:
                     del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] #Don't want mapping antennas with no reference antennas.
                     logger.warning('DDI ' + str(ddi) + ' and mapping antenna ' + str(map_ant_key) + ' has no reference antennas.')
-                     
+    
     return holog_obs_dict
 
 
@@ -520,8 +527,9 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
                             cell_sizes.append(xds.attrs["grid_parms"]["cell_size"])
                             n_pixs.append(xds.attrs["grid_parms"]["n_pix"])
                             telescope_names.append(xds.attrs['telescope_name'])
-
-    if not (len(set(cell_sizes)) == 1):
+    
+    cell_sizes_sigfigs =  _significant_digits(cell_sizes,digits=3)
+    if not (len(set(cell_sizes_sigfigs)) == 1):
         logger.error('Cell size not consistant: ' + str(cell_sizes))
         raise
         
@@ -540,7 +548,7 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
     except Exception as error:
         logger.error("[_create_holog_meta_data] {error}".format(error=error))
 
-    meta_data = {'cell_size': cell_sizes[0],
+    meta_data = {'cell_size': np.mean(cell_sizes),
                  'n_pix': n_pixs[0],
                  'telescope_name': telescope_names[0]}
     meta_data.update(input_params)

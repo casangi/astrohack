@@ -34,7 +34,6 @@ from astrohack._utils._parm_utils._check_parms import _check_parms
 
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._tools import _jsonify
-from astrohack._utils._tools import _print_holog_obs_dict
 
 from astrohack._utils._dio import AstrohackHologFile
 
@@ -243,7 +242,8 @@ def extract_holog(
         
         holog_obs_dict = holog_obs_dict_with_ddi
             
-    _print_holog_obs_dict(holog_obs_dict)
+    from pprint import pformat
+    logger.info("holog_obs_dict: \n%s", pformat(holog_obs_dict,indent=1,width=1))
 
 
     outfile_obj = copy.deepcopy(holog_obs_dict)
