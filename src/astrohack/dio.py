@@ -10,7 +10,7 @@ from astrohack._utils._io import _check_mds_origin, check_if_file_exists
 from astrohack._utils._constants import length_units, trigo_units, plot_types
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _parm_to_list
+from astrohack._utils._tools import _parm_to_list, _factorized_antenna_ddi_loop
 
 from astrohack._utils._dio import AstrohackImageFile
 from astrohack._utils._dio import AstrohackHologFile
@@ -390,22 +390,7 @@ def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type
     except FileExistsError:
         logger.warning('Destination folder already exists, results may be overwritten')
 
-    delayed_list = []
-    antennae = _parm_to_list(parm_dict['ant_name'], parm_dict['filename'])
-    for antenna in antennae:
-        if 'ant' in antenna:
-            parm_dict['this_antenna'] = antenna
-            ddis = _parm_to_list(parm_dict['ddi'], parm_dict['filename'] + '/' + antenna)
-            for ddi in ddis:
-                if 'ddi' in ddi:
-                    parm_dict['this_ddi'] = ddi
-                    if parallel:
-                        delayed_list.append(dask.delayed(_plot_antenna_chunk)(dask.delayed(parm_dict)))
-                    else:
-                        _plot_antenna_chunk(parm_dict)
-
-    if parallel:
-        dask.compute(delayed_list)
+    _factorized_antenna_ddi_loop('plot_antenna', _plot_antenna_chunk, parm_dict, parallel)
 
 
 def export_to_fits(mds_name, destination, complex_split='cartesian', ant_name=None, ddi=None, parallel=True):
@@ -471,24 +456,4 @@ def export_to_fits(mds_name, destination, complex_split='cartesian', ant_name=No
     except FileExistsError:
         logger.warning('Destination folder already exists, results may be overwritten')
 
-    delayed_list = []
-    antennae = _parm_to_list(parm_dict['ant_name'], parm_dict['filename'])
-    count = 0
-    for antenna in antennae:
-        if 'ant' in antenna:
-            parm_dict['this_antenna'] = antenna
-            ddis = _parm_to_list(parm_dict['ddi'], parm_dict['filename'] + '/' + antenna)
-            for ddi in ddis:
-                if 'ddi' in ddi:
-                    parm_dict['this_ddi'] = ddi
-                    if parallel:
-                        delayed_list.append(dask.delayed(chunk_function)(dask.delayed(parm_dict)))
-                    else:
-                        chunk_function(parm_dict)
-                    count += 1
-
-    if parallel:
-        dask.compute(delayed_list)
-
-    if count == 0:
-        logger.warning("No data to process")
+    _factorized_antenna_ddi_loop('export_to_fits', chunk_function, parm_dict, parallel)
