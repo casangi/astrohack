@@ -21,17 +21,18 @@ def _panel_chunk(panel_chunk_params):
     Args:
         panel_chunk_params: dictionary of inputs
     """
+    logger = _get_astrohack_logger()
     if panel_chunk_params['origin'] == 'AIPS':
         inputxds = xr.open_zarr(panel_chunk_params['image_name'])
         telescope = Telescope(inputxds.attrs['telescope_name'])
         panel_chunk_params['antenna'] = inputxds.attrs['ant_name']
 
     else:
-        inputxds = _load_image_xds(panel_chunk_params['image_name'],
-                                   panel_chunk_params['antenna'],
-                                   panel_chunk_params['ddi'],
-                                   dask_load=False)
+        ddi = panel_chunk_params['this_ddi']
+        antenna = panel_chunk_params['this_antenna']
+        inputxds = _load_image_xds(panel_chunk_params['image_name'], antenna, ddi, dask_load=False)
 
+        logger.info(f'[panel]: processing antenna {antenna} DDI {ddi}')
         inputxds.attrs['AIPS'] = False
 
         if inputxds.attrs['telescope_name'] == "ALMA":
@@ -50,7 +51,7 @@ def _panel_chunk(panel_chunk_params):
     surface.fit_surface()
     surface.correct_surface()
     
-    xds_name = panel_chunk_params['panel_name'] + '/' + panel_chunk_params['antenna'] + '/' + panel_chunk_params['ddi']
+    xds_name = panel_chunk_params['panel_name'] + f'/{antenna}/{ddi}'
     xds = surface.export_xds()
     xds.to_zarr(xds_name, mode='w')
 
