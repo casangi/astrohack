@@ -63,10 +63,10 @@ def verify_panel_shifts(
     
     return np.all(relative_shift <= 1e-6)
 
-def verify_center_pixels(file, reference_center_pixels, number_of_digits=7):
+def verify_center_pixels(file, antenna, ddi, reference_center_pixels, number_of_digits=7):
     from astrohack.dio import open_image
     
-    mds = open_image(file)['ant_ea25']['ddi_0']
+    mds = open_image(file)[antenna][ddi]
     
     aperture_shape = mds.APERTURE.values.shape[-2], mds.APERTURE.values.shape[-1]
     beam_shape = mds.BEAM.values.shape[-2], mds.BEAM.values.shape[-1]    
@@ -246,7 +246,11 @@ def test_holog(set_data):
     parallel=True
   )
   
-  assert verify_center_pixels(file=before_image, reference_center_pixels=reference_before_dict)
+  assert verify_center_pixels(
+    file=before_image, 
+    antenna='ant_ea25',
+    ddi='ddi_0',
+    reference_center_pixels=reference_before_dict)
 
   assert verify_holog_diagnostics(
     cell_size = np.array([-0.0006442, 0.0006442]),
@@ -267,7 +271,12 @@ def test_holog(set_data):
     parallel=True
   )
 
-  assert verify_center_pixels(file=after_image, reference_center_pixels=reference_after_dict)
+  assert verify_center_pixels(
+    file=after_image, 
+    antenna='ant_ea25',
+    ddi='ddi_0',
+    reference_center_pixels=reference_after_dict
+  )
 
   assert verify_holog_diagnostics(
     cell_size = np.array([-0.0006442, 0.0006442]),
