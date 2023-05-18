@@ -42,9 +42,10 @@ def extract_holog(
     holog_obs_dict=None,
     ddi_sel=None,
     baseline_average_distance=None,
+    baseline_average_nearest=None,
     holog_name=None,
     point_name=None,
-    data_col="DATA",
+    data_column="DATA",
     parallel=False,
     reuse_point_zarr=False,
     overwrite=False,
@@ -70,8 +71,8 @@ def extract_holog(
     :param point_name: Name of *<point_name>.point.zarr* file to create. Defaults to measurement set name with *point.zarr* extension.
     :type point_name: str, optional
 
-    :param data_col: Determines the data column to pull from the measurement set. Defaults to "DATA"
-    :type data_col: str, optional, ex. DATA, CORRECTED_DATA
+    :param data_column: Determines the data column to pull from the measurement set. Defaults to "CORRECTED_DATA"
+    :type data_column: str, optional, ex. DATA, CORRECTED_DATA
 
     :param parallel: Boolean for whether to process in parallel. Defaults to False
     :type parallel: bool, optional
@@ -156,9 +157,10 @@ def extract_holog(
                                 holog_obs_dict,
                                 ddi_sel,
                                 baseline_average_distance,
+                                baseline_average_nearest,
                                 holog_name,
                                 point_name,
-                                data_col,
+                                data_column,
                                 parallel,
                                 reuse_point_zarr,
                                 overwrite)
@@ -170,7 +172,11 @@ def extract_holog(
         
     ############# Exstract pointing infromation and save to point.zarr #############
     if extract_holog_parms["reuse_point_zarr"]:
-        pnt_dict = _load_point_file(extract_holog_parms['point_name'])
+        try:
+            pnt_dict = _load_point_file(extract_holog_parms['point_name'])
+        except:
+            logger.warning('Could not find ' + extract_holog_parms['point_name'] + ', creating point new point.zarr .')
+            pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
     else:
         pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
 
@@ -220,7 +226,7 @@ def extract_holog(
     ddi_sel = extract_holog_parms['ddi_sel']
     if holog_obs_dict is None: #Automatically create holog_obs_dict
         from astrohack._utils._extract_holog import _create_holog_obs_dict
-        holog_obs_dict = _create_holog_obs_dict(pnt_dict, extract_holog_parms['baseline_average_distance'],ant_names,ant_pos,ant_names_main)
+        holog_obs_dict = _create_holog_obs_dict(pnt_dict, extract_holog_parms['baseline_average_distance'], extract_holog_parms['baseline_average_nearest'], ant_names,ant_pos,ant_names_main)
         
         #From the generated holog_obs_dict subselect user supplied ddis.
         if ddi_sel != 'all':
@@ -243,7 +249,7 @@ def extract_holog(
         holog_obs_dict = holog_obs_dict_with_ddi
             
     from pprint import pformat
-    logger.info("holog_obs_dict: \n%s", pformat(holog_obs_dict,indent=1,width=1))
+    logger.info("holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0],indent=2,width=2))
 
 
     outfile_obj = copy.deepcopy(holog_obs_dict)
@@ -418,9 +424,10 @@ def _check_extract_holog_parms(
     holog_obs_dict,
     ddi_sel,
     baseline_average_distance,
+    baseline_average_nearest,
     holog_name,
     point_name,
-    data_col,
+    data_column,
     parallel,
     reuse_point_zarr,
     overwrite):
@@ -430,11 +437,12 @@ def _check_extract_holog_parms(
     extract_holog_parms["holog_name"] = holog_name
     extract_holog_parms["ddi_sel"] = ddi_sel
     extract_holog_parms["point_name"] = point_name
-    extract_holog_parms["data_col"] = data_col
+    extract_holog_parms["data_column"] = data_column
     extract_holog_parms["parallel"] = parallel
     extract_holog_parms["overwrite"] = overwrite
     extract_holog_parms["reuse_point_zarr"] = reuse_point_zarr
     extract_holog_parms["baseline_average_distance"] = baseline_average_distance
+    extract_holog_parms["baseline_average_nearest"] = baseline_average_nearest
 
     
     #### Parameter Checking ####
@@ -458,9 +466,15 @@ def _check_extract_holog_parms(
     if not parm_check:
         logger.error('Parameter holog_obs_dict must be of type '+ str(dict))
         
-    parms_passed = parms_passed and _check_parms(extract_holog_parms,'baseline_average_distance', [numbers.Number],default='all')
-        
-    parms_passed = parms_passed and _check_parms(extract_holog_parms,'data_col', [str],default='DATA')
+    parms_passed = parms_passed and _check_parms(extract_holog_parms,'baseline_average_distance',[numbers.Number],default='all')
+    
+    parms_passed = parms_passed and _check_parms(extract_holog_parms,'baseline_average_nearest',[int], default='all')
+    
+    if (extract_holog_parms['baseline_average_distance'] != 'all') and (extract_holog_parms['baseline_average_nearest'] != 'all'):
+        logger.error('baseline_average_distance: ' + str(baseline_average_distance ) + ' and baseline_average_nearest: ' + str(baseline_average_distance ) + ' can not both be specified.')
+        parms_passed = False
+ 
+    parms_passed = parms_passed and _check_parms(extract_holog_parms,'data_column', [str],default='CORRECTED_DATA')
 
     parms_passed = parms_passed and _check_parms(extract_holog_parms, 'parallel', [bool],default=False)
     
