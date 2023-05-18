@@ -322,9 +322,9 @@ def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type
         - *phase*: Phase deviations over the surface, three plots are produced for each antenna and ddi combination,
                    phase before correction, the corrections applied and the corrected phase, deg and rad available as
                    units
-        - *ancillary*: Three ancillary plots with useful information: The mask used to select data to be fitted, the
-                       amplitude data used to derive the mask and the panel assignments of each pixel, units are
-                       irrelevant for these plots
+        - *ancillary*: Two ancillary plots with useful information: The mask used to select data to be fitted, the
+                       amplitude data used to derive the mask, units are irrelevant for these plots
+        - *all*: All the plots listed above
     """
     logger = _get_astrohack_logger()
     parm_dict = {'filename': panel_mds_name,
@@ -397,6 +397,19 @@ def export_to_fits(mds_name, destination, complex_split='cartesian', ant_name=No
     :type parallel: bool
 
     .. _Description:
+    Export the products from either holog or panel onto FITS files to be read by other software packages
+
+    **Additional Information**
+    The image products of holog are complex images due to the nature of interferometric measurements and Fourier
+    transforms, currently complex128 FITS files are not supported by astropy, hence the need to split complex images
+    onto two real image products, we present the user with two options to carry out this split.
+
+        .. rubric:: Available complex splitting possibilities:
+        - *cartesian*: Split is done to a real part and an imaginary part FITS files
+        - *polar*:     Split is done to an amplitude and a phase FITS files
+
+
+    The FITS produced by this function have been tested are known to work with CARTA and DS9
     """
 
     logger = _get_astrohack_logger()
