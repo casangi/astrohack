@@ -18,7 +18,7 @@ from astrohack._utils._algorithms import _calc_coords
 
 from astrohack._utils._conversion import _to_stokes
 from astrohack._utils._constants import clight
-from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header
+from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header, _stokes_axis_to_fits_header
 
 from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk
@@ -328,7 +328,6 @@ def _export_to_fits_holog_chunk(parm_dict):
         parm_dict: parameter dictionary
     """
     logger = _get_astrohack_logger()
-    logger.warning('HOLOG chunk Not yet functional!')
 
     inputxds = _load_image_xds(parm_dict['filename'], parm_dict['this_antenna'], parm_dict['this_ddi'], dask_load=False)
     metadata = parm_dict['holog_mds']._meta_data
@@ -337,6 +336,8 @@ def _export_to_fits_holog_chunk(parm_dict):
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
     basename = f'{destination}/image_{antenna}_{ddi}'
+
+    logger.info(f'Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
 
     nchan = len(inputxds.chan)
     if nchan == 1:
@@ -371,7 +372,7 @@ def _export_to_fits_holog_chunk(parm_dict):
     carta_dim_order = (1, 0, 2, 3, )
 
     baseheader = _axis_to_fits_header(baseheader, inputxds.chan.values, 3, 'Frequency', 'Hz')
-    baseheader = _axis_to_fits_header(baseheader, np.arange(len(inputxds.pol)), 4, 'Stokes', '')
+    baseheader = _stokes_axis_to_fits_header(baseheader, 4)
 
     beamheader = _axis_to_fits_header(baseheader, inputxds.l.values, 1, 'L', 'rad')
     beamheader = _axis_to_fits_header(beamheader, inputxds.m.values, 2, 'M', 'rad')

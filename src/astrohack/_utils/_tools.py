@@ -189,6 +189,27 @@ def _split_pointing_table(ms_name, antennas):
     )
 
 
+def _stokes_axis_to_fits_header(header, iaxis):
+    """
+    Inserts a dedicated stokes axis in the header at iaxis
+    Args:
+        header: The header to add the axis description to
+        iaxis: The position of the axis in the data
+
+    Returns: The augmented header
+
+    """
+    header[f'NAXIS{iaxis}'] = 4
+    header[f'CRVAL{iaxis}'] = 1.0
+    header[f'CDELT{iaxis}'] = 1.0
+    header[f'CRPIX{iaxis}'] = 1.0
+    header[f'CROTA{iaxis}'] = 0.
+    header[f'CTYPE{iaxis}'] = 'STOKES'
+    header[f'CUNIT{iaxis}'] = ''
+
+    return header
+
+
 def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
     """
     Process an axis to create a FITS compatible linear axis description
@@ -214,12 +235,9 @@ def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
         if absdiff > 1e-7:
             logger.error('Axis is not linear!')
             raise Exception
-    if axistype == 'Stokes':
-        ref = 0.0
-        val = 'I'
-    else:
-        ref = naxis//2
-        val = axis[ref]
+
+    ref = naxis//2
+    val = axis[ref]
 
     header[f'NAXIS{iaxis}'] = naxis
     header[f'CRVAL{iaxis}'] = val
