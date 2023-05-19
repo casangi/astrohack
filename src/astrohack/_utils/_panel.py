@@ -645,7 +645,7 @@ def _plot_antenna_chunk(parm_dict):
     destination = parm_dict['destination']
     plot_type = parm_dict['plot_type']
     basename = f'{destination}/{antenna}_{ddi}'
-    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi)
+    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi, dask_load=False)
     if plot_type == plot_types[0]:  # deviation plot
         surface.plot_deviation(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
     elif plot_type == plot_types[1]:  # phase plot
@@ -671,7 +671,7 @@ def _export_to_fits_panel_chunk(parm_dict):
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
     logger.info(f'Exporting panel contents of {antenna} {ddi} to FITS files in {destination}')
-    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi)
+    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi, dask_load=False)
     basename = f'{destination}/panel_{antenna}_{ddi}'
     surface.export_to_fits(basename)
     return
@@ -686,7 +686,7 @@ def _export_screws_chunk(parm_dict):
     antenna = parm_dict['this_antenna']
     ddi = parm_dict['this_ddi']
     export_name = parm_dict['destination'] + f'/screws_{antenna}_{ddi}.'
-    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi)
+    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi, dask_load=False)
     surface.export_screws(export_name + 'csv', unit=parm_dict['unit'])
     if parm_dict['plot_map']:
         surface.plot_screw_adjustments(export_name + 'png', unit=parm_dict['unit'], threshold=parm_dict['threshold'],

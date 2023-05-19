@@ -305,16 +305,17 @@ class AstrohackPanelFile(dict):
         print('\nContents:')
         print(table)
 
-    def get_antenna(self, antenna, ddi):
+    def get_antenna(self, antenna, ddi, dask_load=True):
         """
         Return an AntennaSurface object for interaction
         Args:
             antenna: Which antenna in to be used
             ddi: Which ddi is to be used
+            dask_load: Load xds using dask?
         Returns:
             AntennaSurface object contaning relevant information for panel adjustments
         """
-        xds = _load_image_xds(self.file, antenna, ddi)
+        xds = _load_image_xds(self.file, antenna, ddi, dask_load)
         telescope = Telescope(xds.attrs['telescope_name'])
         
         return AntennaSurface(xds, telescope, reread=True)
