@@ -45,7 +45,7 @@ def extract_holog(
     baseline_average_nearest=None,
     holog_name=None,
     point_name=None,
-    data_column="DATA",
+    data_column="CORRECTED_DATA",
     parallel=False,
     reuse_point_zarr=False,
     overwrite=False,

@@ -273,6 +273,7 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None, unit='mm
     check_if_file_exists(panel_mds_name)
     panel_mds = AstrohackPanelFile(panel_mds_name)
     panel_mds.open()
+    parm_dict['panel_mds'] = panel_mds
 
     try:
         os.mkdir(parm_dict['destination'])
