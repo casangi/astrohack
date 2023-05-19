@@ -1,5 +1,4 @@
 import os
-import dask
 import numbers
 import numpy as np
 from matplotlib import colormaps as cmaps
@@ -10,7 +9,7 @@ from astrohack._utils._io import _check_mds_origin, check_if_file_exists
 from astrohack._utils._constants import length_units, trigo_units, plot_types
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _parm_to_list, _factorized_antenna_ddi_loop
+from astrohack._utils._dask_graph_tools import _generate_antenna_ddi_graph_and_compute
 
 from astrohack._utils._dio import AstrohackImageFile
 from astrohack._utils._dio import AstrohackHologFile
@@ -280,7 +279,7 @@ def export_screws(panel_mds_name, destination, ant_name=None, ddi=None, unit='mm
     except FileExistsError:
         logger.warning('Destination folder already exists, results may be overwritten')
 
-    _factorized_antenna_ddi_loop('export_screws', _export_screws_chunk, parm_dict, False)
+    _generate_antenna_ddi_graph_and_compute('export_screws', _export_screws_chunk, parm_dict, False)
 
 
 def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type='deviation', plot_screws=False,
@@ -377,7 +376,7 @@ def plot_antenna(panel_mds_name, destination, ant_name=None, ddi=None, plot_type
     except FileExistsError:
         logger.warning('Destination folder already exists, results may be overwritten')
 
-    _factorized_antenna_ddi_loop('plot_antenna', _plot_antenna_chunk, parm_dict, parallel)
+    _generate_antenna_ddi_graph_and_compute('plot_antenna', _plot_antenna_chunk, parm_dict, parallel)
 
 
 def export_to_fits(mds_name, destination, complex_split='cartesian', ant_name=None, ddi=None, parallel=True):
@@ -456,4 +455,4 @@ def export_to_fits(mds_name, destination, complex_split='cartesian', ant_name=No
     except FileExistsError:
         logger.warning('Destination folder already exists, results may be overwritten')
 
-    _factorized_antenna_ddi_loop('export_to_fits', chunk_function, parm_dict, parallel)
+    _generate_antenna_ddi_graph_and_compute('export_to_fits', chunk_function, parm_dict, parallel)

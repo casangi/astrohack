@@ -9,7 +9,8 @@ from astrohack._utils._io import _aips_holog_to_xds, check_if_file_will_be_overw
 from astrohack._utils._panel import _panel_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
-from astrohack._utils._tools import _remove_suffix, _factorized_antenna_ddi_loop
+from astrohack._utils._tools import _remove_suffix
+from astrohack._utils._dask_graph_tools import _generate_antenna_ddi_graph_and_compute
 
 from astrohack._utils._dio import AstrohackPanelFile
 
@@ -107,7 +108,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
 
     else:
         panel_params['origin'] = 'astrohack'
-        count = _factorized_antenna_ddi_loop('panel', _panel_chunk, panel_params, parallel)
+        count = _generate_antenna_ddi_graph_and_compute('panel', _panel_chunk, panel_params, parallel)
         if count == 0:
             logger.warning("No data to process")
             return None
