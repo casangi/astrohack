@@ -178,7 +178,7 @@ def _least_squares_fit(system, vector):
     
     result = fit[0]
     residuals = fit[1]
-    covar = np.matrix(np.dot(system.T, system)).I
+    covar = np.linalg.inv(np.dot(system.T, system))
     variances = np.diagonal(covar)
     
     return result, variances, residuals
