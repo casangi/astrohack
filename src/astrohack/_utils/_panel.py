@@ -9,9 +9,11 @@ from astrohack._utils._io import _load_image_xds
 
 from astrohack._classes.telescope import Telescope
 from astrohack._classes.antenna_surface import AntennaSurface
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 # global constants
 NPAR = 10
+
 
 def _panel_chunk(panel_chunk_params):
     """
@@ -19,17 +21,18 @@ def _panel_chunk(panel_chunk_params):
     Args:
         panel_chunk_params: dictionary of inputs
     """
+    logger = _get_astrohack_logger()
     if panel_chunk_params['origin'] == 'AIPS':
         inputxds = xr.open_zarr(panel_chunk_params['image_name'])
         telescope = Telescope(inputxds.attrs['telescope_name'])
         panel_chunk_params['antenna'] = inputxds.attrs['ant_name']
 
     else:
-        inputxds = _load_image_xds(panel_chunk_params['image_name'],
-                                   panel_chunk_params['antenna'],
-                                   panel_chunk_params['ddi'],
-                                   dask_load=False)
+        ddi = panel_chunk_params['this_ddi']
+        antenna = panel_chunk_params['this_antenna']
+        inputxds = _load_image_xds(panel_chunk_params['image_name'], antenna, ddi, dask_load=False)
 
+        logger.info(f'[panel]: processing antenna {antenna} DDI {ddi}')
         inputxds.attrs['AIPS'] = False
 
         if inputxds.attrs['telescope_name'] == "ALMA":
@@ -48,7 +51,7 @@ def _panel_chunk(panel_chunk_params):
     surface.fit_surface()
     surface.correct_surface()
     
-    xds_name = panel_chunk_params['panel_name'] + '/' + panel_chunk_params['antenna'] + '/' + panel_chunk_params['ddi']
+    xds_name = panel_chunk_params['panel_name'] + f'/{antenna}/{ddi}'
     xds = surface.export_xds()
     xds.to_zarr(xds_name, mode='w')
 
@@ -72,6 +75,7 @@ def _create_phase_model(npix, parameters, wavelength, telescope, cellxy):
     _, model = _correct_phase(dummyphase, cellxy, iNPARameters, telescope.magnification, telescope.focus,
                               telescope.surp_slope)
     return model
+
 
 def _phase_fitting_block(pols, wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
                          focus_xy_offsets, focus_z_offset, subreflector_tilt, cassegrain_offset):
@@ -631,12 +635,17 @@ def _compute_phase_rms_block(phase_image):
 
 
 def _plot_antenna_chunk(parm_dict):
+    """
+    Chunk function for the user facing function plot_antenna
+    Args:
+        parm_dict: parameter dictionary
+    """
     antenna = parm_dict['this_antenna']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
     plot_type = parm_dict['plot_type']
     basename = f'{destination}/{antenna}_{ddi}'
-    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi)
+    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi, dask_load=False)
     if plot_type == plot_types[0]:  # deviation plot
         surface.plot_deviation(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
     elif plot_type == plot_types[1]:  # phase plot
@@ -649,3 +658,37 @@ def _plot_antenna_chunk(parm_dict):
         surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
         surface.plot_mask(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
         surface.plot_amplitude(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
+
+
+def _export_to_fits_panel_chunk(parm_dict):
+    """
+    Panel side chunk function for the user facing function export_to_fits
+    Args:
+        parm_dict: parameter dictionary
+    """
+    logger = _get_astrohack_logger()
+    antenna = parm_dict['this_antenna']
+    ddi = parm_dict['this_ddi']
+    destination = parm_dict['destination']
+    logger.info(f'Exporting panel contents of {antenna} {ddi} to FITS files in {destination}')
+    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi, dask_load=False)
+    basename = f'{destination}/panel_{antenna}_{ddi}'
+    surface.export_to_fits(basename)
+    return
+
+
+def _export_screws_chunk(parm_dict):
+    """
+    Chunk function for the user facing function export_screws
+    Args:
+        parm_dict: parameter dictionary
+    """
+    antenna = parm_dict['this_antenna']
+    ddi = parm_dict['this_ddi']
+    export_name = parm_dict['destination'] + f'/screws_{antenna}_{ddi}.'
+    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi, dask_load=False)
+    surface.export_screws(export_name + 'csv', unit=parm_dict['unit'])
+    if parm_dict['plot_map']:
+        surface.plot_screw_adjustments(export_name + 'png', unit=parm_dict['unit'], threshold=parm_dict['threshold'],
+                                       colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'],
+                                       dpi=parm_dict['dpi'])
