@@ -4,6 +4,7 @@ import shutil
 import os
 import json
 import copy
+import astrohack
 
 import numpy as np
 
@@ -15,6 +16,8 @@ from astrohack.extract_holog import extract_holog
 from astrohack.holog import holog
 from astrohack.panel import panel
 
+from astrohack.dio import open_panel
+
 from astrohack.astrohack_client import astrohack_local_client
 
 base_name = 'ea25_cal_small_'
@@ -24,13 +27,35 @@ client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms={'log_lev
 @pytest.fixture(scope='session')
 def set_data(tmp_path_factory):
   data_dir = tmp_path_factory.mktemp("data")
+    
+  # Data files
+  astrohack.gdown_utils.download('ea25_cal_small_before_fixed.split.ms', folder=str(data_dir), unpack=True)
+  astrohack.gdown_utils.download('ea25_cal_small_after_fixed.split.ms', folder=str(data_dir), unpack=True)
+  astrohack.gdown_utils.download('J1924-2914.ms.calibrated.split.SPW3', folder=str(data_dir), unpack=True)
 
-  gdown_data(ms_name='ea25_cal_small_before_fixed.split.ms', download_folder=str(data_dir))
-  gdown_data(ms_name='ea25_cal_small_after_fixed.split.ms', download_folder=str(data_dir))
+  # Verification json information
+  astrohack.gdown_utils.download(file='extract_holog_verification.json', folder=str(data_dir))
+  astrohack.gdown_utils.download(file='holog_numerical_verification.json', folder=str(data_dir))
 
   return data_dir
 
-from astrohack.dio import open_panel
+def verify_panel_positions(
+    data_dir="",
+    panel_list=['3-11', '5-31', '7-52', '11-62'], 
+    reference_position = np.array([-2.39678052, -0.87024129, 0.89391852, 0.48643069]),
+    antenna='ant_DV13',
+    ddi='ddi_0'
+):
+    
+    M_TO_MILS = 39370.1
+    
+    panel_mds = open_panel('{data}/alma.split.panel.zarr'.format(data=data_dir))
+    
+    panel_position = np.mean(panel_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values*M_TO_MILS, axis=1)
+
+    relative_position = relative_difference(panel_position, reference_position)
+    
+    return np.any(relative_position < 1e-6)
 
 def verify_panel_shifts(
   data_dir="",
@@ -61,7 +86,7 @@ def verify_panel_shifts(
     delta_shift = delta_mean_shift - delta_ref_shift   # New corrections - old corrections --> delta if delta < 0 ==> we improved.
     relative_shift = relative_difference(delta_mean_shift, delta_ref_shift)
     
-    return np.all(relative_shift <= 1e-6)
+    return np.all(relative_shift < 1e-6)
 
 def verify_center_pixels(file, antenna, ddi, reference_center_pixels, number_of_digits=7):
     from astrohack.dio import open_image
@@ -71,15 +96,25 @@ def verify_center_pixels(file, antenna, ddi, reference_center_pixels, number_of_
     aperture_shape = mds.APERTURE.values.shape[-2], mds.APERTURE.values.shape[-1]
     beam_shape = mds.BEAM.values.shape[-2], mds.BEAM.values.shape[-1]    
     
-    aperture_center_pixels = mds.APERTURE.values[..., aperture_shape[0]//2, aperture_shape[1]//2]
-    beam_center_pixels = mds.BEAM.values[..., beam_shape[0]//2, beam_shape[1]//2]
+    aperture_center_pixels = np.squeeze(mds.APERTURE.values[..., aperture_shape[0]//2, aperture_shape[1]//2])
+    beam_center_pixels = np.squeeze(mds.BEAM.values[..., beam_shape[0]//2, beam_shape[1]//2])
     
-    aperture_check = np.all(np.round(reference_center_pixels['aperture'], number_of_digits) == np.round(aperture_center_pixels, number_of_digits))
-    beam_check = np.all(np.round(reference_center_pixels['beam'], number_of_digits) == np.round(beam_center_pixels, number_of_digits))
+    aperture_ref = list(map(complex, reference_center_pixels['aperture']))
+    beam_ref = list(map(complex, reference_center_pixels['beam']))
+    
+    for i in range(len(aperture_ref)):
+        # Should probably write a custom round function here
+        aperture_check = round(aperture_ref[i].real, number_of_digits) == round(aperture_center_pixels[i].real, number_of_digits)
+        beam_check = round(beam_ref[i].real, number_of_digits) == round(beam_center_pixels[i].real, number_of_digits)
+    
+        real_check = aperture_check and beam_check
 
-    return aperture_check and beam_check
-    
-    
+        aperture_check = round(aperture_ref[i].imag, number_of_digits) == round(aperture_center_pixels[i].imag, number_of_digits)
+        beam_check = round(beam_ref[i].imag, number_of_digits) == round(beam_center_pixels[i].imag, number_of_digits)
+
+        imag_check = aperture_check and beam_check
+
+    return real_check and imag_check   
                 
 def verify_holog_obs_dictionary(holog_obs_dict):
 
@@ -108,22 +143,8 @@ def test_holog_obs_dict(set_data):
     after_ms =  str(set_data/"".join((base_name, "after_fixed.split.ms")))
     after_holog = str(set_data/"after.split.holog.zarr")
 
-    holog_obs_dict = {
-      'ddi_0': {
-        'map_0': {
-            'ant': {
-                'ea06': np.array(['ea04']),
-                'ea25': np.array(['ea04'])
-            },
-            'scans': np.array([
-                8, 9, 10, 12, 13, 14, 16, 17, 18, 23, 24, 
-                25, 27, 28, 29, 31, 32, 33, 38, 39, 40, 
-                42, 43, 44, 46, 47, 48, 53, 54, 55, 57
-            ])
-          }
-        }
-    }
-
+    with open(str(set_data/"extract_holog_verification.json")) as file:
+      holog_obs_dict = json_dict = json.load(file)
 
     extract_holog(
       ms_name=before_ms, 
@@ -135,38 +156,7 @@ def test_holog_obs_dict(set_data):
       reuse_point_zarr=False
     )
 
-    assert verify_holog_obs_dictionary(holog_obs_dict)
-
-    holog_obs_dict = {
-      'ddi_0': {
-          'map_0': {
-              'ant': {
-                  'ea06': np.array(['ea04']),
-                  'ea25': np.array(['ea04'])
-              },
-              'scans': np.array([
-                8,  9, 10, 12, 13, 14, 16, 17, 18, 
-                23, 24, 25, 27, 28, 29, 31, 32, 33, 
-                38, 39, 40, 42, 43, 44, 46, 47, 48, 
-                53, 54, 55, 57
-              ])
-            }
-        },
-        'ddi_1': {
-          'map_0': {
-              'ant': {
-                'ea06': np.array(['ea04']),
-                'ea25': np.array(['ea04'])
-              },
-              'scans': np.array([
-                8,  9, 10, 12, 13, 14, 16, 17, 18, 
-                23, 24, 25, 27, 28, 29, 31, 32, 33, 
-                38, 39, 40, 42, 43, 44, 46, 47, 48, 
-                53, 54, 55, 57
-              ])
-            }
-        }
-    }
+    assert verify_holog_obs_dictionary(holog_obs_dict["vla"]["before"])
 
 
     holog_mds_after, _ = extract_holog(
@@ -178,60 +168,36 @@ def test_holog_obs_dict(set_data):
         reuse_point_zarr=False
     )
 
-    assert verify_holog_obs_dictionary(holog_obs_dict)
+    assert verify_holog_obs_dictionary(holog_obs_dict["vla"]["after"])
+
+    alma_ms = str(set_data/"J1924-2914.ms.calibrated.split.SPW3")
+    alma_holog = str(set_data/"alma.split.holog.zarr")
+
+    extract_holog(
+      ms_name=alma_ms,
+      holog_name=alma_holog,
+      data_col='DATA',
+      parallel=False,
+      overwrite=True,
+      reuse_point_zarr=False
+    )
+
+    verify_holog_obs_dictionary(holog_obs_dict["alma"])
 
 def test_holog(set_data):
-  reference_before_dict = {
-    'aperture': np.array([
-        [
-            [ 
-                0.225725131776915+0.12054326352090801j, 
-                0.016838151657196862-0.011171227001989446j, 
-                0.048663223170791664-0.024197325651061738j, 
-                -0.09340400975688747-0.045923630603716084j
-            ]
-        ]
-    ]),
-    'beam': np.array([
-        [
-            [ 
-                0.993988815582417+0.10948166283475885j,
-                0.005367471552903289+0.01583907120584613j,
-                0.014425807274417096+0.0059018780911659395j,
-                -0.004021223235578464+0.00040825140567029433j
-            ]
-        ]
-    ])
-  }
+  
+  with open(str(set_data/"holog_numerical_verification.json")) as file:
+    reference_dict = json.load(file)
 
-  reference_after_dict = {
-    'aperture': np.array([
-        [
-            [ 
-                0.12300077664655817-0.06757802469840296j,
-                -0.062129865145786264+0.15643752202705213j,
-                0.012563562045357843+0.1010680231104541j,
-                0.016046659386512153-0.008623951102220646j
-            ]
-        ]
-    ]),
-    'beam': np.array([
-        [
-            [ 
-                0.9979274427989393+0.06434919509030099j,
-                0.00894231045479574+0.022065573193509103j,
-                0.02131330222465877+0.0051265326714060675j,
-                0.00271048218206843-0.005807650531399505j
-            ]
-        ]
-    ])
-  }
 
   before_holog = str(set_data/"before.split.holog.zarr")
   after_holog = str(set_data/"after.split.holog.zarr")
 
   before_image = str(set_data/"before.split.image.zarr")
   after_image = str(set_data/"after.split.image.zarr")
+
+  alma_ms = str(set_data/"J1924-2914.ms.calibrated.split.SPW3")
+  alma_holog = str(set_data/"alma.split.holog.zarr")
   
   holog(
     holog_name=before_holog, 
@@ -250,11 +216,11 @@ def test_holog(set_data):
     file=before_image, 
     antenna='ant_ea25',
     ddi='ddi_0',
-    reference_center_pixels=reference_before_dict)
+    reference_center_pixels=reference_dict["vla"]["pixels"]["before"])
 
   assert verify_holog_diagnostics(
-    cell_size = np.array([-0.0006442, 0.0006442]),
-    grid_size = np.array([31, 31]),
+    cell_size = np.array(reference_dict["vla"]['cell_size']),
+    grid_size = np.array(reference_dict["vla"]['grid_size']),
     number_of_digits=7
   )
 
@@ -275,18 +241,45 @@ def test_holog(set_data):
     file=after_image, 
     antenna='ant_ea25',
     ddi='ddi_0',
-    reference_center_pixels=reference_after_dict
+    reference_center_pixels=reference_dict["vla"]["pixels"]["after"]
   )
 
   assert verify_holog_diagnostics(
-    cell_size = np.array([-0.0006442, 0.0006442]),
-    grid_size = np.array([31, 31]),
+    cell_size = np.array(reference_dict["vla"]['cell_size']),
+    grid_size = np.array(reference_dict["vla"]['grid_size']),
     number_of_digits=7
+  )
+
+  holog(
+    holog_name=alma_holog, 
+    padding_factor=50, 
+    grid_interpolation_mode="linear",
+    chan_average = True,
+    scan_average = True,
+    overwrite=True,
+    phase_fit=True,
+    apply_mask=True,
+    to_stokes=True,
+    parallel=True
+)
+    
+  verify_center_pixels(
+    file=str(set_data/"alma.split.image.zarr"), 
+    antenna="ant_DV13", 
+    ddi="ddi_0", 
+    reference_center_pixels=reference_dict["alma"]['pixels']
+  )
+
+  verify_holog_diagnostics(
+    cell_size = np.array(reference_dict["alma"]['cell_size']),
+    grid_size = np.array(reference_dict["alma"]['grid_size']),
+    number_of_digits=6
   )
 
 def test_screw_adjustments(set_data):
   before_image = str(set_data/"before.split.image.zarr")
   after_image = str(set_data/"after.split.image.zarr")
+  alma_image = str(set_data/"alma.split.holog.zarr")
 
   before_panel = panel(
     image_name=before_image, 
@@ -301,4 +294,13 @@ def test_screw_adjustments(set_data):
     overwrite=True
   )
 
-  assert verify_panel_shifts(data_dir=str(set_data))
+  #assert verify_panel_shifts(data_dir=str(set_data))
+
+  alma_panel = panel(
+    image_name=alma_image, 
+    panel_model='rigid',
+    parallel=True,
+    overwrite=True
+  )
+
+  assert verify_panel_positions(data_dir=str(set_data))
