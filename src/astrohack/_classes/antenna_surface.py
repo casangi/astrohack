@@ -73,6 +73,7 @@ class AntennaSurface:
         self.v_axis = inputxds.v.values
         self.computephase = True
         self.processed = False
+        self.resolution = None
 
     def _read_holog_xds(self, inputxds):
         if 'chan' in inputxds.dims:
@@ -91,6 +92,14 @@ class AntennaSurface:
         self.v_axis = inputxds.v_prime.values * self.wavelength
         self.computephase = False
 
+        try:
+            self.resolution = inputxds.attrs['aperture_resolution']
+        except KeyError:
+            logger = _get_astrohack_logger()
+            logger.warning("[_read_holog_xds] holog image does not have resolution information")
+            logger.warning("[_read_holog_xds] Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+            self.resolution = None
+
     def _read_panel_xds(self, inputxds):
         self.wavelength = inputxds.attrs['wavelength']
         self.amp_unit = inputxds.attrs['amp_unit']
@@ -107,6 +116,13 @@ class AntennaSurface:
         self.u_axis = inputxds.u.values
         self.v_axis = inputxds.u.values
         self.panel_distribution = inputxds['PANEL_DISTRIBUTION'].values
+        try:
+            self.resolution = inputxds.attrs['aperture_resolution']
+        except KeyError:
+            logger = _get_astrohack_logger()
+            logger.warning("[_read_panel_xds] Input panel file does not have resolution information")
+            logger.warning("[_read_panel_xds] Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+            self.resolution = None
 
         if self.solved:
             self.phase_residuals = inputxds['PHASE_RESIDUALS'].values
@@ -683,6 +699,7 @@ class AntennaSurface:
         xds.attrs['cutoff'] = self.cut
         xds.attrs['solved'] = self.solved
         xds.attrs['fitted'] = self.fitted
+        xds.attrs['aperture_resolution'] = self.resolution
         xds['AMPLITUDE'] = xr.DataArray(self.amplitude, dims=["u", "v"])
         xds['PHASE'] = xr.DataArray(self.phase, dims=["u", "v"])
         xds['DEVIATION'] = xr.DataArray(self.deviation, dims=["u", "v"])
@@ -725,7 +742,9 @@ class AntennaSurface:
             'TELESCOP': self.antenna_name,
             'INSTRUME': self.telescope.name,
             'WAVELENG': self.wavelength,
-            'FREQUENC': clight/self.wavelength
+            'FREQUENC': clight/self.wavelength,
+            'L_RESOLU': self.resolution[0],
+            'M_RESOLU': self.resolution[1],
         }
         head = _axis_to_fits_header(head, self.u_axis, 1, 'X', 'm')
         head = _axis_to_fits_header(head, self.v_axis, 2, 'Y', 'm')
