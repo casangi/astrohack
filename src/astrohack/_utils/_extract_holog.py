@@ -10,7 +10,7 @@ from casacore import tables as ctables
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._io import _write_meta_data
-from astrohack._utils._algorithms import _get_grid_parms
+from astrohack._utils._algorithms import _get_grid_parms, _significant_digits
 
 from astrohack._utils._io import _load_point_file
 
@@ -20,7 +20,7 @@ def _extract_holog_chunk(extract_holog_params):
 
     Args:
         ms_name (str): Measurementset name
-        data_col (str): Data column to extract.
+        data_column (str): Data column to extract.
         ddi (int): Data description id
         scan (int): Scan number
         map_ant_ids (numpy.narray): Array of antenna_id values corresponding to mapping data.
@@ -31,7 +31,7 @@ def _extract_holog_chunk(extract_holog_params):
 
     ms_name = extract_holog_params["ms_name"]
     pnt_name = extract_holog_params["point_name"]
-    data_col = extract_holog_params["data_col"]
+    data_column = extract_holog_params["data_column"]
     ddi = extract_holog_params["ddi"]
     scans = extract_holog_params["scans"]
     ant_names = extract_holog_params["ant_names"]
@@ -57,15 +57,15 @@ def _extract_holog_chunk(extract_holog_params):
     if sel_state_ids:
         ctb = ctables.taql(
             "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
-            % (data_col, ddi, list(scans), list(sel_state_ids))
+            % (data_column, ddi, list(scans), list(sel_state_ids))
         )
     else:
         ctb = ctables.taql(
             "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
-            % (data_col, ddi, list(scans))
+            % (data_column, ddi, list(scans))
         )
         
-    vis_data = ctb.getcol(data_col)
+    vis_data = ctb.getcol(data_column)
     weight = ctb.getcol("WEIGHT")
     ant1 = ctb.getcol("ANTENNA1")
     ant2 = ctb.getcol("ANTENNA2")
@@ -344,6 +344,10 @@ def _create_holog_file(
                 pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, dims=["time", "lm"]
             )
             
+            xds["IDEAL_DIRECTIONAL_COSINES"] = xr.DataArray(
+                pnt_map_dict[map_ant_tag]["POINTING_OFFSET"].values, dims=["time", "lm"]
+            )
+            
             xds.attrs["holog_map_key"] = holog_map_key
             #xds.attrs["ant_id"] = map_ant_tag
             xds.attrs["ddi"] = ddi
@@ -385,7 +389,7 @@ def _create_holog_file(
             )
 
 
-def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos,ant_names_main):
+def _create_holog_obs_dict(pnt_dict,baseline_average_distance,baseline_average_nearest,ant_names,ant_pos,ant_names_main):
     '''
     Generate holog_obs_dict.
     '''
@@ -406,6 +410,7 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos,
                     if ddi not in holog_obs_dict:
                             holog_obs_dict[ddi] = {}
                     for ant_map_id, scan_list in map_dict.items():
+                        #logger.debug('ant name ' + ant_name + ' scan list' + str(scan_list))
                         if scan_list:
                             map_key = _check_if_array_in_dict(mapping_scans_dict,scan_list)
                             if not map_key:
@@ -415,26 +420,33 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos,
                                 
                             if map_key not in holog_obs_dict[ddi]:
                                 holog_obs_dict[ddi][map_key] = {'scans':np.array(scan_list),'ant':{}}
-                                                        
+                                
                             holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
-       
+
     # If users specifies a baseline_average_distance we need to create an antenna distance matrix.
-    if baseline_average_distance != 'ALL':
+    if (baseline_average_distance != 'all') or (baseline_average_nearest != 'all'):
         import pandas as pd
         from scipy.spatial import distance_matrix
         df = pd.DataFrame(ant_pos, columns=['x', 'y', 'z'], index=ant_names)
         df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
         logger.debug('Antenna distance matrix in meters: \n' + str(df_mat))
-                        
+        
+                
+    if (baseline_average_distance != 'all') and (baseline_average_nearest != 'all'):
+        logger.error('baseline_average_distance and baseline_average_nearest can not both be specified.')
+        raise
+
+    
     #The reference antennas are then given by ref_ant_set = ant_names_set - map_ant_set.
     for ddi, ddi_dict in holog_obs_dict.items():
         for map_id, map_dict in ddi_dict.items():
             map_ant_set = set(map_dict['ant'].keys())
-            ref_ant_set = ant_names_set - map_ant_set
-
             map_ant_keys = list(map_dict['ant'].keys()) #Need a copy because of del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] below.
+            
             for map_ant_key in map_ant_keys:
-                #add code for distance from antenna
+                ref_ant_set = ant_names_set - map_ant_set
+
+                #Select reference antennas by distance from mapping antenna
                 if baseline_average_distance != 'all':
                     sub_ref_ant_set = []
                     for ref_ant in ref_ant_set:
@@ -445,13 +457,24 @@ def _create_holog_obs_dict(pnt_dict,baseline_average_distance,ant_names,ant_pos,
                         logger.warning('DDI ' + str(ddi) + ' and mapping antenna ' + str(map_ant_key) + ' has no reference antennas. If baseline_average_distance was specified increase this distance. See antenna distance matrix in log by setting debug level to DEBUG in astrohack_client function.')
                      
                     ref_ant_set = sub_ref_ant_set
+                    
+                #Select reference antennas by n closest antennas
+                if baseline_average_nearest != 'all':
+                    sub_ref_ant_set = []
+                    nearest_ant_list = df_mat.loc[map_ant_key,:].loc[list(ref_ant_set)].sort_values().index.tolist()[1:baseline_average_nearest+1] #Skip first value since that is the antenna itself (distance=0)
+                    for ref_ant in ref_ant_set:
+                        if ref_ant in nearest_ant_list:
+                            sub_ref_ant_set.append(ref_ant)
+                            
+                    ref_ant_set = sub_ref_ant_set
+                ##################################################
                 
                 if ref_ant_set:
                     holog_obs_dict[ddi][map_id]['ant'][map_ant_key] = np.array(list(ref_ant_set))
                 else:
                     del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] #Don't want mapping antennas with no reference antennas.
                     logger.warning('DDI ' + str(ddi) + ' and mapping antenna ' + str(map_ant_key) + ' has no reference antennas.')
-                     
+    
     return holog_obs_dict
 
 
@@ -520,8 +543,9 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
                             cell_sizes.append(xds.attrs["grid_parms"]["cell_size"])
                             n_pixs.append(xds.attrs["grid_parms"]["n_pix"])
                             telescope_names.append(xds.attrs['telescope_name'])
-
-    if not (len(set(cell_sizes)) == 1):
+    
+    cell_sizes_sigfigs =  _significant_digits(cell_sizes,digits=3)
+    if not (len(set(cell_sizes_sigfigs)) == 1):
         logger.error('Cell size not consistant: ' + str(cell_sizes))
         raise
         
@@ -540,7 +564,7 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
     except Exception as error:
         logger.error("[_create_holog_meta_data] {error}".format(error=error))
 
-    meta_data = {'cell_size': cell_sizes[0],
+    meta_data = {'cell_size': np.mean(cell_sizes),
                  'n_pix': n_pixs[0],
                  'telescope_name': telescope_names[0]}
     meta_data.update(input_params)

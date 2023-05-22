@@ -1,5 +1,4 @@
 import scipy
-import json
 import numpy as np
 import xarray as xr
 
@@ -7,8 +6,8 @@ from scipy.interpolate import griddata
 
 from astrohack._classes.telescope import Telescope
 
-from astrohack._utils._io import _load_holog_file
-from astrohack._utils._io import _read_meta_data, _write_meta_data
+from astrohack._utils._io import _load_holog_file, _load_image_xds
+from astrohack._utils._io import _read_meta_data, _write_meta_data, _write_fits
 
 from astrohack._utils._panel import _phase_fitting_block
 
@@ -18,6 +17,8 @@ from astrohack._utils._algorithms import _find_nearest
 from astrohack._utils._algorithms import _calc_coords
 
 from astrohack._utils._conversion import _to_stokes
+from astrohack._utils._constants import clight
+from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header, _stokes_axis_to_fits_header
 
 from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk
@@ -46,7 +47,7 @@ def _holog_chunk(holog_chunk_params):
         ddi_id=holog_chunk_params["ddi_id"]
     )
 
-    meta_data = _read_meta_data(holog_chunk_params["holog_file"], 'holog')
+    meta_data = _read_meta_data(holog_chunk_params["holog_file"], 'holog', 'extract_holog')
 
     # Calculate lm coordinates
     l, m = _calc_coords(holog_chunk_params["grid_size"], holog_chunk_params["cell_size"])
@@ -109,7 +110,6 @@ def _holog_chunk(holog_chunk_params):
 
 
         time_centroid_index = ant_data_dict[ddi][holog_map].dims["time"] // 2
-
         time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
 
         for chan in range(n_chan): ### Todo: Vectorize holog_map and channel axis
@@ -117,9 +117,10 @@ def _holog_chunk(holog_chunk_params):
                 xx_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
                 yy_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
             except:
-                center_pixel = np.array(beam_grid.shape[0:2])//2
+                center_pixel = np.array(beam_grid.shape[-2:])//2
                 xx_peak = beam_grid[holog_map_index, chan, 0, center_pixel[0], center_pixel[1]]
                 yy_peak = beam_grid[holog_map_index, chan, 3, center_pixel[0], center_pixel[1]]
+
             normalization = np.abs(0.5 * (xx_peak + yy_peak))
             beam_grid[holog_map_index, chan, ...] /= normalization
 
@@ -192,7 +193,6 @@ def _holog_chunk(holog_chunk_params):
     phase_corrected_angle = np.zeros_like(phase)
     u_prime = u[start_cut[0]:end_cut[0]]
     v_prime = v[start_cut[1]:end_cut[1]]
-    
 
     phase_fit_par = holog_chunk_params["phase_fit"]
     if isinstance(phase_fit_par, bool):
@@ -319,3 +319,95 @@ def _create_image_meta_data(image_file, input_params):
     """
     output_attr_file = "{name}/{ext}".format(name=image_file, ext=".image_attr")
     _write_meta_data('holog', output_attr_file, input_params)
+
+
+def _export_to_fits_holog_chunk(parm_dict):
+    """
+    Holog side chunk function for the user facing function export_to_fits
+    Args:
+        parm_dict: parameter dictionary
+    """
+    logger = _get_astrohack_logger()
+
+    inputxds = _load_image_xds(parm_dict['filename'], parm_dict['this_antenna'], parm_dict['this_ddi'], dask_load=False)
+    metadata = parm_dict['holog_mds']._meta_data
+
+    antenna = parm_dict['this_antenna']
+    ddi = parm_dict['this_ddi']
+    destination = parm_dict['destination']
+    basename = f'{destination}/image_{antenna}_{ddi}'
+
+    logger.info(f'Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
+
+    nchan = len(inputxds.chan)
+    if nchan == 1:
+        reffreq = inputxds.chan.values[0]
+    else:
+        reffreq = inputxds.chan.values[nchan//2]
+    telname = inputxds.attrs['telescope_name']
+    if telname in ['EVLA', 'VLA', 'JVLA']:
+        telname = 'VLA'
+    polist = []
+    for pol in inputxds.pol:
+        polist.append(str(pol.values))
+    baseheader = {
+        'STOKES'  : ", ".join(polist),
+        'WAVELENG': clight/reffreq,
+        'FREQUENC': reffreq,
+        'TELESCOP': inputxds.attrs['ant_name'],
+        'INSTRUME': telname,
+        'TIME_CEN': inputxds.attrs['time_centroid'],
+        'PADDING' : metadata['padding_factor'],
+        'GRD_INTR': metadata['grid_interpolation_mode'],
+        'CHAN_AVE': _bool_to_string(metadata['chan_average']),
+        'CHAN_TOL': metadata['chan_tolerance_factor'],
+        'SCAN_AVE': _bool_to_string(metadata['scan_average']),
+        'TO_STOKE': _bool_to_string(metadata['to_stokes']),
+    }
+    ntime = len(inputxds.time)
+    if ntime != 1:
+        logger.error("Data with multiple times not supported for FITS export")
+        raise Exception("Data with multiple times not supported for FITS export")
+
+    carta_dim_order = (1, 0, 2, 3, )
+
+    baseheader = _axis_to_fits_header(baseheader, inputxds.chan.values, 3, 'Frequency', 'Hz')
+    baseheader = _stokes_axis_to_fits_header(baseheader, 4)
+
+    beamheader = _axis_to_fits_header(baseheader, inputxds.l.values, 1, 'L', 'rad')
+    beamheader = _axis_to_fits_header(beamheader, inputxds.m.values, 2, 'M', 'rad')
+    transpobeam = np.transpose(inputxds['BEAM'][0, ...].values, carta_dim_order)
+    if parm_dict['complex_split'] == 'cartesian':
+        _write_fits(beamheader, 'Complex beam real part', transpobeam.real, basename + '_beam_real.fits', 'Normalized',
+                    'image')
+        _write_fits(beamheader, 'Complex beam imag part', transpobeam.imag, basename + '_beam_imag.fits', 'Normalized',
+                    'image')
+    else:
+        _write_fits(beamheader, 'Complex beam amplitude', np.absolute(transpobeam),
+                    basename + '_beam_amplitude.fits', 'Normalized', 'image')
+        _write_fits(beamheader, 'Complex beam phase', np.angle(transpobeam), basename + '_beam_phase.fits',
+                    'Radians', 'image')
+
+    apertureheader = _axis_to_fits_header(baseheader, inputxds.u.values, 1, 'X', 'm')
+    apertureheader = _axis_to_fits_header(apertureheader, inputxds.v.values, 2, 'Y', 'm')
+    transpoaper = np.transpose(inputxds['APERTURE'][0, ...].values, carta_dim_order)
+    if parm_dict['complex_split'] == 'cartesian':
+        _write_fits(apertureheader, 'Complex aperture real part', transpoaper.real,
+                    basename + '_aperture_real.fits', 'Normalized', 'image')
+        _write_fits(apertureheader, 'Complex aperture imag part', transpoaper.imag,
+                    basename + '_aperture_imag.fits', 'Normalized', 'image')
+    else:
+        _write_fits(apertureheader, 'Complex aperture amplitude', np.absolute(transpoaper),
+                    basename + '_aperture_amplitude.fits', 'Normalized', 'image')
+        _write_fits(apertureheader, 'Complex aperture phase', np.angle(transpoaper),
+                    basename + '_aperture_phase.fits', 'rad', 'image')
+
+    phase_amp_header = _axis_to_fits_header(baseheader, inputxds.u_prime.values, 1, 'X', 'm')
+    phase_amp_header = _axis_to_fits_header(phase_amp_header, inputxds.v_prime.values, 2, 'Y', 'm')
+    transpoamp = np.transpose(inputxds['AMPLITUDE'][0, ...].values, carta_dim_order)
+    _write_fits(phase_amp_header, 'Cropped aperture amplitude', transpoamp, basename + '_amplitude.fits',
+                'Normalized', 'image')
+    transpopha = np.transpose(inputxds['CORRECTED_PHASE'][0, ...].values, carta_dim_order)
+    _write_fits(phase_amp_header, 'Cropped aperture corrected phase', transpopha, basename + '_corrected_phase.fits',
+                'rad', 'image')
+    return

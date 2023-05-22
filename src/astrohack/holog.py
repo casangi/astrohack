@@ -21,7 +21,7 @@ def holog(
     cell_size=None,
     image_name=None,
     padding_factor=50,
-    grid_interpolation_mode="nearest",
+    grid_interpolation_mode="linear",
     chan_average=True,
     chan_tolerance_factor=0.005,
     scan_average=True,
@@ -52,7 +52,7 @@ def holog(
     :param parallel: Run in parallel with Dask or in serial., defaults to True
     :type parallel: bool, optional
 
-    :param grid_interpolation_mode: Method of interpolation used when gridding data. This is done using the `scipy.interpolate.griddata` method. For more information on the interpolation see `scipy.interploate <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html#scipy.interpolate.griddata>`_, defaults to "nearest"
+    :param grid_interpolation_mode: Method of interpolation used when gridding data. This is done using the `scipy.interpolate.griddata` method. For more information on the interpolation see `scipy.interploate <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html#scipy.interpolate.griddata>`_, defaults to "linear"
     :type grid_interpolation_mode: str, optional. Available options: {"linear", "nearest", "cubic"} 
 
     :param chan_average: Boolean dictating whether the channel average is computed and written to the output holog file., defaults to True
@@ -137,33 +137,31 @@ def holog(
     json_data = "/".join((holog_params['holog_file'], ".holog_json"))
     with open(json_data, "r") as json_file:
         holog_json = json.load(json_file)
-    meta_data = _read_meta_data(holog_params['holog_file'], 'holog')
+    meta_data = _read_meta_data(holog_params['holog_file'], 'holog', 'extract_holog')
 
     if  holog_params['ant_list'] == 'all':
         holog_params['ant_list'] = list(holog_json.keys())
         
     logger.info('Mapping antennas ' + str(holog_params['ant_list']))
 
+    if (holog_params["cell_size"] is None):
+        cell_size = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
+        holog_params["cell_size"] = cell_size
     
-    if (cell_size is None) and (grid_size is None):
+    if  (holog_params["grid_size"] is None):
         n_pix = int(np.sqrt(meta_data["n_pix"]))
         grid_size = np.array([n_pix, n_pix])
-        cell_size = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
-
-        holog_params["cell_size"] = cell_size
-        holog_params["grid_size"] = grid_size
-        
-        logger.info("Cell size: " + str(cell_size) + " Grid size " + str(grid_size))
-    else:
-        holog_params["cell_size"] = cell_size
         holog_params["grid_size"] = grid_size
     
     
+    logger.info("Cell size: " + str(cell_size) + " Grid size " + str(grid_size))
     json_data = {
-            "cell_size": list(map(float, cell_size)),
-            "grid_size": list(map(float, grid_size))
+            "cell_size": holog_params["cell_size"].tolist(),
+            "grid_size": holog_params["grid_size"].tolist()
     }
-
+    
+    print(holog_params["grid_size"])
+    
     with open(".holog_diagnostic.json", "w") as out_file:
         json.dump(json_data, out_file)
 
@@ -226,13 +224,17 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
     
     parms_passed = parms_passed and _check_parms(holog_params, 'holog_file', [str],default=None)
 
-    parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list, np.ndarray], list_acceptable_data_types=[np.int64, np.int64], list_len=2, default='None',log_default_setting=False)
-    if (isinstance(holog_params['grid_size'],str)) and (holog_params['grid_size'] == 'None'): holog_params['grid_size'] =  None
-    holog_params['grid_size'] = np.array(holog_params['grid_size'])
+    parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list, np.ndarray], list_acceptable_data_types=[np.int64, int], list_len=2, default='None',log_default_setting=False)
+    if (isinstance(holog_params['grid_size'],str)) and (holog_params['grid_size'] == 'None'):
+        holog_params['grid_size'] =  None
+    else:
+        holog_params['grid_size'] = np.array(holog_params['grid_size'])
 
     parms_passed = parms_passed and _check_parms(holog_params, 'cell_size', [list,np.ndarray], list_acceptable_data_types=[numbers.Number], list_len=2, default='None',log_default_setting=False)
-    if (isinstance(holog_params['cell_size'],str)) and (holog_params['cell_size'] == 'None'): holog_params['cell_size'] =  None
-    holog_params['cell_size'] = np.array(holog_params['cell_size'])
+    if (isinstance(holog_params['cell_size'],str)) and (holog_params['cell_size'] == 'None'):
+        holog_params['cell_size'] =  None
+    else:
+        holog_params['cell_size'] = np.array(holog_params['cell_size'])
 
     
     base_name = _remove_suffix(holog_params['holog_file'],'.holog.zarr')

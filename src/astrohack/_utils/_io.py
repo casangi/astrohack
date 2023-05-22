@@ -4,6 +4,7 @@ import zarr
 import copy
 import numpy as np
 import xarray as xr
+import datetime
 
 from astropy.io import fits
 from astrohack import __version__ as code_version
@@ -53,7 +54,7 @@ def _load_panel_file(file=None, panel_dict=None, dask_load=True):
     if panel_dict is not None:
             panel_data_dict = panel_dict
     
-    ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
+    ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
     
     try:
         for ant in ant_list:
@@ -154,7 +155,6 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
                                 mapping_ant_vis_holog_data_name = os.path.join(
                                     holog_file, ddi + "/" + holog_map + "/" + ant
                                 )
-                                
 
                                 if dask_load:
                                     holog_dict[ddi][holog_map][ant] = xr.open_zarr(
@@ -195,17 +195,24 @@ def _read_fits(filename):
     return head, data
 
 
-def _write_fits(head, data, filename):
+def _write_fits(header, imagetype, data, filename, unit, origin):
     """
     Write a dictionary and a dataset to a FITS file
     Args:
-        head: The dictionary containing the header
+        header: The dictionary containing the header
+        imagetype: Type to be added to FITS header
         data: The dataset
         filename: The name of the output file
+        unit: to be set to bunit
     """
+
+    header['BUNIT'] = unit
+    header['TYPE'] = imagetype
+    header['ORIGIN'] = f'Astrohack v{code_version}: {origin}'
+    header['DATE'] = datetime.datetime.now().strftime('%b %d %Y, %H:%M:%S')
     hdu = fits.PrimaryHDU(data)
-    hdu.header = head
-    hdu.header["ORIGIN"] = "Astrohack"
+    for key in header.keys():
+        hdu.header.set(key, header[key])
     hdu.writeto(filename, overwrite=True)
     return
 
@@ -298,12 +305,13 @@ def _load_image_xds(file_stem, ant, ddi, dask_load=True):
         raise FileNotFoundError("Image file: {} not found".format(image_path))
 
 
-def _read_meta_data(file_name, file_type):
+def _read_meta_data(file_name, file_type, origin):
     """Reads dimensional data from holog meta file.
 
     Args:
         file_name (str): astorhack file name.
         file_type (str): astrohack file type
+        origin (str, list): Astrohack expected origin(s)
 
     Returns:
         dict: dictionary containing dimension data.
@@ -319,7 +327,59 @@ def _read_meta_data(file_name, file_type):
         raise
         
 
+    try:
+        metadataorigin = json_dict['origin']
+    except KeyError:
+        logger.error("[_read_meta_data]: Badly formatted metadata in input file")
+        raise Exception('Bad metadata')
+    if isinstance(origin, str):
+        if metadataorigin != origin:
+            logger.error(f"[_read_meta_data]: Input file is not an Astrohack {file_type} file")
+            logger.error(f"Expected origin was {origin} but got {metadataorigin}")
+            raise TypeError('Incorrect file type')
+    elif isinstance(origin, (list, tuple)):
+        if metadataorigin not in origin:
+            logger.error(f"[_read_meta_data]: Input file is not an Astrohack {file_type} file")
+            logger.error(f"Expected origin was {origin} but got {metadataorigin}")
+            raise TypeError('Incorrect file type')
+
     return json_dict
+
+
+def _check_mds_origin(file_name, file_type):
+    """
+
+    Args:
+        file_name(str): astrohack file name.
+        file_type(str, list): accepted astrohack file type
+
+    Returns: origin(str) the origin of the mds file
+
+    """
+    logger = _get_astrohack_logger()
+    if isinstance(file_type, str):
+        file_type = [file_type]
+
+    for ftype in file_type:
+        try:
+            with open(f'{file_name}/.{ftype}_attr') as json_file:
+                json_dict = json.load(json_file)
+                found = True
+        except FileNotFoundError:
+            found = False
+        if found:
+            break
+    if not found:
+        logger.error("[_check_mds_origin]: metadata not found")
+        raise Exception('Metadata not found')
+
+    try:
+        metadataorigin = json_dict['origin']
+    except KeyError:
+        logger.error("[_check_mds_origin]: Badly formatted metadata in input file")
+        raise Exception('Bad metadata')
+
+    return metadataorigin
 
 
 def _write_meta_data(origin, file_name, input_dict):
