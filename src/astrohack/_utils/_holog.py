@@ -245,6 +245,10 @@ def _holog_chunk(holog_chunk_params):
     else:
         logger.info("Skipping phase correction ...")
 
+    deltal = np.max(l) - np.min(l)
+    deltam = np.max(m) - np.min(m)
+    aperture_resolution = np.array([1/deltal, 1/deltam])
+    aperture_resolution *= 1.27*min_wavelength
     
     ###To Do: Add Paralactic angle as a non-dimension coordinate dependant on time.
     xds = xr.Dataset()
@@ -255,6 +259,7 @@ def _holog_chunk(holog_chunk_params):
     xds["AMPLITUDE"] = xr.DataArray(amplitude, dims=["time", "chan", "pol", "u_prime", "v_prime"])
     xds["CORRECTED_PHASE"] = xr.DataArray(phase_corrected_angle, dims=["time", "chan", "pol", "u_prime", "v_prime"])
 
+    xds.attrs["aperture_resolution"] = aperture_resolution
     xds.attrs["ant_id"] = holog_chunk_params["ant_id"]
     xds.attrs["ant_name"] = ant_name
     xds.attrs["telescope_name"] = meta_data['telescope_name']
@@ -339,6 +344,13 @@ def _export_to_fits_holog_chunk(parm_dict):
 
     logger.info(f'Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
 
+    try:
+        aperture_resolution = inputxds.attrs["aperture_resolution"]
+    except KeyError:
+        logger.warning("[_read_holog_xds] holog image does not have resolution information")
+        logger.warning("[_read_holog_xds] Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+        aperture_resolution = None
+
     nchan = len(inputxds.chan)
     if nchan == 1:
         reffreq = inputxds.chan.values[0]
@@ -390,6 +402,8 @@ def _export_to_fits_holog_chunk(parm_dict):
 
     apertureheader = _axis_to_fits_header(baseheader, inputxds.u.values, 1, 'X', 'm')
     apertureheader = _axis_to_fits_header(apertureheader, inputxds.v.values, 2, 'Y', 'm')
+    apertureheader['L_RESOLU'] = aperture_resolution[0]
+    apertureheader['M_RESOLU'] = aperture_resolution[1]
     transpoaper = np.transpose(inputxds['APERTURE'][0, ...].values, carta_dim_order)
     if parm_dict['complex_split'] == 'cartesian':
         _write_fits(apertureheader, 'Complex aperture real part', transpoaper.real,
@@ -404,6 +418,8 @@ def _export_to_fits_holog_chunk(parm_dict):
 
     phase_amp_header = _axis_to_fits_header(baseheader, inputxds.u_prime.values, 1, 'X', 'm')
     phase_amp_header = _axis_to_fits_header(phase_amp_header, inputxds.v_prime.values, 2, 'Y', 'm')
+    phase_amp_header['L_RESOLU'] = aperture_resolution[0]
+    phase_amp_header['M_RESOLU'] = aperture_resolution[1]
     transpoamp = np.transpose(inputxds['AMPLITUDE'][0, ...].values, carta_dim_order)
     _write_fits(phase_amp_header, 'Cropped aperture amplitude', transpoamp, basename + '_amplitude.fits',
                 'Normalized', 'image')
