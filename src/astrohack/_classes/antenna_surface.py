@@ -1,6 +1,7 @@
 import xarray as xr
 from matplotlib import pyplot as plt
 from matplotlib import colormaps as cmaps
+from matplotlib import patches
 
 from astrohack._classes.base_panel import panel_models, irigid
 from astrohack._classes.ring_panel import RingPanel
@@ -565,14 +566,13 @@ class AntennaSurface:
             fig, ax = plt.subplots(1, 1, figsize=figuresize)
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
-        xmin = np.min(self.u_axis)
-        xmax = np.max(self.u_axis)
-        ymin = np.min(self.v_axis)
-        ymax = np.max(self.v_axis)
-        im = ax.imshow(data, cmap=colormap, interpolation="nearest", extent=[xmin, xmax, ymin, ymax],
+        extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
+        im = ax.imshow(data, cmap=colormap, interpolation="nearest", extent=extent,
                        vmin=vmin, vmax=vmax,)
+        self._add_resolution_to_plot(ax, extent)
         if colorbar:
             _well_positioned_colorbar(ax, fig, im, "Z Scale [" + unit + "]")
+        self._add_resolution_to_plot(ax, extent)
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
@@ -580,6 +580,16 @@ class AntennaSurface:
         fig.tight_layout()
         plt.savefig(filename, dpi=dpi)
         plt.close()
+
+    def _add_resolution_to_plot(self, ax, extent):
+        if self.resolution is None:
+            return
+        dx = extent[1]-extent[0]
+        dy = extent[3]-extent[2]
+        center = (extent[0]+0.9*dx, extent[2]+0.1*dy)
+        resolution = patches.Ellipse(center, self.resolution[0], self.resolution[1], angle=0.0, linewidth=2,
+                                     color='black', zorder=2)
+        ax.add_patch(resolution)
 
     def plot_screw_adjustments(self, filename, unit, threshold=None, colormap=None, figuresize=None, dpi=300):
         """
@@ -611,12 +621,10 @@ class AntennaSurface:
         fig.suptitle('Screw corrections', y=0.92, fontsize='large')
         ax.set_title(f'\nThreshold = {threshold:.2f} {unit}', fontsize='small')
         # set the limits of the plot to the limits of the data
-        xmin = np.min(self.u_axis)
-        xmax = np.max(self.u_axis)
-        ymin = np.min(self.v_axis)
-        ymax = np.max(self.v_axis)
+        extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
         im = ax.imshow(np.full_like(self.deviation, fill_value=np.nan), cmap=cmap, interpolation="nearest",
-                       extent=[xmin, xmax, ymin, ymax], vmin=vmin, vmax=vmax)
+                       extent=extent, vmin=vmin, vmax=vmax)
+        self._add_resolution_to_plot(ax, extent)
         colorbar = _well_positioned_colorbar(ax, fig, im, "Screw adjustments [" + unit + "]")
         if threshold > 0:
             line = threshold
