@@ -8,7 +8,8 @@ from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar, _axis_to_fits_header
+from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar, _axis_to_fits_header, \
+    _resolution_to_fits_header
 from astrohack._utils._io import _write_fits
 
 lnbr = "\n"
@@ -743,11 +744,10 @@ class AntennaSurface:
             'INSTRUME': self.telescope.name,
             'WAVELENG': self.wavelength,
             'FREQUENC': clight/self.wavelength,
-            'L_RESOLU': self.resolution[0],
-            'M_RESOLU': self.resolution[1],
         }
         head = _axis_to_fits_header(head, self.u_axis, 1, 'X', 'm')
         head = _axis_to_fits_header(head, self.v_axis, 2, 'Y', 'm')
+        head = _resolution_to_fits_header(head, self.resolution)
 
         _write_fits(head, 'Amplitude', self.amplitude, basename + '_amplitude.fits', self.amp_unit, 'panel')
         _write_fits(head, 'Mask', np.where(self.mask, 1.0, np.nan), basename + '_mask.fits', '', 'panel')

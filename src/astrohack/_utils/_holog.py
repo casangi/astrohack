@@ -18,7 +18,8 @@ from astrohack._utils._algorithms import _calc_coords
 
 from astrohack._utils._conversion import _to_stokes
 from astrohack._utils._constants import clight
-from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header, _stokes_axis_to_fits_header
+from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header, _stokes_axis_to_fits_header, \
+    _resolution_to_fits_header
 
 from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk
@@ -402,8 +403,7 @@ def _export_to_fits_holog_chunk(parm_dict):
 
     apertureheader = _axis_to_fits_header(baseheader, inputxds.u.values, 1, 'X', 'm')
     apertureheader = _axis_to_fits_header(apertureheader, inputxds.v.values, 2, 'Y', 'm')
-    apertureheader['L_RESOLU'] = aperture_resolution[0]
-    apertureheader['M_RESOLU'] = aperture_resolution[1]
+    apertureheader = _resolution_to_fits_header(apertureheader, aperture_resolution)
     transpoaper = np.transpose(inputxds['APERTURE'][0, ...].values, carta_dim_order)
     if parm_dict['complex_split'] == 'cartesian':
         _write_fits(apertureheader, 'Complex aperture real part', transpoaper.real,
@@ -418,8 +418,7 @@ def _export_to_fits_holog_chunk(parm_dict):
 
     phase_amp_header = _axis_to_fits_header(baseheader, inputxds.u_prime.values, 1, 'X', 'm')
     phase_amp_header = _axis_to_fits_header(phase_amp_header, inputxds.v_prime.values, 2, 'Y', 'm')
-    phase_amp_header['L_RESOLU'] = aperture_resolution[0]
-    phase_amp_header['M_RESOLU'] = aperture_resolution[1]
+    phase_amp_header = _resolution_to_fits_header(phase_amp_header, aperture_resolution)
     transpoamp = np.transpose(inputxds['AMPLITUDE'][0, ...].values, carta_dim_order)
     _write_fits(phase_amp_header, 'Cropped aperture amplitude', transpoamp, basename + '_amplitude.fits',
                 'Normalized', 'image')
