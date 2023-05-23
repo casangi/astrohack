@@ -577,7 +577,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.plot(ax, screws=screws)
         fig.tight_layout()
-        plt.savefig(filename, dpi=dpi)
+        plt.savefig(_add_prefix(filename, 'panel'), dpi=dpi)
         plt.close()
 
     def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
@@ -642,7 +642,7 @@ class AntennaSurface:
             self.panels[ipanel].plot(ax, screws=False)
             self.panels[ipanel].plot_corrections(ax, cmap, fac*self.screw_adjustments[ipanel], threshold, vmin, vmax)
         fig.tight_layout()
-        plt.savefig(filename, dpi=dpi)
+        plt.savefig(_add_prefix(filename, 'panel'), dpi=dpi)
         plt.close()
 
     def _build_panel_data_arrays(self):
