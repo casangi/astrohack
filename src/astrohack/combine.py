@@ -7,7 +7,7 @@ from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._io import check_if_file_will_be_overwritten, check_if_file_exists, _write_meta_data
-from astrohack._utils._dio import AstrohackImageFile
+from astrohack._utils._mds import AstrohackImageFile
 
 
 def combine_image_ddi(image_name, combine_name=None, ant_list=None, ddi_list=None, weighted=False, parallel=False,

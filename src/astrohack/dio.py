@@ -11,10 +11,10 @@ from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._dask_graph_tools import _generate_antenna_ddi_graph_and_compute
 
-from astrohack._utils._dio import AstrohackImageFile
-from astrohack._utils._dio import AstrohackHologFile
-from astrohack._utils._dio import AstrohackPanelFile
-from astrohack._utils._dio import AstrohackPointFile
+from astrohack._utils._mds import AstrohackImageFile
+from astrohack._utils._mds import AstrohackHologFile
+from astrohack._utils._mds import AstrohackPanelFile
+from astrohack._utils._mds import AstrohackPointFile
 
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk

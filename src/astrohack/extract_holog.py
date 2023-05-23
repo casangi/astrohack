@@ -37,7 +37,7 @@ from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._tools import _jsonify
 
-from astrohack._utils._dio import AstrohackHologFile
+from astrohack._utils._mds import AstrohackHologFile
 
 def extract_holog(
     ms_name,
