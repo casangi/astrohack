@@ -581,15 +581,19 @@ class AntennaSurface:
         plt.savefig(filename, dpi=dpi)
         plt.close()
 
-    def _add_resolution_to_plot(self, ax, extent):
+    def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
+        lw = 0.5
         if self.resolution is None:
             return
         dx = extent[1]-extent[0]
         dy = extent[3]-extent[2]
-        center = (extent[0]+0.9*dx, extent[2]+0.1*dy)
-        resolution = patches.Ellipse(center, self.resolution[0], self.resolution[1], angle=0.0, linewidth=2,
-                                     color='black', zorder=2)
+        center = (extent[0]+xpos*dx, extent[2]+ypos*dy)
+        resolution = patches.Ellipse(center, self.resolution[0], self.resolution[1], angle=0.0, linewidth=lw,
+                                     color='black', zorder=2, fill=False)
         ax.add_patch(resolution)
+        halfbeam = self.resolution/dy/2
+        ax.axvline(x=center[0], ymin=ypos - halfbeam[1], ymax=ypos + halfbeam[1], color='black', lw=lw / 2)
+        ax.axhline(y=center[1], xmin=xpos - halfbeam[0], xmax=xpos + halfbeam[0], color='black', lw=lw / 2)
 
     def plot_screw_adjustments(self, filename, unit, threshold=None, colormap=None, figuresize=None, dpi=300):
         """
