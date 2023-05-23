@@ -261,6 +261,8 @@ def _resolution_to_fits_header(header, resolution):
 
     Returns: The augmented header dictionary
     """
+    if resolution is None:
+        return header
     if resolution[0] >= resolution[1]:
         header['BMAJ'] = resolution[0]
         header['BMIN'] = resolution[1]
