@@ -157,6 +157,66 @@ class AstrohackImageFile(dict):
 
             return self[ant][ddi]
 
+    def export_to_fits(self, destination, complex_split='cartesian', ant_name=None, ddi=None, parallel=True):
+        """ Export contents of an Astrohack MDS file to several FITS files in the destination folder
+
+        :param destination: Name of the destination folder to contain plots
+        :type destination: str
+        :param complex_split: How to split complex data, cartesian (real + imaginary) or polar (amplitude + phase)
+        :type complex_split: str
+        :param ant_name: List of antennae/antenna to be plotted, defaults to "all" when None
+        :type ant_name: list or str, optional, ex. ant_ea25
+        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
+        :type ddi: list or str, optional, ex. ddi_0
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel
+        :type parallel: bool
+
+        .. _Description:
+        Export the products from the holog mds onto FITS files to be read by other software packages
+
+        **Additional Information**
+        The image products of holog are complex images due to the nature of interferometric measurements and Fourier
+        transforms, currently complex128 FITS files are not supported by astropy, hence the need to split complex images
+        onto two real image products, we present the user with two options to carry out this split.
+
+        .. rubric:: Available complex splitting possibilities:
+        - *cartesian*: Split is done to a real part and an imaginary part FITS files
+        - *polar*:     Split is done to an amplitude and a phase FITS files
+
+
+        The FITS files produced by this function have been tested and are known to work with CARTA and DS9
+        """
+
+        logger = _get_astrohack_logger()
+        parm_dict = {'ant_name': ant_name,
+                     'ddi': ddi,
+                     'destination': destination,
+                     'complex_split': complex_split,
+                     'parallel': parallel}
+
+        parms_passed = _check_parms(parm_dict, 'complex_split', [str], acceptable_data=['cartesian', 'polar'],
+                                    default="cartesian")
+        parms_passed = parms_passed and _check_parms(parm_dict, 'ant_name', [list], list_acceptable_data_types=[str],
+                                                     default='all')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list], list_acceptable_data_types=[str],
+                                                     default='all')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(parm_dict, 'parallel', [bool], default=True)
+
+        if not parms_passed:
+            logger.error("export_screws parameter checking failed.")
+            raise Exception("export_screws parameter checking failed.")
+
+        parm_dict['holog_mds'] = self
+        parm_dict['filename'] = self.file
+
+        try:
+            os.mkdir(parm_dict['destination'])
+        except FileExistsError:
+            logger.warning('Destination folder already exists, results may be overwritten')
+
+        _generate_antenna_ddi_graph_and_compute('export_to_fits', _export_to_fits_holog_chunk, parm_dict, parallel)
+
 
 class AstrohackHologFile(dict):
     """
@@ -495,19 +555,11 @@ class AstrohackPanelFile(dict):
         :type parallel: bool
 
         .. _Description:
-        Export the products from either holog or panel onto FITS files to be read by other software packages
+        Export the products from the panel mds onto FITS files to be read by other software packages
 
         **Additional Information**
-        The image products of holog are complex images due to the nature of interferometric measurements and Fourier
-        transforms, currently complex128 FITS files are not supported by astropy, hence the need to split complex images
-        onto two real image products, we present the user with two options to carry out this split.
 
-        .. rubric:: Available complex splitting possibilities:
-        - *cartesian*: Split is done to a real part and an imaginary part FITS files
-        - *polar*:     Split is done to an amplitude and a phase FITS files
-
-
-        The FITS produced by this function have been tested are known to work with CARTA and DS9
+        The FITS fils produced by this method have been tested and are known to work with CARTA and DS9
         """
 
         logger = _get_astrohack_logger()
