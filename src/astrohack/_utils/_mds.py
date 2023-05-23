@@ -1,5 +1,7 @@
 import os
 import numpy as np
+import numbers
+from matplotlib import colormaps as cmaps
 
 from astrohack._utils._dio import _load_image_xds
 from prettytable import PrettyTable
@@ -9,6 +11,12 @@ from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _load_image_file
 from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
+from astrohack._utils._parm_utils._check_parms import _check_parms
+from astrohack._utils._constants import length_units, trigo_units, plot_types
+from astrohack._utils._dask_graph_tools import _generate_antenna_ddi_graph_and_compute
+
+from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
+from astrohack._utils._holog import _export_to_fits_holog_chunk
 
 from astrohack._classes.antenna_surface import AntennaSurface
 from astrohack._classes.telescope import Telescope
@@ -309,7 +317,7 @@ class AstrohackPanelFile(dict):
         """
         Return an AntennaSurface object for interaction
         Args:
-            antenna: Which antenna in to be used
+            antenna: Which antenna is to be used
             ddi: Which ddi is to be used
             dask_load: Load xds using dask?
         Returns:
@@ -319,6 +327,71 @@ class AstrohackPanelFile(dict):
         telescope = Telescope(xds.attrs['telescope_name'])
         
         return AntennaSurface(xds, telescope, reread=True)
+
+    def export_screws(self, destination, ant_name=None, ddi=None, unit='mm', threshold=None, plot_map=False,
+                      colormap='seismic', figuresize=None, dpi=300):
+        """ Export screw adjustment from panel to text file and save to disk.
+
+        :param destination: Name of the destination folder to contain exported screw adjustments
+        :type destination: str
+        :param ant_name: List of antennae/antenna to be exported, defaults to "all" when None
+        :type ant_name: list or str, optional, ex. ant_ea25
+        :param ddi: List of ddis/ddi to be exported, defaults to "all" when None
+        :type ddi: list or str, optional, ex. ddi_0
+        :param unit: Unit for screws adjustments, most length units supported, defaults to "mm"
+        :type unit: str
+        :param threshold: Threshold below which data is considered negligable, value is assumed to be in the same unit as the plot, if not given defaults to 10% of the maximal deviation
+        :type threshold: float, optional
+        :param plot_map: Plot the map of screw adjustments, default is False
+        :type plot_map: bool
+        :param colormap: Colormap for screw adjustment map
+        :type colormap: str
+        :param figuresize: 2 element array/list/tuple with the screw adjustment map size in inches
+        :type figuresize: numpy.ndarray, list, tuple, optional
+        :param dpi: Screw adjustment map resolution in pixels per inch
+        :type dpi: int
+
+        .. _Description:
+
+        Produce the screw adjustments from ``astrohack.panel`` results to be used at the antenna site to improve the antenna surface
+
+        """
+        logger = _get_astrohack_logger()
+        parm_dict = {'ant_name': ant_name,
+                     'ddi': ddi,
+                     'destination': destination,
+                     'unit': unit,
+                     'threshold': threshold,
+                     'plot_map': plot_map,
+                     'colormap': colormap,
+                     'figuresize': figuresize,
+                     'dpi': dpi}
+
+        parms_passed = _check_parms(parm_dict, 'ant_name', [list], list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list], list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=length_units, default='mm')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'threshold', [numbers.Number], default=None)
+        parms_passed = parms_passed and _check_parms(parm_dict, 'plot_map', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(parm_dict, 'colormap', [str], acceptable_data=cmaps, default='RdBu_r')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'figuresize', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(parm_dict, 'dpi', [int], default=300)
+
+        if not parms_passed:
+            logger.error("export_screws parameter checking failed.")
+            raise Exception("export_screws parameter checking failed.")
+
+        parm_dict['panel_mds'] = self
+        parm_dict['filename'] = self.file
+
+        try:
+            os.mkdir(parm_dict['destination'])
+        except FileExistsError:
+            logger.warning('Destination folder already exists, results may be overwritten')
+
+        _generate_antenna_ddi_graph_and_compute('export_screws', _export_screws_chunk, parm_dict, False)
 
 
 class AstrohackPointFile(dict):
