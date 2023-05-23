@@ -1,4 +1,6 @@
 import numpy as np
+    
+import matplotlib.pyplot as plt
 
 from astropy.time import Time
 
@@ -197,3 +199,92 @@ def _plotly_calibration_inspection_function(data, delta=0.01, pol='RR', width=10
         }
     
     fig.show()
+
+def _calibration_plot_chunk(param_dict):
+
+    data = param_dict['data']
+    delta  = param_dict['delta']
+    data_type = param_dict['type']
+    save_plot = param_dict['save']
+    display = param_dict['display']
+    width = param_dict['width']
+    height = param_dict['height']
+    
+    pixels = 1/plt.rcParams['figure.dpi']
+    plt.rcParams['figure.figsize'] = [width*pixels, height*pixels]
+    
+    UNIX_CONVERSION = 3506716800
+    
+    radius = np.power(data.grid_parms['cell_size']*delta, 2)
+    
+    l = data.DIRECTIONAL_COSINES.values[..., 0] 
+    m = data.DIRECTIONAL_COSINES.values[..., 1]
+    
+    assert l.shape[0] == m.shape[0], "l, m dimensions don't match!"
+    
+    indicies = _extract_indicies(
+        l = l, 
+        m = m, 
+        squared_radius=radius
+    )
+    
+    if data_type == "real":
+        vis_dict = {
+            "data": [
+                data.isel(time=indicies).VIS.real,
+                data.isel(time=indicies).VIS.imag
+            ],
+            "polarization": [0, 3],
+            "label":[
+                "REAL", 
+                "IMAGINARY"
+            ]
+        }
+    else:
+        vis_dict = {
+            "data": [
+                data.isel(time=indicies).apply(np.abs).VIS,
+                data.isel(time=indicies).apply(np.angle).VIS
+            ],
+            "polarization": [0, 3],
+            "label":[
+                "AMPLITUDE", 
+                "PHASE"
+            ]
+        }
+    
+    times = Time(vis_dict["data"][0].time.data - UNIX_CONVERSION, format='unix').iso
+    
+    fig, axis = plt.subplots(4, 1, sharex=True)
+    
+    chan = np.arange(0, data.chan.data.shape[0])
+
+    fig.suptitle(
+        'Data Calibration Check: [{ddi}, {map_id}, {ant_id}]'.format(ddi=data.ddi, map_id=data.holog_map_key, ant_id=data.antenna_name), 
+        ha='left', 
+        va='center', 
+        x=0.04, 
+        y=0.5, 
+        rotation=90
+    )
+    
+    length = times.shape[0]
+    
+    for i, vis in enumerate(vis_dict["data"]):
+        for j, pol in enumerate(vis_dict["polarization"]):
+            for time in range(length):
+                k = 2*i + j
+                axis[k].plot(chan, vis[time, :, pol], marker='o', label=times[time])
+                axis[k].set_ylabel("Visibilities ({component}; {pol})".format(component=vis_dict["label"][i], pol=data.pol.values[pol]))
+    
+    
+    axis[3].set_xlabel("Channel")
+    axis[0].legend(
+        bbox_to_anchor=(0., 1.02, 1., .102), 
+        loc='lower left',
+        ncols=4, 
+        mode="expand", 
+        borderaxespad=0.
+    )
+    
+    if save_plot: fig.savefig("ddi_{ddi}_{map_id}_{ant_id}.png".format(ddi=data.ddi, map_id=data.holog_map_key, ant_id=data.antenna_name))

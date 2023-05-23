@@ -1,5 +1,7 @@
 import os
 import json
+import dask
+import xarray
 
 import numpy as np
 
@@ -144,3 +146,28 @@ def _split_pointing_table(ms_name, antennas):
         tablename="/".join((ms_name, 'REDUCED')), 
         newtablename="/".join((ms_name, 'POINTING'))
     )
+
+def _dask_compute(data_dict, function, param_dict, key_list=["ant_", "ddi_", "map_"], parallel=False):
+    
+    delayed_list = []
+    _construct_graph(data_dict, function, param_dict, delayed_list=delayed_list, key_list=key_list, parallel=parallel)
+    
+    if parallel:
+        dask.compute(delayed_list)
+
+def _construct_graph(data_dict, function, param_dict, delayed_list, key_list=["ant_", "ddi_", "map_"], parallel=False):
+
+    
+    if isinstance(data_dict, xarray.Dataset):
+        param_dict['data'] = data_dict
+        
+        if parallel:
+            delayed_list.append(dask.delayed(function)(dask.delayed(param_dict)))
+            
+        else:
+            function(param_dict)
+        
+    for key, value in data_dict.items():
+        for element in key_list:
+            if key.find(element) == 0:
+                _dask_compute(value, function, param_dict, key_list, parallel)  
