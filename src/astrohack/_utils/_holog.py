@@ -246,6 +246,8 @@ def _holog_chunk(holog_chunk_params):
     else:
         logger.info("Skipping phase correction ...")
 
+    # Here we compute the aperture resolution from Equation 7 In EVLA memo 212
+    # https://library.nrao.edu/public/memos/evla/EVLAM_212.pdf
     deltal = np.max(l) - np.min(l)
     deltam = np.max(m) - np.min(m)
     aperture_resolution = np.array([1/deltal, 1/deltam])
