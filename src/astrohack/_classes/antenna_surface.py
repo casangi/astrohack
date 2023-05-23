@@ -17,7 +17,7 @@ figsize = [5, 4]
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, panel_margins=None, reread=False):
+    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, nan_out_of_bounds=True, panel_margins=None, reread=False):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -27,6 +27,7 @@ class AntennaSurface:
                     defaults to 20% if None
             pmodel: model of panel surface fitting, if is None defaults to telescope default
             crop: Crop apertures to slightly larger frames than the antenna diameter
+            nan_out_of_bounds: Should the region outside the dish be replaced with NaNs?
             panel_margins: Margin to be ignored at edges of panels when fitting, defaults to 20% if None
             reread: Read a previously processed holography
         """
@@ -60,9 +61,10 @@ class AntennaSurface:
             else:
                 self.deviation = self._phase_to_deviation(self.phase)
 
-            self.phase = self._nan_out_of_bounds(self.phase)
-            self.amplitude = self._nan_out_of_bounds(self.amplitude)
-            self.deviation = self._nan_out_of_bounds(self.deviation)
+            if nan_out_of_bounds:
+                self.phase = self._nan_out_of_bounds(self.phase)
+                self.amplitude = self._nan_out_of_bounds(self.amplitude)
+                self.deviation = self._nan_out_of_bounds(self.deviation)
 
     def _read_aips_xds(self, inputxds):
         self.amplitude = np.flipud(inputxds["AMPLITUDE"].values)

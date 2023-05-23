@@ -25,6 +25,9 @@ from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk
 from astrohack._utils._imaging import _calculate_aperture_pattern
 
+from astrohack._utils._panel import _get_correct_telescope_from_name
+from astrohack._classes.antenna_surface import AntennaSurface
+
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 
@@ -428,3 +431,24 @@ def _export_to_fits_holog_chunk(parm_dict):
     _write_fits(phase_amp_header, 'Cropped aperture corrected phase', transpopha, basename + '_corrected_phase.fits',
                 'rad', 'image')
     return
+
+
+def _plot_aperture_chunk(parm_dict):
+    """
+    Chunk function for the user facing function plot_apertures
+    Args:
+        parm_dict: parameter dictionary
+    """
+    antenna = parm_dict['this_antenna']
+    ddi = parm_dict['this_ddi']
+    destination = parm_dict['destination']
+    basename = f'{destination}/{antenna}_{ddi}'
+    inputxds = parm_dict['image_mds'].select(antenna, ddi, polar=False)
+    inputxds.attrs['AIPS'] = False
+    telescope = _get_correct_telescope_from_name(inputxds)
+    surface = AntennaSurface(inputxds, telescope, nan_out_of_bounds=False)
+
+    surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'],
+                       colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'])
+    surface.plot_amplitude(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
+                           colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'])
