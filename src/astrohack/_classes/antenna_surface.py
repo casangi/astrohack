@@ -464,7 +464,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.print_misc()
 
-    def plot_mask(self, basename, screws=False, colormap=None, figuresize=None, dpi=300):
+    def plot_mask(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, caller='panel'):
         """
         Plot mask used in the selection of points to be fitted
         Args:
@@ -473,13 +473,14 @@ class AntennaSurface:
             colormap: Colormap for amplitude plot
             figuresize: 2 element array with the image sizes in inches
             dpi: Plot resolution
+            caller: Which mds called this plotting function
         """
         plotmask = np.where(self.mask, 1, np.nan)
         plotname = _add_prefix(basename, 'mask')
         self._plot_map(plotname, plotmask, 'Mask', 0, 1, None, screws=screws, colormap=colormap, figuresize=figuresize,
-                       dpi=dpi, colorbar=False)
+                       dpi=dpi, colorbar=False, caller=caller)
 
-    def plot_amplitude(self, basename, screws=False, colormap=None, figuresize=None, dpi=300):
+    def plot_amplitude(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, caller='panel'):
         """
         Plot Amplitude map
         Args:
@@ -488,14 +489,15 @@ class AntennaSurface:
             colormap: Colormap for amplitude plot
             figuresize: 2 element array with the image sizes in inches
             dpi: Plot resolution
+            caller: Which mds called this plotting function
         """
         vmin, vmax = np.nanmin(self.amplitude), np.nanmax(self.amplitude)
         title = "Amplitude min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
         plotname = _add_prefix(basename, 'amplitude')
         self._plot_map(plotname, self.amplitude, title, vmin, vmax, self.amp_unit, screws=screws, colormap=colormap,
-                       figuresize=figuresize, dpi=dpi)
+                       figuresize=figuresize, dpi=dpi, caller=caller)
 
-    def plot_phase(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None):
+    def plot_phase(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None, caller='panel'):
         """
         Plot phase map(s)
         Args:
@@ -505,6 +507,7 @@ class AntennaSurface:
             figuresize: 2 element array with the image sizes in inches
             dpi: Plot resolution
             unit: Angle unit for plot(s)
+            caller: Which mds called this plotting function
         """
         if unit is None:
             unit = 'deg'
@@ -516,9 +519,9 @@ class AntennaSurface:
         else:
             maps = [self.phase, self.phase_corrections, self.phase_residuals]
             labels = ['original', 'corrections', 'residuals']
-        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi)
+        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller)
 
-    def plot_deviation(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None):
+    def plot_deviation(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None, caller='panel'):
         """
         Plot deviation map(s)
         Args:
@@ -528,6 +531,7 @@ class AntennaSurface:
             figuresize: 2 element array with the image sizes in inches
             dpi: Plot resolution
             unit: Length unit for plot(s)
+            caller: Which mds called this plotting function
         """
         if unit is None:
             unit = 'mm'
@@ -539,10 +543,10 @@ class AntennaSurface:
         else:
             maps = [self.deviation, self.corrections, self.residuals]
             labels = ['original', 'corrections', 'residuals']
-        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi)
+        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller)
 
     def _multi_plot(self, maps, labels, prefix, basename, unit, conversion, screws, colormap=None, figuresize=None,
-                    dpi=300):
+                    dpi=300, caller='panel'):
         if len(maps) != len(labels):
             raise Exception('Map list and label list must be of the same size')
         nplots = len(maps)
@@ -553,10 +557,10 @@ class AntennaSurface:
             plotname = _add_prefix(basename, labels[iplot])
             plotname = _add_prefix(plotname, prefix)
             self._plot_map(plotname, conversion*maps[iplot], title, vmin, vmax, unit, screws=screws, dpi=dpi,
-                           colormap=colormap, figuresize=figuresize)
+                           colormap=colormap, figuresize=figuresize, caller=caller)
 
     def _plot_map(self, filename, data, title, vmin, vmax, unit, screws=False, colormap=None, figuresize=None, dpi=300,
-                  colorbar=True):
+                  colorbar=True, caller='panel'):
         if colormap is None:
             colormap = 'viridis'
         if figuresize is None:
@@ -579,7 +583,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.plot(ax, screws=screws)
         fig.tight_layout()
-        plt.savefig(_add_prefix(filename, 'panel'), dpi=dpi)
+        plt.savefig(_add_prefix(filename, caller), dpi=dpi)
         plt.close()
 
     def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
@@ -644,7 +648,7 @@ class AntennaSurface:
             self.panels[ipanel].plot(ax, screws=False)
             self.panels[ipanel].plot_corrections(ax, cmap, fac*self.screw_adjustments[ipanel], threshold, vmin, vmax)
         fig.tight_layout()
-        plt.savefig(_add_prefix(filename, 'panel'), dpi=dpi)
+        plt.savefig(filename, dpi=dpi)
         plt.close()
 
     def _build_panel_data_arrays(self):

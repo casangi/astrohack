@@ -690,7 +690,7 @@ def _export_screws_chunk(parm_dict):
     """
     antenna = parm_dict['this_antenna']
     ddi = parm_dict['this_ddi']
-    export_name = parm_dict['destination'] + f'/screws_{antenna}_{ddi}.'
+    export_name = parm_dict['destination'] + f'/panel_screws_{antenna}_{ddi}.'
     surface = parm_dict['panel_mds'].get_antenna(antenna, ddi, dask_load=False)
     surface.export_screws(export_name + 'csv', unit=parm_dict['unit'])
     if parm_dict['plot_map']:
