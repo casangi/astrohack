@@ -3,7 +3,7 @@ import os
 import xarray as xr
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._io import _load_image_xds
+from astrohack._utils._dio import _load_image_xds
 from scipy.interpolate import griddata
 from astrohack._utils._constants import clight
 

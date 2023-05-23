@@ -1,4 +1,4 @@
-from ._io import *
+from ._dio import *
 from ._algorithms import *
 from ._constants import *
 from ._conversion import *

@@ -1,14 +1,14 @@
 import os
 import numpy as np
 
-from astrohack._utils._io import _load_image_xds
+from astrohack._utils._dio import _load_image_xds
 from prettytable import PrettyTable
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._io import _read_meta_data
-from astrohack._utils._io import _load_holog_file
-from astrohack._utils._io import _load_image_file
-from astrohack._utils._io import _load_panel_file
-from astrohack._utils._io import _load_point_file
+from astrohack._utils._dio import _read_meta_data
+from astrohack._utils._dio import _load_holog_file
+from astrohack._utils._dio import _load_image_file
+from astrohack._utils._dio import _load_panel_file
+from astrohack._utils._dio import _load_point_file
 
 from astrohack._classes.antenna_surface import AntennaSurface
 from astrohack._classes.telescope import Telescope

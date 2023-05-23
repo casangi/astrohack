@@ -21,13 +21,13 @@ from astrohack._utils._conversion import _convert_ant_name_to_id
 from astrohack._utils._extract_holog import _create_holog_meta_data
 from astrohack._utils._extract_point import _extract_pointing
 
-from astrohack._utils._io import _load_point_file
-from astrohack._utils._io import _open_no_dask_zarr
-from astrohack._utils._io import _read_data_from_holog_json
-from astrohack._utils._io import _read_meta_data
-from astrohack._utils._io import _load_holog_file
-from astrohack._utils._io import  check_if_file_will_be_overwritten, check_if_file_exists
-from astrohack._utils._io import _load_holog_file
+from astrohack._utils._dio import _load_point_file
+from astrohack._utils._dio import _open_no_dask_zarr
+from astrohack._utils._dio import _read_data_from_holog_json
+from astrohack._utils._dio import _read_meta_data
+from astrohack._utils._dio import _load_holog_file
+from astrohack._utils._dio import  check_if_file_will_be_overwritten, check_if_file_exists
+from astrohack._utils._dio import _load_holog_file
 
 from astrohack._utils._extract_holog import _extract_holog_chunk
 

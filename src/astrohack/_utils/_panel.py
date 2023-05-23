@@ -5,7 +5,7 @@ from numba import njit
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit_block
 from astrohack._utils._constants import plot_types
-from astrohack._utils._io import _load_image_xds
+from astrohack._utils._dio import _load_image_xds
 
 from astrohack._classes.telescope import Telescope
 from astrohack._classes.antenna_surface import AntennaSurface

@@ -6,8 +6,8 @@ from scipy.interpolate import griddata
 
 from astrohack._classes.telescope import Telescope
 
-from astrohack._utils._io import _load_holog_file, _load_image_xds
-from astrohack._utils._io import _read_meta_data, _write_meta_data, _write_fits
+from astrohack._utils._dio import _load_holog_file, _load_image_xds
+from astrohack._utils._dio import _read_meta_data, _write_meta_data, _write_fits
 
 from astrohack._utils._panel import _phase_fitting_block
 

@@ -9,10 +9,10 @@ from numba.core import types
 from casacore import tables as ctables
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._io import _write_meta_data
+from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._algorithms import _get_grid_parms, _significant_digits
 
-from astrohack._utils._io import _load_point_file
+from astrohack._utils._dio import _load_point_file
 
 
 def _extract_holog_chunk(extract_holog_params):

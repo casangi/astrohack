@@ -5,7 +5,7 @@ from matplotlib import colormaps as cmaps
 
 from casacore import tables
 
-from astrohack._utils._io import _check_mds_origin, check_if_file_exists
+from astrohack._utils._dio import _check_mds_origin, check_if_file_exists
 from astrohack._utils._constants import length_units, trigo_units, plot_types
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
