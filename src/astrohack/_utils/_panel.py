@@ -15,6 +15,18 @@ from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 NPAR = 10
 
 
+def _get_correct_telescope_from_name(xds):
+    if xds.attrs['telescope_name'] == "ALMA":
+        tname = xds.attrs['telescope_name']+'_'+xds.attrs['ant_name'][0:2]
+        telescope = Telescope(tname)
+    elif xds.attrs['telescope_name'] == "EVLA":
+        tname = "VLA"
+        telescope = Telescope(tname)
+    else:
+        raise ValueError('Unsuported telescope {0:s}'.format(xds.attrs['telescope_name']))
+    return telescope
+
+
 def _panel_chunk(panel_chunk_params):
     """
     Process a chunk of the holographies, usually a chunk consists of an antenna over a ddi
@@ -35,14 +47,7 @@ def _panel_chunk(panel_chunk_params):
         logger.info(f'[panel]: processing antenna {antenna} DDI {ddi}')
         inputxds.attrs['AIPS'] = False
 
-        if inputxds.attrs['telescope_name'] == "ALMA":
-            tname = inputxds.attrs['telescope_name']+'_'+inputxds.attrs['ant_name'][0:2]
-            telescope = Telescope(tname)
-        elif inputxds.attrs['telescope_name'] == "EVLA":
-            tname = "VLA"
-            telescope = Telescope(tname)
-        else:
-            raise ValueError('Unsuported telescope {0:s}'.format(inputxds.attrs['telescope_name']))
+        telescope = _get_correct_telescope_from_name(inputxds)
 
     surface = AntennaSurface(inputxds, telescope, panel_chunk_params['cutoff'], panel_chunk_params['panel_kind'],
                              panel_margins=panel_chunk_params['panel_margins'])
