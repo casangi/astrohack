@@ -1,13 +1,18 @@
+import os
+import distributed
+
 from astrohack._utils._tools import _dask_compute
 from astrohack._utils._tools import _construct_graph
 
 from astrohack.dio import open_holog
 
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 
 def plot_holog_diagnostics(
     file, 
-    delta=0.01, 
+    delta=0.01,
+    out_folder="", 
     ant_id="", 
     ddi="", 
     map_id="", 
@@ -43,7 +48,24 @@ def plot_holog_diagnostics(
   :param parallel: _description_, defaults to False
   :type parallel: bool, optional
   """
+
+  logger = _get_astrohack_logger()
+
+  if parallel:
+    if not distributed.client._get_global_client():
+      from astrohack.astrohack_client import astrohack_local_client
+
+      logger.info("local client not found, starting ...")
+
+      log_parms = {'log_level':'DEBUG'}
+      client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
+      logger.info(client.dashboard_link)
+
   hack_mds = open_holog(file)
+
+  if save_plots:
+    os.makedirs("{out_folder}/".format(out_folder=out_folder), exist_ok=True)
+
     
   # Default but ant | ddi | map take precendence
   key_list = ["ant_", "ddi_", "map_"]
@@ -62,7 +84,8 @@ def plot_holog_diagnostics(
     'save': save_plots,
     'display': display,
     'width': width,
-    'height': height
+    'height': height,
+    'out_folder': out_folder
   }
     
   _dask_compute(

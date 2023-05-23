@@ -166,8 +166,12 @@ def _construct_graph(data_dict, function, param_dict, delayed_list, key_list=["a
             
         else:
             function(param_dict)
-        
-    for key, value in data_dict.items():
-        for element in key_list:
-            if key.find(element) == 0:
-                _dask_compute(value, function, param_dict, key_list, parallel)  
+
+    else:    
+        for key, value in data_dict.items():
+            if key_list:
+                for element in key_list:
+                    if key.find(element) == 0:
+                        _construct_graph(value, function, param_dict, delayed_list, key_list, parallel)  
+            else:
+                _construct_graph(value, function, param_dict, key_list, parallel)
