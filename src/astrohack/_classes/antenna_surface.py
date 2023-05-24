@@ -1,6 +1,7 @@
 import xarray as xr
 from matplotlib import pyplot as plt
 from matplotlib import colormaps as cmaps
+from matplotlib import patches
 
 from astrohack._classes.base_panel import panel_models, irigid
 from astrohack._classes.ring_panel import RingPanel
@@ -8,7 +9,8 @@ from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar, _axis_to_fits_header
+from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar, _axis_to_fits_header, \
+    _resolution_to_fits_header
 from astrohack._utils._io import _write_fits
 
 lnbr = "\n"
@@ -73,6 +75,7 @@ class AntennaSurface:
         self.v_axis = inputxds.v.values
         self.computephase = True
         self.processed = False
+        self.resolution = None
 
     def _read_holog_xds(self, inputxds):
         if 'chan' in inputxds.dims:
@@ -91,6 +94,14 @@ class AntennaSurface:
         self.v_axis = inputxds.v_prime.values * self.wavelength
         self.computephase = False
 
+        try:
+            self.resolution = inputxds.attrs['aperture_resolution']
+        except KeyError:
+            logger = _get_astrohack_logger()
+            logger.warning("[_read_holog_xds] holog image does not have resolution information")
+            logger.warning("[_read_holog_xds] Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+            self.resolution = None
+
     def _read_panel_xds(self, inputxds):
         self.wavelength = inputxds.attrs['wavelength']
         self.amp_unit = inputxds.attrs['amp_unit']
@@ -107,6 +118,13 @@ class AntennaSurface:
         self.u_axis = inputxds.u.values
         self.v_axis = inputxds.u.values
         self.panel_distribution = inputxds['PANEL_DISTRIBUTION'].values
+        try:
+            self.resolution = inputxds.attrs['aperture_resolution']
+        except KeyError:
+            logger = _get_astrohack_logger()
+            logger.warning("[_read_panel_xds] Input panel file does not have resolution information")
+            logger.warning("[_read_panel_xds] Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+            self.resolution = None
 
         if self.solved:
             self.phase_residuals = inputxds['PHASE_RESIDUALS'].values
@@ -548,14 +566,13 @@ class AntennaSurface:
             fig, ax = plt.subplots(1, 1, figsize=figuresize)
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
-        xmin = np.min(self.u_axis)
-        xmax = np.max(self.u_axis)
-        ymin = np.min(self.v_axis)
-        ymax = np.max(self.v_axis)
-        im = ax.imshow(data, cmap=colormap, interpolation="nearest", extent=[xmin, xmax, ymin, ymax],
+        extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
+        im = ax.imshow(data, cmap=colormap, interpolation="nearest", extent=extent,
                        vmin=vmin, vmax=vmax,)
+        self._add_resolution_to_plot(ax, extent)
         if colorbar:
             _well_positioned_colorbar(ax, fig, im, "Z Scale [" + unit + "]")
+        self._add_resolution_to_plot(ax, extent)
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
@@ -563,6 +580,20 @@ class AntennaSurface:
         fig.tight_layout()
         plt.savefig(filename, dpi=dpi)
         plt.close()
+
+    def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
+        lw = 0.5
+        if self.resolution is None:
+            return
+        dx = extent[1]-extent[0]
+        dy = extent[3]-extent[2]
+        center = (extent[0]+xpos*dx, extent[2]+ypos*dy)
+        resolution = patches.Ellipse(center, self.resolution[0], self.resolution[1], angle=0.0, linewidth=lw,
+                                     color='black', zorder=2, fill=False)
+        ax.add_patch(resolution)
+        halfbeam = self.resolution/dy/2
+        ax.axvline(x=center[0], ymin=ypos - halfbeam[1], ymax=ypos + halfbeam[1], color='black', lw=lw / 2)
+        ax.axhline(y=center[1], xmin=xpos - halfbeam[0], xmax=xpos + halfbeam[0], color='black', lw=lw / 2)
 
     def plot_screw_adjustments(self, filename, unit, threshold=None, colormap=None, figuresize=None, dpi=300):
         """
@@ -594,12 +625,10 @@ class AntennaSurface:
         fig.suptitle('Screw corrections', y=0.92, fontsize='large')
         ax.set_title(f'\nThreshold = {threshold:.2f} {unit}', fontsize='small')
         # set the limits of the plot to the limits of the data
-        xmin = np.min(self.u_axis)
-        xmax = np.max(self.u_axis)
-        ymin = np.min(self.v_axis)
-        ymax = np.max(self.v_axis)
+        extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
         im = ax.imshow(np.full_like(self.deviation, fill_value=np.nan), cmap=cmap, interpolation="nearest",
-                       extent=[xmin, xmax, ymin, ymax], vmin=vmin, vmax=vmax)
+                       extent=extent, vmin=vmin, vmax=vmax)
+        self._add_resolution_to_plot(ax, extent)
         colorbar = _well_positioned_colorbar(ax, fig, im, "Screw adjustments [" + unit + "]")
         if threshold > 0:
             line = threshold
@@ -683,6 +712,7 @@ class AntennaSurface:
         xds.attrs['cutoff'] = self.cut
         xds.attrs['solved'] = self.solved
         xds.attrs['fitted'] = self.fitted
+        xds.attrs['aperture_resolution'] = self.resolution
         xds['AMPLITUDE'] = xr.DataArray(self.amplitude, dims=["u", "v"])
         xds['PHASE'] = xr.DataArray(self.phase, dims=["u", "v"])
         xds['DEVIATION'] = xr.DataArray(self.deviation, dims=["u", "v"])
@@ -725,10 +755,11 @@ class AntennaSurface:
             'TELESCOP': self.antenna_name,
             'INSTRUME': self.telescope.name,
             'WAVELENG': self.wavelength,
-            'FREQUENC': clight/self.wavelength
+            'FREQUENC': clight/self.wavelength,
         }
         head = _axis_to_fits_header(head, self.u_axis, 1, 'X', 'm')
         head = _axis_to_fits_header(head, self.v_axis, 2, 'Y', 'm')
+        head = _resolution_to_fits_header(head, self.resolution)
 
         _write_fits(head, 'Amplitude', self.amplitude, basename + '_amplitude.fits', self.amp_unit, 'panel')
         _write_fits(head, 'Mask', np.where(self.mask, 1.0, np.nan), basename + '_mask.fits', '', 'panel')

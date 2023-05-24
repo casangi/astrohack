@@ -252,6 +252,28 @@ def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
     return header
 
 
+def _resolution_to_fits_header(header, resolution):
+    """
+    Adds resolution information to standard header keywords: BMAJ, BMIN and BPA
+    Args:
+        header: The dictionary header to be augmented
+        resolution: The lenght=2 array with the resolution elements
+
+    Returns: The augmented header dictionary
+    """
+    if resolution is None:
+        return header
+    if resolution[0] >= resolution[1]:
+        header['BMAJ'] = resolution[0]
+        header['BMIN'] = resolution[1]
+        header['BPA']  = 0.0
+    else:
+        header['BMAJ'] = resolution[1]
+        header['BMIN'] = resolution[0]
+        header['BPA']  = 90.0
+    return header
+
+
 def _bool_to_string(flag):
     """
     Converts a boolean to a yes or no string
