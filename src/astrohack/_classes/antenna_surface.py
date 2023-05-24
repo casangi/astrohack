@@ -627,7 +627,7 @@ class AntennaSurface:
         fac = _convert_unit('m', unit, 'length')
         vmax = np.nanmax(np.abs(fac * self.screw_adjustments))
         vmin = -vmax
-        if threshold is None:
+        if threshold is None or threshold == 'None':
             threshold = 0.1*vmax
         else:
             threshold = np.abs(threshold)
