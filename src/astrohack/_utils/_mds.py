@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import numbers
+import distributed
 from matplotlib import colormaps as cmaps
 
 from astrohack._utils._dio import _load_image_xds
@@ -13,10 +14,11 @@ from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._parm_utils._check_parms import _check_parms
 from astrohack._utils._constants import length_units, trigo_units, plot_types
-from astrohack._utils._dask_graph_tools import _generate_antenna_ddi_graph_and_compute
+from astrohack._utils._dask_graph_tools import _generate_antenna_ddi_graph_and_compute, _dask_compute
 
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk
+from astrohack._utils._diagnostics import _calibration_plot_chunk
 
 from astrohack._classes.antenna_surface import AntennaSurface
 from astrohack._classes.telescope import Telescope
@@ -374,6 +376,97 @@ class AstrohackHologFile(dict):
         """
 
         return self._meta_data
+
+    def plot_diagnostics(self, destination="", delta=0.01, ant_id="", ddi="", map_id="", data_type='amplitude',
+                         save_plots=False, display=True, width=1250, height=1200, parallel=False):
+        """ Plot diagnostic calibration plots from the holography data file.
+
+        :param destination: Name of the destination folder to contain exported screw adjustments
+        :type destination: str
+
+        :param delta: Defines a fraction of cell_size around which to look for peaks., defaults to 0.01
+        :type delta: float, optional
+
+        :param ant_id: antenna ID to use in subselection, defaults to ""
+        :type ant_id: str, optional
+
+        :param ddi: data description ID to use in subselection, defaults to ""
+        :type ddi: str, optional
+
+        :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning configuration,  defaults to ""
+        :type map_id: str, optional
+
+        :param data_type: Whether the plots should investigate amplitude/phase or real/imaginary. Options are 'amplitude' or 'real', defaults to 'amplitude'
+        :type data_type: str, optional
+
+        :param save_plots: Save plots to disk, defaults to False
+        :type save_plots: bool, optional
+
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+
+        :param width: figure width in pixels, defaults to 1250
+        :type width: int, optional
+
+        :param height: figure height in pixels, defaults to 1200
+        :type height: int, optional
+
+        :param parallel: Run inparallel, defaults to False
+        :type parallel: bool, optional
+        """
+
+        # This is the default address used by Dask. Note that in the client check below, if the user has multiple
+        # clients running a new client may still be spawned but only once. If run again in a notebook session the
+        # local_client check will catch it. It will also be caught if the user spawns their own instance in the
+        # notebook.
+        DEFAULT_DASK_ADDRESS="127.0.0.1:8786"
+
+        logger = _get_astrohack_logger()
+
+        if parallel:
+            if not distributed.client._get_global_client():
+                try:
+                    distributed.Client(DEFAULT_DASK_ADDRESS, timeout=2)
+
+                except Exception:
+                    from astrohack.astrohack_client import astrohack_local_client
+
+                    logger.info("local client not found, starting ...")
+
+                    log_parms = {'log_level':'DEBUG'}
+                    client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
+                    logger.info(client.dashboard_link)
+
+        if save_plots:
+            os.makedirs(f"{destination}/", exist_ok=True)
+
+        # Default but ant | ddi | map take precendence
+        key_list = ["ant_", "ddi_", "map_"]
+
+        if ant_id or ddi or map_id:
+            key_list = []
+            key_list.append("ant_") if not ant_id else key_list.append(ant_id)
+            key_list.append("ddi_") if not ddi else key_list.append(ddi)
+            key_list.append("map_") if not map_id else key_list.append(map_id)
+
+        param_dict = {
+            'data': None,
+            'delta': delta,
+            'type': data_type,
+            'save': save_plots,
+            'display': display,
+            'width': width,
+            'height': height,
+            'destination': destination
+            }
+
+        _dask_compute(
+            data_dict=self,
+            function=_calibration_plot_chunk,
+            param_dict=param_dict,
+            key_list=key_list,
+            parallel=parallel
+            )
 
 
 class AstrohackPanelFile(dict):

@@ -209,7 +209,7 @@ def _calibration_plot_chunk(param_dict):
     display = param_dict['display']
     width = param_dict['width']
     height = param_dict['height']
-    out_folder = param_dict['out_folder']
+    destination = param_dict['destination']
     
     pixels = 1/plt.rcParams['figure.dpi']
     plt.rcParams['figure.figsize'] = [width*pixels, height*pixels]
@@ -287,7 +287,7 @@ def _calibration_plot_chunk(param_dict):
         mode="expand", 
         borderaxespad=0.
     )
-    
-    if save_plot: fig.savefig("{out_folder}/ddi_{ddi}_{map_id}_{ant_id}.png".format(out_folder=out_folder, ddi=data.ddi, map_id=data.holog_map_key, ant_id=data.antenna_name))
+    plotfile = f"{destination}/holog_diagnostics_{data.holog_map_key}_ant_{data.antenna_name}_ddi_{data.ddi}.png"
+    if save_plot: fig.savefig(plotfile)
 
     if not display: plt.close(fig)
