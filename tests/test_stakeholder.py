@@ -150,7 +150,7 @@ def test_holog_obs_dict(set_data):
       ms_name=before_ms, 
       holog_name=before_holog, 
       ddi_sel=[0],
-      data_col='CORRECTED_DATA',
+      data_column='CORRECTED_DATA',
       parallel=False,
       overwrite=True,
       reuse_point_zarr=False
@@ -162,7 +162,7 @@ def test_holog_obs_dict(set_data):
     holog_mds_after, _ = extract_holog(
         ms_name=after_ms, 
         holog_name=after_holog,
-        data_col='CORRECTED_DATA',
+        data_column='CORRECTED_DATA',
         parallel=False,
         overwrite=True,
         reuse_point_zarr=False
