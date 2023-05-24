@@ -439,11 +439,11 @@ def _plot_aperture_chunk(parm_dict):
     Args:
         parm_dict: parameter dictionary
     """
-    antenna = parm_dict['this_antenna']
+    antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
     basename = f'{destination}/{antenna}_{ddi}'
-    inputxds = parm_dict['image_mds'].select(antenna, ddi, polar=False)
+    inputxds = parm_dict['xds_data']
     inputxds.attrs['AIPS'] = False
     telescope = _get_correct_telescope_from_name(inputxds)
     surface = AntennaSurface(inputxds, telescope, nan_out_of_bounds=False)

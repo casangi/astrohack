@@ -211,24 +211,24 @@ class AstrohackImageFile(dict):
         parm_dict['metadata'] = self._meta_data
         _dask_compute_2(fname, self, _export_to_fits_holog_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_apertures(self, destination, ant_name=None, ddi=None, plot_screws=False, unit=None,
-                       colormap='viridis', figuresize=None, dpi=300, parallel=True):
+    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, unit=None,
+                       colormap='viridis', figure_size=None, dpi=300, parallel=True):
         """ Create diagnostic plots of apertures amplitude and phase from an image mds.
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_name: List of antennae/antenna to be plotted, defaults to "all" when None
-        :type ant_name: list or str, optional, ex. ant_ea25
+        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None
+        :type ant_id: list or str, optional, ex. ea25
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
-        :type ddi: list or str, optional, ex. ddi_0
+        :type ddi: list or int, optional, ex. 0
         :param plot_screws: Add screw positions to plot
         :type plot_screws: bool
-        :param unit: Unit for phaseplots, defaults to 'deg'
+        :param unit: Unit for phase plots, defaults to 'deg'
         :type unit: str
         :param colormap: Colormap for plots
         :type colormap: str
-        :param figuresize: 2 element array/list/tuple with the plot sizes in inches
-        :type figuresize: numpy.ndarray, list, tuple, optional
+        :param figure_size: 2 element array/list/tuple with the plot sizes in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
         :param dpi: dots per inch to be used in plots
         :type dpi: int
         :param parallel: If True will use an existing astrohack client to produce plots in parallel
@@ -239,42 +239,35 @@ class AstrohackImageFile(dict):
         Produce plots from ``astrohack.holog`` results for analysis
         """
         logger = _get_astrohack_logger()
-        parm_dict = {'ant_name': ant_name,
+        parm_dict = {'ant': ant_id,
                      'ddi': ddi,
                      'destination': destination,
                      'unit': unit,
                      'plot_screws': plot_screws,
                      'colormap': colormap,
-                     'figuresize': figuresize,
+                     'figuresize': figure_size,
                      'dpi': dpi,
                      'parallel': parallel}
 
-        parms_passed = _check_parms(parm_dict, 'ant_name', [list], list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list], list_acceptable_data_types=[str],
+        parms_passed = _check_parms(parm_dict, 'ant', [list, str], list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list, int], list_acceptable_data_types=[str],
                                                      default='all')
         parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=trigo_units, default='deg')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=trigo_units,
+                                                     default='deg')
         parms_passed = parms_passed and _check_parms(parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(parm_dict, 'plot_screws', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'colormap', [str], acceptable_data=cmaps, default='viridis')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'colormap', [str], acceptable_data=cmaps,
+                                                     default='viridis')
         parms_passed = parms_passed and _check_parms(parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(parm_dict, 'dpi', [int], default=300)
 
-        if not parms_passed:
-            logger.error("plot_apertures parameter checking failed.")
-            raise Exception("plot_apertures parameter checking failed.")
-
-        parm_dict['image_mds'] = self
-        parm_dict['filename'] = self.file
-
-        try:
-            os.mkdir(parm_dict['destination'])
-        except FileExistsError:
-            logger.warning('Destination folder already exists, results may be overwritten')
-
-        _generate_antenna_ddi_graph_and_compute('plot_apertures', _plot_aperture_chunk, parm_dict, parallel)
+        fname = 'plot_apertures'
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(fname, parm_dict['destination'])
+        _dask_compute_2(fname, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackHologFile(dict):
