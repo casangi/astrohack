@@ -674,11 +674,13 @@ def _export_to_fits_panel_chunk(parm_dict):
         parm_dict: parameter dictionary
     """
     logger = _get_astrohack_logger()
-    antenna = parm_dict['this_antenna']
+    antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
     logger.info(f'Exporting panel contents of {antenna} {ddi} to FITS files in {destination}')
-    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi, dask_load=False)
+    xds = parm_dict['xds_data']
+    telescope = Telescope(xds.attrs['telescope_name'])
+    surface = AntennaSurface(xds, telescope, reread=True)
     basename = f'{destination}/{antenna}_{ddi}'
     surface.export_to_fits(basename)
     return

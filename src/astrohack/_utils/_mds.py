@@ -691,15 +691,15 @@ class AstrohackPanelFile(dict):
         _create_destination_folder(fname, parm_dict['destination'])
         _dask_compute_2(fname, self, _plot_antenna_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def export_to_fits(self, destination, ant_name=None, ddi=None, parallel=True):
+    def export_to_fits(self, destination, ant_id=None, ddi=None, parallel=True):
         """ Export contents of an Astrohack MDS file to several FITS files in the destination folder
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_name: List of antennae/antenna to be plotted, defaults to "all" when None
-        :type ant_name: list or str, optional, ex. ant_ea25
+        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None
+        :type ant_id: list or str, optional, ex. ea25
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
-        :type ddi: list or str, optional, ex. ddi_0
+        :type ddi: list or int, optional, ex. 0
         :param parallel: If True will use an existing astrohack client to produce plots in parallel
         :type parallel: bool
 
@@ -711,30 +711,21 @@ class AstrohackPanelFile(dict):
         The FITS fils produced by this method have been tested and are known to work with CARTA and DS9
         """
 
-        logger = _get_astrohack_logger()
-        parm_dict = {'ant_name': ant_name,
+        parm_dict = {'ant': ant_id,
                      'ddi': ddi,
                      'destination': destination,
                      'parallel': parallel}
 
-        parms_passed = _check_parms(parm_dict, 'ant_name', [list], list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list], list_acceptable_data_types=[str], default='all')
+        parms_passed = _check_parms(parm_dict, 'ant', [list, str], list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list, int], list_acceptable_data_types=[int],
+                                                     default='all')
         parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(parm_dict, 'parallel', [bool], default=True)
 
-        if not parms_passed:
-            logger.error("export_screws parameter checking failed.")
-            raise Exception("export_screws parameter checking failed.")
-
-        parm_dict['panel_mds'] = self
-        parm_dict['filename'] = self.file
-
-        try:
-            os.mkdir(parm_dict['destination'])
-        except FileExistsError:
-            logger.warning('Destination folder already exists, results may be overwritten')
-
-        _generate_antenna_ddi_graph_and_compute('export_to_fits', _export_to_fits_panel_chunk, parm_dict, parallel)
+        fname = 'export_to_fits'
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(fname, parm_dict['destination'])
+        _dask_compute_2(fname, self, _export_to_fits_panel_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackPointFile(dict):
