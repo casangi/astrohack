@@ -18,7 +18,8 @@ from astrohack._utils._algorithms import _calc_coords
 
 from astrohack._utils._conversion import _to_stokes
 from astrohack._utils._constants import clight
-from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header, _stokes_axis_to_fits_header
+from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header, _stokes_axis_to_fits_header, \
+    _resolution_to_fits_header
 
 from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk
@@ -245,6 +246,12 @@ def _holog_chunk(holog_chunk_params):
     else:
         logger.info("Skipping phase correction ...")
 
+    # Here we compute the aperture resolution from Equation 7 In EVLA memo 212
+    # https://library.nrao.edu/public/memos/evla/EVLAM_212.pdf
+    deltal = np.max(l) - np.min(l)
+    deltam = np.max(m) - np.min(m)
+    aperture_resolution = np.array([1/deltal, 1/deltam])
+    aperture_resolution *= 1.27*min_wavelength
     
     ###To Do: Add Paralactic angle as a non-dimension coordinate dependant on time.
     xds = xr.Dataset()
@@ -255,6 +262,7 @@ def _holog_chunk(holog_chunk_params):
     xds["AMPLITUDE"] = xr.DataArray(amplitude, dims=["time", "chan", "pol", "u_prime", "v_prime"])
     xds["CORRECTED_PHASE"] = xr.DataArray(phase_corrected_angle, dims=["time", "chan", "pol", "u_prime", "v_prime"])
 
+    xds.attrs["aperture_resolution"] = aperture_resolution
     xds.attrs["ant_id"] = holog_chunk_params["ant_id"]
     xds.attrs["ant_name"] = ant_name
     xds.attrs["telescope_name"] = meta_data['telescope_name']
@@ -339,6 +347,13 @@ def _export_to_fits_holog_chunk(parm_dict):
 
     logger.info(f'Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
 
+    try:
+        aperture_resolution = inputxds.attrs["aperture_resolution"]
+    except KeyError:
+        logger.warning("[_read_holog_xds] holog image does not have resolution information")
+        logger.warning("[_read_holog_xds] Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+        aperture_resolution = None
+
     nchan = len(inputxds.chan)
     if nchan == 1:
         reffreq = inputxds.chan.values[0]
@@ -390,6 +405,7 @@ def _export_to_fits_holog_chunk(parm_dict):
 
     apertureheader = _axis_to_fits_header(baseheader, inputxds.u.values, 1, 'X', 'm')
     apertureheader = _axis_to_fits_header(apertureheader, inputxds.v.values, 2, 'Y', 'm')
+    apertureheader = _resolution_to_fits_header(apertureheader, aperture_resolution)
     transpoaper = np.transpose(inputxds['APERTURE'][0, ...].values, carta_dim_order)
     if parm_dict['complex_split'] == 'cartesian':
         _write_fits(apertureheader, 'Complex aperture real part', transpoaper.real,
@@ -404,6 +420,7 @@ def _export_to_fits_holog_chunk(parm_dict):
 
     phase_amp_header = _axis_to_fits_header(baseheader, inputxds.u_prime.values, 1, 'X', 'm')
     phase_amp_header = _axis_to_fits_header(phase_amp_header, inputxds.v_prime.values, 2, 'Y', 'm')
+    phase_amp_header = _resolution_to_fits_header(phase_amp_header, aperture_resolution)
     transpoamp = np.transpose(inputxds['AMPLITUDE'][0, ...].values, carta_dim_order)
     _write_fits(phase_amp_header, 'Cropped aperture amplitude', transpoamp, basename + '_amplitude.fits',
                 'Normalized', 'image')

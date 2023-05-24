@@ -257,8 +257,8 @@ def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
     parms_passed = parms_passed and _check_parms(holog_params, 'overwrite', [bool],default=False)
 
     if not parms_passed:
-        logger.error("extract_holog parameter checking failed.")
-        raise Exception("extract_holog parameter checking failed.")
+        logger.error("holog parameter checking failed.")
+        raise Exception("holog parameter checking failed.")
 
     return holog_params
 

@@ -1,7 +1,11 @@
 import os
 import json
+import dask
+import xarray
+
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
+
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -198,6 +202,36 @@ def _split_pointing_table(ms_name, antennas):
         newtablename="/".join((ms_name, 'POINTING'))
     )
 
+    
+def _dask_compute(data_dict, function, param_dict, key_list=[], parallel=False):
+    
+    delayed_list = []
+    _construct_graph(data_dict, function, param_dict, delayed_list=delayed_list, key_list=key_list, parallel=parallel)
+    
+    if parallel:
+        dask.compute(delayed_list)
+
+def _construct_graph(data_dict, function, param_dict, delayed_list, key_list, parallel=False):
+
+    
+    if isinstance(data_dict, xarray.Dataset):
+        param_dict['data'] = data_dict
+        
+        if parallel:
+            delayed_list.append(dask.delayed(function)(dask.delayed(param_dict)))
+            
+        else:
+            function(param_dict)
+
+    else:    
+        for key, value in data_dict.items():
+            if key_list:
+                for element in key_list:
+                    if key.find(element) == 0:
+                        _construct_graph(value, function, param_dict, delayed_list, key_list, parallel)  
+            else:
+                _construct_graph(value, function, param_dict, key_list, parallel)
+
 
 def _stokes_axis_to_fits_header(header, iaxis):
     """
@@ -256,6 +290,28 @@ def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
     header[f'CROTA{iaxis}'] = 0.
     header[f'CTYPE{iaxis}'] = axistype
     header[f'CUNIT{iaxis}'] = unit
+    return header
+
+
+def _resolution_to_fits_header(header, resolution):
+    """
+    Adds resolution information to standard header keywords: BMAJ, BMIN and BPA
+    Args:
+        header: The dictionary header to be augmented
+        resolution: The lenght=2 array with the resolution elements
+
+    Returns: The augmented header dictionary
+    """
+    if resolution is None:
+        return header
+    if resolution[0] >= resolution[1]:
+        header['BMAJ'] = resolution[0]
+        header['BMIN'] = resolution[1]
+        header['BPA']  = 0.0
+    else:
+        header['BMAJ'] = resolution[1]
+        header['BMIN'] = resolution[0]
+        header['BPA']  = 90.0
     return header
 
 
