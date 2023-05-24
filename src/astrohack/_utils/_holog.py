@@ -340,10 +340,10 @@ def _export_to_fits_holog_chunk(parm_dict):
     """
     logger = _get_astrohack_logger()
 
-    inputxds = _load_image_xds(parm_dict['filename'], parm_dict['this_antenna'], parm_dict['this_ddi'], dask_load=False)
-    metadata = parm_dict['holog_mds']._meta_data
+    inputxds = parm_dict['xds_data']
+    metadata = parm_dict['metadata']
 
-    antenna = parm_dict['this_antenna']
+    antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
     basename = f'{destination}/{antenna}_{ddi}'
