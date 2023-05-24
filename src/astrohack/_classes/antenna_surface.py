@@ -513,12 +513,17 @@ class AntennaSurface:
             unit = 'deg'
         fac = _convert_unit('rad', unit, 'trigonometric')
         prefix = 'phase'
-        if self.residuals is None:
+        if caller == 'image':
+            prefix = 'corrected'
             maps = [self.phase]
-            labels = ['original']
+            labels = ['phase']
         else:
-            maps = [self.phase, self.phase_corrections, self.phase_residuals]
-            labels = ['original', 'corrections', 'residuals']
+            if self.residuals is None:
+                maps = [self.phase]
+                labels = ['original']
+            else:
+                maps = [self.phase, self.phase_corrections, self.phase_residuals]
+                labels = ['original', 'correction', 'residual']
         self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller)
 
     def plot_deviation(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None, caller='panel'):
@@ -542,7 +547,7 @@ class AntennaSurface:
             labels = ['original']
         else:
             maps = [self.deviation, self.corrections, self.residuals]
-            labels = ['original', 'corrections', 'residuals']
+            labels = ['original', 'correction', 'residual']
         self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller)
 
     def _multi_plot(self, maps, labels, prefix, basename, unit, conversion, screws, colormap=None, figuresize=None,
@@ -766,17 +771,18 @@ class AntennaSurface:
         head = _axis_to_fits_header(head, self.v_axis, 2, 'Y', 'm')
         head = _resolution_to_fits_header(head, self.resolution)
 
-        _write_fits(head, 'Amplitude', self.amplitude, basename + '_amplitude.fits', self.amp_unit, 'panel')
-        _write_fits(head, 'Mask', np.where(self.mask, 1.0, np.nan), basename + '_mask.fits', '', 'panel')
-        _write_fits(head, 'Original Phase', self.phase, basename + '_phase_original.fits', 'rad', 'panel')
-        _write_fits(head, 'Phase Corrections', self.phase_corrections, basename + '_phase_correction.fits', 'rad',
+        _write_fits(head, 'Amplitude', self.amplitude, _add_prefix(basename, 'amplitude')+'.fits', self.amp_unit,
                     'panel')
-        _write_fits(head, 'Phase residuals', self.phase_residuals, basename + '_phase_residual.fits', 'rad',
-                    'panel')
-        _write_fits(head, 'Original Deviation', self.deviation, basename + '_deviation_original.fits', 'm',
-                    'panel')
-        _write_fits(head, 'Deviation Corrections', self.corrections, basename + '_deviation_correction.fits', 'm',
-                    'panel')
-        _write_fits(head, 'Deviation residuals', self.residuals, basename + '_deviation_residual.fits', 'm',
-                    'panel')
+        _write_fits(head, 'Mask', np.where(self.mask, 1.0, np.nan), _add_prefix(basename, 'mask')+'.fits', '', 'panel')
+        _write_fits(head, 'Original Phase', self.phase, _add_prefix(basename, 'phase_original')+'.fits', 'rad', 'panel')
+        _write_fits(head, 'Phase Corrections', self.phase_corrections,
+                    _add_prefix(basename, 'phase_correction')+'.fits', 'rad', 'panel')
+        _write_fits(head, 'Phase residuals', self.phase_residuals, _add_prefix(basename, 'phase_residual')+'.fits',
+                    'rad', 'panel')
+        _write_fits(head, 'Original Deviation', self.deviation, _add_prefix(basename, 'deviation_original')+'.fits',
+                    'm', 'panel')
+        _write_fits(head, 'Deviation Corrections', self.corrections,
+                    _add_prefix(basename, 'deviation_correction')+'.fits', 'm', 'panel')
+        _write_fits(head, 'Deviation residuals', self.residuals, _add_prefix(basename, 'deviation_residual')+'.fits',
+                    'm', 'panel')
 

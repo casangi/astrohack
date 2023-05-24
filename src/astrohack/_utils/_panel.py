@@ -677,7 +677,7 @@ def _export_to_fits_panel_chunk(parm_dict):
     destination = parm_dict['destination']
     logger.info(f'Exporting panel contents of {antenna} {ddi} to FITS files in {destination}')
     surface = parm_dict['panel_mds'].get_antenna(antenna, ddi, dask_load=False)
-    basename = f'{destination}/panel_{antenna}_{ddi}'
+    basename = f'{destination}/{antenna}_{ddi}'
     surface.export_to_fits(basename)
     return
 

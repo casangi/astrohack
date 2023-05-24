@@ -10,7 +10,7 @@ import xarray as xr
 from astropy.io import fits
 from astrohack import __version__ as code_version
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _numpy_to_json
+from astrohack._utils._tools import _numpy_to_json, _add_prefix
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
@@ -206,6 +206,7 @@ def _write_fits(header, imagetype, data, filename, unit, origin):
         data: The dataset
         filename: The name of the output file
         unit: to be set to bunit
+        origin: Which astrohack mds has created the FITS being written
     """
 
     header['BUNIT'] = unit
@@ -215,7 +216,7 @@ def _write_fits(header, imagetype, data, filename, unit, origin):
     hdu = fits.PrimaryHDU(data)
     for key in header.keys():
         hdu.header.set(key, header[key])
-    hdu.writeto(filename, overwrite=True)
+    hdu.writeto(_add_prefix(filename, origin), overwrite=True)
     return
 
 
