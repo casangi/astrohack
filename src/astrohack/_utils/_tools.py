@@ -3,11 +3,6 @@ import json
 import dask
 import xarray
 import numpy as np
-
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
@@ -127,7 +122,6 @@ def _print_holog_obs_dict(holog_obj):
     logger.info("{close_bracket}".format(close_bracket=CLOSE_DICT))
 
 
-
 def _parm_to_list(parm, path, prefix):
     """
     Transforms a string parameter to a list if parameter is all or a single string
@@ -201,36 +195,6 @@ def _split_pointing_table(ms_name, antennas):
         tablename="/".join((ms_name, 'REDUCED')), 
         newtablename="/".join((ms_name, 'POINTING'))
     )
-
-    
-def _dask_compute(data_dict, function, param_dict, key_list=[], parallel=False):
-    
-    delayed_list = []
-    _construct_graph(data_dict, function, param_dict, delayed_list=delayed_list, key_list=key_list, parallel=parallel)
-    
-    if parallel:
-        dask.compute(delayed_list)
-
-def _construct_graph(data_dict, function, param_dict, delayed_list, key_list, parallel=False):
-
-    
-    if isinstance(data_dict, xarray.Dataset):
-        param_dict['data'] = data_dict
-        
-        if parallel:
-            delayed_list.append(dask.delayed(function)(dask.delayed(param_dict)))
-            
-        else:
-            function(param_dict)
-
-    else:    
-        for key, value in data_dict.items():
-            if key_list:
-                for element in key_list:
-                    if key.find(element) == 0:
-                        _construct_graph(value, function, param_dict, delayed_list, key_list, parallel)  
-            else:
-                _construct_graph(value, function, param_dict, key_list, parallel)
 
 
 def _stokes_axis_to_fits_header(header, iaxis):

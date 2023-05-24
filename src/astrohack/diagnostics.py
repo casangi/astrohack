@@ -1,8 +1,7 @@
 import os
 import distributed
 
-from astrohack._utils._tools import _dask_compute
-from astrohack._utils._tools import _construct_graph
+from astrohack._utils._dask_graph_tools import _construct_graph, _dask_compute
 
 from astrohack.dio import open_holog
 

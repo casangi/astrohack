@@ -1,5 +1,6 @@
 import os
 import dask
+import xarray
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._tools import _parm_to_list
@@ -51,3 +52,33 @@ def _generate_antenna_ddi_graph_and_compute(function_name, chunk_function, parm_
     if count == 0:
         logger.warning(f"[{function_name}]: No data to process")
     return count
+
+
+def _construct_graph(data_dict, function, param_dict, delayed_list, key_list, parallel=False):
+
+    if isinstance(data_dict, xarray.Dataset):
+        param_dict['data'] = data_dict
+
+        if parallel:
+            delayed_list.append(dask.delayed(function)(dask.delayed(param_dict)))
+
+        else:
+            function(param_dict)
+
+    else:
+        for key, value in data_dict.items():
+            if key_list:
+                for element in key_list:
+                    if key.find(element) == 0:
+                        _construct_graph(value, function, param_dict, delayed_list, key_list, parallel)
+            else:
+                _construct_graph(value, function, param_dict, key_list, parallel)
+
+
+def _dask_compute(data_dict, function, param_dict, key_list=[], parallel=False):
+
+    delayed_list = []
+    _construct_graph(data_dict, function, param_dict, delayed_list=delayed_list, key_list=key_list, parallel=parallel)
+
+    if parallel:
+        dask.compute(delayed_list)
