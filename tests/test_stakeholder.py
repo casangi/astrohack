@@ -176,7 +176,7 @@ def test_holog_obs_dict(set_data):
     extract_holog(
       ms_name=alma_ms,
       holog_name=alma_holog,
-      data_col='DATA',
+      data_column='DATA',
       parallel=False,
       overwrite=True,
       reuse_point_zarr=False
