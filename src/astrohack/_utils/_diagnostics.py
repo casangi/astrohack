@@ -238,7 +238,7 @@ def _calibration_plot_chunk(param_dict):
             "polarization": [0, 3],
             "label":[
                 "REAL", 
-                "IMAGINARY"
+                "IMAG"
             ]
         }
     else:
@@ -249,7 +249,7 @@ def _calibration_plot_chunk(param_dict):
             ],
             "polarization": [0, 3],
             "label":[
-                "AMPLITUDE", 
+                "AMP", 
                 "PHASE"
             ]
         }
@@ -276,7 +276,7 @@ def _calibration_plot_chunk(param_dict):
             for time in range(length):
                 k = 2*i + j
                 axis[k].plot(chan, vis[time, :, pol], marker='o', label=times[time])
-                axis[k].set_ylabel("Visibilities ({component}; {pol})".format(component=vis_dict["label"][i], pol=data.pol.values[pol]))
+                axis[k].set_ylabel("Vis ({component}; {pol})".format(component=vis_dict["label"][i], pol=data.pol.values[pol]))
     
     
     axis[3].set_xlabel("Channel")

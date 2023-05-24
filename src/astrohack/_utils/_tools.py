@@ -147,7 +147,7 @@ def _split_pointing_table(ms_name, antennas):
         newtablename="/".join((ms_name, 'POINTING'))
     )
 
-def _dask_compute(data_dict, function, param_dict, key_list=["ant_", "ddi_", "map_"], parallel=False):
+def _dask_compute(data_dict, function, param_dict, key_list=[], parallel=False):
     
     delayed_list = []
     _construct_graph(data_dict, function, param_dict, delayed_list=delayed_list, key_list=key_list, parallel=parallel)
@@ -155,7 +155,7 @@ def _dask_compute(data_dict, function, param_dict, key_list=["ant_", "ddi_", "ma
     if parallel:
         dask.compute(delayed_list)
 
-def _construct_graph(data_dict, function, param_dict, delayed_list, key_list=["ant_", "ddi_", "map_"], parallel=False):
+def _construct_graph(data_dict, function, param_dict, delayed_list, key_list, parallel=False):
 
     
     if isinstance(data_dict, xarray.Dataset):

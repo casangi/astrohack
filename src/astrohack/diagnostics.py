@@ -19,47 +19,66 @@ def plot_holog_diagnostics(
     data_type='amplitude',
     save_plots=False,
     display=True,
-    width=1000, 
-    height=450,
+    width=1250, 
+    height=1200,
     parallel=False
 ):
-  """_summary_
+  """ Plot diagnostic calibration plots from the holography data file. 
 
-  :param file: _description_
-  :type file: _type_
-  :param delta: _description_, defaults to 0.01
+  :param file: AstroHack holography file, ie. *.holog.zarr
+  :type file: str
+
+  :param delta: Defines a fraction of cell_size around which to look fro peaks., defaults to 0.01
   :type delta: float, optional
-  :param ant_id: _description_, defaults to ""
+
+  :param ant_id: antenna ID to use in subselection, defaults to ""
   :type ant_id: str, optional
-  :param ddi: _description_, defaults to ""
+
+  :param ddi: data description ID to use in subselection, defaults to ""
   :type ddi: str, optional
-  :param map_id: _description_, defaults to ""
+
+  :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning configuration,  defaults to ""
   :type map_id: str, optional
-  :param data_type: _description_, defaults to 'amplitude'
+
+  :param data_type: Whether the plots should investigate amplitude/phase or real/imaginary. Options are 'amplitude' or 'real', defaults to 'amplitude'
   :type data_type: str, optional
-  :param save_plots: _description_, defaults to False
+
+  :param save_plots: Save plots to disk, defaults to False
   :type save_plots: bool, optional
-  :param display: _description_, defaults to True
+
+  :param display: Display plots inline or suppress, defaults to True
   :type display: bool, optional
-  :param width: _description_, defaults to 1000
+
+  :param width: figure width in pixels, defaults to 1250
   :type width: int, optional
-  :param height: _description_, defaults to 450
+
+  :param height: figure height in pixels, defaults to 1200
   :type height: int, optional
-  :param parallel: _description_, defaults to False
+
+  :param parallel: Run inparallel, defaults to False
   :type parallel: bool, optional
   """
+
+  # This is the default address used by Dask. Note that in the client check below, if the user has multiple clients running
+  # a new client may still be spawned but only once. If run again in a notebook session the local_client check will catch it.
+  # It will also be caught if the user spawns their own instance in the notebook.
+  DEFAULT_DASK_ADDRESS="127.0.0.1:8786" 
 
   logger = _get_astrohack_logger()
 
   if parallel:
     if not distributed.client._get_global_client():
-      from astrohack.astrohack_client import astrohack_local_client
+      try:
+        Client(DEFAULT_DASK_ADDRESS, timeout=2)
 
-      logger.info("local client not found, starting ...")
+      except Exception:
+        from astrohack.astrohack_client import astrohack_local_client
 
-      log_parms = {'log_level':'DEBUG'}
-      client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
-      logger.info(client.dashboard_link)
+        logger.info("local client not found, starting ...")
+
+        log_parms = {'log_level':'DEBUG'}
+        client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
+        logger.info(client.dashboard_link)
 
   hack_mds = open_holog(file)
 
