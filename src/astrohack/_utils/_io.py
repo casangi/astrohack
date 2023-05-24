@@ -317,6 +317,7 @@ def _read_meta_data(file_name, file_type, origin):
         dict: dictionary containing dimension data.
     """
     logger = _get_astrohack_logger()
+    
     try:
         with open(f'{file_name}/.{file_type}_attr') as json_file:
             json_dict = json.load(json_file)
@@ -324,6 +325,7 @@ def _read_meta_data(file_name, file_type, origin):
     except Exception as error:
         logger.error(str(error))
         raise
+        
 
     try:
         metadataorigin = json_dict['origin']
