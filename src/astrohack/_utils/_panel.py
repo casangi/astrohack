@@ -688,10 +688,12 @@ def _export_screws_chunk(parm_dict):
     Args:
         parm_dict: parameter dictionary
     """
-    antenna = parm_dict['this_antenna']
+    antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
     export_name = parm_dict['destination'] + f'/panel_screws_{antenna}_{ddi}.'
-    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi, dask_load=False)
+    xds = parm_dict['xds_data']
+    telescope = Telescope(xds.attrs['telescope_name'])
+    surface = AntennaSurface(xds, telescope, reread=True)
     surface.export_screws(export_name + 'csv', unit=parm_dict['unit'])
     if parm_dict['plot_map']:
         surface.plot_screw_adjustments(export_name + 'png', unit=parm_dict['unit'], threshold=parm_dict['threshold'],
