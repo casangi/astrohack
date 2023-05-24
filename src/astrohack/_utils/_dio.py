@@ -220,6 +220,20 @@ def _write_fits(header, imagetype, data, filename, unit, origin):
     return
 
 
+def _create_destination_folder(caller, destination):
+    """
+    Try to create a folder if it already exists raise a warning
+    Args:
+        caller: Calling function
+        destination: the folder to be created
+    """
+    logger = _get_astrohack_logger()
+    try:
+        os.mkdir(destination)
+    except FileExistsError:
+        logger.warning(f'[{caller}]: Destination folder already exists, results may be overwritten')
+
+
 def _aips_holog_to_xds(ampname, devname):
     """
     Read amplitude and deviation FITS files onto a common Xarray dataset
