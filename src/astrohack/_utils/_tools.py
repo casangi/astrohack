@@ -145,6 +145,42 @@ def _parm_to_list(parm, path, prefix):
     return oulist
 
 
+def _parm_to_list_2(parm, data_dict, prefix):
+    """
+    Transforms a string parameter to a list if parameter is all or a single string
+    Args:
+        parm: string or list parameter
+        data_dict: Dictionary in which to search for data to be listed
+        prefix: prefix to be added to parameter
+
+    Returns: parameter converted to a list
+
+    """
+    logger = _get_astrohack_logger()
+    if parm == 'all':
+        oulist = data_dict.keys()
+    elif isinstance(parm, str):
+        oulist = [_add_prefix(parm, prefix)]
+    elif isinstance(parm, int):
+        oulist = [f'{prefix}_{parm}']
+    elif isinstance(parm, (list, tuple)):
+        oulist = []
+        for item in parm:
+            if isinstance(item, str):
+                oulist.append(_add_prefix(item, prefix))
+            elif isinstance(item, int):
+                oulist.append(f'{prefix}_{item}')
+            else:
+                msg = f'[_parm_to_list] cannot interpret parameter {item} of type {type(item)}'
+                logger.error(msg)
+                raise Exception(msg)
+    else:
+        msg = f'[_parm_to_list] cannot interpret parameter {parm} of type {type(parm)}'
+        logger.error(msg)
+        raise Exception(msg)
+    return oulist
+
+
 def _numpy_to_json(value):
     if isinstance(value, np.integer):
         return int(value)
