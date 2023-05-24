@@ -588,7 +588,7 @@ class AstrohackPanelFile(dict):
                      'dpi': dpi}
 
         parms_passed = _check_parms(parm_dict, 'ant', [list, str], list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list, int], list_acceptable_data_types=[str],
+        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list, int], list_acceptable_data_types=[int],
                                                      default='all')
         parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=length_units, default='mm')
@@ -605,16 +605,16 @@ class AstrohackPanelFile(dict):
         _create_destination_folder(fname, parm_dict['destination'])
         _dask_compute_2(fname, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
-    def plot_antennas(self, destination, ant_name=None, ddi=None, plot_type='deviation', plot_screws=False, unit=None,
-                      colormap='viridis', figuresize=None, dpi=300, parallel=True):
+    def plot_antennae(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False, unit=None,
+                      colormap='viridis', figure_size=None, dpi=300, parallel=True):
         """ Create diagnostic plots of antenna surface deviations from panel data file. Available plots listed in additional information.
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_name: List of antennae/antenna to be plotted, defaults to "all" when None
-        :type ant_name: list or str, optional, ex. ant_ea25
+        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None
+        :type ant_id: list or str, optional, ex. ea25
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
-        :type ddi: list or str, optional, ex. ddi_0
+        :type ddi: list or int, optional, ex. 0
         :param plot_type: type of plot to be produced, deviation, phase or ancillary
         :type plot_type: str
         :param plot_screws: Add screw positions to plot
@@ -623,8 +623,8 @@ class AstrohackPanelFile(dict):
         :type unit: str
         :param colormap: Colormap for plots
         :type colormap: str
-        :param figuresize: 2 element array/list/tuple with the plot sizes in inches
-        :type figuresize: numpy.ndarray, list, tuple, optional
+        :param figure_size: 2 element array/list/tuple with the plot sizes in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
         :param dpi: dots per inch to be used in plots
         :type dpi: int
         :param parallel: If True will use an existing astrohack client to produce plots in parallel
@@ -644,22 +644,23 @@ class AstrohackPanelFile(dict):
                    units
         - *ancillary*: Two ancillary plots with useful information: The mask used to select data to be fitted, the
                        amplitude data used to derive the mask, units are irrelevant for these plots
-        - *all*: All the plots listed above
+        - *all*: All the plots listed above. In this case the unit parameter is taken to mean the deviation unit, the
+                 phase unit is set to degrees
         """
         logger = _get_astrohack_logger()
-        parm_dict = {'ant_name': ant_name,
+        parm_dict = {'ant': ant_id,
                      'ddi': ddi,
                      'destination': destination,
                      'unit': unit,
                      'plot_type': plot_type,
                      'plot_screws': plot_screws,
                      'colormap': colormap,
-                     'figuresize': figuresize,
+                     'figuresize': figure_size,
                      'dpi': dpi,
                      'parallel': parallel}
 
-        parms_passed = _check_parms(parm_dict, 'ant_name', [list], list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list], list_acceptable_data_types=[str],
+        parms_passed = _check_parms(parm_dict, 'ant', [list, str], list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list, int], list_acceptable_data_types=[int],
                                                      default='all')
         parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(parm_dict, 'plot_type', [str], acceptable_data=plot_types,
@@ -670,29 +671,25 @@ class AstrohackPanelFile(dict):
         elif parm_dict['plot_type'] == plot_types[1]:  # Trigonometric units for phase plots
             parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=trigo_units,
                                                          default='deg')
-        else:  # Units ignored for ancillary plots
+        elif parm_dict['plot_type'] == plot_types[2]:  # Ancillary plots, no units
             logger.info('Unit ignored for ancillary plots')
+        else:  # Unit is taken for the deviation plot, phase is then in degrees
+            parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=length_units,
+                                                         default='mm')
+            logger.info('Unit for phase plots set to degrees')
         parms_passed = parms_passed and _check_parms(parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(parm_dict, 'plot_screws', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'colormap', [str], acceptable_data=cmaps, default='viridis')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'colormap', [str], acceptable_data=cmaps,
+                                                     default='viridis')
         parms_passed = parms_passed and _check_parms(parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(parm_dict, 'dpi', [int], default=300)
 
-        if not parms_passed:
-            logger.error("plot_antennas parameter checking failed.")
-            raise Exception("plot_antennas parameter checking failed.")
-
-        parm_dict['panel_mds'] = self
-        parm_dict['filename'] = self.file
-
-        try:
-            os.mkdir(parm_dict['destination'])
-        except FileExistsError:
-            logger.warning('Destination folder already exists, results may be overwritten')
-
-        _generate_antenna_ddi_graph_and_compute('plot_antennas', _plot_antenna_chunk, parm_dict, parallel)
+        fname = 'plot_antennae'
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(fname, parm_dict['destination'])
+        _dask_compute_2(fname, self, _plot_antenna_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def export_to_fits(self, destination, ant_name=None, ddi=None, parallel=True):
         """ Export contents of an Astrohack MDS file to several FITS files in the destination folder

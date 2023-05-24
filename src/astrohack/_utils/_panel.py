@@ -645,12 +645,14 @@ def _plot_antenna_chunk(parm_dict):
     Args:
         parm_dict: parameter dictionary
     """
-    antenna = parm_dict['this_antenna']
+    antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
     plot_type = parm_dict['plot_type']
     basename = f'{destination}/{antenna}_{ddi}'
-    surface = parm_dict['panel_mds'].get_antenna(antenna, ddi, dask_load=False)
+    xds = parm_dict['xds_data']
+    telescope = Telescope(xds.attrs['telescope_name'])
+    surface = AntennaSurface(xds, telescope, reread=True)
     if plot_type == plot_types[0]:  # deviation plot
         surface.plot_deviation(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
     elif plot_type == plot_types[1]:  # phase plot
@@ -658,9 +660,9 @@ def _plot_antenna_chunk(parm_dict):
     elif plot_type == plot_types[2]:  # Ancillary plot
         surface.plot_mask(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
         surface.plot_amplitude(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
-    else: # all plots
+    else:  # all plots
         surface.plot_deviation(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
-        surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
+        surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit='deg')
         surface.plot_mask(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
         surface.plot_amplitude(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
 
