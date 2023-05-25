@@ -2,9 +2,10 @@ import os
 import json
 import dask
 import xarray
+s
+import numpy as np
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import numpy as np
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 

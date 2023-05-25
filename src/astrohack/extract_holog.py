@@ -8,6 +8,8 @@ import xarray as xr
 import numpy as np
 import numbers
 
+from pprint import pformat
+
 from casacore import tables as ctables
 
 from astropy.time import Time
@@ -251,8 +253,7 @@ def extract_holog(
         
         holog_obs_dict = holog_obs_dict_with_ddi
             
-    from pprint import pformat
-    logger.info("holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0],indent=2,width=2))
+    logger.info("holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0], indent=2, width=2))
 
 
     outfile_obj = copy.deepcopy(holog_obs_dict)
