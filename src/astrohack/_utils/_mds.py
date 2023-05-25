@@ -166,13 +166,13 @@ class AstrohackImageFile(dict):
         :param destination: Name of the destination folder to contain plots
         :type destination: str
         :param complex_split: How to split complex data, cartesian (real + imaginary) or polar (amplitude + phase)
-        :type complex_split: str
+        :type complex_split: str, optional
         :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None
         :type ant_id: list or str, optional, ex. ea25
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
         :type ddi: list or int, optional, ex. 0
         :param parallel: If True will use an existing astrohack client to produce plots in parallel
-        :type parallel: bool
+        :type parallel: bool, optional
 
         .. _Description:
         Export the products from the holog mds onto FITS files to be read by other software packages
@@ -238,7 +238,6 @@ class AstrohackImageFile(dict):
 
         Produce plots from ``astrohack.holog`` results for analysis
         """
-        logger = _get_astrohack_logger()
         parm_dict = {'ant': ant_id,
                      'ddi': ddi,
                      'destination': destination,
@@ -362,42 +361,40 @@ class AstrohackHologFile(dict):
 
         return self._meta_data
 
-    def plot_diagnostics(self, destination="", delta=0.01, ant_id="", ddi="", map_id="", data_type='amplitude',
-                         save_plots=False, display=True, width=1250, height=1200, parallel=False):
+    def plot_diagnostics(self, destination, delta=0.01, ant_id=None, ddi=None, map_id=None, complex_split='polar',
+                         display=True, figure_size=None, dpi=300, parallel=False):
         """ Plot diagnostic calibration plots from the holography data file.
 
-        :param destination: Name of the destination folder to contain exported screw adjustments
+        :param destination: Name of the destination folder to contain diagnostic plots
         :type destination: str
-
         :param delta: Defines a fraction of cell_size around which to look for peaks., defaults to 0.01
         :type delta: float, optional
-
-        :param ant_id: antenna ID to use in subselection, defaults to ""
-        :type ant_id: str, optional
-
-        :param ddi: data description ID to use in subselection, defaults to ""
-        :type ddi: str, optional
-
-        :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning configuration,  defaults to ""
-        :type map_id: str, optional
-
-        :param data_type: Whether the plots should investigate amplitude/phase or real/imaginary. Options are 'amplitude' or 'real', defaults to 'amplitude'
-        :type data_type: str, optional
-
-        :param save_plots: Save plots to disk, defaults to False
-        :type save_plots: bool, optional
-
+        :param ant_id: antenna ID to use in subselection, defaults to "all" when None
+        :type ant_id: list or str, optional, ex. ea25
+        :param ddi: data description ID to use in subselection, defaults to "all" when None
+        :type ddi: list or int, optional, ex. 0
+        :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning configuration,  defaults to "all" when None
+        :type map_id: list or int, optional, ex. 0
+        :param complex_split: How to split complex data, cartesian (real + imaginary) or polar (amplitude + phase)
+        :type complex_split: str, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
-
-        :param width: figure width in pixels, defaults to 1250
-        :type width: int, optional
-
-        :param height: figure height in pixels, defaults to 1200
-        :type height: int, optional
-
+        :param figure_size: 2 element array/list/tuple with the plot sizes in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: dots per inch to be used in plots
+        :type dpi: int
         :param parallel: Run inparallel, defaults to False
         :type parallel: bool, optional
+
+        **Additional Information**
+        The visibilities extracted by extract_holog are complex due to the nature of interferometric measurements. To
+        ease the visualization of the complex data it can be split into real and imaginary parts (cartesian) or in
+        amplitude and phase (polar).
+
+        .. rubric:: Available complex splitting possibilities:
+        - *cartesian*: Split is done to a real part and an imaginary part in the plots
+        - *polar*:     Split is done to an amplitude and a phase in the plots
+
         """
 
         # This is the default address used by Dask. Note that in the client check below, if the user has multiple
@@ -422,38 +419,40 @@ class AstrohackHologFile(dict):
                     client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
                     logger.info(client.dashboard_link)
 
-        if save_plots:
-            os.makedirs(f"{destination}/", exist_ok=True)
-
-        # Default but ant | ddi | map take precedence
-        key_list = ["ant_", "ddi_", "map_"]
-
-        if ant_id or ddi or map_id:
-            key_list = []
-            key_list.append("ant_") if not ant_id else key_list.append(ant_id)
-            key_list.append("ddi_") if not ddi else key_list.append(ddi)
-            key_list.append("map_") if not map_id else key_list.append(map_id)
-
-        print(key_list)
-
-        param_dict = {
-            'data': None,
+        parm_dict = {
+            'destination': destination,
             'delta': delta,
-            'type': data_type,
-            'save': save_plots,
+            'ant': ant_id,
+            'ddi': ddi,
+            'map': map_id,
+            'complex_split': complex_split,
             'display': display,
-            'width': width,
-            'height': height,
-            'destination': destination
-            }
+            'figuresize': figure_size,
+            'dpi': dpi,
+            'parallel': parallel
+        }
+        parms_passed = _check_parms(parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(parm_dict, 'delta', [float], default=0.01)
+        parms_passed = parms_passed and _check_parms(parm_dict, 'ant', [list, str], list_acceptable_data_types=[str],
+                                                     default='all')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list, int], list_acceptable_data_types=[int],
+                                                     default='all')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'map', [list, int], list_acceptable_data_types=[int],
+                                                     default='all')
+        parms_passed = parms_passed and _check_parms(parm_dict, 'complex_split', [str],
+                                                     acceptable_data=['cartesian', 'polar'], default="polar")
+        parms_passed = parms_passed and _check_parms(parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(parm_dict, 'figuresize', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(parm_dict, 'parallel', [bool], default=False)
 
-        _dask_compute(
-            data_dict=self,
-            function=_calibration_plot_chunk,
-            param_dict=param_dict,
-            key_list=key_list,
-            parallel=parallel
-            )
+        fname = 'plot_diagnostics'
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(fname, parm_dict['destination'])
+        key_order = ["ddi", "map", "ant"]
+        _dask_compute_2(fname, self, _calibration_plot_chunk, parm_dict, key_order, parallel)
 
 
 class AstrohackPanelFile(dict):
