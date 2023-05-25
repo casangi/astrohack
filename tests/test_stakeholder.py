@@ -52,6 +52,7 @@ def verify_panel_positions(
   M_TO_MILS = 39370.1
     
   panel_mds = open_panel('{data}/alma.split.panel.zarr'.format(data=data_dir))
+
     
   panel_position = np.mean(panel_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values*M_TO_MILS, axis=1)
 
@@ -304,5 +305,6 @@ def test_screw_adjustments(set_data):
     parallel=True,
     overwrite=True
   )
+
 
   assert verify_panel_positions(data_dir=str(set_data))
