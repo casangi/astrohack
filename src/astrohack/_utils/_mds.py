@@ -15,7 +15,7 @@ from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _create_destination_folder
 from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._constants import length_units, trigo_units, plot_types
-from astrohack._utils._dask_graph_tools import _generate_antenna_ddi_graph_and_compute, _dask_compute, _dask_compute_2
+from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk
@@ -209,7 +209,7 @@ class AstrohackImageFile(dict):
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
         parm_dict['metadata'] = self._meta_data
-        _dask_compute_2(fname, self, _export_to_fits_holog_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(fname, self, _export_to_fits_holog_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, unit=None,
                        colormap='viridis', figure_size=None, dpi=300, parallel=True):
@@ -266,7 +266,7 @@ class AstrohackImageFile(dict):
         fname = 'plot_apertures'
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
-        _dask_compute_2(fname, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(fname, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackHologFile(dict):
@@ -452,7 +452,7 @@ class AstrohackHologFile(dict):
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
         key_order = ["ddi", "map", "ant"]
-        _dask_compute_2(fname, self, _calibration_plot_chunk, parm_dict, key_order, parallel)
+        _dask_general_compute(fname, self, _calibration_plot_chunk, parm_dict, key_order, parallel)
 
 
 class AstrohackPanelFile(dict):
@@ -586,7 +586,7 @@ class AstrohackPanelFile(dict):
         fname = 'export_screws'
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
-        _dask_compute_2(fname, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
+        _dask_general_compute(fname, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
     def plot_antennae(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False, unit=None,
                       colormap='viridis', figure_size=None, dpi=300, parallel=True):
@@ -672,7 +672,7 @@ class AstrohackPanelFile(dict):
         fname = 'plot_antennae'
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
-        _dask_compute_2(fname, self, _plot_antenna_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(fname, self, _plot_antenna_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def export_to_fits(self, destination, ant_id=None, ddi=None, parallel=True):
         """ Export contents of an Astrohack MDS file to several FITS files in the destination folder
@@ -708,7 +708,7 @@ class AstrohackPanelFile(dict):
         fname = 'export_to_fits'
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
-        _dask_compute_2(fname, self, _export_to_fits_panel_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(fname, self, _export_to_fits_panel_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackPointFile(dict):

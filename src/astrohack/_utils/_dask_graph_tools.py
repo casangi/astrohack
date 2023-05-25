@@ -54,28 +54,8 @@ def _generate_antenna_ddi_graph_and_compute(function_name, chunk_function, parm_
     return count
 
 
-def _construct_graph(data_dict, function, param_dict, delayed_list, key_list, parallel=False):
-
-    if isinstance(data_dict, xarray.Dataset):
-        param_dict['data'] = data_dict
-
-        if parallel:
-            delayed_list.append(dask.delayed(function)(dask.delayed(param_dict)))
-
-        else:
-            function(param_dict)
-
-    else:
-        for key, value in data_dict.items():
-            if key_list:
-                for element in key_list:
-                    if key.find(element) == 0:
-                        _construct_graph(value, function, param_dict, delayed_list, key_list, parallel)
-            else:
-                _construct_graph(value, function, param_dict, key_list, parallel)
-
-
-def _construct_graph_2(caller, data_dict, function, param_dict, delayed_list, key_order, parallel=False, oneup=None):
+def _construct_general_graph_recursively(caller, data_dict, function, param_dict, delayed_list, key_order,
+                                         parallel=False, oneup=None):
     logger = _get_astrohack_logger()
     if isinstance(data_dict, xarray.Dataset):
         param_dict['xds_data'] = data_dict
@@ -93,8 +73,8 @@ def _construct_graph_2(caller, data_dict, function, param_dict, delayed_list, ke
         for item in exec_list:
             param_dict[f'this_{key}'] = item
             try:
-                _construct_graph_2(caller, data_dict[item], function, param_dict, delayed_list, key_order[1:],
-                                   parallel=parallel, oneup=item)
+                _construct_general_graph_recursively(caller, data_dict[item], function, param_dict, delayed_list, key_order[1:],
+                                                     parallel=parallel, oneup=item)
             except KeyError:
                 if oneup is None:
                     logger.warning(f'[{caller}]: {item} is not present in this mds')
@@ -102,19 +82,11 @@ def _construct_graph_2(caller, data_dict, function, param_dict, delayed_list, ke
                     logger.warning(f'[{caller}]: {item} is not present for {oneup}')
 
 
-def _dask_compute(data_dict, function, param_dict, key_list=[], parallel=False):
-    delayed_list = []
-    _construct_graph(data_dict, function, param_dict, delayed_list=delayed_list, key_list=key_list, parallel=parallel)
-
-    if parallel:
-        dask.compute(delayed_list)
-
-
-def _dask_compute_2(caller, mds, function, param_dict, key_order, parallel=False):
+def _dask_general_compute(caller, mds, function, param_dict, key_order, parallel=False):
     logger = _get_astrohack_logger()
     delayed_list = []
-    _construct_graph_2(caller, mds, function, param_dict, delayed_list=delayed_list, key_order=key_order,
-                       parallel=parallel)
+    _construct_general_graph_recursively(caller, mds, function, param_dict, delayed_list=delayed_list, key_order=key_order,
+                                         parallel=parallel)
     if len(delayed_list) == 0:
         logger.warning(f"[{caller}]: No data to process")
     else:
