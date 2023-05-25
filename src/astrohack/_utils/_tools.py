@@ -122,30 +122,7 @@ def _print_holog_obs_dict(holog_obj):
     logger.info("{close_bracket}".format(close_bracket=CLOSE_DICT))
 
 
-def _parm_to_list(parm, path, prefix):
-    """
-    Transforms a string parameter to a list if parameter is all or a single string
-    Args:
-        parm: string or list parameter
-        path: Path to complete parameter with values if parameter is 'all'
-
-    Returns: parameter value converter to a list
-
-    """
-    if parm == 'all':
-        tmplist = os.listdir(path)
-        oulist = []
-        for item in tmplist:
-            if item.find(prefix) == 0:
-                oulist.append(item)
-    elif isinstance(parm, str):
-        oulist = [parm]
-    else:
-        oulist = parm
-    return oulist
-
-
-def _parm_to_list_2(parm, data_dict, prefix):
+def _parm_to_list(parm, data_dict, prefix):
     """
     Transforms a string parameter to a list if parameter is all or a single string
     Args:
