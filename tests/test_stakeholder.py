@@ -40,7 +40,7 @@ def set_data(tmp_path_factory):
   return data_dir
 
 def verify_panel_positions(
-    file="",
+    data_dir="",
     panel_list=['3-11', '5-31', '7-52', '11-62'], 
     reference_position = np.array([-2.39678052, -0.87024129, 0.89391852, 0.48643069]),
     antenna='ant_DV13',
@@ -49,7 +49,7 @@ def verify_panel_positions(
     
     M_TO_MILS = 39370.1
     
-    panel_mds = open_panel(file)
+    panel_mds = open_panel('{data}/alma.split.panel.zarr'.format(data=data_dir))
     
     panel_position = np.mean(panel_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values*M_TO_MILS, axis=1)
 
@@ -303,3 +303,4 @@ def test_screw_adjustments(set_data):
     overwrite=True
   )
 
+assert verify_panel_positions(data_dir=str(set_data))
