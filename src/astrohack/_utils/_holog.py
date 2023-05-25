@@ -1,4 +1,3 @@
-import scipy
 import numpy as np
 import xarray as xr
 
@@ -6,7 +5,7 @@ from scipy.interpolate import griddata
 
 from astrohack._classes.telescope import Telescope
 
-from astrohack._utils._dio import _load_holog_file, _load_image_xds
+from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _read_meta_data, _write_meta_data, _write_fits
 
 from astrohack._utils._panel import _phase_fitting_block
@@ -39,9 +38,6 @@ def _holog_chunk(holog_chunk_params):
         holog_chunk_params (dict): Dictionary containing holography parameters.
     """
     logger = _get_astrohack_logger()
-    
-    c = scipy.constants.speed_of_light
-    
 
     holog_file, ant_data_dict = _load_holog_file(
         holog_chunk_params["holog_file"],
@@ -89,7 +85,7 @@ def _holog_chunk(holog_chunk_params):
 
         # Grid the data
         vis = ant_xds.VIS.values
-        vis[vis==np.nan] = 0.0
+        vis[vis == np.nan] = 0.0
         lm = ant_xds.DIRECTIONAL_COSINES.values
         weight = ant_xds.WEIGHT.values
 
@@ -110,8 +106,7 @@ def _holog_chunk(holog_chunk_params):
             
             freq_chan = [np.mean(avg_freq)]
         else:
-            beam_grid[holog_map_index, ...] = np.moveaxis(griddata(lm, vis, (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"],fill_value=0.0), (0,1), (2,3))
-
+            beam_grid[holog_map_index, ...] = np.moveaxis(griddata(lm, vis, (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"], fill_value=0.0), (0,1), (2,3))
 
         time_centroid_index = ant_data_dict[ddi][holog_map].dims["time"] // 2
         time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
@@ -134,8 +129,8 @@ def _holog_chunk(holog_chunk_params):
     ###############
     pol = beam_grid,ant_data_dict[ddi][holog_map].pol.values
     if to_stokes:
-        beam_grid = _to_stokes(beam_grid,ant_data_dict[ddi][holog_map].pol.values)
-        pol=['I','Q','U','V']
+        beam_grid = _to_stokes(beam_grid, ant_data_dict[ddi][holog_map].pol.values)
+        pol = ['I', 'Q', 'U', 'V']
     ###############
     
     if holog_chunk_params["scan_average"]:
@@ -166,7 +161,7 @@ def _holog_chunk(holog_chunk_params):
 
     telescope = Telescope(telescope_name)
 
-    min_wavelength = scipy.constants.speed_of_light/freq_chan[0]
+    min_wavelength = clight/freq_chan[0]
     max_aperture_radius = (0.5*telescope.diam)/min_wavelength
     
     image_slice = aperture_grid[0, 0, 0, ...]
@@ -232,7 +227,7 @@ def _holog_chunk(holog_chunk_params):
             pols=(0, 3)
         
         #? Wavelength
-        max_wavelength = scipy.constants.speed_of_light/freq_chan[-1]
+        max_wavelength = clight/freq_chan[-1]
         
         results, errors, phase_corrected_angle, _, in_rms, out_rms = _phase_fitting_block(
                     pols=pols,

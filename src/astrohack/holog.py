@@ -139,7 +139,7 @@ def holog(holog_name,
         holog_json = json.load(json_file)
     meta_data = _read_meta_data(holog_params['holog_file'], 'holog', 'extract_holog')
 
-    if  holog_params['ant_list'] == 'all':
+    if holog_params['ant_list'] == 'all':
         holog_params['ant_list'] = list(holog_json.keys())
         
     logger.info('Mapping antennas ' + str(holog_params['ant_list']))
@@ -153,7 +153,7 @@ def holog(holog_name,
         grid_size = np.array([n_pix, n_pix])
         holog_params["grid_size"] = grid_size
 
-    logger.info(f'[{fname}]: Cell size: {str(cell_size)} Grid size {str(grid_size)}')
+    logger.info(f'[{fname}]: Cell size: {str(cell_size)}, Grid size {str(grid_size)}')
     json_data = {
             "cell_size": holog_params["cell_size"].tolist(),
             "grid_size": holog_params["grid_size"].tolist()
@@ -167,7 +167,7 @@ def holog(holog_name,
 
     for ant_id in holog_chunk_params['ant_list']:
         for ddi in list(holog_json[ant_id].keys()):
-            logger.info("Processing ant_id: " + str(ant_id)  + " and " + ddi)
+            logger.info(f'[{fname}]: Processing ant_id: {str(ant_id)} and {ddi}.')
             holog_chunk_params["ant_id"] = ant_id
             holog_chunk_params["ddi_id"] = ddi
             

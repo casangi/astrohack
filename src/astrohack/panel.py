@@ -26,9 +26,9 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     :type panel_model: str, optional
     :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.2.
     :type panel_margins: float, optional
-    :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None
+    :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None
     :type ant_id: list or str, optional, ex. ea25
-    :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
+    :param ddi: List of ddis/ddi to be processed, defaults to "all" when None
     :type ddi: list or int, optional, ex. 0
     :param parallel: Run in parallel. Defaults to False.
     :type parallel: bool, optional
@@ -108,14 +108,14 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     else:
         panel_params['origin'] = 'astrohack'
         if _dask_general_compute(fname, image_mds, _panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
-            logger.info(f"[{fname}] Finished processing")
+            logger.info(f"[{fname}]: Finished processing")
             output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_attr")
             _write_meta_data('panel', output_attr_file, input_params)
             panel_mds = AstrohackPanelFile(panel_params['panel_name'])
             panel_mds.open()
             return panel_mds
         else:
-            logger.warning("No data to process")
+            logger.warning(f"[{fname}]: No data to process")
             return None
 
 
@@ -125,7 +125,7 @@ def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, ov
 
     This function reads amplitude and deviation FITS files produced by AIPS's HOLOG task and transfers their data onto a
     .image.zarr file that can be read by panel.
-    Most of the meta data can be inferred from the FITS headers, but it remains necessary to specify the telescope name
+    Most of the metadata can be inferred from the FITS headers, but it remains necessary to specify the telescope name
     to be included on the .image.zarr file
 
     Args:
