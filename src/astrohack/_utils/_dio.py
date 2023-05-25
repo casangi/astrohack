@@ -15,30 +15,28 @@ from astrohack._utils._tools import _numpy_to_json, _add_prefix
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 
-def check_if_file_exists(file):
+def check_if_file_exists(caller, file):
     logger = _get_astrohack_logger()
 
     if os.path.exists(file) is False:
-        logger.error(
-            " File " + file + " does not exists."
-            )
+        logger.error(f'[{caller}]: File {file} does not exists.')
         raise FileNotFoundError
 
 
-def check_if_file_will_be_overwritten(file, overwrite):
+def check_if_file_will_be_overwritten(caller, file, overwrite):
     logger = _get_astrohack_logger()
     if (os.path.exists(file) is True) and (overwrite is False):
-        logger.error(" {file} already exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(file=file))
+        logger.error(f'[{caller}]: {file} already exists. To overwite set overwrite to True, or remove current file.'
         
         raise FileExistsError
         
     elif  (os.path.exists(file) is True) and (overwrite is True):
         if file.endswith(".zarr"):
-            logger.warning(file + " will be overwritten.")
+            logger.warning(f'[{caller}]: {file} will be overwritten.')
             shutil.rmtree(file)
         else:
-            logger.warning(file + ": is not a valid hack file. Check the file name again.")
-            raise Exception("IncorrectFileType: {file}".format(file=file))
+            logger.warning(f'[{caller}]: {file} may not be valid hack file. Check the file name again.')
+            raise Exception(f"IncorrectFileType: {file}")
 
 
 def _load_panel_file(file=None, panel_dict=None, dask_load=True):
@@ -74,8 +72,6 @@ def _load_panel_file(file=None, panel_dict=None, dask_load=True):
     except Exception as e:
             logger.error(str(e))
             raise
-
-    
     return panel_data_dict
 
 
@@ -131,7 +127,7 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
     if holog_dict is None:
         holog_dict = {}
 
-    if load_pnt_dict == True:
+    if load_pnt_dict:
         logger.info("Loading pointing dictionary to holog ...")
         holog_dict["pnt_dict"] = _load_point_file(file=holog_file, ant_list=None, dask_load=dask_load)
 
@@ -142,7 +138,7 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
                 if ddi not in holog_dict:
                     holog_dict[ddi] = {}
             else:
-                if (ddi == ddi_id):
+                if ddi == ddi_id:
                     holog_dict[ddi] = {}
                 else:
                     continue
@@ -164,7 +160,6 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
                                     )
                                 else:
                                     holog_dict[ddi][holog_map][ant] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
-
     
     if ant_id is None:
         return holog_dict

@@ -677,7 +677,7 @@ def _export_to_fits_panel_chunk(parm_dict):
     antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
-    logger.info(f'Exporting panel contents of {antenna} {ddi} to FITS files in {destination}')
+    logger.info(f'[export_to_fits]: Exporting panel contents of {antenna} {ddi} to FITS files in {destination}')
     xds = parm_dict['xds_data']
     telescope = Telescope(xds.attrs['telescope_name'])
     surface = AntennaSurface(xds, telescope, reread=True)

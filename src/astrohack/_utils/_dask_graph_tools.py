@@ -20,7 +20,7 @@ def _construct_general_graph_recursively(caller, data_dict, function, param_dict
 
     else:
         key = key_order[0]
-        exec_list = _parm_to_list(param_dict[key], data_dict, key)
+        exec_list = _parm_to_list(caller, param_dict[key], data_dict, key)
         for item in exec_list:
             param_dict[f'this_{key}'] = item
             try:

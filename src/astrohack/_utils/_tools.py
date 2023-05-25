@@ -122,7 +122,7 @@ def _print_holog_obs_dict(holog_obj):
     logger.info("{close_bracket}".format(close_bracket=CLOSE_DICT))
 
 
-def _parm_to_list(parm, data_dict, prefix):
+def _parm_to_list(caller, parm, data_dict, prefix):
     """
     Transforms a string parameter to a list if parameter is all or a single string
     Args:
@@ -148,11 +148,11 @@ def _parm_to_list(parm, data_dict, prefix):
             elif isinstance(item, int):
                 oulist.append(f'{prefix}_{item}')
             else:
-                msg = f'[_parm_to_list] cannot interpret parameter {item} of type {type(item)}'
+                msg = f'[{caller}]: cannot interpret parameter {item} of type {type(item)}'
                 logger.error(msg)
                 raise Exception(msg)
     else:
-        msg = f'[_parm_to_list] cannot interpret parameter {parm} of type {type(parm)}'
+        msg = f'[{caller}] cannot interpret parameter {parm} of type {type(parm)}'
         logger.error(msg)
         raise Exception(msg)
     return oulist
@@ -250,11 +250,11 @@ def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
     else:
         inc = axis[1] - axis[0]
         if inc == 0:
-            logger.error('Axis increment is zero valued')
+            logger.error('[_axis_to_fits_header]: Axis increment is zero valued')
             raise Exception
         absdiff = abs((axis[-1]-axis[-2])-inc)/inc
         if absdiff > 1e-7:
-            logger.error('Axis is not linear!')
+            logger.error('[_axis_to_fits_header]: Axis is not linear!')
             raise Exception
 
     ref = naxis//2

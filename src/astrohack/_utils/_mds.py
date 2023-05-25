@@ -39,7 +39,6 @@ class AstrohackDataFile:
         self.point = None
             
         self._verify_holog_files(file_stem, path)
-            
 
     def _verify_holog_files(self, file_stem, path):
         logger = _get_astrohack_logger()
@@ -52,7 +51,6 @@ class AstrohackDataFile:
             
             self._holog_path = file_path
             self.holog = AstrohackHologFile(file_path)
-                
 
         file_path = "{path}/{stem}.image.zarr".format(path=path, stem=file_stem)
 
@@ -141,24 +139,26 @@ class AstrohackImageFile(dict):
         print('\nContents:')
         print(table)
 
-    def select(self, ant=None, ddi=None, polar=False):
+    def select(self, ant_id, ddi, complex_split='cartesian'):
         """Select data on the basis of ddi, scan, ant. This is a convenience function.
         Args:
-            ddi (int, optional): Data description ID. Defaults to None.
-            ant (int, optional): Antenna ID. Defaults to None.
+            ddi (int): Data description ID.
+            ant_id (int): Antenna ID.
+            complex_split (str, optional): how the selected data is to be splited, defaults to cartesian
+
         Returns:
-            xarray.Dataset: xarray dataset of corresponding ddi, scan, antenna ID.
+            xarray.Dataset: xarray dataset of corresponding ddi and antenna ID., or self if no selection
         """
         logger = _get_astrohack_logger()
         
-        if ant is None and ddi is None:
-            logger.info("No selections made ...")
+        if ant_id is None or ddi is None:
+            logger.info("[select]: No selections made ...")
             return self
         else:
-            if polar:
-                return self[ant][ddi].apply(np.absolute), self[ant][ddi].apply(np.angle, deg=True)
-
-            return self[ant][ddi]
+            if complex_split == 'polar':
+                return self[ant_id][ddi].apply(np.absolute), self[ant_id][ddi].apply(np.angle, deg=True)
+            else:
+                return self[ant_id][ddi]
 
     def export_to_fits(self, destination, complex_split='cartesian', ant_id=None, ddi=None, parallel=True):
         """ Export contents of an Astrohack MDS file to several FITS files in the destination folder
@@ -195,17 +195,17 @@ class AstrohackImageFile(dict):
                      'destination': destination,
                      'complex_split': complex_split,
                      'parallel': parallel}
-
-        parms_passed = _check_parms(parm_dict, 'complex_split', [str], acceptable_data=['cartesian', 'polar'],
-                                    default="cartesian")
-        parms_passed = parms_passed and _check_parms(parm_dict, 'ant', [list, str], list_acceptable_data_types=[str],
-                                                     default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list, int], list_acceptable_data_types=[int],
-                                                     default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'parallel', [bool], default=True)
-
+        
         fname = 'export_to_fits'
+        parms_passed = _check_parms(fname, parm_dict, 'complex_split', [str], acceptable_data=['cartesian', 'polar'],
+                                    default="cartesian")
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ant', [list, str],
+                                                     list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
+
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
         parm_dict['metadata'] = self._meta_data
@@ -248,22 +248,23 @@ class AstrohackImageFile(dict):
                      'dpi': dpi,
                      'parallel': parallel}
 
-        parms_passed = _check_parms(parm_dict, 'ant', [list, str], list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list, int], list_acceptable_data_types=[str],
-                                                     default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=trigo_units,
+        fname = 'plot_apertures'
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [list, str], list_acceptable_data_types=[str],
+                                    default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int],
+                                                     list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'parallel', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'plot_screws', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'colormap', [str], acceptable_data=cmaps,
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='viridis')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
 
-        fname = 'plot_apertures'
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
         _dask_general_compute(fname, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
@@ -335,22 +336,22 @@ class AstrohackHologFile(dict):
         print('\nContents:')
         print(table)
 
-    def select(self, ddi=None, scan=None, ant=None):
+    def select(self, ddi=None, scan=None, ant_id=None):
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
         Args:
-            ddi (int, optional): Data description ID. Defaults to None.
-            scan (int, optional): Scan number. Defaults to None.
-            ant (int, optional): Antenna ID. Defaults to None.
+            ddi (int, optional): Data description ID.
+            scan (int, optional): Scan number.
+            ant_id (int, optional): Antenna ID.
         Returns:
             xarray.Dataset: xarray dataset of corresponding ddi, scan, antenna ID.
         """
         logger = _get_astrohack_logger()
         
-        if ant is None or ddi is None or scan is None:
-            logger.info("No selections made ...")
+        if ant_id is None or ddi is None or scan is None:
+            logger.info("[select]: No selection made ...")
             return self
         else:
-            return self[ddi][scan][ant]
+            return self[ddi][scan][ant_id]
 
     @property
     def meta_data(self):
@@ -431,24 +432,24 @@ class AstrohackHologFile(dict):
             'dpi': dpi,
             'parallel': parallel
         }
-        parms_passed = _check_parms(parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'delta', [float], default=0.01)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'ant', [list, str], list_acceptable_data_types=[str],
-                                                     default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list, int], list_acceptable_data_types=[int],
-                                                     default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'map', [list, int], list_acceptable_data_types=[int],
-                                                     default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'complex_split', [str],
+        fname = 'plot_diagnostics'
+        parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delta', [float], default=0.01)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ant', [list, str],
+                                                     list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'map', [list, int],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'complex_split', [str],
                                                      acceptable_data=['cartesian', 'polar'], default="polar")
-        parms_passed = parms_passed and _check_parms(parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'dpi', [int], default=300)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'parallel', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=False)
 
-        fname = 'plot_diagnostics'
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
         key_order = ["ddi", "map", "ant"]
@@ -517,19 +518,17 @@ class AstrohackPanelFile(dict):
         print('\nContents:')
         print(table)
 
-    def get_antenna(self, antenna, ddi, dask_load=True):
+    def get_antenna(self, ant_id, ddi):
         """
         Return an AntennaSurface object for interaction
         Args:
-            antenna: Which antenna is to be used
+            ant_id: Which antenna is to be used
             ddi: Which ddi is to be used
-            dask_load: Load xds using dask?
         Returns:
             AntennaSurface object contaning relevant information for panel adjustments
         """
-        xds = _load_image_xds(self.file, antenna, ddi, dask_load)
+        xds = self[ant_id][ddi]
         telescope = Telescope(xds.attrs['telescope_name'])
-        
         return AntennaSurface(xds, telescope, reread=True)
 
     def export_screws(self, destination, ant_id=None, ddi=None, unit='mm', threshold=None, plot_map=False,
@@ -570,20 +569,23 @@ class AstrohackPanelFile(dict):
                      'figuresize': figure_size,
                      'dpi': dpi}
 
-        parms_passed = _check_parms(parm_dict, 'ant', [list, str], list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list, int], list_acceptable_data_types=[int],
-                                                     default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=length_units, default='mm')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'threshold', [numbers.Number], default='None')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'plot_map', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'colormap', [str], acceptable_data=cmaps, default='RdBu_r')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'figuresize', [list, np.ndarray],
+        fname = 'export_screws'
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [list, str], list_acceptable_data_types=[str], 
+                                    default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int], 
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units, 
+                                                     default='mm')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'threshold', [numbers.Number], default='None')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_map', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps, 
+                                                     default='RdBu_r')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'dpi', [int], default=300)
-
-        fname = 'export_screws'
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+        
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
         _dask_general_compute(fname, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
@@ -642,34 +644,35 @@ class AstrohackPanelFile(dict):
                      'dpi': dpi,
                      'parallel': parallel}
 
-        parms_passed = _check_parms(parm_dict, 'ant', [list, str], list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list, int], list_acceptable_data_types=[int],
-                                                     default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'plot_type', [str], acceptable_data=plot_types,
+        fname = 'plot_antennae'
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [list, str], list_acceptable_data_types=[str],
+                                    default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_type', [str], acceptable_data=plot_types,
                                                      default=plot_types[0])
         if parm_dict['plot_type'] == plot_types[0]:  # Length units for deviation plots
-            parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=length_units,
+            parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units,
                                                          default='mm')
         elif parm_dict['plot_type'] == plot_types[1]:  # Trigonometric units for phase plots
-            parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=trigo_units,
+            parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=trigo_units,
                                                          default='deg')
         elif parm_dict['plot_type'] == plot_types[2]:  # Ancillary plots, no units
-            logger.info('Unit ignored for ancillary plots')
+            logger.info(f'[{fname}]: Unit ignored for ancillary plots')
         else:  # Unit is taken for the deviation plot, phase is then in degrees
-            parms_passed = parms_passed and _check_parms(parm_dict, 'unit', [str], acceptable_data=length_units,
+            parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units,
                                                          default='mm')
-            logger.info('Unit for phase plots set to degrees')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'parallel', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'plot_screws', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'colormap', [str], acceptable_data=cmaps,
+            logger.info(f'[{fname}]: Unit for phase plots set to degrees')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='viridis')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
 
-        fname = 'plot_antennae'
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
         _dask_general_compute(fname, self, _plot_antenna_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
@@ -698,14 +701,15 @@ class AstrohackPanelFile(dict):
                      'ddi': ddi,
                      'destination': destination,
                      'parallel': parallel}
-
-        parms_passed = _check_parms(parm_dict, 'ant', [list, str], list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'ddi', [list, int], list_acceptable_data_types=[int],
-                                                     default='all')
-        parms_passed = parms_passed and _check_parms(parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(parm_dict, 'parallel', [bool], default=True)
-
+        
         fname = 'export_to_fits'
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [list, str], list_acceptable_data_types=[str],
+                                    default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
+
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
         _dask_general_compute(fname, self, _export_to_fits_panel_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)

@@ -1,43 +1,29 @@
 import os
 import dask
-import sys
 import json
 import copy
-
-import xarray as xr
 import numpy as np
 import numbers
+from astropy.time import Time
 
 from pprint import pformat
 
 from casacore import tables as ctables
 
-from astropy.time import Time
-
 from astrohack._utils._constants import pol_str
-
 from astrohack._utils._conversion import _convert_ant_name_to_id
-
 from astrohack._utils._extract_holog import _create_holog_meta_data
 from astrohack._utils._extract_point import _extract_pointing
-
 from astrohack._utils._dio import _load_point_file
-from astrohack._utils._dio import _open_no_dask_zarr
-from astrohack._utils._dio import _read_data_from_holog_json
-from astrohack._utils._dio import _read_meta_data
-from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import  check_if_file_will_be_overwritten, check_if_file_exists
 from astrohack._utils._dio import _load_holog_file
-
 from astrohack._utils._extract_holog import _extract_holog_chunk
-
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._parm_utils._check_parms import _check_parms
-
+from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._tools import _jsonify
-
 from astrohack._utils._mds import AstrohackHologFile
+
 
 def extract_holog(
     ms_name,
@@ -84,9 +70,6 @@ def extract_holog(
     
     :param reuse_point_zarr: If true the point.zarr specified in point_name is reused.
     :type reuse_point_zarr: bool, optional
-
-    :param test_mode: Boolean for whether to writeholog dictionary to disk. This is solely for testing., defaults to False
-    :type overwrite: bool, optional
 
     :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files., defaults to False
     :type overwrite: bool, optional
@@ -156,34 +139,38 @@ def extract_holog(
     """
     logger = _get_astrohack_logger()
     
-    
+    fname = 'extract_holog'
     ######### Parameter Checking #########
-    extract_holog_parms = _check_extract_holog_parms(ms_name,
-                                holog_obs_dict,
-                                ddi_sel,
-                                baseline_average_distance,
-                                baseline_average_nearest,
-                                holog_name,
-                                point_name,
-                                data_column,
-                                parallel,
-                                reuse_point_zarr,
-                                overwrite)
+    extract_holog_parms = _check_extract_holog_parms(fname,
+                                                     ms_name,
+                                                     holog_obs_dict,
+                                                     ddi_sel,
+                                                     baseline_average_distance,
+                                                     baseline_average_nearest,
+                                                     holog_name,
+                                                     point_name,
+                                                     data_column,
+                                                     parallel,
+                                                     reuse_point_zarr,
+                                                     overwrite)
     input_params = extract_holog_parms.copy()
     
-    check_if_file_exists(extract_holog_parms['ms_name'])
-    check_if_file_will_be_overwritten(extract_holog_parms['holog_name'],extract_holog_parms['overwrite'])
-    check_if_file_will_be_overwritten(extract_holog_parms['point_name'],extract_holog_parms['overwrite'])
+    check_if_file_exists(fname, extract_holog_parms['ms_name'])
+    check_if_file_will_be_overwritten(fname, extract_holog_parms['holog_name'], extract_holog_parms['overwrite'])
+    check_if_file_will_be_overwritten(fname, extract_holog_parms['point_name'], extract_holog_parms['overwrite'])
         
     ############# Exstract pointing infromation and save to point.zarr #############
     if extract_holog_parms["reuse_point_zarr"]:
         try:
             pnt_dict = _load_point_file(extract_holog_parms['point_name'])
         except:
-            logger.warning('Could not find ' + extract_holog_parms['point_name'] + ', creating point new point.zarr .')
-            pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
+            logger.warning(f'[{fname}]: Could not find {extract_holog_parms["point_name"]}, creating point new '
+                           f'point.zarr.')
+            pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'],
+                                         parallel=extract_holog_parms['parallel'])
     else:
-        pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
+        pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'],
+                                     parallel=extract_holog_parms['parallel'])
 
     ######## Get Spectral Windows ########
     ctb = ctables.table(
@@ -211,7 +198,6 @@ def extract_holog(
 
     ctb.close()
     
-    
     ######## Get Antenna IDs that are in the main table########
     ctb = ctables.table(
         extract_holog_parms['ms_name'],
@@ -231,7 +217,9 @@ def extract_holog(
     ddi_sel = extract_holog_parms['ddi_sel']
     if holog_obs_dict is None: #Automatically create holog_obs_dict
         from astrohack._utils._extract_holog import _create_holog_obs_dict
-        holog_obs_dict = _create_holog_obs_dict(pnt_dict, extract_holog_parms['baseline_average_distance'], extract_holog_parms['baseline_average_nearest'], ant_names, ant_pos, ant_names_main)
+        holog_obs_dict = _create_holog_obs_dict(pnt_dict, extract_holog_parms['baseline_average_distance'],
+                                                extract_holog_parms['baseline_average_nearest'], ant_names, ant_pos,
+                                                ant_names_main)
         
         #From the generated holog_obs_dict subselect user supplied ddis.
         if ddi_sel != 'all':
@@ -325,10 +313,11 @@ def extract_holog(
             ack=False,
         )
     
-        assert ("pnt_tbl:fixed" in his_ctb.getcol("MESSAGE")), "Pointing table not corrected, users should apply function astrohack.dio.fix_pointing_table() to remedy this."
+        assert ("pnt_tbl:fixed" in his_ctb.getcol("MESSAGE")), \
+            "Pointing table not corrected, users should apply function astrohack.dio.fix_pointing_table() to " \
+            "remedy this."
         
         his_ctb.close()
-
 
     delayed_list = []
     
@@ -340,18 +329,14 @@ def extract_holog(
         extract_holog_parms["ddi"] = ddi
         extract_holog_parms["chan_setup"] = {}
         extract_holog_parms["pol_setup"] = {}
-        
         extract_holog_parms["chan_setup"]["chan_freq"] = spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0, :]
         extract_holog_parms["chan_setup"]["chan_width"] = spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[0, :]
         extract_holog_parms["chan_setup"]["eff_bw"] = spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0, :]
         extract_holog_parms["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[0]
         extract_holog_parms["chan_setup"]["total_bw"] = spw_ctb.getcol("TOTAL_BANDWIDTH", startrow=spw_setup_id, nrow=1)[0]
-
         extract_holog_parms["pol_setup"]["pol"] = pol_str[pol_ctb.getcol("CORR_TYPE", startrow=pol_setup_id, nrow=1)[0, :]]
-                
         
         extract_holog_parms["telescope_name"] = obs_ctb.getcol("TELESCOPE_NAME")[0]
-        
 
         for holog_map_key in holog_obs_dict[ddi_name].keys(): #loop over all beam_scan_ids, a beam_scan_id can conist out of more than one scan in an ms (this is the case for the VLA pointed mosiacs).
 
@@ -375,8 +360,6 @@ def extract_holog(
                         
                         ref_ant_per_map_ant_name_list.append(list(holog_obs_dict[ddi_name][holog_map_key]['ant'][map_ant_str]))
                         map_ant_name_list.append(map_ant_str)
-                        
-                   
 
                     extract_holog_parms["ref_ant_per_map_ant_tuple"] = tuple(ref_ant_per_map_ant_list)
                     extract_holog_parms["map_ant_tuple"] = tuple(map_ant_list)
@@ -399,9 +382,6 @@ def extract_holog(
                         _extract_holog_chunk(extract_holog_parms)
                 else:
                     logger.warning('DDI ' + str(ddi) + ' has no holography data to extract.')
-                     
-     
-    
 
     spw_ctb.close()
     pol_ctb.close()
@@ -426,73 +406,68 @@ def extract_holog(
 
     return holog_mds
 
+def _check_extract_holog_parms(fname,
+                               ms_name,
+                               holog_obs_dict,
+                               ddi_sel,
+                               baseline_average_distance,
+                               baseline_average_nearest,
+                               holog_name,
+                               point_name,
+                               data_column,
+                               parallel,
+                               reuse_point_zarr,
+                               overwrite):
 
-def _check_extract_holog_parms(
-    ms_name,
-    holog_obs_dict,
-    ddi_sel,
-    baseline_average_distance,
-    baseline_average_nearest,
-    holog_name,
-    point_name,
-    data_column,
-    parallel,
-    reuse_point_zarr,
-    overwrite):
-    
-    extract_holog_parms = {}
-    extract_holog_parms["ms_name"] = ms_name
-    extract_holog_parms["holog_name"] = holog_name
-    extract_holog_parms["ddi_sel"] = ddi_sel
-    extract_holog_parms["point_name"] = point_name
-    extract_holog_parms["data_column"] = data_column
-    extract_holog_parms["parallel"] = parallel
-    extract_holog_parms["overwrite"] = overwrite
-    extract_holog_parms["reuse_point_zarr"] = reuse_point_zarr
-    extract_holog_parms["baseline_average_distance"] = baseline_average_distance
-    extract_holog_parms["baseline_average_nearest"] = baseline_average_nearest
+    extract_holog_parms = {"ms_name": ms_name, "holog_name": holog_name, "ddi_sel": ddi_sel, "point_name": point_name,
+                           "data_column": data_column, "parallel": parallel, "overwrite": overwrite,
+                           "reuse_point_zarr": reuse_point_zarr, "baseline_average_distance": baseline_average_distance,
+                           "baseline_average_nearest": baseline_average_nearest}
 
-    
     #### Parameter Checking ####
     logger = _get_astrohack_logger()
     parms_passed = True
     
-    parms_passed = parms_passed and _check_parms(extract_holog_parms, 'ms_name', [str],default=None)
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_parms, 'ms_name', [str], default=None)
 
-    base_name = _remove_suffix(ms_name,'.ms')
-    parms_passed = parms_passed and _check_parms(extract_holog_parms,'holog_name', [str],default=base_name+'.holog.zarr')
-  
+    base_name = _remove_suffix(ms_name, '.ms')
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_parms,'holog_name', [str],
+                                                 default=base_name+'.holog.zarr')
+
+    point_base_name = _remove_suffix(extract_holog_parms['holog_name'], '.holog.zarr')
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_parms, 'point_name', [str],
+                                                 default=point_base_name+'.point.zarr')
     
-    point_base_name = _remove_suffix(extract_holog_parms['holog_name'],'.holog.zarr')
-    parms_passed = parms_passed and _check_parms(extract_holog_parms,'point_name', [str],default=point_base_name+'.point.zarr')
-    
-    parms_passed = parms_passed and _check_parms(extract_holog_parms,'ddi_sel', [list,np.ndarray], list_acceptable_data_types=[int], default='all')
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_parms, 'ddi_sel', [list, np.ndarray],
+                                                 list_acceptable_data_types=[int], default='all')
   
     #To Do: special function needed to check holog_obs_dict.
     parm_check = isinstance(holog_obs_dict,dict) or (holog_obs_dict is None)
     parms_passed = parms_passed and parm_check
     if not parm_check:
-        logger.error('Parameter holog_obs_dict must be of type '+ str(dict))
+        logger.error(f'[{fname}]: Parameter holog_obs_dict must be of type {str(dict)}.')
         
-    parms_passed = parms_passed and _check_parms(extract_holog_parms,'baseline_average_distance',[numbers.Number],default='all')
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_parms, 'baseline_average_distance',
+                                                 [numbers.Number], default='all')
     
-    parms_passed = parms_passed and _check_parms(extract_holog_parms,'baseline_average_nearest',[int], default='all')
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_parms, 'baseline_average_nearest', [int],
+                                                 default='all')
     
-    if (extract_holog_parms['baseline_average_distance'] != 'all') and (extract_holog_parms['baseline_average_nearest'] != 'all'):
-        logger.error('baseline_average_distance: ' + str(baseline_average_distance ) + ' and baseline_average_nearest: ' + str(baseline_average_distance ) + ' can not both be specified.')
+    if (extract_holog_parms['baseline_average_distance'] != 'all') and \
+            (extract_holog_parms['baseline_average_nearest'] != 'all'):
+        logger.error(f'[{fname}]: baseline_average_distance: {str(baseline_average_distance)} and '
+                     f'baseline_average_nearest: {str(baseline_average_distance)} can not both be specified.')
         parms_passed = False
  
-    parms_passed = parms_passed and _check_parms(extract_holog_parms,'data_column', [str],default='CORRECTED_DATA')
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_parms, 'data_column', [str],
+                                                 default='CORRECTED_DATA')
 
-    parms_passed = parms_passed and _check_parms(extract_holog_parms, 'parallel', [bool],default=False)
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_parms, 'parallel', [bool], default=False)
     
-    parms_passed = parms_passed and _check_parms(extract_holog_parms, 'reuse_point_zarr', [bool],default=False)
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_parms, 'reuse_point_zarr', [bool], default=False)
 
-    parms_passed = parms_passed and _check_parms(extract_holog_parms, 'overwrite', [bool],default=False)
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_parms, 'overwrite', [bool],default=False)
 
-    if not parms_passed:
-        logger.error("extract_holog parameter checking failed.")
-        raise Exception("extract_holog parameter checking failed.")
-    
-    
+    _parm_check_passed(fname, parms_passed)
+
     return extract_holog_parms

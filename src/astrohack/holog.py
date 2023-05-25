@@ -9,29 +9,29 @@ import numbers
 from astrohack._utils._holog import _holog_chunk, _create_image_meta_data
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._parm_utils._check_parms import _check_parms
+from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
    
 from astrohack._utils._dio import check_if_file_will_be_overwritten, check_if_file_exists, _read_meta_data
 from astrohack._utils._mds import AstrohackImageFile
 
-def holog(
-    holog_name,
-    grid_size=None,
-    cell_size=None,
-    image_name=None,
-    padding_factor=50,
-    grid_interpolation_mode="linear",
-    chan_average=True,
-    chan_tolerance_factor=0.005,
-    scan_average=True,
-    ant_list=None,
-    to_stokes=True,
-    apply_mask=True,
-    phase_fit=True,
-    overwrite=False,
-    parallel=True, 
-    ):
+
+def holog(holog_name,
+          grid_size=None,
+          cell_size=None,
+          image_name=None,
+          padding_factor=50,
+          grid_interpolation_mode="linear",
+          chan_average=True,
+          chan_tolerance_factor=0.005,
+          scan_average=True,
+          ant_list=None,
+          to_stokes=True,
+          apply_mask=True,
+          phase_fit=True,
+          overwrite=False,
+          parallel=True,
+          ):
     """ Process holography data and derive aperture illumination pattern.
 
     :param holog_name: Name of holography .holog.zarr file to process.
@@ -111,28 +111,28 @@ def holog(
     """
     
     logger = _get_astrohack_logger()
-    
-    holog_params = _check_holog_parms(
-        holog_name, 
-        grid_size,
-        cell_size, 
-        image_name, 
-        padding_factor, 
-        parallel, 
-        grid_interpolation_mode, 
-        chan_average, 
-        chan_tolerance_factor, 
-        scan_average,
-        ant_list, 
-        to_stokes, 
-        apply_mask, 
-        phase_fit,
-        overwrite
-    )
+    fname = 'holog'
+    holog_params = _check_holog_parms(fname,
+                                      holog_name,
+                                      grid_size,
+                                      cell_size,
+                                      image_name,
+                                      padding_factor,
+                                      parallel,
+                                      grid_interpolation_mode,
+                                      chan_average,
+                                      chan_tolerance_factor,
+                                      scan_average,
+                                      ant_list,
+                                      to_stokes,
+                                      apply_mask,
+                                      phase_fit,
+                                      overwrite
+                                      )
     input_params = holog_params.copy()
     
-    check_if_file_exists(holog_params['holog_file'])
-    check_if_file_will_be_overwritten(holog_params['image_file'], holog_params['overwrite'])
+    check_if_file_exists(fname, holog_params['holog_file'])
+    check_if_file_will_be_overwritten(fname, holog_params['image_file'], holog_params['overwrite'])
 
     json_data = "/".join((holog_params['holog_file'], ".holog_json"))
     with open(json_data, "r") as json_file:
@@ -144,32 +144,27 @@ def holog(
         
     logger.info('Mapping antennas ' + str(holog_params['ant_list']))
 
-    if (holog_params["cell_size"] is None):
+    if holog_params["cell_size"] is None:
         cell_size = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
         holog_params["cell_size"] = cell_size
     
-    if  (holog_params["grid_size"] is None):
+    if holog_params["grid_size"] is None:
         n_pix = int(np.sqrt(meta_data["n_pix"]))
         grid_size = np.array([n_pix, n_pix])
         holog_params["grid_size"] = grid_size
-    
-    
-    logger.info("Cell size: " + str(cell_size) + " Grid size " + str(grid_size))
+
+    logger.info(f'[{fname}]: Cell size: {str(cell_size)} Grid size {str(grid_size)}')
     json_data = {
             "cell_size": holog_params["cell_size"].tolist(),
             "grid_size": holog_params["grid_size"].tolist()
     }
     
-    print(holog_params["grid_size"])
-    
     with open(".holog_diagnostic.json", "w") as out_file:
         json.dump(json_data, out_file)
 
-    
-    holog_chunk_params =  holog_params
+    holog_chunk_params = holog_params
     delayed_list = []
-    
-    
+
     for ant_id in holog_chunk_params['ant_list']:
         for ddi in list(holog_json[ant_id].keys()):
             logger.info("Processing ant_id: " + str(ant_id)  + " and " + ddi)
@@ -183,7 +178,6 @@ def holog(
 
             else:
                 _holog_chunk(holog_chunk_params)
-            
 
     if holog_chunk_params['parallel']:
         dask.compute(delayed_list)
@@ -196,69 +190,62 @@ def holog(
     return image_mds
 
 
-def _check_holog_parms(holog_name,grid_size,cell_size,image_name,
-                      padding_factor,parallel,grid_interpolation_mode,
-                      chan_average,chan_tolerance_factor,
-                      scan_average,ant_list,to_stokes,apply_mask,phase_fit,overwrite):
+def _check_holog_parms(fname, holog_name, grid_size, cell_size, image_name, padding_factor, parallel,
+                       grid_interpolation_mode, chan_average, chan_tolerance_factor, scan_average, ant_list, to_stokes,
+                       apply_mask, phase_fit, overwrite):
 
-    holog_params = {}
-    holog_params["holog_file"] = holog_name
-    holog_params["grid_size"] = grid_size
-    holog_params["cell_size"] = cell_size
-    holog_params["image_file"] = image_name
-    holog_params["padding_factor"] = padding_factor
-    holog_params["parallel"] = parallel
-    holog_params["grid_interpolation_mode"] = grid_interpolation_mode
-    holog_params["chan_average"] = chan_average
-    holog_params["chan_tolerance_factor"] = chan_tolerance_factor
-    holog_params["scan_average"] = scan_average
-    holog_params["ant_list"] = ant_list
-    holog_params["to_stokes"] = to_stokes
-    holog_params["apply_mask"] = apply_mask
-    holog_params["phase_fit"] = phase_fit
-    holog_params["overwrite"] = overwrite
-    
+    holog_params = {"holog_file": holog_name, "grid_size": grid_size, "cell_size": cell_size, "image_file": image_name,
+                    "padding_factor": padding_factor, "parallel": parallel,
+                    "grid_interpolation_mode": grid_interpolation_mode, "chan_average": chan_average,
+                    "chan_tolerance_factor": chan_tolerance_factor, "scan_average": scan_average, "ant_list": ant_list,
+                    "to_stokes": to_stokes, "apply_mask": apply_mask, "phase_fit": phase_fit, "overwrite": overwrite}
+
     #### Parameter Checking ####
-    logger = _get_astrohack_logger()
     parms_passed = True
     
-    parms_passed = parms_passed and _check_parms(holog_params, 'holog_file', [str],default=None)
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'holog_file', [str], default=None)
 
-    parms_passed = parms_passed and _check_parms(holog_params, 'grid_size', [list, np.ndarray], list_acceptable_data_types=[np.int64, int], list_len=2, default='None',log_default_setting=False)
-    if (isinstance(holog_params['grid_size'],str)) and (holog_params['grid_size'] == 'None'):
-        holog_params['grid_size'] =  None
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'grid_size', [list, np.ndarray],
+                                                 list_acceptable_data_types=[np.int64, int], list_len=2, default='None',
+                                                 log_default_setting=False)
+    if (isinstance(holog_params['grid_size'], str)) and (holog_params['grid_size'] == 'None'):
+        holog_params['grid_size'] = None
     else:
         holog_params['grid_size'] = np.array(holog_params['grid_size'])
 
-    parms_passed = parms_passed and _check_parms(holog_params, 'cell_size', [list,np.ndarray], list_acceptable_data_types=[numbers.Number], list_len=2, default='None',log_default_setting=False)
-    if (isinstance(holog_params['cell_size'],str)) and (holog_params['cell_size'] == 'None'):
-        holog_params['cell_size'] =  None
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'cell_size', [list, np.ndarray],
+                                                 list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                 default='None', log_default_setting=False)
+    if (isinstance(holog_params['cell_size'], str)) and (holog_params['cell_size'] == 'None'):
+        holog_params['cell_size'] = None
     else:
         holog_params['cell_size'] = np.array(holog_params['cell_size'])
 
-    
-    base_name = _remove_suffix(holog_params['holog_file'],'.holog.zarr')
-    parms_passed = parms_passed and _check_parms(holog_params,'image_file', [str],default=base_name+'.image.zarr')
-    parms_passed = parms_passed and _check_parms(holog_params, 'padding_factor', [int], default=50)
-    parms_passed = parms_passed and _check_parms(holog_params, 'parallel', [bool],default=False)
-    parms_passed = parms_passed and _check_parms(holog_params,'grid_interpolation_mode', [str],acceptable_data=["nearest","linear","cubic"],default="nearest")
-    parms_passed = parms_passed and _check_parms(holog_params, 'chan_average', [bool],default=True)
-    parms_passed = parms_passed and _check_parms(holog_params, 'chan_tolerance_factor', [float], acceptable_range=[0,1], default=0.005)
-    parms_passed = parms_passed and _check_parms(holog_params, 'scan_average', [bool],default=True)
-    parms_passed = parms_passed and _check_parms(holog_params, 'ant_list', [list,np.ndarray], list_acceptable_data_types=[str], default='all')
-    parms_passed = parms_passed and _check_parms(holog_params, 'to_stokes', [bool],default=True)
+    base_name = _remove_suffix(holog_params['holog_file'], '.holog.zarr')
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'image_file', [str],
+                                                 default=base_name+'.image.zarr')
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'padding_factor', [int], default=50)
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'parallel', [bool],default=False)
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'grid_interpolation_mode', [str],
+                                                 acceptable_data=["nearest", "linear", "cubic"], default="nearest")
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'chan_average', [bool], default=True)
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'chan_tolerance_factor', [float],
+                                                 acceptable_range=[0, 1], default=0.005)
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'scan_average', [bool], default=True)
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'ant_list', [list, np.ndarray],
+                                                 list_acceptable_data_types=[str], default='all')
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'to_stokes', [bool], default=True)
 
-    if isinstance(holog_params['phase_fit'],list) or isinstance(holog_params['phase_fit'],type(np.ndarray)):
-        parms_passed = parms_passed and _check_parms(holog_params, 'phase_fit', [list,type(np.ndarray)], list_acceptable_data_types=[bool], list_len=5)
+    if isinstance(holog_params['phase_fit'], list) or isinstance(holog_params['phase_fit'], type(np.ndarray)):
+        parms_passed = parms_passed and _check_parms(fname, holog_params, 'phase_fit', [list, type(np.ndarray)],
+                                                     list_acceptable_data_types=[bool], list_len=5)
     else:
-        parms_passed = parms_passed and _check_parms(holog_params, 'phase_fit', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, holog_params, 'phase_fit', [bool], default=True)
 
-    parms_passed = parms_passed and _check_parms(holog_params, 'apply_mask', [bool],default=True)
-    parms_passed = parms_passed and _check_parms(holog_params, 'overwrite', [bool],default=False)
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'apply_mask', [bool], default=True)
+    parms_passed = parms_passed and _check_parms(fname, holog_params, 'overwrite', [bool], default=False)
 
-    if not parms_passed:
-        logger.error("holog parameter checking failed.")
-        raise Exception("holog parameter checking failed.")
+    _parm_check_passed(fname, parms_passed)
 
     return holog_params
 

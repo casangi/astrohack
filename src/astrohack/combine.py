@@ -4,7 +4,7 @@ import numpy as np
 
 from astrohack._utils._combine import _combine_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._parm_utils._check_parms import _check_parms
+from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._dio import check_if_file_will_be_overwritten, check_if_file_exists, _write_meta_data
 from astrohack._utils._mds import AstrohackImageFile
@@ -50,8 +50,9 @@ def combine_image_ddi(image_name, combine_name=None, ant_list=None, ddi_list=Non
         }
     """
     logger = _get_astrohack_logger()
-
-    combine_params = _check_combine_parms(image_name, combine_name, ant_list, ddi_list, weighted, parallel,  overwrite)
+    fname = 'combine'
+    combine_params = _check_combine_parms(fname, image_name, combine_name, ant_list, ddi_list, weighted, parallel,
+                                          overwrite)
     input_params = combine_params.copy()
 
     check_if_file_exists(combine_params['image_file'])
@@ -84,7 +85,7 @@ def combine_image_ddi(image_name, combine_name=None, ant_list=None, ddi_list=Non
     return combine_mds
 
 
-def _check_combine_parms(image_name, combine_name, ant_list, ddi_list, weighted, parallel,  overwrite):
+def _check_combine_parms(fname, image_name, combine_name, ant_list, ddi_list, weighted, parallel,  overwrite):
 
     combine_params = {"image_file": image_name,
                       "combine_file": combine_name,
@@ -95,21 +96,18 @@ def _check_combine_parms(image_name, combine_name, ant_list, ddi_list, weighted,
                       "overwrite": overwrite}
 
     #### Parameter Checking ####
-    logger = _get_astrohack_logger()
-
-    parms_passed = _check_parms(combine_params, 'image_file', [str], default=None)
+    parms_passed = _check_parms(fname, combine_params, 'image_file', [str], default=None)
     base_name = _remove_suffix(combine_params['image_file'], '.image.zarr')
-    parms_passed = parms_passed and _check_parms(combine_params, 'combine_file', [str], default=base_name+'.combine.zarr')
-    parms_passed = parms_passed and _check_parms(combine_params, 'ant_list', [list, np.ndarray],
+    parms_passed = parms_passed and _check_parms(fname, combine_params, 'combine_file', [str],
+                                                 default=base_name+'.combine.zarr')
+    parms_passed = parms_passed and _check_parms(fname, combine_params, 'ant_list', [list, np.ndarray],
                                                  list_acceptable_data_types=[str], default='all')
-    parms_passed = parms_passed and _check_parms(combine_params, 'ddi_list', [list, np.ndarray],
+    parms_passed = parms_passed and _check_parms(fname, combine_params, 'ddi_list', [list, np.ndarray],
                                                  list_acceptable_data_types=[str], default='all')
-    parms_passed = parms_passed and _check_parms(combine_params, 'parallel', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(combine_params, 'weighted', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(combine_params, 'overwrite', [bool], default=False)
+    parms_passed = parms_passed and _check_parms(fname, combine_params, 'parallel', [bool], default=False)
+    parms_passed = parms_passed and _check_parms(fname, combine_params, 'weighted', [bool], default=False)
+    parms_passed = parms_passed and _check_parms(fname, combine_params, 'overwrite', [bool], default=False)
 
-    if not parms_passed:
-        logger.error("extract_combine parameter checking failed.")
-        raise Exception("extract_combine parameter checking failed.")
+    _parm_check_passed(fname, parms_passed)
     #### End Parameter Checking ####
     return combine_params

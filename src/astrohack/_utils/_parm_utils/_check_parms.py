@@ -28,14 +28,14 @@ def _check_parm(parm, parm_name, acceptable_data_types, acceptable_data=None, ac
     return parm_passed, parm
 
 
-def _check_parms(parm_dict, string_key, acceptable_data_types, acceptable_data=None, acceptable_range=None,
+def _check_parms(caller, parm_dict, string_key, acceptable_data_types, acceptable_data=None, acceptable_range=None,
                  list_acceptable_data_types=None, list_len=None, default=None, log_default_setting=True):
     """
 
     Parameters
     ----------
     parm_dict: dict
-        The dictionary in which the a parameter will be checked
+        The dictionary in which the parameter will be checked
     string_key :
     acceptable_data_types : list
     acceptable_data : list
@@ -54,8 +54,8 @@ def _check_parms(parm_dict, string_key, acceptable_data_types, acceptable_data=N
     if (string_key in parm_dict) and (parm_dict[string_key] is not None):
         if (list in acceptable_data_types) or (np.ndarray in acceptable_data_types):
             if (len(parm_dict[string_key]) != list_len) and (list_len is not None):
-                logger.error('Parameter ' + str(string_key) + ' must be a list of ' + str(list_acceptable_data_types) +
-                             ' and length' + str(list_len) + '. Wrong length.')
+                logger.error(f'[{caller}]: Parameter {str(string_key)} must be a list of '
+                             f'{str(list_acceptable_data_types)} and length {str(list_len)}. Wrong length.')
                 return False
             else:
                 list_len = len(parm_dict[string_key])
@@ -65,38 +65,40 @@ def _check_parms(parm_dict, string_key, acceptable_data_types, acceptable_data=N
                         if isinstance(parm_dict[string_key][i], lt):
                             type_check = True
                     if not type_check:
-                        logger.error('Parameter ' + str(string_key) + ' must be a list of '
-                                     + str(list_acceptable_data_types) + ' and length ' + str(list_len) +
-                                     '. Wrong type of'+str(type(parm_dict[string_key][i])))
+                        logger.error(f'[{caller}]: Parameter {str(string_key)} must be a list of '
+                                     f'{str(list_acceptable_data_types)} and length {str(list_len)}. Wrong type of '
+                                     f'{str(type(parm_dict[string_key][i]))}.')
                         return False
                           
                     if acceptable_data is not None:
                         if not(parm_dict[string_key][i] in acceptable_data):
-                            logger.error('Invalid '+ str(string_key)+'. Can only be one of '+str(acceptable_data)+'.')
+                            logger.error(f'[{caller}]: Invalid {str(string_key)}. Can only be one of '
+                                         f'{+str(acceptable_data)}.')
                             return False
                             
                     if acceptable_range is not None:
                         if (parm_dict[string_key][i] < acceptable_range[0]) or (parm_dict[string_key][i] >
                                                                                 acceptable_range[1]):
-                            logger.error('Invalid ' + str(string_key) + '. Must be within the range '
-                                         + str(acceptable_range)+'.')
+                            logger.error(f'[{caller}]: Invalid {str(string_key)}. Must be within the range '
+                                         f'{str(acceptable_range)}.')
                             return False
         elif dict in acceptable_data_types:
             parms_passed = True
 
             if default is None:
-                logger.error('Dictionary parameters must have a default. Please report bug.')
+                logger.error(f'[{caller}]: Dictionary parameters must have a default. Please report bug.')
                 return False
             for default_element in default:
                 if default_element in parm_dict[string_key]:
-                    if not(_check_parms(parm_dict[string_key], default_element, [type(default[default_element])],
-                                        default=default[default_element])): parms_passed = False
+                    if not(_check_parm(parm_dict[string_key], default_element, [type(default[default_element])],
+                                       default=default[default_element])):
+                        parms_passed = False
                 else:
                     parm_dict[string_key][default_element] = default[default_element]
                     
                     if log_default_setting:
-                        logger.info('Setting default ' + str(string_key) + '[\''+str(default_element)+'\']' + ' to '
-                                    + str(default[default_element]))
+                        logger.info(f'[{caller}]: Setting default {str(string_key)} [\'{str(default_element)}\'] to '
+                                    f'{str(default[default_element])}.')
                     
             return parms_passed
                     
@@ -107,26 +109,27 @@ def _check_parms(parm_dict, string_key, acceptable_data_types, acceptable_data=N
                 if isinstance(parm_dict[string_key], adt):
                     type_check = True
             if not type_check:
-                logger.error('Parameter ' + str(string_key) + ' must be of type ' + str(acceptable_data_types))
+                logger.error(f'[{caller}]: Parameter {str(string_key)} must be of type {str(acceptable_data_types)}.')
                 return False
                     
             if acceptable_data is not None:
                 if not(parm_dict[string_key] in acceptable_data):
-                    logger.error('Invalid ' + str(string_key) + '. Can only be one of ' + str(acceptable_data) + '.')
+                    logger.error(f'[{caller}]: Invalid {str(string_key)}. Can only be one of {str(acceptable_data)}.')
                     return False
                     
             if acceptable_range is not None:
                 if (parm_dict[string_key] < acceptable_range[0]) or (parm_dict[string_key] > acceptable_range[1]):
-                    logger.error('Invalid '+str(string_key) + '. Must be within the range '+str(acceptable_range)+'.')
+                    logger.error(f'[{caller}]: Invalid {str(string_key)}. Must be within the range '
+                                 f'{str(acceptable_range)}.')
                     return False
     else:
         if default is not None:
             parm_dict[string_key] = default
             
             if log_default_setting:
-                logger.info('Setting default ' + str(string_key) + ' to ' + str(parm_dict[string_key]))
+                logger.info(f'[{caller}]: Setting default {str(string_key)} to {str(parm_dict[string_key])}.')
         else:
-            logger.error('Parameter ' + str(string_key) + ' must be specified')
+            logger.error(f'[{caller}]: Parameter {str(string_key)} must be specified.')
             return False
     
     return True

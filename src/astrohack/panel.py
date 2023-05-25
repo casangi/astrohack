@@ -96,10 +96,10 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     input_params = panel_params.copy()
     # Doubled this entry for compatibility with the factorized antenna ddi loop
     panel_params['filename'] = panel_params['image_name']
-    check_if_file_exists(panel_params['image_name'])
+    check_if_file_exists(fname, panel_params['image_name'])
     image_mds = AstrohackImageFile(panel_params['image_name'])
     image_mds.open()
-    check_if_file_will_be_overwritten(panel_params['panel_name'], panel_params['overwrite'])
+    check_if_file_will_be_overwritten(fname, panel_params['panel_name'], panel_params['overwrite'])
 
     if os.path.exists(panel_params['image_name']+'/.aips'):
         panel_params['origin'] = 'AIPS'
@@ -181,19 +181,23 @@ def _check_panel_parms(fname, image_name, panel_name, cutoff, panel_kind, panel_
                           
     #### Parameter Checking ####
 
-    parms_passed = _check_parms(panel_params, 'image_name', [str], default=None)
+    parms_passed = _check_parms(fname, panel_params, 'image_name', [str], default=None)
     base_name = _remove_suffix(panel_params['image_name'], '.image.zarr')
     base_name = _remove_suffix(base_name, '.combine.zarr')
-    parms_passed = parms_passed and _check_parms(panel_params, 'panel_name', [str], default=base_name+'.panel.zarr')
-    parms_passed = parms_passed and _check_parms(panel_params, 'ant', [list, str], list_acceptable_data_types=[str],
-                                                 default='all')
-    parms_passed = parms_passed and _check_parms(panel_params, 'ddi', [list, int], list_acceptable_data_types=[int],
-                                                 default='all')
-    parms_passed = parms_passed and _check_parms(panel_params, 'cutoff', [float], acceptable_range=[0, 1], default=0.2)
-    parms_passed = parms_passed and _check_parms(panel_params, 'panel_kind', [str], acceptable_data=panel_models, default="rigid")
-    parms_passed = parms_passed and _check_parms(panel_params, 'panel_margins', [float], acceptable_range=[0, 0.5], default=0.2)
-    parms_passed = parms_passed and _check_parms(panel_params, 'parallel', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(panel_params, 'overwrite', [bool], default=False)
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_name', [str],
+                                                 default=base_name+'.panel.zarr')
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'ant', [list, str],
+                                                 list_acceptable_data_types=[str], default='all')
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'ddi', [list, int],
+                                                 list_acceptable_data_types=[int], default='all')
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'cutoff', [float], acceptable_range=[0, 1],
+                                                 default=0.2)
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_kind', [str], acceptable_data=panel_models,
+                                                 default="rigid")
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_margins', [float],
+                                                 acceptable_range=[0, 0.5], default=0.2)
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'parallel', [bool], default=False)
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'overwrite', [bool], default=False)
 
     _parm_check_passed(fname, parms_passed)
 

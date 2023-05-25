@@ -348,13 +348,13 @@ def _export_to_fits_holog_chunk(parm_dict):
     destination = parm_dict['destination']
     basename = f'{destination}/{antenna}_{ddi}'
 
-    logger.info(f'Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
+    logger.info(f'[export_to_fits]: Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
 
     try:
         aperture_resolution = inputxds.attrs["aperture_resolution"]
     except KeyError:
-        logger.warning("[_read_holog_xds] holog image does not have resolution information")
-        logger.warning("[_read_holog_xds] Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+        logger.warning("[export_to_fits]: holog image does not have resolution information")
+        logger.warning("[export_to_fits]: Rerun holog with astrohack v>0.1.5 for aperture resolution information")
         aperture_resolution = None
 
     nchan = len(inputxds.chan)
@@ -384,8 +384,8 @@ def _export_to_fits_holog_chunk(parm_dict):
     }
     ntime = len(inputxds.time)
     if ntime != 1:
-        logger.error("Data with multiple times not supported for FITS export")
-        raise Exception("Data with multiple times not supported for FITS export")
+        logger.error("[export_to_fits]: Data with multiple times not supported for FITS export")
+        raise Exception("[export_to_fits]: Data with multiple times not supported for FITS export")
 
     carta_dim_order = (1, 0, 2, 3, )
 
