@@ -43,8 +43,8 @@ def _holog_chunk(holog_chunk_params):
         holog_chunk_params["holog_file"],
         dask_load=False,
         load_pnt_dict=False,
-        ant_id=holog_chunk_params["ant_id"],
-        ddi_id=holog_chunk_params["ddi_id"]
+        ant_id=holog_chunk_params["this_ant"],
+        ddi_id=holog_chunk_params["this_ddi"]
     )
 
     meta_data = _read_meta_data(holog_chunk_params["holog_file"], 'holog', 'extract_holog')
@@ -55,7 +55,7 @@ def _holog_chunk(holog_chunk_params):
     
     to_stokes = holog_chunk_params["to_stokes"]
 
-    ddi = holog_chunk_params["ddi_id"]
+    ddi = holog_chunk_params["this_ddi"]
     n_holog_map = len(ant_data_dict[ddi].keys())
     
     # For a fixed ddi the frequency axis should not change over holog_maps, consequently we only have to consider the first holog_map.
@@ -261,7 +261,7 @@ def _holog_chunk(holog_chunk_params):
     xds["CORRECTED_PHASE"] = xr.DataArray(phase_corrected_angle, dims=["time", "chan", "pol", "u_prime", "v_prime"])
 
     xds.attrs["aperture_resolution"] = aperture_resolution
-    xds.attrs["ant_id"] = holog_chunk_params["ant_id"]
+    xds.attrs["ant_id"] = holog_chunk_params["this_ant"]
     xds.attrs["ant_name"] = ant_name
     xds.attrs["telescope_name"] = meta_data['telescope_name']
     xds.attrs["time_centroid"] = np.array(time_centroid)
@@ -281,7 +281,8 @@ def _holog_chunk(holog_chunk_params):
 
     xds = xds.assign_coords(coords)
 
-    xds.to_zarr("{name}/{ant}/{ddi}".format(name= holog_chunk_params["image_file"], ant=holog_chunk_params["ant_id"], ddi=ddi), mode="w", compute=True, consolidated=True)
+    xds.to_zarr("{name}/{ant}/{ddi}".format(name=holog_chunk_params["image_file"], ant=holog_chunk_params["this_ant"],
+                                            ddi=ddi), mode="w", compute=True, consolidated=True)
 
 
 def _create_average_chan_map(freq_chan, chan_tolerance_factor):
