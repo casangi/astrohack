@@ -135,7 +135,7 @@ def _parm_to_list(caller, parm, data_dict, prefix):
     """
     logger = _get_astrohack_logger()
     if parm == 'all':
-        oulist = data_dict.keys()
+        oulist = list(data_dict.keys())
     elif isinstance(parm, str):
         oulist = [_add_prefix(parm, prefix)]
     elif isinstance(parm, int):
