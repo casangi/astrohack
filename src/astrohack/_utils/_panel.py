@@ -1,11 +1,10 @@
 import numpy as np
-
+import xarray as xr
 from numba import njit
 
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit_block
 from astrohack._utils._constants import plot_types
-from astrohack._utils._dio import _load_image_xds
 
 from astrohack._classes.telescope import Telescope
 from astrohack._classes.antenna_surface import AntennaSurface
@@ -37,14 +36,15 @@ def _panel_chunk(panel_chunk_params):
     if panel_chunk_params['origin'] == 'AIPS':
         inputxds = xr.open_zarr(panel_chunk_params['image_name'])
         telescope = Telescope(inputxds.attrs['telescope_name'])
-        panel_chunk_params['antenna'] = inputxds.attrs['ant_name']
+        antenna = inputxds.attrs['ant_name']
+        ddi = 0
 
     else:
         ddi = panel_chunk_params['this_ddi']
-        antenna = panel_chunk_params['this_antenna']
-        inputxds = _load_image_xds(panel_chunk_params['image_name'], antenna, ddi, dask_load=False)
+        antenna = panel_chunk_params['this_ant']
+        inputxds = panel_chunk_params['xds_data']
 
-        logger.info(f'[panel]: processing antenna {antenna} DDI {ddi}')
+        logger.info(f'[panel]: processing {antenna} {ddi}')
         inputxds.attrs['AIPS'] = False
 
         telescope = _get_correct_telescope_from_name(inputxds)
