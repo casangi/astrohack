@@ -241,7 +241,7 @@ def extract_holog(
         
         holog_obs_dict = holog_obs_dict_with_ddi
             
-    logger.info("holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0], indent=2, width=2))
+    logger.info(f"[{fname}]: holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0], indent=2, width=2))
 
 
     outfile_obj = copy.deepcopy(holog_obs_dict)
@@ -319,8 +319,8 @@ def extract_holog(
         
         his_ctb.close()
 
+    count = 0
     delayed_list = []
-    
     for ddi_name in holog_obs_dict.keys():
         ddi = int(ddi_name.replace('ddi_',''))
         spw_setup_id = ddi_spw[ddi]
@@ -342,14 +342,14 @@ def extract_holog(
 
             if 'map' in holog_map_key:
                 scans = holog_obs_dict[ddi_name][holog_map_key]["scans"]
-                logger.info("Processing ddi: {ddi}, scans: {scans}".format(ddi=ddi, scans=scans))
+                logger.info(f"[{fname}]: Processing ddi: {ddi}, scans: {scans}")
                 
                 if len(list(holog_obs_dict[ddi_name][holog_map_key]['ant'].keys())) != 0:
                     map_ant_list = []
-                    ref_ant_per_map_ant_list = [] #
+                    ref_ant_per_map_ant_list = []
                     
                     map_ant_name_list = []
-                    ref_ant_per_map_ant_name_list = [] #
+                    ref_ant_per_map_ant_name_list = []
                     for map_ant_str in holog_obs_dict[ddi_name][holog_map_key]['ant'].keys():
                         ref_ant_ids = np.array(_convert_ant_name_to_id(ant_names,list(holog_obs_dict[ddi_name][holog_map_key]['ant'][map_ant_str])))
                         
@@ -380,8 +380,9 @@ def extract_holog(
                         )
                     else:
                         _extract_holog_chunk(extract_holog_parms)
+                    count += 1
                 else:
-                    logger.warning('DDI ' + str(ddi) + ' has no holography data to extract.')
+                    logger.warning(f'[{fname}]: DDI ' + str(ddi) + ' has no holography data to extract.')
 
     spw_ctb.close()
     pol_ctb.close()
@@ -390,17 +391,18 @@ def extract_holog(
     if parallel:
         dask.compute(delayed_list)    
 
-    holog_dict = _load_holog_file(holog_file=extract_holog_parms["holog_name"], dask_load=True, load_pnt_dict=False)
-
-    extract_holog_parms['telescope_name'] = telescope_name
-
-    _create_holog_meta_data(
-        holog_file=extract_holog_parms['holog_name'], 
-        holog_dict=holog_dict,
-        input_params=input_params
-    )
-    
-    holog_mds = AstrohackHologFile(extract_holog_parms['holog_name'])
+    if count > 0:
+        logger.info(f"[{fname}]: Finished processing")
+        holog_dict = _load_holog_file(holog_file=extract_holog_parms["holog_name"], dask_load=True, load_pnt_dict=False)
+        extract_holog_parms['telescope_name'] = telescope_name
+        _create_holog_meta_data(holog_file=extract_holog_parms['holog_name'], holog_dict=holog_dict,
+                                input_params=input_params)
+        holog_mds = AstrohackHologFile(extract_holog_parms['holog_name'])
+        holog_mds.open()
+        return holog_mds
+    else:
+        logger.warning(f"[{fname}]: No data to process")
+        return None
 
     holog_mds.open()
 
