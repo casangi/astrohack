@@ -13,7 +13,6 @@ from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar, _axi
 from astrohack._utils._dio import _write_fits
 
 lnbr = "\n"
-figsize = [5, 4]
 
 
 class AntennaSurface:

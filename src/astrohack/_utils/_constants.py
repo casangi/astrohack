@@ -35,5 +35,8 @@ pol_codes_RL = np.array([5, 6, 7, 8]) #'RR','RL','LR','LL'
 pol_codes_XY = np.array([9, 10, 11, 12]) #['XX','XY','YX','YY']
 pol_str = np.array(['0','I','Q','U','V','RR','RL','LR','LL','XX','XY','YX','YY'])
 
-#Plot types
+# Plot convenience
 plot_types = ['deviation', 'phase', 'ancillary', 'all']
+figsize = [5, 4]
+fontsize = 4
+markersize = 2
