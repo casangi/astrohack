@@ -8,7 +8,7 @@ from astrohack._classes.telescope import Telescope
 from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _read_meta_data, _write_meta_data, _write_fits
 
-from astrohack._utils._panel import _phase_fitting_block
+from astrohack._utils._phase_fitting import _phase_fitting_block
 
 from astrohack._utils._algorithms import _chunked_average
 from astrohack._utils._algorithms import _find_peak_beam_value
@@ -38,6 +38,7 @@ def _holog_chunk(holog_chunk_params):
         holog_chunk_params (dict): Dictionary containing holography parameters.
     """
     logger = _get_astrohack_logger()
+    fname = 'holog'
 
     holog_file, ant_data_dict = _load_holog_file(
         holog_chunk_params["holog_file"],
@@ -206,7 +207,7 @@ def _holog_chunk(holog_chunk_params):
             do_sub_til = False
     elif isinstance(phase_fit_par, (np.ndarray, list, tuple)):
         if len(phase_fit_par) != 5:
-            logger.error("Phase fit parameter must have 5 elements")
+            logger.error(f'[{fname}]: Phase fit parameter must have 5 elements')
             raise Exception
         else:
             if np.sum(phase_fit_par) == 0:
@@ -215,16 +216,16 @@ def _holog_chunk(holog_chunk_params):
                 do_phase_fit = True
                 do_pnt_off, do_xy_foc_off, do_z_foc_off, do_sub_til, do_cass_off = phase_fit_par
     else:
-        logger.error("Phase fit parameter is neither a boolean nor an array of booleans")
+        logger.error(f'[{fname}]: Phase fit parameter is neither a boolean nor an array of booleans.')
         raise Exception
 
     if do_phase_fit:
-        logger.info("Applying phase correction ...")
+        logger.info(f'[{fname}]: Applying phase correction')
         
         if to_stokes:
-            pols=(0,)
+            pols = (0,)
         else:
-            pols=(0, 3)
+            pols = (0, 3)
         
         #? Wavelength
         max_wavelength = clight/freq_chan[-1]
@@ -242,7 +243,7 @@ def _holog_chunk(holog_chunk_params):
                     subreflector_tilt=do_sub_til,
                     cassegrain_offset=do_cass_off)
     else:
-        logger.info("Skipping phase correction ...")
+        logger.info('[{fname}]: Skipping phase correction')
 
     # Here we compute the aperture resolution from Equation 7 In EVLA memo 212
     # https://library.nrao.edu/public/memos/evla/EVLAM_212.pdf
@@ -267,17 +268,9 @@ def _holog_chunk(holog_chunk_params):
     xds.attrs["time_centroid"] = np.array(time_centroid)
     xds.attrs["ddi"] = ddi
 
-    coords = {}
+    coords = {"ddi": list(ant_data_dict.keys()), "pol": pol, "l": l, "m": m, "u": u, "v": v, "u_prime": u_prime,
+              "v_prime": v_prime, "chan": freq_chan}
     #coords["time"] = np.array(time_centroid)
-    coords["ddi"] = list(ant_data_dict.keys())
-    coords["pol"] = pol
-    coords["l"] = l
-    coords["m"] = m
-    coords["u"] = u
-    coords["v"] = v
-    coords["u_prime"] = u_prime
-    coords["v_prime"] = v_prime
-    coords["chan"] = freq_chan
 
     xds = xds.assign_coords(coords)
 
@@ -343,14 +336,15 @@ def _export_to_fits_holog_chunk(parm_dict):
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
     basename = f'{destination}/{antenna}_{ddi}'
+    fname = 'export_to_fits'
 
-    logger.info(f'[export_to_fits]: Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
+    logger.info(f'[{fname}]: Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
 
     try:
         aperture_resolution = inputxds.attrs["aperture_resolution"]
     except KeyError:
-        logger.warning("[export_to_fits]: holog image does not have resolution information")
-        logger.warning("[export_to_fits]: Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+        logger.warning(f"[{fname}]: holog image does not have resolution information")
+        logger.warning(f"[{fname}]: Rerun holog with astrohack v>0.1.5 for aperture resolution information")
         aperture_resolution = None
 
     nchan = len(inputxds.chan)
@@ -380,8 +374,8 @@ def _export_to_fits_holog_chunk(parm_dict):
     }
     ntime = len(inputxds.time)
     if ntime != 1:
-        logger.error("[export_to_fits]: Data with multiple times not supported for FITS export")
-        raise Exception("[export_to_fits]: Data with multiple times not supported for FITS export")
+        logger.error(f"[{fname}]: Data with multiple times not supported for FITS export")
+        raise Exception(f"[{fname}]: Data with multiple times not supported for FITS export")
 
     carta_dim_order = (1, 0, 2, 3, )
 

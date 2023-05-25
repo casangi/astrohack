@@ -1,18 +1,12 @@
 import math
 import scipy
-
 import numpy as np
-
 import astropy.units as u
 import astropy.coordinates as coord
-
 from skimage.draw import disk
-
 from astrohack._utils._algorithms import _calc_coords
-
-from memory_profiler import profile
-
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+
 
 def _parallactic_derotation(data, parallactic_angle_dict):
     """ Uses samples of parallactic angle (PA) values to correct differences in PA between maps. The reference PA is selected
@@ -48,6 +42,7 @@ def _parallactic_derotation(data, parallactic_angle_dict):
         
     return data
 
+
 def _mask_circular_disk(center, radius, array, mask_value=np.nan):
     """ Create a mask to trim an image
 
@@ -56,14 +51,13 @@ def _mask_circular_disk(center, radius, array, mask_value=np.nan):
         radius (int): disk radius
         array (numpy.ndarray): data array to mask
         mask_value (int, optional): Value to set masked value to. Defaults to 1.
-        make_nan (bool, optional): Set maked values to NaN. Defaults to True.
 
     Returns:
         _type_: _description_
     """
     shape = np.array(array.shape[-2:])
 
-    if center == None:
+    if center is None:
         center = shape//2
 
     r, c = disk(center, radius, shape=shape)
@@ -72,16 +66,16 @@ def _mask_circular_disk(center, radius, array, mask_value=np.nan):
     
     mask = np.tile(mask, reps=(array.shape[:-2] + (1, 1)))
     
-    mask[mask==0] = mask_value
+    mask[mask == 0] = mask_value
     
     return mask
+
 
 def _calculate_aperture_pattern(grid, delta, padding_factor=50):
     """ Calcualtes the aperture illumination pattern from the beam data.
 
     Args:
         grid (numpy.ndarray): gridded beam data
-        frequency (float): channel frequency
         delta (float): incremental spacing between lm values, ie. delta_l = l_(n+1) - l_(n)
         padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edged of 
                                         each beam data grid and not between layers. Defaults to 20.
@@ -90,7 +84,7 @@ def _calculate_aperture_pattern(grid, delta, padding_factor=50):
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
     logger = _get_astrohack_logger()
-    logger.info("Calculating aperture illumination pattern ...")
+    logger.info("[holog]: Calculating aperture illumination pattern ...")
 
     assert grid.shape[-1] == grid.shape[-2] ###To do: why is this expected that l.shape == m.shape
     initial_dimension = grid.shape[-1]
@@ -127,6 +121,7 @@ def _calculate_aperture_pattern(grid, delta, padding_factor=50):
     u, v = _calc_coords(image_size, cell_size)
 
     return aperture_grid, u, v, cell_size
+
 
 def _calculate_parallactic_angle_chunk(
     time_samples,
