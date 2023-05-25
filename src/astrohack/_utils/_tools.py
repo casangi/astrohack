@@ -2,11 +2,15 @@ import os
 import json
 import dask
 import xarray
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
+
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
     """

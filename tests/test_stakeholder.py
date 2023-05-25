@@ -46,16 +46,19 @@ def verify_panel_positions(
     antenna='ant_DV13',
     ddi='ddi_0'
 ):
+  def relative_difference(mean, expected):  
+      return 2*np.abs(mean - expected)/(abs(mean) + abs(expected))
     
-    M_TO_MILS = 39370.1
+  M_TO_MILS = 39370.1
     
-    panel_mds = open_panel('{data}/alma.split.panel.zarr'.format(data=data_dir))
-    
-    panel_position = np.mean(panel_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values*M_TO_MILS, axis=1)
+  panel_mds = open_panel('{data}/alma.split.panel.zarr'.format(data=data_dir))
 
-    relative_position = relative_difference(panel_position, reference_position)
     
-    return np.any(relative_position < 1e-6)
+  panel_position = np.mean(panel_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values*M_TO_MILS, axis=1)
+
+  relative_position = relative_difference(panel_position, reference_position)
+    
+  return np.any(relative_position < 1e-6)
 
 def verify_panel_shifts(
   data_dir="",
@@ -303,4 +306,5 @@ def test_screw_adjustments(set_data):
     overwrite=True
   )
 
-assert verify_panel_positions(data_dir=str(set_data))
+
+  assert verify_panel_positions(data_dir=str(set_data))
