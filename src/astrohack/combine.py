@@ -17,11 +17,11 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
     :type image_name: str
     :param combine_name: Name of output file; File name will be appended with suffix *.combine.zarr*. Defaults to *basename* of input file plus holography panel file suffix.
     :type combine_name: str, optional
-    :param ant_id: List of Antennae to be processed. None will use all antennae. Defaults to None
-    :type ant_id: list or str, optional, ex. ea25
-    :param ddi: List of DDIs to be combined. None will use all DDIs. Defaults to None.
-    :type ddi: list of int, optional, ex. [0 ... 8]
-    :param weighted: Weight phases by the corresponding amplitudes
+    :param ant_id: List of Antennae to be processed. None will use all antennae. Defaults to None, ex. ea25.
+    :type ant_id: list or str, optional
+    :param ddi: List of DDIs to be combined. None will use all DDIs. Defaults to None, ex. [0, ..., 8].
+    :type ddi: list of int, optional
+    :param weighted: Weight phases by the corresponding amplitudes.
     :type weighted: bool, optional
     :param parallel: Run in parallel. Defaults to False.
     :type parallel: bool, optional

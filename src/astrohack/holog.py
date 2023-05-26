@@ -13,7 +13,7 @@ from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 def holog(holog_name, grid_size=None, cell_size=None, image_name=None, padding_factor=50,
           grid_interpolation_mode="linear", chan_average=True, chan_tolerance_factor=0.005, scan_average=True,
-          ant_id=None, ddi=None, to_stokes=True, apply_mask=True, phase_fit=True, overwrite=False, parallel=True):
+          ant_id=None, ddi=None, to_stokes=True, apply_mask=True, phase_fit=True, overwrite=False, parallel=False):
     """ Process holography data and derive aperture illumination pattern.
 
     :param holog_name: Name of holography .holog.zarr file to process.
@@ -26,7 +26,7 @@ def holog(holog_name, grid_size=None, cell_size=None, image_name=None, padding_f
     :type image_name: str, optional
     :param padding_factor: Padding factor applied to beam grid before computing the fast-fourier transform. The default has been set for operation on most systems. The user should be aware of memory constraints before increasing this parameter significatly., defaults to 50
     :type padding_factor: int, optional
-    :param parallel: Run in parallel with Dask or in serial., defaults to True
+    :param parallel: Run in parallel with Dask or in serial., defaults to False
     :type parallel: bool, optional
     :param grid_interpolation_mode: Method of interpolation used when gridding data. This is done using the `scipy.interpolate.griddata` method. For more information on the interpolation see `scipy.interploate <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html#scipy.interpolate.griddata>`_, defaults to "linear"
     :type grid_interpolation_mode: str, optional. Available options: {"linear", "nearest", "cubic"}
@@ -36,10 +36,10 @@ def holog(holog_name, grid_size=None, cell_size=None, image_name=None, padding_f
     :type chan_tolerance_factor: float, optional
     :param scan_average: Boolean dicating whether averagin is done over scan., defaults to True
     :type scan_average: bool, optional
-    :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None
-    :type ant_id: list or str, optional, ex. ea25
-    :param ddi: List of ddis/ddi to be processed, defaults to "all" when None
-    :type ddi: list or int, optional, ex. 0
+    :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None, ex. ea25
+    :type ant_id: list or str, optional
+    :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
+    :type ddi: list or int, optional
     :param to_stokes: Dictates whether polarization is computed according to stokes values., defaults to True
     :type to_stokes: bool, optional
     :param apply_mask: If True applies a mask to the aperture setting values outside of the aperture to zero., defaults to True

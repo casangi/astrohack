@@ -26,10 +26,10 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     :type panel_model: str, optional
     :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.2.
     :type panel_margins: float, optional
-    :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None
-    :type ant_id: list or str, optional, ex. ea25
-    :param ddi: List of ddis/ddi to be processed, defaults to "all" when None
-    :type ddi: list or int, optional, ex. 0
+    :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None, ex. ea25
+    :type ant_id: list or str, optional
+    :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
+    :type ddi: list or int, optional
     :param parallel: Run in parallel. Defaults to False.
     :type parallel: bool, optional
     :param overwrite: Overwrite files on disk. Defaults to False.

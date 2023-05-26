@@ -28,7 +28,7 @@ from astrohack._utils._mds import AstrohackHologFile
 def extract_holog(
     ms_name,
     holog_obs_dict=None,
-    ddi_sel=None,
+    ddi=None,
     baseline_average_distance=None,
     baseline_average_nearest=None,
     holog_name=None,
@@ -43,34 +43,24 @@ def extract_holog(
 
     :param ms_name: Name of input measurement file name.
     :type ms_name: str
-
     :param holog_obs_dict: The *holog_obs_dict* describes which scan and antenna data to extract from the measurement set. As detailed below, this compound dictionary also includes important meta data needed for preprocessing and extraction of the holography data from the measurement set. If not specified holog_obs_dict will be generated. For auto generation of the holog_obs_dict the assumtion is made that the same antanna beam is not mapped twice in a row (alternating sets of antennas is fine).
     :type holog_obs_dict: dict, optional
-    
-    :param ddi_sel:  Value(s) of DDI that should be extracted from the measurement set. Defaults to all DDI's in the ms.
-    :type ddi_sel: int numpy.ndarray | int list, optional
-       
+    :param ddi:  DDI(s) that should be extracted from the measurement set. Defaults to all DDI's in the ms.
+    :type ddi: int numpy.ndarray | int list, optional
     :param baseline_average_distance: To increase the signal to noise for a mapping antenna mutiple reference antennas can be used. The baseline_average_distance is the acceptable distance between a mapping antenna and a reference antenna. The baseline_average_distance is only used if the holog_obs_dict is not specified. If no distance is specified all reference antennas will be used. baseline_average_distance and baseline_average_nearest can not be used together.
     :type holog_obs_dict: float, optional
-    
     :param baseline_average_nearest: To increase the signal to noise for a mapping antenna mutiple reference antennas can be used. The baseline_average_nearest is the number of nearest reference antennas to use. The baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and baseline_average_nearest can not be used together.
     :type holog_obs_dict: int, optional
-
     :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with *holog.zarr* extension.
     :type holog_name: str, optional
-
     :param point_name: Name of *<point_name>.point.zarr* file to create. Defaults to measurement set name with *point.zarr* extension.
     :type point_name: str, optional
-
-    :param data_column: Determines the data column to pull from the measurement set. Defaults to "CORRECTED_DATA"
+    :param data_column: Determines the data column to pull from the measurement set. Defaults to "CORRECTED_DATA".
     :type data_column: str, optional, ex. DATA, CORRECTED_DATA
-
     :param parallel: Boolean for whether to process in parallel. Defaults to False
     :type parallel: bool, optional
-    
     :param reuse_point_zarr: If true the point.zarr specified in point_name is reused.
     :type reuse_point_zarr: bool, optional
-
     :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files., defaults to False
     :type overwrite: bool, optional
 
@@ -144,7 +134,7 @@ def extract_holog(
     extract_holog_parms = _check_extract_holog_parms(fname,
                                                      ms_name,
                                                      holog_obs_dict,
-                                                     ddi_sel,
+                                                     ddi,
                                                      baseline_average_distance,
                                                      baseline_average_nearest,
                                                      holog_name,
@@ -214,7 +204,7 @@ def extract_holog(
     ctb.close()
     
     # Create holog_obs_dict or modify user supplied holog_obs_dict.
-    ddi_sel = extract_holog_parms['ddi_sel']
+    ddi = extract_holog_parms['ddi_sel']
     if holog_obs_dict is None: #Automatically create holog_obs_dict
         from astrohack._utils._extract_holog import _create_holog_obs_dict
         holog_obs_dict = _create_holog_obs_dict(pnt_dict, extract_holog_parms['baseline_average_distance'],
@@ -222,21 +212,21 @@ def extract_holog(
                                                 ant_names_main)
         
         #From the generated holog_obs_dict subselect user supplied ddis.
-        if ddi_sel != 'all':
+        if ddi != 'all':
             holog_obs_dict_keys = list(holog_obs_dict.keys())
             for ddi_key in holog_obs_dict_keys:
                 if 'ddi' in ddi_key:
                     ddi_id = int(ddi_key.replace('ddi_',''))
-                    if ddi_id not in ddi_sel:
+                    if ddi_id not in ddi:
                         del holog_obs_dict[ddi_key]
     else:
         #If a user defines a holog_obs_dict it needs to be duplicated for each ddi.
         holog_obs_dict_with_ddi = {}
-        if ddi_sel == 'all':
+        if ddi == 'all':
             for ddi_id in ms_ddi:
                 holog_obs_dict_with_ddi['ddi_' + str(ddi_id)] = holog_obs_dict
         else:
-            for ddi_id in ddi_sel:
+            for ddi_id in ddi:
                 holog_obs_dict_with_ddi['ddi_' + str(ddi_id)] = holog_obs_dict
         
         holog_obs_dict = holog_obs_dict_with_ddi

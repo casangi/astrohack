@@ -180,7 +180,7 @@ class AstrohackImageFile(dict):
             else:
                 return self[ant_id][ddi]
 
-    def export_to_fits(self, destination, complex_split='cartesian', ant_id=None, ddi=None, parallel=True):
+    def export_to_fits(self, destination, complex_split='cartesian', ant_id=None, ddi=None, parallel=False):
         """ Export contents of an AstrohackImageFile object to several FITS files in the destination folder
 
         :param destination: Name of the destination folder to contain plots
@@ -191,7 +191,7 @@ class AstrohackImageFile(dict):
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
-        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is True
+        :param parallel: If True will use an existing astrohack client to export FITS in parallel, default is False
         :type parallel: bool, optional
 
         .. _Description:
@@ -232,7 +232,7 @@ class AstrohackImageFile(dict):
         _dask_general_compute(fname, self, _export_to_fits_holog_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, unit=None,
-                       colormap='viridis', figure_size=None, dpi=300, parallel=True):
+                       colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Aperture amplitude and phase plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
@@ -251,7 +251,7 @@ class AstrohackImageFile(dict):
         :type figure_size: numpy.ndarray, list, tuple, optional
         :param dpi: dots per inch to be used in plots, default is 300
         :type dpi: int, optional
-        :param parallel: If True will use an existing astrohack client to produce plots in parallel, edfault is True
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is False
         :type parallel: bool, optional
 
         .. _Description:
@@ -652,7 +652,7 @@ class AstrohackPanelFile(dict):
         _dask_general_compute(fname, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
     def plot_antennae(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False, unit=None,
-                      colormap='viridis', figure_size=None, dpi=300, parallel=True):
+                      colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Create diagnostic plots of antenna surfaces from panel data file.
 
         :param destination: Name of the destination folder to contain plots
@@ -673,7 +673,7 @@ class AstrohackPanelFile(dict):
         :type figure_size: numpy.ndarray, list, tuple, optional
         :param dpi: dots per inch to be used in plots, default is 300
         :type dpi: int, optional
-        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is True
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is False
         :type parallel: bool, optional
 
         .. _Description:
@@ -738,7 +738,7 @@ class AstrohackPanelFile(dict):
         _create_destination_folder(fname, parm_dict['destination'])
         _dask_general_compute(fname, self, _plot_antenna_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def export_to_fits(self, destination, ant_id=None, ddi=None, parallel=True):
+    def export_to_fits(self, destination, ant_id=None, ddi=None, parallel=False):
         """ Export contents of an Astrohack MDS file to several FITS files in the destination folder
 
         :param destination: Name of the destination folder to contain plots
@@ -747,7 +747,7 @@ class AstrohackPanelFile(dict):
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
-        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is True
+        :param parallel: If True will use an existing astrohack client to export FITS in parallel, default is False
         :type parallel: bool, optional
 
         .. _Description:
