@@ -1,11 +1,10 @@
-import os
-import json
-import dask
-import xarray
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from prettytable import PrettyTable
+import inspect
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+
 
 def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
     """
@@ -307,3 +306,115 @@ def _bool_to_string(flag):
         return 'no'
 
 
+def _print_data_contents(data_dict, field_names, alignment='l'):
+    """
+    Factorized printing of the prettytable with the data contents
+    Args:
+        data_dict: Dictionary with data to be displayed
+        field_names: Field names in the table
+        alignment: Contents of the table to be aligned Left or Right
+    """
+    table = PrettyTable()
+    table.field_names = field_names
+    table.align = alignment
+    depth = len(field_names)
+    if depth == 3:
+        for item_l1 in data_dict.keys():
+            for item_l2 in data_dict[item_l1].keys():
+                table.add_row([item_l1, item_l2, list(data_dict[item_l1][item_l2].keys())])
+    elif depth == 2:
+        for item_l1 in data_dict.keys():
+            table.add_row([item_l1, list(data_dict[item_l1].keys())])
+    elif depth == 1:
+        for item_l1 in data_dict.keys():
+            table.add_row([item_l1])
+    else:
+        raise Exception(f'Unhandled case len(field_names) == {depth}')
+
+    print('\nContents:')
+    print(table)
+
+
+def _print_attributes(meta_dict, split_key=None, alignment='l'):
+    """
+    Print a summary of the atributes
+    Args:
+        meta_dict: Dictionary containing metadata attributes
+        split_key: key to be sqrt and displayed as nx X ny
+
+    Returns:
+
+    """
+    print("\nAttributes:")
+    table = PrettyTable()
+    table.field_names = ['Attribute', 'Value']
+    table.align = alignment
+    if split_key is None:
+        for key in meta_dict.keys():
+            table.add_row([key, meta_dict[key]])
+
+    else:
+        for key in meta_dict.keys():
+            if key == split_key:
+                n_side = int(np.sqrt(meta_dict[key]))
+                table.add_row([key, f'{n_side:d} x {n_side:d}'])
+            else:
+                table.add_row([key, meta_dict[key]])
+    print(table)
+
+
+def _print_summary_header(filename, print_len=80, frame_char='#', frame_width=3):
+    """
+    Print a summary header dynamically adjusted to the filename
+    Args:
+        filename: filename
+        print_len: Lenght of the print on screen
+        frame_char: Character to frame header
+        frame_width: Width of the frame
+
+    Returns:
+
+    """
+    title = 'Summary for:'
+    filename, file_nlead, file_ntrail, print_len = _compute_spacing(filename, print_len=print_len,
+                                                                    frame_width=frame_width)
+    title, title_nlead, title_ntrail, _ = _compute_spacing(title, print_len=print_len, frame_width=frame_width)
+    print(print_len * frame_char)
+    _print_centralized(title, title_nlead, title_ntrail, frame_width, frame_char)
+    _print_centralized(filename, file_nlead, file_ntrail, frame_width, frame_char)
+    print(print_len * frame_char)
+
+
+def _compute_spacing(string, print_len=80, frame_width=3):
+    spc = ' '
+    nchar = len(string)
+    if 2*(nchar//2) != nchar:
+        nchar += 1
+        string += spc
+    cont_len = nchar+2*frame_width+2
+    if 2*(print_len//2) != print_len:
+        print_len += 1
+    if cont_len > print_len:
+        print_len += cont_len - print_len
+
+    nlead = int(print_len // 2 - nchar // 2 - frame_width)
+    ntrail = print_len - nlead - 2*frame_width - nchar
+    return string, nlead, ntrail, print_len
+
+
+def _print_centralized(string, nlead, ntrail, frame_width, frame_char):
+    spc = ' '
+    print(f'{frame_width * frame_char}{nlead * spc}{string}{ntrail * spc}{frame_width * frame_char}')
+
+
+def _print_method_list(methods, alignment='l'):
+    name_len = 0
+
+    print('\nAvailable methods:')
+    table = PrettyTable()
+    table.field_names = ['Methods', 'Description']
+    table.align = alignment
+    for method in methods:
+        table.add_row([method.__name__, method.__doc__.splitlines()[0]])
+    print(table)
+    print()
