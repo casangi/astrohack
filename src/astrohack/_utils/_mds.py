@@ -4,7 +4,6 @@ import numbers
 import distributed
 from matplotlib import colormaps as cmaps
 
-from astrohack._utils._dio import _load_image_xds
 from prettytable import PrettyTable
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._dio import _read_meta_data
@@ -26,6 +25,8 @@ from astrohack._classes.telescope import Telescope
 
 
 class AstrohackDataFile:
+    """ Base class for the Astrohack data files
+    """
     def __init__(self, file_stem, path='./'):
                         
         self._image_path = None
@@ -78,10 +79,18 @@ class AstrohackDataFile:
 
 
 class AstrohackImageFile(dict):
-    """
-        Data class for holography image data.
+    """ Data class for holography image data.
+
+    Data within an object of this class can be selected for further inspection, plotted or outputed to FITS files.
     """
     def __init__(self, file):
+        """ Initialize an AstrohackImageFile object.
+        :param file: File to be linked to this object
+        :type file: str
+
+        :return: AstrohackImageFile object
+        :rtype: AstrohackImageFile
+        """
         super().__init__()
         self._meta_data = None
         self.file = file
@@ -94,14 +103,20 @@ class AstrohackImageFile(dict):
         return super().__setitem__(key, value)
         
     def is_open(self):
+        """Check wether the object has opened the corresponding hack file.
+
+        :return: True if open, else False.
+        :rtype: bool
+        """
         return self._open
 
     def open(self, file=None):
-        """ Open hologgraphy file.
-        Args:self =_
-            file (str, optional): Path to holography file. Defaults to None.
-        Returns:
-            bool: bool describing whether the file was opened properly
+        """ Open holography image file.
+        :param file: File to be opened, if None defaults to the previously defined file
+        :type file: str, optional
+
+        :return: True if file is properly opened, else returns False
+        :rtype: bool
         """
         logger = _get_astrohack_logger()
         if file is None:
@@ -121,11 +136,10 @@ class AstrohackImageFile(dict):
         return self._open
 
     def summary(self):
-        """
-           Prints summary table of holog image file. 
+        """ Prints summary of the AstrohackImageFile object, with available data, attributes and available methods
         """
 
-        print("Atributes:")
+        print("Attributes:")
         for key in self._meta_data.keys():
             print(f'{key:26s}= {self._meta_data[key]}')
 
@@ -140,17 +154,23 @@ class AstrohackImageFile(dict):
         print(table)
 
     def select(self, ant_id, ddi, complex_split='cartesian'):
-        """Select data on the basis of ddi, scan, ant. This is a convenience function.
-        Args:
-            ddi (int): Data description ID.
-            ant_id (int): Antenna ID.
-            complex_split (str, optional): how the selected data is to be splited, defaults to cartesian
+        """ Select data on the basis of ddi, scan, ant. This is a convenience function.
 
-        Returns:
-            xarray.Dataset: xarray dataset of corresponding ddi and antenna ID., or self if no selection
+        :param ddi: Data description ID, ex. 0.
+        :type ddi: int
+        :param ant_id: Antenna ID, ex. ea25.
+        :type ant_id: str
+        :param complex_split: Is the data to b left as is (Real + imag: cartesian, default) or split into Amplitude and Phase (polar)
+        :type complex_split: str, optional
+
+        :return: Corresponding xarray dataset, or self if selection is None
+        :rtype: xarray.Dataset or AstrohackImageFile
         """
         logger = _get_astrohack_logger()
-        
+
+        ant_id = 'ant_'+ant_id
+        ddi = f'ddi_{ddi}'
+
         if ant_id is None or ddi is None:
             logger.info("[select]: No selections made ...")
             return self
@@ -161,17 +181,17 @@ class AstrohackImageFile(dict):
                 return self[ant_id][ddi]
 
     def export_to_fits(self, destination, complex_split='cartesian', ant_id=None, ddi=None, parallel=True):
-        """ Export contents of an Astrohack MDS file to several FITS files in the destination folder
+        """ Export contents of an AstrohackImageFile object to several FITS files in the destination folder
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param complex_split: How to split complex data, cartesian (real + imaginary) or polar (amplitude + phase)
+        :param complex_split: How to split complex data, cartesian (real + imag, default) or polar (amplitude + phase)
         :type complex_split: str, optional
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None
-        :type ant_id: list or str, optional, ex. ea25
-        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
-        :type ddi: list or int, optional, ex. 0
-        :param parallel: If True will use an existing astrohack client to produce plots in parallel
+        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is True
         :type parallel: bool, optional
 
         .. _Description:
@@ -213,26 +233,26 @@ class AstrohackImageFile(dict):
 
     def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, unit=None,
                        colormap='viridis', figure_size=None, dpi=300, parallel=True):
-        """ Create diagnostic plots of apertures amplitude and phase from an image mds.
+        """ Aperture amplitude and phase plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None
-        :type ant_id: list or str, optional, ex. ea25
-        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
-        :type ddi: list or int, optional, ex. 0
-        :param plot_screws: Add screw positions to plot
-        :type plot_screws: bool
+        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param plot_screws: Add screw positions to plot, default is False
+        :type plot_screws: bool, optional
         :param unit: Unit for phase plots, defaults to 'deg'
-        :type unit: str
-        :param colormap: Colormap for plots
-        :type colormap: str
+        :type unit: str, optional
+        :param colormap: Colormap for plots, default is viridis
+        :type colormap: str, optional
         :param figure_size: 2 element array/list/tuple with the plot sizes in inches
         :type figure_size: numpy.ndarray, list, tuple, optional
-        :param dpi: dots per inch to be used in plots
-        :type dpi: int
-        :param parallel: If True will use an existing astrohack client to produce plots in parallel
-        :type parallel: bool
+        :param dpi: dots per inch to be used in plots, default is 300
+        :type dpi: int, optional
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel, edfault is True
+        :type parallel: bool, optional
 
         .. _Description:
 
@@ -271,10 +291,18 @@ class AstrohackImageFile(dict):
 
 
 class AstrohackHologFile(dict):
-    """
-        Data Class to interact ith holography imaging data.
+    """ Data Class for extracted holography data
+
+    Data within an object of this class can be selected for further inspection or plotted for calibration diagnostics.
     """
     def __init__(self, file):
+        """ Initialize an AstrohackHologFile object.
+        :param file: File to be linked to this object
+        :type file: str
+
+        :return: AstrohackHologFile object
+        :rtype: AstrohackHologFile
+        """
         super().__init__()
         
         self.file = file
@@ -288,15 +316,22 @@ class AstrohackHologFile(dict):
         return super().__setitem__(key, value)
 
     def is_open(self):
+        """Check wether the object has opened the corresponding hack file.
+
+        :return: True if open, else False.
+        :rtype: bool
+        """
         return self._open
 
     def open(self, file=None, dask_load=True):
-        """ Open hologgraphy file.
-        Args:self =_
-            file (str, optional): Path to holography file. Defaults to None.
-            dask_load (bool, optional): If True the file is loaded with Dask. Defaults to True.
-        Returns:
-            bool: bool describing whether the file was opened properly
+        """ Open extracted holography file.
+        :param file: File to be opened, if None defaults to the previously defined file
+        :type file: str, optional
+        :param dask_load: Is file to be loaded with dask?, default is True
+        :type dask_load: bool, optional
+
+        :return: True if file is properly opened, else returns False
+        :rtype: bool
         """
         logger = _get_astrohack_logger()
 
@@ -316,9 +351,9 @@ class AstrohackHologFile(dict):
         return self._open
 
     def summary(self):
+        """ Prints summary of the AstrohackHologFile object, with available data, attributes and available methods
         """
-            Prints summary table of holog file.
-        """
+
         print("Atributes:")
         for key in self._meta_data.keys():
             if key == 'n_pix':
@@ -336,28 +371,36 @@ class AstrohackHologFile(dict):
         print('\nContents:')
         print(table)
 
-    def select(self, ddi=None, scan=None, ant_id=None):
+    def select(self, ddi=None, map_id=None, ant_id=None):
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
-        Args:
-            ddi (int, optional): Data description ID.
-            scan (int, optional): Scan number.
-            ant_id (int, optional): Antenna ID.
-        Returns:
-            xarray.Dataset: xarray dataset of corresponding ddi, scan, antenna ID.
+
+        :param ddi: Data description ID, ex. 0.
+        :type ddi: int
+        :param map_id: Mapping ID, ex. 0.
+        :type map_id: int
+        :param ant_id: Antenna ID, ex. ea25.
+        :type ant_id: str
+
+        :return: Corresponding xarray dataset, or self if selection is None
+        :rtype: xarray.Dataset or AstrohackHologFile
         """
         logger = _get_astrohack_logger()
-        
-        if ant_id is None or ddi is None or scan is None:
+        ant_id = 'ant_'+ant_id
+        ddi = f'ddi_{ddi}'
+        map_id = f'map_{map_id}'
+
+        if ant_id is None or ddi is None or map_id is None:
             logger.info("[select]: No selection made ...")
             return self
         else:
-            return self[ddi][scan][ant_id]
+            return self[ddi][map_id][ant_id]
 
     @property
     def meta_data(self):
-        """ Holog file meta data.
-        Returns:
-            JSON: JSON file of holography meta data.
+        """ Retrieve AstrohackHologFile JSON metadata.
+
+        :return: JSON metadata for this AstrohackHologFile object
+        :rtype: dict
         """
 
         return self._meta_data
@@ -370,21 +413,21 @@ class AstrohackHologFile(dict):
         :type destination: str
         :param delta: Defines a fraction of cell_size around which to look for peaks., defaults to 0.01
         :type delta: float, optional
-        :param ant_id: antenna ID to use in subselection, defaults to "all" when None
-        :type ant_id: list or str, optional, ex. ea25
-        :param ddi: data description ID to use in subselection, defaults to "all" when None
-        :type ddi: list or int, optional, ex. 0
-        :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning configuration,  defaults to "all" when None
-        :type map_id: list or int, optional, ex. 0
-        :param complex_split: How to split complex data, cartesian (real + imaginary) or polar (amplitude + phase)
+        :param ant_id: antenna ID to use in subselection, defaults to "all" when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: data description ID to use in subselection, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning configuration,  defaults to "all" when None, ex. 0
+        :type map_id: list or int, optional
+        :param complex_split: How to split complex data, cartesian (real + imaginary) or polar (amplitude + phase), default is polar
         :type complex_split: str, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param figure_size: 2 element array/list/tuple with the plot sizes in inches
         :type figure_size: numpy.ndarray, list, tuple, optional
-        :param dpi: dots per inch to be used in plots
-        :type dpi: int
-        :param parallel: Run inparallel, defaults to False
+        :param dpi: dots per inch to be used in plots, default is 300
+        :type dpi: int, optional
+        :param parallel: Run in parallel, defaults to False
         :type parallel: bool, optional
 
         **Additional Information**
@@ -457,10 +500,19 @@ class AstrohackHologFile(dict):
 
 
 class AstrohackPanelFile(dict):
-    """
-        Data class for holography panel data.
+    """ Data class for holography panel data.
+
+    Data within an object of this class can be selected for further inspection, plotted or exported to FITS for analysis
+    or exported to csv for panel adjustments.
     """
     def __init__(self, file):
+        """ Initialize an AstrohackPanelFile object.
+        :param file: File to be linked to this object
+        :type file: str
+
+        :return: AstrohackPanelFile object
+        :rtype: AstrohackPanelFile
+        """
         super().__init__()
 
         self.file = file
@@ -474,14 +526,20 @@ class AstrohackPanelFile(dict):
         return super().__setitem__(key, value)
         
     def is_open(self):
+        """Check wether the object has opened the corresponding hack file.
+
+        :return: True if open, else False.
+        :rtype: bool
+        """
         return self._open
 
     def open(self, file=None):
-        """ Open panel file.
-        Args:self =_
-            file (str, optional): Path to holography file. Defaults to None.
-        Returns:
-            bool: bool describing whether the file was opened properly
+        """ Open panel holography file.
+        :param file: File to be opened, if None defaults to the previously defined file
+        :type file: str, optional
+
+        :return: True if file is properly opened, else returns False
+        :rtype: bool
         """
         logger = _get_astrohack_logger()
 
@@ -500,8 +558,7 @@ class AstrohackPanelFile(dict):
         return self._open
 
     def summary(self):
-        """
-           Prints summary table of panel image file.
+        """ Prints summary of the AstrohackPanelFile object, with available data, attributes and available methods
         """
 
         print("Atributes:")
@@ -519,40 +576,44 @@ class AstrohackPanelFile(dict):
         print(table)
 
     def get_antenna(self, ant_id, ddi):
+        """ Retrieve an AntennaSurface object for interaction
+
+        :param ant_id: Antenna to be retrieved, ex. ea25.
+        :type ant_id: str
+        :param ddi: DDI to be retrieved for ant_id, ex. 0
+        :type ddi: int
+
+        :return: AntennaSurface object describing for further interaction
+        :rtype: AntennaSurface
         """
-        Return an AntennaSurface object for interaction
-        Args:
-            ant_id: Which antenna is to be used
-            ddi: Which ddi is to be used
-        Returns:
-            AntennaSurface object contaning relevant information for panel adjustments
-        """
+        ant_id = 'ant_'+ant_id
+        ddi = f'ddi_{ddi}'
         xds = self[ant_id][ddi]
         telescope = Telescope(xds.attrs['telescope_name'])
         return AntennaSurface(xds, telescope, reread=True)
 
     def export_screws(self, destination, ant_id=None, ddi=None, unit='mm', threshold=None, plot_map=False,
-                      colormap='seismic', figure_size=None, dpi=300):
-        """ Export screw adjustment from panel to text file and save to disk.
+                      colormap='RdBu_r', figure_size=None, dpi=300):
+        """ Export screw adjustments to text files and optionally plots.
 
         :param destination: Name of the destination folder to contain exported screw adjustments
         :type destination: str
-        :param ant_id: List of antennae/antenna to be exported, defaults to "all" when None
-        :type ant_id: list or str, optional, ex. ea25
-        :param ddi: List of ddis/ddi to be exported, defaults to "all" when None
-        :type ddi: list or int, optional, ex. 0
+        :param ant_id: List of antennae/antenna to be exported, defaults to "all" when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
         :param unit: Unit for screws adjustments, most length units supported, defaults to "mm"
-        :type unit: str
+        :type unit: str, optional
         :param threshold: Threshold below which data is considered negligable, value is assumed to be in the same unit as the plot, if not given defaults to 10% of the maximal deviation
         :type threshold: float, optional
         :param plot_map: Plot the map of screw adjustments, default is False
-        :type plot_map: bool
-        :param colormap: Colormap for screw adjustment map
-        :type colormap: str
+        :type plot_map: bool, optional
+        :param colormap: Colormap for screw adjustment map, default is RdBu_r
+        :type colormap: str, optional
         :param figure_size: 2 element array/list/tuple with the screw adjustment map size in inches
         :type figure_size: numpy.ndarray, list, tuple, optional
-        :param dpi: Screw adjustment map resolution in pixels per inch
-        :type dpi: int
+        :param dpi: Screw adjustment map resolution in pixels per inch, default is 300
+        :type dpi: int, optional
 
         .. _Description:
 
@@ -592,28 +653,28 @@ class AstrohackPanelFile(dict):
 
     def plot_antennae(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False, unit=None,
                       colormap='viridis', figure_size=None, dpi=300, parallel=True):
-        """ Create diagnostic plots of antenna surface deviations from panel data file. Available plots listed in additional information.
+        """ Create diagnostic plots of antenna surfaces from panel data file.
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None
-        :type ant_id: list or str, optional, ex. ea25
-        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
-        :type ddi: list or int, optional, ex. 0
-        :param plot_type: type of plot to be produced, deviation, phase or ancillary
-        :type plot_type: str
+        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param plot_type: type of plot to be produced, deviation, phase, ancillary or all, default is deviation
+        :type plot_type: str, optional
         :param plot_screws: Add screw positions to plot
-        :type plot_screws: bool
+        :type plot_screws: bool, optional
         :param unit: Unit for phase or deviation plots, defaults to "mm" for deviation and 'deg' for phase
-        :type unit: str
-        :param colormap: Colormap for plots
-        :type colormap: str
+        :type unit: str, optional
+        :param colormap: Colormap for plots, default is viridis
+        :type colormap: str, optional
         :param figure_size: 2 element array/list/tuple with the plot sizes in inches
         :type figure_size: numpy.ndarray, list, tuple, optional
-        :param dpi: dots per inch to be used in plots
-        :type dpi: int
-        :param parallel: If True will use an existing astrohack client to produce plots in parallel
-        :type parallel: bool
+        :param dpi: dots per inch to be used in plots, default is 300
+        :type dpi: int, optional
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is True
+        :type parallel: bool, optional
 
         .. _Description:
 
@@ -682,12 +743,12 @@ class AstrohackPanelFile(dict):
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None
-        :type ant_id: list or str, optional, ex. ea25
-        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None
-        :type ddi: list or int, optional, ex. 0
-        :param parallel: If True will use an existing astrohack client to produce plots in parallel
-        :type parallel: bool
+        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is True
+        :type parallel: bool, optional
 
         .. _Description:
         Export the products from the panel mds onto FITS files to be read by other software packages
@@ -716,10 +777,16 @@ class AstrohackPanelFile(dict):
 
 
 class AstrohackPointFile(dict):
-    """
-        Data Class to interact ith holography pointing data.
+    """ Data Class for holography pointing data.
     """
     def __init__(self, file):
+        """ Initialize an AstrohackPointFile object.
+        :param file: File to be linked to this object
+        :type file: str
+
+        :return: AstrohackPointFile object
+        :rtype: AstrohackPointFile
+        """
         super().__init__()
         
         self.file = file
@@ -733,15 +800,22 @@ class AstrohackPointFile(dict):
         return super().__setitem__(key, value)
 
     def is_open(self):
+        """Check wether the object has opened the corresponding hack file.
+
+        :return: True if open, else False.
+        :rtype: bool
+        """
         return self._open
 
     def open(self, file=None, dask_load=True):
-        """ Open pointing file.
-        Args:self =_
-            file (str, optional): Path to pointing file. Defaults to None.
-            dask_load (bool, optional): If True the file is loaded with Dask. Defaults to True.
-        Returns:
-            bool: bool describing whether the file was opened properly
+        """ Open holography pointing file.
+        :param file: File to be opened, if None defaults to the previously defined file
+        :type file: str, optional
+        :param dask_load: Is file to be loaded with dask?, default is True
+        :type dask_load: bool, optional
+
+        :return: True if file is properly opened, else returns False
+        :rtype: bool
         """
         logger = _get_astrohack_logger()
 
@@ -761,8 +835,7 @@ class AstrohackPointFile(dict):
         return self._open
 
     def summary(self):
-        """
-            Prints summary table of pointing file.
+        """ Prints summary of the AstrohackPointFile object, with available data, attributes and available methods
         """
         print("Atributes:")
         for key in self._meta_data.keys():
