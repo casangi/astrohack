@@ -2,9 +2,10 @@ import os
 import json
 import zarr
 import copy
+import datetime
+import shutil
 import numpy as np
 import xarray as xr
-import datetime
 
 from astropy.io import fits
 from astrohack import __version__ as code_version
@@ -24,19 +25,16 @@ def check_if_file_exists(file):
         raise FileNotFoundError
 
 
-def check_if_file_will_be_overwritten(file,overwrite):
+def check_if_file_will_be_overwritten(file, overwrite):
     logger = _get_astrohack_logger()
     if (os.path.exists(file) is True) and (overwrite is False):
-        logger.error(
-            " {file} already exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(
-                file=file
-            )
-        )
+        logger.error(" {file} already exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(file=file))
+        
         raise FileExistsError
+        
     elif  (os.path.exists(file) is True) and (overwrite is True):
-        logger.warning(
-            file + " will be overwritten."
-        )
+        logger.warning(file + " will be overwritten.")
+        shutil.rmtree(file)
 
 
 def _load_panel_file(file=None, panel_dict=None, dask_load=True):

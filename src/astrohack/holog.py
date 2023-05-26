@@ -132,7 +132,7 @@ def holog(
     input_params = holog_params.copy()
     
     check_if_file_exists(holog_params['holog_file'])
-    check_if_file_will_be_overwritten(holog_params['image_file'],holog_params['overwrite'])
+    check_if_file_will_be_overwritten(holog_params['image_file'], holog_params['overwrite'])
 
     json_data = "/".join((holog_params['holog_file'], ".holog_json"))
     with open(json_data, "r") as json_file:

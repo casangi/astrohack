@@ -231,7 +231,7 @@ def extract_holog(
     ddi_sel = extract_holog_parms['ddi_sel']
     if holog_obs_dict is None: #Automatically create holog_obs_dict
         from astrohack._utils._extract_holog import _create_holog_obs_dict
-        holog_obs_dict = _create_holog_obs_dict(pnt_dict, extract_holog_parms['baseline_average_distance'], extract_holog_parms['baseline_average_nearest'], ant_names,ant_pos,ant_names_main)
+        holog_obs_dict = _create_holog_obs_dict(pnt_dict, extract_holog_parms['baseline_average_distance'], extract_holog_parms['baseline_average_nearest'], ant_names, ant_pos, ant_names_main)
         
         #From the generated holog_obs_dict subselect user supplied ddis.
         if ddi_sel != 'all':
@@ -413,14 +413,18 @@ def extract_holog(
     holog_dict = _load_holog_file(holog_file=extract_holog_parms["holog_name"], dask_load=True, load_pnt_dict=False)
 
     extract_holog_parms['telescope_name'] = telescope_name
-    _create_holog_meta_data(holog_file=extract_holog_parms['holog_name'], holog_dict=holog_dict,
-                            input_params=input_params)
+
+    _create_holog_meta_data(
+        holog_file=extract_holog_parms['holog_name'], 
+        holog_dict=holog_dict,
+        input_params=input_params
+    )
     
     holog_mds = AstrohackHologFile(extract_holog_parms['holog_name'])
-    holog_mds.open()
-    
-    return holog_mds
 
+    holog_mds.open()
+
+    return holog_mds
 
 
 def _check_extract_holog_parms(
