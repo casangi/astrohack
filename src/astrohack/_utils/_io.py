@@ -33,8 +33,12 @@ def check_if_file_will_be_overwritten(file, overwrite):
         raise FileExistsError
         
     elif  (os.path.exists(file) is True) and (overwrite is True):
-        logger.warning(file + " will be overwritten.")
-        shutil.rmtree(file)
+        if file.endswith(".zarr"):
+            logger.warning(file + " will be overwritten.")
+            shutil.rmtree(file)
+        else:
+            logger.warning(file + ": is not a valid hack file. Check the file name again.")
+            raise Exception("IncorrectFileType: {file}".format(file=file))
 
 
 def _load_panel_file(file=None, panel_dict=None, dask_load=True):
