@@ -15,6 +15,7 @@ from astrohack._utils._dio import _create_destination_folder
 from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._constants import length_units, trigo_units, plot_types
 from astrohack._utils._dask_graph_tools import _dask_general_compute
+from astrohack._utils._tools import _print_method_list, _print_attributes, _print_data_contents, _print_summary_header
 
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk
@@ -103,7 +104,7 @@ class AstrohackImageFile(dict):
         return super().__setitem__(key, value)
         
     def is_open(self):
-        """Check wether the object has opened the corresponding hack file.
+        """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
         :rtype: bool
@@ -138,20 +139,11 @@ class AstrohackImageFile(dict):
     def summary(self):
         """ Prints summary of the AstrohackImageFile object, with available data, attributes and available methods
         """
-
-        print("Attributes:")
-        for key in self._meta_data.keys():
-            print(f'{key:26s}= {self._meta_data[key]}')
-
-        table = PrettyTable()
-        table.field_names = ["antenna", "ddi"]
-        table.align = "l"
-        
-        for ant in self.keys():
-            table.add_row([ant, list(self[ant].keys())])
-
-        print('\nContents:')
-        print(table)
+        _print_summary_header(self.file)
+        _print_attributes(self._meta_data)
+        _print_data_contents(self, ["Antenna", "DDI"])
+        _print_method_list([self.summary, self.is_open, self.open, self.select, self.export_to_fits,
+                            self.plot_apertures])
 
     def select(self, ant_id, ddi, complex_split='cartesian'):
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
@@ -316,7 +308,7 @@ class AstrohackHologFile(dict):
         return super().__setitem__(key, value)
 
     def is_open(self):
-        """Check wether the object has opened the corresponding hack file.
+        """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
         :rtype: bool
@@ -353,23 +345,10 @@ class AstrohackHologFile(dict):
     def summary(self):
         """ Prints summary of the AstrohackHologFile object, with available data, attributes and available methods
         """
-
-        print("Atributes:")
-        for key in self._meta_data.keys():
-            if key == 'n_pix':
-                n_side = int(np.sqrt(self._meta_data[key]))
-                print(f'{key:26s}= {n_side:d} x {n_side:d}')
-            else:
-                print(f'{key:26s}= {self._meta_data[key]}')
-        table = PrettyTable()
-        table.field_names = ["ddi", "map", "antenna"]
-        table.align = "l"
-        
-        for ddi in self.keys():
-            for scan in self[ddi].keys():
-                table.add_row([ddi, scan, list(self[ddi][scan].keys())])
-        print('\nContents:')
-        print(table)
+        _print_summary_header(self.file)
+        _print_attributes(self._meta_data)
+        _print_data_contents(self, ["DDI", "Map", "Antenna"])
+        _print_method_list([self.summary, self.is_open, self.open, self.select, self.plot_diagnostics])
 
     def select(self, ddi=None, map_id=None, ant_id=None):
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
@@ -526,7 +505,7 @@ class AstrohackPanelFile(dict):
         return super().__setitem__(key, value)
         
     def is_open(self):
-        """Check wether the object has opened the corresponding hack file.
+        """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
         :rtype: bool
@@ -560,20 +539,11 @@ class AstrohackPanelFile(dict):
     def summary(self):
         """ Prints summary of the AstrohackPanelFile object, with available data, attributes and available methods
         """
-
-        print("Atributes:")
-        for key in self._meta_data.keys():
-            print(f'{key:26s}= {self._meta_data[key]}')
-
-        table = PrettyTable()
-        table.field_names = ["antenna", "ddi"]
-        table.align = "l"
-        
-        for ant in self.keys():
-            table.add_row([ant, list(self[ant].keys())])
-
-        print('\nContents:')
-        print(table)
+        _print_summary_header(self.file)
+        _print_attributes(self._meta_data)
+        _print_data_contents(self, ["Antenna", "DDI"])
+        _print_method_list([self.summary, self.is_open, self.open, self.get_antenna, self.export_screws,
+                            self.export_to_fits, self.plot_antennae])
 
     def get_antenna(self, ant_id, ddi):
         """ Retrieve an AntennaSurface object for interaction
@@ -800,7 +770,7 @@ class AstrohackPointFile(dict):
         return super().__setitem__(key, value)
 
     def is_open(self):
-        """Check wether the object has opened the corresponding hack file.
+        """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
         :rtype: bool
@@ -837,16 +807,8 @@ class AstrohackPointFile(dict):
     def summary(self):
         """ Prints summary of the AstrohackPointFile object, with available data, attributes and available methods
         """
-        print("Atributes:")
-        for key in self._meta_data.keys():
-            print(f'{key:26s}= {self._meta_data[key]}')
+        _print_summary_header(self.file)
+        _print_attributes(self._meta_data)
+        _print_data_contents(self, ["Antenna"])
+        _print_method_list([self.summary, self.is_open, self.open])
 
-        table = PrettyTable()
-        table.field_names = ["antenna"]
-        table.align = "l"
-        
-        for ant in self.keys():
-            table.add_row([ant])
-
-        print('\nContents:')
-        print(table)
