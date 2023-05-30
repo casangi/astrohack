@@ -430,7 +430,7 @@ def _check_extract_holog_parms(fname,
     parms_passed = parms_passed and _check_parms(fname, extract_holog_parms, 'point_name', [str],
                                                  default=point_base_name+'.point.zarr')
     
-    parms_passed = parms_passed and _check_parms(fname, extract_holog_parms, 'ddi_sel', [list, np.ndarray],
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_parms, 'ddi_sel', [list, int],
                                                  list_acceptable_data_types=[int], default='all')
   
     #To Do: special function needed to check holog_obs_dict.

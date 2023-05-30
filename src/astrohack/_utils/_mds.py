@@ -211,9 +211,9 @@ class AstrohackImageFile(dict):
         fname = 'export_to_fits'
         parms_passed = _check_parms(fname, parm_dict, 'complex_split', [str], acceptable_data=['cartesian', 'polar'],
                                     default="cartesian")
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ant', [list, str],
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ant', [str, list],
                                                      list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int],
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
@@ -261,10 +261,10 @@ class AstrohackImageFile(dict):
                      'parallel': parallel}
 
         fname = 'plot_apertures'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [list, str], list_acceptable_data_types=[str],
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
                                     default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int],
-                                                     list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+                                                     list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
@@ -457,11 +457,11 @@ class AstrohackHologFile(dict):
         fname = 'plot_diagnostics'
         parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delta', [float], default=0.01)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ant', [list, str],
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ant', [str, list],
                                                      list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int],
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'map', [list, int],
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'map', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'complex_split', [str],
                                                      acceptable_data=['cartesian', 'polar'], default="polar")
@@ -601,9 +601,9 @@ class AstrohackPanelFile(dict):
                      'dpi': dpi}
 
         fname = 'export_screws'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [list, str], list_acceptable_data_types=[str], 
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
                                     default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int], 
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units, 
@@ -676,9 +676,9 @@ class AstrohackPanelFile(dict):
                      'parallel': parallel}
 
         fname = 'plot_antennae'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [list, str], list_acceptable_data_types=[str],
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
                                     default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int],
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_type', [str], acceptable_data=plot_types,
@@ -734,9 +734,9 @@ class AstrohackPanelFile(dict):
                      'parallel': parallel}
         
         fname = 'export_to_fits'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [list, str], list_acceptable_data_types=[str],
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
                                     default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int],
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)

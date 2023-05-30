@@ -88,10 +88,10 @@ def _check_combine_parms(fname, image_name, combine_name, ant_id, ddi_list, weig
     base_name = _remove_suffix(combine_params['image_file'], '.image.zarr')
     parms_passed = parms_passed and _check_parms(fname, combine_params, 'combine_file', [str],
                                                  default=base_name+'.combine.zarr')
-    parms_passed = parms_passed and _check_parms(fname, combine_params, 'ant', [list, np.ndarray],
+    parms_passed = parms_passed and _check_parms(fname, combine_params, 'ant', [str, list],
                                                  list_acceptable_data_types=[str], default='all')
-    parms_passed = parms_passed and _check_parms(fname, combine_params, 'ddi', [list, np.ndarray],
-                                                 list_acceptable_data_types=[str], default='all')
+    parms_passed = parms_passed and _check_parms(fname, combine_params, 'ddi', [int, list],
+                                                 list_acceptable_data_types=[int], default='all')
     parms_passed = parms_passed and _check_parms(fname, combine_params, 'parallel', [bool], default=False)
     parms_passed = parms_passed and _check_parms(fname, combine_params, 'weighted', [bool], default=False)
     parms_passed = parms_passed and _check_parms(fname, combine_params, 'overwrite', [bool], default=False)
