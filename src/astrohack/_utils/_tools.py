@@ -1,7 +1,7 @@
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from prettytable import PrettyTable
-import inspect
+from textwrap import fill
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
@@ -363,7 +363,7 @@ def _print_attributes(meta_dict, split_key=None, alignment='l'):
     print(table)
 
 
-def _print_summary_header(filename, print_len=80, frame_char='#', frame_width=3):
+def _print_summary_header(filename, print_len=100, frame_char='#', frame_width=3):
     """
     Print a summary header dynamically adjusted to the filename
     Args:
@@ -385,7 +385,7 @@ def _print_summary_header(filename, print_len=80, frame_char='#', frame_width=3)
     print(print_len * frame_char)
 
 
-def _compute_spacing(string, print_len=80, frame_width=3):
+def _compute_spacing(string, print_len=100, frame_width=3):
     spc = ' '
     nchar = len(string)
     if 2*(nchar//2) != nchar:
@@ -407,14 +407,19 @@ def _print_centralized(string, nlead, ntrail, frame_width, frame_char):
     print(f'{frame_width * frame_char}{nlead * spc}{string}{ntrail * spc}{frame_width * frame_char}')
 
 
-def _print_method_list(methods, alignment='l'):
+def _print_method_list(method_list, alignment='l', print_len=100):
     name_len = 0
+    for obj_method in method_list:
+        meth_len = len(obj_method.__name__)
+        if meth_len > name_len:
+            name_len = meth_len
+    desc_len = print_len - name_len - 3 - 4  # Separators and padding
 
     print('\nAvailable methods:')
     table = PrettyTable()
     table.field_names = ['Methods', 'Description']
     table.align = alignment
-    for method in methods:
-        table.add_row([method.__name__, method.__doc__.splitlines()[0]])
+    for obj_method in method_list:
+        table.add_row([obj_method.__name__, fill(obj_method.__doc__.splitlines()[0][1:], width=desc_len)])
     print(table)
     print()
