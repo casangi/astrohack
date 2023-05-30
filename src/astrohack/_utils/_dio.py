@@ -26,8 +26,7 @@ def check_if_file_exists(caller, file):
 def check_if_file_will_be_overwritten(caller, file, overwrite):
     logger = _get_astrohack_logger()
     if (os.path.exists(file) is True) and (overwrite is False):
-        logger.error(f'[{caller}]: {file} already exists. To overwite set overwrite to True, or remove current file.'
-        
+        logger.error(f'[{caller}]: {file} already exists. To overwite set overwrite to True, or remove current file.')
         raise FileExistsError
         
     elif  (os.path.exists(file) is True) and (overwrite is True):
