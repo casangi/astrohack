@@ -608,7 +608,7 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units, 
                                                      default='mm')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'threshold', [numbers.Number], default='None')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'threshold', [int, float], default='None')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_map', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps, 
                                                      default='RdBu_r')
