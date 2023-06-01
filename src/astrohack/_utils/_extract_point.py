@@ -19,7 +19,7 @@ from astropy.time import Time
 from astrohack._utils._conversion import convert_dict_from_numba
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
-from astrohack._utils._io import _load_point_file
+from astrohack._utils._dio import _load_point_file
 
 from casacore import tables as ctables
 

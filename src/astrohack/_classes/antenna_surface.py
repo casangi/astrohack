@@ -9,16 +9,14 @@ from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar, _axis_to_fits_header, \
-    _resolution_to_fits_header
-from astrohack._utils._io import _write_fits
+from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar, _axis_to_fits_header, _resolution_to_fits_header
+from astrohack._utils._dio import _write_fits
 
 lnbr = "\n"
-figsize = [5, 4]
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, panel_margins=None, reread=False):
+    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, nan_out_of_bounds=True, panel_margins=None, reread=False):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -28,6 +26,7 @@ class AntennaSurface:
                     defaults to 20% if None
             pmodel: model of panel surface fitting, if is None defaults to telescope default
             crop: Crop apertures to slightly larger frames than the antenna diameter
+            nan_out_of_bounds: Should the region outside the dish be replaced with NaNs?
             panel_margins: Margin to be ignored at edges of panels when fitting, defaults to 20% if None
             reread: Read a previously processed holography
         """
@@ -61,9 +60,10 @@ class AntennaSurface:
             else:
                 self.deviation = self._phase_to_deviation(self.phase)
 
-            self.phase = self._nan_out_of_bounds(self.phase)
-            self.amplitude = self._nan_out_of_bounds(self.amplitude)
-            self.deviation = self._nan_out_of_bounds(self.deviation)
+            if nan_out_of_bounds:
+                self.phase = self._nan_out_of_bounds(self.phase)
+                self.amplitude = self._nan_out_of_bounds(self.amplitude)
+                self.deviation = self._nan_out_of_bounds(self.deviation)
 
     def _read_aips_xds(self, inputxds):
         self.amplitude = np.flipud(inputxds["AMPLITUDE"].values)
@@ -463,7 +463,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.print_misc()
 
-    def plot_mask(self, basename, screws=False, colormap=None, figuresize=None, dpi=300):
+    def plot_mask(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, caller='panel'):
         """
         Plot mask used in the selection of points to be fitted
         Args:
@@ -472,13 +472,14 @@ class AntennaSurface:
             colormap: Colormap for amplitude plot
             figuresize: 2 element array with the image sizes in inches
             dpi: Plot resolution
+            caller: Which mds called this plotting function
         """
         plotmask = np.where(self.mask, 1, np.nan)
         plotname = _add_prefix(basename, 'mask')
         self._plot_map(plotname, plotmask, 'Mask', 0, 1, None, screws=screws, colormap=colormap, figuresize=figuresize,
-                       dpi=dpi, colorbar=False)
+                       dpi=dpi, colorbar=False, caller=caller)
 
-    def plot_amplitude(self, basename, screws=False, colormap=None, figuresize=None, dpi=300):
+    def plot_amplitude(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, caller='panel'):
         """
         Plot Amplitude map
         Args:
@@ -487,14 +488,15 @@ class AntennaSurface:
             colormap: Colormap for amplitude plot
             figuresize: 2 element array with the image sizes in inches
             dpi: Plot resolution
+            caller: Which mds called this plotting function
         """
         vmin, vmax = np.nanmin(self.amplitude), np.nanmax(self.amplitude)
         title = "Amplitude min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
         plotname = _add_prefix(basename, 'amplitude')
         self._plot_map(plotname, self.amplitude, title, vmin, vmax, self.amp_unit, screws=screws, colormap=colormap,
-                       figuresize=figuresize, dpi=dpi)
+                       figuresize=figuresize, dpi=dpi, caller=caller)
 
-    def plot_phase(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None):
+    def plot_phase(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None, caller='panel'):
         """
         Plot phase map(s)
         Args:
@@ -504,20 +506,26 @@ class AntennaSurface:
             figuresize: 2 element array with the image sizes in inches
             dpi: Plot resolution
             unit: Angle unit for plot(s)
+            caller: Which mds called this plotting function
         """
         if unit is None:
             unit = 'deg'
         fac = _convert_unit('rad', unit, 'trigonometric')
         prefix = 'phase'
-        if self.residuals is None:
+        if caller == 'image':
+            prefix = 'corrected'
             maps = [self.phase]
-            labels = ['original']
+            labels = ['phase']
         else:
-            maps = [self.phase, self.phase_corrections, self.phase_residuals]
-            labels = ['original', 'corrections', 'residuals']
-        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi)
+            if self.residuals is None:
+                maps = [self.phase]
+                labels = ['original']
+            else:
+                maps = [self.phase, self.phase_corrections, self.phase_residuals]
+                labels = ['original', 'correction', 'residual']
+        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller)
 
-    def plot_deviation(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None):
+    def plot_deviation(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None, caller='panel'):
         """
         Plot deviation map(s)
         Args:
@@ -527,6 +535,7 @@ class AntennaSurface:
             figuresize: 2 element array with the image sizes in inches
             dpi: Plot resolution
             unit: Length unit for plot(s)
+            caller: Which mds called this plotting function
         """
         if unit is None:
             unit = 'mm'
@@ -537,11 +546,11 @@ class AntennaSurface:
             labels = ['original']
         else:
             maps = [self.deviation, self.corrections, self.residuals]
-            labels = ['original', 'corrections', 'residuals']
-        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi)
+            labels = ['original', 'correction', 'residual']
+        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller)
 
     def _multi_plot(self, maps, labels, prefix, basename, unit, conversion, screws, colormap=None, figuresize=None,
-                    dpi=300):
+                    dpi=300, caller='panel'):
         if len(maps) != len(labels):
             raise Exception('Map list and label list must be of the same size')
         nplots = len(maps)
@@ -552,10 +561,10 @@ class AntennaSurface:
             plotname = _add_prefix(basename, labels[iplot])
             plotname = _add_prefix(plotname, prefix)
             self._plot_map(plotname, conversion*maps[iplot], title, vmin, vmax, unit, screws=screws, dpi=dpi,
-                           colormap=colormap, figuresize=figuresize)
+                           colormap=colormap, figuresize=figuresize, caller=caller)
 
     def _plot_map(self, filename, data, title, vmin, vmax, unit, screws=False, colormap=None, figuresize=None, dpi=300,
-                  colorbar=True):
+                  colorbar=True, caller='panel'):
         if colormap is None:
             colormap = 'viridis'
         if figuresize is None:
@@ -578,7 +587,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.plot(ax, screws=screws)
         fig.tight_layout()
-        plt.savefig(filename, dpi=dpi)
+        plt.savefig(_add_prefix(filename, caller), dpi=dpi)
         plt.close()
 
     def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
@@ -617,7 +626,7 @@ class AntennaSurface:
         fac = _convert_unit('m', unit, 'length')
         vmax = np.nanmax(np.abs(fac * self.screw_adjustments))
         vmin = -vmax
-        if threshold is None:
+        if threshold is None or threshold == 'None':
             threshold = 0.1*vmax
         else:
             threshold = np.abs(threshold)
@@ -761,17 +770,18 @@ class AntennaSurface:
         head = _axis_to_fits_header(head, self.v_axis, 2, 'Y', 'm')
         head = _resolution_to_fits_header(head, self.resolution)
 
-        _write_fits(head, 'Amplitude', self.amplitude, basename + '_amplitude.fits', self.amp_unit, 'panel')
-        _write_fits(head, 'Mask', np.where(self.mask, 1.0, np.nan), basename + '_mask.fits', '', 'panel')
-        _write_fits(head, 'Original Phase', self.phase, basename + '_phase_original.fits', 'rad', 'panel')
-        _write_fits(head, 'Phase Corrections', self.phase_corrections, basename + '_phase_correction.fits', 'rad',
+        _write_fits(head, 'Amplitude', self.amplitude, _add_prefix(basename, 'amplitude')+'.fits', self.amp_unit,
                     'panel')
-        _write_fits(head, 'Phase residuals', self.phase_residuals, basename + '_phase_residual.fits', 'rad',
-                    'panel')
-        _write_fits(head, 'Original Deviation', self.deviation, basename + '_deviation_original.fits', 'm',
-                    'panel')
-        _write_fits(head, 'Deviation Corrections', self.corrections, basename + '_deviation_correction.fits', 'm',
-                    'panel')
-        _write_fits(head, 'Deviation residuals', self.residuals, basename + '_deviation_residual.fits', 'm',
-                    'panel')
+        _write_fits(head, 'Mask', np.where(self.mask, 1.0, np.nan), _add_prefix(basename, 'mask')+'.fits', '', 'panel')
+        _write_fits(head, 'Original Phase', self.phase, _add_prefix(basename, 'phase_original')+'.fits', 'rad', 'panel')
+        _write_fits(head, 'Phase Corrections', self.phase_corrections,
+                    _add_prefix(basename, 'phase_correction')+'.fits', 'rad', 'panel')
+        _write_fits(head, 'Phase residuals', self.phase_residuals, _add_prefix(basename, 'phase_residual')+'.fits',
+                    'rad', 'panel')
+        _write_fits(head, 'Original Deviation', self.deviation, _add_prefix(basename, 'deviation_original')+'.fits',
+                    'm', 'panel')
+        _write_fits(head, 'Deviation Corrections', self.corrections,
+                    _add_prefix(basename, 'deviation_correction')+'.fits', 'm', 'panel')
+        _write_fits(head, 'Deviation residuals', self.residuals, _add_prefix(basename, 'deviation_residual')+'.fits',
+                    'm', 'panel')
 

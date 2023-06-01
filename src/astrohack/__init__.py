@@ -7,5 +7,5 @@ from .extract_holog import *
 from .holog import *
 from .dio import *
 from .panel import *
-from .diagnostics import *
-#from .visualization import *
+from .combine import *
+

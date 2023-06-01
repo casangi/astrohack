@@ -152,7 +152,7 @@ def test_holog_obs_dict(set_data):
     extract_holog(
       ms_name=before_ms, 
       holog_name=before_holog, 
-      ddi_sel=[0],
+      ddi=[0],
       data_column='CORRECTED_DATA',
       parallel=False,
       overwrite=True,

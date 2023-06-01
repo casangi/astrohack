@@ -1,14 +1,16 @@
 import numpy as np
-
 import matplotlib.pyplot as plt
-
 from astropy.time import Time
+
+from astrohack._utils._constants import figsize, fontsize, markersize
+
 
 def _calc_index(n, m):
     if n >= m:
         return n % m
     else:
         return n
+
 
 def _extract_indicies(l, m, squared_radius):
     indicies = []
@@ -21,6 +23,7 @@ def _extract_indicies(l, m, squared_radius):
             indicies.append(i)
             
     return np.array(indicies)
+
 
 def _matplotlib_calibration_inspection_function(data, delta=0.01, pol='RR', width=1000, height=450):
   import matplotlib.pyplot as plt
@@ -65,7 +68,8 @@ def _matplotlib_calibration_inspection_function(data, delta=0.01, pol='RR', widt
         axis[1].set_xlabel("Channel")
         
         axis[1].legend()    
-    
+
+
 def _plotly_calibration_inspection_function(data, delta=0.01, pol='RR', width=1000, height=450):
     import plotly.graph_objects as go
     import plotly.express as px
@@ -200,46 +204,37 @@ def _plotly_calibration_inspection_function(data, delta=0.01, pol='RR', width=10
     
     fig.show()
 
+
 def _calibration_plot_chunk(param_dict):
 
-    data = param_dict['data']
+    data = param_dict['xds_data']
     delta  = param_dict['delta']
-    data_type = param_dict['type']
-    save_plot = param_dict['save']
+    complex_split = param_dict['complex_split']
     display = param_dict['display']
-    width = param_dict['width']
-    height = param_dict['height']
-    out_folder = param_dict['out_folder']
-    
-    pixels = 1/plt.rcParams['figure.dpi']
-    plt.rcParams['figure.figsize'] = [width*pixels, height*pixels]
+    figuresize = param_dict['figuresize']
+    destination = param_dict['destination']
+    dpi = param_dict['dpi']
+    thisfont = 1.2*fontsize
     
     UNIX_CONVERSION = 3506716800
     
     radius = np.power(data.grid_parms['cell_size']*delta, 2)
     
-    l = data.DIRECTIONAL_COSINES.values[..., 0] 
-    m = data.DIRECTIONAL_COSINES.values[..., 1]
+    l_axis = data.DIRECTIONAL_COSINES.values[..., 0]
+    m_axis = data.DIRECTIONAL_COSINES.values[..., 1]
     
-    assert l.shape[0] == m.shape[0], "l, m dimensions don't match!"
+    assert l_axis.shape[0] == m_axis.shape[0], "l, m dimensions don't match!"
     
-    indicies = _extract_indicies(
-        l = l, 
-        m = m, 
-        squared_radius=radius
-    )
+    indicies = _extract_indicies(l=l_axis, m=m_axis, squared_radius=radius)
     
-    if data_type == "real":
+    if complex_split == "cartesian":
         vis_dict = {
             "data": [
                 data.isel(time=indicies).VIS.real,
                 data.isel(time=indicies).VIS.imag
             ],
             "polarization": [0, 3],
-            "label":[
-                "REAL", 
-                "IMAG"
-            ]
+            "label": ["REAL", "IMAG"]
         }
     else:
         vis_dict = {
@@ -248,26 +243,21 @@ def _calibration_plot_chunk(param_dict):
                 data.isel(time=indicies).apply(np.angle).VIS
             ],
             "polarization": [0, 3],
-            "label":[
-                "AMP", 
-                "PHASE"
-            ]
+            "label": ["AMP", "PHASE"]
         }
     
     times = np.unique(Time(vis_dict["data"][0].time.data - UNIX_CONVERSION, format='unix').iso)
-    
-    fig, axis = plt.subplots(4, 1, sharex=True)
-    
+
+    if figuresize is None or figuresize == 'None':
+        fig, axis = plt.subplots(4, 1, figsize=figsize, sharex=True)
+    else:
+        fig, axis = plt.subplots(4, 1, figsize=figuresize, sharex=True)
+
     chan = np.arange(0, data.chan.data.shape[0])
 
     fig.suptitle(
-        'Data Calibration Check: [dd_{ddi}, {map_id}, {ant_id}]'.format(ddi=data.ddi, map_id=data.holog_map_key, ant_id=data.antenna_name), 
-        ha='left', 
-        va='center', 
-        x=0.04, 
-        y=0.5, 
-        rotation=90
-    )
+        f'Data Calibration Check: [{param_dict["this_ddi"]}, {param_dict["this_map"]}, {param_dict["this_ant"]}]',
+        ha='center', va='center', x=0.5, y=0.95, rotation=0, fontsize=1.5*thisfont)
     
     length = times.shape[0]
     
@@ -275,19 +265,17 @@ def _calibration_plot_chunk(param_dict):
         for j, pol in enumerate(vis_dict["polarization"]):
             for time in range(length):
                 k = 2*i + j
-                axis[k].plot(chan, vis[time, :, pol], marker='o', label=times[time])
-                axis[k].set_ylabel("Vis ({component}; {pol})".format(component=vis_dict["label"][i], pol=data.pol.values[pol]))
-    
-    
-    axis[3].set_xlabel("Channel")
-    axis[0].legend(
-        bbox_to_anchor=(0., 1.02, 1., .102), 
-        loc='lower left',
-        ncols=4, 
-        mode="expand", 
-        borderaxespad=0.
-    )
-    
-    if save_plot: fig.savefig("{out_folder}/ddi_{ddi}_{map_id}_{ant_id}.png".format(out_folder=out_folder, ddi=data.ddi, map_id=data.holog_map_key, ant_id=data.antenna_name))
+                axis[k].plot(chan, vis[time, :, pol], marker='o', label=times[time], markersize=markersize)
+                axis[k].set_ylabel(f'Vis ({vis_dict["label"][i]}; {data.pol.values[pol]})', fontsize=thisfont)
+                axis[k].tick_params(axis='both', which='major', labelsize=thisfont)
 
-    if not display: plt.close(fig)
+    axis[3].set_xlabel("Channel", fontsize=thisfont)
+    axis[0].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left', ncols=4, mode="expand", borderaxespad=0.,
+                   fontsize=fontsize)
+
+    plotfile = f'{destination}/holog_diagnostics_{param_dict["this_map"]}_{param_dict["this_ant"]}_' \
+               f'{param_dict["this_ddi"]}.png'
+    fig.savefig(plotfile, dpi=dpi)
+
+    if not display:
+        plt.close(fig)

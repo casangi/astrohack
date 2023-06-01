@@ -35,9 +35,7 @@ def set_warned(value: bool):
 class BasePanel:
     markers = ['X', 'o', '*', 'P', 'D']
     colors = ['g', 'g', 'r', 'r', 'b']
-    fontsize = 4
     linewidth = 0.5
-    markersize = 2
     linecolor = 'black'
 
     def __init__(self, model, screws, plot_screw_pos, plot_screw_size, label, center=None, zeta=None):
@@ -524,7 +522,7 @@ class BasePanel:
             angle = (-self.zeta % pi - pi/2)*_convert_unit('rad', 'deg', 'trigonometric')
         else:
             angle = 0
-        ax.text(self.center[1], self.center[0], self.label, fontsize=self.fontsize, ha='center', va='center',
+        ax.text(self.center[1], self.center[0], self.label, fontsize=fontsize, ha='center', va='center',
                 rotation=angle)
 
     def plot_screws(self, ax):
@@ -535,7 +533,7 @@ class BasePanel:
         """
         for iscrew in range(self.screws.shape[0]):
             screw = self.screws[iscrew, ]
-            ax.scatter(screw[1], screw[0], marker=self.markers[iscrew], lw=self.linewidth, s=self.markersize,
+            ax.scatter(screw[1], screw[0], marker=self.markers[iscrew], lw=self.linewidth, s=markersize,
                        color=self.colors[iscrew])
 
     def plot_corrections(self, ax, cmap, corrections, threshold, vmin, vmax):
