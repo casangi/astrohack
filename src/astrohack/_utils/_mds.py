@@ -103,7 +103,7 @@ class AstrohackImageFile(dict):
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
         
-    def is_open(self):
+    def _is_open(self):
         """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
@@ -111,7 +111,7 @@ class AstrohackImageFile(dict):
         """
         return self._open
 
-    def open(self, file=None):
+    def _open(self, file=None):
         """ Open holography image file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -142,8 +142,7 @@ class AstrohackImageFile(dict):
         _print_summary_header(self.file)
         _print_attributes(self._meta_data)
         _print_data_contents(self, ["Antenna", "DDI"])
-        _print_method_list([self.summary, self.is_open, self.open, self.select, self.export_to_fits,
-                            self.plot_apertures])
+        _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_apertures])
 
     def select(self, ant_id, ddi, complex_split='cartesian'):
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
@@ -307,7 +306,7 @@ class AstrohackHologFile(dict):
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
 
-    def is_open(self):
+    def _is_open(self):
         """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
@@ -315,7 +314,7 @@ class AstrohackHologFile(dict):
         """
         return self._open
 
-    def open(self, file=None, dask_load=True):
+    def _open(self, file=None, dask_load=True):
         """ Open extracted holography file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -348,7 +347,7 @@ class AstrohackHologFile(dict):
         _print_summary_header(self.file)
         _print_attributes(self._meta_data)
         _print_data_contents(self, ["DDI", "Map", "Antenna"])
-        _print_method_list([self.summary, self.is_open, self.open, self.select, self.plot_diagnostics])
+        _print_method_list([self.summary, self.select, self.plot_diagnostics])
 
     def select(self, ddi=None, map_id=None, ant_id=None):
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
@@ -504,7 +503,7 @@ class AstrohackPanelFile(dict):
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
         
-    def is_open(self):
+    def _is_open(self):
         """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
@@ -512,7 +511,7 @@ class AstrohackPanelFile(dict):
         """
         return self._open
 
-    def open(self, file=None):
+    def _open(self, file=None):
         """ Open panel holography file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -542,8 +541,8 @@ class AstrohackPanelFile(dict):
         _print_summary_header(self.file)
         _print_attributes(self._meta_data)
         _print_data_contents(self, ["Antenna", "DDI"])
-        _print_method_list([self.summary, self.is_open, self.open, self.get_antenna, self.export_screws,
-                            self.export_to_fits, self.plot_antennae])
+        _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
+                            self.plot_antennae])
 
     def get_antenna(self, ant_id, ddi):
         """ Retrieve an AntennaSurface object for interaction
@@ -769,7 +768,7 @@ class AstrohackPointFile(dict):
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
 
-    def is_open(self):
+    def _is_open(self):
         """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
@@ -777,7 +776,7 @@ class AstrohackPointFile(dict):
         """
         return self._open
 
-    def open(self, file=None, dask_load=True):
+    def _open(self, file=None, dask_load=True):
         """ Open holography pointing file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -810,5 +809,5 @@ class AstrohackPointFile(dict):
         _print_summary_header(self.file)
         _print_attributes(self._meta_data)
         _print_data_contents(self, ["Antenna"])
-        _print_method_list([self.summary, self.is_open, self.open])
+        _print_method_list([self.summary])
 

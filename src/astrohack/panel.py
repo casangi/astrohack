@@ -98,7 +98,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     panel_params['filename'] = panel_params['image_name']
     check_if_file_exists(fname, panel_params['image_name'])
     image_mds = AstrohackImageFile(panel_params['image_name'])
-    image_mds.open()
+    image_mds._open()
     check_if_file_will_be_overwritten(fname, panel_params['panel_name'], panel_params['overwrite'])
 
     if os.path.exists(panel_params['image_name']+'/.aips'):
@@ -112,7 +112,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
             output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_attr")
             _write_meta_data('panel', output_attr_file, input_params)
             panel_mds = AstrohackPanelFile(panel_params['panel_name'])
-            panel_mds.open()
+            panel_mds._open()
             return panel_mds
         else:
             logger.warning(f"[{fname}]: No data to process")

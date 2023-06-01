@@ -388,13 +388,13 @@ def extract_holog(
         _create_holog_meta_data(holog_file=extract_holog_parms['holog_name'], holog_dict=holog_dict,
                                 input_params=input_params)
         holog_mds = AstrohackHologFile(extract_holog_parms['holog_name'])
-        holog_mds.open()
+        holog_mds._open()
         return holog_mds
     else:
         logger.warning(f"[{fname}]: No data to process")
         return None
 
-    holog_mds.open()
+    holog_mds._open()
 
     return holog_mds
 

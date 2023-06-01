@@ -117,7 +117,7 @@ def holog(holog_name, grid_size=None, cell_size=None, image_name=None, padding_f
     if _dask_general_compute(fname, holog_json, _holog_chunk, holog_params, ['ant', 'ddi'], parallel=parallel):
         _create_image_meta_data(holog_params['image_file'], input_params)
         image_mds = AstrohackImageFile(holog_params['image_file'])
-        image_mds.open()
+        image_mds._open()
         logger.info(f'[{fname}]: Finished processing')
         return image_mds
     else:

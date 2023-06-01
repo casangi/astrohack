@@ -58,7 +58,7 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
     check_if_file_will_be_overwritten(fname, combine_params['combine_file'], combine_params['overwrite'])
 
     image_mds = AstrohackImageFile(combine_params['image_file'])
-    image_mds.open()
+    image_mds._open()
     combine_params['image_mds'] = image_mds
 
     if _dask_general_compute(fname, image_mds, _combine_chunk, combine_params, ['ant'], parallel=parallel):
@@ -66,7 +66,7 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
         output_attr_file = "{name}/{ext}".format(name=combine_params['combine_file'], ext=".image_attr")
         _write_meta_data('combine', output_attr_file, input_params)
         combine_mds = AstrohackImageFile(combine_params['combine_file'])
-        combine_mds.open()
+        combine_mds._open()
         return combine_mds
     else:
         logger.warning(f"[{fname}]: No data to process")
