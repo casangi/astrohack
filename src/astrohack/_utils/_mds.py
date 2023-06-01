@@ -12,7 +12,7 @@ from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _create_destination_folder
 from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
-from astrohack._utils._constants import length_units, trigo_units, plot_types
+from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._tools import _print_method_list, _print_attributes, _print_data_contents, _print_summary_header
 
@@ -207,7 +207,7 @@ class AstrohackImageFile(dict):
                      'parallel': parallel}
         
         fname = 'export_to_fits'
-        parms_passed = _check_parms(fname, parm_dict, 'complex_split', [str], acceptable_data=['cartesian', 'polar'],
+        parms_passed = _check_parms(fname, parm_dict, 'complex_split', [str], acceptable_data=possible_splits,
                                     default="cartesian")
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ant', [str, list],
                                                      list_acceptable_data_types=[str], default='all')
@@ -293,7 +293,7 @@ class AstrohackImageFile(dict):
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
-        :param complex_split: How to split complex beam data, cartesian (real + imag, default) or polar (amplitude + phase)
+        :param complex_split: How to split complex beam data, cartesian (real + imag) or polar (amplitude + phase, default)
         :type complex_split: str, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
@@ -327,7 +327,7 @@ class AstrohackImageFile(dict):
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'complex_split', [str],
-                                                     acceptable_data=['cartesian', 'polar'], default="cartesian")
+                                                     acceptable_data=possible_splits, default="polar")
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps,
@@ -498,7 +498,7 @@ class AstrohackHologFile(dict):
 
                     logger.info("local client not found, starting ...")
 
-                    log_parms = {'log_level':'DEBUG'}
+                    log_parms = {'log_level': 'DEBUG'}
                     client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
                     logger.info(client.dashboard_link)
 
@@ -524,7 +524,7 @@ class AstrohackHologFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'map', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'complex_split', [str],
-                                                     acceptable_data=['cartesian', 'polar'], default="polar")
+                                                     acceptable_data=possible_splits, default="polar")
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
