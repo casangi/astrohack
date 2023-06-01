@@ -1,6 +1,6 @@
 import numpy as np
 import xarray as xr
-
+from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
 
 from astrohack._classes.telescope import Telescope
@@ -16,9 +16,9 @@ from astrohack._utils._algorithms import _find_nearest
 from astrohack._utils._algorithms import _calc_coords
 
 from astrohack._utils._conversion import _to_stokes
-from astrohack._utils._constants import clight
+from astrohack._utils._constants import clight, figsize
 from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header, _stokes_axis_to_fits_header, \
-    _resolution_to_fits_header, _add_prefix
+    _resolution_to_fits_header, _add_prefix, _well_positioned_colorbar
 
 from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk
@@ -444,3 +444,98 @@ def _plot_aperture_chunk(parm_dict):
     surface.plot_amplitude(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
                            colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='image',
                            display=parm_dict['display'])
+
+
+def _plot_beam_chunk(parm_dict):
+    """
+    Chunk function for the user facing function plot_beams
+    Args:
+        parm_dict: parameter dictionary
+    """
+    antenna = parm_dict['this_ant']
+    ddi = parm_dict['this_ddi']
+    destination = parm_dict['destination']
+    basename = f'{destination}/{antenna}_{ddi}'
+    inputxds = parm_dict['xds_data']
+    laxis = inputxds.l.values
+    maxis = inputxds.m.values
+    if inputxds.dims['chan'] != 1:
+        raise Exception("Only single channel holographies supported")
+    if inputxds.dims['time'] != 1:
+        raise Exception("Only single mapping holographies supported")
+    full_beam = inputxds.BEAM.isel(time=0, chan=0).values
+    pol_axis = inputxds.pol.values
+    if parm_dict['complex_split'] == 'cartesian':
+        realpart = full_beam.real
+        imagpart = full_beam.imag
+        _plot_beam(laxis, maxis, pol_axis, realpart, basename, 'real', antenna, ddi, 'normalized',
+                   figuresize=parm_dict['figuresize'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
+                   display=parm_dict['display'])
+        _plot_beam(laxis, maxis, pol_axis, imagpart, basename, 'real', antenna, ddi, 'normalized',
+                   figuresize=parm_dict['figuresize'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
+                   display=parm_dict['display'])
+    else:
+        ampli = np.absolute(full_beam)
+        phase = np.angle(full_beam)
+        _plot_beam(laxis, maxis, pol_axis, ampli, basename, 'amplitude', antenna, ddi, 'normalized',
+                   figuresize=parm_dict['figuresize'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
+                   display=parm_dict['display'])
+        _plot_beam(laxis, maxis, pol_axis, phase, basename, 'phase', antenna, ddi, 'rad',
+                   figuresize=parm_dict['figuresize'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
+                   display=parm_dict['display'])
+
+
+def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit, figuresize, dpi, colormap, display):
+    """
+    Plot a beam
+    Args:
+        laxis: L axis
+        maxis: M axis
+        pol_axis: Polarization axis
+        data: Beam data
+        basename: Basename for output file
+        label: data label
+        antenna: which antenna
+        ddi: which DDI
+        unit: data unit
+        figuresize: Figure size
+        dpi: DPI
+        colormap: Colormap for plot
+        display: Display plots?
+    """
+    fname = 'plot_beams'
+    logger = _get_astrohack_logger()
+    if colormap is None:
+        colormap = 'viridis'
+    if figuresize is None or figuresize == 'None':
+        figuresize = figsize
+    n_pol = len(pol_axis)
+    if n_pol == 4:
+        fig, axes = plt.subplots(2, 2, figsize=figuresize)
+        axes = axes.flat
+    elif n_pol == 2:
+        fig, axes = plt.subplots(2, 1, figsize=figuresize)
+    elif n_pol == 1:
+        fig, ax = plt.subplots(1, 1, figsize=figuresize)
+        axes = [ax]
+    else:
+        msg = f'[{fname}]: Do not know how to handle polarization axis with {n_pol} elements'
+        logger.error(msg)
+        raise Exception(msg)
+
+    extent = [laxis[0], laxis[-1], maxis[0], maxis[-1]]
+    for ipol, pol, in enumerate(pol_axis):
+        axis = axes[ipol]
+        axis.set_title(f'Polarization: {pol}')
+        im = axis.imshow(data[ipol, ...], cmap=colormap, interpolation="nearest", extent=extent)
+        _well_positioned_colorbar(axis, fig, im, f"Z Scale [{unit}]")
+        axis.set_xlabel('L axis ["]')
+        axis.set_ylabel('M axis ["]')
+
+    fig.suptitle(f'Beam {label}, Antenna: {antenna.split("_")[1]}, DDI: {ddi.split("_")[1]}')
+    fig.tight_layout()
+    fname = _add_prefix(_add_prefix(basename, label), 'image_beam')
+    plt.savefig(fname, dpi=dpi)
+    if not display:
+        plt.close()
+    return
