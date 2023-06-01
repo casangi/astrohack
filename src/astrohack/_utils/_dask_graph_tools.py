@@ -21,10 +21,10 @@ def _construct_general_graph_recursively(caller, looping_dict, chunk_function, p
         exec_list = _parm_to_list(caller, param_dict[key], looping_dict, key)
         for item in exec_list:
             param_dict[f'this_{key}'] = item
-            try:
-                _construct_general_graph_recursively(caller, looping_dict[item], chunk_function, param_dict, delayed_list,
-                                                     key_order[1:], parallel=parallel, oneup=item)
-            except KeyError:
+            if item in looping_dict:
+                _construct_general_graph_recursively(caller, looping_dict[item], chunk_function, param_dict,
+                                                     delayed_list, key_order[1:], parallel=parallel, oneup=item)
+            else:
                 if oneup is None:
                     logger.warning(f'[{caller}]: {item} is not present in this mds')
                 else:
