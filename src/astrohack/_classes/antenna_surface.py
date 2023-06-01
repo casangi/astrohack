@@ -548,12 +548,13 @@ class AntennaSurface:
             unit = 'mm'
         fac = _convert_unit('m', unit, 'length')
         prefix = 'deviation'
+        rms = self.get_rms(unit=unit)
         if self.residuals is None:
             maps = [self.deviation]
-            labels = ['original']
+            labels = [f'original RMS={rms:.2f} {unit}']
         else:
             maps = [self.deviation, self.corrections, self.residuals]
-            labels = ['original', 'correction', 'residual']
+            labels = [f'original RMS={rms[0]:.2f} {unit}', 'correction', f'residual RMS={rms[1]:.2f} {unit}']
         self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller, display)
 
     def _multi_plot(self, maps, labels, prefix, basename, unit, conversion, screws, colormap=None, figuresize=None,
@@ -565,7 +566,7 @@ class AntennaSurface:
         vmin = -vmax
         for iplot in range(nplots):
             title = f'{prefix.capitalize()} {labels[iplot]}'
-            plotname = _add_prefix(basename, labels[iplot])
+            plotname = _add_prefix(basename, labels[iplot].split()[0])
             plotname = _add_prefix(plotname, prefix)
             self._plot_map(plotname, conversion*maps[iplot], title, vmin, vmax, unit, screws=screws, dpi=dpi,
                            colormap=colormap, figuresize=figuresize, caller=caller, display=display)
