@@ -95,7 +95,7 @@ class AstrohackImageFile(dict):
         super().__init__()
         self._meta_data = None
         self.file = file
-        self._open = False
+        self._file_is_open = False
 
     def __getitem__(self, key):
         return super().__getitem__(key)
@@ -109,7 +109,7 @@ class AstrohackImageFile(dict):
         :return: True if open, else False.
         :rtype: bool
         """
-        return self._open
+        return self._file_is_open
 
     def _open(self, file=None):
         """ Open holography image file.
@@ -126,15 +126,15 @@ class AstrohackImageFile(dict):
         try:
             _load_image_file(file, image_dict=self)
 
-            self._open = True
+            self._file_is_open = True
 
         except Exception as e:
             logger.error("[AstroHackImageFile.open()]: {}".format(e))
-            self._open = False
+            self._file_is_open = False
 
         self._meta_data = _read_meta_data(file, 'image', ['combine', 'holog'])
 
-        return self._open
+        return self._file_is_open
 
     def summary(self):
         """ Prints summary of the AstrohackImageFile object, with available data, attributes and available methods
@@ -298,7 +298,7 @@ class AstrohackHologFile(dict):
         
         self.file = file
         self._meta_data = None
-        self._open = False
+        self._file_is_open = False
 
     def __getitem__(self, key):
         return super().__getitem__(key)
@@ -312,7 +312,7 @@ class AstrohackHologFile(dict):
         :return: True if open, else False.
         :rtype: bool
         """
-        return self._open
+        return self._file_is_open
 
     def _open(self, file=None, dask_load=True):
         """ Open extracted holography file.
@@ -331,15 +331,15 @@ class AstrohackHologFile(dict):
 
         try:
             _load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
-            self._open = True
+            self._file_is_open = True
 
         except Exception as e:
             logger.error("[AstrohackHologFile]: {}".format(e))
-            self._open = False
+            self._file_is_open = False
 
         self._meta_data = _read_meta_data(file, 'holog', 'extract_holog')
 
-        return self._open
+        return self._file_is_open
 
     def summary(self):
         """ Prints summary of the AstrohackHologFile object, with available data, attributes and available methods
@@ -494,7 +494,7 @@ class AstrohackPanelFile(dict):
         super().__init__()
 
         self.file = file
-        self._open = False
+        self._file_is_open = False
         self._meta_data = None
 
     def __getitem__(self, key):
@@ -509,7 +509,7 @@ class AstrohackPanelFile(dict):
         :return: True if open, else False.
         :rtype: bool
         """
-        return self._open
+        return self._file_is_open
 
     def _open(self, file=None):
         """ Open panel holography file.
@@ -526,14 +526,14 @@ class AstrohackPanelFile(dict):
 
         try:
             _load_panel_file(file, panel_dict=self)
-            self._open = True
+            self._file_is_open = True
         except Exception as e:
             logger.error("[AstroHackPanelFile.open()]: {}".format(e))
-            self._open = False
+            self._file_is_open = False
 
         self._meta_data = _read_meta_data(file, 'panel', 'panel')
 
-        return self._open
+        return self._file_is_open
 
     def summary(self):
         """ Prints summary of the AstrohackPanelFile object, with available data, attributes and available methods
@@ -760,7 +760,7 @@ class AstrohackPointFile(dict):
         
         self.file = file
         self._meta_data = None
-        self._open = False
+        self._file_is_open = False
 
     def __getitem__(self, key):
         return super().__getitem__(key)
@@ -774,7 +774,7 @@ class AstrohackPointFile(dict):
         :return: True if open, else False.
         :rtype: bool
         """
-        return self._open
+        return self._file_is_open
 
     def _open(self, file=None, dask_load=True):
         """ Open holography pointing file.
@@ -793,15 +793,15 @@ class AstrohackPointFile(dict):
 
         try:
             _load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
-            self._open = True
+            self._file_is_open = True
 
         except Exception as e:
             logger.error("[AstrohackPointFile]: {}".format(e))
-            self._open = False
+            self._file_is_open = False
 
         self._meta_data = _read_meta_data(file, 'point', 'extract_holog')
 
-        return self._open
+        return self._file_is_open
 
     def summary(self):
         """ Prints summary of the AstrohackPointFile object, with available data, attributes and available methods
