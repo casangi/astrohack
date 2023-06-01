@@ -71,17 +71,33 @@ def _plot_antenna_chunk(parm_dict):
     telescope = Telescope(xds.attrs['telescope_name'])
     surface = AntennaSurface(xds, telescope, reread=True)
     if plot_type == plot_types[0]:  # deviation plot
-        surface.plot_deviation(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
+        surface.plot_deviation(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'],
+                               colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='panel',
+                               display=parm_dict['display'])
     elif plot_type == plot_types[1]:  # phase plot
-        surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
+        surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'],
+                           colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='panel',
+                           display=parm_dict['display'])
     elif plot_type == plot_types[2]:  # Ancillary plot
-        surface.plot_mask(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
-        surface.plot_amplitude(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
+        surface.plot_mask(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
+                          colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='panel',
+                          display=parm_dict['display'])
+        surface.plot_amplitude(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
+                               colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='panel',
+                               display=parm_dict['display'])
     else:  # all plots
-        surface.plot_deviation(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'])
-        surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit='deg')
-        surface.plot_mask(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
-        surface.plot_amplitude(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'])
+        surface.plot_deviation(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'],
+                               colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='panel',
+                               display=parm_dict['display'])
+        surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit='deg',
+                           colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='panel',
+                           display=parm_dict['display'])
+        surface.plot_mask(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
+                          colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='panel',
+                          display=parm_dict['display'])
+        surface.plot_amplitude(basename=basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
+                               colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='panel',
+                               display=parm_dict['display'])
 
 
 def _export_to_fits_panel_chunk(parm_dict):
@@ -115,8 +131,7 @@ def _export_screws_chunk(parm_dict):
     xds = parm_dict['xds_data']
     telescope = Telescope(xds.attrs['telescope_name'])
     surface = AntennaSurface(xds, telescope, reread=True)
-    surface.export_screws(export_name + 'csv', unit=parm_dict['unit'])
-    if parm_dict['plot_map']:
-        surface.plot_screw_adjustments(export_name + 'png', unit=parm_dict['unit'], threshold=parm_dict['threshold'],
-                                       colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'],
-                                       dpi=parm_dict['dpi'])
+    surface.export_screws(export_name + 'txt', unit=parm_dict['unit'])
+    surface.plot_screw_adjustments(export_name + 'png', unit=parm_dict['unit'], threshold=parm_dict['threshold'],
+                                   colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'],
+                                   dpi=parm_dict['dpi'], display=parm_dict['display'])
