@@ -222,7 +222,7 @@ class AstrohackImageFile(dict):
         parm_dict['metadata'] = self._meta_data
         _dask_general_compute(fname, self, _export_to_fits_holog_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, unit=None,
+    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, unit=None, display=True,
                        colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Aperture amplitude and phase plots from the data in an AstrohackImageFIle object.
 
@@ -236,6 +236,8 @@ class AstrohackImageFile(dict):
         :type plot_screws: bool, optional
         :param unit: Unit for phase plots, defaults to 'deg'
         :type unit: str, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
         :param colormap: Colormap for plots, default is viridis
         :type colormap: str, optional
         :param figure_size: 2 element array/list/tuple with the plot sizes in inches
@@ -254,6 +256,7 @@ class AstrohackImageFile(dict):
                      'destination': destination,
                      'unit': unit,
                      'plot_screws': plot_screws,
+                     'display': display,
                      'colormap': colormap,
                      'figuresize': figure_size,
                      'dpi': dpi,
@@ -267,6 +270,7 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps,
