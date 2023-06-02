@@ -4,7 +4,6 @@ import numbers
 import distributed
 from matplotlib import colormaps as cmaps
 
-from prettytable import PrettyTable
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._dio import _read_meta_data
 from astrohack._utils._dio import _load_holog_file
@@ -13,12 +12,12 @@ from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _create_destination_folder
 from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
-from astrohack._utils._constants import length_units, trigo_units, plot_types
+from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._tools import _print_method_list, _print_attributes, _print_data_contents, _print_summary_header
 
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
-from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk
+from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 
 from astrohack._classes.antenna_surface import AntennaSurface
@@ -142,7 +141,7 @@ class AstrohackImageFile(dict):
         _print_summary_header(self.file)
         _print_attributes(self._meta_data)
         _print_data_contents(self, ["Antenna", "DDI"])
-        _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_apertures])
+        _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
 
     def select(self, ant_id, ddi, complex_split='cartesian'):
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
@@ -208,7 +207,7 @@ class AstrohackImageFile(dict):
                      'parallel': parallel}
         
         fname = 'export_to_fits'
-        parms_passed = _check_parms(fname, parm_dict, 'complex_split', [str], acceptable_data=['cartesian', 'polar'],
+        parms_passed = _check_parms(fname, parm_dict, 'complex_split', [str], acceptable_data=possible_splits,
                                     default="cartesian")
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ant', [str, list],
                                                      list_acceptable_data_types=[str], default='all')
@@ -222,7 +221,7 @@ class AstrohackImageFile(dict):
         parm_dict['metadata'] = self._meta_data
         _dask_general_compute(fname, self, _export_to_fits_holog_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, unit=None,
+    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, unit=None, display=True,
                        colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Aperture amplitude and phase plots from the data in an AstrohackImageFIle object.
 
@@ -236,6 +235,8 @@ class AstrohackImageFile(dict):
         :type plot_screws: bool, optional
         :param unit: Unit for phase plots, defaults to 'deg'
         :type unit: str, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
         :param colormap: Colormap for plots, default is viridis
         :type colormap: str, optional
         :param figure_size: 2 element array/list/tuple with the plot sizes in inches
@@ -254,6 +255,7 @@ class AstrohackImageFile(dict):
                      'destination': destination,
                      'unit': unit,
                      'plot_screws': plot_screws,
+                     'display': display,
                      'colormap': colormap,
                      'figuresize': figure_size,
                      'dpi': dpi,
@@ -267,6 +269,7 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps,
@@ -279,6 +282,64 @@ class AstrohackImageFile(dict):
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(fname, parm_dict['destination'])
         _dask_general_compute(fname, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+
+    def plot_beams(self, destination, ant_id=None, ddi=None, complex_split='polar', display=True, colormap='viridis',
+                   figure_size=None, dpi=300, parallel=False):
+        """ Beam plots from the data in an AstrohackImageFIle object.
+
+        :param destination: Name of the destination folder to contain plots
+        :type destination: str
+        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param complex_split: How to split complex beam data, cartesian (real + imag) or polar (amplitude + phase, default)
+        :type complex_split: str, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+        :param colormap: Colormap for plots, default is viridis
+        :type colormap: str, optional
+        :param figure_size: 2 element array/list/tuple with the plot sizes in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: dots per inch to be used in plots, default is 300
+        :type dpi: int, optional
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is False
+        :type parallel: bool, optional
+
+        .. _Description:
+
+        Produce plots from ``astrohack.holog`` results for analysis
+        """
+        parm_dict = {'ant': ant_id,
+                     'ddi': ddi,
+                     'destination': destination,
+                     'complex_split': complex_split,
+                     'display': display,
+                     'colormap': colormap,
+                     'figuresize': figure_size,
+                     'dpi': dpi,
+                     'parallel': parallel}
+
+        fname = 'plot_apertures'
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
+                                    default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'complex_split', [str],
+                                                     acceptable_data=possible_splits, default="polar")
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps,
+                                                     default='viridis')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(fname, parm_dict['destination'])
+        _dask_general_compute(fname, self, _plot_beam_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackHologFile(dict):
@@ -437,7 +498,7 @@ class AstrohackHologFile(dict):
 
                     logger.info("local client not found, starting ...")
 
-                    log_parms = {'log_level':'DEBUG'}
+                    log_parms = {'log_level': 'DEBUG'}
                     client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
                     logger.info(client.dashboard_link)
 
@@ -463,7 +524,7 @@ class AstrohackHologFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'map', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'complex_split', [str],
-                                                     acceptable_data=['cartesian', 'polar'], default="polar")
+                                                     acceptable_data=possible_splits, default="polar")
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
@@ -561,7 +622,7 @@ class AstrohackPanelFile(dict):
         telescope = Telescope(xds.attrs['telescope_name'])
         return AntennaSurface(xds, telescope, reread=True)
 
-    def export_screws(self, destination, ant_id=None, ddi=None, unit='mm', threshold=None, plot_map=False,
+    def export_screws(self, destination, ant_id=None, ddi=None, unit='mm', threshold=None, display=True,
                       colormap='RdBu_r', figure_size=None, dpi=300):
         """ Export screw adjustments to text files and optionally plots.
 
@@ -575,8 +636,8 @@ class AstrohackPanelFile(dict):
         :type unit: str, optional
         :param threshold: Threshold below which data is considered negligable, value is assumed to be in the same unit as the plot, if not given defaults to 10% of the maximal deviation
         :type threshold: float, optional
-        :param plot_map: Plot the map of screw adjustments, default is False
-        :type plot_map: bool, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
         :param colormap: Colormap for screw adjustment map, default is RdBu_r
         :type colormap: str, optional
         :param figure_size: 2 element array/list/tuple with the screw adjustment map size in inches
@@ -594,7 +655,7 @@ class AstrohackPanelFile(dict):
                      'destination': destination,
                      'unit': unit,
                      'threshold': threshold,
-                     'plot_map': plot_map,
+                     'display': display,
                      'colormap': colormap,
                      'figuresize': figure_size,
                      'dpi': dpi}
@@ -608,7 +669,7 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units, 
                                                      default='mm')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'threshold', [int, float], default='None')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_map', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps, 
                                                      default='RdBu_r')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
@@ -621,7 +682,7 @@ class AstrohackPanelFile(dict):
         _dask_general_compute(fname, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
     def plot_antennae(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False, unit=None,
-                      colormap='viridis', figure_size=None, dpi=300, parallel=False):
+                      display=True, colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Create diagnostic plots of antenna surfaces from panel data file.
 
         :param destination: Name of the destination folder to contain plots
@@ -636,6 +697,8 @@ class AstrohackPanelFile(dict):
         :type plot_screws: bool, optional
         :param unit: Unit for phase or deviation plots, defaults to "mm" for deviation and 'deg' for phase
         :type unit: str, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
         :param colormap: Colormap for plots, default is viridis
         :type colormap: str, optional
         :param figure_size: 2 element array/list/tuple with the plot sizes in inches
@@ -667,6 +730,7 @@ class AstrohackPanelFile(dict):
                      'ddi': ddi,
                      'destination': destination,
                      'unit': unit,
+                     'display': display,
                      'plot_type': plot_type,
                      'plot_screws': plot_screws,
                      'colormap': colormap,
@@ -694,6 +758,7 @@ class AstrohackPanelFile(dict):
             parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units,
                                                          default='mm')
             logger.info(f'[{fname}]: Unit for phase plots set to degrees')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps,
