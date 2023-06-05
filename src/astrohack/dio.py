@@ -1,3 +1,5 @@
+import os
+import json
 import numpy as np
 
 from casacore import tables
@@ -8,6 +10,9 @@ from astrohack._utils._mds import AstrohackImageFile
 from astrohack._utils._mds import AstrohackHologFile
 from astrohack._utils._mds import AstrohackPanelFile
 from astrohack._utils._mds import AstrohackPointFile
+
+from astrohack._utils._dio import _reshape
+from astrohack._utils._dio import _print_array
 
 
 def open_holog(file):
@@ -198,3 +203,67 @@ def fix_pointing_table(ms_name, reference_antenna):
         length = len(message)
         tb.putcol(columnname="MESSAGE", value='pnt_tbl:fixed', startrow=length)
 
+def print_json(object, indent=6, columns=7):
+    """ Print formatted JSON dictionary
+
+    :param object: JSON object
+    :type object: JSON
+    :param indent: Indent to be used in JSON dictionary., defaults to 6
+    :type indent: int, optional
+    :param columns: Columns used to reshape the antenna list., defaults to 7
+    :type columns: int, optional
+    """
+  
+    if isinstance(object, np.ndarray):
+        object = list(object)
+
+    if isinstance(object, list):
+        if indent > 3:
+            list_indent = indent-3
+        else:
+            list_indent = 0
+
+        print("{open}".format(open="[").rjust(list_indent, ' '))
+        _print_array(object, columns=columns, indent=indent+1)
+        print("{close}".format(close="]").rjust(list_indent, ' '))
+
+    else:
+        for key, value in object.items():
+            key_str="{key}{open}".format(key=key, open=":{")
+            print("{key}".format(key=key_str).rjust(indent, ' '))
+            print_json(value, indent+4, columns=columns)
+            print("{close}".format(close="}").rjust(indent-4, ' '))
+
+def print_holog_obs_dict(file='.holog_obs_dict.json', style='static', indent=6, columns=7):
+    """ Print formatted holography observation dictionary
+
+    :param file: Input file, can be either JSON file or string., defaults to '.holog_obs_dict.json'
+    :type file: str | JSON, optional
+    :param style: Print style of JSON dictionary. This can be static, formatted generalized print out or dynamic, prints a collapsible formatted dictionary, defaults to static
+    :type style: str, optional
+    :param indent: Indent to be used in JSON dictionary., defaults to 6
+    :type indent: int, optional
+    :param columns: Columns used to reshape the antenna list., defaults to 7
+    :type columns: int, optional
+    """
+    logger = _get_astrohack_logger()
+
+    if not isinstance(file, dict):
+        try:
+            with open(file) as json_file:
+                json_object = json.load(json_file)
+            
+        except FileNotFoundError:
+            logger.error("holog observations dictionary not found: {file}".format(file=file))
+    
+    else:
+        json_object = file
+
+    if style == 'dynamic': 
+        from IPython.display import JSON
+
+        return JSON(json_object)
+        
+    
+    else:
+        print_json(object=json_object, indent=indent, columns=columns)

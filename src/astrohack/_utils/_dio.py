@@ -614,3 +614,49 @@ def _print_json(object, indent=6, columns=7):
       print("{key}".format(key=key_str).rjust(indent, ' '))
       _print_json(value, indent+4, columns=columns)
       print("{close}".format(close="}").rjust(indent-4, ' '))
+
+def _reshape(array, columns):
+  size = len(array)
+  rows = int(size/columns)
+  if rows <= 0:
+    return 1, 0
+  else:  
+    remainder = size - (rows*columns)
+
+    return rows, remainder
+
+def _print_array(array, columns, indent=4):
+
+  rows, remainder = _reshape(array, columns)
+  
+  if columns > len(array):
+    columns = len(array)
+
+  str_line = ""
+
+  for i in range(rows):
+    temp = []
+    for j in range(columns):
+      k = columns*i + j
+      if j == 0:
+        temp.append("{:>3}".format(array[k]).rjust(indent, ' '))
+      else:
+        temp.append("{:>3}".format(array[k]))
+  
+    str_line += ", ".join(temp)
+    str_line += "\n"
+
+  temp = []
+  if remainder > 0:
+    for i in range(remainder):
+      index = columns*rows + i
+
+      if i == 0:
+        temp.append("{:>3}".format(array[index]).rjust(indent, ' '))
+      else:
+        temp.append("{:>3}".format(array[index]))
+
+    str_line += ", ".join(temp)
+    
+
+  print(str_line)
