@@ -234,7 +234,7 @@ def print_json(object, indent=6, columns=7):
             print_json(value, indent+4, columns=columns)
             print("{close}".format(close="}").rjust(indent-4, ' '))
 
-def print_holog_obs_dict(file='.holog_obs_dict.json', style='static', indent=6, columns=7):
+def inspect_holog_obs_dict(file='.holog_obs_dict.json', style='static', indent=6, columns=7):
     """ Print formatted holography observation dictionary
 
     :param file: Input file, can be either JSON file or string., defaults to '.holog_obs_dict.json'
