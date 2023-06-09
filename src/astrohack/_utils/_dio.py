@@ -551,16 +551,6 @@ def _get_attrs(zarr_obj):
         k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")
     }
 
-def _reshape(array, columns):
-  size = len(array)
-  rows = int(size/columns)
-  if rows <= 0:
-    return 1, 0
-  else:  
-    remainder = size - (rows*columns)
-
-    return rows, remainder
-
 def _print_json(object, indent=6, columns=7):
   if isinstance(object, list):
     if indent > 3:
