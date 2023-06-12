@@ -47,21 +47,21 @@ def extract_holog(
     :type holog_obs_dict: dict, optional
     :param ddi:  DDI(s) that should be extracted from the measurement set. Defaults to all DDI's in the ms.
     :type ddi: int numpy.ndarray | int list, optional
-    :param baseline_average_distance: To increase the signal to noise for a mapping antenna mutiple reference antennas can be used. The baseline_average_distance is the acceptable distance between a mapping antenna and a reference antenna. The baseline_average_distance is only used if the holog_obs_dict is not specified. If no distance is specified all reference antennas will be used. baseline_average_distance and baseline_average_nearest can not be used together.
-    :type holog_obs_dict: float, optional
+    :param baseline_average_distance: To increase the signal to noise for a mapping antenna mutiple reference antennas can be used. The baseline_average_distance is the acceptable distance (in meters) between a mapping antenna and a reference antenna. The baseline_average_distance is only used if the holog_obs_dict is not specified. If no distance is specified all reference antennas will be used. baseline_average_distance and baseline_average_nearest can not be used together.
+    :type baseline_average_distance: float, optional
     :param baseline_average_nearest: To increase the signal to noise for a mapping antenna mutiple reference antennas can be used. The baseline_average_nearest is the number of nearest reference antennas to use. The baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and baseline_average_nearest can not be used together.
-    :type holog_obs_dict: int, optional
+    :type baseline_average_nearest: int, optional
     :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with *holog.zarr* extension.
     :type holog_name: str, optional
     :param point_name: Name of *<point_name>.point.zarr* file to create. Defaults to measurement set name with *point.zarr* extension.
     :type point_name: str, optional
     :param data_column: Determines the data column to pull from the measurement set. Defaults to "CORRECTED_DATA".
     :type data_column: str, optional, ex. DATA, CORRECTED_DATA
-    :param parallel: Boolean for whether to process in parallel. Defaults to False
+    :param parallel: Boolean for whether to process in parallel, defaults to False.
     :type parallel: bool, optional
-    :param reuse_point_zarr: If true the point.zarr specified in point_name is reused.
+    :param reuse_point_zarr: If true the point.zarr specified in point_name is reused, defaults to False.
     :type reuse_point_zarr: bool, optional
-    :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files., defaults to False
+    :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files, defaults to False.
     :type overwrite: bool, optional
 
     :return: Holography holog object.
