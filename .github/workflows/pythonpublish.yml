@@ -2,7 +2,7 @@
 # For more information see: https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
 # https://www.caktusgroup.com/blog/2021/02/11/automating-pypi-releases/
 
-name: Upload Python Package
+name: Published
 
 on:
   release:
