@@ -3,7 +3,7 @@ import xarray as xr
 from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
 
-from astrohack._classes.telescope import Telescope
+from astrohack._utils._panel_classes.telescope import Telescope
 
 from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _read_meta_data, _write_meta_data, _write_fits
@@ -25,7 +25,7 @@ from astrohack._utils._imaging import _mask_circular_disk
 from astrohack._utils._imaging import _calculate_aperture_pattern
 
 from astrohack._utils._panel import _get_correct_telescope_from_name
-from astrohack._classes.antenna_surface import AntennaSurface
+from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 

@@ -20,8 +20,8 @@ from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_c
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 
-from astrohack._classes.antenna_surface import AntennaSurface
-from astrohack._classes.telescope import Telescope
+from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
+from astrohack._utils._panel_classes.telescope import Telescope
 
 
 class AstrohackDataFile:

@@ -1,5 +1,4 @@
-import pytest
-from astrohack._classes.ring_panel import RingPanel
+from astrohack._utils._panel_classes.ring_panel import RingPanel
 import numpy as np
 
 

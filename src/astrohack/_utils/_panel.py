@@ -2,8 +2,8 @@ import xarray as xr
 
 from astrohack._utils._constants import plot_types
 
-from astrohack._classes.telescope import Telescope
-from astrohack._classes.antenna_surface import AntennaSurface
+from astrohack._utils._panel_classes.telescope import Telescope
+from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 # global constants
