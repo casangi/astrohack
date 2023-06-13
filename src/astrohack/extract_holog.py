@@ -474,8 +474,7 @@ def generate_holog_obs_dict(
     point_name=None,
     data_column="CORRECTED_DATA",
     parallel=False,
-    reuse_point_zarr=False,
-    overwrite=False,
+    reuse_point_zarr=False
 ):
     """
     Extract holography and optionally pointing data, from measurement set. Creates holography output file.
@@ -500,8 +499,6 @@ def generate_holog_obs_dict(
     :type parallel: bool, optional
     :param reuse_point_zarr: If true the point.zarr specified in point_name is reused.
     :type reuse_point_zarr: bool, optional
-    :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files., defaults to False
-    :type overwrite: bool, optional
 
     :return: Holography holog object.
     :rtype: AstrohackHologFile
@@ -580,14 +577,12 @@ def generate_holog_obs_dict(
                                                      point_name,
                                                      data_column,
                                                      parallel,
-                                                     reuse_point_zarr,
-                                                     overwrite)
+                                                     reuse_point_zarr, 
+                                                     False)
     input_params = extract_holog_parms.copy()
     
     check_if_file_exists(fname, extract_holog_parms['ms_name'])
-    check_if_file_will_be_overwritten(fname, extract_holog_parms['holog_name'], extract_holog_parms['overwrite'])
-    check_if_file_will_be_overwritten(fname, extract_holog_parms['point_name'], extract_holog_parms['overwrite'])
-        
+           
     ############# Exstract pointing infromation and save to point.zarr #############
     if extract_holog_parms["reuse_point_zarr"]:
         try:
@@ -598,6 +593,7 @@ def generate_holog_obs_dict(
             pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'],
                                          parallel=extract_holog_parms['parallel'])
     else:
+        check_if_file_will_be_overwritten(fname, extract_holog_parms['point_name'], True)
         pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'],
                                      parallel=extract_holog_parms['parallel'])
 
