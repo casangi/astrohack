@@ -577,14 +577,11 @@ def generate_holog_obs_dict(
                                                      point_name,
                                                      data_column,
                                                      parallel,
-                                                     reuse_point_zarr,
-                                                     overwrite)
+                                                     reuse_point_zarr)
     input_params = extract_holog_parms.copy()
     
     check_if_file_exists(fname, extract_holog_parms['ms_name'])
-    
-    check_if_file_will_be_overwritten(fname, extract_holog_parms['point_name'], extract_holog_parms['overwrite'])
-        
+           
     ############# Exstract pointing infromation and save to point.zarr #############
     if extract_holog_parms["reuse_point_zarr"]:
         try:
@@ -595,6 +592,7 @@ def generate_holog_obs_dict(
             pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'],
                                          parallel=extract_holog_parms['parallel'])
     else:
+        check_if_file_will_be_overwritten(fname, extract_holog_parms['point_name'], true)
         pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'],
                                      parallel=extract_holog_parms['parallel'])
 
