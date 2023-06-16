@@ -1,6 +1,6 @@
 from shapely import Polygon, Point
 from shapely.plotting import plot_polygon
-from astrohack._classes.base_panel import BasePanel, panel_models, icorpara
+from astrohack._utils._panel_classes.base_panel import BasePanel, panel_models, icorpara
 
 
 class PolygonPanel(BasePanel):

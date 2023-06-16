@@ -68,8 +68,8 @@ autoapi_root = '_api/autoapi'
 autoapi_options = ['show-module-summary']
 autoapi_template_dir = '_templates'
 autoapi_keep_files = True
-autoapi_ignore = ['*/_classes/*','*/_utils/*','*/visualization/*','*/__pycache__/*']
-#autoapi_ignore = ['*/_classes/*','*/_utils/*','*/docs/*','*/visualization/*','*/__pycache__/*']
+autoapi_ignore = ['*/_panel_classes/*','*/_utils/*','*/visualization/*','*/__pycache__/*']
+#autoapi_ignore = ['*/_panel_classes/*','*/_utils/*','*/docs/*','*/visualization/*','*/__pycache__/*']
 
 # Napoleon settings
 #napoleon_google_docstring = True

@@ -1,5 +1,5 @@
 import pytest
-from astrohack._classes.telescope import Telescope, _find_cfg_file, tel_data_path
+from astrohack._utils._panel_classes.telescope import Telescope, _find_cfg_file, tel_data_path
 import os
 import filecmp
 import shutil

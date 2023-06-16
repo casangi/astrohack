@@ -3,8 +3,8 @@ from matplotlib import pyplot as plt
 from matplotlib import colormaps as cmaps
 from matplotlib import patches
 
-from astrohack._classes.base_panel import panel_models, irigid
-from astrohack._classes.ring_panel import RingPanel
+from astrohack._utils._panel_classes.base_panel import panel_models, irigid
+from astrohack._utils._panel_classes.ring_panel import RingPanel
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
