@@ -21,7 +21,7 @@ def teardown():
     pass
 
 def test_import_astrohack_client():
-  "Import astrohack_client"
+    """ Import astrohack_client """
     try:
         from astrohack.astrohack_client import astrohack_local_client
     except ImportError:
