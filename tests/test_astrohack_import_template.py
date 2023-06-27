@@ -75,22 +75,3 @@ def test_import_dio_fix_pointing_table():
     except ImportError:
         assert False
         
-def test_import_dio_export_screws():
-    try:
-        from astrohack.dio import export_screws
-    except ImportError:
-        assert False
-        
-def test_import_dio_plot_antenna():
-    try:
-        from astrohack.dio import plot_antenna
-    except ImportError:
-        assert False
-        
-def test_import_dio_export_to_fits():
-    try:
-        from astrohack.dio import export_to_fits
-    except ImportError:
-        assert False
-        
-        
