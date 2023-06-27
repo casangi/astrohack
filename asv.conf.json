@@ -4,19 +4,19 @@
     "version": 1,
 
     // The name of the project being benchmarked
-    "project": "project",
+    "project": "astrohack",
 
     // The project's homepage
-    "project_url": "http://project-homepage.org/",
+    "project_url": "https://astrohack.readthedocs.io/en/latest/",
 
     // The URL or local path of the source code repository for the
     // project being benchmarked
-    "repo": ".",
+    "repo": "https://github.com/casangi/astrohack.git",
 
     // The Python project's subdirectory in your repo.  If missing or
     // the empty string, the project is assumed to be located at the root
     // of the repository.
-    // "repo_subdir": "",
+    // "repo_subdir": "src/astrohack",
 
     // Customizable commands for building, installing, and
     // uninstalling the project. See asv.conf.json documentation.
@@ -27,11 +27,16 @@
     //     "python setup.py build",
     //     "PIP_NO_BUILD_ISOLATION=false python -mpip wheel --no-deps --no-index -w {build_cache_dir} {build_dir}"
     // ],
+    "install_command": ["python -m pip install {wheel_file}"],
+    "build_command": [
+	"python -m pip install --upgrade pip",
+	"python -m pip wheel -w {build_cache_dir} {build_dir}"],
 
     // List of branches to benchmark. If not provided, defaults to "master"
     // (for git) or "default" (for mercurial).
     // "branches": ["master"], // for git
     // "branches": ["default"],    // for mercurial
+    "branches": ["main"],
 
     // The DVCS being used.  If not set, it will be automatically
     // determined from "repo" by looking at the protocol in the URL
@@ -52,10 +57,12 @@
 
     // the base URL to show a commit for the project.
     // "show_commit_url": "http://github.com/owner/project/commit/",
+    "show_commit_url": "https://github.com/casangi/astrohack/commit/",
 
     // The Pythons you'd like to test against.  If not provided, defaults
     // to the current version of Python used to run `asv`.
     // "pythons": ["2.7", "3.6"],
+    "pythons": ["3.8", "3.9", "3.10"],
 
     // The list of conda channel names to be searched for benchmark
     // dependency packages in the specified order
@@ -93,7 +100,7 @@
     //     "env": {"ENV_VAR_1": ["val1", "val2"]},
     //     "env_nobuild": {"ENV_VAR_2": ["val3", null]},
     // },
-
+        
     // Combinations of libraries/python versions can be excluded/included
     // from the set to test. Each entry is a dictionary containing additional
     // key-value pairs to include/exclude.
