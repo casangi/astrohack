@@ -37,6 +37,10 @@ def set_data(tmp_path_factory):
   astrohack.gdown_utils.download(file='extract_holog_verification.json', folder=str(data_dir))
   astrohack.gdown_utils.download(file='holog_numerical_verification.json', folder=str(data_dir))
 
+  # Download holog mds files
+  astrohack.gdown_utils.download(file='alma-test', folder=str(data_dir), unpack=True)
+  astrohack.gdown_utils.download(file='vla-test', folder=str(data_dir), unpack=True)
+
   return data_dir
 
 def verify_panel_positions(
@@ -142,9 +146,9 @@ def verify_holog_diagnostics(cell_size, grid_size, number_of_digits=7):
 
 def test_holog_obs_dict(set_data):
     before_ms = str(set_data/"".join((base_name,"before_fixed.split.ms")))
-    before_holog = str(set_data/"vla.before.split.holog.zarr")
+    before_holog = str(set_data/"test_vla.before.split.holog.zarr")
     after_ms =  str(set_data/"".join((base_name, "after_fixed.split.ms")))
-    after_holog = str(set_data/"vla.after.split.holog.zarr")
+    after_holog = str(set_data/"test_vla.after.split.holog.zarr")
 
     with open(str(set_data/"extract_holog_verification.json")) as file:
       holog_obs_dict = json_dict = json.load(file)
@@ -174,7 +178,7 @@ def test_holog_obs_dict(set_data):
     assert verify_holog_obs_dictionary(holog_obs_dict["vla"]["after"])
 
     alma_ms = str(set_data/"J1924-2914.ms.calibrated.split.SPW3")
-    alma_holog = str(set_data/"alma.split.holog.zarr")
+    alma_holog = str(set_data/"test_alma.split.holog.zarr")
 
     extract_holog(
       ms_name=alma_ms,
