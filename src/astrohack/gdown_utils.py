@@ -70,10 +70,11 @@ def download(file, folder='.', unpack=False):
             gdown.download(url, fullname)
 
         # Unpack results
-        if unpack: shutil.unpack_archive(filename=fullname, extract_dir=folder)
-        
-        # Let's clean up after ourselves
-        os.remove(fullname)
+        if unpack: 
+            shutil.unpack_archive(filename=fullname, extract_dir=folder)
+
+            # Let's clean up after ourselves
+            os.remove(fullname)
         
 
 def gdown_data(ms_name, download_folder='.'):
