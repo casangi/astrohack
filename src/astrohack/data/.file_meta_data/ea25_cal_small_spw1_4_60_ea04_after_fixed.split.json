@@ -15,5 +15,5 @@
     "dec": "+16.08.53.56089",
     "epoch": "J2000",  
     "corrs":"RR RL LR LL",
-    "notes":"ant_ea25 panels shifted."
+    "notes":"The pointing table for this measurement set has been corrected => for all reference antennas, pointing_offset=0; target=direction. In addition, this file has been split, including the pointing table, to include only antennas ea04, ea25, ea06"
 }

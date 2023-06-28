@@ -1,0 +1,19 @@
+{
+    "observer": "Bryan Butler",
+    "project": "uid://evla/pdb/4538748",
+    "elapsed time": "10791 seconds",
+    "observed": "20-Sep-2022/01:28:37.0 to 20-Sep-2022/04:28:28.0 (UTC)",
+    "spwID": 0,
+    "name": "X0000000000#ALMA_RB_03#BB_4#SW-01#FULL_RES",
+    "channels": 64,
+    "frame":"TOPO",
+    "chan0": 109010.2,  
+    "chan-width": 31250.0,
+    "total-bandwidth": 2000000.0,
+    "center-frequency": 109994.575,
+    "ra": "19:24:51.055956",
+    "dec": "-29.14.30.12106",
+    "epoch": "ICRS", 
+    "corrs":"XX XY YX YY",
+    "notes":"The pointing table for this measurement set has been corrected => for all reference antennas, pointing_offset=0; target=direction. In addition, this file has been split, including the pointing table, to include only antennas ea04, ea25, ea06"
+}

@@ -1,20 +1,19 @@
 import os
-import dask
 import shutil
 
-import numpy as np
-
-from astrohack._classes.base_panel import panel_models
-from astrohack._utils._io import _aips_holog_to_xds, check_if_file_will_be_overwritten, check_if_file_exists, _write_meta_data
+from astrohack._utils._panel_classes.base_panel import panel_models
+from astrohack._utils._dio import _aips_holog_to_xds, check_if_file_will_be_overwritten, check_if_file_exists, _write_meta_data
 from astrohack._utils._panel import _panel_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._parm_utils._check_parms import _check_parms
-from astrohack._utils._utils import _remove_suffix
+from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
+from astrohack._utils._tools import _remove_suffix
+from astrohack._utils._dask_graph_tools import _dask_general_compute
 
-from astrohack._utils._dio import AstrohackPanelFile
+from astrohack._utils._mds import AstrohackPanelFile, AstrohackImageFile
 
 
-def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margins=0.2, parallel=False, sel_ddi=None, overwrite=False):
+def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margins=0.2, ant_id=None, ddi=None,
+          parallel=False, overwrite=False):
     """Analyze holography images to derive panel adjustments
 
     :param image_name: Input holography data file name. Accepted data formats are the output from ``astrohack.holog.holog`` and AIPS holography data prepackaged using ``astrohack.panel.aips_holog_to_astrohack``.
@@ -27,10 +26,12 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     :type panel_model: str, optional
     :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.2.
     :type panel_margins: float, optional
+    :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None, ex. ea25
+    :type ant_id: list or str, optional
+    :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
+    :type ddi: list or int, optional
     :param parallel: Run in parallel. Defaults to False.
     :type parallel: bool, optional
-    :param sel_ddi: List of DDIs to be processed. None will use all DDIs. Defaults to None.
-    :type sel_ddi: list, optional, ex. [ddi_0 ... ddi_N]
     :param overwrite: Overwrite files on disk. Defaults to False.
     :type overwrite: bool, optional
 
@@ -89,55 +90,33 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     """
     
     logger = _get_astrohack_logger()
-    
-    panel_params = _check_panel_parms(image_name, panel_name, cutoff, panel_model, panel_margins, parallel, sel_ddi,
-                                      overwrite)
+    fname = 'panel'
+    panel_params = _check_panel_parms(fname, image_name, panel_name, cutoff, panel_model, panel_margins, ant_id, ddi,
+                                      parallel, overwrite)
     input_params = panel_params.copy()
-          
-    check_if_file_exists(panel_params['image_name'])
-    check_if_file_will_be_overwritten(panel_params['panel_name'], panel_params['overwrite'])
+    # Doubled this entry for compatibility with the factorized antenna ddi loop
+    panel_params['filename'] = panel_params['image_name']
+    check_if_file_exists(fname, panel_params['image_name'])
+    image_mds = AstrohackImageFile(panel_params['image_name'])
+    image_mds._open()
+    check_if_file_will_be_overwritten(fname, panel_params['panel_name'], panel_params['overwrite'])
 
     if os.path.exists(panel_params['image_name']+'/.aips'):
         panel_params['origin'] = 'AIPS'
         _panel_chunk(panel_params)
 
     else:
-        panel_chunk_params = panel_params
-        panel_chunk_params['origin'] = 'astrohack'
-        delayed_list = []
-
-        antennae = os.listdir(panel_chunk_params['image_name'])
-        count = 0
-        for antenna in antennae:
-            if 'ant_' in antenna:
-                panel_chunk_params['antenna'] = antenna
-                
-                if panel_chunk_params['sel_ddi'] == "all":
-                    panel_chunk_params['sel_ddi'] = os.listdir(panel_chunk_params['image_name']+'/'+antenna)
-
-                for ddi in panel_chunk_params['sel_ddi']:
-                    if 'ddi_' in ddi:
-                        logger.info(f"Processing {ddi} for {antenna}")
-                        panel_chunk_params['ddi'] = ddi
-                        if parallel:
-                            delayed_list.append(dask.delayed(_panel_chunk)(dask.delayed(panel_chunk_params)))
-                        else:
-                            _panel_chunk(panel_chunk_params)
-                        count += 1
-        if parallel:
-            dask.compute(delayed_list)
-
-        if count == 0:
-            logger.warning("No data to process")
-            return None
-        else:
-            logger.info("Panel finished processing")
-
-            output_attr_file = "{name}/{ext}".format(name=panel_chunk_params['panel_name'], ext=".panel_attr")
+        panel_params['origin'] = 'astrohack'
+        if _dask_general_compute(fname, image_mds, _panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
+            logger.info(f"[{fname}]: Finished processing")
+            output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_attr")
             _write_meta_data('panel', output_attr_file, input_params)
-            panel_mds = AstrohackPanelFile(panel_chunk_params['panel_name'])
-            panel_mds.open()
+            panel_mds = AstrohackPanelFile(panel_params['panel_name'])
+            panel_mds._open()
             return panel_mds
+        else:
+            logger.warning(f"[{fname}]: No data to process")
+            return None
 
 
 def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, overwrite=False):
@@ -146,7 +125,7 @@ def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, ov
 
     This function reads amplitude and deviation FITS files produced by AIPS's HOLOG task and transfers their data onto a
     .image.zarr file that can be read by panel.
-    Most of the meta data can be inferred from the FITS headers, but it remains necessary to specify the telescope name
+    Most of the metadata can be inferred from the FITS headers, but it remains necessary to specify the telescope name
     to be included on the .image.zarr file
 
     Args:
@@ -169,19 +148,23 @@ def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, ov
     aips_mark.close()
 
 
-def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, panel_margins, parallel, sel_ddi, overwrite):
+def _check_panel_parms(fname, image_name, panel_name, cutoff, panel_kind, panel_margins, ant_id, ddi, parallel,
+                       overwrite):
     """
     Tests inputs to panel function
     Args:
+        fname: Caller's name
         image_name: Input holography data, can be from astrohack.holog, but also preprocessed AIPS data
         panel_name: Name for the output directory structure containing the products
 
         cutoff: Cut off in amplitude for the physical deviation fitting, None means 20%
         panel_kind: Type of fitting function used to fit panel surfaces, defaults to corotated_paraboloid for ringed
                     telescopes
+        ant_id: Which Antennae are to be processed by panel, None means all of them
+        ddi: Which DDIs are to be processed by panel, None means all of them
         parallel: Run chunks of processing in parallel
         panel_margins: Margin to be ignored at edges of panels when fitting
-        sel_ddi: Which DDIs are to be processed by panel, None means all of them
+
         overwrite: Overwrite previous hack_file of same name?
     """
 
@@ -191,29 +174,31 @@ def _check_panel_parms(image_name, panel_name, cutoff, panel_kind, panel_margins
                     'panel_kind': panel_kind,
                     'panel_margins': panel_margins,
                     'parallel': parallel,
-                    'sel_ddi': sel_ddi,
+                    'ddi': ddi,
+                    'ant': ant_id,
                     'overwrite': overwrite
                     }
                           
     #### Parameter Checking ####
-    logger = _get_astrohack_logger()
-    parms_passed = True
-    
-    parms_passed = parms_passed and _check_parms(panel_params, 'image_name', [str], default=None)
+
+    parms_passed = _check_parms(fname, panel_params, 'image_name', [str], default=None)
     base_name = _remove_suffix(panel_params['image_name'], '.image.zarr')
     base_name = _remove_suffix(base_name, '.combine.zarr')
-    parms_passed = parms_passed and _check_parms(panel_params, 'panel_name', [str], default=base_name+'.panel.zarr')
-    parms_passed = parms_passed and _check_parms(panel_params, 'cutoff', [float], acceptable_range=[0, 1], default=0.2)
-    parms_passed = parms_passed and _check_parms(panel_params, 'panel_kind', [str], acceptable_data=panel_models, default="rigid")
-    parms_passed = parms_passed and _check_parms(panel_params, 'panel_margins', [float], acceptable_range=[0, 0.5], default=0.2)
-    parms_passed = parms_passed and _check_parms(panel_params, 'parallel', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(panel_params, 'sel_ddi', [list, np.array], list_acceptable_data_types=[int, np.int], default='all')
-    parms_passed = parms_passed and _check_parms(panel_params, 'overwrite', [bool], default=False)
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_name', [str],
+                                                 default=base_name+'.panel.zarr')
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'ant', [list, str],
+                                                 list_acceptable_data_types=[str], default='all')
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'ddi', [list, int],
+                                                 list_acceptable_data_types=[int], default='all')
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'cutoff', [float], acceptable_range=[0, 1],
+                                                 default=0.2)
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_kind', [str], acceptable_data=panel_models,
+                                                 default="rigid")
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_margins', [float],
+                                                 acceptable_range=[0, 0.5], default=0.2)
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'parallel', [bool], default=False)
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'overwrite', [bool], default=False)
 
-    if not parms_passed:
-        logger.error("panel parameter checking failed.")
-        raise Exception("panel parameter checking failed.")
-    
+    _parm_check_passed(fname, parms_passed)
+
     return panel_params
-
-

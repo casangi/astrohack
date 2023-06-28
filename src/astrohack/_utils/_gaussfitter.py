@@ -1,6 +1,6 @@
 """
 ===========
-gaussfitter
+_gaussfitter
 ===========
 .. codeauthor:: Adam Ginsburg <adam.g.ginsburg@gmail.com> 3/17/08
 

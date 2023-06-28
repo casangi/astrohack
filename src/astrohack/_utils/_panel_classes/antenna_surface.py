@@ -1,22 +1,22 @@
-import numpy as np
 import xarray as xr
 from matplotlib import pyplot as plt
 from matplotlib import colormaps as cmaps
+from matplotlib import patches
 
-from astrohack._classes.base_panel import panel_models, irigid
-from astrohack._classes.ring_panel import RingPanel
+from astrohack._utils._panel_classes.base_panel import panel_models, irigid
+from astrohack._utils._panel_classes.ring_panel import RingPanel
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._utils import _add_prefix, _well_positioned_colorbar
+from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar, _axis_to_fits_header, _resolution_to_fits_header
+from astrohack._utils._dio import _write_fits
 
 lnbr = "\n"
-figsize = [5, 4]
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, panel_margins=None, reread=False):
+    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, nan_out_of_bounds=True, panel_margins=None, reread=False):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -26,6 +26,7 @@ class AntennaSurface:
                     defaults to 20% if None
             pmodel: model of panel surface fitting, if is None defaults to telescope default
             crop: Crop apertures to slightly larger frames than the antenna diameter
+            nan_out_of_bounds: Should the region outside the dish be replaced with NaNs?
             panel_margins: Margin to be ignored at edges of panels when fitting, defaults to 20% if None
             reread: Read a previously processed holography
         """
@@ -59,9 +60,10 @@ class AntennaSurface:
             else:
                 self.deviation = self._phase_to_deviation(self.phase)
 
-            self.phase = self._nan_out_of_bounds(self.phase)
-            self.amplitude = self._nan_out_of_bounds(self.amplitude)
-            self.deviation = self._nan_out_of_bounds(self.deviation)
+            if nan_out_of_bounds:
+                self.phase = self._nan_out_of_bounds(self.phase)
+                self.amplitude = self._nan_out_of_bounds(self.amplitude)
+                self.deviation = self._nan_out_of_bounds(self.deviation)
 
     def _read_aips_xds(self, inputxds):
         self.amplitude = np.flipud(inputxds["AMPLITUDE"].values)
@@ -73,6 +75,7 @@ class AntennaSurface:
         self.v_axis = inputxds.v.values
         self.computephase = True
         self.processed = False
+        self.resolution = None
 
     def _read_holog_xds(self, inputxds):
         if 'chan' in inputxds.dims:
@@ -91,6 +94,14 @@ class AntennaSurface:
         self.v_axis = inputxds.v_prime.values * self.wavelength
         self.computephase = False
 
+        try:
+            self.resolution = inputxds.attrs['aperture_resolution']
+        except KeyError:
+            logger = _get_astrohack_logger()
+            logger.warning("[_read_holog_xds] holog image does not have resolution information")
+            logger.warning("[_read_holog_xds] Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+            self.resolution = None
+
     def _read_panel_xds(self, inputxds):
         self.wavelength = inputxds.attrs['wavelength']
         self.amp_unit = inputxds.attrs['amp_unit']
@@ -107,6 +118,13 @@ class AntennaSurface:
         self.u_axis = inputxds.u.values
         self.v_axis = inputxds.u.values
         self.panel_distribution = inputxds['PANEL_DISTRIBUTION'].values
+        try:
+            self.resolution = inputxds.attrs['aperture_resolution']
+        except KeyError:
+            logger = _get_astrohack_logger()
+            logger.warning("[_read_panel_xds] Input panel file does not have resolution information")
+            logger.warning("[_read_panel_xds] Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+            self.resolution = None
 
         if self.solved:
             self.phase_residuals = inputxds['PHASE_RESIDUALS'].values
@@ -182,7 +200,7 @@ class AntennaSurface:
         Returns:
             The proper label for the panel at iring, ipanel
         """
-        return '{0:d}-{1:2d}'.format(iring+1, ipanel+1)
+        return '{0:d}-{1:d}'.format(iring+1, ipanel+1)
 
     def _alma_panel_labeling(self, iring, ipanel):
         """
@@ -445,7 +463,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.print_misc()
 
-    def plot_mask(self, basename, screws=False, colormap=None, figuresize=None, dpi=300):
+    def plot_mask(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, caller='panel', display=True):
         """
         Plot mask used in the selection of points to be fitted
         Args:
@@ -454,13 +472,16 @@ class AntennaSurface:
             colormap: Colormap for amplitude plot
             figuresize: 2 element array with the image sizes in inches
             dpi: Plot resolution
+            caller: Which mds called this plotting function
+            display: display plot inline in notebook
         """
         plotmask = np.where(self.mask, 1, np.nan)
         plotname = _add_prefix(basename, 'mask')
         self._plot_map(plotname, plotmask, 'Mask', 0, 1, None, screws=screws, colormap=colormap, figuresize=figuresize,
-                       dpi=dpi, colorbar=False)
+                       dpi=dpi, colorbar=False, caller=caller, display=display)
 
-    def plot_amplitude(self, basename, screws=False, colormap=None, figuresize=None, dpi=300):
+    def plot_amplitude(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, caller='panel',
+                       display=True):
         """
         Plot Amplitude map
         Args:
@@ -469,14 +490,17 @@ class AntennaSurface:
             colormap: Colormap for amplitude plot
             figuresize: 2 element array with the image sizes in inches
             dpi: Plot resolution
+            caller: Which mds called this plotting function
+            display: display plot inline in notebook
         """
         vmin, vmax = np.nanmin(self.amplitude), np.nanmax(self.amplitude)
-        title = "Amplitude min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
+        title = "Amplitude, min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
         plotname = _add_prefix(basename, 'amplitude')
         self._plot_map(plotname, self.amplitude, title, vmin, vmax, self.amp_unit, screws=screws, colormap=colormap,
-                       figuresize=figuresize, dpi=dpi)
+                       figuresize=figuresize, dpi=dpi, caller=caller, display=display)
 
-    def plot_phase(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None):
+    def plot_phase(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None, caller='panel',
+                   display=True):
         """
         Plot phase map(s)
         Args:
@@ -486,20 +510,28 @@ class AntennaSurface:
             figuresize: 2 element array with the image sizes in inches
             dpi: Plot resolution
             unit: Angle unit for plot(s)
+            caller: Which mds called this plotting function
+            display: display plot inline in notebook
         """
         if unit is None:
             unit = 'deg'
         fac = _convert_unit('rad', unit, 'trigonometric')
         prefix = 'phase'
-        if self.residuals is None:
+        if caller == 'image':
+            prefix = 'corrected'
             maps = [self.phase]
-            labels = ['original']
+            labels = ['phase']
         else:
-            maps = [self.phase, self.phase_corrections, self.phase_residuals]
-            labels = ['original', 'corrections', 'residuals']
-        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi)
+            if self.residuals is None:
+                maps = [self.phase]
+                labels = ['original']
+            else:
+                maps = [self.phase, self.phase_corrections, self.phase_residuals]
+                labels = ['original', 'correction', 'residual']
+        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller, display)
 
-    def plot_deviation(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None):
+    def plot_deviation(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None, caller='panel',
+                       display=True):
         """
         Plot deviation map(s)
         Args:
@@ -509,21 +541,24 @@ class AntennaSurface:
             figuresize: 2 element array with the image sizes in inches
             dpi: Plot resolution
             unit: Length unit for plot(s)
+            caller: Which mds called this plotting function
+            display: display plot inline in notebook
         """
         if unit is None:
             unit = 'mm'
         fac = _convert_unit('m', unit, 'length')
         prefix = 'deviation'
+        rms = self.get_rms(unit=unit)
         if self.residuals is None:
             maps = [self.deviation]
-            labels = ['original']
+            labels = [f'original RMS={rms:.2f} {unit}']
         else:
             maps = [self.deviation, self.corrections, self.residuals]
-            labels = ['original', 'corrections', 'residuals']
-        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi)
+            labels = [f'original RMS={rms[0]:.2f} {unit}', 'correction', f'residual RMS={rms[1]:.2f} {unit}']
+        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller, display)
 
     def _multi_plot(self, maps, labels, prefix, basename, unit, conversion, screws, colormap=None, figuresize=None,
-                    dpi=300):
+                    dpi=300, caller='panel', display=True):
         if len(maps) != len(labels):
             raise Exception('Map list and label list must be of the same size')
         nplots = len(maps)
@@ -531,12 +566,13 @@ class AntennaSurface:
         vmin = -vmax
         for iplot in range(nplots):
             title = f'{prefix.capitalize()} {labels[iplot]}'
-            plotname = _add_prefix(basename, labels[iplot])
+            plotname = _add_prefix(basename, labels[iplot].split()[0])
             plotname = _add_prefix(plotname, prefix)
-            self._plot_map(plotname, conversion*maps[iplot], title, vmin, vmax, unit, screws=screws, dpi=dpi)
+            self._plot_map(plotname, conversion*maps[iplot], title, vmin, vmax, unit, screws=screws, dpi=dpi,
+                           colormap=colormap, figuresize=figuresize, caller=caller, display=display)
 
     def _plot_map(self, filename, data, title, vmin, vmax, unit, screws=False, colormap=None, figuresize=None, dpi=300,
-                  colorbar=True):
+                  colorbar=True, caller='panel', display=True):
         if colormap is None:
             colormap = 'viridis'
         if figuresize is None:
@@ -547,23 +583,39 @@ class AntennaSurface:
             fig, ax = plt.subplots(1, 1, figsize=figuresize)
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
-        xmin = np.min(self.u_axis)
-        xmax = np.max(self.u_axis)
-        ymin = np.min(self.v_axis)
-        ymax = np.max(self.v_axis)
-        im = ax.imshow(data, cmap=colormap, interpolation="nearest", extent=[xmin, xmax, ymin, ymax],
+        extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
+        im = ax.imshow(data, cmap=colormap, interpolation="nearest", extent=extent,
                        vmin=vmin, vmax=vmax,)
+        self._add_resolution_to_plot(ax, extent)
         if colorbar:
             _well_positioned_colorbar(ax, fig, im, "Z Scale [" + unit + "]")
+        self._add_resolution_to_plot(ax, extent)
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
             panel.plot(ax, screws=screws)
+        fig.suptitle(f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}')
         fig.tight_layout()
-        plt.savefig(filename, dpi=dpi)
-        plt.close()
+        plt.savefig(_add_prefix(filename, caller), dpi=dpi)
+        if not display:
+            plt.close()
 
-    def plot_screw_adjustments(self, filename, unit, threshold=None, colormap=None, figuresize=None, dpi=300):
+    def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
+        lw = 0.5
+        if self.resolution is None:
+            return
+        dx = extent[1]-extent[0]
+        dy = extent[3]-extent[2]
+        center = (extent[0]+xpos*dx, extent[2]+ypos*dy)
+        resolution = patches.Ellipse(center, self.resolution[0], self.resolution[1], angle=0.0, linewidth=lw,
+                                     color='black', zorder=2, fill=False)
+        ax.add_patch(resolution)
+        halfbeam = self.resolution/dy/2
+        ax.axvline(x=center[0], ymin=ypos - halfbeam[1], ymax=ypos + halfbeam[1], color='black', lw=lw / 2)
+        ax.axhline(y=center[1], xmin=xpos - halfbeam[0], xmax=xpos + halfbeam[0], color='black', lw=lw / 2)
+
+    def plot_screw_adjustments(self, filename, unit, threshold=None, colormap=None, figuresize=None, dpi=300,
+                               display=True):
         """
         Plot screw adjustments as circles over a blank canvas with the panel layout
         Args:
@@ -573,6 +625,7 @@ class AntennaSurface:
             colormap: Colormap to display the screw adjustments
             figuresize: 2 element array with the image sizes in inches
             dpi: Resolution in pixels per inch
+            display: display plot inline in notebook
         """
         if colormap is None:
             cmap = cmaps['RdBu_r']
@@ -585,7 +638,7 @@ class AntennaSurface:
         fac = _convert_unit('m', unit, 'length')
         vmax = np.nanmax(np.abs(fac * self.screw_adjustments))
         vmin = -vmax
-        if threshold is None:
+        if threshold is None or threshold == 'None':
             threshold = 0.1*vmax
         else:
             threshold = np.abs(threshold)
@@ -593,12 +646,10 @@ class AntennaSurface:
         fig.suptitle('Screw corrections', y=0.92, fontsize='large')
         ax.set_title(f'\nThreshold = {threshold:.2f} {unit}', fontsize='small')
         # set the limits of the plot to the limits of the data
-        xmin = np.min(self.u_axis)
-        xmax = np.max(self.u_axis)
-        ymin = np.min(self.v_axis)
-        ymax = np.max(self.v_axis)
+        extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
         im = ax.imshow(np.full_like(self.deviation, fill_value=np.nan), cmap=cmap, interpolation="nearest",
-                       extent=[xmin, xmax, ymin, ymax], vmin=vmin, vmax=vmax)
+                       extent=extent, vmin=vmin, vmax=vmax)
+        self._add_resolution_to_plot(ax, extent)
         colorbar = _well_positioned_colorbar(ax, fig, im, "Screw adjustments [" + unit + "]")
         if threshold > 0:
             line = threshold
@@ -612,9 +663,11 @@ class AntennaSurface:
         for ipanel in range(len(self.panels)):
             self.panels[ipanel].plot(ax, screws=False)
             self.panels[ipanel].plot_corrections(ax, cmap, fac*self.screw_adjustments[ipanel], threshold, vmin, vmax)
+        fig.suptitle(f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}')
         fig.tight_layout()
         plt.savefig(filename, dpi=dpi)
-        plt.close()
+        if not display:
+            plt.close()
 
     def _build_panel_data_arrays(self):
         """
@@ -640,12 +693,12 @@ class AntennaSurface:
             filename: ASCII file name/path
             unit: unit for panel screw adjustments ['mm','miliinches']
         """
-        outfile = "Screw adjustments for {0:s} {1:s} antenna\n".format(self.telescope.name, self.antenna_name)
-        outfile += "Adjustments are in " + unit + 2*lnbr
-        outfile += "Lower means away from subreflector" + lnbr
-        outfile += "Raise means toward the subreflector" + lnbr
-        outfile += "LOWER the panel if the number is POSITIVE" + lnbr
-        outfile += "RAISE the panel if the number is NEGATIVE" + lnbr
+        outfile =  "# Screw adjustments for {0:s} {1:s} antenna\n".format(self.telescope.name, self.antenna_name)
+        outfile += "# Adjustments are in " + unit + 2*lnbr
+        outfile += "# Lower means away from subreflector" + lnbr
+        outfile += "# Raise means toward the subreflector" + lnbr
+        outfile += "# LOWER the panel if the number is POSITIVE" + lnbr
+        outfile += "# RAISE the panel if the number is NEGATIVE" + lnbr
         outfile += 2 * lnbr
         outfile += "{0:16s}".format('Panel')
         nscrews = len(self.telescope.screw_description)
@@ -682,6 +735,7 @@ class AntennaSurface:
         xds.attrs['cutoff'] = self.cut
         xds.attrs['solved'] = self.solved
         xds.attrs['fitted'] = self.fitted
+        xds.attrs['aperture_resolution'] = self.resolution
         xds['AMPLITUDE'] = xr.DataArray(self.amplitude, dims=["u", "v"])
         xds['PHASE'] = xr.DataArray(self.phase, dims=["u", "v"])
         xds['DEVIATION'] = xr.DataArray(self.deviation, dims=["u", "v"])
@@ -709,3 +763,39 @@ class AntennaSurface:
 
         xds = xds.assign_coords(coords)
         return xds
+
+    def export_to_fits(self, basename):
+        """
+        Data to export: Amplitude, mask, phase, phase_corrections, phase_residuals, deviations, deviation_corrections, deviation_residuals
+        conveniently all data are on the same grid!
+        Returns:
+        """
+
+        head = {
+            'PMODEL'  : self.panelmodel,
+            'PMARGIN' : self.panel_margins,
+            'CUTOFF'  : self.cut,
+            'TELESCOP': self.antenna_name,
+            'INSTRUME': self.telescope.name,
+            'WAVELENG': self.wavelength,
+            'FREQUENC': clight/self.wavelength,
+        }
+        head = _axis_to_fits_header(head, self.u_axis, 1, 'X', 'm')
+        head = _axis_to_fits_header(head, self.v_axis, 2, 'Y', 'm')
+        head = _resolution_to_fits_header(head, self.resolution)
+
+        _write_fits(head, 'Amplitude', self.amplitude, _add_prefix(basename, 'amplitude')+'.fits', self.amp_unit,
+                    'panel')
+        _write_fits(head, 'Mask', np.where(self.mask, 1.0, np.nan), _add_prefix(basename, 'mask')+'.fits', '', 'panel')
+        _write_fits(head, 'Original Phase', self.phase, _add_prefix(basename, 'phase_original')+'.fits', 'rad', 'panel')
+        _write_fits(head, 'Phase Corrections', self.phase_corrections,
+                    _add_prefix(basename, 'phase_correction')+'.fits', 'rad', 'panel')
+        _write_fits(head, 'Phase residuals', self.phase_residuals, _add_prefix(basename, 'phase_residual')+'.fits',
+                    'rad', 'panel')
+        _write_fits(head, 'Original Deviation', self.deviation, _add_prefix(basename, 'deviation_original')+'.fits',
+                    'm', 'panel')
+        _write_fits(head, 'Deviation Corrections', self.corrections,
+                    _add_prefix(basename, 'deviation_correction')+'.fits', 'm', 'panel')
+        _write_fits(head, 'Deviation residuals', self.residuals, _add_prefix(basename, 'deviation_residual')+'.fits',
+                    'm', 'panel')
+

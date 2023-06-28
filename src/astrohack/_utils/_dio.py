@@ -1,382 +1,616 @@
 import os
+import json
+import zarr
+import copy
+import datetime
+import shutil
 import numpy as np
-from astrohack._utils._io import _load_image_xds
-from prettytable import PrettyTable
+import xarray as xr
+
+from astropy.io import fits
+from astrohack import __version__ as code_version
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._io import _read_meta_data
-from astrohack._utils._io import _load_holog_file
-from astrohack._utils._io import _load_image_file
-from astrohack._utils._io import _load_panel_file
-from astrohack._utils._io import _load_point_file
+from astrohack._utils._tools import _numpy_to_json, _add_prefix
 
-from astrohack._classes.antenna_surface import AntennaSurface
-from astrohack._classes.telescope import Telescope
+DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 
-class AstrohackDataFile:
-    def __init__(self, file_stem, path='./'):
-                        
-        self._image_path = None
-        self._holog_path = None
-        self._panel_path = None
-        self._point_path = None
+def check_if_file_exists(caller, file):
+    logger = _get_astrohack_logger()
 
-        self.holog = None
-        self.image = None
-        self.panel = None
-        self.point = None
-            
-        self._verify_holog_files(file_stem, path)
-            
+    if os.path.exists(file) is False:
+        logger.error(f'[{caller}]: File {file} does not exists.')
+        raise FileNotFoundError
 
-    def _verify_holog_files(self, file_stem, path):
-        logger = _get_astrohack_logger()
-        logger.info("Verifying {stem}.* files in path={path} ...".format(stem=file_stem, path=path))
 
-        file_path = "{path}/{stem}.holog.zarr".format(path=path, stem=file_stem)
-            
-        if os.path.isdir(file_path):
-            logger.info("Found {stem}.holog.zarr directory ...".format(stem=file_stem))
-            
-            self._holog_path = file_path
-            self.holog = AstrohackHologFile(file_path)
+def check_if_file_will_be_overwritten(caller, file, overwrite):
+    logger = _get_astrohack_logger()
+    if (os.path.exists(file) is True) and (overwrite is False):
+        logger.error(f'[{caller}]: {file} already exists. To overwite set overwrite to True, or remove current file.')
+        raise FileExistsError
+        
+    elif  (os.path.exists(file) is True) and (overwrite is True):
+        if file.endswith(".zarr"):
+            logger.warning(f'[{caller}]: {file} will be overwritten.')
+            shutil.rmtree(file)
+        else:
+            logger.warning(f'[{caller}]: {file} may not be valid hack file. Check the file name again.')
+            raise Exception(f"IncorrectFileType: {file}")
+
+
+def _load_panel_file(file=None, panel_dict=None, dask_load=True):
+    """ Open panel file.
+
+    Args:
+        file (str, optional): Path to panel file. Defaults to None.
+
+    Returns:
+        bool: Nested dictionary containing panel data xds.
+    """
+    logger = _get_astrohack_logger()
+    panel_data_dict = {}
+
+    if panel_dict is not None:
+            panel_data_dict = panel_dict
+    
+    ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
+    
+    try:
+        for ant in ant_list:
+            if 'ant' in ant:
+                ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
+                panel_data_dict[ant] = {}
                 
-
-        file_path = "{path}/{stem}.image.zarr".format(path=path, stem=file_stem)
-
-        if os.path.isdir(file_path):
-            logger.info("Found {stem}.image.zarr directory ...".format(stem=file_stem))
-            
-            self._image_path = file_path
-            self.image = AstrohackImageFile(file_path)
-
-        file_path = "{path}/{stem}.panel.zarr".format(path=path, stem=file_stem)
-
-        if os.path.isdir(file_path):
-            logger.info("Found {stem}.panel.zarr directory ...".format(stem=file_stem))
-            
-            self._image_path = file_path
-            self.panel = AstrohackPanelFile(file_path)
-
-        file_path = "{path}/{stem}.point.zarr".format(path=path, stem=file_stem)
-
-        if os.path.isdir(file_path):
-            logger.info("Found {stem}.point.zarr directory ...".format(stem=file_stem))
-            
-            self._point_path = file_path
-            self.point = AstrohackPointFile(file_path)
-
-
-class AstrohackImageFile(dict):
-    """
-        Data class for holography image data.
-    """
-    def __init__(self, file):
-        super().__init__()
-        self._meta_data = None
-        self.file = file
-        self._open = False
-
-    def __getitem__(self, key):
-        return super().__getitem__(key)
+                for ddi in ddi_list:
+                    if 'ddi' in ddi:
+                        if dask_load:
+                            panel_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                        else:
+                            panel_data_dict[ant][ddi] = _open_no_dask_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
     
-    def __setitem__(self, key, value):
-        return super().__setitem__(key, value)
-        
-    def is_open(self):
-        return self._open
+    except Exception as e:
+            logger.error(str(e))
+            raise
+    return panel_data_dict
 
-    def open(self, file=None):
+
+def _load_image_file(file=None, image_dict=None,  dask_load=True):
         """ Open hologgraphy file.
-        Args:self =_
+
+        Args:s
             file (str, optional): Path to holography file. Defaults to None.
+
         Returns:
             bool: bool describing whether the file was opened properly
         """
         logger = _get_astrohack_logger()
-        if file is None:
-            file = self.file
+        ant_data_dict = {}
 
-        self._meta_data = _read_meta_data(file, 'image')
+        if image_dict is not None:
+            ant_data_dict = image_dict
 
+        ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
+        
         try:
-            _load_image_file(file, image_dict=self)
-
-            self._open = True
+            for ant in ant_list:
+                if 'ant' in ant:
+                    ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
+                    ant_data_dict[ant] = {}
+                    
+                    for ddi in ddi_list:
+                        if 'ddi' in ddi:
+                            if dask_load:
+                                ant_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                            else:
+                                ant_data_dict[ant][ddi] = _open_no_dask_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
 
         except Exception as e:
-            logger.error("[AstroHackImageFile.open()]: {}".format(e))
-            self._open = False
+            logger.error(str(e))
+            raise
 
-        return self._open
-
-    def summary(self):
-        """
-           Prints summary table of holog image file. 
-        """
-
-        print("Atributes:")
-        for key in self._meta_data.keys():
-            print(f'{key:26s}= {self._meta_data[key]}')
-
-        table = PrettyTable()
-        table.field_names = ["antenna", "ddi"]
-        table.align = "l"
-        
-        for ant in self.keys():
-            table.add_row([ant, list(self[ant].keys())])
-
-        print('\nContents:')
-        print(table)
-
-    def select(self, ant=None, ddi=None, polar=False):
-        """Select data on the basis of ddi, scan, ant. This is a convenience function.
-        Args:
-            ddi (int, optional): Data description ID. Defaults to None.
-            ant (int, optional): Antenna ID. Defaults to None.
-        Returns:
-            xarray.Dataset: xarray dataset of corresponding ddi, scan, antenna ID.
-        """
-        logger = _get_astrohack_logger()
-        
-        if ant is None and ddi is None:
-            logger.info("No selections made ...")
-            return self
-        else:
-            if polar:
-                return self[ant][ddi].apply(np.absolute), self[ant][ddi].apply(np.angle, deg=True)
-
-            return self[ant][ddi]
+        return ant_data_dict
 
 
-class AstrohackHologFile(dict):
+def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None, ddi_id=None, holog_dict=None):
+    """Loads holog file from disk
+
+    Args:
+        holog_name (str): holog file name
+
+    Returns:
+
     """
-        Data Class to interact ith holography imaging data.
-    """
-    def __init__(self, file):
-        super().__init__()
-        
-        self.file = file
-        self._meta_data = None
-        self._open = False
-
-    def __getitem__(self, key):
-        return super().__getitem__(key)
     
-    def __setitem__(self, key, value):
-        return super().__setitem__(key, value)
+    logger = _get_astrohack_logger()
+    
+    if holog_dict is None:
+        holog_dict = {}
 
-    def is_open(self):
-        return self._open
+    if load_pnt_dict:
+        logger.info("Loading pointing dictionary to holog ...")
+        holog_dict["pnt_dict"] = _load_point_file(file=holog_file, ant_list=None, dask_load=dask_load)
 
-    def open(self, file=None, dask_load=True):
-        """ Open hologgraphy file.
-        Args:self =_
-            file (str, optional): Path to holography file. Defaults to None.
-            dask_load (bool, optional): If True the file is loaded with Dask. Defaults to True.
-        Returns:
-            bool: bool describing whether the file was opened properly
-        """
-        logger = _get_astrohack_logger()
-
-        if file is None:
-            file = self.file
-
-        self._meta_data = _read_meta_data(file, 'holog')
-
-        try:
-            _load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
-            self._open = True
-
-        except Exception as e:
-            logger.error("[AstrohackHologFile]: {}".format(e))
-            self._open = False
-        
-        return self._open
-
-    def summary(self):
-        """
-            Prints summary table of holog file.
-        """
-        print("Atributes:")
-        for key in self._meta_data.keys():
-            if key == 'n_pix':
-                n_side = int(np.sqrt(self._meta_data[key]))
-                print(f'{key:26s}= {n_side:d} x {n_side:d}')
+    for ddi in os.listdir(holog_file):
+        if "ddi_" in ddi:
+            
+            if ddi_id is None:
+                if ddi not in holog_dict:
+                    holog_dict[ddi] = {}
             else:
-                print(f'{key:26s}= {self._meta_data[key]}')
-        table = PrettyTable()
-        table.field_names = ["ddi", "map", "antenna"]
-        table.align = "l"
-        
-        for ddi in self.keys():
-            for scan in self[ddi].keys():
-                table.add_row([ddi, scan, list(self[ddi][scan].keys())])
-        print('\nContents:')
-        print(table)
+                if ddi == ddi_id:
+                    holog_dict[ddi] = {}
+                else:
+                    continue
+                
+            for holog_map in os.listdir(os.path.join(holog_file, ddi)):
+                if "map_" in holog_map:
+                    if holog_map not in holog_dict[ddi]:
+                        holog_dict[ddi][holog_map] = {}
+                    for ant in os.listdir(os.path.join(holog_file, ddi + "/" + holog_map)):
+                        if "ant_" in ant:
+                            if (ant_id is None) or (ant_id in ant):
+                                mapping_ant_vis_holog_data_name = os.path.join(
+                                    holog_file, ddi + "/" + holog_map + "/" + ant
+                                )
 
-    def select(self, ddi=None, scan=None, ant=None):
-        """ Select data on the basis of ddi, scan, ant. This is a convenience function.
-        Args:
-            ddi (int, optional): Data description ID. Defaults to None.
-            scan (int, optional): Scan number. Defaults to None.
-            ant (int, optional): Antenna ID. Defaults to None.
-        Returns:
-            xarray.Dataset: xarray dataset of corresponding ddi, scan, antenna ID.
-        """
-        logger = _get_astrohack_logger()
+                                if dask_load:
+                                    holog_dict[ddi][holog_map][ant] = xr.open_zarr(
+                                        mapping_ant_vis_holog_data_name
+                                    )
+                                else:
+                                    holog_dict[ddi][holog_map][ant] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
+    
+    if ant_id is None:
+        return holog_dict
         
-        if ant is None or ddi is None or scan is None:
-            logger.info("No selections made ...")
-            return self
+    return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id, ddi_id=ddi_id)
+
+
+def _read_fits(filename):
+    """
+    Reads a square FITS file and do sanity checks on its dimensionality
+    Args:
+        filename: a string containing the FITS file name/path
+
+    Returns:
+    The FITS header and the associated data array
+    """
+    hdul = fits.open(filename)
+    head = hdul[0].header
+    data = hdul[0].data[0, 0, :, :]
+    hdul.close()
+    if head["NAXIS"] != 1:
+        if head["NAXIS"] < 1:
+            raise Exception(filename + " is not bi-dimensional")
+        elif head["NAXIS"] > 1:
+            for iax in range(2, head["NAXIS"]):
+                if head["NAXIS" + str(iax + 1)] != 1:
+                    raise Exception(filename + " is not bi-dimensional")
+    if head["NAXIS1"] != head["NAXIS2"]:
+        raise Exception(filename + " does not have the same amount of pixels in the x and y axes")
+    return head, data
+
+
+def _write_fits(header, imagetype, data, filename, unit, origin):
+    """
+    Write a dictionary and a dataset to a FITS file
+    Args:
+        header: The dictionary containing the header
+        imagetype: Type to be added to FITS header
+        data: The dataset
+        filename: The name of the output file
+        unit: to be set to bunit
+        origin: Which astrohack mds has created the FITS being written
+    """
+
+    header['BUNIT'] = unit
+    header['TYPE'] = imagetype
+    header['ORIGIN'] = f'Astrohack v{code_version}: {origin}'
+    header['DATE'] = datetime.datetime.now().strftime('%b %d %Y, %H:%M:%S')
+    hdu = fits.PrimaryHDU(data)
+    for key in header.keys():
+        hdu.header.set(key, header[key])
+    hdu.writeto(_add_prefix(filename, origin), overwrite=True)
+    return
+
+
+def _create_destination_folder(caller, destination):
+    """
+    Try to create a folder if it already exists raise a warning
+    Args:
+        caller: Calling function
+        destination: the folder to be created
+    """
+    logger = _get_astrohack_logger()
+    try:
+        os.mkdir(destination)
+    except FileExistsError:
+        logger.warning(f'[{caller}]: Destination folder already exists, results may be overwritten')
+
+
+def _aips_holog_to_xds(ampname, devname):
+    """
+    Read amplitude and deviation FITS files onto a common Xarray dataset
+    Args:
+        ampname: Name of the amplitude FITS file
+        devname: Name of the deviation FITS file
+
+    Returns:
+    Xarray dataset
+    """
+    amphead, ampdata = _read_fits(ampname)
+    devhead, devdata = _read_fits(devname)
+    ampdata = np.flipud(ampdata)
+    devdata = np.flipud(devdata)
+
+    if amphead["NAXIS1"] != devhead["NAXIS1"]:
+        raise Exception(ampname+' and '+devname+' have different dimensions')
+    if amphead["CRPIX1"] != devhead["CRPIX1"] or amphead["CRVAL1"] != devhead["CRVAL1"] \
+            or amphead["CDELT1"] != devhead["CDELT1"]:
+        raise Exception(ampname+' and '+devname+' have different axes descriptions')
+
+    npoint, wavelength = _get_aips_headpars(devhead)
+    u = np.arange(-amphead["CRPIX1"], amphead["NAXIS1"] - amphead["CRPIX1"]) * amphead["CDELT1"]
+    v = np.arange(-amphead["CRPIX2"], amphead["NAXIS2"] - amphead["CRPIX2"]) * amphead["CDELT2"]
+
+    xds = xr.Dataset()
+    xds.attrs['npix'] = amphead["NAXIS1"]
+    xds.attrs['cell_size'] = amphead["CDELT1"]
+    xds.attrs['ref_pixel'] = amphead["CRPIX1"]
+    xds.attrs['ref_value'] = amphead["CRVAL1"]
+    xds.attrs['npoint'] = npoint
+    xds.attrs['wavelength'] = wavelength
+    xds.attrs['amp_unit'] = amphead["BUNIT"].strip()
+    xds.attrs['AIPS'] = True
+    xds.attrs['ant_name'] = amphead["TELESCOP"].strip()
+    xds['AMPLITUDE'] = xr.DataArray(ampdata, dims=["u", "v"])
+    xds['DEVIATION'] = xr.DataArray(devdata, dims=["u", "v"])
+    coords = {"u": u, "v": v}
+    xds = xds.assign_coords(coords)
+    return xds
+
+
+def _get_aips_headpars(head):
+    """
+    Fetch number of points used in holography and wavelength stored by AIPS on a FITS header
+    Args:
+        head: AIPS FITS header
+
+    Returns:
+    npoint, wavelength
+    """
+    npoint = np.nan
+    wavelength = np.nan
+    for line in head["HISTORY"]:
+        wrds = line.split()
+        if wrds[1] == "Visibilities":
+            npoint = np.sqrt(int(wrds[-1]))
+        elif wrds[1] == "Observing":
+            wavelength = float(wrds[-2])
+    return npoint, wavelength
+
+
+def _load_image_xds(file_stem, ant, ddi, dask_load=True):
+    """ Load specific image xds
+
+    Args:
+        file_name (str): File directory
+        ant (int): Antenna ID
+        ddi (int): DDI 
+
+    Raises:
+        FileNotFoundError: FileNotFoundError
+
+    Returns:
+        zarr: zarr image file
+    """
+
+    image_path = "{image}/{ant}/{ddi}".format(image=file_stem, ant=ant, ddi=ddi)
+
+    if os.path.isdir(image_path):
+        if dask_load:
+            return xr.open_zarr(image_path)
         else:
-            return self[ddi][scan][ant]
-
-    @property
-    def meta_data(self):
-        """ Holog file meta data.
-        Returns:
-            JSON: JSON file of holography meta data.
-        """
-
-        return self._meta_data
+            return _open_no_dask_zarr(image_path)
+    else:
+        raise FileNotFoundError("Image file: {} not found".format(image_path))
 
 
-class AstrohackPanelFile(dict):
+def _read_meta_data(file_name, file_type, origin):
+    """Reads dimensional data from holog meta file.
+
+    Args:
+        file_name (str): astorhack file name.
+        file_type (str): astrohack file type
+        origin (str, list): Astrohack expected origin(s)
+
+    Returns:
+        dict: dictionary containing dimension data.
     """
-        Data class for holography panel data.
-    """
-    def __init__(self, file):
-        super().__init__()
-
-        self.file = file
-        self._open = False
-        self._meta_data = None
-
-    def __getitem__(self, key):
-        return super().__getitem__(key)
+    logger = _get_astrohack_logger()
     
-    def __setitem__(self, key, value):
-        return super().__setitem__(key, value)
+    try:
+        with open(f'{file_name}/.{file_type}_attr') as json_file:
+            json_dict = json.load(json_file)
+
+    except Exception as error:
+        logger.error(str(error))
+        raise
         
-    def is_open(self):
-        return self._open
 
-    def open(self, file=None):
-        """ Open panel file.
-        Args:self =_
-            file (str, optional): Path to holography file. Defaults to None.
-        Returns:
-            bool: bool describing whether the file was opened properly
-        """
-        logger = _get_astrohack_logger()
+    try:
+        metadataorigin = json_dict['origin']
+    except KeyError:
+        logger.error("[_read_meta_data]: Badly formatted metadata in input file")
+        raise Exception('Bad metadata')
+    if isinstance(origin, str):
+        if metadataorigin != origin:
+            logger.error(f"[_read_meta_data]: Input file is not an Astrohack {file_type} file")
+            logger.error(f"Expected origin was {origin} but got {metadataorigin}")
+            raise TypeError('Incorrect file type')
+    elif isinstance(origin, (list, tuple)):
+        if metadataorigin not in origin:
+            logger.error(f"[_read_meta_data]: Input file is not an Astrohack {file_type} file")
+            logger.error(f"Expected origin was {origin} but got {metadataorigin}")
+            raise TypeError('Incorrect file type')
 
-        if file is None:
-            file = self.file
+    return json_dict
 
-        self._meta_data = _read_meta_data(file, 'panel')
 
+def _check_mds_origin(file_name, file_type):
+    """
+
+    Args:
+        file_name(str): astrohack file name.
+        file_type(str, list): accepted astrohack file type
+
+    Returns: origin(str) the origin of the mds file
+
+    """
+    logger = _get_astrohack_logger()
+    if isinstance(file_type, str):
+        file_type = [file_type]
+
+    for ftype in file_type:
         try:
-            _load_panel_file(file, panel_dict=self)
-            self._open = True
-        except Exception as e:
-            logger.error("[AstroHackPanelFile.open()]: {}".format(e))
-            self._open = False
+            with open(f'{file_name}/.{ftype}_attr') as json_file:
+                json_dict = json.load(json_file)
+                found = True
+        except FileNotFoundError:
+            found = False
+        if found:
+            break
+    if not found:
+        logger.error("[_check_mds_origin]: metadata not found")
+        raise Exception('Metadata not found')
 
-        return self._open
+    try:
+        metadataorigin = json_dict['origin']
+    except KeyError:
+        logger.error("[_check_mds_origin]: Badly formatted metadata in input file")
+        raise Exception('Bad metadata')
 
-    def summary(self):
-        """
-           Prints summary table of panel image file.
-        """
-
-        print("Atributes:")
-        for key in self._meta_data.keys():
-            print(f'{key:26s}= {self._meta_data[key]}')
-
-        table = PrettyTable()
-        table.field_names = ["antenna", "ddi"]
-        table.align = "l"
-        
-        for ant in self.keys():
-            table.add_row([ant, list(self[ant].keys())])
-
-        print('\nContents:')
-        print(table)
-
-    def get_antenna(self, antenna, ddi):
-        """
-        Return an AntennaSurface object for interaction
-        Args:
-            antenna: Which antenna in to be used
-            ddi: Which ddi is to be used
-        Returns:
-            AntennaSurface object contaning relevant information for panel adjustments
-        """
-        xds = _load_image_xds(self.file, antenna, ddi)
-        telescope = Telescope(xds.attrs['telescope_name'])
-        
-        return AntennaSurface(xds, telescope, reread=True)
+    return metadataorigin
 
 
-class AstrohackPointFile(dict):
+def _write_meta_data(origin, file_name, input_dict):
     """
-        Data Class to interact ith holography pointing data.
+    Creates a metadata dictionary that is compatible with JSON and writes it to a file
+    Args:
+        origin: Which function created the mds
+        file_name: Output json file name
+        input_dict: Dictionary to be included in the metadata
     """
-    def __init__(self, file):
-        super().__init__()
-        
-        self.file = file
-        self._meta_data = None
-        self._open = False
+    logger = _get_astrohack_logger()
+    metadata = {'version': code_version,
+                'origin': origin}
+    for key in input_dict.keys():
+        if type(input_dict[key]) == np.ndarray:
+            try:
+                for item in range(len(input_dict[key])):
+                    newkey = f'{key}_{item}'
+                    metadata[newkey] = _numpy_to_json(input_dict[key][item])
+            except TypeError:
+                if len(input_dict['grid_size'].shape) == 0:
+                    metadata[key] = "None"
+                else:
+                    metadata[key] = input_dict[key]
+        elif input_dict[key] is None:
+            metadata[key] = "None"
+        else:
+            metadata[key] = input_dict[key]
+    try:
+        with open(file_name, "w") as json_file:
+            json.dump(metadata, json_file)
+    except Exception as error:
+        logger.error("[_write_meta_data] {error}".format(error=error))
 
-    def __getitem__(self, key):
-        return super().__getitem__(key)
+
+def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
+    """Read holog file meta data and extract antenna based xds information for each (ddi, holog_map)
+
+    Args:
+        holog_file (str): holog file name.
+        holog_dict (dict): holog file dictionary containing msxds data.
+        ant_id (int): Antenna id
+
+    Returns:
+        nested dict: nested dictionary (ddi, holog_map, xds) with xds data embedded in it.
+    """
+    logger = _get_astrohack_logger()
+    ant_id_str = str(ant_id)
     
-    def __setitem__(self, key, value):
-        return super().__setitem__(key, value)
 
-    def is_open(self):
-        return self._open
+    holog_meta_data = "/".join((holog_file, ".holog_json"))
 
-    def open(self, file=None, dask_load=True):
-        """ Open pointing file.
-        Args:self =_
-            file (str, optional): Path to pointing file. Defaults to None.
-            dask_load (bool, optional): If True the file is loaded with Dask. Defaults to True.
-        Returns:
-            bool: bool describing whether the file was opened properly
-        """
-        logger = _get_astrohack_logger()
+    try:
+        with open(holog_meta_data, "r") as json_file:
+            holog_json = json.load(json_file)
 
-        if file is None:
-            file = self.file
+    except Exception as error:
+        logger.error(str(error))
+        raise
 
-        self._meta_data = _read_meta_data(file, 'point')
-        try:
-            _load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
-            self._open = True
+    ant_data_dict = {}
 
-        except Exception as e:
-            logger.error("[AstrohackPointFile]: {}".format(e))
-            self._open = False
+    for ddi in holog_json[ant_id_str].keys():
+        if "ddi_" in ddi:
+            if (ddi_id is not None) and (ddi != ddi_id):
+                continue
+                
+            for holog_map in holog_json[ant_id_str][ddi].keys():
+                if "map_" in holog_map:
+                    ant_data_dict.setdefault(ddi, {})[holog_map] = holog_dict[ddi][holog_map][ant_id]
+
+
+    return ant_data_dict
+
+
+def _open_no_dask_zarr(zarr_name, slice_dict={}):
+    """
+    Alternative to xarray open_zarr where the arrays are not Dask Arrays.
+
+    slice_dict: A dictionary of slice objects for which values to read form a dimension.
+                For example silce_dict={'time':slice(0,10)} would select the first 10 elements in the time dimension.
+                If a dim is not specified all values are returned.
+    return:
+        xarray.Dataset()
+    """
+
+    zarr_group = zarr.open_group(store=zarr_name, mode="r")
+    group_attrs = _get_attrs(zarr_group)
+
+    slice_dict_complete = copy.deepcopy(slice_dict)
+    coords = {}
+    xds = xr.Dataset()
+
+    for var_name, var in zarr_group.arrays():
+        var_attrs = _get_attrs(var)
+
+        for dim in var_attrs[DIMENSION_KEY]:
+            if dim not in slice_dict_complete:
+                slice_dict_complete[dim] = slice(None)  # No slicing.
+
+        if (var_attrs[DIMENSION_KEY][0] == var_name) and (
+            len(var_attrs[DIMENSION_KEY]) == 1
+        ):
+            coords[var_name] = var[
+                slice_dict_complete[var_attrs[DIMENSION_KEY][0]]
+            ]  # Dimension coordinates.
+        else:
+            # Construct slicing
+            slicing_list = []
+            for dim in var_attrs[DIMENSION_KEY]:
+                slicing_list.append(slice_dict_complete[dim])
+            slicing_tuple = tuple(slicing_list)
+            xds[var_name] = xr.DataArray(
+                var[slicing_tuple], dims=var_attrs[DIMENSION_KEY]
+            )
+
+    xds = xds.assign_coords(coords)
+
+    xds.attrs = group_attrs
+    return xds
+
+
+def _load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None):
+    """Load pointing dictionary from disk.
+
+    Args:
+        file (zarr): Input zarr file containing pointing dictionary.
+
+    Returns:
+        dict: Pointing dictionary
+    """
+    if pnt_dict is None:
+        pnt_dict = {}
         
-        return self._open
+    pnt_dict['point_meta_ds'] = xr.open_zarr(file)
 
-    def summary(self):
-        """
-            Prints summary table of pointing file.
-        """
-        print("Atributes:")
-        for key in self._meta_data.keys():
-            print(f'{key:26s}= {self._meta_data[key]}')
+    for ant in os.listdir(file):
+        if "ant_" in ant:
+            if (ant_list is None) or (ant in ant_list):
+                if dask_load:
+                    pnt_dict[ant] = xr.open_zarr(os.path.join(file, ant))
+                else:
+                    pnt_dict[ant] = _open_no_dask_zarr(os.path.join(file, ant))
 
-        table = PrettyTable()
-        table.field_names = ["antenna"]
-        table.align = "l"
-        
-        for ant in self.keys():
-            table.add_row([ant])
+    return pnt_dict
 
-        print('\nContents:')
-        print(table)
+
+def _get_attrs(zarr_obj):
+    """Get attributes of zarr obj (groups or arrays)
+
+    Args:
+        zarr_obj (zarr): a zarr_group object
+
+    Returns:
+        dict: a group of zarr attibutes
+    """
+    return {
+        k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")
+    }
+
+def _print_json(object, indent=6, columns=7):
+  if isinstance(object, list):
+    if indent > 3:
+      list_indent = indent-3
+    else:
+      list_indent = 0
+
+    print("{open}".format(open="[").rjust(list_indent, ' '))
+    _print_array(object, columns=columns, indent=indent+1)
+    print("{close}".format(close="]").rjust(list_indent, ' '))
+
+  else:
+    for key, value in object.items():
+      key_str="{key}{open}".format(key=key, open=":{")
+      print("{key}".format(key=key_str).rjust(indent, ' '))
+      _print_json(value, indent+4, columns=columns)
+      print("{close}".format(close="}").rjust(indent-4, ' '))
+
+def _reshape(array, columns):
+  size = len(array)
+  rows = int(size/columns)
+  if rows <= 0:
+    return 1, 0
+  else:  
+    remainder = size - (rows*columns)
+
+    return rows, remainder
+
+def _print_array(array, columns, indent=4):
+
+  rows, remainder = _reshape(array, columns)
+  
+  if columns > len(array):
+    columns = len(array)
+
+  str_line = ""
+
+  for i in range(rows):
+    temp = []
+    for j in range(columns):
+      k = columns*i + j
+      if j == 0:
+        temp.append("{:>3}".format(array[k]).rjust(indent, ' '))
+      else:
+        temp.append("{:>3}".format(array[k]))
+  
+    str_line += ", ".join(temp)
+    str_line += "\n"
+
+  temp = []
+  if remainder > 0:
+    for i in range(remainder):
+      index = columns*rows + i
+
+      if i == 0:
+        temp.append("{:>3}".format(array[index]).rjust(indent, ' '))
+      else:
+        temp.append("{:>3}".format(array[index]))
+
+    str_line += ", ".join(temp)
+    
+
+  print(str_line)

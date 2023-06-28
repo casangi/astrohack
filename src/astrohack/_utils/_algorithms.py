@@ -178,7 +178,7 @@ def _least_squares_fit(system, vector):
     
     result = fit[0]
     residuals = fit[1]
-    covar = np.matrix(np.dot(system.T, system)).I
+    covar = np.linalg.inv(np.dot(system.T, system))
     variances = np.diagonal(covar)
     
     return result, variances, residuals
@@ -224,8 +224,19 @@ def _get_grid_parms(vis_map_dict,pnt_map_dict, ant_names):
 
 
     return grid_parms
-    
-    
+
+def _significant_digits(x, digits):
+    if np.isscalar(x):
+        return _significant_digits_scalar(x,digits)
+    else:
+        return list(map(_significant_digits,x,[digits]*len(x)))
+
+
+def _significant_digits_scalar(x, digits):
+    if x == 0 or not np.isfinite(x):
+        return x
+    digits = int(digits - np.ceil(np.log10(abs(x))))
+    return round(x, digits)
     
     
 #Does not work

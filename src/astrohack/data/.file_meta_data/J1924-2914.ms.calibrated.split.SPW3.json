@@ -1,0 +1,19 @@
+{
+    "observer": "nsaez",
+    "project": "uid://A002/X19e2e6/X1",
+    "elapsed time": "13088.9 seconds",
+    "observed": "04-Oct-2018/20:40:59.0 to 05-Oct-2018/00:19:08.0",
+    "spwID": 0,
+    "name": "J1924-2914",
+    "channels": 57,
+    "frame":"",
+    "chan0": 14112.0,  
+    "chan-width": 2000.0,
+    "total-bandwidth": 114000,
+    "center-frequency": 14168.0,
+    "ra": "",
+    "dec": "",
+    "epoch": "", 
+    "corrs":"",
+    "notes":"The pointing table for this measurement set has been corrected => for all reference antennas, pointing_offset=0; target=direction. In addition, this file has been split, including the pointing table, to include only antennas DA44 & DV13"
+}

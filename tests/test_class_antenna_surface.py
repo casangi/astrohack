@@ -1,7 +1,6 @@
-import pytest
-from astrohack._classes.antenna_surface import AntennaSurface
-from astrohack._classes.telescope import Telescope
-from astrohack._utils._io import _aips_holog_to_xds
+from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
+from astrohack._utils._panel_classes.telescope import Telescope
+from astrohack._utils._dio import _aips_holog_to_xds
 from astrohack._utils._conversion import _convert_unit
 
 import numpy as np

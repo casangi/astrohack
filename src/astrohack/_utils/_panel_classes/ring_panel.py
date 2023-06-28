@@ -1,7 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from astrohack._classes.base_panel import BasePanel
-from astrohack._utils._constants import twopi
+from astrohack._utils._panel_classes.base_panel import BasePanel
 
 
 class RingPanel(BasePanel):

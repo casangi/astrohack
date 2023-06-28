@@ -19,7 +19,7 @@ from astropy.time import Time
 from astrohack._utils._conversion import convert_dict_from_numba
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
-from astrohack._utils._io import _load_point_file
+from astrohack._utils._dio import _load_point_file
 
 from casacore import tables as ctables
 
@@ -231,8 +231,10 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         map_id = 0
         
         for scan_id, scan_time in ddi.items():
-            _, time_index = time_tree.query(scan_time[:,None])
+            _, time_index = time_tree.query(scan_time[:, None])
+            
             pointing_offset_scan_slice = pnt_xds["POINTING_OFFSET"].isel(time=slice(time_index[0],time_index[1]))
+            
             r = (np.sqrt(pointing_offset_scan_slice.isel(az_el=0)**2 + pointing_offset_scan_slice.isel(az_el=1)**2)).mean()
             
             if r > 10**-12: #Antenna is mapping since lm is non-zero

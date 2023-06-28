@@ -3,9 +3,10 @@ import os
 import xarray as xr
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._io import _load_image_xds
+from astrohack._utils._dio import _load_image_xds
 from scipy.interpolate import griddata
 from astrohack._utils._constants import clight
+from astrohack._utils._tools import _parm_to_list
 
 
 def _combine_chunk(combine_chunk_params):
@@ -15,35 +16,29 @@ def _combine_chunk(combine_chunk_params):
         combine_chunk_params: Param dictionary for combine chunk
     """
     logger = _get_astrohack_logger()
-
-    data_path = combine_chunk_params['image_file']+'/'+combine_chunk_params['antenna']
-    if combine_chunk_params['ddi_list'] == 'all':
-        ddi_list = os.listdir(data_path)
-    else:
-        ddi_list = combine_chunk_params['ddi_list']
+    antenna = combine_chunk_params['this_ant']
+    ddi_dict = combine_chunk_params['image_mds'][antenna]
+    fname = 'combine'
+    ddi_list = _parm_to_list(fname, combine_chunk_params['ddi'], ddi_dict, 'ddi')
+    print("DDI_LIST:", ddi_list)
 
     nddi = len(ddi_list)
-    out_xds_name = combine_chunk_params['combine_file'] + '/' + combine_chunk_params['antenna'] + '/' + ddi_list[0]
+    out_xds_name = '/'.join([combine_chunk_params['combine_file'], antenna, ddi_list[0]])
     if nddi == 0:
-        logger.warning('Nothing to process for ant_id: '+combine_chunk_params['antenna'])
+        logger.warning(f'[{fname}]: Nothing to process for {antenna}')
         return
     elif nddi == 1:
-        logger.info(combine_chunk_params['antenna']+' has a single ddi to be combined, data copied from input file')
-
-        out_xds = _load_image_xds(combine_chunk_params['image_file'],
-                                  combine_chunk_params['antenna'],
-                                  ddi_list[0],
-                                  dask_load=False)
+        logger.info(f'[{fname}]: {antenna} has a single ddi to be combined, data copied from input file')
+        out_xds = ddi_dict[ddi_list[0]]
         out_xds.to_zarr(out_xds_name, mode='w')
     else:
-        out_xds = _load_image_xds(combine_chunk_params['image_file'],
-                                  combine_chunk_params['antenna'],
-                                  ddi_list[0],
-                                  dask_load=False)
+        out_xds = _load_image_xds(combine_chunk_params['image_file'], antenna, ddi_list[0], dask_load=False)
         nddi = len(ddi_list)
         shape = list(out_xds['CORRECTED_PHASE'].values.shape)
         if out_xds.dims['chan'] != 1:
-            raise Exception("Only single channel holographies supported")
+            msg = f'[{fname}]: Only single channel holographies supported'
+            logger.error(msg)
+            raise Exception(msg)
         npol = shape[2]
         npoints = shape[3]*shape[4]
         amp_sum = np.zeros((npol, npoints))
@@ -59,11 +54,8 @@ def _combine_chunk(combine_chunk_params):
         dest_u_axis = u.ravel()
         dest_v_axis = v.ravel()
         for iddi in range(1, nddi):
-            print(iddi)
-            this_xds = _load_image_xds(combine_chunk_params['image_file'],
-                                       combine_chunk_params['antenna'],
-                                       ddi_list[iddi],
-                                       dask_load=False)
+            logger.info(f'[{fname}]: Regridding {antenna} {ddi_list[iddi]}')
+            this_xds = _load_image_xds(combine_chunk_params['image_file'], antenna, ddi_list[iddi], dask_load=False)
             wavelength = clight / this_xds.chan.values[0]
             u, v = np.meshgrid(this_xds.u_prime.values * wavelength, this_xds.v_prime.values * wavelength)
             loca_u_axis = u.ravel()
