@@ -73,8 +73,8 @@ def verify_panel_shifts(
     
     M_TO_MILS = 39370.1
     
-    before_mds = open_panel('{data}/before.split.panel.zarr'.format(data=data_dir))
-    after_mds = open_panel('{data}/after.split.panel.zarr'.format(data=data_dir))
+    before_mds = open_panel('{data}/vla.before.split.panel.zarr'.format(data=data_dir))
+    after_mds = open_panel('{data}/vla.after.split.panel.zarr'.format(data=data_dir))
     
     before_shift = before_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values*M_TO_MILS
     after_shift = after_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values*M_TO_MILS
@@ -142,9 +142,9 @@ def verify_holog_diagnostics(cell_size, grid_size, number_of_digits=7):
 
 def test_holog_obs_dict(set_data):
     before_ms = str(set_data/"".join((base_name,"before_fixed.split.ms")))
-    before_holog = str(set_data/"before.split.holog.zarr")
+    before_holog = str(set_data/"vla.before.split.holog.zarr")
     after_ms =  str(set_data/"".join((base_name, "after_fixed.split.ms")))
-    after_holog = str(set_data/"after.split.holog.zarr")
+    after_holog = str(set_data/"vla.after.split.holog.zarr")
 
     with open(str(set_data/"extract_holog_verification.json")) as file:
       holog_obs_dict = json_dict = json.load(file)
@@ -193,11 +193,11 @@ def test_holog(set_data):
     reference_dict = json.load(file)
 
 
-  before_holog = str(set_data/"before.split.holog.zarr")
-  after_holog = str(set_data/"after.split.holog.zarr")
+  before_holog = str(set_data/"vla.before.split.holog.zarr")
+  after_holog = str(set_data/"vla.after.split.holog.zarr")
 
-  before_image = str(set_data/"before.split.image.zarr")
-  after_image = str(set_data/"after.split.image.zarr")
+  before_image = str(set_data/"vla.before.split.image.zarr")
+  after_image = str(set_data/"vla.after.split.image.zarr")
 
   alma_ms = str(set_data/"J1924-2914.ms.calibrated.split.SPW3")
   alma_holog = str(set_data/"alma.split.holog.zarr")
@@ -280,8 +280,8 @@ def test_holog(set_data):
   )
 
 def test_screw_adjustments(set_data):
-  before_image = str(set_data/"before.split.image.zarr")
-  after_image = str(set_data/"after.split.image.zarr")
+  before_image = str(set_data/"vla.before.split.image.zarr")
+  after_image = str(set_data/"vla.after.split.image.zarr")
   alma_image = str(set_data/"alma.split.image.zarr")
 
   before_panel = panel(
