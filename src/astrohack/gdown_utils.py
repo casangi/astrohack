@@ -43,6 +43,15 @@ def build_folder_structure(dataname, resultname):
     create_folder(resultname)
 
 def download(file, folder='.', unpack=False):
+    """ Allows access to stakeholder and unit testing data and configuration files via gdown.
+
+    :param file: File to download for gdirve storage. A list of the available measurement sets can be accessed via `astrohack.gdown_utils.list_datasets()`. 
+    :type file: str
+    :param folder: Destination folder if not the current directory, defaults to '.'
+    :type folder: str, optional
+    :param unpack: Unzip file, defaults to False
+    :type unpack: bool, optional
+    """
 
     if file == 'vla-test': 
         matched = [(key, value) for key, value in gdown_ids.items() if re.search(r"^vla.+(before|after).split.+(holog|image|panel|point).*zarr$", key)]
@@ -61,7 +70,8 @@ def download(file, folder='.', unpack=False):
         id = gdown_ids[file]
         create_folder(folder)
 
-        if unpack: file = file+'.zip'
+        if unpack: 
+            file = file+'.zip'
         
         fullname = os.path.join(folder, file)
 
