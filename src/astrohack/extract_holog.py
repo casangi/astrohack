@@ -22,7 +22,7 @@ from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._tools import _jsonify
-from astrohack._utils._mds import AstrohackHologFile
+from astrohack.mds import AstrohackHologFile
 
 
 def extract_holog(
