@@ -82,8 +82,8 @@ class TestAstrohack():
         except ImportError:
             assert False
 
-    def test_import_dio_inspect_holog_obs_dio(self):
+    def test_import_dio_inspect_holog_obs_dic(self):
         try:
-            from astrohack.dio import inspect_holog_obs_dio
+            from astrohack.dio import inspect_holog_obs_dic
         except ImportError:
             assert False
