@@ -9,8 +9,7 @@ from astrohack._utils._mds import AstrohackImageFile
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 
-def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False, parallel=False,
-            overwrite=False):
+def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False, parallel=False, overwrite=False):
     """Combine DDIs in a Holography image to increase SNR
 
     :param image_name: Input holography data file name. Accepted data format is the output from ``astrohack.holog.holog``
@@ -50,8 +49,7 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
     """
     logger = _get_astrohack_logger()
     fname = 'combine'
-    combine_params = _check_combine_parms(fname, image_name, combine_name, ant_id, ddi, weighted, parallel,
-                                          overwrite)
+    combine_params = _check_combine_parms(fname, image_name, combine_name, ant_id, ddi, weighted, parallel, overwrite)
     input_params = combine_params.copy()
 
     check_if_file_exists(fname, combine_params['image_file'])
