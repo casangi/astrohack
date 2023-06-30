@@ -78,8 +78,8 @@ def _chunked_average(data, weight, avg_map, avg_freq):
     # Update new chan dim.
     data_avg_shape[1] = n_avg_chan  
 
-    data_avg = np.zeros(data_avg_shape, dtype=np.complex)
-    weight_sum = np.zeros(data_avg_shape, dtype=np.float)
+    data_avg = np.zeros(data_avg_shape, dtype=np.complex128)
+    weight_sum = np.zeros(data_avg_shape, dtype=np.float64)
 
     index = 0
 
