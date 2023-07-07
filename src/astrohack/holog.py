@@ -101,7 +101,7 @@ def holog(holog_name, grid_size=None, cell_size=None, image_name=None, padding_f
         holog_params["cell_size"] = cell_size
     
     if holog_params["grid_size"] is None:
-        n_pix = int(np.sqrt(meta_data["n_pix"]))
+        n_pix = int(meta_data["n_pix"])
         grid_size = np.array([n_pix, n_pix])
         holog_params["grid_size"] = grid_size
 
