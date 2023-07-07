@@ -11,4 +11,5 @@ Under development.
    _api/autoapi/astrohack/holog/index
    _api/autoapi/astrohack/panel/index
    _api/autoapi/astrohack/dio/index
+   _api/autoapi/astrohack/mds/index
 

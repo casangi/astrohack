@@ -875,4 +875,3 @@ class AstrohackPointFile(dict):
         _print_attributes(self._meta_data)
         _print_data_contents(self, ["Antenna"])
         _print_method_list([self.summary])
-
