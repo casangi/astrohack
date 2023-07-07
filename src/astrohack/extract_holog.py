@@ -147,20 +147,24 @@ def extract_holog(
     
     check_if_file_exists(fname, extract_holog_parms['ms_name'])
     check_if_file_will_be_overwritten(fname, extract_holog_parms['holog_name'], extract_holog_parms['overwrite'])
-    check_if_file_will_be_overwritten(fname, extract_holog_parms['point_name'], extract_holog_parms['overwrite'])
+    
         
-    ############# Exstract pointing infromation and save to point.zarr #############
+    ############# Extract pointing infromation and save to point.zarr #############
     if extract_holog_parms["reuse_point_zarr"]:
         try:
             pnt_dict = _load_point_file(extract_holog_parms['point_name'])
         except:
-            logger.warning(f'[{fname}]: Could not find {extract_holog_parms["point_name"]}, creating point new '
-                           f'point.zarr.')
-            pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'],
-                                         parallel=extract_holog_parms['parallel'])
+            logger.warning(f'[{fname}]: Could not find {extract_holog_parms["point_name"]}, creating point new 'f'point.zarr.')
+
+            # If you tried to reuse .pointing and there was a failure, delete old file and recreate
+            check_if_file_will_be_overwritten(fname, extract_holog_parms['point_name'], True)
+            pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
     else:
-        pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'],
-                                     parallel=extract_holog_parms['parallel'])
+
+        # If you don't want to reuse .point delete and recreate
+        check_if_file_will_be_overwritten(fname, extract_holog_parms['point_name'], True)
+        pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'], parallel=extract_holog_parms['parallel'])
+        
 
     ######## Get Spectral Windows ########
     ctb = ctables.table(
