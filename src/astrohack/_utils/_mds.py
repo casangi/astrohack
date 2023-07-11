@@ -864,7 +864,7 @@ class AstrohackPointFile(dict):
             logger.error("[AstrohackPointFile]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file, 'point', 'extract_holog')
+        self._meta_data = _read_meta_data(file, 'point', 'extract_pointing')
 
         return self._file_is_open
 

@@ -335,7 +335,7 @@ def _read_meta_data(file_name, file_type, origin):
 
     except Exception as error:
         logger.error(str(error))
-        raise
+        raise Exception
         
 
     try:
@@ -402,26 +402,35 @@ def _write_meta_data(origin, file_name, input_dict):
         input_dict: Dictionary to be included in the metadata
     """
     logger = _get_astrohack_logger()
-    metadata = {'version': code_version,
-                'origin': origin}
+
+    metadata = {
+        'version': code_version,
+        'origin': origin
+    }
+
     for key in input_dict.keys():
         if type(input_dict[key]) == np.ndarray:
             try:
                 for item in range(len(input_dict[key])):
                     newkey = f'{key}_{item}'
                     metadata[newkey] = _numpy_to_json(input_dict[key][item])
+    
             except TypeError:
                 if len(input_dict['grid_size'].shape) == 0:
                     metadata[key] = "None"
+
                 else:
                     metadata[key] = input_dict[key]
+    
         elif input_dict[key] is None:
             metadata[key] = "None"
+    
         else:
             metadata[key] = input_dict[key]
     try:
         with open(file_name, "w") as json_file:
             json.dump(metadata, json_file)
+
     except Exception as error:
         logger.error("[_write_meta_data] {error}".format(error=error))
 

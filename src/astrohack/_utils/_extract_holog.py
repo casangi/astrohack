@@ -570,6 +570,4 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
     meta_data.update(input_params)
     holog_attr_file = "{name}/{ext}".format(name=holog_file, ext=".holog_attr")
     _write_meta_data('extract_holog', holog_attr_file, meta_data)
-    point_attr_file = "{name}/{ext}".format(name=input_params['point_name'], ext=".point_attr")
-    _write_meta_data('extract_holog', point_attr_file, input_params)
 

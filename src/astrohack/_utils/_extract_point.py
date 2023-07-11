@@ -301,4 +301,3 @@ def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_id
                 scan_time_dict[ddi] = {s: np.array([t,t])}
   
     return scan_time_dict
-

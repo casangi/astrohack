@@ -590,8 +590,11 @@ def generate_holog_obs_dict(
         except:
             logger.warning(f'[{fname}]: Could not find {extract_holog_parms["point_name"]}, creating point new '
                            f'point.zarr.')
-            pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'],
-                                         parallel=extract_holog_parms['parallel'])
+            pnt_dict = _extract_pointing(
+                extract_holog_parms['ms_name'], 
+                extract_holog_parms['point_name'],
+                parallel=extract_holog_parms['parallel']
+            )
     else:
         check_if_file_will_be_overwritten(fname, extract_holog_parms['point_name'], True)
         pnt_dict = _extract_pointing(extract_holog_parms['ms_name'], extract_holog_parms['point_name'],
