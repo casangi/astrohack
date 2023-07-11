@@ -31,7 +31,7 @@ jobs:
         pip install .
     - name: Test with pytest
       run: |
-        pytest -v tests/test* --html=pytest-results-${{ matrix.python-version }}.html -cov=astrohack --no-cov-on-fail --cov-report=html --doctest-modules
+        pytest -v tests/test* --html=pytest-results-${{ matrix.python-version }}.html --cov=astrohack --no-cov-on-fail --cov-report=html --doctest-modules
     - name: Upload pytest results
       uses: actions/upload-artifact@v3
       with:
