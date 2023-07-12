@@ -9,7 +9,7 @@ from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
-from astrohack._utils._mds import AstrohackPanelFile, AstrohackImageFile
+from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 
 
 def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margins=0.2, ant_id=None, ddi=None,
