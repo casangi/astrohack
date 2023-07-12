@@ -13,11 +13,11 @@ class TestAstrohack():
         such as deleting test data """
         pass
 
-    def setup(self):
+    def setup_method(self):
         """ setup any state specific to all methods of the given class """
         pass
 
-    def teardown(self):
+    def teardown_method(self):
         """ teardown any state that was previously setup for all methods of the given class """
         pass
 

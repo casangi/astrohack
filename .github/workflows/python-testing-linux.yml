@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.8", "3.9", "3.10","3.11"]
+        python-version: ["3.8","3.9","3.10","3.11"]
     steps:
     - uses: actions/checkout@v3
 
@@ -31,4 +31,14 @@ jobs:
         pip install .
     - name: Test with pytest
       run: |
-        pytest
+        pytest -v tests/ --html=test-results.html --self-contained-html --cov=astrohack --no-cov-on-fail --cov-report=html --doctest-modules
+
+    - name: Upload pytest test results and coverage reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-results-${{ matrix.python-version }}
+        path: |
+          ./test-results.html
+          ./htmlcov
+      # Use always() to always run this step to publish test results when there are test failures
+      if: ${{ always() }}
