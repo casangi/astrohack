@@ -31,12 +31,14 @@ jobs:
         pip install .
     - name: Test with pytest
       run: |
-        pytest -v tests/ --html=pytest-results-${{ matrix.python-version }}.html --cov=astrohack --no-cov-on-fail --cov-report=html --doctest-modules --junitxml=test-results-${{ matrix.python-version }}.xml
-    - name: Upload pytest results
+        pytest -v tests/ --html=test-results.html --self-contained-html --cov=astrohack --no-cov-on-fail --cov-report=html --doctest-modules
+
+    - name: Upload pytest test results and coverage reports
       uses: actions/upload-artifact@v3
       with:
         name: pytest-results-${{ matrix.python-version }}
         path: |
-          pytest-results-${{ matrix.python-version }}.html
+          ./test-results.html
+          ./htmlcov
       # Use always() to always run this step to publish test results when there are test failures
       if: ${{ always() }}
