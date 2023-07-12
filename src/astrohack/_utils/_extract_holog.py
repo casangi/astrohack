@@ -364,12 +364,6 @@ def _create_holog_file(
             
             holog_file = holog_name
 
-            if overwrite is False:
-                if os.path.exists(holog_file):
-                    logger.error(
-                        "Holog file {file} exists. To overwite set the overwrite=True option in extract_holog or remove current file.".format(file=holog_file))
-                    raise
-
             logger.info(
                 "Writing holog file to {file}".format(file=holog_file)
             )

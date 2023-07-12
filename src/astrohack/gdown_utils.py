@@ -5,7 +5,6 @@ import shutil
 import json
 
 from prettytable import PrettyTable
-from prettytable import DOUBLE_BORDER
 
 gdown_ids = {
     'ea25_cal_small_before_fixed.split.ms':'1oydlR7kA7F4n0i9KF9HgRc2jq1ziUslt',
