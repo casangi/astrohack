@@ -4,7 +4,7 @@ from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._dio import  check_if_file_will_be_overwritten, check_if_file_exists
 from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
-from astrohack._utils._extract_locit import _extract_antenna_data
+from astrohack._utils._extract_locit import _extract_antenna_data, _extract_pointing_data
 
 
 def extract_locit(ms_name, locit_name=None, parallel=False, overwrite=False):
@@ -41,7 +41,8 @@ def extract_locit(ms_name, locit_name=None, parallel=False, overwrite=False):
     check_if_file_exists(fname, extract_locit_parms['ms_name'])
     check_if_file_will_be_overwritten(fname, extract_locit_parms['locit_name'], extract_locit_parms['overwrite'])
 
-    ant_data = _extract_antenna_data(fname, extract_locit_parms['ms_name'])
+    ant_dict = _extract_antenna_data(fname, extract_locit_parms['ms_name'])
+    pnt_dict = _extract_pointing_data(fname, ms_name, ant_dict)
 
 
 def _check_extract_locit_parms(fname, ms_name, locit_name, parallel, overwrite):
