@@ -813,6 +813,7 @@ class AstrohackPanelFile(dict):
 class AstrohackPointFile(dict):
     """ Data Class for holography pointing data.
     """
+
     def __init__(self, file):
         """ Initialize an AstrohackPointFile object.
         :param file: File to be linked to this object
@@ -822,14 +823,14 @@ class AstrohackPointFile(dict):
         :rtype: AstrohackPointFile
         """
         super().__init__()
-        
+
         self.file = file
         self._meta_data = None
         self._file_is_open = False
 
     def __getitem__(self, key):
         return super().__getitem__(key)
-    
+
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
 
@@ -874,4 +875,72 @@ class AstrohackPointFile(dict):
         _print_summary_header(self.file)
         _print_attributes(self._meta_data)
         _print_data_contents(self, ["Antenna"])
+        _print_method_list([self.summary])
+
+
+class AstrohackLocitFile(dict):
+    """ Data Class for extracted antenna location determination
+    """
+
+    def __init__(self, file):
+        """ Initialize an AstrohackLocitFile object.
+        :param file: File to be linked to this object
+        :type file: str
+
+        :return: AstrohackLocitFile object
+        :rtype: AstrohackLocitFile
+        """
+        super().__init__()
+
+        self.file = file
+        self._meta_data = None
+        self._file_is_open = False
+
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+
+    def __setitem__(self, key, value):
+        return super().__setitem__(key, value)
+
+    def _is_open(self):
+        """ Check wether the object has opened the corresponding hack file.
+
+        :return: True if open, else False.
+        :rtype: bool
+        """
+        return self._file_is_open
+
+    def _open(self, file=None, dask_load=True):
+        """ Open holography Lociting file.
+        :param file: File to be opened, if None defaults to the previously defined file
+        :type file: str, optional
+        :param dask_load: Is file to be loaded with dask?, default is True
+        :type dask_load: bool, optional
+
+        :return: True if file is properly opened, else returns False
+        :rtype: bool
+        """
+        logger = _get_astrohack_logger()
+
+        if file is None:
+            file = self.file
+
+        try:
+            # _load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
+            self._file_is_open = True
+
+        except Exception as e:
+            logger.error("[AstrohackLocitFile]: {}".format(e))
+            self._file_is_open = False
+
+        # self._meta_data = _read_meta_data(file, 'locit', 'extract_locit')
+
+        return self._file_is_open
+
+    def summary(self):
+        """ Prints summary of the AstrohackLocitFile object, with available data, attributes and available methods
+        """
+        _print_summary_header(self.file)
+        # _print_attributes(self._meta_data)
+        # _print_data_contents(self, ["Antenna"])
         _print_method_list([self.summary])
