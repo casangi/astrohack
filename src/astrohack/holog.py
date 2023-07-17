@@ -11,9 +11,24 @@ from astrohack.mds import AstrohackImageFile
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 
-def holog(holog_name, grid_size=None, cell_size=None, image_name=None, padding_factor=50,
-          grid_interpolation_mode="linear", chan_average=True, chan_tolerance_factor=0.005, scan_average=True,
-          ant_id=None, ddi=None, to_stokes=True, apply_mask=True, phase_fit=True, overwrite=False, parallel=False):
+def holog(
+    holog_name, 
+    grid_size=None, 
+    cell_size=None, 
+    image_name=None, 
+    padding_factor=50,
+    grid_interpolation_mode="linear", 
+    chan_average=True, 
+    chan_tolerance_factor=0.005, 
+    scan_average=True,
+    ant_id=None, 
+    ddi=None, 
+    to_stokes=True, 
+    apply_mask=True, 
+    phase_fit=True, 
+    overwrite=False, 
+    parallel=False
+):
     """ Process holography data and derive aperture illumination pattern.
 
     :param holog_name: Name of holography .holog.zarr file to process.
@@ -83,9 +98,26 @@ def holog(holog_name, grid_size=None, cell_size=None, image_name=None, padding_f
     
     logger = _get_astrohack_logger()
     fname = 'holog'
-    holog_params = _check_holog_parms(fname, holog_name, grid_size, cell_size, image_name, padding_factor, parallel,
-                                      grid_interpolation_mode, chan_average, chan_tolerance_factor, scan_average,
-                                      ant_id, ddi, to_stokes, apply_mask, phase_fit, overwrite)
+    holog_params = _check_holog_parms(
+        fname, 
+        holog_name, 
+        grid_size, 
+        cell_size, 
+        image_name, 
+        padding_factor, 
+        parallel,
+        grid_interpolation_mode, 
+        chan_average, 
+        chan_tolerance_factor, 
+        scan_average,
+        ant_id, 
+        ddi, 
+        to_stokes, 
+        apply_mask, 
+        phase_fit, 
+        overwrite
+    )
+
     input_params = holog_params.copy()
     
     check_if_file_exists(fname, holog_params['holog_file'])
@@ -94,6 +126,7 @@ def holog(holog_name, grid_size=None, cell_size=None, image_name=None, padding_f
     json_data = "/".join((holog_params['holog_file'], ".holog_json"))
     with open(json_data, "r") as json_file:
         holog_json = json.load(json_file)
+        
     meta_data = _read_meta_data(holog_params['holog_file'], 'holog', 'extract_holog')
 
     if holog_params["cell_size"] is None:
@@ -106,6 +139,7 @@ def holog(holog_name, grid_size=None, cell_size=None, image_name=None, padding_f
         holog_params["grid_size"] = grid_size
 
     logger.info(f'[{fname}]: Cell size: {str(cell_size)}, Grid size {str(grid_size)}')
+    
     json_data = {
             "cell_size": holog_params["cell_size"].tolist(),
             "grid_size": holog_params["grid_size"].tolist()
@@ -116,9 +150,12 @@ def holog(holog_name, grid_size=None, cell_size=None, image_name=None, padding_f
 
     if _dask_general_compute(fname, holog_json, _holog_chunk, holog_params, ['ant', 'ddi'], parallel=parallel):
         _create_image_meta_data(holog_params['image_file'], input_params)
+        
         image_mds = AstrohackImageFile(holog_params['image_file'])
         image_mds._open()
+        
         logger.info(f'[{fname}]: Finished processing')
+
         return image_mds
     else:
         logger.warning(f"[{fname}]: No data to process")

@@ -154,15 +154,8 @@ def _parm_to_list(caller, parm, data_dict, prefix):
         msg = f'[{caller}] cannot interpret parameter {parm} of type {type(parm)}'
         logger.error(msg)
         raise Exception(msg)
+        
     return oulist
-
-
-def _numpy_to_json(value):
-    if isinstance(value, np.integer):
-        return int(value)
-    if isinstance(value, np.floating):
-        return float(value)
-
 
 def _split_pointing_table(ms_name, antennas):
     """ Split pointing table to contain only specified antennas

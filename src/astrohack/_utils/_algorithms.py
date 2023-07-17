@@ -209,15 +209,16 @@ def _least_squares_fit_block(system, vector):
     return results, variances
     
     
-def _get_grid_parms(vis_map_dict,pnt_map_dict, ant_names):
+def _get_grid_parms(vis_map_dict, pnt_map_dict, ant_names):
     
     grid_parms = {}
+
     for ant_index in vis_map_dict.keys():
-        abs_diff = np.abs(np.diff(pnt_map_dict['ant_'+ant_names[ant_index]]['POINTING_OFFSET'],axis=0))
-        
+        abs_diff = np.abs(np.diff(pnt_map_dict['ant_'+ant_names[ant_index]]['POINTING_OFFSET'], axis=0))
+                
         max_dis_x = np.max(abs_diff[:,0])/100
         max_dis_y = np.max(abs_diff[:,1])/100
-        
+
         n_pix_x = np.sum([abs_diff[:,0] > max_dis_x]) + 1
         n_pix_y = np.sum([abs_diff[:,1] > max_dis_y]) + 1
         
@@ -227,11 +228,12 @@ def _get_grid_parms(vis_map_dict,pnt_map_dict, ant_names):
         if n_pix_x < n_pix_y:
             n_pix = n_pix_x**2
             cell_size = cell_size_x
+
         else:
             n_pix = n_pix_y**2
             cell_size = cell_size_y
         
-        grid_parms['ant_'+ant_names[ant_index]] = {'n_pix':n_pix,'cell_size':cell_size}
+        grid_parms['ant_'+ant_names[ant_index]] = {'n_pix':n_pix, 'cell_size':cell_size}
 
     return grid_parms
 

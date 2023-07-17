@@ -2,8 +2,10 @@ import os
 import dask
 import json
 import copy
+import inspect 
 import numpy as np
 import numbers
+
 from astropy.time import Time
 
 from pprint import pformat
@@ -25,14 +27,18 @@ from astrohack._utils._tools import _jsonify
 
 from astrohack.mds import AstrohackHologFile
 
+from astrohack.extract_pointing import extract_pointing
+
+CURRENT_FUNCTION=0
+
 def extract_holog(
     ms_name,
-    holog_obs_dict=None,
-    ddi=None,
-    baseline_average_distance=None,
-    baseline_average_nearest=None,
+    point_name,
     holog_name=None,
-    point_name=None,
+    holog_obs_dict=None,
+    ddi='all',
+    baseline_average_distance='all',
+    baseline_average_nearest='all',
     data_column="CORRECTED_DATA",
     parallel=False,
     overwrite=False,
@@ -122,15 +128,14 @@ def extract_holog(
             }
 
     """
-    logger = _get_astrohack_logger()
-    
-    #fname = 'extract_holog'
-    import inspect 
+    #extract_holog_params = locals()
 
-    fname = inspect.stack[0].function
+    logger = _get_astrohack_logger()
+
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     ######### Parameter Checking #########
-    extract_holog_params = _check_extract_holog_params(fname,
+    extract_holog_params = _check_extract_holog_params(function_name,
                                                      ms_name,
                                                      holog_obs_dict,
                                                      ddi,
@@ -141,17 +146,26 @@ def extract_holog(
                                                      data_column,
                                                      parallel,
                                                      overwrite)
+    
 
-    extract_holog_params['point_name'] = point_name
-    input_params = extract_holog_params.copy()
-    
-    check_if_file_exists(fname, extract_holog_params['ms_name'])
-    check_if_file_will_be_overwritten(fname, extract_holog_params['holog_name'], extract_holog_params['overwrite'])
-    
+    check_if_file_exists(function_name, extract_holog_params['ms_name'])
+    check_if_file_will_be_overwritten(function_name, extract_holog_params['holog_name'], extract_holog_params['overwrite'])
+
+    if holog_name==None:
+        
+        logger.debug('[{caller}]: File {file} does not exists. Extracting ...'.format(caller=function_name, file=holog_name))
+            
+        from astrohack._utils._tools import _remove_suffix
+
+        holog_name = _remove_suffix(ms_name, '.ms') + '.holog.zarr'
+        extract_holog_params['holog_name'] = holog_name
+            
+        logger.debug('[{caller}]: Extracting holog to {output}'.format(caller=function_name, output=holog_name))
+          
     try:
         pnt_dict = _load_point_file(extract_holog_params['point_name'])
     except:
-        logger.warning(f'[{fname}]: Could not find {extract_holog_params["point_name"]}, creating point new 'f'point.zarr.')        
+        logger.warning(f'[{function_name}]: Could not find {extract_holog_params["point_name"]}, creating point new 'f'point.zarr.')        
 
     ######## Get Spectral Windows ########
     ctb = ctables.table(
@@ -195,7 +209,7 @@ def extract_holog(
     ctb.close()
     
     # Create holog_obs_dict or modify user supplied holog_obs_dict.
-    ddi = extract_holog_params['ddi_sel']
+    ddi = extract_holog_params['ddi']
 
     if holog_obs_dict is None: #Automatically create holog_obs_dict
         from astrohack._utils._extract_holog import _create_holog_obs_dict
@@ -229,7 +243,7 @@ def extract_holog(
         
         holog_obs_dict = holog_obs_dict_with_ddi
             
-    logger.info(f"[{fname}]: holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0], indent=2, width=2))
+    logger.info(f"[{function_name}]: holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0], indent=2, width=2))
 
 
     outfile_obj = copy.deepcopy(holog_obs_dict)
@@ -330,7 +344,7 @@ def extract_holog(
 
             if 'map' in holog_map_key:
                 scans = holog_obs_dict[ddi_name][holog_map_key]["scans"]
-                logger.info(f"[{fname}]: Processing ddi: {ddi}, scans: {scans}")
+                logger.info(f"[{function_name}]: Processing ddi: {ddi}, scans: {scans}")
                 
                 if len(list(holog_obs_dict[ddi_name][holog_map_key]['ant'].keys())) != 0:
                     map_ant_list = []
@@ -339,7 +353,7 @@ def extract_holog(
                     map_ant_name_list = []
                     ref_ant_per_map_ant_name_list = []
                     for map_ant_str in holog_obs_dict[ddi_name][holog_map_key]['ant'].keys():
-                        ref_ant_ids = np.array(_convert_ant_name_to_id(ant_names,list(holog_obs_dict[ddi_name][holog_map_key]['ant'][map_ant_str])))
+                        ref_ant_ids = np.array(_convert_ant_name_to_id(ant_names, list(holog_obs_dict[ddi_name][holog_map_key]['ant'][map_ant_str])))
                         
                         map_ant_id = _convert_ant_name_to_id(ant_names,map_ant_str)[0]
 
@@ -370,7 +384,7 @@ def extract_holog(
                         _extract_holog_chunk(extract_holog_params)
                     count += 1
                 else:
-                    logger.warning(f'[{fname}]: DDI ' + str(ddi) + ' has no holography data to extract.')
+                    logger.warning(f'[{function_name}]: DDI ' + str(ddi) + ' has no holography data to extract.')
 
     spw_ctb.close()
     pol_ctb.close()
@@ -380,16 +394,22 @@ def extract_holog(
         dask.compute(delayed_list)    
 
     if count > 0:
-        logger.info(f"[{fname}]: Finished processing")
+        logger.info(f"[{function_name}]: Finished processing")
         holog_dict = _load_holog_file(holog_file=extract_holog_params["holog_name"], dask_load=True, load_pnt_dict=False)
         extract_holog_params['telescope_name'] = telescope_name
-        _create_holog_meta_data(holog_file=extract_holog_params['holog_name'], holog_dict=holog_dict,
-                                input_params=input_params)
+        
+        _create_holog_meta_data(
+            holog_file=extract_holog_params['holog_name'], 
+            holog_dict=holog_dict,
+            input_params=extract_holog_params.copy()
+        )
+
         holog_mds = AstrohackHologFile(extract_holog_params['holog_name'])
         holog_mds._open()
+        
         return holog_mds
     else:
-        logger.warning(f"[{fname}]: No data to process")
+        logger.warning(f"[{function_name}]: No data to process")
         return None
 
     holog_mds._open()
@@ -412,7 +432,7 @@ def _check_extract_holog_params(fname,
         "ms_name": ms_name, 
         "holog_name": holog_name, 
         "point_name": point_name, 
-        "ddi_sel": ddi_sel,
+        "ddi": ddi_sel,
         "data_column": data_column, 
         "parallel": parallel, 
         "overwrite": overwrite,
@@ -433,7 +453,7 @@ def _check_extract_holog_params(fname,
 
     point_base_name = _remove_suffix(extract_holog_params['holog_name'], '.holog.zarr')
     
-    parms_passed = parms_passed and _check_parms(fname, extract_holog_params, 'ddi_sel', [list, int], list_acceptable_data_types=[int], default='all')
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_params, 'ddi_sel', [list, int, str], list_acceptable_data_types=[int], default='all')
   
     #To Do: special function needed to check holog_obs_dict.
     parm_check = isinstance(holog_obs_dict,dict) or (holog_obs_dict is None)
@@ -442,9 +462,9 @@ def _check_extract_holog_params(fname,
     if not parm_check:
         logger.error(f'[{fname}]: Parameter holog_obs_dict must be of type {str(dict)}.')
         
-    parms_passed = parms_passed and _check_parms(fname, extract_holog_params, 'baseline_average_distance', [numbers.Number], default='all')
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_params, 'baseline_average_distance', [numbers.Number, str], default='all')
     
-    parms_passed = parms_passed and _check_parms(fname, extract_holog_params, 'baseline_average_nearest', [int], default='all')
+    parms_passed = parms_passed and _check_parms(fname, extract_holog_params, 'baseline_average_nearest', [int, str], default='all')
     
     if (extract_holog_params['baseline_average_distance'] != 'all') and (extract_holog_params['baseline_average_nearest'] != 'all'):
         logger.error(f'[{fname}]: baseline_average_distance: {str(baseline_average_distance)} and 'f'baseline_average_nearest: {str(baseline_average_distance)} can not both be specified.')
@@ -559,10 +579,8 @@ def generate_holog_obs_dict(
     extract_holog_params = locals()
 
     logger = _get_astrohack_logger()
-
-    import inspect
     
-    fname = inspect.stack()[0].function
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     ######### Parameter Checking #########
 #    extract_holog_params = _check_extract_holog_params(fname,
@@ -579,23 +597,19 @@ def generate_holog_obs_dict(
 #                                                     False)
 #    input_params = extract_holog_params.copy()
     
-    check_if_file_exists(fname, extract_holog_params['ms_name'])
+    check_if_file_exists(function_name, extract_holog_params['ms_name'])
 
     if os.path.exists(point_name) is False or point_name==None:
-        if ms_name.endswith('.ms'):
-            logger.debug('[{caller}]: File {file} does not exists. Extracting ...'.format(caller=fname, file=point_name))
+        
+        logger.debug('[{caller}]: File {file} does not exists. Extracting ...'.format(caller=function_name, file=point_name))
             
-            from astrohack._utils._tools import _remove_suffix
+        from astrohack._utils._tools import _remove_suffix
 
-            point_name = _remove_suffix(ms_name, '.ms') + '.point.zarr'
-            extract_holog_params['point_name'] = point_name
+        point_name = _remove_suffix(ms_name, '.ms') + '.point.zarr'
+        extract_holog_params['point_name'] = point_name
             
-            logger.debug('[{caller}]: Extracting pointing to {output}'.format(caller=fname, output=point_name))
-        else:
-            raise TypeError('Unknown measurement file type, expected ".ms"')
-           
-
-    from astrohack.extract_pointing import extract_pointing
+        logger.debug('[{caller}]: Extracting pointing to {output}'.format(caller=function_name, output=point_name))
+        
 
     pnt_dict = extract_pointing(
         ms_name=extract_holog_params['ms_name'],
