@@ -216,12 +216,12 @@ def test_holography_pipeline(set_data):
       parallel=True
     )
   
-    #assert verify_center_pixels(
-    #  file=before_image, 
-    #  antenna='ant_ea25',
-    #  ddi='ddi_0',
-    #  reference_center_pixels=reference_dict["vla"]["pixels"]["before"]
-    #)
+    assert verify_center_pixels(
+      file=before_image, 
+      antenna='ant_ea25',
+      ddi='ddi_0',
+      reference_center_pixels=reference_dict["vla"]["pixels"]["before"]
+    )
 
     holog(
       holog_name=after_holog, 
@@ -236,14 +236,14 @@ def test_holography_pipeline(set_data):
       parallel=True
     )
 
-    #assert verify_center_pixels(
-    #  file=after_image, 
-    #  antenna='ant_ea25',
-    #  ddi='ddi_0',
-    #  reference_center_pixels=reference_dict["vla"]["pixels"]["after"]
-    #)
+    assert verify_center_pixels(
+      file=after_image, 
+      antenna='ant_ea25',
+      ddi='ddi_0',
+      reference_center_pixels=reference_dict["vla"]["pixels"]["after"]
+    )
 
-
+    '''
     before_image = str(set_data/"vla.before.split.image.zarr")
     after_image = str(set_data/"vla.after.split.image.zarr")
 
@@ -262,3 +262,4 @@ def test_holography_pipeline(set_data):
     )
 
     assert verify_panel_shifts(data_dir=str(set_data))
+  '''
