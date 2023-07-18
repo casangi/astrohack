@@ -25,6 +25,31 @@ class NumpyEncoder(json.JSONEncoder):
 
         return json.JSONEncoder.default(self, obj)
 
+def _casa_time_to_mjd(times):
+    corrected = times/3600/24.0
+    return corrected
+
+
+def _altaz2hadec(az, el, lat):
+    """Convert Local to HA + DEC coordinates.
+
+    (HA [rad], dec [rad])
+
+    - TBD: Refraction
+    - TBD: Earth parallax
+    - TBD: dip of the horizon
+    Provided by D. Faes DSOC
+    """
+    #
+    top = np.sin(az)
+    bottom = np.cos(az) * np.sin(lat) + np.tan(el) * np.cos(lat)
+    ha = np.arctan2(top, bottom)
+    sin_dec = np.sin(lat) * np.sin(el) - np.cos(lat) * np.cos(el) * np.cos(az)
+    dec = np.arcsin(sin_dec)
+    #
+    return ha, dec
+
+
 def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
     """
     Adds a well positioned colorbar to a plot

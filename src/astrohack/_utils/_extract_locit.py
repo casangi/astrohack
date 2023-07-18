@@ -5,8 +5,10 @@ from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord
 from astropy.time import Time
 import astropy.units as units
 import xarray as xr
+import time
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+from astrohack._utils._tools import _casa_time_to_mjd, _altaz2hadec
 
 
 def _extract_antenna_data(fname, ms_name):
@@ -20,6 +22,7 @@ def _extract_antenna_data(fname, ms_name):
     ant_nam = ant_table.getcol('NAME')
     ant_sta = ant_table.getcol('STATION')
     ant_typ = ant_table.getcol('TYPE')
+    ant_table.close()
 
     n_ant = ant_off.shape[0]
 
@@ -66,15 +69,21 @@ def _extract_pointing_data(fname, ms_name, ant_dict):
         sub_table.close()
 
         x_ant, y_ant, z_ant = ant_dict['position'][i_ant]
-        print(ant_dict['name'][i_ant], x_ant, y_ant, z_ant, pnt_time[0])
-        ant_pos = EarthLocation.from_geocentric(x_ant, y_ant, z_ant, 'meter')
-        mjd_time = Time(pnt_time[0], format='mjd', scale='utc')
+        print(ant_dict['name'][i_ant], x_ant, y_ant, z_ant)
+        ant_lat = ant_dict['latitude'][i_ant]
 
+        t0 = time.time()
+        ant_pos = EarthLocation.from_geocentric(x_ant, y_ant, z_ant, 'meter')
+        mjd_time = Time(_casa_time_to_mjd(pnt_time), format='mjd', scale='utc')
         az_el_frame = AltAz(location=ant_pos, obstime=mjd_time)
         ha_dec_frame = HADec(location=ant_pos, obstime=mjd_time)
-        azel_coor = SkyCoord(az[0]*units.rad, el[0]*units.rad, frame=az_el_frame)
+        azel_coor = SkyCoord(az*units.rad, el*units.rad, frame=az_el_frame)
         ha_dec_coor = azel_coor.transform_to(ha_dec_frame)
-
+        t1 = time.time()
+        ha, dec = _altaz2hadec(az, el, ant_lat)
+        t2 = time.time()
+        print('astropy:', t1-t0)
+        print('daniel:', t2-t1)
         #az_el_pnt_dict[ant_dict['name'][i_ant]] = sub_dict
 
     pnt_table.close()
