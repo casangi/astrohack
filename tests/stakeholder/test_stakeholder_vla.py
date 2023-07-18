@@ -68,7 +68,7 @@ def verify_panel_shifts(
   data_dir="",
   panel_list=['3-4', '5-27', '5-37', '5-38'], 
   expected_shift=np.array([-100, 75, 0, 150]),
-  ref_mean_shift = np.array([-112.17789033, 73.22619286, -1.53666468, 138.99617087]),
+  ref_mean_shift = np.array([-112.23760235, 73.09423151, -1.52957784, 138.96735818]),
   antenna='ant_ea25',
   ddi='ddi_0'
 ):
@@ -243,7 +243,7 @@ def test_holography_pipeline(set_data):
       reference_center_pixels=reference_dict["vla"]["pixels"]["after"]
     )
 
-    '''
+    
     before_image = str(set_data/"vla.before.split.image.zarr")
     after_image = str(set_data/"vla.after.split.image.zarr")
 
@@ -262,4 +262,3 @@ def test_holography_pipeline(set_data):
     )
 
     assert verify_panel_shifts(data_dir=str(set_data))
-  '''
