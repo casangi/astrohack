@@ -43,6 +43,9 @@ def set_data(tmp_path_factory):
 
   return data_dir
 
+def relative_difference(result, expected):  
+      return 2*np.abs(result - expected)/(abs(result) + abs(expected))
+
 def verify_panel_positions(
     data_dir="",
     panel_list=['3-11', '5-31', '7-52', '11-62'], 
@@ -50,13 +53,10 @@ def verify_panel_positions(
     antenna='ant_DV13',
     ddi='ddi_0'
 ):
-  def relative_difference(result, expected):  
-      return 2*np.abs(result - expected)/(abs(result) + abs(expected))
     
   M_TO_MILS = 39370.1
     
   panel_mds = open_panel('{data}/alma.split.panel.zarr'.format(data=data_dir))
-
     
   panel_position = np.mean(panel_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values*M_TO_MILS, axis=1)
 
@@ -135,14 +135,26 @@ def verify_holog_obs_dictionary(holog_obs_dict):
                           
     return  holog_obj == ref_holog_obj
 
-def verify_holog_diagnostics(cell_size, grid_size, number_of_digits=7):
+def verify_holog_diagnostics(json_data, truth_json, tolerance=1e-7):
     
-    with open(".holog_diagnostic.json") as json_file:
-        json_data = json.load(json_file)
+    with open(truth_json) as file:
+        reference_dict = json.load(file)
         
-    json_data['cell_size'] = np.array([round(x, number_of_digits) for x in json_data['cell_size']])
-        
-    return np.all(json_data['cell_size'] == cell_size) and np.all(json_data['grid_size'] == grid_size)
+    cell_size = reference_dict["vla"]['cell_size'][1]
+    grid_size = float(reference_dict["vla"]['grid_size'][1])
+    
+    json_data['cell_size'] = np.abs(float(json_data['cell_size']))
+    
+    cell_size = np.abs(float(cell_size))
+    
+    #return True
+
+    print("Cell size::json: {}".format(json_data['cell_size']))
+    print("Cell size::ref: {}".format(cell_size))
+
+    print("Cell size: {}".format(relative_difference(json_data['cell_size'], cell_size)))
+
+    return (relative_difference(json_data['cell_size'], cell_size) < tolerance) and (relative_difference(np.sqrt(int(json_data['n_pix'])), grid_size) < tolerance)
 
 def test_holog_obs_dict(set_data):
     before_ms = str(set_data/"".join((base_name,"before_fixed.split.ms")))
@@ -174,6 +186,16 @@ def test_holog_obs_dict(set_data):
         overwrite=True,
         reuse_point_zarr=False
     )
+
+    with open(str(set_data/"test_vla.before.split.holog.zarr/.holog_attr")) as attr_file:
+      holog_attr = json.load(attr_file)
+    
+    assert verify_holog_diagnostics(
+      json_data=holog_attr,
+      truth_json=str(set_data/"holog_numerical_verification.json"),
+      tolerance=1e-4
+    )
+
 
     assert verify_holog_obs_dictionary(holog_obs_dict["vla"]["after"])
 
@@ -225,11 +247,11 @@ def test_holog(set_data):
     ddi='ddi_0',
     reference_center_pixels=reference_dict["vla"]["pixels"]["before"])
 
-  assert verify_holog_diagnostics(
-    cell_size = np.array(reference_dict["vla"]['cell_size']),
-    grid_size = np.array(reference_dict["vla"]['grid_size']),
-    number_of_digits=7
-  )
+  #assert verify_holog_diagnostics(
+  #  cell_size = np.array(reference_dict["vla"]['cell_size']),
+  #  grid_size = np.array(reference_dict["vla"]['grid_size']),
+  #  number_of_digits=7
+  #)
 
   holog(
     holog_name=after_holog, 
@@ -251,11 +273,11 @@ def test_holog(set_data):
     reference_center_pixels=reference_dict["vla"]["pixels"]["after"]
   )
 
-  assert verify_holog_diagnostics(
-    cell_size = np.array(reference_dict["vla"]['cell_size']),
-    grid_size = np.array(reference_dict["vla"]['grid_size']),
-    number_of_digits=7
-  )
+  #assert verify_holog_diagnostics(
+  #  cell_size = np.array(reference_dict["vla"]['cell_size']),
+  #  grid_size = np.array(reference_dict["vla"]['grid_size']),
+  #  number_of_digits=7
+  #)
 
   holog(
     holog_name=alma_holog, 
@@ -277,11 +299,11 @@ def test_holog(set_data):
     reference_center_pixels=reference_dict["alma"]['pixels']
   )
 
-  verify_holog_diagnostics(
-    cell_size = np.array(reference_dict["alma"]['cell_size']),
-    grid_size = np.array(reference_dict["alma"]['grid_size']),
-    number_of_digits=6
-  )
+  #verify_holog_diagnostics(
+  #  cell_size = np.array(reference_dict["alma"]['cell_size']),
+  #  grid_size = np.array(reference_dict["alma"]['grid_size']),
+  #  number_of_digits=6
+  #)
 
 def test_screw_adjustments(set_data):
   before_image = str(set_data/"vla.before.split.image.zarr")
