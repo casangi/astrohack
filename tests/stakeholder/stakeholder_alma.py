@@ -57,7 +57,7 @@ def verify_panel_positions(
     
   return np.any(relative_position < 1e-6)
 
-def verify_center_pixels(file, antenna, ddi, reference_center_pixels, number_of_digits=7):
+def verify_center_pixels(file, antenna, ddi, reference_center_pixels, tolerance=1e-6):
     from astrohack.dio import open_image
     
     mds = open_image(file)[antenna][ddi]
@@ -72,18 +72,32 @@ def verify_center_pixels(file, antenna, ddi, reference_center_pixels, number_of_
     beam_ref = list(map(complex, reference_center_pixels['beam']))
     
     for i in range(len(aperture_ref)):
-        # Should probably write a custom round function here
-        aperture_check = round(aperture_ref[i].real, number_of_digits) == round(aperture_center_pixels[i].real, number_of_digits)
-        beam_check = round(beam_ref[i].real, number_of_digits) == round(beam_center_pixels[i].real, number_of_digits)
-    
-        real_check = aperture_check and beam_check
 
-        aperture_check = round(aperture_ref[i].imag, number_of_digits) == round(aperture_center_pixels[i].imag, number_of_digits)
-        beam_check = round(beam_ref[i].imag, number_of_digits) == round(beam_center_pixels[i].imag, number_of_digits)
+        aperture_check = relative_difference(
+            aperture_ref[i].real, 
+            aperture_center_pixels[i].real
+        ) < tolerance
+        
+        beam_check = relative_difference(
+            beam_ref[i].real, 
+            beam_center_pixels[i].real
+        ) < tolerance
+
+        real_check = aperture_check and beam_check
+                
+        aperture_check = relative_difference(
+            aperture_ref[i].imag, 
+            aperture_center_pixels[i].imag
+        ) < tolerance
+
+        beam_check = relative_difference(
+            beam_ref[i].imag, 
+            beam_center_pixels[i].imag
+        ) < tolerance
 
         imag_check = aperture_check and beam_check
-
-    return real_check and imag_check   
+        
+        return real_check and imag_check   
                 
 def verify_holog_obs_dictionary(holog_obs_dict):
 
@@ -154,7 +168,8 @@ def test_holography_pipeline(set_data):
       file=alma_image, 
       antenna="ant_DV13", 
       ddi="ddi_0", 
-      reference_center_pixels=reference_dict["alma"]['pixels']
+      reference_center_pixels=reference_dict["alma"]['pixels'],
+      tolerance=1e-6
     )
 
     alma_panel = panel(
