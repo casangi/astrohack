@@ -8,14 +8,13 @@ import xarray as xr
 import time
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _casa_time_to_mjd, _altaz2hadec
+from astrohack._utils._tools import _casa_time_to_mjd, _altaz_to_hadec
 
 
 def _extract_antenna_data(fname, ms_name):
-
     logger = _get_astrohack_logger()
 
-    ant_table = ctables.table(ms_name+'::ANTENNA', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    ant_table = ctables.table(ms_name + '::ANTENNA', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     ant_off = ant_table.getcol('OFFSET')
     ant_pos = ant_table.getcol('POSITION')
     ant_mnt = ant_table.getcol('MOUNT')
@@ -40,27 +39,23 @@ def _extract_antenna_data(fname, ms_name):
         logger.error(msg)
         raise Exception(msg)
 
-    ant_pos_corrected = ant_pos+ant_off
-    ant_rad = np.sqrt(ant_pos_corrected[:, 0]**2 + ant_pos_corrected[:, 1]**2 + ant_pos_corrected[:, 2]**2)
-    ant_lat = np.arcsin(ant_pos_corrected[:, 2]/ant_rad)
-    ant_lon = -np.arccos(ant_pos_corrected[:, 0] / (ant_rad*np.cos(ant_lat)))
+    ant_pos_corrected = ant_pos + ant_off
+    ant_rad = np.sqrt(ant_pos_corrected[:, 0] ** 2 + ant_pos_corrected[:, 1] ** 2 + ant_pos_corrected[:, 2] ** 2)
+    ant_lat = np.arcsin(ant_pos_corrected[:, 2] / ant_rad)
+    ant_lon = -np.arccos(ant_pos_corrected[:, 0] / (ant_rad * np.cos(ant_lat)))
 
-    # for i in range(ant_off.shape[0]):
-    #     print(ant_nam[i], ant_lon[i]*180/np.pi, ant_lat[i]*180/np.pi)
     ant_dict = {'n_ant': n_ant, 'name': ant_nam, 'station': ant_sta, 'longitude': ant_lon, 'latitude': ant_lat,
                 'radius': ant_rad, 'position': ant_pos, 'offset': ant_off, 'corrected': ant_pos_corrected}
 
     return ant_dict
 
 
-def _extract_pointing_data(fname, ms_name, ant_dict):
-
-    az_el_pnt_dict = {}
+def _extract_pointing_data(ms_name, ant_dict):
+    pnt_dict = {}
     pnt_table = ctables.table(ms_name + '::POINTING', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     for i_ant in range(ant_dict['n_ant']):
         sub_table = ctables.taql("select DIRECTION, TIME, ANTENNA_ID from $pnt_table WHERE ANTENNA_ID == %s"
-        % (i_ant))
-        #sub_table = ctables.taql(f"select ANTENNA_ID, DIRECTION, TIME, from $pnt_table WHERE ANTENNA_ID == {i_ant}")
+                                 % i_ant)
         # This is the pointing direction at pnt_time, in radians in AZ EL
         pnt_dir = sub_table.getcol('DIRECTION')
         az = pnt_dir[:, 0, 0]
@@ -68,30 +63,53 @@ def _extract_pointing_data(fname, ms_name, ant_dict):
         pnt_time = sub_table.getcol('TIME')
         sub_table.close()
 
-        x_ant, y_ant, z_ant = ant_dict['position'][i_ant]
-        print(ant_dict['name'][i_ant], x_ant, y_ant, z_ant)
         ant_lat = ant_dict['latitude'][i_ant]
-
-        t0 = time.time()
-        ant_pos = EarthLocation.from_geocentric(x_ant, y_ant, z_ant, 'meter')
-        mjd_time = Time(_casa_time_to_mjd(pnt_time), format='mjd', scale='utc')
-        az_el_frame = AltAz(location=ant_pos, obstime=mjd_time)
-        ha_dec_frame = HADec(location=ant_pos, obstime=mjd_time)
-        azel_coor = SkyCoord(az*units.rad, el*units.rad, frame=az_el_frame)
-        ha_dec_coor = azel_coor.transform_to(ha_dec_frame)
-        t1 = time.time()
-        ha, dec = _altaz2hadec(az, el, ant_lat)
-        t2 = time.time()
-        print('astropy:', t1-t0)
-        print('daniel:', t2-t1)
-        #az_el_pnt_dict[ant_dict['name'][i_ant]] = sub_dict
-
+        ha, dec = _altaz_to_hadec(az, el, ant_lat)
+        pnt_xds = xr.Dataset()
+        coords = {"time": pnt_time}
+        pnt_xds = pnt_xds.assign_coords(coords)
+        pnt_xds["HOURANGLE"] = xr.DataArray(ha, dims="time")
+        pnt_xds["DECLINATION"] = xr.DataArray(dec, dims="time")
+        pnt_dict[ant_dict['name'][i_ant]] = pnt_xds
     pnt_table.close()
 
-    return az_el_pnt_dict
+    return pnt_dict
 
 
-def _extract_phase_gains(ms_name, pol_state, phase_gain_tol):
-    time_vis = None
-    phase_gains = None
-    return time_vis, phase_gains
+def _extract_phase_gains(ms_name):
+    main_table = ctables.table(ms_name, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    antenna1 = main_table.getcol('ANTENNA1')
+    antenna2 = main_table.getcol('ANTENNA2')
+    vis_time = main_table.getcol('TIME')
+    data = main_table.getcol('DATA')[:, 0, 0]  # For The moment working with RR only, this should be a parameter
+    corrected = main_table.getcol('CORRECTED_DATA')[:, 0, 0]
+
+    orig_phase = np.angle(data)
+    corr_phase = np.angle(corrected)
+    phase_gains = corr_phase-orig_phase
+
+    sel_gain, indices = np.unique(phase_gains, return_index=True)
+    sel_time = vis_time[indices]
+    sel_ant1 = antenna1[indices]
+    sel_ant2 = antenna2[indices]
+    time_order = np.argsort(sel_time)
+
+    phase_dict = {'time': sel_time[time_order],
+                 'antenna1': sel_ant1[time_order],
+                 'antenna2': sel_ant2[time_order],
+                 'baseline_phases': sel_gain[time_order]}
+
+    return phase_dict
+
+
+def _interpolate_pnt_times(pnt_dict, gain_dict):
+    interp_pnt_dict = {}
+    time_vis = gain_dict['time']
+    for antenna in pnt_dict.keys():
+        interp_pnt_dict[antenna] = pnt_dict[antenna].interp(time=time_vis, method="nearest")
+    return interp_pnt_dict
+
+
+def _derive_antenna_based_phases(gain_dict, ant_dict):
+    # Build matrix with 1 and -1 to solve for phase gains!
+    return

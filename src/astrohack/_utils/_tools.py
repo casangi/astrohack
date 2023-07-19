@@ -5,6 +5,9 @@ import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from prettytable import PrettyTable
 from textwrap import fill
+from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord
+from astropy.time import Time
+import astropy.units as units
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
@@ -30,24 +33,49 @@ def _casa_time_to_mjd(times):
     return corrected
 
 
-def _altaz2hadec(az, el, lat):
+def _altaz_to_hadec(az, el, lat):
     """Convert Local to HA + DEC coordinates.
 
     (HA [rad], dec [rad])
 
-    - TBD: Refraction
-    - TBD: Earth parallax
-    - TBD: dip of the horizon
     Provided by D. Faes DSOC
     """
-    #
-    top = np.sin(az)
-    bottom = np.cos(az) * np.sin(lat) + np.tan(el) * np.cos(lat)
-    ha = np.arctan2(top, bottom)
-    sin_dec = np.sin(lat) * np.sin(el) - np.cos(lat) * np.cos(el) * np.cos(az)
-    dec = np.arcsin(sin_dec)
-    #
+    sinlat = np.sin(lat)
+    coslat = np.cos(lat)
+    sinel  = np.sin(el)
+    cosel  = np.cos(el)
+    cosaz  = np.cos(az)
+    sindec = sinlat*sinel+coslat*cosel*cosaz
+    dec = np.arcsin(sindec)
+    argarccos = (sinel-sinlat*sindec)/(coslat*np.cos(dec))
+
+    lt1 = argarccos < -1
+    argarccos[lt1] = -1.0
+    ha = np.arccos(argarccos)
     return ha, dec
+
+
+def _altaz_to_hadec_astropy(az, el, time, x_ant, y_ant, z_ant):
+    """
+    Astropy convertion from Alt Az to Ha Dec, seems to be more precise but it is VERY slow
+    Args:
+        az: Azimuth
+        el: Elevation
+        time: Time
+        x_ant: Antenna x position in geocentric coordinates
+        y_ant: Antenna y position in geocentric coordinates
+        z_ant: Antenna z position in geocentric coordinates
+
+    Returns: Hour angle and Declination
+
+    """
+    ant_pos = EarthLocation.from_geocentric(x_ant, y_ant, z_ant, 'meter')
+    mjd_time = Time(_casa_time_to_mjd(time), format='mjd', scale='utc')
+    az_el_frame = AltAz(location=ant_pos, obstime=mjd_time)
+    ha_dec_frame = HADec(location=ant_pos, obstime=mjd_time)
+    azel_coor = SkyCoord(az*units.rad, el*units.rad, frame=az_el_frame)
+    ha_dec_coor = azel_coor.transform_to(ha_dec_frame)
+    return ha_dec_coor.ha, ha_dec_coor.dec
 
 
 def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
