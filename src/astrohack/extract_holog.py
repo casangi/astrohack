@@ -555,21 +555,6 @@ def generate_holog_obs_dict(
     logger = _get_astrohack_logger()
     
     function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-    ######### Parameter Checking #########
-#    extract_holog_params = _check_extract_holog_params(function_name,
-#                                                     ms_name,
-#                                                     holog_obs_dict,
-#                                                     ddi,
-#                                                     baseline_average_distance,
-#                                                     baseline_average_nearest,
-#                                                     holog_name,
-#                                                     point_name,
-#                                                     data_column,
-#                                                     parallel,
-#                                                     reuse_point_zarr, 
-#                                                     False)
-    input_params = extract_holog_params.copy()
     
     _check_if_file_exists(extract_holog_params['ms_name'])
 

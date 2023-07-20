@@ -320,7 +320,6 @@ def _load_image_xds(file_stem, ant, ddi, dask_load=True):
     else:
         raise FileNotFoundError("Image file: {} not found".format(image_path))
 
-
 def _read_meta_data(file_name, file_type, origin):
     """Reads dimensional data from holog meta file.
 
@@ -340,9 +339,12 @@ def _read_meta_data(file_name, file_type, origin):
 
     except Exception as error:
         logger.error(str(error))
-        raise Exception
-        
-
+        raise Exception   
+    
+    # I don't see the use case for this or the origin in general. This means I need to either look at the
+    # meta data of a file I want to open ahead of time or list all possible unctions that could have made it.
+    
+    
     try:
         metadataorigin = json_dict['origin']
     except KeyError:
@@ -363,6 +365,7 @@ def _read_meta_data(file_name, file_type, origin):
             logger.error(f"Expected origin was {origin} but got {metadataorigin}")
             
             raise TypeError('Incorrect file type')
+    
 
     return json_dict
 
@@ -378,6 +381,7 @@ def _check_mds_origin(file_name, file_type):
 
     """
     logger = _get_astrohack_logger()
+
     if isinstance(file_type, str):
         file_type = [file_type]
 
@@ -469,7 +473,7 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
 
     except Exception as error:
         logger.error(str(error))
-        raise
+        raise Exception
 
     ant_data_dict = {}
 
