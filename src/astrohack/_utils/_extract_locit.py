@@ -11,10 +11,10 @@ from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._tools import _casa_time_to_mjd, _altaz_to_hadec
 
 
-def _extract_antenna_data(fname, ms_name):
+def _extract_antenna_data(fname, cal_table):
     logger = _get_astrohack_logger()
 
-    ant_table = ctables.table(ms_name + '::ANTENNA', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    ant_table = ctables.table(cal_table + '::ANTENNA', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     ant_off = ant_table.getcol('OFFSET')
     ant_pos = ant_table.getcol('POSITION')
     ant_mnt = ant_table.getcol('MOUNT')
@@ -35,7 +35,7 @@ def _extract_antenna_data(fname, ms_name):
             logger.error(f'[{fname}]: Antenna {ant_nam[iant]} is not ground based which is currently not supported')
 
     if error:
-        msg = f'[{fname}]: Unsupported antenna types'
+        msg = f'[{fname}]: Unsupported antenna characteristics'
         logger.error(msg)
         raise Exception(msg)
 
@@ -46,70 +46,94 @@ def _extract_antenna_data(fname, ms_name):
 
     ant_dict = {'n_ant': n_ant, 'name': ant_nam, 'station': ant_sta, 'longitude': ant_lon, 'latitude': ant_lat,
                 'radius': ant_rad, 'position': ant_pos, 'offset': ant_off, 'corrected': ant_pos_corrected}
-
     return ant_dict
 
 
-def _extract_pointing_data(ms_name, ant_dict):
-    pnt_dict = {}
-    pnt_table = ctables.table(ms_name + '::POINTING', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
-    for i_ant in range(ant_dict['n_ant']):
-        sub_table = ctables.taql("select DIRECTION, TIME, ANTENNA_ID from $pnt_table WHERE ANTENNA_ID == %s"
-                                 % i_ant)
-        # This is the pointing direction at pnt_time, in radians in AZ EL
-        pnt_dir = sub_table.getcol('DIRECTION')
-        az = pnt_dir[:, 0, 0]
-        el = pnt_dir[:, 0, 1]
-        pnt_time = sub_table.getcol('TIME')
-        sub_table.close()
-
-        ant_lat = ant_dict['latitude'][i_ant]
-        ha, dec = _altaz_to_hadec(az, el, ant_lat)
-        pnt_xds = xr.Dataset()
-        coords = {"time": pnt_time}
-        pnt_xds = pnt_xds.assign_coords(coords)
-        pnt_xds["HOURANGLE"] = xr.DataArray(ha, dims="time")
-        pnt_xds["DECLINATION"] = xr.DataArray(dec, dims="time")
-        pnt_dict[ant_dict['name'][i_ant]] = pnt_xds
-    pnt_table.close()
-
-    return pnt_dict
+def _extract_spectral_info(fname, cal_table):
+    logger = _get_astrohack_logger()
+    spw_table = ctables.table(cal_table+'::SPECTRAL_WINDOW', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    ref_freq = spw_table.getcol('REF_FREQUENCY')
+    n_chan = spw_table.getcol('NUM_CHAN')
+    bandwidth = spw_table.getcol('CHAN_WIDTH')
+    spw_table.close()
+    n_ddi = len(ref_freq)
+    error = False
+    for i_ddi in range(n_ddi):
+        if n_chan[i_ddi] != 1:
+            error = True
+            msg = f'[{fname}]: DDI {i_ddi} has {n_chan[i_ddi]}, which is not supported'
+            logger.error(msg)
+    if error:
+        msg = f'[{fname}]: Unsupported DDI characteristics'
+        logger.error(msg)
+        raise Exception(msg)
+    ddi_dict = {'n_ddi': n_ddi, 'frequencies': ref_freq, 'bandwidth': bandwidth}
+    return ddi_dict
 
 
-def _extract_phase_gains(ms_name):
-    main_table = ctables.table(ms_name, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+def _extract_source_info(fname, cal_table):
+    src_table = ctables.table(cal_table+'::FIELD', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    src_id = src_table.getcol('SOURCE_ID')
+    phase_center_j2000 = src_table.getcol('PHASE_DIR')
+    src_name = src_table.getcol('NAME')
+    src_table.close()
+    n_src = len(src_id)
+
+    src_dict = {'n_src': n_src, 'id': src_id, 'name': src_name, 'radec_j2000': phase_center_j2000}
+    return src_dict
+
+
+def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict):
+    logger = _get_astrohack_logger()
+    main_table = ctables.table(cal_table, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     antenna1 = main_table.getcol('ANTENNA1')
     antenna2 = main_table.getcol('ANTENNA2')
-    vis_time = main_table.getcol('TIME')
-    data = main_table.getcol('DATA')[:, 0, 0]  # For The moment working with RR only, this should be a parameter
-    corrected = main_table.getcol('CORRECTED_DATA')[:, 0, 0]
+    gain_time = main_table.getcol('TIME')
+    gains = main_table.getcol('CPARAM')
+    fields = main_table.getcol('FIELD_ID')
+    spw_id = main_table.getcol('SPECTRAL_WINDOW_ID')
+    main_table.close()
+    n_gains = len(gains)
 
-    orig_phase = np.angle(data)
-    corr_phase = np.angle(corrected)
-    phase_gains = corr_phase-orig_phase
+    ref_antennas, counts = np.unique(antenna2, return_counts=True)
+    n_refant = len(ref_antennas)
+    if n_refant > 1:
+        i_best_ant = np.argmax(counts)
+        fraction_best = counts[i_best_ant]/n_gains
+        if fraction_best < 0.5:
+            logger.warning(f'[{fname}]: The best reference Antenna only covers {100*fraction_best}% of the data')
+        for i_refant in range(n_refant):
+            if i_refant != i_best_ant:
+                logger.info(f'[{fname}]: Discarding gains derived with antenna {ant_dict["name"][ref_antennas[i_refant]]} as reference')
+                sel_refant = antenna2 != ref_antennas[i_refant]
+                antenna2 = antenna2[sel_refant]
+                antenna1 = antenna1[sel_refant]
+                gain_time = gain_time[sel_refant]
+                gains = gains[sel_refant]
+                fields = fields[sel_refant]
+                spw_id = spw_id[sel_refant]
+    else:
+        # No data to discard we can go on and compute the phase gains
+        pass
+    phase_gains = np.angle(gains)
+    global_dict = {}
+    for i_ant in range(ant_dict['n_ant']):
+        this_ant_dict = {}
+        ant_sel = antenna1 == i_ant
+        ant_time = gain_time[ant_sel]
+        ant_field = fields[ant_sel]
+        ant_phase_gains = phase_gains[ant_sel]
+        ant_spw_id = spw_id[ant_sel]
+        for i_ddi in range(ddi_dict['n_ddi']):
+            this_ddi_xds = xr.Dataset()
+            ddi_sel = ant_spw_id == i_ddi
+            coords = {"time": ant_time[ddi_sel]}
+            this_ddi_xds.assign_coords(coords)
+            this_ddi_xds['PHASE_GAINS'] = xr.DataArray(ant_phase_gains[ddi_sel], dims=('time', 'chan', 'pol'))
+            this_ddi_xds['FIELD_ID'] = xr.DataArray(ant_field[ddi_sel], dims='time')
+            this_ant_dict[f'DDI_{i_ddi}'] = this_ddi_xds
+        global_dict[ant_dict['name'][i_ant]] = this_ant_dict
 
-    sel_gain, indices = np.unique(phase_gains, return_index=True)
-    sel_time = vis_time[indices]
-    sel_ant1 = antenna1[indices]
-    sel_ant2 = antenna2[indices]
-    time_order = np.argsort(sel_time)
-
-    phase_dict = {'time': sel_time[time_order],
-                 'antenna1': sel_ant1[time_order],
-                 'antenna2': sel_ant2[time_order],
-                 'baseline_phases': sel_gain[time_order]}
-
-    return phase_dict
+    return global_dict
 
 
-def _interpolate_pnt_times(pnt_dict, gain_dict):
-    interp_pnt_dict = {}
-    time_vis = gain_dict['time']
-    for antenna in pnt_dict.keys():
-        interp_pnt_dict[antenna] = pnt_dict[antenna].interp(time=time_vis, method="nearest")
-    return interp_pnt_dict
-
-
-def _derive_antenna_based_phases(gain_dict, ant_dict):
-    # Build matrix with 1 and -1 to solve for phase gains!
-    return
