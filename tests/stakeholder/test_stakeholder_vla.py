@@ -22,7 +22,8 @@ from astrohack.astrohack_client import astrohack_local_client
 
 base_name = 'ea25_cal_small_'
 
-client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms={'log_level':'DEBUG'})
+# Can use this for parallel testing; turning of for now.
+#client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms={'log_level':'DEBUG'})
 
 @pytest.fixture(scope='session')
 def set_data(tmp_path_factory):

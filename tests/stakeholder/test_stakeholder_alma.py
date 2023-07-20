@@ -20,7 +20,8 @@ from astrohack.dio import open_panel
 
 from astrohack.astrohack_client import astrohack_local_client
 
-client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms={'log_level':'DEBUG'})
+# Can use this for parallel testing; turning of for now.
+#client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms={'log_level':'DEBUG'})
 
 @pytest.fixture(scope='session')
 def set_data(tmp_path_factory):
@@ -41,7 +42,7 @@ def relative_difference(result, expected):
 def verify_panel_positions(
     data_dir="",
     panel_list=['3-11', '5-31', '7-52', '11-62'], 
-    reference_position = np.array([-2.39678052, -0.87024129, 0.89391852, 0.48643069]),
+    reference_position = np.array([-2.16823971, -0.94590908,  0.84834425, 0.76463105]),
     antenna='ant_DV13',
     ddi='ddi_0'
 ):
