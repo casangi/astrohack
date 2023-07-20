@@ -553,6 +553,7 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         raise
 
     output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
+    
     try:
         with open(output_meta_file, "w") as json_file:
             json.dump(ant_holog_dict, json_file)
@@ -565,7 +566,9 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         'n_pix': n_pixs[0],
         'telescope_name': telescope_names[0]
     }
+
     meta_data.update(input_params)
-    holog_attr_file = "{name}/{ext}".format(name=holog_file, ext=".holog_attr")
-    _write_meta_data('extract_holog', holog_attr_file, meta_data)
+    
+    return meta_data
+    
 

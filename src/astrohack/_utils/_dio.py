@@ -4,6 +4,8 @@ import zarr
 import copy
 import datetime
 import shutil
+import inspect
+
 import numpy as np
 import xarray as xr
 
@@ -13,18 +15,20 @@ from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._tools import _add_prefix
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
+CALLING_FUNCTION=1
 
-
-def check_if_file_exists(caller, file):
+def _check_if_file_exists(file):
     logger = _get_astrohack_logger()
+    caller = inspect.stack()[CALLING_FUNCTION].function
 
     if os.path.exists(file) is False:
         logger.error(f'[{caller}]: File {file} does not exists.')
         raise FileNotFoundError
 
 
-def check_if_file_will_be_overwritten(caller, file, overwrite):
+def _check_if_file_will_be_overwritten(file, overwrite):
     logger = _get_astrohack_logger()
+    caller=inspect.stack()[CALLING_FUNCTION].function
     
     if (os.path.exists(file) is True) and (overwrite is False):
         logger.error(f'[{caller}]: {file} already exists. To overwite set overwrite to True, or remove current file.')
@@ -416,7 +420,7 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def _write_meta_data(origin, file_name, input_dict):
+def _write_meta_data(file_name, input_dict):
     """
     Creates a metadata dictionary that is compatible with JSON and writes it to a file
     Args:
@@ -424,13 +428,14 @@ def _write_meta_data(origin, file_name, input_dict):
         file_name: Output json file name
         input_dict: Dictionary to be included in the metadata
     """
+
     logger = _get_astrohack_logger()
 
     meta_data = copy.deepcopy(input_dict)
 
     meta_data.update({
         'version': code_version,
-        'origin': origin
+        'origin': inspect.stack()[CALLING_FUNCTION].function
     })
 
     try:

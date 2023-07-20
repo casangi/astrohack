@@ -2,10 +2,10 @@ import os
 import shutil
 
 from astrohack._utils._panel_classes.base_panel import panel_models
-from astrohack._utils._dio import _aips_holog_to_xds, check_if_file_will_be_overwritten, check_if_file_exists, _write_meta_data
+from astrohack._utils._dio import _aips_holog_to_xds, _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
 from astrohack._utils._panel import _panel_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
+from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
@@ -96,10 +96,10 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     input_params = panel_params.copy()
     # Doubled this entry for compatibility with the factorized antenna ddi loop
     panel_params['filename'] = panel_params['image_name']
-    check_if_file_exists(fname, panel_params['image_name'])
+    _check_if_file_exists(panel_params['image_name'])
     image_mds = AstrohackImageFile(panel_params['image_name'])
     image_mds._open()
-    check_if_file_will_be_overwritten(fname, panel_params['panel_name'], panel_params['overwrite'])
+    _check_if_file_will_be_overwritten(panel_params['panel_name'], panel_params['overwrite'])
 
     if os.path.exists(panel_params['image_name']+'/.aips'):
         panel_params['origin'] = 'AIPS'
@@ -110,7 +110,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
         if _dask_general_compute(fname, image_mds, _panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
             logger.info(f"[{fname}]: Finished processing")
             output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_attr")
-            _write_meta_data('panel', output_attr_file, input_params)
+            _write_meta_data(output_attr_file, input_params)
             panel_mds = AstrohackPanelFile(panel_params['panel_name'])
             panel_mds._open()
             return panel_mds
@@ -135,9 +135,9 @@ def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, ov
         holog_name: Name of the output .zarr file
         overwrite: Overwrite previous file of same name?
     """
-    check_if_file_exists(amp_image)
-    check_if_file_exists(dev_image)
-    check_if_file_will_be_overwritten(holog_name, overwrite)
+    _check_if_file_exists(amp_image)
+    _check_if_file_exists(dev_image)
+    _check_if_file_will_be_overwritten(holog_name, overwrite)
 
     xds = _aips_holog_to_xds(amp_image, dev_image)
     xds.attrs['telescope_name'] = telescope_name

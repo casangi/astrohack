@@ -12,6 +12,7 @@ from astrohack.gdown_utils import gdown_data
 
 from astrohack._utils._tools import _jsonify
 
+from astrohack.extract_pointing import extract_pointing
 from astrohack.extract_holog import extract_holog
 from astrohack.holog import holog
 from astrohack.panel import panel
@@ -128,18 +129,26 @@ def verify_holog_diagnostics(json_data, truth_json, tolerance=1e-7):
 
 def test_holography_pipeline(set_data):
     alma_ms = str(set_data/"J1924-2914.ms.calibrated.split.SPW3")
+    alma_point = str(set_data/"alma.split.point.zarr")
     alma_holog = str(set_data/"alma.split.holog.zarr")
 
     with open(str(set_data/"extract_holog_verification.json")) as file:
       holog_obs_dict = json_dict = json.load(file)
 
+    extract_pointing(
+      ms_name=alma_ms,
+      point_name=alma_point,
+      parallel=False,
+      overwrite=True
+    )
+
     extract_holog(
       ms_name=alma_ms,
       holog_name=alma_holog,
+      point_name=alma_point,
       data_column='DATA',
       parallel=False,
-      overwrite=True,
-      reuse_point_zarr=False
+      overwrite=True
     )
 
     verify_holog_obs_dictionary(holog_obs_dict["alma"])

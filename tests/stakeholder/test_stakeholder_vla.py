@@ -12,6 +12,7 @@ from astrohack.gdown_utils import gdown_data
 
 from astrohack._utils._tools import _jsonify
 
+from astrohack.extract_pointing import extract_pointing
 from astrohack.extract_holog import extract_holog
 from astrohack.holog import holog
 from astrohack.panel import panel
@@ -143,33 +144,50 @@ def verify_holog_diagnostics(json_data, truth_json, tolerance=1e-7):
 
 def test_holography_pipeline(set_data):
     before_ms = str(set_data/"".join((base_name,"before_fixed.split.ms")))
+    before_point = str(set_data/"vla.before.split.point.zarr")
     before_holog = str(set_data/"vla.before.split.holog.zarr")
+
     after_ms =  str(set_data/"".join((base_name, "after_fixed.split.ms")))
+    after_point = str(set_data/"vla.after.split.point.zarr")
     after_holog = str(set_data/"vla.after.split.holog.zarr")
 
     with open(str(set_data/"extract_holog_verification.json")) as file:
       holog_obs_dict = json_dict = json.load(file)
 
+    extract_pointing(
+      ms_name=before_ms,
+      point_name=before_point,
+      parallel=False,
+      overwrite=True
+    )
+
+    extract_pointing(
+      ms_name=after_ms,
+      point_name=after_point,
+      parallel=False,
+      overwrite=True
+    )
+
     extract_holog(
       ms_name=before_ms, 
+      point_name=before_point,
       holog_name=before_holog, 
       ddi=[0],
       data_column='CORRECTED_DATA',
       parallel=False,
-      overwrite=True,
-      reuse_point_zarr=False
+      overwrite=True
     )
 
     assert verify_holog_obs_dictionary(holog_obs_dict["vla"]["before"])
 
 
-    holog_mds_after, _ = extract_holog(
-        ms_name=after_ms, 
+    extract_holog(
+        ms_name=after_ms,
+        point_name=after_point, 
         holog_name=after_holog,
         data_column='CORRECTED_DATA',
         parallel=False,
-        overwrite=True,
-        reuse_point_zarr=False
+        overwrite=True
     )
 
     with open(str(set_data/"vla.before.split.holog.zarr/.holog_attr")) as attr_file:

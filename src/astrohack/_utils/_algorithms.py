@@ -215,7 +215,7 @@ def _get_grid_parms(vis_map_dict, pnt_map_dict, ant_names):
 
     for ant_index in vis_map_dict.keys():
         abs_diff = np.abs(np.diff(pnt_map_dict['ant_'+ant_names[ant_index]]['POINTING_OFFSET'], axis=0))
-                
+
         max_dis_x = np.max(abs_diff[:,0])/100
         max_dis_y = np.max(abs_diff[:,1])/100
 
