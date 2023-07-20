@@ -22,6 +22,8 @@ dependencies = [
 'numpy',
 'prettytable',
 'pytest',
+'pytest-cov',
+'pytest-html',
 'scikit_image',
 'scipy',
 'xarray',
