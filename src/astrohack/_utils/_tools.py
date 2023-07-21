@@ -1,10 +1,29 @@
+import json
+
 import numpy as np
+
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from prettytable import PrettyTable
 from textwrap import fill
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        
+        elif isinstance(obj, np.integer):
+            return int(obj)
+
+        elif isinstance(obj, NoneType):
+            return "None"
+
+
+        return json.JSONEncoder.default(self, obj)
 
 def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
     """

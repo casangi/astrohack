@@ -82,29 +82,35 @@ def extract_pointing(
 
     input_params = extract_pointing_params.copy()
     
-    _check_if_file_exists(extract_pointing_params['ms_name'])
-    _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
+    try:
+        _check_if_file_exists(extract_pointing_params['ms_name'])
+        _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
     
     
-    pnt_dict = _extract_pointing(
-        ms_name=extract_pointing_params['ms_name'], 
-        pnt_name=extract_pointing_params['point_name'], 
-        parallel=extract_pointing_params['parallel']
-    )
+        pnt_dict = _extract_pointing(
+            ms_name=extract_pointing_params['ms_name'], 
+            pnt_name=extract_pointing_params['point_name'], 
+            parallel=extract_pointing_params['parallel']
+        )
     
-    # Calling this directly since it is so simple it doesn't need a "_create_{}" function.
-    _write_meta_data(
-        file_name="{name}/{ext}".format(name=extract_pointing_params['point_name'], ext=".point_attr"), 
-        input_dict=extract_pointing_params
-    )
+        # Calling this directly since it is so simple it doesn't need a "_create_{}" function.
+        _write_meta_data(
+            file_name="{name}/{ext}".format(name=extract_pointing_params['point_name'], ext=".point_attr"), 
+            input_dict=extract_pointing_params
+        )
 
-    logger.info(f"[{function_name}]: Finished processing")
-    point_dict = _load_point_file(file=extract_pointing_params["point_name"], dask_load=True)
+        logger.info(f"[{function_name}]: Finished processing")
+        point_dict = _load_point_file(file=extract_pointing_params["point_name"], dask_load=True)
     
-    pointing_mds = AstrohackPointFile(extract_pointing_params['point_name'])
-    pointing_mds._open()
+        pointing_mds = AstrohackPointFile(extract_pointing_params['point_name'])
+        pointing_mds._open()
 
-    return pointing_mds
+        return pointing_mds
+    
+    except Exception:
+        logger.error("There was an error, exiting.")
+        
+        return
 
 def _check_extract_pointing_params(function_name, extract_point_params):
 

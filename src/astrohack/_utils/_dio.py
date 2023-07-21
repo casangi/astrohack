@@ -12,7 +12,9 @@ import xarray as xr
 from astropy.io import fits
 from astrohack import __version__ as code_version
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+
 from astrohack._utils._tools import _add_prefix
+from astrohack._utils._tools import NumpyEncoder
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 CALLING_FUNCTION=1
@@ -32,7 +34,8 @@ def _check_if_file_will_be_overwritten(file, overwrite):
     
     if (os.path.exists(file) is True) and (overwrite is False):
         logger.error(f'[{caller}]: {file} already exists. To overwite set overwrite to True, or remove current file.')
-        raise FileExistsError
+        
+        raise FileExistsError("{file} exists.".format(file=file))
         
     elif  (os.path.exists(file) is True) and (overwrite is True):
         if file.endswith(".zarr"):
@@ -405,23 +408,6 @@ def _check_mds_origin(file_name, file_type):
         raise Exception('Bad metadata')
 
     return metadataorigin
-
-class NumpyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        
-        elif isinstance(obj, np.integer):
-            return int(obj)
-
-        elif isinstance(obj, NoneType):
-            return "None"
-
-
-        return json.JSONEncoder.default(self, obj)
 
 
 def _write_meta_data(file_name, input_dict):
