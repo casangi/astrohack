@@ -4,7 +4,7 @@ from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._dio import  check_if_file_will_be_overwritten, check_if_file_exists
 from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
-from astrohack._utils._extract_locit import _extract_antenna_data, _extract_spectral_info, _extract_source_info, \
+from astrohack._utils._extract_locit import _extract_antenna_data, _extract_spectral_info, _extract_source_and_telescope, \
     _extract_antenna_phase_gains
 
 
@@ -44,11 +44,8 @@ def extract_locit(cal_table, locit_name=None, parallel=False, overwrite=False):
 
     ant_dict = _extract_antenna_data(fname, extract_locit_parms['cal_table'])
     ddi_dict = _extract_spectral_info(fname, extract_locit_parms['cal_table'])
-    src_dict = _extract_source_info(fname, extract_locit_parms['cal_table'])
+    src_dict = _extract_source_and_telescope(fname, extract_locit_parms['cal_table'])
     _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict)
-    # pnt_dict = _extract_pointing_data(cal_table, ant_dict)
-    # phase_dict = _extract_phase_gains(cal_table)
-    # pnt_dict = _interpolate_pnt_times(pnt_dict, phase_dict)
 
 
 def _check_extract_locit_parms(fname, cal_table, locit_name, parallel, overwrite):

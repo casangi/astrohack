@@ -1,7 +1,7 @@
 import numpy as np
 
 from casacore import tables as ctables
-from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord
+from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord, ITRS, CIRS
 from astropy.time import Time
 import astropy.units as units
 import xarray as xr
@@ -9,6 +9,7 @@ import time
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._tools import _casa_time_to_mjd, _altaz_to_hadec
+from astrohack._utils._conversion import _convert_unit
 
 
 def _extract_antenna_data(fname, cal_table):
@@ -24,28 +25,36 @@ def _extract_antenna_data(fname, cal_table):
     ant_table.close()
 
     n_ant = ant_off.shape[0]
+    ant_pos_corrected = ant_pos + ant_off
+    ant_rad = np.sqrt(ant_pos_corrected[:, 0] ** 2 + ant_pos_corrected[:, 1] ** 2 + ant_pos_corrected[:, 2] ** 2)
+    ant_lat = np.arcsin(ant_pos_corrected[:, 2] / ant_rad)
+    ant_lon = -np.arccos(ant_pos_corrected[:, 0] / (ant_rad * np.cos(ant_lat)))
 
+    ant_dict = {'n_ant': n_ant}
+    antenna_list = []
     error = False
-    for iant in range(n_ant):
-        if ant_mnt[iant] != 'ALT-AZ':
-            logger.error(f'[{fname}]: Antenna {ant_nam[iant]} has a non supported mount type: {ant_mnt[iant]}')
+    for i_ant in range(n_ant):
+        this_name = ant_nam[i_ant]
+        if ant_mnt[i_ant] != 'ALT-AZ':
+            logger.error(f'[{fname}]: Antenna {this_name} has a non supported mount type: {ant_mnt[i_ant]}')
             error = True
-        if ant_typ[iant] != 'GROUND-BASED':
+        if ant_typ[i_ant] != 'GROUND-BASED':
             error = True
-            logger.error(f'[{fname}]: Antenna {ant_nam[iant]} is not ground based which is currently not supported')
+            logger.error(f'[{fname}]: Antenna {this_name} is not ground based which is currently not supported')
+        if error:
+            pass
+        else:
+            antenna = {'name': this_name, 'station': ant_sta[i_ant], 'geocentric_position': ant_pos[i_ant],
+                       'longitude': ant_lon[i_ant], 'latitude': ant_lat[i_ant], 'radius': ant_rad[i_ant],
+                       'offset': ant_off[i_ant]}
+            antenna_list.append(antenna)
 
     if error:
         msg = f'[{fname}]: Unsupported antenna characteristics'
         logger.error(msg)
         raise Exception(msg)
 
-    ant_pos_corrected = ant_pos + ant_off
-    ant_rad = np.sqrt(ant_pos_corrected[:, 0] ** 2 + ant_pos_corrected[:, 1] ** 2 + ant_pos_corrected[:, 2] ** 2)
-    ant_lat = np.arcsin(ant_pos_corrected[:, 2] / ant_rad)
-    ant_lon = -np.arccos(ant_pos_corrected[:, 0] / (ant_rad * np.cos(ant_lat)))
-
-    ant_dict = {'n_ant': n_ant, 'name': ant_nam, 'station': ant_sta, 'longitude': ant_lon, 'latitude': ant_lat,
-                'radius': ant_rad, 'position': ant_pos, 'offset': ant_off, 'corrected': ant_pos_corrected}
+    ant_dict['list'] = antenna_list
     return ant_dict
 
 
@@ -71,16 +80,35 @@ def _extract_spectral_info(fname, cal_table):
     return ddi_dict
 
 
-def _extract_source_info(fname, cal_table):
+def _extract_source_and_telescope(fname, cal_table):
     src_table = ctables.table(cal_table+'::FIELD', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     src_id = src_table.getcol('SOURCE_ID')
-    phase_center_j2000 = src_table.getcol('PHASE_DIR')
+    phase_center_j2000 = src_table.getcol('PHASE_DIR')[:, 0, :]
     src_name = src_table.getcol('NAME')
     src_table.close()
     n_src = len(src_id)
 
-    src_dict = {'n_src': n_src, 'id': src_id, 'name': src_name, 'radec_j2000': phase_center_j2000}
-    return src_dict
+    obs_table = ctables.table(cal_table+'::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    time_range = _casa_time_to_mjd(obs_table.getcol('TIME_RANGE')[0])
+    telescope_name = obs_table.getcol('TELESCOPE_NAME')[0]
+    obs_table.close()
+
+    mid_time = Time((time_range[-1]+time_range[0])/2, scale='utc', format='mjd')
+
+    astropy_j2000 = SkyCoord(phase_center_j2000[:, 0], phase_center_j2000[:, 1], unit=units.rad, frame='fk5')
+    astropy_precessed = astropy_j2000.transform_to(CIRS(obstime=mid_time))
+    phase_center_precessed = np.ndarray((n_src, 2))
+    phase_center_precessed[:, 0] = astropy_precessed.ra
+    phase_center_precessed[:, 1] = astropy_precessed.dec
+    phase_center_precessed *= _convert_unit('deg', 'rad', 'trigonometric')
+
+    src_list = []
+    for i_src in range(n_src):
+        source = {'id': src_id[i_src], 'name': src_name[i_src], 'j2000': phase_center_j2000[i_src],
+                  'precessed': phase_center_precessed[i_src]}
+        src_list.append(source)
+    obs_dict = {'n_src': n_src, 'src_list': src_list, 'time_range': time_range, 'telescope_name': telescope_name}
+    return obs_dict
 
 
 def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict):
@@ -104,7 +132,8 @@ def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict):
             logger.warning(f'[{fname}]: The best reference Antenna only covers {100*fraction_best}% of the data')
         for i_refant in range(n_refant):
             if i_refant != i_best_ant:
-                logger.info(f'[{fname}]: Discarding gains derived with antenna {ant_dict["name"][ref_antennas[i_refant]]} as reference')
+                logger.info(f'[{fname}]: Discarding gains derived with antenna '
+                            f'{ant_dict["list"][ref_antennas[i_refant]]["name"]} as reference')
                 sel_refant = antenna2 != ref_antennas[i_refant]
                 antenna2 = antenna2[sel_refant]
                 antenna1 = antenna1[sel_refant]
@@ -132,7 +161,7 @@ def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict):
             this_ddi_xds['PHASE_GAINS'] = xr.DataArray(ant_phase_gains[ddi_sel], dims=('time', 'chan', 'pol'))
             this_ddi_xds['FIELD_ID'] = xr.DataArray(ant_field[ddi_sel], dims='time')
             this_ant_dict[f'DDI_{i_ddi}'] = this_ddi_xds
-        global_dict[ant_dict['name'][i_ant]] = this_ant_dict
+        global_dict[ant_dict['list'][i_ant]['name']] = this_ant_dict
 
     return global_dict
 
