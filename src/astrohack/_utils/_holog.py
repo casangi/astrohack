@@ -41,14 +41,14 @@ def _holog_chunk(holog_chunk_params):
     fname = 'holog'
 
     holog_file, ant_data_dict = _load_holog_file(
-        holog_chunk_params["holog_file"],
+        holog_chunk_params["holog_name"],
         dask_load=False,
         load_pnt_dict=False,
         ant_id=holog_chunk_params["this_ant"],
         ddi_id=holog_chunk_params["this_ddi"]
     )
 
-    meta_data = _read_meta_data(holog_chunk_params["holog_file"], 'holog', 'extract_holog')
+    meta_data = _read_meta_data(holog_chunk_params["holog_name"], 'holog', 'extract_holog')
 
     # Calculate lm coordinates
     l, m = _calc_coords(holog_chunk_params["grid_size"], holog_chunk_params["cell_size"])
@@ -268,13 +268,21 @@ def _holog_chunk(holog_chunk_params):
     xds.attrs["time_centroid"] = np.array(time_centroid)
     xds.attrs["ddi"] = ddi
 
-    coords = {"ddi": list(ant_data_dict.keys()), "pol": pol, "l": l, "m": m, "u": u, "v": v, "u_prime": u_prime,
-              "v_prime": v_prime, "chan": freq_chan}
-    #coords["time"] = np.array(time_centroid)
-
+    coords = {
+        "ddi": list(ant_data_dict.keys()), 
+        "pol": pol, 
+        "l": l, 
+        "m": m, 
+        "u": u, 
+        "v": v, 
+        "u_prime": u_prime,
+        "v_prime": v_prime, 
+        "chan": freq_chan
+    }
+    
     xds = xds.assign_coords(coords)
 
-    xds.to_zarr("{name}/{ant}/{ddi}".format(name=holog_chunk_params["image_file"], ant=holog_chunk_params["this_ant"],
+    xds.to_zarr("{name}/{ant}/{ddi}".format(name=holog_chunk_params["image_name"], ant=holog_chunk_params["this_ant"],
                                             ddi=ddi), mode="w", compute=True, consolidated=True)
 
 
@@ -308,17 +316,6 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
         cf_chan_map[i], _ = _find_nearest(pb_freq, freq_chan[i])
 
     return cf_chan_map, pb_freq
-
-
-def _create_image_meta_data(image_file, input_params):
-    """
-    Save image meta data to a json file
-    Args:
-        image_file: image file
-        input_params: holog input parameter dictionaire
-    """
-    output_attr_file = "{name}/{ext}".format(name=image_file, ext=".image_attr")
-    _write_meta_data('holog', output_attr_file, input_params)
 
 
 def _export_to_fits_holog_chunk(parm_dict):

@@ -11,7 +11,7 @@ from astrohack._utils._dio import _load_image_file
 from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _create_destination_folder
-from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
+from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._tools import _print_method_list, _print_attributes, _print_data_contents, _print_summary_header
@@ -864,7 +864,7 @@ class AstrohackPointFile(dict):
             logger.error("[AstrohackPointFile]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file, 'point', 'extract_holog')
+        self._meta_data = _read_meta_data(file, 'point', 'extract_pointing')
 
         return self._file_is_open
 

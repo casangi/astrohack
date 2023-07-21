@@ -4,6 +4,8 @@ import gdown
 import shutil
 import json
 
+from astrohack._utils._tools import _remove_suffix
+
 from prettytable import PrettyTable
 
 gdown_ids = {
@@ -69,14 +71,16 @@ def download(file, folder='.', unpack=False):
         id = gdown_ids[file]
         create_folder(folder)
 
-        if unpack: 
-            file = file+'.zip'
-        
         fullname = os.path.join(folder, file)
 
-        if not os.path.exists(fullname):
-            url = 'https://drive.google.com/u/0/uc?id=' + id + '&export=download'
-            gdown.download(url, fullname)
+        if os.path.exists(fullname) or os.path.exists(fullname + '.zip'):
+            continue   
+
+        if unpack:
+            fullname = fullname + '.zip'
+
+        url = 'https://drive.google.com/u/0/uc?id=' + id + '&export=download'
+        gdown.download(url, fullname)
 
         # Unpack results
         if unpack: 

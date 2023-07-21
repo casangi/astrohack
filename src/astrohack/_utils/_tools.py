@@ -1,10 +1,29 @@
+import json
+
 import numpy as np
+
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from prettytable import PrettyTable
 from textwrap import fill
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        
+        elif isinstance(obj, np.integer):
+            return int(obj)
+
+        elif isinstance(obj, NoneType):
+            return "None"
+
+
+        return json.JSONEncoder.default(self, obj)
 
 def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
     """
@@ -38,6 +57,7 @@ def _remove_suffix(input_string, suffix):
     """
     if suffix and input_string.endswith(suffix):
         return input_string[:-len(suffix)]
+        
     return input_string
 
 
@@ -154,15 +174,8 @@ def _parm_to_list(caller, parm, data_dict, prefix):
         msg = f'[{caller}] cannot interpret parameter {parm} of type {type(parm)}'
         logger.error(msg)
         raise Exception(msg)
+        
     return oulist
-
-
-def _numpy_to_json(value):
-    if isinstance(value, np.integer):
-        return int(value)
-    if isinstance(value, np.floating):
-        return float(value)
-
 
 def _split_pointing_table(ms_name, antennas):
     """ Split pointing table to contain only specified antennas

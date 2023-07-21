@@ -50,8 +50,8 @@ def verify_panel_positions(
     antenna='ant_DV13',
     ddi='ddi_0'
 ):
-  def relative_difference(result, expected):  
-      return 2*np.abs(result - expected)/(abs(result) + abs(expected))
+  def relative_difference(mean, expected):  
+      return 2*np.abs(mean - expected)/(abs(mean) + abs(expected))
     
   M_TO_MILS = 39370.1
     

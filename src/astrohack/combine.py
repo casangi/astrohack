@@ -2,9 +2,9 @@ import numpy as np
 
 from astrohack._utils._combine import _combine_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
+from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
-from astrohack._utils._dio import check_if_file_will_be_overwritten, check_if_file_exists, _write_meta_data
+from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
 from astrohack.mds import AstrohackImageFile
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
@@ -52,8 +52,8 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
     combine_params = _check_combine_parms(fname, image_name, combine_name, ant_id, ddi, weighted, parallel, overwrite)
     input_params = combine_params.copy()
 
-    check_if_file_exists(fname, combine_params['image_file'])
-    check_if_file_will_be_overwritten(fname, combine_params['combine_file'], combine_params['overwrite'])
+    _check_if_file_exists(combine_params['image_file'])
+    _check_if_file_will_be_overwritten(combine_params['combine_file'], combine_params['overwrite'])
 
     image_mds = AstrohackImageFile(combine_params['image_file'])
     image_mds._open()
@@ -62,7 +62,7 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
     if _dask_general_compute(fname, image_mds, _combine_chunk, combine_params, ['ant'], parallel=parallel):
         logger.info(f"[{fname}]: Finished processing")
         output_attr_file = "{name}/{ext}".format(name=combine_params['combine_file'], ext=".image_attr")
-        _write_meta_data('combine', output_attr_file, input_params)
+        _write_meta_data(output_attr_file, input_params)
         combine_mds = AstrohackImageFile(combine_params['combine_file'])
         combine_mds._open()
         return combine_mds

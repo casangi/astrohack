@@ -102,7 +102,7 @@ def _extract_holog_chunk(extract_holog_params):
 
     pnt_ant_dict = _load_point_file(pnt_name, map_ant_name_list, dask_load=False)
     pnt_map_dict = _extract_pointing_chunk(map_ant_name_list, time_vis, pnt_ant_dict)
-    grid_parms = _get_grid_parms(vis_map_dict,pnt_map_dict, ant_names)
+    grid_parms = _get_grid_parms(vis_map_dict, pnt_map_dict, ant_names)
     
     ### To DO:
     ################### Average multiple repeated samples
@@ -538,7 +538,8 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
                             n_pixs.append(xds.attrs["grid_parms"]["n_pix"])
                             telescope_names.append(xds.attrs['telescope_name'])
     
-    cell_sizes_sigfigs =  _significant_digits(cell_sizes,digits=3)
+    cell_sizes_sigfigs =  _significant_digits(cell_sizes, digits=3)
+
     if not (len(set(cell_sizes_sigfigs)) == 1):
         logger.error('Cell size not consistant: ' + str(cell_sizes))
         raise
@@ -550,7 +551,9 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
     if not (len(set(telescope_names)) == 1):
         logger.error('Telescope name not consistant: ' + str(telescope_names))
         raise
+
     output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
+    
     try:
         with open(output_meta_file, "w") as json_file:
             json.dump(ant_holog_dict, json_file)
@@ -558,12 +561,14 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
     except Exception as error:
         logger.error("[_create_holog_meta_data] {error}".format(error=error))
 
-    meta_data = {'cell_size': np.mean(cell_sizes),
-                 'n_pix': n_pixs[0],
-                 'telescope_name': telescope_names[0]}
+    meta_data = {
+        'cell_size': np.mean(cell_sizes),
+        'n_pix': n_pixs[0],
+        'telescope_name': telescope_names[0]
+    }
+
     meta_data.update(input_params)
-    holog_attr_file = "{name}/{ext}".format(name=holog_file, ext=".holog_attr")
-    _write_meta_data('extract_holog', holog_attr_file, meta_data)
-    point_attr_file = "{name}/{ext}".format(name=input_params['point_name'], ext=".point_attr")
-    _write_meta_data('extract_holog', point_attr_file, input_params)
+    
+    return meta_data
+    
 
