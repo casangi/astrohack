@@ -1,15 +1,15 @@
 import numpy as np
 
 from casacore import tables as ctables
-from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord, ITRS, CIRS
+from astropy.coordinates import SkyCoord, CIRS
 from astropy.time import Time
 import astropy.units as units
 import xarray as xr
-import time
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _casa_time_to_mjd, _altaz_to_hadec
+from astrohack._utils._tools import _casa_time_to_mjd
 from astrohack._utils._conversion import _convert_unit
+from astrohack._utils._dio import _write_meta_data
 
 
 def _extract_antenna_data(fname, cal_table):
@@ -80,7 +80,7 @@ def _extract_spectral_info(fname, cal_table):
     return ddi_dict
 
 
-def _extract_source_and_telescope(fname, cal_table):
+def _extract_source_and_telescope(fname, cal_table, basename):
     src_table = ctables.table(cal_table+'::FIELD', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     src_id = src_table.getcol('SOURCE_ID')
     phase_center_j2000 = src_table.getcol('PHASE_DIR')[:, 0, :]
@@ -104,14 +104,15 @@ def _extract_source_and_telescope(fname, cal_table):
 
     src_list = []
     for i_src in range(n_src):
-        source = {'id': src_id[i_src], 'name': src_name[i_src], 'j2000': phase_center_j2000[i_src],
-                  'precessed': phase_center_precessed[i_src]}
+        source = {'id': int(src_id[i_src]), 'name': src_name[i_src], 'j2000': phase_center_j2000[i_src].tolist(),
+                  'precessed': phase_center_precessed[i_src].tolist()}
         src_list.append(source)
     obs_dict = {'n_src': n_src, 'src_list': src_list, 'time_range': time_range, 'telescope_name': telescope_name}
-    return obs_dict
+
+    _write_meta_data('extract_locit', "/".join([basename, ".observation_info"]), obs_dict)
 
 
-def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict):
+def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, basename):
     logger = _get_astrohack_logger()
     main_table = ctables.table(cal_table, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     antenna1 = main_table.getcol('ANTENNA1')
@@ -145,14 +146,14 @@ def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict):
         # No data to discard we can go on and compute the phase gains
         pass
     phase_gains = np.angle(gains)
-    global_dict = {}
     for i_ant in range(ant_dict['n_ant']):
-        this_ant_dict = {}
         ant_sel = antenna1 == i_ant
         ant_time = gain_time[ant_sel]
         ant_field = fields[ant_sel]
         ant_phase_gains = phase_gains[ant_sel]
         ant_spw_id = spw_id[ant_sel]
+        antenna = ant_dict['list'][i_ant]
+
         for i_ddi in range(ddi_dict['n_ddi']):
             this_ddi_xds = xr.Dataset()
             ddi_sel = ant_spw_id == i_ddi
@@ -160,9 +161,8 @@ def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict):
             this_ddi_xds.assign_coords(coords)
             this_ddi_xds['PHASE_GAINS'] = xr.DataArray(ant_phase_gains[ddi_sel], dims=('time', 'chan', 'pol'))
             this_ddi_xds['FIELD_ID'] = xr.DataArray(ant_field[ddi_sel], dims='time')
-            this_ant_dict[f'DDI_{i_ddi}'] = this_ddi_xds
-        global_dict[ant_dict['list'][i_ant]['name']] = this_ant_dict
-
-    return global_dict
-
-
+            this_ddi_xds.attrs['frequency'] = ddi_dict['frequencies'][i_ddi]
+            this_ddi_xds.attrs['bandwidth'] = ddi_dict['bandwidth'][i_ddi]
+            outname = "/".join([basename, antenna['name'], f'DDI_{i_ddi}'])
+            this_ddi_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
+        _write_meta_data('extract_locit', "/".join([basename, antenna['name'], ".antenna_info"]), antenna)
