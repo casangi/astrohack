@@ -398,7 +398,7 @@ class AstrohackHologFile(dict):
             logger.error("[AstrohackHologFile]: {}".format(e))
             self._file_is_open = False
 
-        #self._meta_data = _read_meta_data(file, 'holog', 'extract_holog')
+        self._meta_data = _read_meta_data(file, 'holog', 'extract_holog')
 
         return self._file_is_open
 

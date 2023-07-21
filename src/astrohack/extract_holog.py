@@ -50,20 +50,31 @@ def extract_holog(
 
     :param ms_name: Name of input measurement file name.
     :type ms_name: str
-    :param holog_obs_dict: The *holog_obs_dict* describes which scan and antenna data to extract from the measurement set. As detailed below, this compound dictionary also includes important meta data needed for preprocessing and extraction of the holography data from the measurement set. If not specified holog_obs_dict will be generated. For auto generation of the holog_obs_dict the assumtion is made that the same antanna beam is not mapped twice in a row (alternating sets of antennas is fine).
-    :type holog_obs_dict: dict, optional
-    :param ddi:  DDI(s) that should be extracted from the measurement set. Defaults to all DDI's in the ms.
-    :type ddi: int numpy.ndarray | int list, optional
-    :param baseline_average_distance: To increase the signal to noise for a mapping antenna mutiple reference antennas can be used. The baseline_average_distance is the acceptable distance (in meters) between a mapping antenna and a reference antenna. The baseline_average_distance is only used if the holog_obs_dict is not specified. If no distance is specified all reference antennas will be used. baseline_average_distance and baseline_average_nearest can not be used together.
-    :type baseline_average_distance: float, optional
-    :param baseline_average_nearest: To increase the signal to noise for a mapping antenna mutiple reference antennas can be used. The baseline_average_nearest is the number of nearest reference antennas to use. The baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and baseline_average_nearest can not be used together.
-    :type baseline_average_nearest: int, optional
+
+    :param point_name: Name of *<point_name>.point.zarr* file to use.
+    :type holog_name: str
+
     :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with *holog.zarr* extension.
     :type holog_name: str, optional
+
+    :param holog_obs_dict: The *holog_obs_dict* describes which scan and antenna data to extract from the measurement set. As detailed below, this compound dictionary also includes important meta data needed for preprocessing and extraction of the holography data from the measurement set. If not specified holog_obs_dict will be generated. For auto generation of the holog_obs_dict the assumtion is made that the same antanna beam is not mapped twice in a row (alternating sets of antennas is fine).
+    :type holog_obs_dict: dict, optional
+
+    :param ddi:  DDI(s) that should be extracted from the measurement set. Defaults to all DDI's in the ms.
+    :type ddi: int numpy.ndarray | int list, optional
+
+    :param baseline_average_distance: To increase the signal to noise for a mapping antenna mutiple reference antennas can be used. The baseline_average_distance is the acceptable distance (in meters) between a mapping antenna and a reference antenna. The baseline_average_distance is only used if the holog_obs_dict is not specified. If no distance is specified all reference antennas will be used. baseline_average_distance and baseline_average_nearest can not be used together.
+    :type baseline_average_distance: float, optional
+
+    :param baseline_average_nearest: To increase the signal to noise for a mapping antenna mutiple reference antennas can be used. The baseline_average_nearest is the number of nearest reference antennas to use. The baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and baseline_average_nearest can not be used together.
+    :type baseline_average_nearest: int, optional
+
     :param data_column: Determines the data column to pull from the measurement set. Defaults to "CORRECTED_DATA".
     :type data_column: str, optional, ex. DATA, CORRECTED_DATA
+
     :param parallel: Boolean for whether to process in parallel, defaults to False.
     :type parallel: bool, optional
+
     :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files, defaults to False.
     :type overwrite: bool, optional
 
@@ -470,25 +481,30 @@ def generate_holog_obs_dict(
 
     :param ms_name: Name of input measurement file name.
     :type ms_name: str
-    :param holog_obs_dict: The *holog_obs_dict* describes which scan and antenna data to extract from the measurement set. As detailed below, this compound dictionary also includes important meta data needed for preprocessing and extraction of the holography data from the measurement set. If not specified holog_obs_dict will be generated. For auto generation of the holog_obs_dict the assumtion is made that the same antanna beam is not mapped twice in a row (alternating sets of antennas is fine).
-    :type holog_obs_dict: dict, optional
+    
     :param ddi:  DDI(s) that should be extracted from the measurement set. Defaults to all DDI's in the ms.
     :type ddi: int numpy.ndarray | int list, optional
+
     :param baseline_average_distance: To increase the signal to noise for a mapping antenna mutiple reference antennas can be used. The baseline_average_distance is the acceptable distance between a mapping antenna and a reference antenna. The baseline_average_distance is only used if the holog_obs_dict is not specified. If no distance is specified all reference antennas will be used. baseline_average_distance and baseline_average_nearest can not be used together.
     :type holog_obs_dict: float, optional
+
     :param baseline_average_nearest: To increase the signal to noise for a mapping antenna mutiple reference antennas can be used. The baseline_average_nearest is the number of nearest reference antennas to use. The baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and baseline_average_nearest can not be used together.
     :type holog_obs_dict: int, optional
-    :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with *holog.zarr* extension.
-    :type holog_name: str, optional
+
     :param point_name: Name of *<point_name>.point.zarr* file to create. Defaults to measurement set name with *point.zarr* extension.
     :type point_name: str, optional
+
     :param data_column: Determines the data column to pull from the measurement set. Defaults to "CORRECTED_DATA".
     :type data_column: str, optional, ex. DATA, CORRECTED_DATA
+
+    :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files, defaults to False.
+    :type overwrite: bool, optional
+
     :param parallel: Boolean for whether to process in parallel. Defaults to False
     :type parallel: bool, optional
 
-    :return: Holography holog object.
-    :rtype: AstrohackHologFile
+    :return: holog observation dictionary
+    :rtype: json
 
     .. _Description:
 
@@ -513,8 +529,6 @@ def generate_holog_obs_dict(
         }
 
     **Additional Information**
-
-        This function extracts the holography related information from the given measurement file. The data is restructured into an astrohack file format and saved into a file in the form of *<holog_name>.holog.zarr*. The extension *.holog.zarr* is used for all holography files. In addition, the pointing information is recorded into a holography file of format *<pointing_name>.point.zarr*. The extension *.point.zarr* is used for all holography pointing files. 
 
         **holog_obs_dict[holog_mapping_id] (dict):**
         *holog_mapping_id* is a unique, arbitrary, user-defined integer assigned to the data that describes a single complete mapping of the beam.
