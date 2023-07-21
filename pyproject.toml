@@ -1,6 +1,6 @@
 [project]
 name = "astrohack"
-version = "0.1.6"
+version = "0.1.8"
 description = "Holography Antenna Commissioning Kit"
 authors = [
     {name = "Jan-Willem Steeb", email="jsteeb@nrao.edu"},
@@ -22,6 +22,8 @@ dependencies = [
 'numpy',
 'prettytable',
 'pytest',
+'pytest-cov',
+'pytest-html',
 'scikit_image',
 'scipy',
 'xarray',

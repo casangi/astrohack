@@ -36,9 +36,12 @@ class astrohack_formatter(logging.Formatter):
     middle_msg = "%(levelname)-8s"
     end_msg = " - %(name)s - (%(filename)s:%(lineno)d) - %(message)s"
     
+    import inspect
+
+
     FORMATS = {
         logging.DEBUG: start_msg + DEBUG + middle_msg  + reset + end_msg ,
-        logging.INFO:  start_msg + INFO + middle_msg  + reset + end_msg ,
+        logging.INFO:  start_msg + INFO + middle_msg  + reset + end_msg,
         logging.WARNING:  start_msg + WARNING + middle_msg  + reset + end_msg ,
         logging.ERROR:  start_msg + ERROR + middle_msg  + reset + end_msg ,
         logging.CRITICAL:  start_msg + CRITICAL + middle_msg  + reset + end_msg ,
