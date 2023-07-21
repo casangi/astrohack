@@ -10,11 +10,14 @@ from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _load_image_file
 from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
+from astrohack._utils._dio import _load_locit_file
+
 from astrohack._utils._dio import _create_destination_folder
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._tools import _print_method_list, _print_attributes, _print_data_contents, _print_summary_header
+from astrohack._utils._tools import _print_source_table
 
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
@@ -911,7 +914,7 @@ class AstrohackLocitFile(dict):
         return self._file_is_open
 
     def _open(self, file=None, dask_load=True):
-        """ Open holography Lociting file.
+        """ Open antenna location file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
         :param dask_load: Is file to be loaded with dask?, default is True
@@ -926,21 +929,26 @@ class AstrohackLocitFile(dict):
             file = self.file
 
         try:
-            # _load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
+            _load_locit_file(file=file, dask_load=dask_load, locit_dict=self)
             self._file_is_open = True
 
         except Exception as e:
             logger.error("[AstrohackLocitFile]: {}".format(e))
             self._file_is_open = False
 
-        # self._meta_data = _read_meta_data(file, 'locit', 'extract_locit')
+        self._meta_data = _read_meta_data(file, 'locit', 'extract_locit')
 
         return self._file_is_open
+
+    def print_source_table(self):
+        """ Prints a table with the sources observaed for antenna location determination
+        """
+        _print_source_table(self['obs_info']['src_list'])
 
     def summary(self):
         """ Prints summary of the AstrohackLocitFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        # _print_attributes(self._meta_data)
-        # _print_data_contents(self, ["Antenna"])
-        _print_method_list([self.summary])
+        _print_attributes(self._meta_data)
+        _print_data_contents(self, ["Antenna", "DDI"])
+        _print_method_list([self.summary, self.print_source_table])

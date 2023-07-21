@@ -82,41 +82,85 @@ def _load_panel_file(file=None, panel_dict=None, dask_load=True):
     return panel_data_dict
 
 
-def _load_image_file(file=None, image_dict=None,  dask_load=True):
-        """ Open hologgraphy file.
+def _load_image_file(file=None, image_dict=None, dask_load=True):
+    """ Open hologgraphy file.
 
-        Args:s
-            file (str, optional): Path to holography file. Defaults to None.
+    Args:s
+        file (str, optional): Path to holography file. Defaults to None.
 
-        Returns:
-            bool: bool describing whether the file was opened properly
-        """
-        logger = _get_astrohack_logger()
-        ant_data_dict = {}
+    Returns:
+        bool: bool describing whether the file was opened properly
+    """
+    logger = _get_astrohack_logger()
+    ant_data_dict = {}
 
-        if image_dict is not None:
-            ant_data_dict = image_dict
+    if image_dict is not None:
+        ant_data_dict = image_dict
 
-        ant_list =  [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
-        
-        try:
-            for ant in ant_list:
-                if 'ant' in ant:
-                    ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
-                    ant_data_dict[ant] = {}
-                    
-                    for ddi in ddi_list:
-                        if 'ddi' in ddi:
-                            if dask_load:
-                                ant_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
-                            else:
-                                ant_data_dict[ant][ddi] = _open_no_dask_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+    ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
 
-        except Exception as e:
-            logger.error(str(e))
-            raise
+    try:
+        for ant in ant_list:
+            if 'ant' in ant:
+                ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
+                            os.path.isdir(file + "/" + str(ant))]
+                ant_data_dict[ant] = {}
 
-        return ant_data_dict
+                for ddi in ddi_list:
+                    if 'ddi' in ddi:
+                        if dask_load:
+                            ant_data_dict[ant][ddi] = xr.open_zarr(
+                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                        else:
+                            ant_data_dict[ant][ddi] = _open_no_dask_zarr(
+                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+
+    except Exception as e:
+        logger.error(str(e))
+        raise
+
+    return ant_data_dict
+
+
+def _load_locit_file(file=None, locit_dict=None, dask_load=True):
+    """ Open Antenna position (locit) file.
+
+    Args:
+        file (str, optional): Path to holography file. Defaults to None.
+
+
+    Returns:
+        bool: bool describing whether the file was opened properly
+    """
+    logger = _get_astrohack_logger()
+    ant_data_dict = {}
+
+    if locit_dict is not None:
+        ant_data_dict = locit_dict
+
+    ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
+
+    ant_data_dict['obs_info'] = _read_meta_data(f'{file}/.observation_info', None, 'extract_locit')
+    try:
+        for ant in ant_list:
+            if 'ant' in ant:
+                ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
+                            os.path.isdir(file + "/" + str(ant))]
+                ant_data_dict[ant] = {'ant_info': _read_meta_data(f'{file}/{ant}/.antenna_info', None, 'extract_locit')}
+                for ddi in ddi_list:
+                    if 'ddi' in ddi:
+                        if dask_load:
+                            ant_data_dict[ant][ddi] = xr.open_zarr(
+                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                        else:
+                            ant_data_dict[ant][ddi] = _open_no_dask_zarr(
+                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+
+    except Exception as e:
+        logger.error(str(e))
+        raise
+
+    return ant_data_dict
 
 
 def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None, ddi_id=None, holog_dict=None):

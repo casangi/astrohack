@@ -393,7 +393,10 @@ def _print_data_contents(data_dict, field_names, alignment='l'):
                 table.add_row([item_l1, item_l2, list(data_dict[item_l1][item_l2].keys())])
     elif depth == 2:
         for item_l1 in data_dict.keys():
-            table.add_row([item_l1, list(data_dict[item_l1].keys())])
+            if 'info' in item_l1:
+                pass
+            else:
+                table.add_row([item_l1, list(data_dict[item_l1].keys())])
     elif depth == 1:
         for item_l1 in data_dict.keys():
             table.add_row([item_l1])
@@ -430,6 +433,44 @@ def _print_attributes(meta_dict, split_key=None, alignment='l'):
             else:
                 table.add_row([key, meta_dict[key]])
     print(table)
+
+
+def _print_source_table(src_list, alignment='l'):
+    print("\nSources:")
+    table = PrettyTable()
+    table.field_names = ['Id', 'Name', 'RA J2000', 'DEC J2000', 'RA precessed', 'DEC precessed']
+    for source in src_list:
+        table.add_row([source['id'], source['name'], _rad_to_ra_str(source['j2000'][0]),
+                       _rad_to_dec_str(source['j2000'][1]), _rad_to_ra_str(source['precessed'][0]),
+                       _rad_to_dec_str(source['precessed'][1])])
+    table.align = alignment
+    print(table)
+
+
+def _rad_to_ra_str(ra_rad):
+    h_float = ra_rad*12/np.pi
+    if h_float < 0:
+        h_float += 24
+    h_int = np.floor(h_float)
+    m_float = (h_float-h_int)*60
+    m_int = np.floor(m_float)
+    s_float = (m_float-m_int)*60
+    return f'{int(h_int):02d}h{int(m_int):02d}m{s_float:06.3f}s'
+
+
+def _rad_to_dec_str(ra_rad):
+    d_float = ra_rad*180/np.pi
+    if d_float < 0:
+        d_float *= -1
+        sign = '-'
+    else:
+        sign = '+'
+    d_int = np.floor(d_float)
+    m_float = (d_float-d_int)*60
+    m_int = np.floor(m_float)
+    s_float = (m_float-m_int)*60
+    deg_symbol = '\u00b0''U+00B0'
+    return f'{sign}{int(d_int):02d}\u00B0{int(m_int):02d}m{s_float:06.3f}s'
 
 
 def _print_summary_header(filename, print_len=100, frame_char='#', frame_width=3):
