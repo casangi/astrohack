@@ -119,7 +119,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
             return None
 
 
-def aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, overwrite=False):
+def _aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, overwrite=False):
     """
     Package AIPS HOLOG products in a .image.zarr file compatible with astrohack.panel.panel
 
