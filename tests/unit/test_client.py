@@ -39,3 +39,8 @@ class TestAstrohack():
 
             except OSError:
                 assert False
+            
+            finally:
+                clinet.close()
+
+        client.close()
