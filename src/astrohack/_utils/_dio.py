@@ -323,13 +323,11 @@ def _load_image_xds(file_stem, ant, ddi, dask_load=True):
     else:
         raise FileNotFoundError("Image file: {} not found".format(image_path))
 
-def _read_meta_data(file_name, file_type, origin):
+def _read_meta_data(file_name):
     """Reads dimensional data from holog meta file.
 
     Args:
         file_name (str): astorhack file name.
-        file_type (str): astrohack file type
-        origin (str, list): Astrohack expected origin(s)
 
     Returns:
         dict: dictionary containing dimension data.
@@ -337,38 +335,12 @@ def _read_meta_data(file_name, file_type, origin):
     logger = _get_astrohack_logger()
     
     try:
-        with open(f'{file_name}/.{file_type}_attr') as json_file:
+        with open(file_name) as json_file:
             json_dict = json.load(json_file)
 
     except Exception as error:
         logger.error(str(error))
-        raise Exception   
-    
-    # I don't see the use case for this or the origin in general. This means I need to either look at the
-    # meta data of a file I want to open ahead of time or list all possible unctions that could have made it.
-    
-    
-    try:
-        metadataorigin = json_dict['origin']
-    except KeyError:
-        logger.error("[_read_meta_data]: Badly formatted metadata in input file")
-        
-        raise Exception('Bad metadata')
-
-    if isinstance(origin, str):
-        if metadataorigin != origin:
-            logger.error(f"[_read_meta_data]: Input file is not an Astrohack {file_type} file")
-            logger.error(f"Expected origin was {origin} but got {metadataorigin}")
-            
-            raise TypeError('Incorrect file type')
-
-    elif isinstance(origin, (list, tuple)):
-        if metadataorigin not in origin:
-            logger.error(f"[_read_meta_data]: Input file is not an Astrohack {file_type} file")
-            logger.error(f"Expected origin was {origin} but got {metadataorigin}")
-            
-            raise TypeError('Incorrect file type')
-    
+        raise Exception       
 
     return json_dict
 

@@ -472,7 +472,6 @@ def generate_holog_obs_dict(
     ddi='all',
     baseline_average_distance='all',
     baseline_average_nearest='all',
-    data_column="CORRECTED_DATA",
     overwrite=False,
     parallel=False
 ):
@@ -493,9 +492,6 @@ def generate_holog_obs_dict(
 
     :param point_name: Name of *<point_name>.point.zarr* file to create. Defaults to measurement set name with *point.zarr* extension.
     :type point_name: str, optional
-
-    :param data_column: Determines the data column to pull from the measurement set. Defaults to "CORRECTED_DATA".
-    :type data_column: str, optional, ex. DATA, CORRECTED_DATA
 
     :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files, defaults to False.
     :type overwrite: bool, optional

@@ -1,3 +1,4 @@
+import os
 import pytest
 
 class TestAstrohack():
@@ -13,15 +14,15 @@ class TestAstrohack():
         such as deleting test data """
         pass
 
-    def setup(self):
+    def setup_method(self):
         """ setup any state specific to all methods of the given class """
         pass
 
-    def teardown(self):
+    def teardown_method(self):
         """ teardown any state that was previously setup for all methods of the given class """
         pass
 
-    def test_client(self):
+    def test_client_spawn(self):
         """ Test astrohack_client """
         import distributed
 
@@ -41,6 +42,28 @@ class TestAstrohack():
                 assert False
             
             finally:
-                clinet.close()
+                client.shutdown()
 
-        client.close()
+        client.shutdown()
+
+    def test_client_dask_dir(self):
+        """ Test astrohack_client """
+        import distributed
+
+        from astrohack.astrohack_client import astrohack_local_client
+
+        DEFAULT_DASK_ADDRESS="127.0.0.1:8786"
+
+        log_parms = {'log_level':'DEBUG'}
+
+        client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms, dask_local_dir='./dask_test_dir')
+        
+        try:
+            if os.path.exists('./dask_test_dir') is False:
+                raise FileNotFoundError
+
+        except FileNotFoundError:
+            assert False
+            
+        finally:
+            client.shutdown()
