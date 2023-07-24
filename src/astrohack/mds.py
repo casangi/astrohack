@@ -131,7 +131,7 @@ class AstrohackImageFile(dict):
             logger.error("[AstroHackImageFile.open()]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file, 'image', ['combine', 'holog'])
+        self._meta_data = _read_meta_data(file+'/.image_attr')
 
         return self._file_is_open
 
@@ -398,7 +398,7 @@ class AstrohackHologFile(dict):
             logger.error("[AstrohackHologFile]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file, 'holog', 'extract_holog')
+        self._meta_data = _read_meta_data(file+'/.holog_attr')
 
         return self._file_is_open
 
@@ -592,7 +592,7 @@ class AstrohackPanelFile(dict):
             logger.error("[AstroHackPanelFile.open()]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file, 'panel', 'panel')
+        self._meta_data = _read_meta_data(file+'/.panel_attr')
 
         return self._file_is_open
 
@@ -864,7 +864,7 @@ class AstrohackPointFile(dict):
             logger.error("[AstrohackPointFile]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file, 'point', 'extract_pointing')
+        self._meta_data = _read_meta_data(file+'/.point_attr')
 
         return self._file_is_open
 
