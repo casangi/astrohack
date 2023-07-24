@@ -37,17 +37,24 @@ def extract_locit(cal_table, locit_name=None, parallel=False, overwrite=False):
     fname = 'extract_locit'
     ######### Parameter Checking #########
     extract_locit_parms = _check_extract_locit_parms(fname, cal_table, locit_name, parallel, overwrite)
-    input_params = extract_locit_parms.copy()
+    attributes = extract_locit_parms.copy()
 
     _check_if_file_exists(extract_locit_parms['cal_table'])
     _check_if_file_will_be_overwritten(extract_locit_parms['locit_name'], extract_locit_parms['overwrite'])
 
     ant_dict = _extract_antenna_data(fname, extract_locit_parms['cal_table'])
     ddi_dict = _extract_spectral_info(fname, extract_locit_parms['cal_table'])
-    _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, extract_locit_parms['locit_name'])
-    _extract_source_and_telescope(fname, extract_locit_parms['cal_table'], extract_locit_parms['locit_name'])
+    ref_antenna, n_antennae = _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict,
+                                                           extract_locit_parms['locit_name'])
+    telescope_name, n_sources = _extract_source_and_telescope(fname, extract_locit_parms['cal_table'],
+                                                          extract_locit_parms['locit_name'])
+
+    attributes['telescope_name'] = telescope_name
+    attributes['n_sources'] = n_sources
+    attributes['reference_antenna'] = ref_antenna
+    attributes['n_antennae'] = n_antennae
     output_attr_file = "{name}/{ext}".format(name=extract_locit_parms['locit_name'], ext=".locit_attr")
-    _write_meta_data(output_attr_file, input_params)
+    _write_meta_data(output_attr_file, attributes)
 
     logger.info(f"[{fname}]: Finished processing")
     locit_mds = AstrohackLocitFile(extract_locit_parms['locit_name'])
@@ -57,7 +64,8 @@ def extract_locit(cal_table, locit_name=None, parallel=False, overwrite=False):
 
 def _check_extract_locit_parms(fname, cal_table, locit_name, parallel, overwrite):
 
-    extract_locit_parms = {"cal_table": cal_table, "locit_name": locit_name, "parallel": parallel, "overwrite": overwrite}
+    extract_locit_parms = {"cal_table": cal_table, "locit_name": locit_name, "parallel": parallel,
+                           "overwrite": overwrite}
 
     #### Parameter Checking ####
     logger = _get_astrohack_logger()

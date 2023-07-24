@@ -13,6 +13,15 @@ from astrohack._utils._dio import _write_meta_data
 
 
 def _extract_antenna_data(fname, cal_table):
+    """
+    Extract antenna information from the ANTENNA sub table of the cal table
+    Args:
+        fname: Caller
+        cal_table: Cal table file name
+
+    Returns:
+    Antenna dictionary
+    """
     logger = _get_astrohack_logger()
 
     ant_table = ctables.table(cal_table + '::ANTENNA', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
@@ -59,6 +68,15 @@ def _extract_antenna_data(fname, cal_table):
 
 
 def _extract_spectral_info(fname, cal_table):
+    """
+    Extract spectral information from the SPECTRAL_WINDOW sub table of the cal table
+    Args:
+        fname: Caller
+        cal_table: Cal table file name
+
+    Returns:
+    DDI dictionary
+    """
     logger = _get_astrohack_logger()
     spw_table = ctables.table(cal_table+'::SPECTRAL_WINDOW', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     ref_freq = spw_table.getcol('REF_FREQUENCY')
@@ -81,6 +99,15 @@ def _extract_spectral_info(fname, cal_table):
 
 
 def _extract_source_and_telescope(fname, cal_table, basename):
+    """
+    Extract source and telescope  information from the FIELD and OBSERVATION sub tables of the cal table
+    Args:
+        fname: Caller
+        cal_table: Cal table file name
+
+    Returns:
+    Writes dict to a json file
+    """
     src_table = ctables.table(cal_table+'::FIELD', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     src_id = src_table.getcol('SOURCE_ID')
     phase_center_j2000 = src_table.getcol('PHASE_DIR')[:, 0, :]
@@ -107,12 +134,23 @@ def _extract_source_and_telescope(fname, cal_table, basename):
         source = {'id': int(src_id[i_src]), 'name': src_name[i_src], 'j2000': phase_center_j2000[i_src].tolist(),
                   'precessed': phase_center_precessed[i_src].tolist()}
         src_list.append(source)
-    obs_dict = {'n_src': n_src, 'src_list': src_list, 'time_range': time_range.tolist(), 'telescope_name': telescope_name}
+    obs_dict = {'n_src': n_src, 'src_list': src_list, 'time_range': time_range.tolist(),
+                'telescope_name': telescope_name}
 
     _write_meta_data("/".join([basename, ".observation_info"]), obs_dict)
+    return telescope_name, n_src
 
 
 def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, basename):
+    """
+    Extract antenna based phase gains from the cal table
+    Args:
+        fname: Caller
+        cal_table: Cal table file name
+
+    Returns:
+    DDI dictionary
+    """
     logger = _get_astrohack_logger()
     main_table = ctables.table(cal_table, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     antenna1 = main_table.getcol('ANTENNA1')
@@ -130,11 +168,12 @@ def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, basename)
         i_best_ant = np.argmax(counts)
         fraction_best = counts[i_best_ant]/n_gains
         if fraction_best < 0.5:
-            logger.warning(f'[{fname}]: The best reference Antenna only covers {100*fraction_best}% of the data')
+            logger.warning(f'[{fname}]: The best reference Antenna only covers {100*fraction_best:.1f}% of the data')
         for i_refant in range(n_refant):
             if i_refant != i_best_ant:
                 logger.info(f'[{fname}]: Discarding gains derived with antenna '
-                            f'{ant_dict["list"][ref_antennas[i_refant]]["name"]} as reference')
+                            f'{ant_dict["list"][ref_antennas[i_refant]]["name"]} as reference '
+                            f'({100*counts[i_refant]/n_gains:.2f}% of the data)')
                 sel_refant = antenna2 != ref_antennas[i_refant]
                 antenna2 = antenna2[sel_refant]
                 antenna1 = antenna1[sel_refant]
@@ -142,9 +181,11 @@ def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, basename)
                 gains = gains[sel_refant]
                 fields = fields[sel_refant]
                 spw_id = spw_id[sel_refant]
+        ref_antenna = ref_antennas[i_best_ant]
     else:
         # No data to discard we can go on and compute the phase gains
-        pass
+        ref_antenna = ref_antennas[0]
+
     phase_gains = np.angle(gains)
     for i_ant in range(ant_dict['n_ant']):
         ant_sel = antenna1 == i_ant
@@ -153,6 +194,11 @@ def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, basename)
         ant_phase_gains = phase_gains[ant_sel]
         ant_spw_id = spw_id[ant_sel]
         antenna = ant_dict['list'][i_ant]
+        if i_ant == ref_antenna:
+            antenna['reference'] = True
+            ref_antenna_name = antenna['name']
+        else:
+            antenna['reference'] = False
 
         for i_ddi in range(ddi_dict['n_ddi']):
             this_ddi_xds = xr.Dataset()
@@ -166,3 +212,5 @@ def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, basename)
             outname = "/".join([basename, 'ant_'+antenna['name'], f'ddi_{i_ddi}'])
             this_ddi_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
         _write_meta_data("/".join([basename, 'ant_'+antenna['name'], ".antenna_info"]), antenna)
+
+    return ref_antenna_name, ant_dict['n_ant']

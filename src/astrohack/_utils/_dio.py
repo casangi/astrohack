@@ -159,9 +159,6 @@ def _load_locit_file(file=None, locit_dict=None, dask_load=True):
     except Exception as e:
         logger.error(str(e))
         raise
-
-    print(ant_data_dict['obs_info'])
-
     return ant_data_dict
 
 

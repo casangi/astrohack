@@ -435,20 +435,16 @@ def _print_attributes(meta_dict, split_key=None, alignment='l'):
     print(table)
 
 
-def _print_source_table(src_list, alignment='l'):
-    print("\nSources:")
-    table = PrettyTable()
-    table.field_names = ['Id', 'Name', 'RA J2000', 'DEC J2000', 'RA precessed', 'DEC precessed']
-    for source in src_list:
-        table.add_row([source['id'], source['name'], _rad_to_ra_str(source['j2000'][0]),
-                       _rad_to_dec_str(source['j2000'][1]), _rad_to_ra_str(source['precessed'][0]),
-                       _rad_to_dec_str(source['precessed'][1])])
-    table.align = alignment
-    print(table)
+def _rad_to_hour_str(rad):
+    """
+    Converts an angle in radians to hours minutes and seconds
+    Args:
+        rad: angle in radians
 
-
-def _rad_to_ra_str(ra_rad):
-    h_float = ra_rad*12/np.pi
+    Returns:
+    xxhyymzz.zzzs
+    """
+    h_float = rad * 12 / np.pi
     if h_float < 0:
         h_float += 24
     h_int = np.floor(h_float)
@@ -458,8 +454,16 @@ def _rad_to_ra_str(ra_rad):
     return f'{int(h_int):02d}h{int(m_int):02d}m{s_float:06.3f}s'
 
 
-def _rad_to_dec_str(ra_rad):
-    d_float = ra_rad*180/np.pi
+def _rad_to_deg_str(rad):
+    """
+    Converts an angle in radians to degrees minutes and seconds
+    Args:
+        rad: angle in radians
+
+    Returns:
+    xx\u00B0yymzz.zzzs
+    """
+    d_float = rad * 180 / np.pi
     if d_float < 0:
         d_float *= -1
         sign = '-'
@@ -469,7 +473,6 @@ def _rad_to_dec_str(ra_rad):
     m_float = (d_float-d_int)*60
     m_int = np.floor(m_float)
     s_float = (m_float-m_int)*60
-    deg_symbol = '\u00b0''U+00B0'
     return f'{sign}{int(d_int):02d}\u00B0{int(m_int):02d}m{s_float:06.3f}s'
 
 

@@ -2,6 +2,7 @@ import os
 import numpy as np
 import numbers
 import distributed
+from prettytable import PrettyTable
 from matplotlib import colormaps as cmaps
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
@@ -17,7 +18,7 @@ from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check
 from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._tools import _print_method_list, _print_attributes, _print_data_contents, _print_summary_header
-from astrohack._utils._tools import _print_source_table
+from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
@@ -941,9 +942,37 @@ class AstrohackLocitFile(dict):
         return self._file_is_open
 
     def print_source_table(self):
-        """ Prints a table with the sources observaed for antenna location determination
+        """ Prints a table with the sources observed for antenna location determination
         """
-        _print_source_table(self['obs_info']['src_list'])
+        alignment = 'l'
+        print("\nSources:")
+        table = PrettyTable()
+        table.field_names = ['Id', 'Name', 'RA J2000', 'DEC J2000', 'RA precessed', 'DEC precessed']
+        for source in self['obs_info']['src_list']:
+            table.add_row([source['id'], source['name'], _rad_to_hour_str(source['j2000'][0]),
+                           _rad_to_deg_str(source['j2000'][1]), _rad_to_hour_str(source['precessed'][0]),
+                           _rad_to_deg_str(source['precessed'][1])])
+        table.align = alignment
+        print(table)
+
+    def print_antenna_table(self):
+        """ Prints a table of the antennas included in the dataset
+        """
+        alignment = 'l'
+        print(f"\n{self['obs_info']['telescope_name']} Antennae:")
+        table = PrettyTable()
+        table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Distance to earth center (m)']
+        for item in self.keys():
+            if 'ant' in item:
+                antenna = self[item]['ant_info']
+                if antenna['reference']:
+                    table.add_row([antenna['name']+' (ref)', antenna['station'], _rad_to_deg_str(antenna['longitude']),
+                                   _rad_to_deg_str(antenna['latitude']), antenna['radius']])
+                else:
+                    table.add_row([antenna['name'], antenna['station'], _rad_to_deg_str(antenna['longitude']),
+                                   _rad_to_deg_str(antenna['latitude']), antenna['radius']])
+        table.align = alignment
+        print(table)
 
     def summary(self):
         """ Prints summary of the AstrohackLocitFile object, with available data, attributes and available methods
@@ -951,4 +980,4 @@ class AstrohackLocitFile(dict):
         _print_summary_header(self.file)
         _print_attributes(self._meta_data)
         _print_data_contents(self, ["Antenna", "DDI"])
-        _print_method_list([self.summary, self.print_source_table])
+        _print_method_list([self.summary, self.print_source_table, self.print_antenna_table])
