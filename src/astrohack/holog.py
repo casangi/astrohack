@@ -116,7 +116,7 @@ def holog(
     with open(json_data, "r") as json_file:
         holog_json = json.load(json_file)
         
-    meta_data = _read_meta_data(holog_params['holog_name'], 'holog', 'extract_holog')
+    meta_data = _read_meta_data(holog_params['holog_name']+'/.holog_attr')
 
     if holog_params["cell_size"] is None:
         cell_size = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
