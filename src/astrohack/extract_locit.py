@@ -1,6 +1,6 @@
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._dio import check_if_file_will_be_overwritten, check_if_file_exists
-from astrohack._utils._parm_utils._check_parms import _check_parms, _parm_check_passed
+from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
+from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._extract_locit import _extract_antenna_data, _extract_spectral_info
@@ -39,15 +39,15 @@ def extract_locit(cal_table, locit_name=None, parallel=False, overwrite=False):
     extract_locit_parms = _check_extract_locit_parms(fname, cal_table, locit_name, parallel, overwrite)
     input_params = extract_locit_parms.copy()
 
-    check_if_file_exists(fname, extract_locit_parms['cal_table'])
-    check_if_file_will_be_overwritten(fname, extract_locit_parms['locit_name'], extract_locit_parms['overwrite'])
+    _check_if_file_exists(extract_locit_parms['cal_table'])
+    _check_if_file_will_be_overwritten(extract_locit_parms['locit_name'], extract_locit_parms['overwrite'])
 
     ant_dict = _extract_antenna_data(fname, extract_locit_parms['cal_table'])
     ddi_dict = _extract_spectral_info(fname, extract_locit_parms['cal_table'])
     _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, extract_locit_parms['locit_name'])
     _extract_source_and_telescope(fname, extract_locit_parms['cal_table'], extract_locit_parms['locit_name'])
     output_attr_file = "{name}/{ext}".format(name=extract_locit_parms['locit_name'], ext=".locit_attr")
-    _write_meta_data('extract_locit', output_attr_file, input_params)
+    _write_meta_data(output_attr_file, input_params)
 
     logger.info(f"[{fname}]: Finished processing")
     locit_mds = AstrohackLocitFile(extract_locit_parms['locit_name'])

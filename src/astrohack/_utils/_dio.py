@@ -19,6 +19,7 @@ from astrohack._utils._tools import NumpyEncoder
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 CALLING_FUNCTION=1
 
+
 def _check_if_file_exists(file):
     logger = _get_astrohack_logger()
     caller = inspect.stack()[CALLING_FUNCTION].function
@@ -140,13 +141,13 @@ def _load_locit_file(file=None, locit_dict=None, dask_load=True):
 
     ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
 
-    ant_data_dict['obs_info'] = _read_meta_data(f'{file}/.observation_info', None, 'extract_locit')
+    ant_data_dict['obs_info'] = _read_meta_data(f'{file}/.observation_info', None, '_extract_source_and_telescope')
     try:
         for ant in ant_list:
             if 'ant' in ant:
                 ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
                             os.path.isdir(file + "/" + str(ant))]
-                ant_data_dict[ant] = {'ant_info': _read_meta_data(f'{file}/{ant}/.antenna_info', None, 'extract_locit')}
+                ant_data_dict[ant] = {'ant_info': _read_meta_data(f'{file}/{ant}/.antenna_info', None, '_extract_antenna_phase_gains')}
                 for ddi in ddi_list:
                     if 'ddi' in ddi:
                         if dask_load:
@@ -155,10 +156,11 @@ def _load_locit_file(file=None, locit_dict=None, dask_load=True):
                         else:
                             ant_data_dict[ant][ddi] = _open_no_dask_zarr(
                                 "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
-
     except Exception as e:
         logger.error(str(e))
         raise
+
+    print(ant_data_dict['obs_info'])
 
     return ant_data_dict
 

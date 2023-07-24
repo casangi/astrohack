@@ -109,7 +109,7 @@ def _extract_source_and_telescope(fname, cal_table, basename):
         src_list.append(source)
     obs_dict = {'n_src': n_src, 'src_list': src_list, 'time_range': time_range.tolist(), 'telescope_name': telescope_name}
 
-    _write_meta_data('extract_locit', "/".join([basename, ".observation_info"]), obs_dict)
+    _write_meta_data("/".join([basename, ".observation_info"]), obs_dict)
 
 
 def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, basename):
@@ -165,4 +165,4 @@ def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, basename)
             this_ddi_xds.attrs['bandwidth'] = ddi_dict['bandwidth'][i_ddi]
             outname = "/".join([basename, 'ant_'+antenna['name'], f'ddi_{i_ddi}'])
             this_ddi_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
-        _write_meta_data('extract_locit', "/".join([basename, 'ant_'+antenna['name'], ".antenna_info"]), antenna)
+        _write_meta_data("/".join([basename, 'ant_'+antenna['name'], ".antenna_info"]), antenna)
