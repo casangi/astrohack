@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 from casacore import tables as ctables
 from astropy.coordinates import SkyCoord, CIRS
@@ -9,6 +10,7 @@ import xarray as xr
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._tools import _casa_time_to_mjd
 from astrohack._utils._conversion import _convert_unit
+from astrohack._utils._constants import figsize, twopi, fontsize
 from astrohack._utils._dio import _write_meta_data
 
 
@@ -115,6 +117,9 @@ def _extract_source_and_telescope(fname, cal_table, basename):
     src_table.close()
     n_src = len(src_id)
 
+    phase_center_j2000[:, 0] = np.where(phase_center_j2000[:, 0] < 0, phase_center_j2000[:, 0]+twopi,
+                                        phase_center_j2000[:, 0])
+
     obs_table = ctables.table(cal_table+'::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     time_range = _casa_time_to_mjd(obs_table.getcol('TIME_RANGE')[0])
     telescope_name = obs_table.getcol('TELESCOPE_NAME')[0]
@@ -214,3 +219,48 @@ def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, basename)
         _write_meta_data("/".join([basename, 'ant_'+antenna['name'], ".antenna_info"]), antenna)
 
     return ref_antenna_name, ant_dict['n_ant']
+
+
+def _plot_source_table(filename, src_list, n_src, label=True, precessed=False, obs_midpoint=None, display=True,
+                       figure_size=figsize, dpi=300):
+    logger = _get_astrohack_logger()
+    radec = np.ndarray((n_src, 2))
+    name = []
+    if precessed:
+        if obs_midpoint is None:
+            msg = 'Observation midpoint is missing'
+            logger.error(msg)
+            raise Exception(msg)
+        coorkey = 'precessed'
+        time = Time(obs_midpoint, format='mjd')
+        title = f'Coordinates precessed to {time.iso}'
+    else:
+        coorkey = 'j2000'
+        title = 'J2000 reference frame'
+
+    for i_src, src in enumerate(src_list):
+        radec[i_src] = src[coorkey]
+        name.append(src['name'])
+
+    fig, ax = plt.subplots(1, 1, figsize=figure_size)
+    radec[:, 0] *= _convert_unit('rad', 'hour', 'trigonometric')
+    radec[:, 1] *= _convert_unit('rad', 'deg', 'trigonometric')
+
+    if label:
+        for i_src in range(n_src):
+            ax.plot(radec[i_src, 0], radec[i_src, 1], marker='+', ls='', color='red')
+            ax.text(radec[i_src, 0]+0.05, radec[i_src, 1], name[i_src], fontsize=.8*fontsize, ha='left', va='center',
+                    rotation=20)
+    else:
+        ax.plot(radec[:, 0], radec[:, 1], marker='+', ls='', color='red')
+    ax.set_xlim([-0.5, 24.5])
+    ax.set_ylim([-95, 95])
+    ax.set_xlabel('Right Ascension [h]')
+    ax.set_ylabel('Declination [\u00b0]')
+
+    fig.suptitle(title)
+    fig.tight_layout()
+    plt.savefig(filename, dpi=dpi)
+    if not display:
+        plt.close()
+    return
