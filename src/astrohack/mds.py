@@ -949,7 +949,7 @@ class AstrohackLocitFile(dict):
         print("\nSources:")
         table = PrettyTable()
         table.field_names = ['Id', 'Name', 'RA J2000', 'DEC J2000', 'RA precessed', 'DEC precessed']
-        for source in self['obs_info']['src_list']:
+        for source in self['obs_info']['src_dict'].values():
             table.add_row([source['id'], source['name'], _rad_to_hour_str(source['j2000'][0]),
                            _rad_to_deg_str(source['j2000'][1]), _rad_to_hour_str(source['precessed'][0]),
                            _rad_to_deg_str(source['precessed'][1])])
@@ -1026,9 +1026,8 @@ class AstrohackLocitFile(dict):
         else:
             filename = destination + '/source_table_j2000.png'
             obs_midpoint = None
-        _plot_source_table(filename, self['obs_info']['src_list'], self['obs_info']['n_src'], precessed=precessed,
-                           obs_midpoint=obs_midpoint, display=display, figure_size=figure_size, dpi=dpi,
-                           label=display_labels)
+        _plot_source_table(filename, self['obs_info']['src_dict'], precessed=precessed, obs_midpoint=obs_midpoint,
+                           display=display, figure_size=figure_size, dpi=dpi, label=display_labels)
         return
 
     def plot_antenna_positions(self, destination, display_stations=True, display=True, figure_size=None, dpi=300):

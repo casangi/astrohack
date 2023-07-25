@@ -130,11 +130,11 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
     cal_table = extract_locit_parms['cal_table']
     basename = extract_locit_parms['locit_name']
     src_table = ctables.table(cal_table+'::FIELD', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
-    src_id = src_table.getcol('SOURCE_ID')
+    src_ids = src_table.getcol('SOURCE_ID')
     phase_center_j2000 = src_table.getcol('PHASE_DIR')[:, 0, :]
     src_name = src_table.getcol('NAME')
     src_table.close()
-    n_src = len(src_id)
+    n_src = len(src_ids)
 
     phase_center_j2000[:, 0] = np.where(phase_center_j2000[:, 0] < 0, phase_center_j2000[:, 0]+twopi,
                                         phase_center_j2000[:, 0])
@@ -153,14 +153,13 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
     phase_center_precessed[:, 1] = astropy_precessed.dec
     phase_center_precessed *= _convert_unit('deg', 'rad', 'trigonometric')
 
-    src_list = []
+    src_dict = {}
     for i_src in range(n_src):
-        source = {'id': int(src_id[i_src]), 'name': src_name[i_src], 'j2000': phase_center_j2000[i_src].tolist(),
-                  'precessed': phase_center_precessed[i_src].tolist()}
-        src_list.append(source)
+        src_id = int(src_ids[i_src])
+        src_dict[src_id] = {'id': src_id, 'name': src_name[i_src], 'j2000': phase_center_j2000[i_src].tolist(),
+                            'precessed': phase_center_precessed[i_src].tolist()}
 
-    obs_dict = {'n_src': n_src, 'src_list': src_list, 'time_range': time_range.tolist(),
-                'telescope_name': telescope_name}
+    obs_dict = {'src_dict': src_dict, 'time_range': time_range.tolist(), 'telescope_name': telescope_name}
     if telescope_name == 'EVLA':
         tel_pos = EarthLocation.of_site('VLA')
     else:
@@ -170,6 +169,7 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
                                           np.sqrt(tel_pos.x**2+tel_pos.y**2+tel_pos.z**2).value]
 
     _write_meta_data("/".join([basename, ".observation_info"]), obs_dict)
+    extract_locit_parms['telescope_name'] = telescope_name
     return telescope_name, n_src
 
 
@@ -193,7 +193,6 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
     gains = main_table.getcol('CPARAM')
     fields = main_table.getcol('FIELD_ID')
     spw_id = main_table.getcol('SPECTRAL_WINDOW_ID')
-    scans = main_table.getcol('SCAN')
     main_table.close()
     n_gains = len(gains)
 
@@ -221,6 +220,7 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
         # No data to discard we can go on and compute the phase gains
         ref_antenna = ref_antennas[0]
 
+    used_sources = []
     extract_locit_parms['reference_antenna'] = extract_locit_parms['full_antenna_list'][ref_antenna]
     phase_gains = np.angle(gains)
     for ant_id, antenna in extract_locit_parms['ant_dict'].items():
@@ -245,14 +245,16 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
             this_ddi_xds.attrs['bandwidth'] = ddi['bandwidth']
             outname = "/".join([basename, 'ant_'+antenna['name'], f'ddi_{ddi["id"]}'])
             this_ddi_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
+            used_sources.extend(ant_field[ddi_sel])
         _write_meta_data("/".join([basename, 'ant_'+antenna['name'], ".antenna_info"]), antenna)
+    extract_locit_parms['used_sources'] = np.unique(np.array(used_sources))
     return
 
 
-def _plot_source_table(filename, src_list, n_src, label=True, precessed=False, obs_midpoint=None, display=True,
+def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midpoint=None, display=True,
                        figure_size=figsize, dpi=300):
     logger = _get_astrohack_logger()
-    radec = np.ndarray((n_src, 2))
+    radec = np.ndarray((len(src_dict), 2))
     name = []
     if precessed:
         if obs_midpoint is None:
@@ -266,8 +268,8 @@ def _plot_source_table(filename, src_list, n_src, label=True, precessed=False, o
         coorkey = 'j2000'
         title = 'J2000 reference frame'
 
-    for i_src, src in enumerate(src_list):
-        radec[i_src] = src[coorkey]
+    for i_src, src in src_dict.items():
+        radec[int(i_src)] = src[coorkey]
         name.append(src['name'])
 
     if figure_size is None or figure_size == 'None':
