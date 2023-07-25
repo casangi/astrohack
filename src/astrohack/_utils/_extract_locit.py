@@ -193,6 +193,7 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
     gains = main_table.getcol('CPARAM')
     fields = main_table.getcol('FIELD_ID')
     spw_id = main_table.getcol('SPECTRAL_WINDOW_ID')
+    scans = main_table.getcol('SCAN')
     main_table.close()
     n_gains = len(gains)
 
