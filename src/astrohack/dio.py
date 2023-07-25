@@ -6,10 +6,10 @@ from casacore import tables
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
-from astrohack._utils._mds import AstrohackImageFile
-from astrohack._utils._mds import AstrohackHologFile
-from astrohack._utils._mds import AstrohackPanelFile
-from astrohack._utils._mds import AstrohackPointFile
+from astrohack.mds import AstrohackImageFile
+from astrohack.mds import AstrohackHologFile
+from astrohack.mds import AstrohackPanelFile
+from astrohack.mds import AstrohackPointFile
 
 from astrohack._utils._dio import _reshape
 from astrohack._utils._dio import _print_array

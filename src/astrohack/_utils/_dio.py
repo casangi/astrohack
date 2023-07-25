@@ -4,30 +4,38 @@ import zarr
 import copy
 import datetime
 import shutil
+import inspect
+
 import numpy as np
 import xarray as xr
 
 from astropy.io import fits
 from astrohack import __version__ as code_version
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _numpy_to_json, _add_prefix
+
+from astrohack._utils._tools import _add_prefix
+from astrohack._utils._tools import NumpyEncoder
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
+CALLING_FUNCTION=1
 
-
-def check_if_file_exists(caller, file):
+def _check_if_file_exists(file):
     logger = _get_astrohack_logger()
+    caller = inspect.stack()[CALLING_FUNCTION].function
 
     if os.path.exists(file) is False:
         logger.error(f'[{caller}]: File {file} does not exists.')
         raise FileNotFoundError
 
 
-def check_if_file_will_be_overwritten(caller, file, overwrite):
+def _check_if_file_will_be_overwritten(file, overwrite):
     logger = _get_astrohack_logger()
+    caller=inspect.stack()[CALLING_FUNCTION].function
+    
     if (os.path.exists(file) is True) and (overwrite is False):
         logger.error(f'[{caller}]: {file} already exists. To overwite set overwrite to True, or remove current file.')
-        raise FileExistsError
+        
+        raise FileExistsError("{file} exists.".format(file=file))
         
     elif  (os.path.exists(file) is True) and (overwrite is True):
         if file.endswith(".zarr"):
@@ -315,14 +323,11 @@ def _load_image_xds(file_stem, ant, ddi, dask_load=True):
     else:
         raise FileNotFoundError("Image file: {} not found".format(image_path))
 
-
-def _read_meta_data(file_name, file_type, origin):
+def _read_meta_data(file_name):
     """Reads dimensional data from holog meta file.
 
     Args:
         file_name (str): astorhack file name.
-        file_type (str): astrohack file type
-        origin (str, list): Astrohack expected origin(s)
 
     Returns:
         dict: dictionary containing dimension data.
@@ -330,29 +335,12 @@ def _read_meta_data(file_name, file_type, origin):
     logger = _get_astrohack_logger()
     
     try:
-        with open(f'{file_name}/.{file_type}_attr') as json_file:
+        with open(file_name) as json_file:
             json_dict = json.load(json_file)
 
     except Exception as error:
         logger.error(str(error))
-        raise
-        
-
-    try:
-        metadataorigin = json_dict['origin']
-    except KeyError:
-        logger.error("[_read_meta_data]: Badly formatted metadata in input file")
-        raise Exception('Bad metadata')
-    if isinstance(origin, str):
-        if metadataorigin != origin:
-            logger.error(f"[_read_meta_data]: Input file is not an Astrohack {file_type} file")
-            logger.error(f"Expected origin was {origin} but got {metadataorigin}")
-            raise TypeError('Incorrect file type')
-    elif isinstance(origin, (list, tuple)):
-        if metadataorigin not in origin:
-            logger.error(f"[_read_meta_data]: Input file is not an Astrohack {file_type} file")
-            logger.error(f"Expected origin was {origin} but got {metadataorigin}")
-            raise TypeError('Incorrect file type')
+        raise Exception       
 
     return json_dict
 
@@ -368,6 +356,7 @@ def _check_mds_origin(file_name, file_type):
 
     """
     logger = _get_astrohack_logger()
+
     if isinstance(file_type, str):
         file_type = [file_type]
 
@@ -393,7 +382,7 @@ def _check_mds_origin(file_name, file_type):
     return metadataorigin
 
 
-def _write_meta_data(origin, file_name, input_dict):
+def _write_meta_data(file_name, input_dict):
     """
     Creates a metadata dictionary that is compatible with JSON and writes it to a file
     Args:
@@ -401,27 +390,20 @@ def _write_meta_data(origin, file_name, input_dict):
         file_name: Output json file name
         input_dict: Dictionary to be included in the metadata
     """
+
     logger = _get_astrohack_logger()
-    metadata = {'version': code_version,
-                'origin': origin}
-    for key in input_dict.keys():
-        if type(input_dict[key]) == np.ndarray:
-            try:
-                for item in range(len(input_dict[key])):
-                    newkey = f'{key}_{item}'
-                    metadata[newkey] = _numpy_to_json(input_dict[key][item])
-            except TypeError:
-                if len(input_dict['grid_size'].shape) == 0:
-                    metadata[key] = "None"
-                else:
-                    metadata[key] = input_dict[key]
-        elif input_dict[key] is None:
-            metadata[key] = "None"
-        else:
-            metadata[key] = input_dict[key]
+
+    meta_data = copy.deepcopy(input_dict)
+
+    meta_data.update({
+        'version': code_version,
+        'origin': inspect.stack()[CALLING_FUNCTION].function
+    })
+
     try:
         with open(file_name, "w") as json_file:
-            json.dump(metadata, json_file)
+            json.dump(meta_data, json_file, cls=NumpyEncoder)
+
     except Exception as error:
         logger.error("[_write_meta_data] {error}".format(error=error))
 
@@ -449,7 +431,7 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
 
     except Exception as error:
         logger.error(str(error))
-        raise
+        raise Exception
 
     ant_data_dict = {}
 

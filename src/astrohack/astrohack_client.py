@@ -4,7 +4,7 @@ import copy
 import os
 import logging
 import astrohack
-from astrohack._utils._parm_utils._check_logger_parms import _check_logger_parms, _check_worker_logger_parms
+from astrohack._utils._param_utils._check_logger_parms import _check_logger_parms, _check_worker_logger_parms
 from astrohack._utils._logger._astrohack_logger import  _setup_astrohack_logger, _get_astrohack_logger
 from astrohack._utils._dask_plugins._astrohack_worker import _astrohack_worker
 
