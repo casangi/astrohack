@@ -15,18 +15,17 @@ from astrohack._utils._constants import figsize, twopi, fontsize
 from astrohack._utils._dio import _write_meta_data
 
 
-def _extract_antenna_data(fname, cal_table):
+def _extract_antenna_data(fname, extract_locit_parms):
     """
     Extract antenna information from the ANTENNA sub table of the cal table
     Args:
         fname: Caller
-        cal_table: Cal table file name
-
+        extract_locit_parms: input_parameters to extract_locit
     Returns:
     Antenna dictionary
     """
     logger = _get_astrohack_logger()
-
+    cal_table = extract_locit_parms['cal_table']
     ant_table = ctables.table(cal_table + '::ANTENNA', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     ant_off = ant_table.getcol('OFFSET')
     ant_pos = ant_table.getcol('POSITION')
@@ -36,51 +35,57 @@ def _extract_antenna_data(fname, cal_table):
     ant_typ = ant_table.getcol('TYPE')
     ant_table.close()
 
-    n_ant = ant_off.shape[0]
+    n_ant_orig = ant_off.shape[0]
     ant_pos_corrected = ant_pos + ant_off
     ant_rad = np.sqrt(ant_pos_corrected[:, 0] ** 2 + ant_pos_corrected[:, 1] ** 2 + ant_pos_corrected[:, 2] ** 2)
     ant_lat = np.arcsin(ant_pos_corrected[:, 2] / ant_rad)
     ant_lon = -np.arccos(ant_pos_corrected[:, 0] / (ant_rad * np.cos(ant_lat)))
 
-    ant_dict = {'n_ant': n_ant}
-    antenna_list = []
+    if extract_locit_parms['ant'] == 'all':
+        ant_list = ant_nam
+    else:
+        ant_list = extract_locit_parms['ant']
+
+    ant_dict = {}
     error = False
-    for i_ant in range(n_ant):
+    for i_ant in range(n_ant_orig):
         this_name = ant_nam[i_ant]
-        if ant_mnt[i_ant] != 'ALT-AZ':
-            logger.error(f'[{fname}]: Antenna {this_name} has a non supported mount type: {ant_mnt[i_ant]}')
-            error = True
-        if ant_typ[i_ant] != 'GROUND-BASED':
-            error = True
-            logger.error(f'[{fname}]: Antenna {this_name} is not ground based which is currently not supported')
-        if error:
-            pass
-        else:
-            antenna = {'name': this_name, 'station': ant_sta[i_ant], 'geocentric_position': ant_pos[i_ant],
-                       'longitude': ant_lon[i_ant], 'latitude': ant_lat[i_ant], 'radius': ant_rad[i_ant],
-                       'offset': ant_off[i_ant]}
-            antenna_list.append(antenna)
+        if this_name in ant_list:
+            if ant_mnt[i_ant] != 'ALT-AZ':
+                logger.error(f'[{fname}]: Antenna {this_name} has a non supported mount type: {ant_mnt[i_ant]}')
+                error = True
+            if ant_typ[i_ant] != 'GROUND-BASED':
+                error = True
+                logger.error(f'[{fname}]: Antenna {this_name} is not ground based which is currently not supported')
+            if error:
+                pass
+            else:
+                antenna = {'id': i_ant, 'name': this_name, 'station': ant_sta[i_ant],
+                           'geocentric_position': ant_pos[i_ant], 'longitude': ant_lon[i_ant],
+                           'latitude': ant_lat[i_ant], 'radius': ant_rad[i_ant], 'offset': ant_off[i_ant]}
+                ant_dict[i_ant] = antenna
 
     if error:
         msg = f'[{fname}]: Unsupported antenna characteristics'
         logger.error(msg)
         raise Exception(msg)
 
-    ant_dict['list'] = antenna_list
-    return ant_dict
+    extract_locit_parms['ant_dict'] = ant_dict
+    extract_locit_parms['full_antenna_list'] = ant_nam
 
 
-def _extract_spectral_info(fname, cal_table):
+def _extract_spectral_info(fname, extract_locit_parms):
     """
     Extract spectral information from the SPECTRAL_WINDOW sub table of the cal table
     Args:
         fname: Caller
-        cal_table: Cal table file name
+        extract_locit_parms: input_parameters to extract_locit
 
     Returns:
     DDI dictionary
     """
     logger = _get_astrohack_logger()
+    cal_table = extract_locit_parms['cal_table']
     spw_table = ctables.table(cal_table+'::SPECTRAL_WINDOW', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     ref_freq = spw_table.getcol('REF_FREQUENCY')
     n_chan = spw_table.getcol('NUM_CHAN')
@@ -88,29 +93,42 @@ def _extract_spectral_info(fname, cal_table):
     spw_table.close()
     n_ddi = len(ref_freq)
     error = False
-    for i_ddi in range(n_ddi):
+    if extract_locit_parms['ddi'] == 'all':
+        ddi_list = range(n_ddi)
+    else:
+        if isinstance(extract_locit_parms['ddi'], int):
+            ddi_list = [extract_locit_parms['ddi']]
+        else:
+            ddi_list = extract_locit_parms['ddi']
+
+    ddi_dict = {}
+    for i_ddi in ddi_list:
         if n_chan[i_ddi] != 1:
             error = True
             msg = f'[{fname}]: DDI {i_ddi} has {n_chan[i_ddi]}, which is not supported'
             logger.error(msg)
+        else:
+            ddi_dict[i_ddi] = {'id': i_ddi, 'frequency': ref_freq[i_ddi], 'bandwidth': bandwidth[i_ddi]}
+
     if error:
         msg = f'[{fname}]: Unsupported DDI characteristics'
         logger.error(msg)
         raise Exception(msg)
-    ddi_dict = {'n_ddi': n_ddi, 'frequencies': ref_freq, 'bandwidth': bandwidth}
-    return ddi_dict
+    extract_locit_parms['ddi_dict'] = ddi_dict
 
 
-def _extract_source_and_telescope(fname, cal_table, basename):
+def _extract_source_and_telescope(fname, extract_locit_parms):
     """
     Extract source and telescope  information from the FIELD and OBSERVATION sub tables of the cal table
     Args:
         fname: Caller
-        cal_table: Cal table file name
+        extract_locit_parms: input_parameters to extract_locit
 
     Returns:
     Writes dict to a json file
     """
+    cal_table = extract_locit_parms['cal_table']
+    basename = extract_locit_parms['locit_name']
     src_table = ctables.table(cal_table+'::FIELD', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     src_id = src_table.getcol('SOURCE_ID')
     phase_center_j2000 = src_table.getcol('PHASE_DIR')[:, 0, :]
@@ -155,17 +173,19 @@ def _extract_source_and_telescope(fname, cal_table, basename):
     return telescope_name, n_src
 
 
-def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, basename):
+def _extract_antenna_phase_gains(fname, extract_locit_parms):
     """
     Extract antenna based phase gains from the cal table
     Args:
         fname: Caller
-        cal_table: Cal table file name
+        extract_locit_parms: input_parameters to extract_locit
 
     Returns:
-    DDI dictionary
+    Reference antenna
     """
     logger = _get_astrohack_logger()
+    cal_table = extract_locit_parms['cal_table']
+    basename = extract_locit_parms['locit_name']
     main_table = ctables.table(cal_table, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     antenna1 = main_table.getcol('ANTENNA1')
     antenna2 = main_table.getcol('ANTENNA2')
@@ -186,8 +206,8 @@ def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, basename)
         for i_refant in range(n_refant):
             if i_refant != i_best_ant:
                 logger.info(f'[{fname}]: Discarding gains derived with antenna '
-                            f'{ant_dict["list"][ref_antennas[i_refant]]["name"]} as reference '
-                            f'({100*counts[i_refant]/n_gains:.2f}% of the data)')
+                            f'{extract_locit_parms["full_antenna_list"][ref_antennas[i_refant]]}'
+                            f' as reference ({100*counts[i_refant]/n_gains:.2f}% of the data)')
                 sel_refant = antenna2 != ref_antennas[i_refant]
                 antenna2 = antenna2[sel_refant]
                 antenna1 = antenna1[sel_refant]
@@ -200,34 +220,32 @@ def _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict, basename)
         # No data to discard we can go on and compute the phase gains
         ref_antenna = ref_antennas[0]
 
+    extract_locit_parms['reference_antenna'] = extract_locit_parms['full_antenna_list'][ref_antenna]
     phase_gains = np.angle(gains)
-    for i_ant in range(ant_dict['n_ant']):
-        ant_sel = antenna1 == i_ant
+    for ant_id, antenna in extract_locit_parms['ant_dict'].items():
+        ant_sel = antenna1 == ant_id
         ant_time = gain_time[ant_sel]
         ant_field = fields[ant_sel]
         ant_phase_gains = phase_gains[ant_sel]
         ant_spw_id = spw_id[ant_sel]
-        antenna = ant_dict['list'][i_ant]
-        if i_ant == ref_antenna:
+        if ant_id == ref_antenna:
             antenna['reference'] = True
-            ref_antenna_name = antenna['name']
         else:
             antenna['reference'] = False
 
-        for i_ddi in range(ddi_dict['n_ddi']):
+        for ddi_id, ddi in extract_locit_parms['ddi_dict'].items():
             this_ddi_xds = xr.Dataset()
-            ddi_sel = ant_spw_id == i_ddi
+            ddi_sel = ant_spw_id == ddi_id
             coords = {"time": ant_time[ddi_sel]}
             this_ddi_xds.assign_coords(coords)
             this_ddi_xds['PHASE_GAINS'] = xr.DataArray(ant_phase_gains[ddi_sel], dims=('time', 'chan', 'pol'))
             this_ddi_xds['FIELD_ID'] = xr.DataArray(ant_field[ddi_sel], dims='time')
-            this_ddi_xds.attrs['frequency'] = ddi_dict['frequencies'][i_ddi]
-            this_ddi_xds.attrs['bandwidth'] = ddi_dict['bandwidth'][i_ddi]
-            outname = "/".join([basename, 'ant_'+antenna['name'], f'ddi_{i_ddi}'])
+            this_ddi_xds.attrs['frequency'] = ddi['frequency']
+            this_ddi_xds.attrs['bandwidth'] = ddi['bandwidth']
+            outname = "/".join([basename, 'ant_'+antenna['name'], f'ddi_{ddi["id"]}'])
             this_ddi_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
         _write_meta_data("/".join([basename, 'ant_'+antenna['name'], ".antenna_info"]), antenna)
-
-    return ref_antenna_name, ant_dict['n_ant']
+    return
 
 
 def _plot_source_table(filename, src_list, n_src, label=True, precessed=False, obs_midpoint=None, display=True,
@@ -287,8 +305,7 @@ def _plot_antenna_table(filename, ant_dict, array_center, stations=True, display
     rad2deg = _convert_unit('rad', 'deg', 'trigonometric')
     # ax.plot(array_center[0], array_center[1], marker='x', color='blue')
     title = 'Antenna positions during observation'
-    for key in ant_dict:
-        antenna = ant_dict[key]
+    for antenna in ant_dict.values():
         long = antenna['longitude']*rad2deg
         lati = antenna['latitude']*rad2deg
         ax.plot(long, lati, marker='+', color='black')

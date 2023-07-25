@@ -963,8 +963,7 @@ class AstrohackLocitFile(dict):
         print(f"\n{self['obs_info']['telescope_name']} Antennae:")
         table = PrettyTable()
         table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Distance to earth center (m)']
-        for item in self['ant_info'].keys():
-            antenna = self['ant_info'][item]
+        for antenna in self['ant_info'].values():
             if antenna['reference']:
                 table.add_row([antenna['name']+' (ref)', antenna['station'], _rad_to_deg_str(antenna['longitude']),
                                _rad_to_deg_str(antenna['latitude']), antenna['radius']])
@@ -1081,4 +1080,4 @@ class AstrohackLocitFile(dict):
         _print_attributes(self._meta_data)
         _print_data_contents(self, ["Antenna", "Contents"])
         _print_method_list([self.summary, self.print_source_table, self.print_antenna_table,
-                            self.plot_source_positions])
+                            self.plot_source_positions, self.plot_antenna_positions])
