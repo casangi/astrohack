@@ -4,6 +4,7 @@ from astrohack.dio import open_image
 from astrohack.dio import open_panel
 from astrohack.dio import open_pointing
 from astrohack.extract_holog import extract_holog
+from astrohack.extract_holog import extract_pointing
 from astrohack.panel import panel
 from astrohack import holog
 
@@ -11,7 +12,7 @@ import pytest
 import numpy as np
 import shutil
 
-class TestDio:
+class TestAstrohackDio():
     datafolder = 'dioData'
     holog_mds = dict()
     image_mds = dict()
@@ -20,7 +21,14 @@ class TestDio:
     @classmethod
     def setup_class(cls):
         gdown_data('ea25_cal_small_after_fixed.split.ms', download_folder=cls.datafolder)
+        
+        extract_pointing(ms_name=cls.datafolder + '/ea25_cal_small_after_fixed.split.ms',
+                    point_name=cls.datafolder + '/ea25_cal_small_after_fixed.split.point.zarr',
+                    parallel=True,
+                    overwrite=True)
+        
         cls.holog_mds = extract_holog(ms_name=cls.datafolder + '/ea25_cal_small_after_fixed.split.ms',
+                    point_name=cls.datafolder + '/ea25_cal_small_after_fixed.split.point.zarr',
                     data_column='CORRECTED_DATA',
                     parallel=True,
                     overwrite=True)
