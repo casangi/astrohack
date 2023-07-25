@@ -47,7 +47,7 @@ def extract_locit(cal_table, locit_name=None, parallel=False, overwrite=False):
     ref_antenna, n_antennae = _extract_antenna_phase_gains(fname, cal_table, ant_dict, ddi_dict,
                                                            extract_locit_parms['locit_name'])
     telescope_name, n_sources = _extract_source_and_telescope(fname, extract_locit_parms['cal_table'],
-                                                          extract_locit_parms['locit_name'])
+                                                              extract_locit_parms['locit_name'])
 
     attributes['telescope_name'] = telescope_name
     attributes['n_sources'] = n_sources

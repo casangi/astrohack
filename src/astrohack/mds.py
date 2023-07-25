@@ -23,7 +23,7 @@ from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
-from astrohack._utils._extract_locit import _plot_source_table
+from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table
 
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
@@ -963,15 +963,14 @@ class AstrohackLocitFile(dict):
         print(f"\n{self['obs_info']['telescope_name']} Antennae:")
         table = PrettyTable()
         table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Distance to earth center (m)']
-        for item in self.keys():
-            if 'ant' in item:
-                antenna = self[item]['ant_info']
-                if antenna['reference']:
-                    table.add_row([antenna['name']+' (ref)', antenna['station'], _rad_to_deg_str(antenna['longitude']),
-                                   _rad_to_deg_str(antenna['latitude']), antenna['radius']])
-                else:
-                    table.add_row([antenna['name'], antenna['station'], _rad_to_deg_str(antenna['longitude']),
-                                   _rad_to_deg_str(antenna['latitude']), antenna['radius']])
+        for item in self['ant_info'].keys():
+            antenna = self['ant_info'][item]
+            if antenna['reference']:
+                table.add_row([antenna['name']+' (ref)', antenna['station'], _rad_to_deg_str(antenna['longitude']),
+                               _rad_to_deg_str(antenna['latitude']), antenna['radius']])
+            else:
+                table.add_row([antenna['name'], antenna['station'], _rad_to_deg_str(antenna['longitude']),
+                              _rad_to_deg_str(antenna['latitude']), antenna['radius']])
         table.align = alignment
         print(table)
 
@@ -1024,13 +1023,55 @@ class AstrohackLocitFile(dict):
         if precessed:
             filename = destination + '/source_table_precessed.png'
             time_range = self['obs_info']['time_range']
-            obs_midpoint = (time_range[1]+time_range[0])/2.
+            obs_midpoint = (time_range[1] + time_range[0]) / 2.
         else:
             filename = destination + '/source_table_j2000.png'
             obs_midpoint = None
         _plot_source_table(filename, self['obs_info']['src_list'], self['obs_info']['n_src'], precessed=precessed,
                            obs_midpoint=obs_midpoint, display=display, figure_size=figure_size, dpi=dpi,
                            label=display_labels)
+        return
+
+    def plot_antenna_positions(self, destination, display_stations=True, display=True, figure_size=None, dpi=300):
+        """ Plot source positions in either J2000 or precessed right ascension and declination.
+
+        :param destination: Name of the destination folder to contain plot
+        :type destination: str
+        :param display_stations: Add station names to the plot, defaults to True
+        :type display_stations: bool, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+        :param figure_size: 2 element array/list/tuple with the plot sizes in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: dots per inch to be used in plots, default is 300
+        :type dpi: int, optional
+
+        .. _Description:
+
+
+        """
+        parm_dict = {'destination': destination,
+                     'display': display,
+                     'figuresize': figure_size,
+                     'stations': display_stations,
+                     'dpi': dpi}
+
+        fname = 'plot_source_positions'
+        parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'precessed', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'stations', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(fname, parm_dict['destination'])
+
+        filename = destination + '/antenna_positions.png'
+        _plot_antenna_table(filename, self['ant_info'], self['obs_info']['array_center_lonlatrad'], display=display,
+                            figure_size=figure_size, dpi=dpi, stations=display_stations)
         return
 
     def summary(self):

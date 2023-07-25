@@ -5,6 +5,7 @@ from casacore import tables as ctables
 from astropy.coordinates import SkyCoord, CIRS
 from astropy.time import Time
 import astropy.units as units
+from astropy.coordinates import EarthLocation
 import xarray as xr
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
@@ -139,8 +140,16 @@ def _extract_source_and_telescope(fname, cal_table, basename):
         source = {'id': int(src_id[i_src]), 'name': src_name[i_src], 'j2000': phase_center_j2000[i_src].tolist(),
                   'precessed': phase_center_precessed[i_src].tolist()}
         src_list.append(source)
+
     obs_dict = {'n_src': n_src, 'src_list': src_list, 'time_range': time_range.tolist(),
                 'telescope_name': telescope_name}
+    if telescope_name == 'EVLA':
+        tel_pos = EarthLocation.of_site('VLA')
+    else:
+        tel_pos = EarthLocation.of_site(telescope_name)
+    obs_dict['array_center_geocentric'] = [tel_pos.x.value, tel_pos.y.value, tel_pos.z.value]
+    obs_dict['array_center_lonlatrad'] = [tel_pos.lon.value, tel_pos.lat.value,
+                                          np.sqrt(tel_pos.x**2+tel_pos.y**2+tel_pos.z**2).value]
 
     _write_meta_data("/".join([basename, ".observation_info"]), obs_dict)
     return telescope_name, n_src
@@ -242,7 +251,10 @@ def _plot_source_table(filename, src_list, n_src, label=True, precessed=False, o
         radec[i_src] = src[coorkey]
         name.append(src['name'])
 
-    fig, ax = plt.subplots(1, 1, figsize=figure_size)
+    if figure_size is None or figure_size == 'None':
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+    else:
+        fig, ax = plt.subplots(1, 1, figsize=figure_size)
     radec[:, 0] *= _convert_unit('rad', 'hour', 'trigonometric')
     radec[:, 1] *= _convert_unit('rad', 'deg', 'trigonometric')
 
@@ -257,6 +269,46 @@ def _plot_source_table(filename, src_list, n_src, label=True, precessed=False, o
     ax.set_ylim([-95, 95])
     ax.set_xlabel('Right Ascension [h]')
     ax.set_ylabel('Declination [\u00b0]')
+
+    fig.suptitle(title)
+    fig.tight_layout()
+    plt.savefig(filename, dpi=dpi)
+    if not display:
+        plt.close()
+    return
+
+
+def _plot_antenna_table(filename, ant_dict, array_center, stations=True, display=True, figure_size=figsize, dpi=300):
+    if figure_size is None or figure_size == 'None':
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+    else:
+        fig, ax = plt.subplots(1, 1, figsize=figure_size)
+
+    rad2deg = _convert_unit('rad', 'deg', 'trigonometric')
+    # ax.plot(array_center[0], array_center[1], marker='x', color='blue')
+    title = 'Antenna positions during observation'
+    for key in ant_dict:
+        antenna = ant_dict[key]
+        long = antenna['longitude']*rad2deg
+        lati = antenna['latitude']*rad2deg
+        ax.plot(long, lati, marker='+', color='black')
+        text = f'  {antenna["name"]}'
+        if stations:
+            text += f'@{antenna["station"]}'
+        ax.text(long, lati, text, fontsize=fontsize, ha='left', va='center', rotation=0)
+
+    x_lim, y_lim = ax.get_xlim(), ax.get_ylim()
+    x_half, x_mid = (x_lim[1] - x_lim[0])/2, (x_lim[1] + x_lim[0]) / 2
+    y_half, y_mid = (y_lim[1] - y_lim[0])/2, (y_lim[1] + y_lim[0]) / 2
+    if x_half > y_half:
+        y_lim = [y_mid-x_half, y_mid+x_half]
+    else:
+        x_lim = [x_mid-y_half, x_mid+y_half]
+
+    ax.set_xlim(x_lim)
+    ax.set_ylim(y_lim)
+    ax.set_xlabel('Longitude [\u00b0]')
+    ax.set_ylabel('Latitude [\u00b0]')
 
     fig.suptitle(title)
     fig.tight_layout()

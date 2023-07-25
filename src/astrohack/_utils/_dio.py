@@ -142,12 +142,15 @@ def _load_locit_file(file=None, locit_dict=None, dask_load=True):
     ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
 
     ant_data_dict['obs_info'] = _read_meta_data(f'{file}/.observation_info', None, '_extract_source_and_telescope')
+    ant_data_dict['ant_info'] = {}
     try:
         for ant in ant_list:
             if 'ant' in ant:
                 ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
                             os.path.isdir(file + "/" + str(ant))]
-                ant_data_dict[ant] = {'ant_info': _read_meta_data(f'{file}/{ant}/.antenna_info', None, '_extract_antenna_phase_gains')}
+                ant_data_dict[ant] = {}
+                ant_data_dict['ant_info'][ant] = _read_meta_data(f'{file}/{ant}/.antenna_info', None,
+                                                                 '_extract_antenna_phase_gains')
                 for ddi in ddi_list:
                     if 'ddi' in ddi:
                         if dask_load:
