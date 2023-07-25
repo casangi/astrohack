@@ -11,9 +11,9 @@ length_units = ['km', 'mi', 'm', 'yd', 'ft', 'in', 'cm', 'mm', 'um', 'mils']
 length_factors = [1e3, 1609.34, 1.0, 0.9144, 0.3048, 0.0254, 1e-2, 1e-3, 1e-6, 25.4/1e6]
 
 # Trigonometric units
-trigo_units = ['rad', 'deg']
+trigo_units = ['rad', 'deg', 'hour']
 # from rad to unit
-trigo_factors = [1.0, constants.pi/180.]
+trigo_factors = [1.0, constants.pi/180., constants.pi/12.]
 
 unit_dict = {
   'length': length_units,

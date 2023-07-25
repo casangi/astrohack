@@ -10,6 +10,7 @@ from astropy.time import Time
 import astropy.units as units
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+from astrohack._utils._conversion import _convert_unit
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -444,9 +445,7 @@ def _rad_to_hour_str(rad):
     Returns:
     xxhyymzz.zzzs
     """
-    h_float = rad * 12 / np.pi
-    if h_float < 0:
-        h_float += 24
+    h_float = rad * _convert_unit('rad', 'hour', 'trigonometric')
     h_int = np.floor(h_float)
     m_float = (h_float-h_int)*60
     m_int = np.floor(m_float)
@@ -463,7 +462,7 @@ def _rad_to_deg_str(rad):
     Returns:
     xx\u00B0yymzz.zzzs
     """
-    d_float = rad * 180 / np.pi
+    d_float = rad * _convert_unit('rad', 'deg', 'trigonometric')
     if d_float < 0:
         d_float *= -1
         sign = '-'
