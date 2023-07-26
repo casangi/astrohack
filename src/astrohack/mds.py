@@ -938,7 +938,7 @@ class AstrohackLocitFile(dict):
             logger.error("[AstrohackLocitFile]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file, 'locit', 'extract_locit')
+        self._meta_data = _read_meta_data(file+'/.locit_attr')
 
         return self._file_is_open
 

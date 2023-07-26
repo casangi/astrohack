@@ -254,7 +254,8 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
 def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midpoint=None, display=True,
                        figure_size=figsize, dpi=300):
     logger = _get_astrohack_logger()
-    radec = np.ndarray((len(src_dict), 2))
+    n_src = len(src_dict)
+    radec = np.ndarray((n_src, 2))
     name = []
     if precessed:
         if obs_midpoint is None:
