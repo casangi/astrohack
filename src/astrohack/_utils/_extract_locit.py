@@ -189,7 +189,7 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
     main_table = ctables.table(cal_table, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     antenna1 = main_table.getcol('ANTENNA1')
     antenna2 = main_table.getcol('ANTENNA2')
-    gain_time = main_table.getcol('TIME')
+    gain_time = _casa_time_to_mjd(main_table.getcol('TIME'))
     gains = main_table.getcol('CPARAM')
     fields = main_table.getcol('FIELD_ID')
     spw_id = main_table.getcol('SPECTRAL_WINDOW_ID')
@@ -237,13 +237,13 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
         for ddi_id, ddi in extract_locit_parms['ddi_dict'].items():
             this_ddi_xds = xr.Dataset()
             ddi_sel = ant_spw_id == ddi_id
-            coords = {"time": ant_time[ddi_sel]}
-            this_ddi_xds.assign_coords(coords)
+            coords = {"time": ant_time[ddi_sel], "chan": [0], "pol": ['r', 'l']}
             this_ddi_xds['PHASE_GAINS'] = xr.DataArray(ant_phase_gains[ddi_sel], dims=('time', 'chan', 'pol'))
             this_ddi_xds['FIELD_ID'] = xr.DataArray(ant_field[ddi_sel], dims='time')
             this_ddi_xds.attrs['frequency'] = ddi['frequency']
             this_ddi_xds.attrs['bandwidth'] = ddi['bandwidth']
             outname = "/".join([basename, 'ant_'+antenna['name'], f'ddi_{ddi["id"]}'])
+            this_ddi_xds = this_ddi_xds.assign_coords(coords)
             this_ddi_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
             used_sources.extend(ant_field[ddi_sel])
         _write_meta_data("/".join([basename, 'ant_'+antenna['name'], ".antenna_info"]), antenna)
