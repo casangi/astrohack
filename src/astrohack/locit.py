@@ -49,6 +49,8 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, ant_id=None, ddi
     _check_if_file_will_be_overwritten(locit_parms['position_name'], locit_parms['overwrite'])
     locit_mds = AstrohackLocitFile(locit_parms['locit_name'])
     locit_mds._open()
+    locit_parms['ant_info'] = locit_mds['ant_info']
+    locit_parms['obs_info'] = locit_mds['obs_info']
 
     if _dask_general_compute(fname, locit_mds, _locit_chunk, locit_parms, ['ant', 'ddi'], parallel=parallel):
         logger.info(f"[{fname}]: Finished processing")
