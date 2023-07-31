@@ -12,6 +12,8 @@ from pprint import pformat
 
 from casacore import tables as ctables
 
+from astrohack._utils._tools import NumpyEncoder
+
 from astrohack._utils._constants import pol_str
 from astrohack._utils._conversion import _convert_ant_name_to_id
 from astrohack._utils._extract_holog import _create_holog_meta_data
@@ -651,12 +653,9 @@ def generate_holog_obs_dict(
                 if ddi_id not in ddi:
                     del holog_obs_dict[ddi_key]
 
-
-    outfile_obj = copy.deepcopy(holog_obs_dict)
-
-    _jsonify(outfile_obj)
+    encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
 
     with open(".holog_obs_dict.json", "w") as outfile:
-        json.dump(outfile_obj, outfile)
+        json.dump(encoded_obj, outfile)
 
-    return outfile_obj
+    return json.loads(encoded_obj)
