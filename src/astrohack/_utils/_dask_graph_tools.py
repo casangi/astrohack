@@ -20,15 +20,18 @@ def _construct_general_graph_recursively(caller, looping_dict, chunk_function, p
         key = key_order[0]
         exec_list = _parm_to_list(caller, param_dict[key], looping_dict, key)
         for item in exec_list:
-            param_dict[f'this_{key}'] = item
-            if item in looping_dict:
-                _construct_general_graph_recursively(caller, looping_dict[item], chunk_function, param_dict,
-                                                     delayed_list, key_order[1:], parallel=parallel, oneup=item)
+            if 'info' in item:
+                pass
             else:
-                if oneup is None:
-                    logger.warning(f'[{caller}]: {item} is not present in this mds')
+                param_dict[f'this_{key}'] = item
+                if item in looping_dict:
+                    _construct_general_graph_recursively(caller, looping_dict[item], chunk_function, param_dict,
+                                                         delayed_list, key_order[1:], parallel=parallel, oneup=item)
                 else:
-                    logger.warning(f'[{caller}]: {item} is not present for {oneup}')
+                    if oneup is None:
+                        logger.warning(f'[{caller}]: {item} is not present in this mds')
+                    else:
+                        logger.warning(f'[{caller}]: {item} is not present for {oneup}')
 
 
 def _dask_general_compute(caller, looping_dict, chunk_function, param_dict, key_order, parallel=False):
