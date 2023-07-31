@@ -29,13 +29,14 @@ class NumpyEncoder(json.JSONEncoder):
 
         return json.JSONEncoder.default(self, obj)
 
+
 def _casa_time_to_mjd(times):
     corrected = times/3600/24.0
     return corrected
 
 
 def _altaz_to_hadec(az, el, lat):
-    """Convert Local to HA + DEC coordinates.
+    """Convert AltAz to HA + DEC coordinates.
 
     (HA [rad], dec [rad])
 
@@ -49,11 +50,48 @@ def _altaz_to_hadec(az, el, lat):
     sindec = sinlat*sinel+coslat*cosel*cosaz
     dec = np.arcsin(sindec)
     argarccos = (sinel-sinlat*sindec)/(coslat*np.cos(dec))
-
     lt1 = argarccos < -1
     argarccos[lt1] = -1.0
     ha = np.arccos(argarccos)
     return ha, dec
+
+
+def _hadec_to_altaz(ha, dec, lat):
+    """Convert HA + DEC to Alt + Az coordinates.
+
+    (HA [rad], dec [rad])
+
+    Provided by D. Faes DSOC
+    """
+    #
+    sinha = np.sin(ha)
+    cosha = np.cos(ha)
+    coslat = np.cos(lat)
+    sinlat = np.sin(lat)
+    bottom = cosha * sinlat - np.tan(dec) * coslat
+    sin_el = sinlat * np.sin(dec) + coslat * np.cos(dec) * cosha
+    az = np.arctan2(sinha, bottom)
+    el = np.arcsin(sin_el)
+    az += np.pi  # formula is starting from *South* instead of North
+    if az > 2*np.pi:
+        az -= 2*np.pi
+    return az, el
+
+
+def _hadec_to_elevation(ha, dec, lat):
+    """Convert HA + DEC to elevation.
+
+    (HA [rad], dec [rad])
+
+    Provided by D. Faes DSOC
+    """
+    #
+    cosha = np.cos(ha)
+    coslat = np.cos(lat)
+    sinlat = np.sin(lat)
+    sin_el = sinlat * np.sin(dec) + coslat * np.cos(dec) * cosha
+    el = np.arcsin(sin_el)
+    return el
 
 
 def _altaz_to_hadec_astropy(az, el, time, x_ant, y_ant, z_ant):
