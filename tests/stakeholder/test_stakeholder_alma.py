@@ -10,8 +10,6 @@ import numpy as np
 
 from astrohack.gdown_utils import gdown_data
 
-from astrohack._utils._tools import _jsonify
-
 from astrohack.extract_pointing import extract_pointing
 from astrohack.extract_holog import extract_holog
 from astrohack.holog import holog
@@ -103,15 +101,10 @@ def verify_center_pixels(file, antenna, ddi, reference_center_pixels, tolerance=
                 
 def verify_holog_obs_dictionary(holog_obs_dict):
 
-    ref_holog_obj = {}
-    ref_holog_obj = copy.deepcopy(holog_obs_dict)
-
-    _jsonify(ref_holog_obj)
-
     with open(".holog_obs_dict.json") as json_file:
         holog_obj = json.load(json_file)
                           
-    return  holog_obj == ref_holog_obj
+    return  json.loads(holog_obj) == holog_obs_dict
 
 def verify_holog_diagnostics(json_data, truth_json, tolerance=1e-7):
     
