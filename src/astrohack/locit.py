@@ -58,7 +58,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='R'
     if _dask_general_compute(fname, locit_mds, _locit_chunk, locit_parms, ['ant', 'ddi'], parallel=parallel):
         logger.info(f"[{fname}]: Finished processing")
         output_attr_file = "{name}/{ext}".format(name=locit_parms['position_name'], ext=".position_attr")
-        # _write_meta_data(output_attr_file, attributes)
+        _write_meta_data(output_attr_file, attributes)
         # position_mds = AstrohackPositionFile(locit_parms['position_name'])
         # position_mds._open()
         # return position_mds

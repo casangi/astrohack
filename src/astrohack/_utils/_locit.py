@@ -2,6 +2,7 @@ from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from scipy import optimize as opt
 import astropy.units as units
+import xarray as xr
 
 from astrohack._utils._tools import _hadec_to_elevation
 from astrohack._utils._conversion import _convert_unit
@@ -50,9 +51,28 @@ def _locit_chunk(locit_parms):
     else:
         fit, variance = _solve_via_scipy(hadec, gains, elevation, elevation_limit, verbose=True)
 
-    fit, variance = _convert_results(xds_data.attrs['frequency'], fit, variance, 'mm', 'deg')
-    print(fit)
-    print(variance)
+    output_xds = xr.Dataset()
+    output_xds.attrs['polarization'] = locit_parms['polarization']
+    output_xds.attrs['wavelength'] = clight/xds_data.attrs['frequency']
+    output_xds.attrs['position_fit'] = fit[:3]
+    output_xds.attrs['position_error'] = variance[:3]
+    output_xds.attrs['instrumental_delay'] = fit[3]
+    output_xds.attrs['instrumental_delay_error'] = variance[3]
+    output_xds.attrs['antenna_info'] = antenna
+
+    coords = {'time': time, 'coords': ['HA', 'DEC']}
+    output_xds['GAINS'] = xr.DataArray(gains, dims=['time'])
+    output_xds['HADEC'] = xr.DataArray(hadec, dims=['coords', 'time'])
+    output_xds['LST'] = xr.DataArray(lst, dims=['time'])
+
+    basename = locit_parms['position_name']
+    outname = "/".join([basename, 'ant_'+antenna['name'], f'ddi_{locit_parms["this_ant"]}'])
+    output_xds = output_xds.assign_coords(coords)
+    output_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
+
+    # fit, variance = _convert_results(xds_data.attrs['frequency'], fit, variance, 'mm', 'deg')
+    # print(fit)
+    # print(variance)
     return
 
 
