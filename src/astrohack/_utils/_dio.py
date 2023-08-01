@@ -222,7 +222,7 @@ def _write_fits(header, imagetype, data, filename, unit, origin):
     return
 
 
-def _create_destination_folder(caller, destination):
+def _create_destination_folder(destination):
     """
     Try to create a folder if it already exists raise a warning
     Args:
@@ -230,6 +230,8 @@ def _create_destination_folder(caller, destination):
         destination: the folder to be created
     """
     logger = _get_astrohack_logger()
+    caller=inspect.stack()[CALLING_FUNCTION].function
+
     try:
         os.mkdir(destination)
     except FileExistsError:
