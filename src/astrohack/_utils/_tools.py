@@ -60,10 +60,12 @@ def _remove_suffix(input_string, suffix):
         
     return input_string
 
-
+# DEPRECATED
 def _jsonify(holog_obj):
     """ Convert holog_obs_description dictionay to json format. This just means converting numpy.ndarry
         entries to string lists.
+
+    # DEPRECATED
 
     :param holog_obj: holog_obs_description dictionary.
     :type holog_obj: dict
@@ -153,6 +155,7 @@ def _parm_to_list(caller, parm, data_dict, prefix):
 
     """
     logger = _get_astrohack_logger()
+    
     if parm == 'all':
         oulist = list(data_dict.keys())
     elif isinstance(parm, str):

@@ -217,7 +217,7 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
 
         _parm_check_passed(fname, parms_passed)
-        _create_destination_folder(fname, parm_dict['destination'])
+        _create_destination_folder(parm_dict['destination'])
         parm_dict['metadata'] = self._meta_data
         _dask_general_compute(fname, self, _export_to_fits_holog_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
@@ -280,7 +280,7 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
 
         _parm_check_passed(fname, parms_passed)
-        _create_destination_folder(fname, parm_dict['destination'])
+        _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(fname, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_beams(self, destination, ant_id=None, ddi=None, complex_split='polar', display=True, colormap='viridis',
@@ -338,7 +338,7 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
 
         _parm_check_passed(fname, parms_passed)
-        _create_destination_folder(fname, parm_dict['destination'])
+        _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(fname, self, _plot_beam_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
 
@@ -533,7 +533,7 @@ class AstrohackHologFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=False)
 
         _parm_check_passed(fname, parms_passed)
-        _create_destination_folder(fname, parm_dict['destination'])
+        _create_destination_folder(parm_dict['destination'])
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(fname, self, _calibration_plot_chunk, parm_dict, key_order, parallel)
 
@@ -678,7 +678,7 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
         
         _parm_check_passed(fname, parms_passed)
-        _create_destination_folder(fname, parm_dict['destination'])
+        _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(fname, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
     def plot_antennae(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False, unit=None,
@@ -769,7 +769,7 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
 
         _parm_check_passed(fname, parms_passed)
-        _create_destination_folder(fname, parm_dict['destination'])
+        _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(fname, self, _plot_antenna_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def export_to_fits(self, destination, ant_id=None, ddi=None, parallel=False):
@@ -806,7 +806,7 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
 
         _parm_check_passed(fname, parms_passed)
-        _create_destination_folder(fname, parm_dict['destination'])
+        _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(fname, self, _export_to_fits_panel_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
 

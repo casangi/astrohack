@@ -59,7 +59,7 @@ def extract_holog(
     :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with *holog.zarr* extension.
     :type holog_name: str, optional
 
-    :param holog_obs_dict: The *holog_obs_dict* describes which scan and antenna data to extract from the measurement set. As detailed below, this compound dictionary also includes important meta data needed for preprocessing and extraction of the holography data from the measurement set. If not specified holog_obs_dict will be generated. For auto generation of the holog_obs_dict the assumtion is made that the same antanna beam is not mapped twice in a row (alternating sets of antennas is fine).
+    :param holog_obs_dict: The *holog_obs_dict* describes which scan and antenna data to extract from the measurement set. As detailed below, this compound dictionary also includes important meta data needed for preprocessing and extraction of the holography data from the measurement set. If not specified holog_obs_dict will be generated. For auto generation of the holog_obs_dict the assumtion is made that the same antanna beam is not mapped twice in a row (alternating sets of antennas is fine). If the holog_obs_dict is specified, the ddi input is ignored.
     :type holog_obs_dict: dict, optional
 
     :param ddi:  DDI(s) that should be extracted from the measurement set. Defaults to all DDI's in the ms.
@@ -216,7 +216,8 @@ def extract_holog(
     # Create holog_obs_dict or modify user supplied holog_obs_dict.
     ddi = extract_holog_params['ddi']
 
-    if holog_obs_dict is None: #Automatically create holog_obs_dict
+    # Create holog_obs_dict if not specified
+    if holog_obs_dict is None: 
         from astrohack._utils._extract_holog import _create_holog_obs_dict
         holog_obs_dict = _create_holog_obs_dict(
             pnt_dict, 
@@ -236,27 +237,15 @@ def extract_holog(
                     if ddi_id not in ddi:
                         del holog_obs_dict[ddi_key]
 
-    else:
-        #If a user defines a holog_obs_dict it needs to be duplicated for each ddi.
-        holog_obs_dict_with_ddi = {}
-        if ddi == 'all':
-            for ddi_id in ms_ddi:
-                holog_obs_dict_with_ddi['ddi_' + str(ddi_id)] = holog_obs_dict
-        else:
-            for ddi_id in ddi:
-                holog_obs_dict_with_ddi['ddi_' + str(ddi_id)] = holog_obs_dict
-        
-        holog_obs_dict = holog_obs_dict_with_ddi
             
     logger.info(f"[{function_name}]: holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0], indent=2, width=2))
 
 
-    outfile_obj = copy.deepcopy(holog_obs_dict)
-
-    _jsonify(outfile_obj)
+    encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
 
     with open(".holog_obs_dict.json", "w") as outfile:
-        json.dump(outfile_obj, outfile)
+        json.dump(encoded_obj, outfile)
+
         
     ######## Get Scan and Subscan IDs ########
     # SDM Tables Short Description (https://drive.google.com/file/d/16a3g0GQxgcO7N_ZabfdtexQ8r2jRbYIS/view)
