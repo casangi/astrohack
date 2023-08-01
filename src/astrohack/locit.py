@@ -7,7 +7,8 @@ from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 
-def locit(locit_name, position_name=None, elevation_limit=10.0, ant_id=None, ddi=None, parallel=False, overwrite=False):
+def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='R', ant_id=None, ddi=None, parallel=False,
+          overwrite=False):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
 
@@ -17,6 +18,8 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, ant_id=None, ddi
     :type position_name: str, optional
     :param elevation_limit: Lower elevation limit for excluding sources in degrees
     :type elevation_limit: float, optional
+    :param polarization: Which polarization to use R, L or I for circular systems, X, Y, or I for linear systems
+    :type polarization: str, optional
     :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant_id: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
@@ -41,8 +44,8 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, ant_id=None, ddi
 
     fname = 'locit'
     ######### Parameter Checking #########
-    locit_parms = _check_locit_parms(fname, locit_name, position_name, elevation_limit, ant_id, ddi, parallel,
-                                     overwrite)
+    locit_parms = _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, ant_id, ddi,
+                                     parallel, overwrite)
     attributes = locit_parms.copy()
 
     _check_if_file_exists(locit_parms['locit_name'])
@@ -64,10 +67,12 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, ant_id=None, ddi
         return None
 
 
-def _check_locit_parms(fname, locit_name, position_name, elevation_limit, ant_id, ddi, parallel, overwrite):
+def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, ant_id, ddi, parallel,
+                       overwrite):
 
     locit_parms = {"locit_name": locit_name, "position_name": position_name, "elevation_limit": elevation_limit,
-                   "ant": ant_id, "ddi": ddi, "parallel": parallel, "overwrite": overwrite}
+                   "polarization": polarization, "ant": ant_id, "ddi": ddi, "parallel": parallel,
+                   "overwrite": overwrite}
 
     #### Parameter Checking ####
     logger = _get_astrohack_logger()
@@ -80,6 +85,8 @@ def _check_locit_parms(fname, locit_name, position_name, elevation_limit, ant_id
                                                  default=base_name+'.position.zarr')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'elevation_limit', [float],
                                                  acceptable_range=[0, 90], default=10)
+    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'polarization', [str],
+                                                 acceptable_data=['X', 'Y', 'R', 'L'], default='I')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'ant', [list, str],
                                                  list_acceptable_data_types=[str], default='all')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'ddi', [list, int],

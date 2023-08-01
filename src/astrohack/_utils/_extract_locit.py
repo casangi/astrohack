@@ -237,7 +237,7 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
         for ddi_id, ddi in extract_locit_parms['ddi_dict'].items():
             this_ddi_xds = xr.Dataset()
             ddi_sel = ant_spw_id == ddi_id
-            coords = {"time": ant_time[ddi_sel], "chan": [0], "pol": ['r', 'l']}
+            coords = {"time": ant_time[ddi_sel], "chan": [0], "pol": ['R', 'L']}
             this_ddi_xds['PHASE_GAINS'] = xr.DataArray(ant_phase_gains[ddi_sel], dims=('time', 'chan', 'pol'))
             this_ddi_xds['FIELD_ID'] = xr.DataArray(ant_field[ddi_sel], dims='time')
             this_ddi_xds.attrs['frequency'] = ddi['frequency']

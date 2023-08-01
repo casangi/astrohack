@@ -24,6 +24,19 @@ def _locit_chunk(locit_parms):
     gains = xds_data['PHASE_GAINS'].values
     field_id = xds_data['FIELD_ID'].values
     time = xds_data.time.values
+    pol = xds_data.pol.values
+    if len(pol) > 2:
+        msg = f'Polarization scheme {pol} is not what is expected for antenna based gains'
+        logger.error(msg)
+        raise Exception(msg)
+    if locit_parms['polarization'] in pol:
+        i_pol = np.where(pol == locit_parms['polarization'])[0][0]
+        gains = gains[:, 0, i_pol]
+    else:
+        msg = f'Polarization {locit_parms["polarization"]} is not found in data'
+        logger.error(msg)
+        raise Exception(msg)
+
     astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
     lst = astro_time.sidereal_time("apparent").to(units.radian)/units.radian
     hadec = _build_coordinate_array(field_id, src_dict, 'precessed')
@@ -73,7 +86,7 @@ def _solve_a_la_aips_kterm_no_slope(hadec, gains, elevation, elevation_limit):
                 for icol in range(irow):
                     value = afunc[icol]
                     system[irow, icol] += weight * value
-                vector[irow] += gains[i_sample, 0, 1] * weight
+                vector[irow] += gains[i_sample] * weight
         else:
             pass
 
@@ -89,7 +102,7 @@ def _solve_via_scipy(hadec, gains, elevation, elevation_limit, verbose=False):
     logger  = _get_astrohack_logger()
     selelev = elevation > elevation_limit
     hadec = hadec[:, selelev]
-    gains = gains[selelev, 0, 0]
+    gains = gains[selelev]
     # First guess is no error in positions and no instrumental delay
     p0 = [0, 0, 0, 0]
     # Errors are not limited, but the instrumental delay is pegged to the -pi to pi range
@@ -119,7 +132,6 @@ def _geometric_delay_phase(coordinates, xoff, yoff, zoff, inst_delay):
     zterm = twopi*np.sin(dec)*zoff
     xterm = twopi*cosdec*np.cos(ha)*xoff
     yterm = -twopi*cosdec*np.sin(ha)*yoff
-
     return xterm + yterm + zterm + inst_delay
 
 
