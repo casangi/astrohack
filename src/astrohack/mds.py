@@ -2,6 +2,7 @@ import os
 import numpy as np
 import numbers
 import distributed
+from prettytable import PrettyTable
 from matplotlib import colormaps as cmaps
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
@@ -10,15 +11,19 @@ from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _load_image_file
 from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
+from astrohack._utils._dio import _load_locit_file
+
 from astrohack._utils._dio import _create_destination_folder
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._tools import _print_method_list, _print_attributes, _print_data_contents, _print_summary_header
+from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
+from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table
 
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
@@ -813,6 +818,7 @@ class AstrohackPanelFile(dict):
 class AstrohackPointFile(dict):
     """ Data Class for holography pointing data.
     """
+
     def __init__(self, file):
         """ Initialize an AstrohackPointFile object.
         :param file: File to be linked to this object
@@ -822,14 +828,14 @@ class AstrohackPointFile(dict):
         :rtype: AstrohackPointFile
         """
         super().__init__()
-        
+
         self.file = file
         self._meta_data = None
         self._file_is_open = False
 
     def __getitem__(self, key):
         return super().__getitem__(key)
-    
+
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
 
@@ -875,3 +881,202 @@ class AstrohackPointFile(dict):
         _print_attributes(self._meta_data)
         _print_data_contents(self, ["Antenna"])
         _print_method_list([self.summary])
+
+
+class AstrohackLocitFile(dict):
+    """ Data Class for extracted antenna location determination
+    """
+
+    def __init__(self, file):
+        """ Initialize an AstrohackLocitFile object.
+        :param file: File to be linked to this object
+        :type file: str
+
+        :return: AstrohackLocitFile object
+        :rtype: AstrohackLocitFile
+        """
+        super().__init__()
+
+        self.file = file
+        self._meta_data = None
+        self._file_is_open = False
+
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+
+    def __setitem__(self, key, value):
+        return super().__setitem__(key, value)
+
+    def _is_open(self):
+        """ Check wether the object has opened the corresponding hack file.
+
+        :return: True if open, else False.
+        :rtype: bool
+        """
+        return self._file_is_open
+
+    def _open(self, file=None, dask_load=True):
+        """ Open antenna location file.
+        :param file: File to be opened, if None defaults to the previously defined file
+        :type file: str, optional
+        :param dask_load: Is file to be loaded with dask?, default is True
+        :type dask_load: bool, optional
+
+        :return: True if file is properly opened, else returns False
+        :rtype: bool
+        """
+        logger = _get_astrohack_logger()
+
+        if file is None:
+            file = self.file
+
+        try:
+            _load_locit_file(file=file, dask_load=dask_load, locit_dict=self)
+            self._file_is_open = True
+
+        except Exception as e:
+            logger.error("[AstrohackLocitFile]: {}".format(e))
+            self._file_is_open = False
+
+        self._meta_data = _read_meta_data(file+'/.locit_attr')
+
+        return self._file_is_open
+
+    def print_source_table(self):
+        """ Prints a table with the sources observed for antenna location determination
+        """
+        alignment = 'l'
+        print("\nSources:")
+        table = PrettyTable()
+        table.field_names = ['Id', 'Name', 'RA J2000', 'DEC J2000', 'RA precessed', 'DEC precessed']
+        for source in self['obs_info']['src_dict'].values():
+            table.add_row([source['id'], source['name'], _rad_to_hour_str(source['j2000'][0]),
+                           _rad_to_deg_str(source['j2000'][1]), _rad_to_hour_str(source['precessed'][0]),
+                           _rad_to_deg_str(source['precessed'][1])])
+        table.align = alignment
+        print(table)
+
+    def print_antenna_table(self):
+        """ Prints a table of the antennas included in the dataset
+        """
+        alignment = 'l'
+        print(f"\n{self['obs_info']['telescope_name']} Antennae:")
+        table = PrettyTable()
+        table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Distance to earth center (m)']
+        for antenna in self['ant_info'].values():
+            if antenna['reference']:
+                table.add_row([antenna['name']+' (ref)', antenna['station'], _rad_to_deg_str(antenna['longitude']),
+                               _rad_to_deg_str(antenna['latitude']), antenna['radius']])
+            else:
+                table.add_row([antenna['name'], antenna['station'], _rad_to_deg_str(antenna['longitude']),
+                              _rad_to_deg_str(antenna['latitude']), antenna['radius']])
+        table.align = alignment
+        print(table)
+
+    def plot_source_positions(self, destination, display_labels=False, precessed=False, display=True, figure_size=None,
+                              dpi=300):
+        """ Plot source positions in either J2000 or precessed right ascension and declination.
+
+        :param destination: Name of the destination folder to contain plot
+        :type destination: str
+        :param display_labels: Add source labels to the plot, defaults to False
+        :type display_labels: bool, optional
+        :param precessed: Plot in precessed coordinates? defaults to False (J2000)
+        :type precessed: bool, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+        :param figure_size: 2 element array/list/tuple with the plot sizes in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: dots per inch to be used in plots, default is 300
+        :type dpi: int, optional
+
+        .. _Description:
+
+        Plot the sources on the source list to a full 24 hours 180 degrees flat 2D representation of the full sky.
+        If precessed is set to True the coordinates precessd to the midpoint of the observations is plotted, otherwise
+        the J2000 coordinates are plotted.
+        The source names can be plotted next to their positions if label is True, however plots may become too crowded
+        if that is the case.
+
+        """
+        parm_dict = {'destination': destination,
+                     'precessed': precessed,
+                     'display': display,
+                     'figuresize': figure_size,
+                     'label': display_labels,
+                     'dpi': dpi}
+
+        fname = 'plot_source_positions'
+        parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'precessed', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'label', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(fname, parm_dict['destination'])
+
+        if precessed:
+            filename = destination + '/source_table_precessed.png'
+            time_range = self['obs_info']['time_range']
+            obs_midpoint = (time_range[1] + time_range[0]) / 2.
+        else:
+            filename = destination + '/source_table_j2000.png'
+            obs_midpoint = None
+        _plot_source_table(filename, self['obs_info']['src_dict'], precessed=precessed, obs_midpoint=obs_midpoint,
+                           display=display, figure_size=figure_size, dpi=dpi, label=display_labels)
+        return
+
+    def plot_antenna_positions(self, destination, display_stations=True, display=True, figure_size=None, dpi=300):
+        """ Plot source positions in either J2000 or precessed right ascension and declination.
+
+        :param destination: Name of the destination folder to contain plot
+        :type destination: str
+        :param display_stations: Add station names to the plot, defaults to True
+        :type display_stations: bool, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+        :param figure_size: 2 element array/list/tuple with the plot sizes in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: dots per inch to be used in plots, default is 300
+        :type dpi: int, optional
+
+        .. _Description:
+
+
+        """
+        parm_dict = {'destination': destination,
+                     'display': display,
+                     'figuresize': figure_size,
+                     'stations': display_stations,
+                     'dpi': dpi}
+
+        fname = 'plot_source_positions'
+        parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'precessed', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'stations', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(fname, parm_dict['destination'])
+
+        filename = destination + '/antenna_positions.png'
+        _plot_antenna_table(filename, self['ant_info'], self['obs_info']['array_center_lonlatrad'], display=display,
+                            figure_size=figure_size, dpi=dpi, stations=display_stations)
+        return
+
+    def summary(self):
+        """ Prints summary of the AstrohackLocitFile object, with available data, attributes and available methods
+        """
+        _print_summary_header(self.file)
+        _print_attributes(self._meta_data)
+        _print_data_contents(self, ["Antenna", "Contents"])
+        _print_method_list([self.summary, self.print_source_table, self.print_antenna_table,
+                            self.plot_source_positions, self.plot_antenna_positions])

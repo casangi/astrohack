@@ -5,8 +5,12 @@ import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from prettytable import PrettyTable
 from textwrap import fill
+from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord
+from astropy.time import Time
+import astropy.units as units
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+from astrohack._utils._conversion import _convert_unit
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -24,6 +28,56 @@ class NumpyEncoder(json.JSONEncoder):
 
 
         return json.JSONEncoder.default(self, obj)
+
+def _casa_time_to_mjd(times):
+    corrected = times/3600/24.0
+    return corrected
+
+
+def _altaz_to_hadec(az, el, lat):
+    """Convert Local to HA + DEC coordinates.
+
+    (HA [rad], dec [rad])
+
+    Provided by D. Faes DSOC
+    """
+    sinlat = np.sin(lat)
+    coslat = np.cos(lat)
+    sinel  = np.sin(el)
+    cosel  = np.cos(el)
+    cosaz  = np.cos(az)
+    sindec = sinlat*sinel+coslat*cosel*cosaz
+    dec = np.arcsin(sindec)
+    argarccos = (sinel-sinlat*sindec)/(coslat*np.cos(dec))
+
+    lt1 = argarccos < -1
+    argarccos[lt1] = -1.0
+    ha = np.arccos(argarccos)
+    return ha, dec
+
+
+def _altaz_to_hadec_astropy(az, el, time, x_ant, y_ant, z_ant):
+    """
+    Astropy convertion from Alt Az to Ha Dec, seems to be more precise but it is VERY slow
+    Args:
+        az: Azimuth
+        el: Elevation
+        time: Time
+        x_ant: Antenna x position in geocentric coordinates
+        y_ant: Antenna y position in geocentric coordinates
+        z_ant: Antenna z position in geocentric coordinates
+
+    Returns: Hour angle and Declination
+
+    """
+    ant_pos = EarthLocation.from_geocentric(x_ant, y_ant, z_ant, 'meter')
+    mjd_time = Time(_casa_time_to_mjd(time), format='mjd', scale='utc')
+    az_el_frame = AltAz(location=ant_pos, obstime=mjd_time)
+    ha_dec_frame = HADec(location=ant_pos, obstime=mjd_time)
+    azel_coor = SkyCoord(az*units.rad, el*units.rad, frame=az_el_frame)
+    ha_dec_coor = azel_coor.transform_to(ha_dec_frame)
+    return ha_dec_coor.ha, ha_dec_coor.dec
+
 
 def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
     """
@@ -340,7 +394,10 @@ def _print_data_contents(data_dict, field_names, alignment='l'):
                 table.add_row([item_l1, item_l2, list(data_dict[item_l1][item_l2].keys())])
     elif depth == 2:
         for item_l1 in data_dict.keys():
-            table.add_row([item_l1, list(data_dict[item_l1].keys())])
+            if 'info' in item_l1:
+                pass
+            else:
+                table.add_row([item_l1, list(data_dict[item_l1].keys())])
     elif depth == 1:
         for item_l1 in data_dict.keys():
             table.add_row([item_l1])
@@ -377,6 +434,45 @@ def _print_attributes(meta_dict, split_key=None, alignment='l'):
             else:
                 table.add_row([key, meta_dict[key]])
     print(table)
+
+
+def _rad_to_hour_str(rad):
+    """
+    Converts an angle in radians to hours minutes and seconds
+    Args:
+        rad: angle in radians
+
+    Returns:
+    xxhyymzz.zzzs
+    """
+    h_float = rad * _convert_unit('rad', 'hour', 'trigonometric')
+    h_int = np.floor(h_float)
+    m_float = (h_float-h_int)*60
+    m_int = np.floor(m_float)
+    s_float = (m_float-m_int)*60
+    return f'{int(h_int):02d}h{int(m_int):02d}m{s_float:06.3f}s'
+
+
+def _rad_to_deg_str(rad):
+    """
+    Converts an angle in radians to degrees minutes and seconds
+    Args:
+        rad: angle in radians
+
+    Returns:
+    xx\u00B0yymzz.zzzs
+    """
+    d_float = rad * _convert_unit('rad', 'deg', 'trigonometric')
+    if d_float < 0:
+        d_float *= -1
+        sign = '-'
+    else:
+        sign = '+'
+    d_int = np.floor(d_float)
+    m_float = (d_float-d_int)*60
+    m_int = np.floor(m_float)
+    s_float = (m_float-m_int)*60
+    return f'{sign}{int(d_int):02d}\u00B0{int(m_int):02d}m{s_float:06.3f}s'
 
 
 def _print_summary_header(filename, print_len=100, frame_char='#', frame_width=3):
