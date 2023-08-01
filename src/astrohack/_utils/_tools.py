@@ -78,7 +78,7 @@ def _hadec_to_altaz(ha, dec, lat):
     return az, el
 
 
-def _hadec_to_elevation(ha, dec, lat):
+def _hadec_to_elevation(hadec, lat):
     """Convert HA + DEC to elevation.
 
     (HA [rad], dec [rad])
@@ -86,10 +86,10 @@ def _hadec_to_elevation(ha, dec, lat):
     Provided by D. Faes DSOC
     """
     #
-    cosha = np.cos(ha)
+    cosha = np.cos(hadec[0, :])
     coslat = np.cos(lat)
     sinlat = np.sin(lat)
-    sin_el = sinlat * np.sin(dec) + coslat * np.cos(dec) * cosha
+    sin_el = sinlat * np.sin(hadec[1, :]) + coslat * np.cos(hadec[1, :]) * cosha
     el = np.arcsin(sin_el)
     return el
 
