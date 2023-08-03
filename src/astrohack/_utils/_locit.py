@@ -1,3 +1,4 @@
+import numpy as np
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from scipy import optimize as opt
@@ -40,16 +41,16 @@ def _locit_chunk(locit_parms):
 
     astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
     lst = astro_time.sidereal_time("apparent").to(units.radian)/units.radian
-    hadec = _build_coordinate_array(field_id, src_dict, 'precessed')
+    coordinates = _build_coordinate_array(field_id, src_dict, 'precessed', antenna['latitude'], time)
+
     # convert to actual hour angle
-    hadec[0, :] = lst.value - hadec[0, :]
-    elevation = _hadec_to_elevation(hadec, antenna['latitude'])
+    coordinates[0, :] = lst.value - coordinates[0, :]
 
     linalg = False
     if linalg:
-        fit, variance = _solve_a_la_aips_kterm_no_slope(hadec, gains, elevation, elevation_limit)
+        fit, variance = _solve_linear_algebra(coordinates, gains, elevation_limit)
     else:
-        fit, variance = _solve_via_scipy(hadec, gains, elevation, elevation_limit, verbose=True)
+        fit, variance = _solve_scipy_optimize_curve_fit(coordinates, gains, elevation_limit, verbose=True)
 
     output_xds = xr.Dataset()
     output_xds.attrs['polarization'] = locit_parms['polarization']
@@ -60,33 +61,34 @@ def _locit_chunk(locit_parms):
     output_xds.attrs['instrumental_delay_error'] = variance[3]
     output_xds.attrs['antenna_info'] = antenna
 
-    coords = {'time': time, 'coords': ['HA', 'DEC']}
+    coords = {'time': time}
     output_xds['GAINS'] = xr.DataArray(gains, dims=['time'])
-    output_xds['HADEC'] = xr.DataArray(hadec, dims=['coords', 'time'])
+    output_xds['HOUR_ANGLE'] = xr.DataArray(coordinates[0, :], dims=['time'])
+    output_xds['DECLINATION'] = xr.DataArray(coordinates[1, :], dims=['time'])
+    output_xds['ELEVATION'] = xr.DataArray(coordinates[2, :], dims=['time'])
     output_xds['LST'] = xr.DataArray(lst, dims=['time'])
 
     basename = locit_parms['position_name']
     outname = "/".join([basename, 'ant_'+antenna['name'], f'ddi_{locit_parms["this_ant"]}'])
     output_xds = output_xds.assign_coords(coords)
     output_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
-
-    # fit, variance = _convert_results(xds_data.attrs['frequency'], fit, variance, 'mm', 'deg')
-    # print(fit)
-    # print(variance)
     return
 
 
-def _build_coordinate_array(field_id, src_list, key):
+def _build_coordinate_array(field_id, src_list, key, latitude, time):
     """ If this is a bottleneck, good candidate for numba"""
     n_samples = len(field_id)
-    coordinates = np.ndarray([2, n_samples])
+    coordinates = np.ndarray([4, n_samples])
     for i_sample in range(n_samples):
         field = str(field_id[i_sample])
-        coordinates[:, i_sample] = src_list[field][key]
+        coordinates[0:2, i_sample] = src_list[field][key]
+        coordinates[2, i_sample] = _hadec_to_elevation(src_list[field][key], latitude)
+        coordinates[3, i_sample] = time[i_sample]
     return coordinates
 
 
-def _solve_a_la_aips_kterm_no_slope(hadec, gains, elevation, elevation_limit):
+def _solve_linear_algebra(hadec, gains, elevation, elevation_limit):
+    # TODO this needs to be adapted to kterm slope on off etc
     """ If this is a bottleneck, good candidate for numba"""
     syssize = 4
     system = np.ndarray([syssize, syssize])
@@ -118,21 +120,36 @@ def _solve_a_la_aips_kterm_no_slope(hadec, gains, elevation, elevation_limit):
     return fit, variance
 
 
-def _solve_via_scipy(hadec, gains, elevation, elevation_limit, verbose=False):
+def _solve_scipy_optimize_curve_fit(coordinates, gains, elevation_limit, fit_kterm=False, fit_slope=False,
+                                    verbose=False):
     logger  = _get_astrohack_logger()
-    selelev = elevation > elevation_limit
-    hadec = hadec[:, selelev]
+    selelev = coordinates[2, :] > elevation_limit
+    coordinates = coordinates[:, selelev]
     gains = gains[selelev]
+
+    npar = 4 + fit_slope + fit_kterm
+    if fit_kterm and fit_slope:
+        fit_function = _phase_model_kterm_slope
+    elif fit_kterm and not fit_slope:
+        fit_function = _phase_model_kterm_noslope
+    elif not fit_kterm and fit_slope:
+        fit_function = _phase_model_nokterm_slope
+    else:
+        fit_function = _phase_model_nokterm_noslope
+
     # First guess is no error in positions and no instrumental delay
-    p0 = [0, 0, 0, 0]
-    # Errors are not limited, but the instrumental delay is pegged to the -pi to pi range
-    liminf = [-np.inf, -np.inf, -np.inf, -pi]
-    limsup = [+np.inf, +np.inf, +np.inf, +pi]
+    p0 = np.zeros(npar)
+    # Position Errors, k term and phase slope are not constrained, but the instrumental delay is pegged to the
+    # -pi to pi range
+    liminf = np.full(npar, -np.inf)
+    limsup = np.full(npar, +np.inf)
+    liminf[3] = -pi
+    limsup[3] = +pi
 
     maxfevs = [100000, 1000000, 10000000]
     for maxfev in maxfevs:
         try:
-            fit, covar = opt.curve_fit(_geometric_delay_phase, hadec, gains, p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
+            fit, covar = opt.curve_fit(fit_function, coordinates, gains, p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
         except RuntimeError:
             if verbose:
                 logger.info("Increasing number of iterations")
@@ -146,13 +163,44 @@ def _solve_via_scipy(hadec, gains, elevation, elevation_limit, verbose=False):
     return fit, variance
 
 
-def _geometric_delay_phase(coordinates, xoff, yoff, zoff, inst_delay):
-    ha, dec = coordinates
+def _phase_model_nokterm_noslope(coordinates, xoff, yoff, zoff, inst_delay):
+    ha, dec, _, _ = coordinates
     cosdec = np.cos(dec)
     zterm = twopi*np.sin(dec)*zoff
     xterm = twopi*cosdec*np.cos(ha)*xoff
     yterm = -twopi*cosdec*np.sin(ha)*yoff
     return xterm + yterm + zterm + inst_delay
+
+
+def _phase_model_kterm_noslope(coordinates, xoff, yoff, zoff, inst_delay, koff):
+    ha, dec, elevation, _ = coordinates
+    cosdec = np.cos(dec)
+    zterm = twopi*np.sin(dec)*zoff
+    xterm = twopi*cosdec*np.cos(ha)*xoff
+    yterm = -twopi*cosdec*np.sin(ha)*yoff
+    kterm = np.cos(elevation)*koff
+    return xterm + yterm + zterm + inst_delay + kterm
+
+
+def _phase_model_nokterm_slope(coordinates, xoff, yoff, zoff, inst_delay, slope):
+    ha, dec, _, time = coordinates
+    cosdec = np.cos(dec)
+    zterm = twopi*np.sin(dec)*zoff
+    xterm = twopi*cosdec*np.cos(ha)*xoff
+    yterm = -twopi*cosdec*np.sin(ha)*yoff
+    sterm = slope*time
+    return xterm + yterm + zterm + inst_delay + sterm
+
+
+def _phase_model_kterm_slope(coordinates, xoff, yoff, zoff, inst_delay, koff, slope):
+    ha, dec, elevation, time = coordinates
+    cosdec = np.cos(dec)
+    zterm = twopi*np.sin(dec)*zoff
+    xterm = twopi*cosdec*np.cos(ha)*xoff
+    yterm = -twopi*cosdec*np.sin(ha)*yoff
+    kterm = np.cos(elevation)*koff
+    sterm = slope*time
+    return xterm + yterm + zterm + inst_delay + kterm + sterm
 
 
 def _convert_results(frequency, fit, variance, lengthunit, trigounit):

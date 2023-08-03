@@ -86,10 +86,10 @@ def _hadec_to_elevation(hadec, lat):
     Provided by D. Faes DSOC
     """
     #
-    cosha = np.cos(hadec[0, :])
+    cosha = np.cos(hadec[0])
     coslat = np.cos(lat)
     sinlat = np.sin(lat)
-    sin_el = sinlat * np.sin(hadec[1, :]) + coslat * np.cos(hadec[1, :]) * cosha
+    sin_el = sinlat * np.sin(hadec[1]) + coslat * np.cos(hadec[1]) * cosha
     el = np.arcsin(sin_el)
     return el
 
