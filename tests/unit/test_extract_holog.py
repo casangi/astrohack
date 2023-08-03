@@ -6,6 +6,7 @@ import shutil
 import astrohack
 
 from astrohack.extract_holog import extract_holog
+from astrohack.extract_pointing import extract_pointing
 from astrohack.extract_holog import generate_holog_obs_dict
 
 class TestAstrohack():
@@ -126,3 +127,26 @@ class TestAstrohack():
 
         # Check that the holog file date has change
         assert initial_time != final_time
+
+    def test_extract_holog_baseline_average_distance(self):
+
+        # extract pointing data
+        pnt_mds = extract_pointing(
+            ms_name='data/ea25_cal_small_after_fixed.split.ms',
+            point_name='data/ea25_cal_small_after_fixed.split.point.zarr',
+            parallel=False,
+            overwrite=True
+        )
+
+        # Extract holography data
+        holog_mds = extract_holog(
+            ms_name="data/ea25_cal_small_after_fixed.split.ms",
+            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            baseline_average_distance=100.1,
+            data_column="CORRECTED_DATA",
+            parallel=False,
+            overwrite=True
+        )
+        
+        # Check that the expected antenna is present.
+        assert list(holog_mds['ddi_0']['map_0'].keys()) == ['ant_ea25']
