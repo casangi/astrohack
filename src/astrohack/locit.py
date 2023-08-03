@@ -7,8 +7,8 @@ from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 
-def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='R', fit_kterm=False, fit_slope=True,
-          ant_id=None, ddi=None, parallel=False, overwrite=False):
+def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='R', fit_engine='linear algebra',
+          fit_kterm=False, fit_slope=True, ant_id=None, ddi=None, parallel=False, overwrite=False):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
 
@@ -24,6 +24,8 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='R'
     :type fit_kterm: bool, optional
     :param fit_slope: Fit phase slope with time, defaults to True
     :type fit_slope: bool, optional
+    :param fit_engine: What engine to use on fitting, default is linear algebra
+    :type fit_engine: str, optional
     :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant_id: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
@@ -43,13 +45,27 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='R'
 
     **Additional Information**
 
+    .. rubric:: Available fitting engines:
+
+    For locit two fitting engines have been implemented, one the classic method used in AIPS is called here
+    'linear algebra' and a newer more pythonic engine using scipy curve fitting capabilities, which we call
+    scipy, more details below.
+
+    * linear algebra: This fitting engine is based on the least square methods for solving linear systems,
+                      this engine is fast, about one order of magnitude faster than scipy,  but may fail to
+                      converge, also its uncertainties may be underestimated.
+
+    * scipy: This fitting engine uses the well estabilished scipy.optimize.curve_fit routine. This engine is
+             slower than the linear algebra engine, but it is more robust with better estimated uncertainties.
+
+
     """
     logger = _get_astrohack_logger()
 
     fname = 'locit'
     ######### Parameter Checking #########
-    locit_parms = _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, fit_kterm,
-                                     fit_slope, ant_id, ddi, parallel, overwrite)
+    locit_parms = _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, fit_engine,
+                                     fit_kterm, fit_slope, ant_id, ddi, parallel, overwrite)
     attributes = locit_parms.copy()
 
     _check_if_file_exists(locit_parms['locit_name'])
@@ -71,12 +87,12 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='R'
         return None
 
 
-def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, fit_kterm, fit_slope, ant_id,
-                       ddi, parallel, overwrite):
+def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, fit_engine, fit_kterm,
+                       fit_slope, ant_id, ddi, parallel, overwrite):
 
     locit_parms = {"locit_name": locit_name, "position_name": position_name, "elevation_limit": elevation_limit,
-                   "polarization": polarization, "fit_kterm": fit_kterm, "fit_slope": fit_slope, "ant": ant_id,
-                   "ddi": ddi, "parallel": parallel, "overwrite": overwrite}
+                   "fit_engine": fit_engine, "polarization": polarization, "fit_kterm": fit_kterm,
+                   "fit_slope": fit_slope, "ant": ant_id, "ddi": ddi, "parallel": parallel, "overwrite": overwrite}
 
     #### Parameter Checking ####
     logger = _get_astrohack_logger()
@@ -91,6 +107,8 @@ def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polari
                                                  acceptable_range=[0, 90], default=10)
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'polarization', [str],
                                                  acceptable_data=['X', 'Y', 'R', 'L'], default='I')
+    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'fit_engine', [str],
+                                                 acceptable_data=['linear algebra', 'scipy'], default='linear algebra')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'fit_kterm', [bool], default=False)
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'fit_slope', [bool], default=True)
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'ant', [list, str],

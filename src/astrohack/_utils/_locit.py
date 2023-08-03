@@ -1,4 +1,3 @@
-import numpy as np
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from scipy import optimize as opt
@@ -48,26 +47,25 @@ def _locit_chunk(locit_parms):
     # convert to actual hour angle
     coordinates[0, :] = lst.value - coordinates[0, :]
 
-    # linalg = False
-    # if linalg:
-    #     fit, variance = _solve_linear_algebra(coordinates, gains, elevation_limit, fit_kterm, fit_slope)
-    # else:
-    #     fit, variance = _solve_scipy_optimize_curve_fit(coordinates, gains, elevation_limit, fit_kterm, fit_slope,
-    #                                                     verbose=True)
-    fit, variance = _solve_scipy_optimize_curve_fit(coordinates, gains, elevation_limit, fit_kterm, fit_slope)
-    _print_eval_res(fit, variance, 'scipy')
-
-    fit, variance = _solve_linear_algebra(coordinates, gains, elevation_limit, fit_kterm, fit_slope)
-    _print_eval_res(fit, variance, 'linalg')
+    linalg = locit_parms['fit_engine'] == 'linear algebra'
+    if linalg:
+        fit, variance = _solve_linear_algebra(coordinates, gains, elevation_limit, fit_kterm, fit_slope)
+    else:
+        if locit_parms['fit_engine'] == 'scipy':
+            fit, variance = _solve_scipy_optimize_curve_fit(coordinates, gains, elevation_limit, fit_kterm, fit_slope,
+                                                            verbose=True)
+        else:
+            msg = f'Unrecognized fitting engine: {locit_parms["fit_engine"]}'
+            logger.erro(msg)
+            raise Exception(msg)
 
     output_xds = xr.Dataset()
     output_xds.attrs['polarization'] = locit_parms['polarization']
     output_xds.attrs['wavelength'] = clight/xds_data.attrs['frequency']
-    print(output_xds.attrs['wavelength'])
-    output_xds.attrs['position_fit'] = fit[:3]
-    output_xds.attrs['position_error'] = variance[:3]
-    output_xds.attrs['instrumental_delay_fit'] = fit[3]
-    output_xds.attrs['instrumental_delay_error'] = variance[3]
+    output_xds.attrs['position_fit'] = fit[1:4]
+    output_xds.attrs['position_error'] = variance[1:4]
+    output_xds.attrs['instrumental_delay_fit'] = fit[0]
+    output_xds.attrs['instrumental_delay_error'] = variance[0]
     if fit_kterm and fit_slope:
         output_xds.attrs['kterm_fit'] = fit[4]
         output_xds.attrs['kterm_error'] = variance[4]
@@ -95,8 +93,6 @@ def _locit_chunk(locit_parms):
     outname = "/".join([basename, 'ant_'+antenna['name'], f'ddi_{locit_parms["this_ant"]}'])
     output_xds = output_xds.assign_coords(coords)
     output_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
-
-    print(80*'#')
     return
 
 
