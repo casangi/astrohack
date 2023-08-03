@@ -438,7 +438,8 @@ def _check_extract_holog_params(function_name, extract_holog_params):
     if not parm_check:
         logger.error(f'[{function_name}]: Parameter holog_obs_dict must be of type {str(dict)}.')
         
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'baseline_average_distance', [numbers.Number, str], default='all')
+    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'baseline_average_distance', [float, int, str], default='all')
+    print(type(extract_holog_params['baseline_average_distance']))
     
     parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'baseline_average_nearest', [int, str], default='all')
     
