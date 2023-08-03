@@ -50,7 +50,9 @@ def _locit_chunk(locit_parms):
     if linalg:
         fit, variance = _solve_linear_algebra(coordinates, gains, elevation_limit)
     else:
-        fit, variance = _solve_scipy_optimize_curve_fit(coordinates, gains, elevation_limit, verbose=True)
+        fit, variance = _solve_scipy_optimize_curve_fit(coordinates, gains, elevation_limit,
+                                                        fit_kterm=locit_parms['fit_kterm'],
+                                                        fit_slope=locit_parms['fit_slope'], verbose=True)
 
     output_xds = xr.Dataset()
     output_xds.attrs['polarization'] = locit_parms['polarization']
