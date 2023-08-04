@@ -27,6 +27,7 @@ def _extract_antenna_data(fname, extract_locit_parms):
     logger = _get_astrohack_logger()
     cal_table = extract_locit_parms['cal_table']
     ant_table = ctables.table(cal_table + '::ANTENNA', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    print(ant_table.getdesc().keys())
     ant_off = ant_table.getcol('OFFSET')
     ant_pos = ant_table.getcol('POSITION')
     ant_mnt = ant_table.getcol('MOUNT')
@@ -87,6 +88,7 @@ def _extract_spectral_info(fname, extract_locit_parms):
     logger = _get_astrohack_logger()
     cal_table = extract_locit_parms['cal_table']
     spw_table = ctables.table(cal_table+'::SPECTRAL_WINDOW', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    print(spw_table.getdesc().keys())
     ref_freq = spw_table.getcol('REF_FREQUENCY')
     n_chan = spw_table.getcol('NUM_CHAN')
     bandwidth = spw_table.getcol('CHAN_WIDTH')
@@ -130,6 +132,7 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
     cal_table = extract_locit_parms['cal_table']
     basename = extract_locit_parms['locit_name']
     src_table = ctables.table(cal_table+'::FIELD', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    print(src_table.getdesc().keys())
     src_ids = src_table.getcol('SOURCE_ID')
     phase_center_j2000 = src_table.getcol('PHASE_DIR')[:, 0, :]
     src_name = src_table.getcol('NAME')
@@ -142,6 +145,7 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
     obs_table = ctables.table(cal_table+'::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     time_range = _casa_time_to_mjd(obs_table.getcol('TIME_RANGE')[0])
     telescope_name = obs_table.getcol('TELESCOPE_NAME')[0]
+    print(obs_table.getdesc().keys())
     obs_table.close()
 
     mid_time = Time((time_range[-1]+time_range[0])/2, scale='utc', format='mjd')
@@ -187,6 +191,8 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
     cal_table = extract_locit_parms['cal_table']
     basename = extract_locit_parms['locit_name']
     main_table = ctables.table(cal_table, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    print(main_table.getdesc().keys())
+
     antenna1 = main_table.getcol('ANTENNA1')
     antenna2 = main_table.getcol('ANTENNA2')
     gain_time = _casa_time_to_mjd(main_table.getcol('TIME'))
@@ -220,6 +226,20 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
         # No data to discard we can go on and compute the phase gains
         ref_antenna = ref_antennas[0]
 
+    # Calibration tables do not retain a polarization sub table, hence we are going to infer the polarizations present
+    # from the telescope
+    telescope_name = extract_locit_parms['telescope_name']
+    if 'VLA' in telescope_name or telescope_name == 'VLBA':
+        polarization_scheme = ['R', 'L']
+    elif 'ALMA' == telescope_name:
+        polarization_scheme = ['X', 'Y']
+    else:
+        msg = f'Unrecognized telescope {extract_locit_parms["telescope_name"]}'
+        logger.error(msg)
+        raise Exception(msg)
+
+
+
     used_sources = []
     extract_locit_parms['reference_antenna'] = extract_locit_parms['full_antenna_list'][ref_antenna]
     phase_gains = np.angle(gains)
@@ -237,7 +257,7 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
         for ddi_id, ddi in extract_locit_parms['ddi_dict'].items():
             this_ddi_xds = xr.Dataset()
             ddi_sel = ant_spw_id == ddi_id
-            coords = {"time": ant_time[ddi_sel], "chan": [0], "pol": ['R', 'L']}
+            coords = {"time": ant_time[ddi_sel], "chan": [0], "pol": polarization_scheme}
             this_ddi_xds['PHASE_GAINS'] = xr.DataArray(ant_phase_gains[ddi_sel], dims=('time', 'chan', 'pol'))
             this_ddi_xds['FIELD_ID'] = xr.DataArray(ant_field[ddi_sel], dims='time')
             this_ddi_xds.attrs['frequency'] = ddi['frequency']
