@@ -7,7 +7,7 @@ from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 
-def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='R', fit_engine='linear algebra',
+def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='both', fit_engine='linear algebra',
           fit_kterm=False, fit_slope=True, ant_id=None, ddi=None, parallel=False, overwrite=False):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
@@ -18,7 +18,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='R'
     :type position_name: str, optional
     :param elevation_limit: Lower elevation limit for excluding sources in degrees
     :type elevation_limit: float, optional
-    :param polarization: Which polarization to use R, L or I for circular systems, X, Y, or I for linear systems
+    :param polarization: Which polarization to use R, L or both for circular systems, X, Y, or both for linear systems
     :type polarization: str, optional
     :param fit_kterm: Fit antenna focus offset term, defaults to False
     :type fit_kterm: bool, optional
@@ -106,7 +106,7 @@ def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polari
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'elevation_limit', [float],
                                                  acceptable_range=[0, 90], default=10)
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'polarization', [str],
-                                                 acceptable_data=['X', 'Y', 'R', 'L'], default='I')
+                                                 acceptable_data=['X', 'Y', 'R', 'L', 'both'], default='I')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'fit_engine', [str],
                                                  acceptable_data=['linear algebra', 'scipy'], default='linear algebra')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'fit_kterm', [bool], default=False)

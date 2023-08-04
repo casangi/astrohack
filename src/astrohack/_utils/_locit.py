@@ -1,3 +1,4 @@
+import numpy as np
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from scipy import optimize as opt
@@ -28,6 +29,12 @@ def _locit_chunk(locit_parms):
     field_id = xds_data['FIELD_ID'].values
     time = xds_data.time.values
     pol = xds_data.pol.values
+
+    astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
+    lst = astro_time.sidereal_time("apparent").to(units.radian)/units.radian
+    coordinates = _build_coordinate_array(field_id, src_dict, 'precessed', antenna['latitude'], time)
+    coordinates[0, :] = lst.value - coordinates[0, :]
+
     if len(pol) > 2:
         msg = f'Polarization scheme {pol} is not what is expected for antenna based gains'
         logger.error(msg)
@@ -35,17 +42,17 @@ def _locit_chunk(locit_parms):
     if locit_parms['polarization'] in pol:
         i_pol = np.where(pol == locit_parms['polarization'])[0][0]
         gains = gains[:, 0, i_pol]
+    elif locit_parms['polarization'] == 'both':
+        gains = gains.flatten(order='F')
+        coordinates = np.tile(coordinates, 2)
+        lst = np.tile(lst, 2)
     else:
         msg = f'Polarization {locit_parms["polarization"]} is not found in data'
         logger.error(msg)
         raise Exception(msg)
 
-    astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
-    lst = astro_time.sidereal_time("apparent").to(units.radian)/units.radian
-    coordinates = _build_coordinate_array(field_id, src_dict, 'precessed', antenna['latitude'], time)
 
     # convert to actual hour angle
-    coordinates[0, :] = lst.value - coordinates[0, :]
 
     linalg = locit_parms['fit_engine'] == 'linear algebra'
     if linalg:
@@ -58,6 +65,8 @@ def _locit_chunk(locit_parms):
             msg = f'Unrecognized fitting engine: {locit_parms["fit_engine"]}'
             logger.erro(msg)
             raise Exception(msg)
+
+    _print_eval_res(fit, variance, locit_parms['polarization'])
 
     output_xds = xr.Dataset()
     output_xds.attrs['polarization'] = locit_parms['polarization']
@@ -82,7 +91,7 @@ def _locit_chunk(locit_parms):
 
     output_xds.attrs['antenna_info'] = antenna
 
-    coords = {'time': time}
+    coords = {'time': coordinates[3, :]}
     output_xds['GAINS'] = xr.DataArray(gains, dims=['time'])
     output_xds['HOUR_ANGLE'] = xr.DataArray(coordinates[0, :], dims=['time'])
     output_xds['DECLINATION'] = xr.DataArray(coordinates[1, :], dims=['time'])
