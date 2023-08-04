@@ -90,7 +90,7 @@ def _locit_chunk(locit_parms):
     output_xds['LST'] = xr.DataArray(lst, dims=['time'])
 
     basename = locit_parms['position_name']
-    outname = "/".join([basename, 'ant_'+antenna['name'], f'ddi_{locit_parms["this_ant"]}'])
+    outname = "/".join([basename, 'ant_'+antenna['name'], f'{locit_parms["this_ddi"]}'])
     output_xds = output_xds.assign_coords(coords)
     output_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
     return

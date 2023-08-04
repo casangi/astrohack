@@ -1,4 +1,4 @@
-from astrohack.mds import AstrohackLocitFile
+from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 from astrohack._utils._locit import _locit_chunk
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
@@ -79,9 +79,9 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='R'
         logger.info(f"[{fname}]: Finished processing")
         output_attr_file = "{name}/{ext}".format(name=locit_parms['position_name'], ext=".position_attr")
         _write_meta_data(output_attr_file, attributes)
-        # position_mds = AstrohackPositionFile(locit_parms['position_name'])
-        # position_mds._open()
-        # return position_mds
+        position_mds = AstrohackPositionFile(locit_parms['position_name'])
+        position_mds._open()
+        return position_mds
     else:
         logger.warning(f"[{fname}]: No data to process")
         return None

@@ -12,6 +12,7 @@ from astrohack._utils._dio import _load_image_file
 from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _load_locit_file
+from astrohack._utils._dio import _load_position_file
 
 from astrohack._utils._dio import _create_destination_folder
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
@@ -884,7 +885,7 @@ class AstrohackPointFile(dict):
 
 
 class AstrohackLocitFile(dict):
-    """ Data Class for extracted antenna location determination
+    """ Data Class for extracted gains for antenna location determination
     """
 
     def __init__(self, file):
@@ -1017,7 +1018,7 @@ class AstrohackLocitFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
 
         _parm_check_passed(fname, parms_passed)
-        _create_destination_folder(fname, parm_dict['destination'])
+        _create_destination_folder(parm_dict['destination'])
 
         if precessed:
             filename = destination + '/source_table_precessed.png'
@@ -1065,7 +1066,7 @@ class AstrohackLocitFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
 
         _parm_check_passed(fname, parms_passed)
-        _create_destination_folder(fname, parm_dict['destination'])
+        _create_destination_folder(parm_dict['destination'])
 
         filename = destination + '/antenna_positions.png'
         _plot_antenna_table(filename, self['ant_info'], self['obs_info']['array_center_lonlatrad'], display=display,
@@ -1080,3 +1081,71 @@ class AstrohackLocitFile(dict):
         _print_data_contents(self, ["Antenna", "Contents"])
         _print_method_list([self.summary, self.print_source_table, self.print_antenna_table,
                             self.plot_source_positions, self.plot_antenna_positions])
+
+
+class AstrohackPositionFile(dict):
+    """ Data Class for extracted antenna location determination
+    """
+
+    def __init__(self, file):
+        """ Initialize an AstrohackPositionFile object.
+        :param file: File to be linked to this object
+        :type file: str
+
+        :return: AstrohackPositionFile object
+        :rtype: AstrohackPositionFile
+        """
+        super().__init__()
+
+        self.file = file
+        self._meta_data = None
+        self._file_is_open = False
+
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+
+    def __setitem__(self, key, value):
+        return super().__setitem__(key, value)
+
+    def _is_open(self):
+        """ Check wether the object has opened the corresponding hack file.
+
+        :return: True if open, else False.
+        :rtype: bool
+        """
+        return self._file_is_open
+
+    def _open(self, file=None, dask_load=True):
+        """ Open antenna location file.
+        :param file: File to be opened, if None defaults to the previously defined file
+        :type file: str, optional
+        :param dask_load: Is file to be loaded with dask?, default is True
+        :type dask_load: bool, optional
+
+        :return: True if file is properly opened, else returns False
+        :rtype: bool
+        """
+        logger = _get_astrohack_logger()
+
+        if file is None:
+            file = self.file
+
+        try:
+            _load_position_file(file=file, dask_load=dask_load, position_dict=self)
+            self._file_is_open = True
+
+        except Exception as e:
+            logger.error("[AstrohackpositionFile]: {}".format(e))
+            self._file_is_open = False
+
+        self._meta_data = _read_meta_data(file+'/.position_attr')
+
+        return self._file_is_open
+
+    def summary(self):
+        """ Prints summary of the AstrohackpositionFile object, with available data, attributes and available methods
+        """
+        _print_summary_header(self.file)
+        _print_attributes(self._meta_data)
+        _print_data_contents(self, ["Antenna", "Contents"])
+        _print_method_list([self.summary])
