@@ -25,32 +25,30 @@ def _locit_chunk(locit_parms):
 
     xds_data = locit_parms['xds_data']
     elevation_limit = locit_parms['elevation_limit'] * _convert_unit('deg', 'rad', 'trigonometric')
-    gains = xds_data['PHASE_GAINS'].values
-    field_id = xds_data['FIELD_ID'].values
-    time = xds_data.time.values
-    pol = xds_data.pol.values
-
-    astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
-    lst = astro_time.sidereal_time("apparent").to(units.radian)/units.radian
-    coordinates = _build_coordinate_array(field_id, src_dict, 'precessed', antenna['latitude'], time)
-    coordinates[0, :] = lst.value - coordinates[0, :]
+    pol = xds_data.attrs['polarization_scheme']
 
     if len(pol) > 2:
         msg = f'Polarization scheme {pol} is not what is expected for antenna based gains'
         logger.error(msg)
         raise Exception(msg)
     if locit_parms['polarization'] in pol:
-        i_pol = np.where(pol == locit_parms['polarization'])[0][0]
-        gains = gains[:, 0, i_pol]
+        i_pol = np.where(np.array(pol) == locit_parms['polarization'])[0][0]
+        gains = xds_data[f'P{i_pol}_PHASE_GAINS'].values
+        time = getattr(xds_data, f'p{i_pol}_time').values
+        field_id = xds_data[f'P{i_pol}_FIELD_ID'].values
     elif locit_parms['polarization'] == 'both':
-        gains = gains.flatten(order='F')
-        coordinates = np.tile(coordinates, 2)
-        lst = np.tile(lst, 2)
+        gains = np.concatenate([xds_data[f'P0_PHASE_GAINS'].values, xds_data[f'P1_PHASE_GAINS'].values])
+        field_id = np.concatenate([xds_data[f'P0_FIELD_ID'].values, xds_data[f'P1_FIELD_ID'].values])
+        time = np.concatenate([xds_data.p0_time.values, xds_data.p1_time.values])
     else:
         msg = f'Polarization {locit_parms["polarization"]} is not found in data'
         logger.error(msg)
         raise Exception(msg)
 
+    astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
+    lst = astro_time.sidereal_time("apparent").to(units.radian) / units.radian
+    coordinates = _build_coordinate_array(field_id, src_dict, 'precessed', antenna['latitude'], time)
+    coordinates[0, :] = lst.value - coordinates[0, :]
 
     # convert to actual hour angle
 
@@ -66,7 +64,7 @@ def _locit_chunk(locit_parms):
             logger.erro(msg)
             raise Exception(msg)
 
-    _print_eval_res(fit, variance, locit_parms['polarization'])
+    _print_eval_res(fit, variance, locit_parms['polarization'], clight/xds_data.attrs['frequency'])
 
     output_xds = xr.Dataset()
     output_xds.attrs['polarization'] = locit_parms['polarization']
@@ -271,14 +269,18 @@ def _phase_model_kterm_slope(coordinates, inst_delay, xoff, yoff, zoff, koff, sl
     return xterm + yterm + zterm + inst_delay + kterm + sterm
 
 
-def _print_eval_res(fit, variance, fittype):
+def _print_eval_res(fit, variance, fittype, wavelength):
     print(80 * '*')
     print(fittype)
     fitstr = 'fit: '
     errstr = 'err: '
     for i in range(len(fit)):
-        fitstr += f'{fit[i]:16.8f}'
-        errstr += f'{variance[i]:16.8f}'
+        if 0 < i < 4:
+            fitstr += f'{fit[i]*wavelength:16.8f}'
+            errstr += f'{variance[i]*wavelength:16.8f}'
+        else:
+            fitstr += f'{fit[i]*180/pi:16.8f}'
+            errstr += f'{variance[i]*180/pi:16.8f}'
     print(fitstr)
     print(errstr)
 
