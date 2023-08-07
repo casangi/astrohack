@@ -1,7 +1,7 @@
 import json
 
 import numpy as np
-
+from sigfig import round as sigfig_round
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from prettytable import PrettyTable
 from textwrap import fill
@@ -574,3 +574,17 @@ def _print_method_list(method_list, alignment='l', print_len=100):
         table.add_row([obj_method.__name__, fill(obj_method.__doc__.splitlines()[0][1:], width=desc_len)])
     print(table)
     print()
+
+
+def _format_value_error(value, error, scaling):
+    value *= scaling
+    error *= scaling
+    if error > value:
+        places = round(np.log10(error))
+        if places < 0:
+            places = abs(places)
+            return f'{value:.{places}f} \u00B1 {error:.{places}f}'
+        else:
+            return f'{sigfig_round(value, places-round(np.log10(abs(value))))} \u00B1 {sigfig_round(error, places)}'
+    else:
+        return sigfig_round(value, error)
