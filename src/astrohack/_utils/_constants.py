@@ -6,23 +6,29 @@ clight = constants.speed_of_light
 
 # Length units
 length_units = ['km', 'mi', 'm', 'yd', 'ft', 'in', 'cm', 'mm', 'um', 'mils']
-
 # From m to unit
 length_factors = [1e3, 1609.34, 1.0, 0.9144, 0.3048, 0.0254, 1e-2, 1e-3, 1e-6, 25.4/1e6]
 
 # Trigonometric units
-trigo_units = ['rad', 'deg', 'hour']
+trigo_units = ['rad', 'deg', 'hour', 'asec', 'amin']
 # from rad to unit
-trigo_factors = [1.0, constants.pi/180., constants.pi/12.]
+trigo_factors = [1.0, constants.pi/180., constants.pi/12., constants.pi/180./3600., constants.pi/180./60.]
+
+# Time units
+time_units = ['sec', 'min', 'hour', 'day']
+# from sec to unit
+time_factors = [1.0, 60.0, 3600.0, 86400.0]
 
 unit_dict = {
   'length': length_units,
-  'trigonometric': trigo_units
+  'trigonometric': trigo_units,
+  'time': time_units
 }
 
 fact_dict = {
   'length': length_factors,
-  'trigonometric': trigo_factors
+  'trigonometric': trigo_factors,
+  'time': time_factors
 }
 
 # Trigonometric unit conversions
