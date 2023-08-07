@@ -16,7 +16,7 @@ from astrohack._utils._dio import _load_position_file
 
 from astrohack._utils._dio import _create_destination_folder
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
-from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits
+from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits, time_units
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._tools import _print_method_list, _print_attributes, _print_data_contents, _print_summary_header
 from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
@@ -25,6 +25,7 @@ from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_c
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table
+from astrohack._utils._locit import _export_fit_separate_ddis
 
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
@@ -963,7 +964,7 @@ class AstrohackLocitFile(dict):
         alignment = 'l'
         print(f"\n{self['obs_info']['telescope_name']} Antennae:")
         table = PrettyTable()
-        table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Distance to earth center (m)']
+        table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Distance to earth center [m]']
         for antenna in self['ant_info'].values():
             if antenna['reference']:
                 table.add_row([antenna['name']+' (ref)', antenna['station'], _rad_to_deg_str(antenna['longitude']),
@@ -1141,6 +1142,39 @@ class AstrohackPositionFile(dict):
         self._meta_data = _read_meta_data(file+'/.position_attr')
 
         return self._file_is_open
+
+    def export_fit_results(self, destination, ant_id=None, ddi=None, combine_ddis=False, position_unit='m', angle_unit='deg',
+                           time_unit='hour'):
+        parm_dict = {'ant': ant_id,
+                     'ddi': ddi,
+                     'destination': destination,
+                     'combine_ddis': combine_ddis,
+                     'position_unit': position_unit,
+                     'angle_unit': angle_unit,
+                     'time_unit': time_unit}
+
+        fname = 'export_fit_results'
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
+                                    list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
+                                                     default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'combine_ddis', [bool],
+                                                     default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'position_unit', [str],
+                                                     acceptable_data=length_units, default='m')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'angle_unit', [str],
+                                                     acceptable_data=trigo_units, default='deg')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'time_unit', [str],
+                                                     acceptable_data=time_units, default='hour')
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(parm_dict['destination'])
+
+        if combine_ddis:
+            pass
+        else:
+            _export_fit_separate_ddis(self, parm_dict)
 
     def summary(self):
         """ Prints summary of the AstrohackpositionFile object, with available data, attributes and available methods

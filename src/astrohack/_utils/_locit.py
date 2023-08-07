@@ -1,11 +1,12 @@
-import numpy as np
+from prettytable import PrettyTable
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from scipy import optimize as opt
+
 import astropy.units as units
 import xarray as xr
 
-from astrohack._utils._tools import _hadec_to_elevation
+from astrohack._utils._tools import _hadec_to_elevation, _format_value_error
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit
 from astrohack._utils._constants import *
@@ -48,9 +49,8 @@ def _locit_chunk(locit_parms):
     astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
     lst = astro_time.sidereal_time("apparent").to(units.radian) / units.radian
     coordinates = _build_coordinate_array(field_id, src_dict, 'precessed', antenna['latitude'], time)
-    coordinates[0, :] = lst.value - coordinates[0, :]
-
     # convert to actual hour angle
+    coordinates[0, :] = lst.value - coordinates[0, :]
 
     linalg = locit_parms['fit_engine'] == 'linear algebra'
     if linalg:
@@ -64,18 +64,16 @@ def _locit_chunk(locit_parms):
             logger.erro(msg)
             raise Exception(msg)
 
-    _print_eval_res(fit, variance, locit_parms['polarization'], clight/xds_data.attrs['frequency'])
-
     output_xds = xr.Dataset()
     output_xds.attrs['polarization'] = locit_parms['polarization']
     output_xds.attrs['wavelength'] = clight/xds_data.attrs['frequency']
     output_xds.attrs['position_fit'] = fit[1:4]
     output_xds.attrs['position_error'] = variance[1:4]
-    output_xds.attrs['instrumental_delay_fit'] = fit[0]
-    output_xds.attrs['instrumental_delay_error'] = variance[0]
+    output_xds.attrs['fixed_delay_fit'] = fit[0]
+    output_xds.attrs['fixed_delay_error'] = variance[0]
     if fit_kterm and fit_slope:
-        output_xds.attrs['kterm_fit'] = fit[4]
-        output_xds.attrs['kterm_error'] = variance[4]
+        output_xds.attrs['koff_fit'] = fit[4]
+        output_xds.attrs['koff_error'] = variance[4]
         output_xds.attrs['slope_fit'] = fit[5]
         output_xds.attrs['slope_error'] = variance[5]
     elif fit_kterm and not fit_slope:
@@ -283,5 +281,50 @@ def _print_eval_res(fit, variance, fittype, wavelength):
             errstr += f'{variance[i]*180/pi:16.8f}'
     print(fitstr)
     print(errstr)
+
+
+def _export_fit_separate_ddis(data_dict, parm_dict):
+    pos_unit = parm_dict['position_unit']
+    ang_unit = parm_dict['angle_unit']
+    len_fact = _convert_unit('m', pos_unit, 'length')
+    ang_fact = _convert_unit('rad', ang_unit, kind='trigonometric')
+
+    field_names = ['Antenna', 'DDI', f'Fixed delay  [{ang_unit}]', f'X offset [{pos_unit}]',
+                   f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
+    npar = 4
+    kterm_present = data_dict._meta_data["fit_kterm"]
+    slope_present = data_dict._meta_data["fit_slope"]
+    if kterm_present:
+        field_names.extend([f'K offset [{pos_unit}]'])
+        npar += 1
+    if slope_present:
+        tim_unit = parm_dict['time_unit']
+        slo_unit = f'{ang_unit}/{tim_unit}'
+        slope_fact = ang_fact / _convert_unit('day', tim_unit, 'time')
+        field_names.extend([f'Phase slope [{slo_unit}]'])
+        npar += 1
+
+    table = PrettyTable()
+    table.field_names = field_names
+
+    table.align = 'l'
+    for ant_key, antenna in data_dict.items():
+        for ddi_key, ddi in antenna.items():
+            pos_fact = len_fact * ddi.attrs['wavelength']
+            row = [ant_key, ddi_key, _format_value_error(ddi.attrs['fixed_delay_fit'], ddi.attrs['fixed_delay_error'],
+                                                         scaling=ang_fact)]
+            for i_pos in range(3):
+                row.append(_format_value_error(ddi.attrs['position_fit'][i_pos], ddi.attrs['position_error'][i_pos],
+                                               scaling=pos_fact))
+            if kterm_present:
+                row.append(_format_value_error(ddi.attrs['koff_fit'], ddi.attrs['koff_error'], scaling=pos_fact))
+            if slope_present:
+                row.append(_format_value_error(ddi.attrs['slope_fit'], ddi.attrs['slope_error'], scaling=slope_fact))
+            table.add_row(row)
+
+    outname = parm_dict['destination']+'/locit_fit_results.txt'
+    outfile = open(outname, 'w')
+    outfile.write(table.get_string())
+    outfile.close()
 
 
