@@ -10,8 +10,10 @@ from astrohack.mds import AstrohackImageFile
 from astrohack.mds import AstrohackHologFile
 from astrohack.mds import AstrohackPanelFile
 from astrohack.mds import AstrohackPointFile
+from astrohack.mds import AstrohackLocitFile
+from astrohack.mds import AstrohackPositionFile
 
-from astrohack._utils._dio import _reshape
+
 from astrohack._utils._dio import _print_array
 
 
@@ -99,7 +101,7 @@ def open_panel(file):
 
     :param file: Path ot panel file.
     :type file: str
-  
+
     :return: Holography panel object.
     :rtype: AstrohackPanelFile
 
@@ -130,6 +132,82 @@ def open_panel(file):
 
     else:
         logger.error(f"Error opening holgraphy panel file: {file}")
+
+
+def open_locit(file):
+    """ Open locit file and return instance of the locit data object. Object includes summary function to list available dictionary keys.
+
+    :param file: Path of locit file.
+    :type file: str
+
+    :return: locit object.
+    :rtype: AstrohackLocitFile
+
+    .. _Description:
+    **AstrohackLocitFile**
+    Locit object allows the user to access locit data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The locit object also provides a `summary()` helper function to list available keys for each file. An outline of the locit object structure is show below:
+
+    .. parsed-literal::
+        locit_mds =
+            {
+                ant_0:{
+                    ddi_0: locit_ds,
+                    ⋮
+                    ddi_m: locit_ds
+                },
+                ⋮
+                ant_n: …
+            }
+
+    """
+
+    logger = _get_astrohack_logger()
+
+    _data_file = AstrohackLocitFile(file=file)
+
+    if _data_file._open():
+        return _data_file
+
+    else:
+        logger.error(f"Error opening holgraphy locit file: {file}")
+
+
+def open_position(file):
+    """ Open position file and return instance of the position data object. Object includes summary function to list available dictionary keys.
+
+    :param file: Path of position file.
+    :type file: str
+
+    :return: position object.
+    :rtype: AstrohackPositionFile
+
+    .. _Description:
+    **AstrohackPositionFile**
+    position object allows the user to access position data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The position object also provides a `summary()` helper function to list available keys for each file. An outline of the position object structure is show below:
+
+    .. parsed-literal::
+        position_mds =
+            {
+                ant_0:{
+                    ddi_0: position_ds,
+                    ⋮
+                    ddi_m: position_ds
+                },
+                ⋮
+                ant_n: …
+            }
+
+    """
+
+    logger = _get_astrohack_logger()
+
+    _data_file = AstrohackPositionFile(file=file)
+
+    if _data_file._open():
+        return _data_file
+
+    else:
+        logger.error(f"Error opening holgraphy position file: {file}")
 
 
 def open_pointing(file):
@@ -203,36 +281,38 @@ def fix_pointing_table(ms_name, reference_antenna):
         length = len(message)
         tb.putcol(columnname="MESSAGE", value='pnt_tbl:fixed', startrow=length)
 
-def print_json(object, indent=6, columns=7):
+
+def print_json(obj, indent=6, columns=7):
     """ Print formatted JSON dictionary
 
-    :param object: JSON object
-    :type object: JSON
+    :param obj: JSON object
+    :type obj: JSON
     :param indent: Indent to be used in JSON dictionary., defaults to 6
     :type indent: int, optional
     :param columns: Columns used to reshape the antenna list., defaults to 7
     :type columns: int, optional
     """
   
-    if isinstance(object, np.ndarray):
-        object = list(object)
+    if isinstance(obj, np.ndarray):
+        obj = list(obj)
 
-    if isinstance(object, list):
+    if isinstance(obj, list):
         if indent > 3:
             list_indent = indent-3
         else:
             list_indent = 0
 
         print("{open}".format(open="[").rjust(list_indent, ' '))
-        _print_array(object, columns=columns, indent=indent+1)
+        _print_array(obj, columns=columns, indent=indent + 1)
         print("{close}".format(close="]").rjust(list_indent, ' '))
 
     else:
-        for key, value in object.items():
+        for key, value in obj.items():
             key_str="{key}{open}".format(key=key, open=":{")
             print("{key}".format(key=key_str).rjust(indent, ' '))
             print_json(value, indent+4, columns=columns)
             print("{close}".format(close="}").rjust(indent-4, ' '))
+
 
 def inspect_holog_obs_dict(file='.holog_obs_dict.json', style='static', indent=6, columns=7):
     """ Print formatted holography observation dictionary
@@ -266,4 +346,4 @@ def inspect_holog_obs_dict(file='.holog_obs_dict.json', style='static', indent=6
         
     
     else:
-        print_json(object=json_object, indent=indent, columns=columns)
+        print_json(obj=json_object, indent=indent, columns=columns)
