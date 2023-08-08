@@ -1,7 +1,6 @@
 import json
 
 import numpy as np
-from sigfig import round as sigfig_round
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from prettytable import PrettyTable
 from textwrap import fill
@@ -11,6 +10,8 @@ import astropy.units as units
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._conversion import _convert_unit
+from astrohack._utils._algorithms import _significant_digits
+
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -153,6 +154,7 @@ def _remove_suffix(input_string, suffix):
         
     return input_string
 
+
 # DEPRECATED
 def _jsonify(holog_obj):
     """ Convert holog_obs_description dictionay to json format. This just means converting numpy.ndarry
@@ -272,6 +274,7 @@ def _parm_to_list(caller, parm, data_dict, prefix):
         raise Exception(msg)
         
     return oulist
+
 
 def _split_pointing_table(ms_name, antennas):
     """ Split pointing table to contain only specified antennas
@@ -579,12 +582,28 @@ def _print_method_list(method_list, alignment='l', print_len=100):
 def _format_value_error(value, error, scaling):
     value *= scaling
     error *= scaling
-    if error > value:
+    if abs(value) < 1e-7:
+        value = 0.0
+    if abs(error) < 1e-7:
+        error = 0.0
+    if value == 0 and error == 0:
+        return f'{value} \u00b1 {error}'
+    elif error > abs(value):
         places = round(np.log10(error))
         if places < 0:
             places = abs(places)
             return f'{value:.{places}f} \u00B1 {error:.{places}f}'
         else:
-            return f'{sigfig_round(value, places-round(np.log10(abs(value))))} \u00B1 {sigfig_round(error, places)}'
+            if places in [-1, 0, 1]:
+                places = 2
+            digits = places - round(np.log10(abs(value)))
+            value = _significant_digits(value, digits)
+            error = _significant_digits(error, places)
+            return f'{value} \u00b1 {error}'
     else:
-        return sigfig_round(value, error)
+        digits = round(abs(np.log10(abs(value))))-1
+        if digits in [-1, 0, 1]:
+            digits = 2
+        value = _significant_digits(value, digits)
+        error = _significant_digits(error, digits-1)
+        return f'{value} \u00b1 {error}'
