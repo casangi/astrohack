@@ -34,6 +34,14 @@ class TestAstrohack():
 
     def test_extract_holog_obs_dict(self):
 
+        # Generate pointing file
+        extract_pointing(
+            ms_name="data/ea25_cal_small_after_fixed.split.ms",
+            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            overwrite=True,
+            parallel=False
+        )
+
         # Generate a holog observations dictionary with a subset of data descirbed by ddi=1
         holog_obs_dict = generate_holog_obs_dict(
             ms_name="data/ea25_cal_small_after_fixed.split.ms",
@@ -41,7 +49,6 @@ class TestAstrohack():
             ddi=[1],
             baseline_average_distance='all',
             baseline_average_nearest='all',
-            overwrite=True,
             parallel=False
         )
 
@@ -66,6 +73,14 @@ class TestAstrohack():
 
     def test_extract_holog_ddi(self):
 
+        # Generate pointing file
+        extract_pointing(
+            ms_name="data/ea25_cal_small_after_fixed.split.ms",
+            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            overwrite=True,
+            parallel=False
+        )
+
         # Generate a holog observations dictionary with a subset of data descirbed by ddi=1
         holog_obs_dict = generate_holog_obs_dict(
             ms_name="data/ea25_cal_small_after_fixed.split.ms",
@@ -73,7 +88,6 @@ class TestAstrohack():
             ddi=[1],
             baseline_average_distance='all',
             baseline_average_nearest='all',
-            overwrite=True,
             parallel=False
         )
 
@@ -93,13 +107,20 @@ class TestAstrohack():
 
     def test_extract_holog_overwrite(self):
 
+        # Generate pointing file
+        extract_pointing(
+            ms_name="data/ea25_cal_small_after_fixed.split.ms",
+            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            overwrite=True,
+            parallel=False
+        )
+
         # Generate a holog observations dictionary with a subset of data descirbed by ddi=1
         holog_obs_dict = generate_holog_obs_dict(
             ms_name="data/ea25_cal_small_after_fixed.split.ms",
             point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
             baseline_average_distance='all',
             baseline_average_nearest='all',
-            overwrite=True,
             parallel=False
         )
 
@@ -129,6 +150,14 @@ class TestAstrohack():
         assert initial_time != final_time
 
     def test_extract_holog_baseline_average_distance(self):
+
+        # Generate pointing file
+        extract_pointing(
+            ms_name="data/ea25_cal_small_after_fixed.split.ms",
+            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            overwrite=True,
+            parallel=False
+        )
 
         # extract pointing data
         pnt_mds = extract_pointing(

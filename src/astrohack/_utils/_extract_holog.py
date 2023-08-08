@@ -383,7 +383,7 @@ def _create_holog_file(
             )
 
 
-def _create_holog_obs_dict(pnt_dict,baseline_average_distance,baseline_average_nearest,ant_names,ant_pos,ant_names_main):
+def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average_nearest, ant_names, ant_pos, ant_names_main):
     '''
     Generate holog_obs_dict.
     '''
@@ -524,16 +524,16 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
     
     for ddi, map_dict in holog_dict.items():
         if "ddi_" in ddi:
-            for map, ant_dict in map_dict.items():
-                if "map_" in map:
+            for mapping, ant_dict in map_dict.items():
+                if "map_" in mapping:
                     for ant, xds in ant_dict.items():
                         if "ant_" in ant:
                             if ant not in ant_holog_dict:
-                                ant_holog_dict[ant] = {ddi:{map:{}}}
+                                ant_holog_dict[ant] = {ddi:{mapping:{}}}
                             elif ddi not in ant_holog_dict[ant]:
-                                ant_holog_dict[ant][ddi] = {map:{}}
+                                ant_holog_dict[ant][ddi] = {mapping:{}}
                     
-                            ant_holog_dict[ant][ddi][map] = xds.to_dict(data=False)
+                            ant_holog_dict[ant][ddi][mapping] = xds.to_dict(data=False)
                             cell_sizes.append(xds.attrs["grid_parms"]["cell_size"])
                             n_pixs.append(xds.attrs["grid_parms"]["n_pix"])
                             telescope_names.append(xds.attrs['telescope_name'])
@@ -541,16 +541,16 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
     cell_sizes_sigfigs =  _significant_digits(cell_sizes, digits=3)
 
     if not (len(set(cell_sizes_sigfigs)) == 1):
-        logger.error('Cell size not consistant: ' + str(cell_sizes))
-        raise
+        logger.error('Cell size not consistent: ' + str(cell_sizes))
+        raise Exception('Cell size not consistent: ' + str(cell_sizes))
         
     if not (len(set(n_pixs)) == 1):
-        logger.error('Number of pixels not consistant: ' + str(n_pixs))
-        raise
+        logger.error('Number of pixels not consistent: ' + str(n_pixs))
+        #raise Exception('Number of pixels not consistent: ' + str(n_pixs))
         
     if not (len(set(telescope_names)) == 1):
-        logger.error('Telescope name not consistant: ' + str(telescope_names))
-        raise
+        logger.error('Telescope name not consistent: ' + str(telescope_names))
+        raise Exception('Telescope name not consistent: ' + str(telescope_names))
 
     output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
     
