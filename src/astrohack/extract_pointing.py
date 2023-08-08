@@ -78,14 +78,30 @@ def extract_pointing(
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     ######### Parameter Checking #########
-    extract_pointing_params = _check_extract_pointing_params(function_name=function_name, extract_point_params=extract_pointing_params)
+    extract_pointing_params = _check_extract_pointing_params(
+        function_name=function_name, 
+        extract_point_params=extract_pointing_params
+    )
 
     input_params = extract_pointing_params.copy()
     
     try:
         _check_if_file_exists(extract_pointing_params['ms_name'])
         _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
-    
+
+        # Until check params is changed, comment this out.
+        '''
+        if point_name==None:
+        
+            logger.debug('[{caller}]: File {file} does not exists. Extracting ...'.format(caller=function_name, file=point_name))
+            
+            from astrohack._utils._tools import _remove_suffix
+
+            point_name = _remove_suffix(ms_name, '.ms') + '.point.zarr'
+            extract_holog_params['point_name'] = point_name
+            
+            logger.debug('[{caller}]: Extracting pointing to {output}'.format(caller=function_name, output=point_name))
+        '''
     
         pnt_dict = _extract_pointing(
             ms_name=extract_pointing_params['ms_name'], 
@@ -110,7 +126,7 @@ def extract_pointing(
     except Exception as exception:
         logger.error("There was an error, exiting:: Exception: {exception}".format(exception=exception))
         
-        return
+        return None
 
 def _check_extract_pointing_params(function_name, extract_point_params):
 
