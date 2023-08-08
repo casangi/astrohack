@@ -25,7 +25,7 @@ from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_c
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table
-from astrohack._utils._locit import _export_fit_separate_ddis
+from astrohack._utils._locit import _export_fit_separate_ddis, _export_fit_combine_ddis
 
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
@@ -1172,7 +1172,7 @@ class AstrohackPositionFile(dict):
         _create_destination_folder(parm_dict['destination'])
 
         if combine_ddis:
-            pass
+            _export_fit_combine_ddis(self, parm_dict)
         else:
             _export_fit_separate_ddis(self, parm_dict)
 

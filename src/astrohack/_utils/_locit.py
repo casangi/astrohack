@@ -267,22 +267,6 @@ def _phase_model_kterm_slope(coordinates, inst_delay, xoff, yoff, zoff, koff, sl
     return xterm + yterm + zterm + inst_delay + kterm + sterm
 
 
-def _print_eval_res(fit, variance, fittype, wavelength):
-    print(80 * '*')
-    print(fittype)
-    fitstr = 'fit: '
-    errstr = 'err: '
-    for i in range(len(fit)):
-        if 0 < i < 4:
-            fitstr += f'{fit[i]*wavelength:16.8f}'
-            errstr += f'{variance[i]*wavelength:16.8f}'
-        else:
-            fitstr += f'{fit[i]*180/pi:16.8f}'
-            errstr += f'{variance[i]*180/pi:16.8f}'
-    print(fitstr)
-    print(errstr)
-
-
 def _export_fit_separate_ddis(data_dict, parm_dict):
     pos_unit = parm_dict['position_unit']
     ang_unit = parm_dict['angle_unit']
@@ -291,18 +275,15 @@ def _export_fit_separate_ddis(data_dict, parm_dict):
 
     field_names = ['Antenna', 'DDI', f'Fixed delay  [{ang_unit}]', f'X offset [{pos_unit}]',
                    f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
-    npar = 4
     kterm_present = data_dict._meta_data["fit_kterm"]
     slope_present = data_dict._meta_data["fit_slope"]
     if kterm_present:
         field_names.extend([f'K offset [{pos_unit}]'])
-        npar += 1
     if slope_present:
         tim_unit = parm_dict['time_unit']
         slo_unit = f'{ang_unit}/{tim_unit}'
         slope_fact = ang_fact / _convert_unit('day', tim_unit, 'time')
         field_names.extend([f'Phase slope [{slo_unit}]'])
-        npar += 1
 
     table = PrettyTable()
     table.field_names = field_names
@@ -322,9 +303,68 @@ def _export_fit_separate_ddis(data_dict, parm_dict):
                 row.append(_format_value_error(ddi.attrs['slope_fit'], ddi.attrs['slope_error'], scaling=slope_fact))
             table.add_row(row)
 
-    outname = parm_dict['destination']+'/locit_fit_results.txt'
+    outname = parm_dict['destination']+'/locit_fit_results_separated_ddis.txt'
     outfile = open(outname, 'w')
-    outfile.write(table.get_string())
+    outfile.write(table.get_string()+'\n')
+    outfile.close()
+
+
+def _export_fit_combine_ddis(data_dict, parm_dict):
+    pos_unit = parm_dict['position_unit']
+    ang_unit = parm_dict['angle_unit']
+    len_fact = _convert_unit('m', pos_unit, 'length')
+    ang_fact = _convert_unit('rad', ang_unit, kind='trigonometric')
+
+    field_names = ['Antenna', f'Fixed delay  [{ang_unit}]', f'X offset [{pos_unit}]',
+                   f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
+    npar = 4
+    kterm_present = data_dict._meta_data["fit_kterm"]
+    slope_present = data_dict._meta_data["fit_slope"]
+    if kterm_present:
+        field_names.extend([f'K offset [{pos_unit}]'])
+        npar += 1
+        i_kterm = npar-1
+    if slope_present:
+        tim_unit = parm_dict['time_unit']
+        slo_unit = f'{ang_unit}/{tim_unit}'
+        slope_fact = ang_fact / _convert_unit('day', tim_unit, 'time')
+        field_names.extend([f'Phase slope [{slo_unit}]'])
+        npar += 1
+        i_slope = npar-1
+
+    table = PrettyTable()
+    table.field_names = field_names
+    table.align = 'l'
+
+    for ant_key, antenna in data_dict.items():
+        n_ddi = len(antenna.keys())
+        params = np.zeros([npar, n_ddi])
+        weight = np.zeros([npar, n_ddi])
+        row = [ant_key]
+        i_ddi = 0
+        for ddi_key, ddi in antenna.items():
+            pos_fact = len_fact * ddi.attrs['wavelength']
+            params[0, i_ddi] = ddi.attrs['fixed_delay_fit'] * ang_fact
+            weight[0, i_ddi] = 1/(ddi.attrs['fixed_delay_error'] * ang_fact)**2
+            params[1:4, i_ddi] = np.array(ddi.attrs['position_fit'])*pos_fact
+            weight[1:4, i_ddi] = 1/(np.array(ddi.attrs['position_error'])*pos_fact)**2
+            if kterm_present:
+                params[i_kterm, i_ddi] = ddi.attrs['koff_fit'] * pos_fact
+                weight[i_kterm, i_ddi] = 1 / (ddi.attrs['koff_error'] * pos_fact) ** 2
+            if slope_present:
+                params[i_slope, i_ddi] = ddi.attrs['slope_fit'] * slope_fact
+                weight[i_slope, i_ddi] = 1 / (ddi.attrs['slope_error'] * slope_fact) ** 2
+            i_ddi += 1
+
+        avgparams = np.average(params, weights=weight, axis=1)
+        avgerrors = 1/np.sqrt(np.sum(weight, axis=1))
+        for i_par in range(npar):
+            row.append(_format_value_error(avgparams[i_par], avgerrors[i_par], 1.0))
+        table.add_row(row)
+
+    outname = parm_dict['destination']+'/locit_fit_results_combined_ddis.txt'
+    outfile = open(outname, 'w')
+    outfile.write(table.get_string()+'\n')
     outfile.close()
 
 
