@@ -15,7 +15,7 @@ from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 def _locit_chunk(locit_parms):
     logger = _get_astrohack_logger()
-    logger.info(f'procesing {locit_parms["this_ant"]} {locit_parms["this_ddi"]}')
+    # logger.info(f'procesing {locit_parms["this_ant"]} {locit_parms["this_ddi"]}')
     antenna = locit_parms['ant_info'][locit_parms['this_ant']]
     src_dict = locit_parms['obs_info']['src_dict']
     fit_kterm = locit_parms['fit_kterm']
@@ -46,6 +46,10 @@ def _locit_chunk(locit_parms):
         logger.error(msg)
         raise Exception(msg)
 
+    if len(gains) == 0:
+        msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
+        logger.warning(msg)
+        return
     astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
     lst = astro_time.sidereal_time("apparent").to(units.radian) / units.radian
     coordinates = _build_coordinate_array(field_id, src_dict, 'precessed', antenna['latitude'], time)
