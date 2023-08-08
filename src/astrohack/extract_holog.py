@@ -29,7 +29,10 @@ from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._tools import _jsonify
 
+from astrohack._utils._extract_holog import _create_holog_obs_dict
+
 from astrohack.mds import AstrohackHologFile
+from astrohack.mds import AstrohackPointFile
 
 from astrohack.extract_pointing import extract_pointing
 
@@ -53,7 +56,7 @@ def extract_holog(
     :param ms_name: Name of input measurement file name.
     :type ms_name: str
 
-    :param point_name: Name of *<point_name>.point.zarr* file to use.
+    :param point_name: Name of *<point_name>.point.zarr* file to use. This is must be provided.
     :type holog_name: str
 
     :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with *holog.zarr* extension.
@@ -439,7 +442,7 @@ def _check_extract_holog_params(function_name, extract_holog_params):
     if not parm_check:
         logger.error(f'[{function_name}]: Parameter holog_obs_dict must be of type {str(dict)}.')
         
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'baseline_average_distance', [float, int, str], default='all')
+    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'baseline_average_distance', [int, float, str], default='all')
     
     parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'baseline_average_nearest', [int, str], default='all')
     
@@ -460,15 +463,14 @@ def _check_extract_holog_params(function_name, extract_holog_params):
 
 def generate_holog_obs_dict(
     ms_name,
-    point_name=None,
+    point_name,
     ddi='all',
     baseline_average_distance='all',
     baseline_average_nearest='all',
-    overwrite=False,
     parallel=False
 ):
     """
-    Extract holography and optionally pointing data, from measurement set. Creates holography output file.
+    Generate holography observation dictionary, from measurement set..
 
     :param ms_name: Name of input measurement file name.
     :type ms_name: str
@@ -482,11 +484,8 @@ def generate_holog_obs_dict(
     :param baseline_average_nearest: To increase the signal to noise for a mapping antenna mutiple reference antennas can be used. The baseline_average_nearest is the number of nearest reference antennas to use. The baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and baseline_average_nearest can not be used together.
     :type holog_obs_dict: int, optional
 
-    :param point_name: Name of *<point_name>.point.zarr* file to create. Defaults to measurement set name with *point.zarr* extension.
+    :param point_name: Name of *<point_name>.point.zarr* file to use. 
     :type point_name: str, optional
-
-    :param overwrite: Boolean for whether to overwrite current holog.zarr and point.zarr files, defaults to False.
-    :type overwrite: bool, optional
 
     :param parallel: Boolean for whether to process in parallel. Defaults to False
     :type parallel: bool, optional
@@ -558,26 +557,8 @@ def generate_holog_obs_dict(
     
     function_name = inspect.stack()[CURRENT_FUNCTION].function
     
-    _check_if_file_exists(extract_holog_params['ms_name'])
-
-    if os.path.exists(point_name) is False or point_name==None:
-        
-        logger.debug('[{caller}]: File {file} does not exists. Extracting ...'.format(caller=function_name, file=point_name))
-            
-        from astrohack._utils._tools import _remove_suffix
-
-        point_name = _remove_suffix(ms_name, '.ms') + '.point.zarr'
-        extract_holog_params['point_name'] = point_name
-            
-        logger.debug('[{caller}]: Extracting pointing to {output}'.format(caller=function_name, output=point_name))
-        
-
-    pnt_dict = extract_pointing(
-        ms_name=extract_holog_params['ms_name'],
-        point_name=extract_holog_params['point_name'],
-        parallel=extract_holog_params['parallel'],
-        overwrite=extract_holog_params['overwrite']
-    )
+    _check_if_file_exists(ms_name)
+    _check_if_file_exists(point_name)
 
     ######## Get Spectral Windows ########
     ctb = ctables.table(
@@ -586,9 +567,11 @@ def generate_holog_obs_dict(
         lockoptions={"option": "usernoread"},
         ack=False,
     )
+    
     ddi_spw = ctb.getcol("SPECTRAL_WINDOW_ID")
     ddpol_indexol = ctb.getcol("POLARIZATION_ID")
     ms_ddi = np.arange(len(ddi_spw))
+    
     ctb.close()
 
     ######## Get Antenna IDs and Names ########
@@ -622,11 +605,12 @@ def generate_holog_obs_dict(
     
     # Create holog_obs_dict or modify user supplied holog_obs_dict.
     ddi = extract_holog_params['ddi']
-
     
-    from astrohack._utils._extract_holog import _create_holog_obs_dict
+    pnt_mds = AstrohackPointFile(extract_holog_params['point_name'])
+    pnt_mds._open()
+
     holog_obs_dict = _create_holog_obs_dict(
-            pnt_dict, 
+            pnt_mds, 
             extract_holog_params['baseline_average_distance'],
             extract_holog_params['baseline_average_nearest'], 
             ant_names, 
@@ -634,7 +618,7 @@ def generate_holog_obs_dict(
             ant_names_main
     )
         
-        #From the generated holog_obs_dict subselect user supplied ddis.
+    #From the generated holog_obs_dict subselect user supplied ddis.
     if ddi != 'all':
         holog_obs_dict_keys = list(holog_obs_dict.keys())
         for ddi_key in holog_obs_dict_keys:
