@@ -2,6 +2,7 @@ from prettytable import PrettyTable
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from scipy import optimize as opt
+from matplotlib import pyplot as plt
 
 import astropy.units as units
 import xarray as xr
@@ -52,9 +53,8 @@ def _locit_chunk(locit_parms):
         return
     astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
     lst = astro_time.sidereal_time("apparent").to(units.radian) / units.radian
-    coordinates = _build_coordinate_array(field_id, src_dict, 'precessed', antenna['latitude'], time)
-    # convert to actual hour angle
-    coordinates[0, :] = lst.value - coordinates[0, :]
+    coordinates = _build_coordinate_array(field_id, src_dict, 'precessed', antenna['latitude'], time, lst)
+
 
     linalg = locit_parms['fit_engine'] == 'linear algebra'
     if linalg:
@@ -75,6 +75,9 @@ def _locit_chunk(locit_parms):
     output_xds.attrs['position_error'] = variance[1:4]
     output_xds.attrs['fixed_delay_fit'] = fit[0]
     output_xds.attrs['fixed_delay_error'] = variance[0]
+    output_xds.attrs['antenna_info'] = antenna
+    output_xds.attrs['elevation_limit'] = elevation_limit
+
     if fit_kterm and fit_slope:
         output_xds.attrs['koff_fit'] = fit[4]
         output_xds.attrs['koff_error'] = variance[4]
@@ -88,8 +91,6 @@ def _locit_chunk(locit_parms):
         output_xds.attrs['slope_error'] = variance[4]
     else:
         pass  # Nothing to be added to the attributes
-
-    output_xds.attrs['antenna_info'] = antenna
 
     coords = {'time': coordinates[3, :]}
     output_xds['GAINS'] = xr.DataArray(gains, dims=['time'])
@@ -105,7 +106,7 @@ def _locit_chunk(locit_parms):
     return
 
 
-def _build_coordinate_array(field_id, src_list, key, latitude, time):
+def _build_coordinate_array(field_id, src_list, key, latitude, time, lst):
     """ If this is a bottleneck, good candidate for numba"""
     n_samples = len(field_id)
     coordinates = np.ndarray([4, n_samples])
@@ -114,6 +115,10 @@ def _build_coordinate_array(field_id, src_list, key, latitude, time):
         coordinates[0:2, i_sample] = src_list[field][key]
         coordinates[2, i_sample] = _hadec_to_elevation(src_list[field][key], latitude)
         coordinates[3, i_sample] = time[i_sample]-time[0]  # time is set to zero at the beginning of obs
+
+    # convert to actual hour angle
+    coordinates[0, :] = lst.value - coordinates[0, :]
+    coordinates[0, :] = np.where(coordinates[0, :] < 0, coordinates[0, :] + twopi, coordinates[0, :])
     return coordinates
 
 
@@ -372,3 +377,68 @@ def _export_fit_combine_ddis(data_dict, parm_dict):
     outfile.close()
 
 
+def _plot_sky_coverage_chunk(parm_dict):
+    logger = _get_astrohack_logger()
+    antenna = parm_dict['this_ant']
+    ddi = parm_dict['this_ddi']
+    destination = parm_dict['destination']
+    xds = parm_dict['xds_data']
+    figuresize = parm_dict['figure_size']
+    angle_unit = parm_dict['angle_unit']
+    time_unit = parm_dict['time_unit']
+    display = parm_dict['display']
+    dpi = parm_dict['dpi']
+    antenna_info = xds.attrs['antenna_info']
+    export_name = f'{destination}/locit_sky_coverage{antenna}_{ddi}.png'
+
+    time = xds.time.values * _convert_unit('day', time_unit, 'time')
+    angle_fact = _convert_unit('rad', angle_unit, 'trigonometric')
+    ha = xds['HOUR_ANGLE'] * angle_fact
+    dec = xds['DECLINATION'] * angle_fact
+    ele = xds['ELEVATION'] * angle_fact
+    latitude = antenna_info['latitude'] * angle_fact
+
+    if figuresize is None or figuresize == 'None':
+        fig, axes = plt.subplots(2, 2, figsize=figsize)
+    else:
+        fig, axes = plt.subplots(2, 2, figsize=figuresize)
+
+    right_angle = pi/2*angle_fact
+    border = 0.05 * right_angle
+    elelimit = [-border-right_angle/2, right_angle+border]
+    border *= 2
+    declimit = [-border-right_angle, right_angle+border]
+    border *= 2
+    halimit = [-border, 4*right_angle+border]
+    elelines = [0, xds.attrs['elevation_limit'] * angle_fact]  # lines at zero and elevation limit
+    declines = [latitude-right_angle, latitude+right_angle]
+    _scatter_plot(axes[0, 0], time, f'Time from observation start [{time_unit}]', ele, f'Elevation [{angle_unit}]',
+                  'Time vs Elevation', ylim=elelimit, hlines=elelines)
+    _scatter_plot(axes[0, 1], time, f'Time from observation start [{time_unit}]', ha, f'Hour angle [{angle_unit}]',
+                  'Time vs Hour angle', ylim=halimit)
+    _scatter_plot(axes[1, 0], time, f'Time from observation start [{time_unit}]', dec, f'Declination [{angle_unit}]',
+                  'Time vs Declination', ylim=declimit, hlines=declines)
+    _scatter_plot(axes[1, 1], ha, f'Hour angle [{angle_unit}]', dec, f'Declination [{angle_unit}]',
+                  'Hour angle vs Declination', ylim=declimit, xlim=halimit, hlines=declines)
+
+    fig.suptitle(f'Antenna {antenna.split("_")[1]}, DDI {ddi.split("_")[1]}')
+    fig.tight_layout()
+    plt.savefig(export_name, dpi=dpi)
+    if not display:
+        plt.close()
+    return
+
+
+def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None, hlines=None):
+    ax.plot(xdata, ydata, ls='', marker='+', color='red')
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    if hlines is not None:
+        for hline in hlines:
+            ax.axhline(hline, color='black', ls='--')
+    return
