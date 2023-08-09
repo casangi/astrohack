@@ -173,7 +173,9 @@ def extract_holog(
     try:
         pnt_dict = _load_point_file(extract_holog_params['point_name'])
     except:
-        logger.warning(f'[{function_name}]: Could not find {extract_holog_params["point_name"]}, creating point new 'f'point.zarr.')        
+        logger.error(f'[{function_name}]: Could not find {extract_holog_params["point_name"]}.')
+        
+        return None
 
     ######## Get Spectral Windows ########
     ctb = ctables.table(

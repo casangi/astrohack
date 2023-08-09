@@ -224,7 +224,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     
     ############### Detect during which scans an antenna is mapping by averaging the POINTING_OFFSET radius.
     mapping_scans_obs_dict={}
-    time_tree = spatial.KDTree(direction_time[:,None]) #Use for nearest interpolation
+    time_tree = spatial.KDTree(direction_time[:,None]) # Use for nearest interpolation
     mapping_scans_obs_dict = {}
     for ddi_id, ddi in scan_time_dict.items():
         map_scans_dict = {}
@@ -244,6 +244,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
                     map_scans_dict['map_' + str(map_id)] = [scan_id]
             else:
                 map_id = map_id + 1
+                #logger.debug("map switch: time_index: {t} | map_id: {id} | R={r}".format(r=r.values, t=time_index, id=map_id))
                 
         mapping_scans_obs_dict['ddi_'+ str(ddi_id)] = map_scans_dict
             
