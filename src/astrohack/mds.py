@@ -1146,6 +1146,24 @@ class AstrohackPositionFile(dict):
 
     def export_fit_results(self, destination, combine_ddis=False, position_unit='m', angle_unit='deg',
                            time_unit='hour'):
+        """ Export antenna position fit results to a text file.
+
+        :param destination: Name of the destination folder to contain exported fit results
+        :type destination: str
+        :param combine_ddis: Combine DDIS for a lower uncertainty value, defaults to False
+        :type combine_ddis: bool, optional
+        :param position_unit: Unit to list position fit results, defaults to 'm'
+        :type position_unit: str, optional
+        :param angle_unit: Unit for angle in position fit results, defaults to 'deg'
+        :type angle_unit: str, optional
+        :param time_unit: Unit for time in position fit results, defaults to 'hour'
+        :type time_unit: str, optional
+
+        .. _Description:
+
+        Produce a text file with the fit results from astrohack.locit for better determination of antenna locations.
+        """
+        
         parm_dict = {'destination': destination,
                      'combine_ddis': combine_ddis,
                      'position_unit': position_unit,
@@ -1153,6 +1171,7 @@ class AstrohackPositionFile(dict):
                      'time_unit': time_unit}
 
         fname = 'export_fit_results'
+        parms_passed = True
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
                                                      default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'combine_ddis', [bool],
@@ -1173,6 +1192,39 @@ class AstrohackPositionFile(dict):
 
     def plot_sky_coverage(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', display=True,
                           figure_size=None, dpi=300, parallel=False):
+        """ Plot the sky coverage of the data used for antenna position fitting
+
+        :param destination: Name of the destination folder to contain the plots
+        :type destination: str
+        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param angle_unit: Unit for angle in plots, defaults to 'deg'
+        :type angle_unit: str, optional
+        :param time_unit: Unit for time in plots, defaults to 'hour'
+        :type time_unit: str, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+        :param figure_size: 2 element array/list/tuple with the plot size in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: plot resolution in pixels per inch, default is 300
+        :type dpi: int, optional
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is False
+        :type parallel: bool, optional
+
+        .. _Description:
+
+        This method produces 4 plots for each selected antenna and DDI. These plots are:
+        1) Time vs Elevation
+        2) Time vs Hour Angle
+        3) Time vs Declination
+        4) Hour Angle vs Declination
+
+        These plots are intended to display the coverage of the sky of the fitted data
+
+        """
+        
         parm_dict = {'ant': ant_id,
                      'ddi': ddi,
                      'destination': destination,
@@ -1206,13 +1258,50 @@ class AstrohackPositionFile(dict):
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(fname, self, _plot_sky_coverage_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_gains(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', display=True,
-                   figure_size=None, dpi=300, parallel=False):
+    def plot_gains(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', plot_fit=True,
+                   display=True, figure_size=None, dpi=300, parallel=False):
+        """ Plot the gains solutions used for antenna position fitting and optionally the resulting fit.
+
+        :param destination: Name of the destination folder to contain the plots
+        :type destination: str
+        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param angle_unit: Unit for angle in plots, defaults to 'deg'
+        :type angle_unit: str, optional
+        :param time_unit: Unit for time in plots, defaults to 'hour'
+        :type time_unit: str, optional
+        :param plot_fit: Plot the fit results alongside the data.
+        :type plot_fit: bool, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+        :param figure_size: 2 element array/list/tuple with the plot size in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: plot resolution in pixels per inch, default is 300
+        :type dpi: int, optional
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is False
+        :type parallel: bool, optional
+
+        .. _Description:
+
+        This method produces 4 plots for each selected antenna and DDI. These plots are:
+        1) Time vs Gains
+        2) Elevation vs Gains
+        3) Hour Angle vs Gains
+        4) Declination vs Gains
+
+        These plots are intended to display the gain variation with the 4 relevant parameters for the fitting and also
+        asses the quality of the position fit.
+
+        """
+
         parm_dict = {'ant': ant_id,
                      'ddi': ddi,
                      'destination': destination,
                      'time_unit': time_unit,
                      'angle_unit': angle_unit,
+                     'plot_fit': plot_fit,
                      'display': display,
                      'figure_size': figure_size,
                      'dpi': dpi,
@@ -1229,6 +1318,7 @@ class AstrohackPositionFile(dict):
                                                      default='hour')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'angle_unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_fit', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
@@ -1247,4 +1337,4 @@ class AstrohackPositionFile(dict):
         _print_summary_header(self.file)
         _print_attributes(self._meta_data)
         _print_data_contents(self, ["Antenna", "Contents"])
-        _print_method_list([self.summary])
+        _print_method_list([self.summary, self.export_fit_results, self.plot_sky_coverage, self.plot_gains])

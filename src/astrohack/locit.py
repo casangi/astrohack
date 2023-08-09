@@ -18,7 +18,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     :type position_name: str, optional
     :param elevation_limit: Lower elevation limit for excluding sources in degrees
     :type elevation_limit: float, optional
-    :param polarization: Which polarization to use R, L or both for circular systems, X, Y, or both for linear systems
+    :param polarization: Which polarization to use R, L or both for circular systems, X, Y, or both for linear systems.
     :type polarization: str, optional
     :param fit_kterm: Fit antenna focus offset term, defaults to False
     :type fit_kterm: bool, optional
@@ -41,7 +41,21 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     .. _Description:
 
     **AstrohackPositionFile**
+    Position object allows the user to access position data via compound dictionary keys with values, in order of depth,
+    `ant` -> `ddi`. The position object also provides a `summary()` helper function to list available keys for each file.
+    An outline of the position object structure is show below:
 
+    .. parsed-literal::
+        position_mds =
+        {
+            ant_0:{
+                ddi_0: panel_ds,
+                 ⋮
+                ddi_m: panel_ds
+            },
+            ⋮
+            ant_n: …
+        }
 
     **Additional Information**
 
@@ -58,7 +72,11 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     * scipy: This fitting engine uses the well estabilished scipy.optimize.curve_fit routine. This engine is
              slower than the linear algebra engine, but it is more robust with better estimated uncertainties.
 
+    . rubric:: Choosing a polarization
 
+    The position fit may be done on either polarization (R or L for the VLA, X or Y for ALMA) or for both polarizations
+    at once. When choosing both polarizations we increase the robustness of the solution by doubling the amount of data
+    fitted.
     """
     logger = _get_astrohack_logger()
 

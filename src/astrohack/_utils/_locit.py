@@ -16,8 +16,15 @@ from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 
 def _locit_chunk(locit_parms):
+    """
+    This is the chunk function for locit
+    Args:
+        locit_parms: the locit parameter dictionary
+
+    Returns:
+    xds save to disk in the .zarr format
+    """
     logger = _get_astrohack_logger()
-    # logger.info(f'procesing {locit_parms["this_ant"]} {locit_parms["this_ddi"]}')
     antenna = locit_parms['ant_info'][locit_parms['this_ant']]
     src_dict = locit_parms['obs_info']['src_dict']
     fit_kterm = locit_parms['fit_kterm']
@@ -55,7 +62,6 @@ def _locit_chunk(locit_parms):
     astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
     lst = astro_time.sidereal_time("apparent").to(units.radian) / units.radian
     coordinates = _build_coordinate_array(field_id, src_dict, 'precessed', antenna['latitude'], time, lst)
-
 
     linalg = locit_parms['fit_engine'] == 'linear algebra'
     if linalg:
@@ -108,7 +114,7 @@ def _locit_chunk(locit_parms):
 
 
 def _build_coordinate_array(field_id, src_list, key, latitude, time, lst):
-    """ If this is a bottleneck, good candidate for numba"""
+    """ Build the coordinate arrays (ha, dec, elevation, angle) for use in the fitting"""
     n_samples = len(field_id)
     coordinates = np.ndarray([4, n_samples])
     for i_sample in range(n_samples):
@@ -124,6 +130,7 @@ def _build_coordinate_array(field_id, src_list, key, latitude, time, lst):
 
 
 def _geometrical_coeffs(coordinates):
+    """Compute the position related coefficients for the fitting, also the 1 corresponding to the delay"""
     ha, dec = coordinates[0:2]
     cosdec = np.cos(dec)
     xterm = twopi*np.cos(ha) * cosdec
@@ -133,16 +140,18 @@ def _geometrical_coeffs(coordinates):
 
 
 def _kterm_coeff(coordinates):
+    """Compute the k term coefficient from elevation"""
     elevation = coordinates[2]
     return twopi*np.cos(elevation)
 
 
 def _slope_coeff(coordinates):
+    """Compute the phase slope coefficient (basically the time)"""
     return coordinates[3]
 
 
 def _solve_linear_algebra(coordinates, gains, elevation_limit, fit_kterm, fit_slope):
-    """ If this is a bottleneck, good candidate for numba"""
+    """Fit a phase model to the gain solutions using linear algebra, AIPS style"""
     npar = 4 + fit_slope + fit_kterm
     if fit_kterm and fit_slope:
         coeff_function = _coeff_system_kterm_slope
@@ -175,23 +184,27 @@ def _solve_linear_algebra(coordinates, gains, elevation_limit, fit_kterm, fit_sl
 
 
 def _coeff_system_nokterm_noslope(coordinates):
+    """build coefficient list for linear algebra fit with no k or slope terms"""
     coeffs = _geometrical_coeffs(coordinates)
     return coeffs
 
 
 def _coeff_system_kterm_noslope(coordinates):
+    """build coefficient list for linear algebra fit with k term and no slope term"""
     coeffs = _geometrical_coeffs(coordinates)
     coeffs.append(_kterm_coeff(coordinates))
     return coeffs
 
 
 def _coeff_system_nokterm_slope(coordinates):
+    """build coefficient list for linear algebra fit with slope term and no k term"""
     coeffs = _geometrical_coeffs(coordinates)
     coeffs.append(_slope_coeff(coordinates))
     return coeffs
 
 
 def _coeff_system_kterm_slope(coordinates):
+    """build coefficient list for linear algebra fit with slope and k terms"""
     coeffs = _geometrical_coeffs(coordinates)
     coeffs.append(_kterm_coeff(coordinates))
     coeffs.append(_slope_coeff(coordinates))
@@ -199,6 +212,7 @@ def _coeff_system_kterm_slope(coordinates):
 
 
 def _solve_scipy_optimize_curve_fit(coordinates, gains, elevation_limit, fit_kterm, fit_slope, verbose=False):
+    """Fit a phase model to the gain solutions using scipy optimize curve_fit algorithm"""
     logger  = _get_astrohack_logger()
     selelev = coordinates[2, :] > elevation_limit
     coordinates = coordinates[:, selelev]
@@ -242,11 +256,13 @@ def _solve_scipy_optimize_curve_fit(coordinates, gains, elevation_limit, fit_kte
 
 
 def _phase_wrap(values, wrap=pi):
+    """Simple angle wrapping routine to limit values to the -wrap to wrap range"""
     values = values % 2*wrap
     return np.where(values > wrap, values-2*wrap, values)
 
 
 def _phase_model_nokterm_noslope(coordinates,  inst_delay, xoff, yoff, zoff):
+    """Phase model for scipy fitting with no k or slope terms"""
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
@@ -255,6 +271,7 @@ def _phase_model_nokterm_noslope(coordinates,  inst_delay, xoff, yoff, zoff):
 
 
 def _phase_model_kterm_noslope(coordinates, inst_delay, xoff, yoff, zoff, koff):
+    """Phase model for scipy fitting with k term and no slope term"""
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
@@ -264,6 +281,7 @@ def _phase_model_kterm_noslope(coordinates, inst_delay, xoff, yoff, zoff, koff):
 
 
 def _phase_model_nokterm_slope(coordinates, inst_delay, xoff, yoff, zoff, slope):
+    """Phase model for scipy fitting with slope term and no k term"""
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
@@ -273,6 +291,7 @@ def _phase_model_nokterm_slope(coordinates, inst_delay, xoff, yoff, zoff, slope)
 
 
 def _phase_model_kterm_slope(coordinates, inst_delay, xoff, yoff, zoff, koff, slope):
+    """"Phase model for scipy fitting with k and slope terms"""
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
@@ -283,6 +302,7 @@ def _phase_model_kterm_slope(coordinates, inst_delay, xoff, yoff, zoff, koff, sl
 
 
 def _export_fit_separate_ddis(data_dict, parm_dict):
+    """Export fit results to a txt file listing the different DDIs as different solutions"""
     pos_unit = parm_dict['position_unit']
     ang_unit = parm_dict['angle_unit']
     len_fact = _convert_unit('m', pos_unit, 'length')
@@ -325,6 +345,7 @@ def _export_fit_separate_ddis(data_dict, parm_dict):
 
 
 def _export_fit_combine_ddis(data_dict, parm_dict):
+    """Export fit results to a txt file combining the different DDIs in a single lower uncertainty solution"""
     pos_unit = parm_dict['position_unit']
     ang_unit = parm_dict['angle_unit']
     len_fact = _convert_unit('m', pos_unit, 'length')
@@ -384,6 +405,7 @@ def _export_fit_combine_ddis(data_dict, parm_dict):
 
 
 def _plot_sky_coverage_chunk(parm_dict):
+    """Plot the sky coverage for an antenna and DDI"""
     logger = _get_astrohack_logger()
     antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
@@ -429,9 +451,8 @@ def _plot_sky_coverage_chunk(parm_dict):
 
 
 def _plot_gains_chunk(parm_dict):
-    # ADD FREAKING FIT!
-    # plot_fit = parm_dict['plot_fit']
-    plot_fit = True
+    """Plot the gain solutions for an antenna and DDI, optionally with the fit included"""
+    plot_fit = parm_dict['plot_fit']
     antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
@@ -530,6 +551,7 @@ def _hour_angle_label(unit):
 
 
 def _plot_borders(angle_fact, latitude, elevation_limit):
+    """Compute plot borders and and lines to be added to plots"""
     latitude *= angle_fact
     elevation_limit *= angle_fact
     right_angle = pi/2*angle_fact
@@ -545,6 +567,7 @@ def _plot_borders(angle_fact, latitude, elevation_limit):
 
 
 def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None, hlines=None, vlines=None, fit=None):
+    """Plot the data"""
     ax.plot(xdata, ydata, ls='', marker='+', color='red', label='data')
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
