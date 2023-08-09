@@ -1,3 +1,4 @@
+import numpy as np
 from prettytable import PrettyTable
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
@@ -240,6 +241,11 @@ def _solve_scipy_optimize_curve_fit(coordinates, gains, elevation_limit, fit_kte
     return fit, variance
 
 
+def _phase_wrap(values, wrap=pi):
+    values = values % 2*wrap
+    return np.where(values > wrap, values-2*wrap, values)
+
+
 def _phase_model_nokterm_noslope(coordinates,  inst_delay, xoff, yoff, zoff):
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
@@ -263,7 +269,7 @@ def _phase_model_nokterm_slope(coordinates, inst_delay, xoff, yoff, zoff, slope)
     yterm = coeffs[2] * yoff
     zterm = coeffs[3] * zoff
     sterm = _slope_coeff(coordinates) * slope
-    return xterm + yterm + zterm + inst_delay + sterm
+    return xterm + yterm + zterm + inst_delay + _phase_wrap(sterm)
 
 
 def _phase_model_kterm_slope(coordinates, inst_delay, xoff, yoff, zoff, koff, slope):
@@ -273,7 +279,7 @@ def _phase_model_kterm_slope(coordinates, inst_delay, xoff, yoff, zoff, koff, sl
     zterm = coeffs[3] * zoff
     sterm = _slope_coeff(coordinates) * slope
     kterm = _kterm_coeff(coordinates) * koff
-    return xterm + yterm + zterm + inst_delay + kterm + sterm
+    return xterm + yterm + zterm + inst_delay + kterm + _phase_wrap(sterm)
 
 
 def _export_fit_separate_ddis(data_dict, parm_dict):
@@ -389,39 +395,32 @@ def _plot_sky_coverage_chunk(parm_dict):
     display = parm_dict['display']
     dpi = parm_dict['dpi']
     antenna_info = xds.attrs['antenna_info']
-    export_name = f'{destination}/locit_sky_coverage{antenna}_{ddi}.png'
+    export_name = f'{destination}/position_sky_coverage_{antenna}_{ddi}.png'
 
     time = xds.time.values * _convert_unit('day', time_unit, 'time')
     angle_fact = _convert_unit('rad', angle_unit, 'trigonometric')
     ha = xds['HOUR_ANGLE'] * angle_fact
     dec = xds['DECLINATION'] * angle_fact
     ele = xds['ELEVATION'] * angle_fact
-    latitude = antenna_info['latitude'] * angle_fact
 
     if figuresize is None or figuresize == 'None':
         fig, axes = plt.subplots(2, 2, figsize=figsize)
     else:
         fig, axes = plt.subplots(2, 2, figsize=figuresize)
 
-    right_angle = pi/2*angle_fact
-    border = 0.05 * right_angle
-    elelimit = [-border-right_angle/2, right_angle+border]
-    border *= 2
-    declimit = [-border-right_angle, right_angle+border]
-    border *= 2
-    halimit = [-border, 4*right_angle+border]
-    elelines = [0, xds.attrs['elevation_limit'] * angle_fact]  # lines at zero and elevation limit
-    declines = [latitude-right_angle, latitude+right_angle]
-    _scatter_plot(axes[0, 0], time, f'Time from observation start [{time_unit}]', ele, f'Elevation [{angle_unit}]',
-                  'Time vs Elevation', ylim=elelimit, hlines=elelines)
-    _scatter_plot(axes[0, 1], time, f'Time from observation start [{time_unit}]', ha, f'Hour angle [{angle_unit}]',
-                  'Time vs Hour angle', ylim=halimit)
-    _scatter_plot(axes[1, 0], time, f'Time from observation start [{time_unit}]', dec, f'Declination [{angle_unit}]',
-                  'Time vs Declination', ylim=declimit, hlines=declines)
-    _scatter_plot(axes[1, 1], ha, f'Hour angle [{angle_unit}]', dec, f'Declination [{angle_unit}]',
-                  'Hour angle vs Declination', ylim=declimit, xlim=halimit, hlines=declines)
+    elelim, elelines, declim, declines, halim = _plot_borders(angle_fact, antenna_info['latitude'],
+                                                              xds.attrs['elevation_limit'])
+    timelabel = _time_label(time_units)
+    halabel = _hour_angle_label(angle_unit)
+    declabel = _declination_label(angle_unit)
+    _scatter_plot(axes[0, 0], time, timelabel, ele, _elevation_label(angle_unit), 'Time vs Elevation', ylim=elelim,
+                  hlines=elelines)
+    _scatter_plot(axes[0, 1], time, timelabel, ha, halabel, 'Time vs Hour angle', ylim=halim)
+    _scatter_plot(axes[1, 0], time, timelabel, dec, declabel, 'Time vs Declination', ylim=declim, hlines=declines)
+    _scatter_plot(axes[1, 1], ha, halabel, dec, declabel, 'Hour angle vs Declination', ylim=declim, xlim=halim,
+                  hlines=declines)
 
-    fig.suptitle(f'Antenna {antenna.split("_")[1]}, DDI {ddi.split("_")[1]}')
+    fig.suptitle(f'Sky coverage for antenna {antenna.split("_")[1]}, DDI {ddi.split("_")[1]}')
     fig.tight_layout()
     plt.savefig(export_name, dpi=dpi)
     if not display:
@@ -429,8 +428,124 @@ def _plot_sky_coverage_chunk(parm_dict):
     return
 
 
-def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None, hlines=None):
-    ax.plot(xdata, ydata, ls='', marker='+', color='red')
+def _plot_gains_chunk(parm_dict):
+    # ADD FREAKING FIT!
+    # plot_fit = parm_dict['plot_fit']
+    plot_fit = True
+    antenna = parm_dict['this_ant']
+    ddi = parm_dict['this_ddi']
+    destination = parm_dict['destination']
+    xds = parm_dict['xds_data']
+    figuresize = parm_dict['figure_size']
+    angle_unit = parm_dict['angle_unit']
+    time_unit = parm_dict['time_unit']
+    display = parm_dict['display']
+    dpi = parm_dict['dpi']
+    antenna_info = xds.attrs['antenna_info']
+    export_name = f'{destination}/position_gains_{antenna}_{ddi}.png'
+
+    time = xds.time.values * _convert_unit('day', time_unit, 'time')
+    angle_fact = _convert_unit('rad', angle_unit, 'trigonometric')
+    ha = xds['HOUR_ANGLE'] * angle_fact
+    dec = xds['DECLINATION'] * angle_fact
+    ele = xds['ELEVATION'] * angle_fact
+    gains = xds['GAINS'].values * angle_fact
+
+    elelim, elelines, declim, declines, halim = _plot_borders(angle_fact, antenna_info['latitude'],
+                                                              xds.attrs['elevation_limit'])
+    gainslim = [-1.05*pi*angle_fact, 1.05*pi*angle_fact]
+
+    if figuresize is None or figuresize == 'None':
+        fig, axes = plt.subplots(2, 2, figsize=figsize)
+    else:
+        fig, axes = plt.subplots(2, 2, figsize=figuresize)
+
+    ylabel = f'Phase gains [{angle_unit}]'
+    if plot_fit:
+        n_samp = len(time)
+        coordinates = np.ndarray([4, n_samp])
+        coordinates[0, :] = ha
+        coordinates[1, :] = dec
+        coordinates[2, :] = ele
+        coordinates[3, :] = time
+
+        delay = xds.attrs['fixed_delay_fit']
+        xoff, yoff, zoff = xds.attrs['position_fit']
+        try:
+            kterm = xds.attrs['koff_fit']
+        except KeyError:
+            kterm = None
+        try:
+            slope = xds.attrs['slope_fit']
+        except KeyError:
+            slope = None
+
+        if slope is None and kterm is None:
+            fit = _phase_model_nokterm_noslope(coordinates, delay, xoff, yoff, zoff)
+        elif slope is None and kterm is not None:
+            fit = _phase_model_kterm_noslope(coordinates, delay, xoff, yoff, zoff, kterm)
+        elif slope is not None and kterm is None:
+            fit = _phase_model_nokterm_slope(coordinates,  delay, xoff, yoff, zoff, slope)
+        else:
+            fit = _phase_model_kterm_slope(coordinates, delay, xoff, yoff, zoff, kterm, slope)
+        fit *= angle_fact
+
+        _scatter_plot(axes[0, 0], time, _time_label(time_unit), gains, ylabel, 'Time vs Gains', fit=fit, ylim=gainslim)
+        _scatter_plot(axes[0, 1], ele, _elevation_label(angle_unit), gains, ylabel, 'Elevation vs Gains',
+                      xlim=elelim, vlines=elelines, fit=fit, ylim=gainslim)
+        _scatter_plot(axes[1, 0], ha, _hour_angle_label(angle_unit), gains, ylabel, 'Hour Angle vs Gains', xlim=halim,
+                      fit=fit, ylim=gainslim)
+        _scatter_plot(axes[1, 1], dec, _declination_label(angle_unit), gains, ylabel, 'Declination vs Gains',
+                      xlim=declim, vlines=declines, fit=fit, ylim=gainslim)
+    else:
+        _scatter_plot(axes[0, 0], time, _time_label(time_unit), gains, ylabel, 'Time vs Gains', ylim=gainslim)
+        _scatter_plot(axes[0, 1], ele, _elevation_label(angle_unit), gains, ylabel, 'Elevation vs Gains',
+                      xlim=elelim, vlines=elelines, ylim=gainslim)
+        _scatter_plot(axes[1, 0], ha, _hour_angle_label(angle_unit), gains, ylabel, 'Hour Angle vs Gains', xlim=halim,
+                      ylim=gainslim)
+        _scatter_plot(axes[1, 1], dec, _declination_label(angle_unit), gains, ylabel, 'Declination vs Gains',
+                      xlim=declim, vlines=declines, ylim=gainslim)
+    fig.suptitle(f'Gains for antenna {antenna.split("_")[1]}, DDI {ddi.split("_")[1]}')
+    fig.tight_layout()
+    plt.savefig(export_name, dpi=dpi)
+    if not display:
+        plt.close()
+    return
+
+
+def _time_label(unit):
+    return f'Time from observation start [{unit}]'
+
+
+def _elevation_label(unit):
+    return f'Elevation [{unit}]'
+
+
+def _declination_label(unit):
+    return f'Declination [{unit}]'
+
+
+def _hour_angle_label(unit):
+    return f'Hour Angle [{unit}]'
+
+
+def _plot_borders(angle_fact, latitude, elevation_limit):
+    latitude *= angle_fact
+    elevation_limit *= angle_fact
+    right_angle = pi/2*angle_fact
+    border = 0.05 * right_angle
+    elelim = [-border-right_angle/2, right_angle+border]
+    border *= 2
+    declim = [-border-right_angle, right_angle+border]
+    border *= 2
+    halim = [-border, 4*right_angle+border]
+    elelines = [0, elevation_limit]  # lines at zero and elevation limit
+    declines = [latitude-right_angle, latitude+right_angle]
+    return elelim, elelines, declim, declines, halim
+
+
+def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None, hlines=None, vlines=None, fit=None):
+    ax.plot(xdata, ydata, ls='', marker='+', color='red', label='data')
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
@@ -441,4 +556,10 @@ def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None,
     if hlines is not None:
         for hline in hlines:
             ax.axhline(hline, color='black', ls='--')
+    if vlines is not None:
+        for vline in vlines:
+            ax.axvline(vline, color='black', ls='--')
+    if fit is not None:
+        ax.plot(xdata, fit, ls='', marker='x', color='blue', label='fit')
+        ax.legend()
     return

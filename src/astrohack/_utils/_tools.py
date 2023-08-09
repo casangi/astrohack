@@ -580,30 +580,36 @@ def _print_method_list(method_list, alignment='l', print_len=100):
 
 
 def _format_value_error(value, error, scaling):
-    value *= scaling
-    error *= scaling
-    if abs(value) < 1e-7:
-        value = 0.0
-    if abs(error) < 1e-7:
-        error = 0.0
-    if value == 0 and error == 0:
-        return f'{value} \u00b1 {error}'
-    elif error > abs(value):
-        places = round(np.log10(error))
-        if places < 0:
-            places = abs(places)
-            return f'{value:.{places}f} \u00B1 {error:.{places}f}'
+    if np.isfinite(value) and np.isfinite(error):
+        value *= scaling
+        error *= scaling
+        if abs(value) < 1e-7:
+            value = 0.0
+        if abs(error) < 1e-7:
+            error = 0.0
+        if value == 0 and error == 0:
+            return f'{value} \u00b1 {error}'
+        elif error > abs(value):
+            places = round(np.log10(error))
+            if places < 0:
+                places = abs(places)
+                return f'{value:.{places}f} \u00B1 {error:.{places}f}'
+            else:
+                if places in [-1, 0, 1]:
+                    places = 2
+                if value == 0:
+                    digits = places - round(np.log10(abs(error)))
+                else:
+                    digits = places - round(np.log10(abs(value)))
+                value = _significant_digits(value, digits)
+                error = _significant_digits(error, places)
+                return f'{value} \u00b1 {error}'
         else:
-            if places in [-1, 0, 1]:
-                places = 2
-            digits = places - round(np.log10(abs(value)))
+            digits = round(abs(np.log10(abs(value))))-1
+            if digits in [-1, 0, 1]:
+                digits = 2
             value = _significant_digits(value, digits)
-            error = _significant_digits(error, places)
+            error = _significant_digits(error, digits-1)
             return f'{value} \u00b1 {error}'
     else:
-        digits = round(abs(np.log10(abs(value))))-1
-        if digits in [-1, 0, 1]:
-            digits = 2
-        value = _significant_digits(value, digits)
-        error = _significant_digits(error, digits-1)
         return f'{value} \u00b1 {error}'

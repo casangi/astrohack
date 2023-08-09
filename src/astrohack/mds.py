@@ -26,6 +26,7 @@ from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table
 from astrohack._utils._locit import _export_fit_separate_ddis, _export_fit_combine_ddis, _plot_sky_coverage_chunk
+from astrohack._utils._locit import _plot_gains_chunk
 
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
@@ -1143,21 +1144,15 @@ class AstrohackPositionFile(dict):
 
         return self._file_is_open
 
-    def export_fit_results(self, destination, ant_id=None, ddi=None, combine_ddis=False, position_unit='m', angle_unit='deg',
+    def export_fit_results(self, destination, combine_ddis=False, position_unit='m', angle_unit='deg',
                            time_unit='hour'):
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
+        parm_dict = {'destination': destination,
                      'combine_ddis': combine_ddis,
                      'position_unit': position_unit,
                      'angle_unit': angle_unit,
                      'time_unit': time_unit}
 
         fname = 'export_fit_results'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
-                                    list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
-                                                     list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
                                                      default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'combine_ddis', [bool],
@@ -1188,7 +1183,7 @@ class AstrohackPositionFile(dict):
                      'dpi': dpi,
                      'parallel': parallel}
 
-        fname = 'plot_hour_angle_declination_coverage'
+        fname = 'plot_sky_coverage'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
                                     list_acceptable_data_types=[str], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
@@ -1210,6 +1205,41 @@ class AstrohackPositionFile(dict):
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(fname, self, _plot_sky_coverage_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+
+    def plot_gains(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', display=True,
+                   figure_size=None, dpi=300, parallel=False):
+        parm_dict = {'ant': ant_id,
+                     'ddi': ddi,
+                     'destination': destination,
+                     'time_unit': time_unit,
+                     'angle_unit': angle_unit,
+                     'display': display,
+                     'figure_size': figure_size,
+                     'dpi': dpi,
+                     'parallel': parallel}
+
+        fname = 'plot_gains'
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
+                                    list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
+                                                     default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'time_unit', [str], acceptable_data=time_units,
+                                                     default='hour')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'angle_unit', [str], acceptable_data=trigo_units,
+                                                     default='deg')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool],
+                                                     default=False)
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(parm_dict['destination'])
+        _dask_general_compute(fname, self, _plot_gains_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def summary(self):
         """ Prints summary of the AstrohackpositionFile object, with available data, attributes and available methods
