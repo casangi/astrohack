@@ -292,6 +292,7 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
 
 def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midpoint=None, display=True,
                        figure_size=figsize, dpi=300):
+    """ Backend function for plotting the source table"""
     logger = _get_astrohack_logger()
     n_src = len(src_dict)
     radec = np.ndarray((n_src, 2))
@@ -340,6 +341,7 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
 
 
 def _plot_antenna_table(filename, ant_dict, array_center, stations=True, display=True, figure_size=figsize, dpi=300):
+    """Plot antenna positions"""
     if figure_size is None or figure_size == 'None':
         fig, ax = plt.subplots(1, 1, figsize=figsize)
     else:

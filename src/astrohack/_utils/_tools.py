@@ -562,6 +562,7 @@ def _print_centralized(string, nlead, ntrail, frame_width, frame_char):
 
 
 def _print_method_list(method_list, alignment='l', print_len=100):
+    """Print the method list of an mds object"""
     name_len = 0
     for obj_method in method_list:
         meth_len = len(obj_method.__name__)
@@ -580,6 +581,7 @@ def _print_method_list(method_list, alignment='l', print_len=100):
 
 
 def _format_value_error(value, error, scaling):
+    """Format values based and errors based on the significant digits"""
     if np.isfinite(value) and np.isfinite(error):
         value *= scaling
         error *= scaling
