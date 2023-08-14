@@ -27,7 +27,6 @@ from astrohack._utils._extract_holog import _extract_holog_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
-from astrohack._utils._tools import _jsonify
 
 from astrohack._utils._extract_holog import _create_holog_obs_dict
 
@@ -62,7 +61,7 @@ def extract_holog(
     :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with *holog.zarr* extension.
     :type holog_name: str, optional
 
-    :param holog_obs_dict: The *holog_obs_dict* describes which scan and antenna data to extract from the measurement set. As detailed below, this compound dictionary also includes important meta data needed for preprocessing and extraction of the holography data from the measurement set. If not specified holog_obs_dict will be generated. For auto generation of the holog_obs_dict the assumtion is made that the same antanna beam is not mapped twice in a row (alternating sets of antennas is fine). If the holog_obs_dict is specified, the ddi input is ignored.
+    :param holog_obs_dict: The *holog_obs_dict* describes which scan and antenna data to extract from the measurement set. As detailed below, this compound dictionary also includes important meta data needed for preprocessing and extraction of the holography data from the measurement set. If not specified holog_obs_dict will be generated. For auto generation of the holog_obs_dict the assumtion is made that the same antanna beam is not mapped twice in a row (alternating sets of antennas is fine). If the holog_obs_dict is specified, the ddi input is ignored. The user can self generate this dictionary using `generate_holog_obs_dict`.
     :type holog_obs_dict: dict, optional
 
     :param ddi:  DDI(s) that should be extracted from the measurement set. Defaults to all DDI's in the ms.
@@ -162,8 +161,6 @@ def extract_holog(
     if holog_name==None:
         
         logger.debug('[{caller}]: File {file} does not exists. Extracting ...'.format(caller=function_name, file=holog_name))
-            
-        from astrohack._utils._tools import _remove_suffix
 
         holog_name = _remove_suffix(ms_name, '.ms') + '.holog.zarr'
         extract_holog_params['holog_name'] = holog_name
@@ -172,6 +169,7 @@ def extract_holog(
           
     try:
         pnt_dict = _load_point_file(extract_holog_params['point_name'])
+
     except:
         logger.error(f'[{function_name}]: Could not find {extract_holog_params["point_name"]}.')
         
@@ -184,6 +182,7 @@ def extract_holog(
         lockoptions={"option": "usernoread"},
         ack=False,
     )
+
     ddi_spw = ctb.getcol("SPECTRAL_WINDOW_ID")
     ddpol_indexol = ctb.getcol("POLARIZATION_ID")
     ms_ddi = np.arange(len(ddi_spw))
@@ -222,9 +221,7 @@ def extract_holog(
     ddi = extract_holog_params['ddi']
 
     # Create holog_obs_dict if not specified
-    if holog_obs_dict is None: 
-        from astrohack._utils._extract_holog import _create_holog_obs_dict
-        
+    if holog_obs_dict is None:         
         holog_obs_dict = _create_holog_obs_dict(
             pnt_dict, 
             extract_holog_params['baseline_average_distance'],
@@ -246,12 +243,10 @@ def extract_holog(
             
     logger.info(f"[{function_name}]: holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0], indent=2, width=2))
 
-
     encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
 
     with open(".holog_obs_dict.json", "w") as outfile:
         json.dump(encoded_obj, outfile)
-
         
     ######## Get Scan and Subscan IDs ########
     # SDM Tables Short Description (https://drive.google.com/file/d/16a3g0GQxgcO7N_ZabfdtexQ8r2jRbYIS/view)
@@ -307,6 +302,7 @@ def extract_holog(
 
     # If we have an EVLA run from before 2023 the pointing table needs to be fixed.
     if telescope_name == "EVLA" and time < 2023:
+
         # Convert from casa epoch to unix time
         his_ctb = ctables.table(
             os.path.join(extract_holog_params['ms_name'], "HISTORY"),
@@ -315,14 +311,15 @@ def extract_holog(
             ack=False,
         )
     
-        assert ("pnt_tbl:fixed" in his_ctb.getcol("MESSAGE")), \
-            "Pointing table not corrected, users should apply function astrohack.dio.fix_pointing_table() to " \
-            "remedy this."
+        if "pnt_tbl:fixed" not in his_ctb.getcol("MESSAGE"):
+            logger.error("Pointing table not corrected, users should apply function astrohack.dio.fix_pointing_table() to remedy this.")
+            raise Exception("Issue with pointing table correction, see error message above for more info.")
         
         his_ctb.close()
 
     count = 0
     delayed_list = []
+
     for ddi_name in holog_obs_dict.keys():
         ddi = int(ddi_name.replace('ddi_',''))
         spw_setup_id = ddi_spw[ddi]
@@ -340,7 +337,8 @@ def extract_holog(
         
         extract_holog_params["telescope_name"] = obs_ctb.getcol("TELESCOPE_NAME")[0]
 
-        for holog_map_key in holog_obs_dict[ddi_name].keys(): #loop over all beam_scan_ids, a beam_scan_id can conist out of more than one scan in an ms (this is the case for the VLA pointed mosiacs).
+        # Loop over all beam_scan_ids, a beam_scan_id can conist out of more than one scan in an ms (this is the case for the VLA pointed mosiacs).
+        for holog_map_key in holog_obs_dict[ddi_name].keys(): 
 
             if 'map' in holog_map_key:
                 scans = holog_obs_dict[ddi_name][holog_map_key]["scans"]
@@ -412,13 +410,10 @@ def extract_holog(
         holog_mds._open()
         
         return holog_mds
+    
     else:
         logger.warning(f"[{function_name}]: No data to process")
         return None
-
-    holog_mds._open()
-
-    return holog_mds
 
 def _check_extract_holog_params(function_name, extract_holog_params):
 

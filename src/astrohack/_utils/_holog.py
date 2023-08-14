@@ -52,8 +52,9 @@ def _holog_chunk(holog_chunk_params):
 
     # Calculate lm coordinates
     l, m = _calc_coords(holog_chunk_params["grid_size"], holog_chunk_params["cell_size"])
-    grid_l, grid_m = list(map(np.transpose, np.meshgrid(l, m)))
     
+    grid_l, grid_m = list(map(np.transpose, np.meshgrid(l, m)))
+        
     to_stokes = holog_chunk_params["to_stokes"]
 
     ddi = holog_chunk_params["this_ddi"]
@@ -116,12 +117,18 @@ def _holog_chunk(holog_chunk_params):
             try:
                 xx_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
                 yy_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
+
             except:
                 center_pixel = np.array(beam_grid.shape[-2:])//2
                 xx_peak = beam_grid[holog_map_index, chan, 0, center_pixel[0], center_pixel[1]]
                 yy_peak = beam_grid[holog_map_index, chan, 3, center_pixel[0], center_pixel[1]]
 
             normalization = np.abs(0.5 * (xx_peak + yy_peak))
+            
+            if normalization == 0:
+                logger.warning("Peak of zero found! Setting normalization to unity.")
+                normalization = 1
+                
             beam_grid[holog_map_index, chan, ...] /= normalization
 
     beam_grid = _parallactic_derotation(data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi])
