@@ -80,8 +80,8 @@ def _locit_chunk(locit_parms):
     output_xds.attrs['wavelength'] = clight/xds_data.attrs['frequency']
     output_xds.attrs['position_fit'] = fit[1:4]
     output_xds.attrs['position_error'] = variance[1:4]
-    output_xds.attrs['fixed_delay_fit'] = fit[0]
-    output_xds.attrs['fixed_delay_error'] = variance[0]
+    output_xds.attrs['fixed_phase_fit'] = fit[0]
+    output_xds.attrs['fixed_phase_error'] = variance[0]
     output_xds.attrs['antenna_info'] = antenna
     output_xds.attrs['elevation_limit'] = elevation_limit
 
@@ -137,7 +137,7 @@ def _build_filtered_arrays(field_id, src_list, key, latitude, time, lst, gains, 
 
 
 def _geometrical_coeffs(coordinates):
-    """Compute the position related coefficients for the fitting, also the 1 corresponding to the delay"""
+    """Compute the position related coefficients for the fitting, also the 1 corresponding to the fixed phase"""
     ha, dec = coordinates[0:2]
     cosdec = np.cos(dec)
     xterm = twopi*np.cos(ha) * cosdec
@@ -229,10 +229,10 @@ def _solve_scipy_optimize_curve_fit(coordinates, gains, fit_kterm, fit_slope, ve
     else:
         func_function = _phase_model_nokterm_noslope
 
-    # First guess is no error in positions and no instrumental delay
+    # First guess is no error in positions
     p0 = np.zeros(npar)
     p0[0] = 1
-    # Position Errors, k term and phase slope are not constrained, but the instrumental delay is pegged to the
+    # Position Errors, k term and phase slope are not constrained, but the instrumental phase is pegged to the
     # -pi to pi range
     liminf = np.full(npar, -np.inf)
     limsup = np.full(npar, +np.inf)
@@ -262,36 +262,36 @@ def _phase_wrap(values, wrap=pi):
     return np.where(values > wrap, values-2*wrap, values)
 
 
-def _phase_model_nokterm_noslope(coordinates,  inst_delay, xoff, yoff, zoff):
+def _phase_model_nokterm_noslope(coordinates, inst_phase, xoff, yoff, zoff):
     """Phase model for scipy fitting with no k or slope terms"""
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
     zterm = coeffs[3] * zoff
-    return xterm + yterm + zterm + inst_delay
+    return xterm + yterm + zterm + inst_phase
 
 
-def _phase_model_kterm_noslope(coordinates, inst_delay, xoff, yoff, zoff, koff):
+def _phase_model_kterm_noslope(coordinates, inst_phase, xoff, yoff, zoff, koff):
     """Phase model for scipy fitting with k term and no slope term"""
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
     zterm = coeffs[3] * zoff
     kterm = _kterm_coeff(coordinates) * koff
-    return xterm + yterm + zterm + inst_delay + kterm
+    return xterm + yterm + zterm + inst_phase + kterm
 
 
-def _phase_model_nokterm_slope(coordinates, inst_delay, xoff, yoff, zoff, slope):
+def _phase_model_nokterm_slope(coordinates, inst_phase, xoff, yoff, zoff, slope):
     """Phase model for scipy fitting with slope term and no k term"""
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
     zterm = coeffs[3] * zoff
     sterm = _slope_coeff(coordinates) * slope
-    return xterm + yterm + zterm + inst_delay + _phase_wrap(sterm)
+    return xterm + yterm + zterm + inst_phase + _phase_wrap(sterm)
 
 
-def _phase_model_kterm_slope(coordinates, inst_delay, xoff, yoff, zoff, koff, slope):
+def _phase_model_kterm_slope(coordinates, inst_phase, xoff, yoff, zoff, koff, slope):
     """"Phase model for scipy fitting with k and slope terms"""
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
@@ -299,7 +299,7 @@ def _phase_model_kterm_slope(coordinates, inst_delay, xoff, yoff, zoff, koff, sl
     zterm = coeffs[3] * zoff
     sterm = _slope_coeff(coordinates) * slope
     kterm = _kterm_coeff(coordinates) * koff
-    return xterm + yterm + zterm + inst_delay + kterm + _phase_wrap(sterm)
+    return xterm + yterm + zterm + inst_phase + kterm + _phase_wrap(sterm)
 
 
 def _export_fit_separate_ddis(data_dict, parm_dict):
@@ -309,7 +309,7 @@ def _export_fit_separate_ddis(data_dict, parm_dict):
     len_fact = _convert_unit('m', pos_unit, 'length')
     ang_fact = _convert_unit('rad', ang_unit, kind='trigonometric')
 
-    field_names = ['Antenna', 'DDI', f'Fixed delay  [{ang_unit}]', f'X offset [{pos_unit}]',
+    field_names = ['Antenna', 'DDI', f'Fixed phase  [{ang_unit}]', f'X offset [{pos_unit}]',
                    f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
     kterm_present = data_dict._meta_data["fit_kterm"]
     slope_present = data_dict._meta_data["fit_slope"]
@@ -328,7 +328,7 @@ def _export_fit_separate_ddis(data_dict, parm_dict):
     for ant_key, antenna in data_dict.items():
         for ddi_key, ddi in antenna.items():
             pos_fact = len_fact * ddi.attrs['wavelength']
-            row = [ant_key, ddi_key, _format_value_error(ddi.attrs['fixed_delay_fit'], ddi.attrs['fixed_delay_error'],
+            row = [ant_key, ddi_key, _format_value_error(ddi.attrs['fixed_phase_fit'], ddi.attrs['fixed_phase_error'],
                                                          scaling=ang_fact)]
             for i_pos in range(3):
                 row.append(_format_value_error(ddi.attrs['position_fit'][i_pos], ddi.attrs['position_error'][i_pos],
@@ -352,7 +352,7 @@ def _export_fit_combine_ddis(data_dict, parm_dict):
     len_fact = _convert_unit('m', pos_unit, 'length')
     ang_fact = _convert_unit('rad', ang_unit, kind='trigonometric')
 
-    field_names = ['Antenna', f'Fixed delay  [{ang_unit}]', f'X offset [{pos_unit}]',
+    field_names = ['Antenna', f'Fixed phase  [{ang_unit}]', f'X offset [{pos_unit}]',
                    f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
     npar = 4
     kterm_present = data_dict._meta_data["fit_kterm"]
@@ -381,8 +381,8 @@ def _export_fit_combine_ddis(data_dict, parm_dict):
         i_ddi = 0
         for ddi_key, ddi in antenna.items():
             pos_fact = len_fact * ddi.attrs['wavelength']
-            params[0, i_ddi] = ddi.attrs['fixed_delay_fit'] * ang_fact
-            weight[0, i_ddi] = 1/(ddi.attrs['fixed_delay_error'] * ang_fact)**2
+            params[0, i_ddi] = ddi.attrs['fixed_phase_fit'] * ang_fact
+            weight[0, i_ddi] = 1/(ddi.attrs['fixed_phase_error'] * ang_fact)**2
             params[1:4, i_ddi] = np.array(ddi.attrs['position_fit'])*pos_fact
             weight[1:4, i_ddi] = 1/(np.array(ddi.attrs['position_error'])*pos_fact)**2
             if kterm_present:
@@ -491,7 +491,7 @@ def _plot_gains_chunk(parm_dict):
         coordinates[2, :] = ele
         coordinates[3, :] = time
 
-        delay = xds.attrs['fixed_delay_fit']
+        phase = xds.attrs['fixed_phase_fit']
         xoff, yoff, zoff = xds.attrs['position_fit']
         try:
             kterm = xds.attrs['koff_fit']
@@ -503,13 +503,13 @@ def _plot_gains_chunk(parm_dict):
             slope = None
 
         if slope is None and kterm is None:
-            fit = _phase_model_nokterm_noslope(coordinates, delay, xoff, yoff, zoff)
+            fit = _phase_model_nokterm_noslope(coordinates, phase, xoff, yoff, zoff)
         elif slope is None and kterm is not None:
-            fit = _phase_model_kterm_noslope(coordinates, delay, xoff, yoff, zoff, kterm)
+            fit = _phase_model_kterm_noslope(coordinates, phase, xoff, yoff, zoff, kterm)
         elif slope is not None and kterm is None:
-            fit = _phase_model_nokterm_slope(coordinates,  delay, xoff, yoff, zoff, slope)
+            fit = _phase_model_nokterm_slope(coordinates,  phase, xoff, yoff, zoff, slope)
         else:
-            fit = _phase_model_kterm_slope(coordinates, delay, xoff, yoff, zoff, kterm, slope)
+            fit = _phase_model_kterm_slope(coordinates, phase, xoff, yoff, zoff, kterm, slope)
         fit *= angle_fact
 
         _scatter_plot(axes[0, 0], time, _time_label(time_unit), gains, ylabel, 'Time vs Gains', fit=fit, ylim=gainslim)
