@@ -61,15 +61,15 @@ def _locit_chunk(locit_parms):
         return
     astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
     lst = astro_time.sidereal_time("apparent").to(units.radian) / units.radian
-    coordinates = _build_coordinate_array(field_id, src_dict, 'precessed', antenna['latitude'], time, lst)
+    coordinates, gains, lst = _build_filtered_arrays(field_id, src_dict, 'precessed', antenna['latitude'], time,
+                                                     lst, gains, elevation_limit)
 
     linalg = locit_parms['fit_engine'] == 'linear algebra'
     if linalg:
-        fit, variance = _solve_linear_algebra(coordinates, gains, elevation_limit, fit_kterm, fit_slope)
+        fit, variance = _solve_linear_algebra(coordinates, gains, fit_kterm, fit_slope)
     else:
         if locit_parms['fit_engine'] == 'scipy':
-            fit, variance = _solve_scipy_optimize_curve_fit(coordinates, gains, elevation_limit, fit_kterm, fit_slope,
-                                                            verbose=True)
+            fit, variance = _solve_scipy_optimize_curve_fit(coordinates, gains, fit_kterm, fit_slope, verbose=True)
         else:
             msg = f'Unrecognized fitting engine: {locit_parms["fit_engine"]}'
             logger.erro(msg)
@@ -113,7 +113,7 @@ def _locit_chunk(locit_parms):
     return
 
 
-def _build_coordinate_array(field_id, src_list, key, latitude, time, lst):
+def _build_filtered_arrays(field_id, src_list, key, latitude, time, lst, gains, elevation_limit):
     """ Build the coordinate arrays (ha, dec, elevation, angle) for use in the fitting"""
     n_samples = len(field_id)
     coordinates = np.ndarray([4, n_samples])
@@ -126,7 +126,14 @@ def _build_coordinate_array(field_id, src_list, key, latitude, time, lst):
     # convert to actual hour angle
     coordinates[0, :] = lst.value - coordinates[0, :]
     coordinates[0, :] = np.where(coordinates[0, :] < 0, coordinates[0, :] + twopi, coordinates[0, :])
-    return coordinates
+
+    # Filter data below elevation limit
+    selection = coordinates[2, :] > elevation_limit
+    gains = gains[selection]
+    coordinates = coordinates[:, selection]
+    lst = lst[selection]
+
+    return coordinates, gains, lst
 
 
 def _geometrical_coeffs(coordinates):
@@ -150,7 +157,7 @@ def _slope_coeff(coordinates):
     return coordinates[3]
 
 
-def _solve_linear_algebra(coordinates, gains, elevation_limit, fit_kterm, fit_slope):
+def _solve_linear_algebra(coordinates, gains, fit_kterm, fit_slope):
     """Fit a phase model to the gain solutions using linear algebra, AIPS style"""
     npar = 4 + fit_slope + fit_kterm
     if fit_kterm and fit_slope:
@@ -166,14 +173,11 @@ def _solve_linear_algebra(coordinates, gains, elevation_limit, fit_kterm, fit_sl
     vector = np.zeros([npar])
     n_samples = coordinates.shape[1]
     for i_sample in range(n_samples):
-        if coordinates[2, i_sample] > elevation_limit:
-            coeffs = coeff_function(coordinates[:, i_sample])
-            for irow in range(npar):
-                for icol in range(irow + 1):
-                    system[irow, icol] += coeffs[irow] * coeffs[icol]
-                vector[irow] += gains[i_sample] * coeffs[irow]
-        else:
-            pass
+        coeffs = coeff_function(coordinates[:, i_sample])
+        for irow in range(npar):
+            for icol in range(irow + 1):
+                system[irow, icol] += coeffs[irow] * coeffs[icol]
+            vector[irow] += gains[i_sample] * coeffs[irow]
 
     for irow in range(1, npar):
         for icol in range(irow):
@@ -211,12 +215,9 @@ def _coeff_system_kterm_slope(coordinates):
     return coeffs
 
 
-def _solve_scipy_optimize_curve_fit(coordinates, gains, elevation_limit, fit_kterm, fit_slope, verbose=False):
+def _solve_scipy_optimize_curve_fit(coordinates, gains, fit_kterm, fit_slope, verbose=False):
     """Fit a phase model to the gain solutions using scipy optimize curve_fit algorithm"""
-    logger  = _get_astrohack_logger()
-    selelev = coordinates[2, :] > elevation_limit
-    coordinates = coordinates[:, selelev]
-    gains = gains[selelev]
+    logger = _get_astrohack_logger()
 
     npar = 4 + fit_slope + fit_kterm
     if fit_kterm and fit_slope:
