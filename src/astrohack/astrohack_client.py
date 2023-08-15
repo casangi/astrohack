@@ -74,6 +74,7 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
     if astrohack_local_dir:
         os.environ['ASTROHACK_LOCAL_DIR'] = astrohack_local_dir
         local_cache = True
+    
     else:
         local_cache = False
     
