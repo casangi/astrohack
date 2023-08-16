@@ -1,5 +1,6 @@
 import os
 import json
+import inspect
 import numpy as np
 import xarray as xr
 import astropy
@@ -14,6 +15,7 @@ from astrohack._utils._algorithms import _get_grid_parms, _significant_digits
 
 from astrohack._utils._dio import _load_point_file
 
+CURRENT_FUNCTION=0
 
 def _extract_holog_chunk(extract_holog_params):
     """Perform data query on holography data chunk and get unique time and state_ids/
@@ -28,6 +30,8 @@ def _extract_holog_chunk(extract_holog_params):
         sel_state_ids (list): List pf state_ids corresponding to holography data/
     """
     logger = _get_astrohack_logger()
+
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     ms_name = extract_holog_params["ms_name"]
     pnt_name = extract_holog_params["point_name"]
@@ -44,7 +48,7 @@ def _extract_holog_chunk(extract_holog_params):
     telescope_name = extract_holog_params["telescope_name"]
     
     if len(ref_ant_per_map_ant_tuple) != len(map_ant_tuple):
-        logger.error("Reference antanna per mapping antenna list and mapping antenna list should have same length.")
+        logger.error("[{function_name}]: Reference antanna per mapping antenna list and mapping antenna list should have same length.".format(function_name=function_name))
         raise Exception("Inconsistancy between antenna list length, see error above for more info.")
     
     sel_state_ids = extract_holog_params["sel_state_ids"]
@@ -130,10 +134,8 @@ def _extract_holog_chunk(extract_holog_params):
         grid_parms
     )
 
-    logger.info(
-        "Finished extracting holography chunk for ddi: {ddi} holog_map_key: {holog_map_key}".format(
-            ddi=ddi, holog_map_key=holog_map_key
-        )
+    logger.info("[{function_name}]: Finished extracting holography chunk for ddi: {ddi} holog_map_key: {holog_map_key}".format(
+        ddi=ddi, holog_map_key=holog_map_key, function_name=function_name)
     )
 
 
@@ -304,6 +306,8 @@ def _create_holog_file(
 
     logger = _get_astrohack_logger()
 
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
+
     ctb = ctables.table("/".join((ms_name, "ANTENNA")))
     observing_location = ctb.getcol("POSITION")
 
@@ -364,7 +368,7 @@ def _create_holog_file(
             holog_file = holog_name
 
             logger.info(
-                "Writing holog file to {file}".format(file=holog_file)
+                "[{function_name}]: Writing holog file to {file}".format(function_name=function_name, file=holog_file)
             )
             xds.to_zarr(
                 os.path.join(
@@ -377,7 +381,7 @@ def _create_holog_file(
 
         else:
             logger.warning(
-                "[FLAGGED DATA] mapping antenna index {index}".format(index=ant_names[map_ant_index]
+                "[{function_name}]: [FLAGGED DATA] mapping antenna index {index}".format(index=ant_names[map_ant_index], function_name=function_name
                 )
             )
 
@@ -428,8 +432,8 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
         
                 
     if (baseline_average_distance != 'all') and (baseline_average_nearest != 'all'):
-        logger.error('baseline_average_distance and baseline_average_nearest can not both be specified.')
-        raise
+        logger.error('[{function_name}]: baseline_average_distance and baseline_average_nearest can not both be specified.'.format(function_name=function_name))
+        raise Exception("Too many baseline parameters specified.")
 
     
     #The reference antennas are then given by ref_ant_set = ant_names_set - map_ant_set.
@@ -517,6 +521,8 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         holog_dict (dict): Dictionary containing msdx data.
     """
     logger = _get_astrohack_logger()
+
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
     
     ant_holog_dict = {}
     cell_sizes = []
@@ -567,7 +573,8 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
             json.dump(ant_holog_dict, json_file)
 
     except Exception as error:
-        logger.error("[_create_holog_meta_data] {error}".format(error=error))
+        logger.error("[{function_name}}] {error}".format(error=error, function_name=function_name))
+        
         raise Exception(error)
 
     meta_data.update(input_params)

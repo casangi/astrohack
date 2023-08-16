@@ -170,8 +170,8 @@ def extract_holog(
     try:
         pnt_dict = _load_point_file(extract_holog_params['point_name'])
 
-    except:
-        logger.error(f'[{function_name}]: Could not find {extract_holog_params["point_name"]}.')
+    except Exception as error:
+        logger.error('[{function_name}]: Error loading {name}. - {error}'.format(function_name=function_name, name=extract_holog_params["point_name"], error=error))
         
         return None
 
@@ -313,7 +313,8 @@ def extract_holog(
     
         if "pnt_tbl:fixed" not in his_ctb.getcol("MESSAGE"):
             logger.error("Pointing table not corrected, users should apply function astrohack.dio.fix_pointing_table() to remedy this.")
-            raise Exception("Issue with pointing table correction, see error message above for more info.")
+            
+            return None
         
         his_ctb.close()
 
@@ -342,6 +343,7 @@ def extract_holog(
 
             if 'map' in holog_map_key:
                 scans = holog_obs_dict[ddi_name][holog_map_key]["scans"]
+                
                 logger.info(f"[{function_name}]: Processing ddi: {ddi}, scans: {scans}")
                 
                 if len(list(holog_obs_dict[ddi_name][holog_map_key]['ant'].keys())) != 0:
@@ -379,8 +381,14 @@ def extract_holog(
                             )
                         )
                     else:
-                        _extract_holog_chunk(extract_holog_params)
+                        try:
+                            _extract_holog_chunk(extract_holog_params)
+
+                        except Exception as error:
+                            print("[{function_name}]: There was an error, see log above for more info :: {error}".format(function_name=function_name, error=error))    
+
                     count += 1
+                    
                 else:
                     logger.warning(f'[{function_name}]: DDI ' + str(ddi) + ' has no holography data to extract.')
 
@@ -389,10 +397,15 @@ def extract_holog(
     obs_ctb.close()
 
     if parallel:
-        dask.compute(delayed_list)    
+        try:
+            dask.compute(delayed_list)    
+    
+        except Exception as error:
+            print("[{function_name}]: There was an error, see log above for more info :: {error}".format(function_name=function_name, error=error))
 
     if count > 0:
         logger.info(f"[{function_name}]: Finished processing")
+
         holog_dict = _load_holog_file(holog_file=extract_holog_params["holog_name"], dask_load=True, load_pnt_dict=False)
         extract_holog_params['telescope_name'] = telescope_name
         

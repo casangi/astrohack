@@ -87,6 +87,7 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
     point_meta_ds = xr.Dataset()
     point_meta_ds.attrs['mapping_state_ids'] = mapping_state_ids
     point_meta_ds.to_zarr(pnt_name,mode="w", compute=True, consolidated=True)
+
     ###########################################################################################
     pnt_parms = {
         'pnt_name': pnt_name,
@@ -105,7 +106,9 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
                     pnt_parms
                 )
             )
+
         dask.compute(delayed_pnt_list)
+
     else:
         for id in antenna_id:
             pnt_parms['ant_id'] = id
@@ -151,6 +154,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         logger.warning("Skipping antenna " + str(ant_id) + " no pointing info")
 
         return 0
+    
     tb.close()
     table_obj.close()
     

@@ -121,7 +121,7 @@ def holog(
     if holog_params["cell_size"] is None:
         if meta_data['cell_size'] is None:
             logger.error("Cell size meta data not found. There was likely an issue with the holography data extraction. Fix extract data or provide cell_size as arguement.")
-            raise Exception("Error in extracted holography meta data. See error above for more details.")
+            raise Exception("{function_name}: There was an error, see log above for more info.".format(function_name=function_name))
     
         else:    
             cell_size = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
@@ -130,7 +130,7 @@ def holog(
     if holog_params["grid_size"] is None:
         if meta_data['n_pix'] is None:
             logger.error("Grid size meta data not found. There was likely an issue with the holography data extraction. Fix extract data or provide grid_size as arguement.")
-            raise Exception("Error in extracted holography meta data. See error above for more details.")
+            raise Exception("{function_name}: There was an error, see log above for more info.".format(function_name=function_name))
         
         else:    
             n_pix = int(np.sqrt(meta_data["n_pix"]))
@@ -159,12 +159,13 @@ def holog(
             logger.info(f'[{function_name}]: Finished processing')
 
             return image_mds
+        
         else:
             logger.warning(f"[{function_name}]: No data to process")
             return None
             
-    except Exception:
-        logger.error("There was an error in {function_name}: See log above for more info.".format(function_name=function_name))
+    except Exception as error:
+        logger.error("{function_name}: There was an error, see log above for more info :: {error}".format(function_name=function_name, error=error))
 
 
 def _check_holog_params(function_name, holog_params):

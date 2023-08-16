@@ -124,7 +124,7 @@ def extract_pointing(
         return pointing_mds
     
     except Exception as error:
-        logger.error("There was an error, exiting:: Exception: {e}".format(e=error))
+        logger.error("{function_name}: There was an error, see log above for more info :: {error}".format(function_name=function_name, error=error))
         
         return None
 
