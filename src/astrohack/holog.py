@@ -146,21 +146,25 @@ def holog(
     
     with open(".holog_diagnostic.json", "w") as out_file:
         json.dump(json_data, out_file)
+    
+    try:
+        if _dask_general_compute(function_name, holog_json, _holog_chunk, holog_params, ['ant', 'ddi'], parallel=parallel):
+        
+            output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_attr")
+            _write_meta_data(output_attr_file, holog_params.copy())
+        
+            image_mds = AstrohackImageFile(holog_params['image_name'])
+            image_mds._open()
+        
+            logger.info(f'[{function_name}]: Finished processing')
 
-    if _dask_general_compute(function_name, holog_json, _holog_chunk, holog_params, ['ant', 'ddi'], parallel=parallel):
-        
-        output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_attr")
-        _write_meta_data(output_attr_file, holog_params.copy())
-        
-        image_mds = AstrohackImageFile(holog_params['image_name'])
-        image_mds._open()
-        
-        logger.info(f'[{function_name}]: Finished processing')
-
-        return image_mds
-    else:
-        logger.warning(f"[{function_name}]: No data to process")
-        return None
+            return image_mds
+        else:
+            logger.warning(f"[{function_name}]: No data to process")
+            return None
+            
+    except Exception:
+        logger.error("There was an error in {function_name}: See log above for more info.".format(function_name=function_name))
 
 
 def _check_holog_params(function_name, holog_params):

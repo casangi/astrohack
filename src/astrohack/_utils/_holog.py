@@ -171,7 +171,9 @@ def _holog_chunk(holog_chunk_params):
         telescope_name = 'VLA'
 
     else:
-        raise Exception("Antenna type not found: {}".format(meta_data['ant_name']))
+        raise Exception(
+            logger.error("{function_name}: Antenna type not found: {name}".format(function_name=function_name, name=meta_data['ant_name']))
+        )
 
     telescope = Telescope(telescope_name)
 
@@ -218,19 +220,24 @@ def _holog_chunk(holog_chunk_params):
             do_sub_til = True
         else:
             do_sub_til = False
+
     elif isinstance(phase_fit_par, (np.ndarray, list, tuple)):
         if len(phase_fit_par) != 5:
-            logger.error(f'[{function_name}]: Phase fit parameter must have 5 elements')
-            raise Exception
+            raise Exception(
+                logger.error(f'[{function_name}]: Phase fit parameter must have 5 elements')
+            )
+
         else:
             if np.sum(phase_fit_par) == 0:
                 do_phase_fit = False
             else:
                 do_phase_fit = True
                 do_pnt_off, do_xy_foc_off, do_z_foc_off, do_sub_til, do_cass_off = phase_fit_par
+    
     else:
-        logger.error(f'[{function_name}]: Phase fit parameter is neither a boolean nor an array of booleans.')
-        raise Exception
+        raise Exception(
+            logger.error(f'[{function_name}]: Phase fit parameter is neither a boolean nor an array of booleans.')
+        )
 
     if do_phase_fit:
         logger.info(f'[{function_name}]: Applying phase correction')
@@ -394,8 +401,7 @@ def _export_to_fits_holog_chunk(parm_dict):
     }
     ntime = len(inputxds.time)
     if ntime != 1:
-        logger.error(f"[{function_name}]: Data with multiple times not supported for FITS export")
-        raise Exception(f"[{function_name}]: Data with multiple times not supported for FITS export")
+        raise Exception(logger.error(f"[{function_name}]: Data with multiple times not supported for FITS export"))
 
     carta_dim_order = (1, 0, 2, 3, )
 
@@ -481,8 +487,10 @@ def _plot_beam_chunk(parm_dict):
     maxis = inputxds.m.values
     if inputxds.dims['chan'] != 1:
         raise Exception("Only single channel holographies supported")
+
     if inputxds.dims['time'] != 1:
         raise Exception("Only single mapping holographies supported")
+
     full_beam = inputxds.BEAM.isel(time=0, chan=0).values
     pol_axis = inputxds.pol.values
     if parm_dict['complex_split'] == 'cartesian':
@@ -548,9 +556,9 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit
         axes = [ax]
     
     else:
-        msg = f'[{function_name}]: Do not know how to handle polarization axis with {n_pol} elements'
-        logger.error(msg)
-        raise Exception(msg)
+        raise Exception(
+            logger.error(f'[{function_name}]: Do not know how to handle polarization axis with {n_pol} elements')
+        )
 
     extent = [laxis[0], laxis[-1], maxis[0], maxis[-1]]
     for ipol, pol, in enumerate(pol_axis):

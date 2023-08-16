@@ -273,6 +273,9 @@ def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_id
     '''
     scan_time_dict = _extract_scan_time_dict_jit(time, scan_ids, state_ids, ddi_ids, mapping_state_ids)
 
+    # This section cleans up the case of when there was an issue with the scan time data. If the scan start and end 
+    # times are the same the mapping(reference) state identification does not work. For this reason, scans containing 
+    # instance of this are removed and any empty ddi(s) are dorpped as well.
     drops = {}
 
     for ddi in scan_time_dict.keys():
