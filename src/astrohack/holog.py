@@ -122,7 +122,8 @@ def holog(
         if meta_data['cell_size'] is None:
             logger.error("Cell size meta data not found. There was likely an issue with the holography data extraction. Fix extract data or provide cell_size as arguement.")
             logger.error("{function_name}: There was an error, see log above for more info.".format(function_name=function_name))
-             return None
+            
+            return None
     
         else:    
             cell_size = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
@@ -132,7 +133,7 @@ def holog(
         if meta_data['n_pix'] is None:
             logger.error("Grid size meta data not found. There was likely an issue with the holography data extraction. Fix extract data or provide grid_size as arguement.")
             logger.error("{function_name}: There was an error, see log above for more info.".format(function_name=function_name))
-
+            
             return None
         
         else:    
