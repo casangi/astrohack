@@ -1,5 +1,21 @@
 {
-    "comment": "Data taken from AIPS source code and EVLA memo 212, Screw offset taken from measurements done insitu by VSM on March 14 2023",
+    "array_center": {
+        "m0": {
+            "unit": "rad",
+            "value": -1.8782884344112576
+        },
+        "m1": {
+            "unit": "rad",
+            "value": 0.5916753430723376
+        },
+        "m2": {
+            "unit": "m",
+            "value": 6373580.000000001
+        },
+        "refer": "ITRF",
+        "valid": true
+    },
+    "comment": "Data taken from AIPS source code and EVLA memo 212, Screw offset taken from measurements done insitu by VSM on March 14 2023, Array center location from CASA 6.5.5.21",
     "diam": 25.0,
     "focus": 8.8,
     "inlim": 2.0,
