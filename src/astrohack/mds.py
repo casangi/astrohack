@@ -1191,7 +1191,6 @@ class AstrohackPositionFile(dict):
                                                      default=False)
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
-
         _export_fit_results(self, parm_dict)
 
     def plot_sky_coverage(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', display=True,
@@ -1260,7 +1259,11 @@ class AstrohackPositionFile(dict):
                                                      default=False)
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
-        _dask_general_compute(fname, self, _plot_sky_coverage_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+        parm_dict['combined'] = self.combined
+        if self.combined:
+            _dask_general_compute(fname, self, _plot_sky_coverage_chunk, parm_dict, ['ant'], parallel=parallel)
+        else:
+            _dask_general_compute(fname, self, _plot_sky_coverage_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_gains(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', plot_fit=True,
                    display=True, figure_size=None, dpi=300, parallel=False):

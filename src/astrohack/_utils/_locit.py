@@ -425,9 +425,18 @@ def _export_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, sl
 def _plot_sky_coverage_chunk(parm_dict):
     """Plot the sky coverage for an antenna and DDI"""
     logger = _get_astrohack_logger()
+    combined = parm_dict['combined']
     antenna = parm_dict['this_ant']
-    ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
+
+    if combined:
+        export_name = f'{destination}/position_sky_coverage_{antenna}.png'
+        suptitle = f'Sky coverage for antenna {antenna.split("_")[1]}'
+    else:
+        ddi = parm_dict['this_ddi']
+        export_name = f'{destination}/position_sky_coverage_{antenna}_{ddi}.png'
+        suptitle = f'Sky coverage for antenna {antenna.split("_")[1]}, DDI {ddi.split("_")[1]}'
+
     xds = parm_dict['xds_data']
     figuresize = parm_dict['figure_size']
     angle_unit = parm_dict['angle_unit']
@@ -435,7 +444,6 @@ def _plot_sky_coverage_chunk(parm_dict):
     display = parm_dict['display']
     dpi = parm_dict['dpi']
     antenna_info = xds.attrs['antenna_info']
-    export_name = f'{destination}/position_sky_coverage_{antenna}_{ddi}.png'
 
     time = xds.time.values * _convert_unit('day', time_unit, 'time')
     angle_fact = _convert_unit('rad', angle_unit, 'trigonometric')
@@ -450,7 +458,7 @@ def _plot_sky_coverage_chunk(parm_dict):
 
     elelim, elelines, declim, declines, halim = _plot_borders(angle_fact, antenna_info['latitude'],
                                                               xds.attrs['elevation_limit'])
-    timelabel = _time_label(time_units)
+    timelabel = _time_label(time_unit)
     halabel = _hour_angle_label(angle_unit)
     declabel = _declination_label(angle_unit)
     _scatter_plot(axes[0, 0], time, timelabel, ele, _elevation_label(angle_unit), 'Time vs Elevation', ylim=elelim,
@@ -460,7 +468,7 @@ def _plot_sky_coverage_chunk(parm_dict):
     _scatter_plot(axes[1, 1], ha, halabel, dec, declabel, 'Hour angle vs Declination', ylim=declim, xlim=halim,
                   hlines=declines)
 
-    fig.suptitle(f'Sky coverage for antenna {antenna.split("_")[1]}, DDI {ddi.split("_")[1]}')
+    fig.suptitle(suptitle)
     fig.tight_layout()
     plt.savefig(export_name, dpi=dpi)
     if not display:
