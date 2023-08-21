@@ -11,6 +11,8 @@ def _construct_general_graph_recursively(caller, looping_dict, chunk_function, p
     if len(key_order) == 0:
         if isinstance(looping_dict, xarray.Dataset):
             param_dict['xds_data'] = looping_dict
+        elif isinstance(looping_dict, dict):
+            param_dict['data_dict'] = looping_dict
         if parallel:
             delayed_list.append(dask.delayed(chunk_function)(dask.delayed(param_dict)))
         else:
