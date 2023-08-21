@@ -377,6 +377,9 @@ def _export_fit_results(data_dict, parm_dict):
         slo_unit = f'{del_unit}/{tim_unit}'
         slo_fact = del_fact / _convert_unit('day', tim_unit, 'time')
         field_names.extend([f'Delay rate [{slo_unit}]'])
+    else:
+        slo_unit = 'N/A'
+        slo_fact = 1.0
 
     if parm_dict['rotate_results']:
         telescope = _open_telescope(data_dict._meta_data["telescope_name"])
@@ -476,38 +479,49 @@ def _plot_sky_coverage_chunk(parm_dict):
     return
 
 
-def _plot_gains_chunk(parm_dict):
-    """Plot the gain solutions for an antenna and DDI, optionally with the fit included"""
+def _plot_delays_chunk(parm_dict):
+    """Plot the delays for an antenna and DDI, optionally with the fit included"""
+    combined = parm_dict['combined']
     plot_fit = parm_dict['plot_fit']
     antenna = parm_dict['this_ant']
-    ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
+    if combined:
+        export_name = f'{destination}/position_delays_{antenna}.png'
+        suptitle = f'Delays for antenna {antenna.split("_")[1]}'
+    else:
+        ddi = parm_dict['this_ddi']
+        export_name = f'{destination}/position_delays_{antenna}_{ddi}.png'
+        suptitle = f'Delays for antenna {antenna.split("_")[1]}, DDI {ddi.split("_")[1]}'
+
     xds = parm_dict['xds_data']
     figuresize = parm_dict['figure_size']
     angle_unit = parm_dict['angle_unit']
     time_unit = parm_dict['time_unit']
+    delay_unit = parm_dict['delay_unit']
     display = parm_dict['display']
     dpi = parm_dict['dpi']
     antenna_info = xds.attrs['antenna_info']
-    export_name = f'{destination}/position_gains_{antenna}_{ddi}.png'
 
     time = xds.time.values * _convert_unit('day', time_unit, 'time')
     angle_fact = _convert_unit('rad', angle_unit, 'trigonometric')
+    delay_fact = _convert_unit('sec', delay_unit, kind='time')
     ha = xds['HOUR_ANGLE'] * angle_fact
     dec = xds['DECLINATION'] * angle_fact
     ele = xds['ELEVATION'] * angle_fact
-    gains = xds['GAINS'].values * angle_fact
+    delays = xds['DELAYS'].values * delay_fact
 
     elelim, elelines, declim, declines, halim = _plot_borders(angle_fact, antenna_info['latitude'],
                                                               xds.attrs['elevation_limit'])
-    gainslim = [-1.05*pi*angle_fact, 1.05*pi*angle_fact]
+    delay_minmax = [np.min(delays), np.max(delays)]
+    delay_border = 0.05*(delay_minmax[1]-delay_minmax[0])
+    delaylim = [delay_minmax[0]-delay_border, delay_minmax[1]+delay_border]
 
     if figuresize is None or figuresize == 'None':
         fig, axes = plt.subplots(2, 2, figsize=figsize)
     else:
         fig, axes = plt.subplots(2, 2, figsize=figuresize)
 
-    ylabel = f'Phase gains [{angle_unit}]'
+    ylabel = f'Delays [{delay_unit}]'
     if plot_fit:
         n_samp = len(time)
         coordinates = np.ndarray([4, n_samp])
@@ -516,7 +530,7 @@ def _plot_gains_chunk(parm_dict):
         coordinates[2, :] = ele
         coordinates[3, :] = time
 
-        phase = xds.attrs['fixed_phase_fit']
+        phase = xds.attrs['fixed_delay_fit']
         xoff, yoff, zoff = xds.attrs['position_fit']
         try:
             kterm = xds.attrs['koff_fit']
@@ -535,24 +549,24 @@ def _plot_gains_chunk(parm_dict):
             fit = _phase_model_nokterm_slope(coordinates,  phase, xoff, yoff, zoff, slope)
         else:
             fit = _phase_model_kterm_slope(coordinates, phase, xoff, yoff, zoff, kterm, slope)
-        fit *= angle_fact
+        fit *= delay_fact
 
-        _scatter_plot(axes[0, 0], time, _time_label(time_unit), gains, ylabel, 'Time vs Gains', fit=fit, ylim=gainslim)
-        _scatter_plot(axes[0, 1], ele, _elevation_label(angle_unit), gains, ylabel, 'Elevation vs Gains',
-                      xlim=elelim, vlines=elelines, fit=fit, ylim=gainslim)
-        _scatter_plot(axes[1, 0], ha, _hour_angle_label(angle_unit), gains, ylabel, 'Hour Angle vs Gains', xlim=halim,
-                      fit=fit, ylim=gainslim)
-        _scatter_plot(axes[1, 1], dec, _declination_label(angle_unit), gains, ylabel, 'Declination vs Gains',
-                      xlim=declim, vlines=declines, fit=fit, ylim=gainslim)
+        _scatter_plot(axes[0, 0], time, _time_label(time_unit), delays, ylabel, 'Time vs Delays', fit=fit, ylim=delaylim)
+        _scatter_plot(axes[0, 1], ele, _elevation_label(angle_unit), delays, ylabel, 'Elevation vs Delays',
+                      xlim=elelim, vlines=elelines, fit=fit, ylim=delaylim)
+        _scatter_plot(axes[1, 0], ha, _hour_angle_label(angle_unit), delays, ylabel, 'Hour Angle vs Delays', xlim=halim,
+                      fit=fit, ylim=delaylim)
+        _scatter_plot(axes[1, 1], dec, _declination_label(angle_unit), delays, ylabel, 'Declination vs Delays',
+                      xlim=declim, vlines=declines, fit=fit, ylim=delaylim)
     else:
-        _scatter_plot(axes[0, 0], time, _time_label(time_unit), gains, ylabel, 'Time vs Gains', ylim=gainslim)
-        _scatter_plot(axes[0, 1], ele, _elevation_label(angle_unit), gains, ylabel, 'Elevation vs Gains',
-                      xlim=elelim, vlines=elelines, ylim=gainslim)
-        _scatter_plot(axes[1, 0], ha, _hour_angle_label(angle_unit), gains, ylabel, 'Hour Angle vs Gains', xlim=halim,
-                      ylim=gainslim)
-        _scatter_plot(axes[1, 1], dec, _declination_label(angle_unit), gains, ylabel, 'Declination vs Gains',
-                      xlim=declim, vlines=declines, ylim=gainslim)
-    fig.suptitle(f'Gains for antenna {antenna.split("_")[1]}, DDI {ddi.split("_")[1]}')
+        _scatter_plot(axes[0, 0], time, _time_label(time_unit), delays, ylabel, 'Time vs Delays', ylim=delaylim)
+        _scatter_plot(axes[0, 1], ele, _elevation_label(angle_unit), delays, ylabel, 'Elevation vs Delays',
+                      xlim=elelim, vlines=elelines, ylim=delaylim)
+        _scatter_plot(axes[1, 0], ha, _hour_angle_label(angle_unit), delays, ylabel, 'Hour Angle vs Delays', xlim=halim,
+                      ylim=delaylim)
+        _scatter_plot(axes[1, 1], dec, _declination_label(angle_unit), delays, ylabel, 'Declination vs Delays',
+                      xlim=declim, vlines=declines, ylim=delaylim)
+    fig.suptitle(suptitle)
     fig.tight_layout()
     plt.savefig(export_name, dpi=dpi)
     if not display:
