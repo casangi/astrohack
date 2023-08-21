@@ -164,7 +164,7 @@ def _load_locit_file(file=None, locit_dict=None, dask_load=True):
     return ant_data_dict
 
 
-def _load_position_file(file=None, position_dict=None, dask_load=True):
+def _load_position_file(file=None, position_dict=None, dask_load=True, combine=False):
     """ Open position file.
 
     Args:
@@ -183,19 +183,27 @@ def _load_position_file(file=None, position_dict=None, dask_load=True):
     ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
 
     try:
-        for ant in ant_list:
-            if 'ant' in ant:
-                ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
-                            os.path.isdir(file + "/" + str(ant))]
-                ant_data_dict[ant] = {}
-                for ddi in ddi_list:
-                    if 'ddi' in ddi:
-                        if dask_load:
-                            ant_data_dict[ant][ddi] = xr.open_zarr(
-                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
-                        else:
-                            ant_data_dict[ant][ddi] = _open_no_dask_zarr(
-                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+        if combine:
+            for ant in ant_list:
+                if 'ant' in ant:
+                    if dask_load:
+                        ant_data_dict[ant] = xr.open_zarr(f'{file}/{ant}')
+                    else:
+                        ant_data_dict[ant] = _open_no_dask_zarr(f'{file}/{ant}')
+        else:
+            for ant in ant_list:
+                if 'ant' in ant:
+                    ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
+                                os.path.isdir(file + "/" + str(ant))]
+                    ant_data_dict[ant] = {}
+                    for ddi in ddi_list:
+                        if 'ddi' in ddi:
+                            if dask_load:
+                                ant_data_dict[ant][ddi] = xr.open_zarr(
+                                    "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                            else:
+                                ant_data_dict[ant][ddi] = _open_no_dask_zarr(
+                                    "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
     except Exception as e:
         logger.error(str(e))
         raise

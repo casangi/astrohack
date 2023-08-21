@@ -1132,15 +1132,17 @@ class AstrohackPositionFile(dict):
         if file is None:
             file = self.file
 
+        self._meta_data = _read_meta_data(file + '/.position_attr')
+        self.combined = self._meta_data['combine_ddis']
+
         try:
-            _load_position_file(file=file, dask_load=dask_load, position_dict=self)
+            _load_position_file(file=file, dask_load=dask_load, position_dict=self,
+                                combine=self.combined)
             self._file_is_open = True
 
         except Exception as e:
             logger.error("[AstrohackpositionFile]: {}".format(e))
             self._file_is_open = False
-
-        self._meta_data = _read_meta_data(file+'/.position_attr')
 
         return self._file_is_open
 
@@ -1338,5 +1340,8 @@ class AstrohackPositionFile(dict):
         """
         _print_summary_header(self.file)
         _print_attributes(self._meta_data)
-        _print_data_contents(self, ["Antenna", "Contents"])
+        if self.combined:
+            _print_data_contents(self, ["Antenna"])
+        else:
+            _print_data_contents(self, ["Antenna", "Contents"])
         _print_method_list([self.summary, self.export_fit_results, self.plot_sky_coverage, self.plot_gains])
