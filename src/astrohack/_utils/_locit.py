@@ -13,6 +13,7 @@ from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit
 from astrohack._utils._constants import *
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+from astrohack._utils._panel_classes.telescope import Telescope
 
 
 def _locit_chunk(locit_parms):
@@ -321,6 +322,11 @@ def _export_fit_separate_ddis(data_dict, parm_dict):
         slope_fact = ang_fact / _convert_unit('day', tim_unit, 'time')
         field_names.extend([f'Phase slope [{slo_unit}]'])
 
+    if parm_dict['rotate_results']:
+        telescope = _open_telescope(data_dict._meta_data["telescope_name"])
+    else:
+        telescope = None
+
     table = PrettyTable()
     table.field_names = field_names
 
@@ -330,9 +336,16 @@ def _export_fit_separate_ddis(data_dict, parm_dict):
             pos_fact = len_fact * ddi.attrs['wavelength']
             row = [ant_key, ddi_key, _format_value_error(ddi.attrs['fixed_phase_fit'], ddi.attrs['fixed_phase_error'],
                                                          scaling=ang_fact)]
-            for i_pos in range(3):
-                row.append(_format_value_error(ddi.attrs['position_fit'][i_pos], ddi.attrs['position_error'][i_pos],
-                                               scaling=pos_fact))
+
+            if telescope is None:
+                for i_pos in range(3):
+                    row.append(_format_value_error(ddi.attrs['position_fit'][i_pos], ddi.attrs['position_error'][i_pos],
+                                                   scaling=pos_fact))
+            else:
+                newpos, newerr = _rotate_to_array_center(ddi.attrs['position_fit'], ddi.attrs['position_error'],
+                                                         ddi.attrs['antenna_info'], telescope)
+                for i_pos in range(3):
+                    row.append(_format_value_error(newpos[i_pos], newerr[i_pos], scaling=pos_fact))
             if kterm_present:
                 row.append(_format_value_error(ddi.attrs['koff_fit'], ddi.attrs['koff_error'], scaling=pos_fact))
             if slope_present:
@@ -354,6 +367,12 @@ def _export_fit_combine_ddis(data_dict, parm_dict):
 
     field_names = ['Antenna', f'Fixed phase  [{ang_unit}]', f'X offset [{pos_unit}]',
                    f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
+
+    if parm_dict['rotate_results']:
+        telescope = _open_telescope(data_dict._meta_data["telescope_name"])
+    else:
+        telescope = None
+
     npar = 4
     kterm_present = data_dict._meta_data["fit_kterm"]
     slope_present = data_dict._meta_data["fit_slope"]
@@ -382,9 +401,17 @@ def _export_fit_combine_ddis(data_dict, parm_dict):
         for ddi_key, ddi in antenna.items():
             pos_fact = len_fact * ddi.attrs['wavelength']
             params[0, i_ddi] = ddi.attrs['fixed_phase_fit'] * ang_fact
-            weight[0, i_ddi] = 1/(ddi.attrs['fixed_phase_error'] * ang_fact)**2
-            params[1:4, i_ddi] = np.array(ddi.attrs['position_fit'])*pos_fact
-            weight[1:4, i_ddi] = 1/(np.array(ddi.attrs['position_error'])*pos_fact)**2
+            weight[0, i_ddi] = 1 / (ddi.attrs['fixed_phase_error'] * ang_fact) ** 2
+
+            if telescope is None:
+                params[1:4, i_ddi] = np.array(ddi.attrs['position_fit'])*pos_fact
+                weight[1:4, i_ddi] = 1/(np.array(ddi.attrs['position_error'])*pos_fact)**2
+            else:
+                newpos, newerr = _rotate_to_array_center(ddi.attrs['position_fit'], ddi.attrs['position_error'],
+                                                         ddi.attrs['antenna_info'], telescope)
+                params[1:4, i_ddi] = np.array(newpos)*pos_fact
+                weight[1:4, i_ddi] = 1/(np.array(newerr)*pos_fact)**2
+
             if kterm_present:
                 params[i_kterm, i_ddi] = ddi.attrs['koff_fit'] * pos_fact
                 weight[i_kterm, i_ddi] = 1 / (ddi.attrs['koff_error'] * pos_fact) ** 2
@@ -587,3 +614,30 @@ def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None,
         ax.plot(xdata, fit, ls='', marker='x', color='blue', label='fit')
         ax.legend()
     return
+
+
+def _rotate_to_array_center(positions, errors, antenna, telescope):
+    xpos, ypos = positions[0:2]
+    antennalon = antenna['longitude']
+    telescopelon = telescope.array_center['m0']['value']
+    delta_lon = antennalon-telescopelon
+    cosdelta = np.cos(delta_lon)
+    sindelta = np.sin(delta_lon)
+    newpositions = positions
+    newpositions[0] = xpos*cosdelta - ypos*sindelta
+    newpositions[1] = ypos*cosdelta - xpos*sindelta
+    newerrors = errors
+    xerr, yerr = errors[0:2]
+    newerrors[0] = np.sqrt((xerr*cosdelta)**2 + (yerr*sindelta)**2)
+    newerrors[1] = np.sqrt((yerr*cosdelta)**2 + (xerr*sindelta)**2)
+
+    return newpositions, newerrors
+
+
+def _open_telescope(telname):
+    if 'VLA' in telname:
+        telname = 'VLA'
+    elif 'ALMA' in telname:
+        telname = 'ALMA_DA'  # It does not matter which ALMA layout since the array center is the same
+    telescope = Telescope(telname)
+    return telescope

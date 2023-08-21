@@ -1145,7 +1145,7 @@ class AstrohackPositionFile(dict):
         return self._file_is_open
 
     def export_fit_results(self, destination, combine_ddis=False, position_unit='m', angle_unit='deg',
-                           time_unit='hour'):
+                           time_unit='hour', rotate_results=False):
         """ Export antenna position fit results to a text file.
 
         :param destination: Name of the destination folder to contain exported fit results
@@ -1158,6 +1158,8 @@ class AstrohackPositionFile(dict):
         :type angle_unit: str, optional
         :param time_unit: Unit for time in position fit results, defaults to 'hour'
         :type time_unit: str, optional
+        :param rotate_results: Rotate position fit results to array center, defaults to Fale
+        :type rotate_results: bool, optional
 
         .. _Description:
 
@@ -1168,7 +1170,8 @@ class AstrohackPositionFile(dict):
                      'combine_ddis': combine_ddis,
                      'position_unit': position_unit,
                      'angle_unit': angle_unit,
-                     'time_unit': time_unit}
+                     'time_unit': time_unit,
+                     'rotate_results': rotate_results}
 
         fname = 'export_fit_results'
         parms_passed = True
@@ -1182,6 +1185,8 @@ class AstrohackPositionFile(dict):
                                                      acceptable_data=trigo_units, default='deg')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'time_unit', [str],
                                                      acceptable_data=time_units, default='hour')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'rotate_results', [bool],
+                                                     default=False)
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
 
