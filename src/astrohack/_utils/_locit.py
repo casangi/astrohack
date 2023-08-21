@@ -1,4 +1,3 @@
-import numpy as np
 from prettytable import PrettyTable
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
@@ -43,102 +42,34 @@ def _locit_separated_chunk(locit_parms):
 
 
 def _locit_combined_chunk(locit_parms):
-    logger = _get_astrohack_logger()
-    antenna = locit_parms['ant_info'][locit_parms['this_ant']]
-    src_dict = locit_parms['obs_info']['src_dict']
-    fit_kterm = locit_parms['fit_kterm']
-    fit_slope = locit_parms['fit_slope']
-
-    geo_pos = antenna['geocentric_position']
-    ant_pos = EarthLocation.from_geocentric(geo_pos[0], geo_pos[1], geo_pos[2], 'meter')
-
-    elevation_limit = locit_parms['elevation_limit'] * _convert_unit('deg', 'rad', 'trigonometric')
     data = locit_parms['data_dict']
 
-    shape_0 = [0]
-    delays = np.empty(shape_0)
-    time = np.empty(shape_0)
-    field_id = np.empty(shape_0)
+    delay_list = []
+    time_list = []
+    field_list = []
+    freq_list = []
     for ddi, xds_data in data.items():
-        pol = xds_data.attrs['polarization_scheme']
-        print(pol)
+        this_field_id, this_time, this_delays = _get_data_from_locit_xds(xds_data, locit_parms['polarization'])
+        freq_list.append(xds_data.attrs['frequency'])
+        field_list.append(this_field_id)
+        time_list.append(this_time)
+        delay_list.append(this_delays)
 
+    delays = np.concatenate(delay_list)
+    time = np.concatenate(time_list)
+    field_id = np.concatenate(field_list)
 
-    #
-    # # pol = xds_data.attrs['polarization_scheme']
-    # if len(pol) > 2:
-    #     msg = f'Polarization scheme {pol} is not what is expected for antenna based gains'
-    #     logger.error(msg)
-    #     raise Exception(msg)
-    # if locit_parms['polarization'] in pol:
-    #     i_pol = np.where(np.array(pol) == locit_parms['polarization'])[0][0]
-    #     gains = xds_data[f'P{i_pol}_PHASE_GAINS'].values
-    #     time = getattr(xds_data, f'p{i_pol}_time').values
-    #     field_id = xds_data[f'P{i_pol}_FIELD_ID'].values
-    # elif locit_parms['polarization'] == 'both':
-    #     gains = np.concatenate([xds_data[f'P0_PHASE_GAINS'].values, xds_data[f'P1_PHASE_GAINS'].values])
-    #     field_id = np.concatenate([xds_data[f'P0_FIELD_ID'].values, xds_data[f'P1_FIELD_ID'].values])
-    #     time = np.concatenate([xds_data.p0_time.values, xds_data.p1_time.values])
-    # else:
-    #     msg = f'Polarization {locit_parms["polarization"]} is not found in data'
-    #     logger.error(msg)
-    #     raise Exception(msg)
-    #
-    # if len(gains) == 0:
-    #     msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
-    #     logger.warning(msg)
-    #     return
-    # astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
-    # lst = astro_time.sidereal_time("apparent").to(units.radian) / units.radian
-    # coordinates, gains, lst = _build_filtered_arrays(field_id, src_dict, 'precessed', antenna['latitude'], time,
-    #                                                  lst, gains, elevation_limit)
-    #
-    # linalg = locit_parms['fit_engine'] == 'linear algebra'
-    # if linalg:
-    #     fit, variance = _solve_linear_algebra(coordinates, gains, fit_kterm, fit_slope)
-    # else:
-    #     if locit_parms['fit_engine'] == 'scipy':
-    #         fit, variance = _solve_scipy_optimize_curve_fit(coordinates, gains, fit_kterm, fit_slope, verbose=True)
-    #     else:
-    #         msg = f'Unrecognized fitting engine: {locit_parms["fit_engine"]}'
-    #         logger.erro(msg)
-    #         raise Exception(msg)
-    #
-    # output_xds = xr.Dataset()
-    # output_xds.attrs['polarization'] = locit_parms['polarization']
-    # output_xds.attrs['wavelength'] = clight/xds_data.attrs['frequency']
-    # output_xds.attrs['position_fit'] = fit[1:4]
-    # output_xds.attrs['position_error'] = variance[1:4]
-    # output_xds.attrs['fixed_phase_fit'] = fit[0]
-    # output_xds.attrs['fixed_phase_error'] = variance[0]
-    # output_xds.attrs['antenna_info'] = antenna
-    # output_xds.attrs['elevation_limit'] = elevation_limit
-    #
-    # if fit_kterm and fit_slope:
-    #     output_xds.attrs['koff_fit'] = fit[4]
-    #     output_xds.attrs['koff_error'] = variance[4]
-    #     output_xds.attrs['slope_fit'] = fit[5]
-    #     output_xds.attrs['slope_error'] = variance[5]
-    # elif fit_kterm and not fit_slope:
-    #     output_xds.attrs['koff_fit'] = fit[4]
-    #     output_xds.attrs['koff_error'] = variance[4]
-    # elif not fit_kterm and fit_slope:
-    #     output_xds.attrs['slope_fit'] = fit[4]
-    #     output_xds.attrs['slope_error'] = variance[4]
-    # else:
-    #     pass  # Nothing to be added to the attributes
-    #
-    # coords = {'time': coordinates[3, :]}
-    # output_xds['GAINS'] = xr.DataArray(gains, dims=['time'])
-    # output_xds['HOUR_ANGLE'] = xr.DataArray(coordinates[0, :], dims=['time'])
-    # output_xds['DECLINATION'] = xr.DataArray(coordinates[1, :], dims=['time'])
-    # output_xds['ELEVATION'] = xr.DataArray(coordinates[2, :], dims=['time'])
-    # output_xds['LST'] = xr.DataArray(lst, dims=['time'])
-    #
-    # basename = locit_parms['position_name']
-    # outname = "/".join([basename, 'ant_'+antenna['name'], f'{locit_parms["this_ddi"]}'])
-    # output_xds = output_xds.assign_coords(coords)
-    # output_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
+    coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
+
+    logger = _get_astrohack_logger()
+    if len(delays) == 0:
+        msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
+        logger.warning(msg)
+        return
+
+    fit, variance = _fit_data(coordinates, delays, locit_parms)
+    _create_output_xds(coordinates, lst, delays, fit, variance, locit_parms, freq_list,
+                       elevation_limit)
     return
 
 
@@ -308,6 +239,7 @@ def _solve_linear_algebra(coordinates, gains, fit_kterm, fit_slope):
             system[icol, irow] = system[irow, icol]
 
     fit, variance, _ = _least_squares_fit(system, vector)
+
     return fit, variance
 
 
@@ -353,15 +285,10 @@ def _solve_scipy_optimize_curve_fit(coordinates, gains, fit_kterm, fit_slope, ve
     else:
         func_function = _phase_model_nokterm_noslope
 
-    # First guess is no error in positions
+    # First guess is no errors in positions, no fixed delay and no delay rate
     p0 = np.zeros(npar)
-    p0[0] = 1
-    # Position Errors, k term and phase slope are not constrained, but the instrumental phase is pegged to the
-    # -pi to pi range
     liminf = np.full(npar, -np.inf)
     limsup = np.full(npar, +np.inf)
-    liminf[0] = -pi
-    limsup[0] = +pi
 
     maxfevs = [100000, 1000000, 10000000]
     for maxfev in maxfevs:
