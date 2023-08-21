@@ -15,9 +15,9 @@ trigo_units = ['rad', 'deg', 'hour', 'asec', 'amin']
 trigo_factors = [1.0, constants.pi/180., constants.pi/12., constants.pi/180./3600., constants.pi/180./60.]
 
 # Time units
-time_units = ['sec', 'min', 'hour', 'day']
+time_units = ['nsec', 'usec', 'msec', 'sec', 'min', 'hour', 'day']
 # from sec to unit
-time_factors = [1.0, 60.0, 3600.0, 86400.0]
+time_factors = [1e-9, 1e-6, 1e-3, 1.0, 60.0, 3600.0, 86400.0]
 
 unit_dict = {
   'length': length_units,
