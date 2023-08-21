@@ -25,94 +25,20 @@ def _locit_separated_chunk(locit_parms):
     Returns:
     xds save to disk in the .zarr format
     """
-    logger = _get_astrohack_logger()
-    antenna = locit_parms['ant_info'][locit_parms['this_ant']]
-    src_dict = locit_parms['obs_info']['src_dict']
-    fit_kterm = locit_parms['fit_kterm']
-    fit_slope = locit_parms['fit_slope']
-
-    geo_pos = antenna['geocentric_position']
-    ant_pos = EarthLocation.from_geocentric(geo_pos[0], geo_pos[1], geo_pos[2], 'meter')
-
     xds_data = locit_parms['xds_data']
-    elevation_limit = locit_parms['elevation_limit'] * _convert_unit('deg', 'rad', 'trigonometric')
-    pol = xds_data.attrs['polarization_scheme']
-    freq = xds_data.attrs['frequency']
+    field_id, time, delays = _get_data_from_locit_xds(xds_data, locit_parms['polarization'])
 
-    if len(pol) > 2:
-        msg = f'Polarization scheme {pol} is not what is expected for antenna based gains'
-        logger.error(msg)
-        raise Exception(msg)
-    if locit_parms['polarization'] in pol:
-        i_pol = np.where(np.array(pol) == locit_parms['polarization'])[0][0]
-        phases = xds_data[f'P{i_pol}_PHASE_GAINS'].values
-        time = getattr(xds_data, f'p{i_pol}_time').values
-        field_id = xds_data[f'P{i_pol}_FIELD_ID'].values
-    elif locit_parms['polarization'] == 'both':
-        phases = np.concatenate([xds_data[f'P0_PHASE_GAINS'].values, xds_data[f'P1_PHASE_GAINS'].values])
-        field_id = np.concatenate([xds_data[f'P0_FIELD_ID'].values, xds_data[f'P1_FIELD_ID'].values])
-        time = np.concatenate([xds_data.p0_time.values, xds_data.p1_time.values])
-    else:
-        msg = f'Polarization {locit_parms["polarization"]} is not found in data'
-        logger.error(msg)
-        raise Exception(msg)
-    delays = phases/twopi/freq
+    coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
 
+    logger = _get_astrohack_logger()
     if len(delays) == 0:
         msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
         logger.warning(msg)
         return
-    astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
-    lst = astro_time.sidereal_time("apparent").to(units.radian) / units.radian
-    coordinates, delays, lst = _build_filtered_arrays(field_id, src_dict, 'precessed', antenna['latitude'], time,
-                                                      lst, delays, elevation_limit)
 
-    linalg = locit_parms['fit_engine'] == 'linear algebra'
-    if linalg:
-        fit, variance = _solve_linear_algebra(coordinates, delays, fit_kterm, fit_slope)
-    else:
-        if locit_parms['fit_engine'] == 'scipy':
-            fit, variance = _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_slope, verbose=True)
-        else:
-            msg = f'Unrecognized fitting engine: {locit_parms["fit_engine"]}'
-            logger.erro(msg)
-            raise Exception(msg)
-
-    output_xds = xr.Dataset()
-    output_xds.attrs['polarization'] = locit_parms['polarization']
-    output_xds.attrs['wavelength'] = clight/freq
-    output_xds.attrs['position_fit'] = fit[1:4]
-    output_xds.attrs['position_error'] = variance[1:4]
-    output_xds.attrs['fixed_delay_fit'] = fit[0]
-    output_xds.attrs['fixed_delay_error'] = variance[0]
-    output_xds.attrs['antenna_info'] = antenna
-    output_xds.attrs['elevation_limit'] = elevation_limit
-
-    if fit_kterm and fit_slope:
-        output_xds.attrs['koff_fit'] = fit[4]
-        output_xds.attrs['koff_error'] = variance[4]
-        output_xds.attrs['slope_fit'] = fit[5]
-        output_xds.attrs['slope_error'] = variance[5]
-    elif fit_kterm and not fit_slope:
-        output_xds.attrs['koff_fit'] = fit[4]
-        output_xds.attrs['koff_error'] = variance[4]
-    elif not fit_kterm and fit_slope:
-        output_xds.attrs['slope_fit'] = fit[4]
-        output_xds.attrs['slope_error'] = variance[4]
-    else:
-        pass  # Nothing to be added to the attributes
-
-    coords = {'time': coordinates[3, :]}
-    output_xds['DELAYS'] = xr.DataArray(delays, dims=['time'])
-    output_xds['HOUR_ANGLE'] = xr.DataArray(coordinates[0, :], dims=['time'])
-    output_xds['DECLINATION'] = xr.DataArray(coordinates[1, :], dims=['time'])
-    output_xds['ELEVATION'] = xr.DataArray(coordinates[2, :], dims=['time'])
-    output_xds['LST'] = xr.DataArray(lst, dims=['time'])
-
-    basename = locit_parms['position_name']
-    outname = "/".join([basename, 'ant_'+antenna['name'], f'{locit_parms["this_ddi"]}'])
-    output_xds = output_xds.assign_coords(coords)
-    output_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
+    fit, variance = _fit_data(coordinates, delays, locit_parms)
+    _create_output_xds(coordinates, lst, delays, fit, variance, locit_parms, xds_data.attrs['frequency'],
+                       elevation_limit)
     return
 
 
@@ -129,10 +55,13 @@ def _locit_combined_chunk(locit_parms):
     elevation_limit = locit_parms['elevation_limit'] * _convert_unit('deg', 'rad', 'trigonometric')
     data = locit_parms['data_dict']
 
-    n_ddi = len(data.keys())
+    shape_0 = [0]
+    delays = np.empty(shape_0)
+    time = np.empty(shape_0)
+    field_id = np.empty(shape_0)
     for ddi, xds_data in data.items():
-        # pol = xds_data.attrs['polarization_scheme']
-        print(xds_data[0])
+        pol = xds_data.attrs['polarization_scheme']
+        print(pol)
 
 
     #
@@ -213,14 +142,109 @@ def _locit_combined_chunk(locit_parms):
     return
 
 
-def _build_filtered_arrays(field_id, src_list, key, latitude, time, lst, gains, elevation_limit):
+def _get_data_from_locit_xds(xds_data, pol_selection):
+    logger = _get_astrohack_logger()
+    pol = xds_data.attrs['polarization_scheme']
+    freq = xds_data.attrs['frequency']
+    if len(pol) != 2:
+        msg = f'Polarization scheme {pol} is not what is expected for antenna based gains'
+        logger.error(msg)
+        raise Exception(msg)
+    if pol_selection in pol:
+        i_pol = np.where(np.array(pol) == pol_selection)[0][0]
+        phases = xds_data[f'P{i_pol}_PHASE_GAINS'].values
+        time = getattr(xds_data, f'p{i_pol}_time').values
+        field_id = xds_data[f'P{i_pol}_FIELD_ID'].values
+    elif pol_selection == 'both':
+        phases = np.concatenate([xds_data[f'P0_PHASE_GAINS'].values, xds_data[f'P1_PHASE_GAINS'].values])
+        field_id = np.concatenate([xds_data[f'P0_FIELD_ID'].values, xds_data[f'P1_FIELD_ID'].values])
+        time = np.concatenate([xds_data.p0_time.values, xds_data.p1_time.values])
+    else:
+        msg = f'Polarization {pol_selection} is not found in data'
+        logger.error(msg)
+        raise Exception(msg)
+    return field_id, time, phases/twopi/freq  # field_id, time, delays
+
+
+def _create_output_xds(coordinates, lst, delays, fit, variance, locit_parms, frequency, elevation_limit):
+    fit_kterm = locit_parms['fit_kterm']
+    fit_slope = locit_parms['fit_slope']
+    antenna = locit_parms['ant_info'][locit_parms['this_ant']]
+
+    output_xds = xr.Dataset()
+    output_xds.attrs['polarization'] = locit_parms['polarization']
+    output_xds.attrs['frequency'] = frequency
+    output_xds.attrs['position_fit'] = fit[1:4]
+    output_xds.attrs['position_error'] = variance[1:4]
+    output_xds.attrs['fixed_delay_fit'] = fit[0]
+    output_xds.attrs['fixed_delay_error'] = variance[0]
+    output_xds.attrs['antenna_info'] = antenna
+    output_xds.attrs['elevation_limit'] = elevation_limit
+
+    if fit_kterm and fit_slope:
+        output_xds.attrs['koff_fit'] = fit[4]
+        output_xds.attrs['koff_error'] = variance[4]
+        output_xds.attrs['slope_fit'] = fit[5]
+        output_xds.attrs['slope_error'] = variance[5]
+    elif fit_kterm and not fit_slope:
+        output_xds.attrs['koff_fit'] = fit[4]
+        output_xds.attrs['koff_error'] = variance[4]
+    elif not fit_kterm and fit_slope:
+        output_xds.attrs['slope_fit'] = fit[4]
+        output_xds.attrs['slope_error'] = variance[4]
+    else:
+        pass  # Nothing to be added to the attributes
+
+    coords = {'time': coordinates[3, :]}
+    output_xds['DELAYS'] = xr.DataArray(delays, dims=['time'])
+    output_xds['HOUR_ANGLE'] = xr.DataArray(coordinates[0, :], dims=['time'])
+    output_xds['DECLINATION'] = xr.DataArray(coordinates[1, :], dims=['time'])
+    output_xds['ELEVATION'] = xr.DataArray(coordinates[2, :], dims=['time'])
+    output_xds['LST'] = xr.DataArray(lst, dims=['time'])
+
+    basename = locit_parms['position_name']
+    outname = "/".join([basename, 'ant_'+antenna['name']])
+    if not locit_parms['combine_ddis']:
+        outname += "/"+f'{locit_parms["this_ddi"]}'
+    output_xds = output_xds.assign_coords(coords)
+    output_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
+
+
+def _fit_data(coordinates, delays, locit_parms):
+    logger = _get_astrohack_logger()
+    fit_kterm = locit_parms['fit_kterm']
+    fit_slope = locit_parms['fit_slope']
+
+    linalg = locit_parms['fit_engine'] == 'linear algebra'
+    if linalg:
+        fit, variance = _solve_linear_algebra(coordinates, delays, fit_kterm, fit_slope)
+    else:
+        if locit_parms['fit_engine'] == 'scipy':
+            fit, variance = _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_slope, verbose=True)
+        else:
+            msg = f'Unrecognized fitting engine: {locit_parms["fit_engine"]}'
+            logger.error(msg)
+            raise Exception(msg)
+    return fit, variance
+
+
+def _build_filtered_arrays(field_id, time, delays, locit_parms):
     """ Build the coordinate arrays (ha, dec, elevation, angle) for use in the fitting"""
+    elevation_limit = locit_parms['elevation_limit'] * _convert_unit('deg', 'rad', 'trigonometric')
+    antenna = locit_parms['ant_info'][locit_parms['this_ant']]
+    src_list = locit_parms['obs_info']['src_dict']
+    geo_pos = antenna['geocentric_position']
+    ant_pos = EarthLocation.from_geocentric(geo_pos[0], geo_pos[1], geo_pos[2], 'meter')
+    astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
+    lst = astro_time.sidereal_time("apparent").to(units.radian) / units.radian
+    key = 'precessed'
+
     n_samples = len(field_id)
     coordinates = np.ndarray([4, n_samples])
     for i_sample in range(n_samples):
         field = str(field_id[i_sample])
         coordinates[0:2, i_sample] = src_list[field][key]
-        coordinates[2, i_sample] = _hadec_to_elevation(src_list[field][key], latitude)
+        coordinates[2, i_sample] = _hadec_to_elevation(src_list[field][key], antenna['latitude'])
         coordinates[3, i_sample] = time[i_sample]-time[0]  # time is set to zero at the beginning of obs
 
     # convert to actual hour angle
@@ -229,11 +253,11 @@ def _build_filtered_arrays(field_id, src_list, key, latitude, time, lst, gains, 
 
     # Filter data below elevation limit
     selection = coordinates[2, :] > elevation_limit
-    gains = gains[selection]
+    delays = delays[selection]
     coordinates = coordinates[:, selection]
     lst = lst[selection]
 
-    return coordinates, gains, lst
+    return coordinates, delays, lst, elevation_limit
 
 
 def _geometrical_coeffs(coordinates):
