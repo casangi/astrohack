@@ -1,5 +1,5 @@
 from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
-from astrohack._utils._locit import _locit_chunk
+from astrohack._utils._locit import _locit_separated_chunk, _locit_combined_chunk
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
@@ -8,7 +8,7 @@ from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 
 def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='both', fit_engine='linear algebra',
-          fit_kterm=False, fit_slope=True, ant_id=None, ddi=None, parallel=False, overwrite=False):
+          fit_kterm=False, fit_slope=True, ant_id=None, ddi=None, combine_ddis=False, parallel=False, overwrite=False):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
 
@@ -83,7 +83,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     fname = 'locit'
     ######### Parameter Checking #########
     locit_parms = _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, fit_engine,
-                                     fit_kterm, fit_slope, ant_id, ddi, parallel, overwrite)
+                                     fit_kterm, fit_slope, ant_id, ddi, combine_ddis, parallel, overwrite)
     attributes = locit_parms.copy()
 
     _check_if_file_exists(locit_parms['locit_name'])
@@ -94,7 +94,14 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     locit_parms['obs_info'] = locit_mds['obs_info']
     attributes['telescope_name'] = locit_mds._meta_data['telescope_name']
 
-    if _dask_general_compute(fname, locit_mds, _locit_chunk, locit_parms, ['ant', 'ddi'], parallel=parallel):
+    if combine_ddis:
+        function = _locit_combined_chunk
+        key_order = ['ant']
+    else:
+        function = _locit_separated_chunk
+        key_order = ['ant', 'ddi']
+
+    if _dask_general_compute(fname, locit_mds, function, locit_parms, key_order, parallel=parallel):
         logger.info(f"[{fname}]: Finished processing")
         output_attr_file = "{name}/{ext}".format(name=locit_parms['position_name'], ext=".position_attr")
         _write_meta_data(output_attr_file, attributes)
@@ -107,11 +114,12 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
 
 
 def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, fit_engine, fit_kterm,
-                       fit_slope, ant_id, ddi, parallel, overwrite):
+                       fit_slope, ant_id, ddi, combine_ddis, parallel, overwrite):
 
     locit_parms = {"locit_name": locit_name, "position_name": position_name, "elevation_limit": elevation_limit,
                    "fit_engine": fit_engine, "polarization": polarization, "fit_kterm": fit_kterm,
-                   "fit_slope": fit_slope, "ant": ant_id, "ddi": ddi, "parallel": parallel, "overwrite": overwrite}
+                   "fit_slope": fit_slope, "ant": ant_id, "ddi": ddi, "combine_ddis":combine_ddis, "parallel": parallel,
+                   "overwrite": overwrite}
 
     #### Parameter Checking ####
     logger = _get_astrohack_logger()
@@ -134,6 +142,7 @@ def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polari
                                                  list_acceptable_data_types=[str], default='all')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'ddi', [list, int],
                                                  list_acceptable_data_types=[int], default='all')
+    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'combine_ddis', [bool], default=True)
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'parallel', [bool], default=False)
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'overwrite', [bool], default=False)
 

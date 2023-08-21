@@ -25,7 +25,7 @@ from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_c
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table
-from astrohack._utils._locit import _export_fit_separate_ddis, _export_fit_combine_ddis, _plot_sky_coverage_chunk
+from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
 from astrohack._utils._locit import _plot_gains_chunk
 
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
@@ -1144,8 +1144,8 @@ class AstrohackPositionFile(dict):
 
         return self._file_is_open
 
-    def export_fit_results(self, destination, combine_ddis=False, position_unit='m', angle_unit='deg',
-                           time_unit='hour', rotate_results=False):
+    def export_fit_results(self, destination, combine_ddis=False, position_unit='m', time_unit='hour',
+                           delay_unit='nsec', rotate_results=False):
         """ Export antenna position fit results to a text file.
 
         :param destination: Name of the destination folder to contain exported fit results
@@ -1154,10 +1154,10 @@ class AstrohackPositionFile(dict):
         :type combine_ddis: bool, optional
         :param position_unit: Unit to list position fit results, defaults to 'm'
         :type position_unit: str, optional
-        :param angle_unit: Unit for angle in position fit results, defaults to 'deg'
-        :type angle_unit: str, optional
         :param time_unit: Unit for time in position fit results, defaults to 'hour'
         :type time_unit: str, optional
+        :param delay_unit: Unit for delays, defaults to 'ns'
+        :type delay_unit: str, optional
         :param rotate_results: Rotate position fit results to array center, defaults to Fale
         :type rotate_results: bool, optional
 
@@ -1169,7 +1169,7 @@ class AstrohackPositionFile(dict):
         parm_dict = {'destination': destination,
                      'combine_ddis': combine_ddis,
                      'position_unit': position_unit,
-                     'angle_unit': angle_unit,
+                     'delay_unit': delay_unit,
                      'time_unit': time_unit,
                      'rotate_results': rotate_results}
 
@@ -1181,19 +1181,16 @@ class AstrohackPositionFile(dict):
                                                      default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'position_unit', [str],
                                                      acceptable_data=length_units, default='m')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'angle_unit', [str],
-                                                     acceptable_data=trigo_units, default='deg')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'time_unit', [str],
                                                      acceptable_data=time_units, default='hour')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delay_unit', [str],
+                                                     acceptable_data=time_units, default='nsec')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'rotate_results', [bool],
                                                      default=False)
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
 
-        if combine_ddis:
-            _export_fit_combine_ddis(self, parm_dict)
-        else:
-            _export_fit_separate_ddis(self, parm_dict)
+        _export_fit_results(self, parm_dict)
 
     def plot_sky_coverage(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', display=True,
                           figure_size=None, dpi=300, parallel=False):
