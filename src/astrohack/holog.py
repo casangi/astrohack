@@ -119,13 +119,27 @@ def holog(
     meta_data = _read_meta_data(holog_params['holog_name']+'/.holog_attr')
 
     if holog_params["cell_size"] is None:
-        cell_size = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
-        holog_params["cell_size"] = cell_size
+        if meta_data['cell_size'] is None:
+            logger.error("Cell size meta data not found. There was likely an issue with the holography data extraction. Fix extract data or provide cell_size as arguement.")
+            logger.error("{function_name}: There was an error, see log above for more info.".format(function_name=function_name))
+            
+            return None
+    
+        else:    
+            cell_size = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
+            holog_params["cell_size"] = cell_size
     
     if holog_params["grid_size"] is None:
-        n_pix = int(np.sqrt(meta_data["n_pix"]))
-        grid_size = np.array([n_pix, n_pix])
-        holog_params["grid_size"] = grid_size
+        if meta_data['n_pix'] is None:
+            logger.error("Grid size meta data not found. There was likely an issue with the holography data extraction. Fix extract data or provide grid_size as arguement.")
+            logger.error("{function_name}: There was an error, see log above for more info.".format(function_name=function_name))
+            
+            return None
+        
+        else:    
+            n_pix = int(np.sqrt(meta_data["n_pix"]))
+            grid_size = np.array([n_pix, n_pix])
+            holog_params["grid_size"] = grid_size
 
     logger.info(f'[{function_name}]: Cell size: {str(cell_size)}, Grid size {str(grid_size)}')
     
@@ -136,21 +150,26 @@ def holog(
     
     with open(".holog_diagnostic.json", "w") as out_file:
         json.dump(json_data, out_file)
+    
+    try:
+        if _dask_general_compute(function_name, holog_json, _holog_chunk, holog_params, ['ant', 'ddi'], parallel=parallel):
+        
+            output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_attr")
+            _write_meta_data(output_attr_file, holog_params.copy())
+        
+            image_mds = AstrohackImageFile(holog_params['image_name'])
+            image_mds._open()
+        
+            logger.info(f'[{function_name}]: Finished processing')
 
-    if _dask_general_compute(function_name, holog_json, _holog_chunk, holog_params, ['ant', 'ddi'], parallel=parallel):
+            return image_mds
         
-        output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_attr")
-        _write_meta_data(output_attr_file, holog_params.copy())
-        
-        image_mds = AstrohackImageFile(holog_params['image_name'])
-        image_mds._open()
-        
-        logger.info(f'[{function_name}]: Finished processing')
-
-        return image_mds
-    else:
-        logger.warning(f"[{function_name}]: No data to process")
-        return None
+        else:
+            logger.warning(f"[{function_name}]: No data to process")
+            return None
+            
+    except Exception as error:
+        logger.error("{function_name}: There was an error, see log above for more info :: {error}".format(function_name=function_name, error=error))
 
 
 def _check_holog_params(function_name, holog_params):
@@ -163,16 +182,20 @@ def _check_holog_params(function_name, holog_params):
     parms_passed = parms_passed and _check_parms(function_name, holog_params, 'grid_size', [list, np.ndarray],
                                                  list_acceptable_data_types=[np.int64, int], list_len=2, default='None',
                                                  log_default_setting=False)
+    
     if (isinstance(holog_params['grid_size'], str)) and (holog_params['grid_size'] == 'None'):
         holog_params['grid_size'] = None
+
     else:
         holog_params['grid_size'] = np.array(holog_params['grid_size'])
 
     parms_passed = parms_passed and _check_parms(function_name, holog_params, 'cell_size', [list, np.ndarray],
                                                  list_acceptable_data_types=[numbers.Number], list_len=2,
                                                  default='None', log_default_setting=False)
+    
     if (isinstance(holog_params['cell_size'], str)) and (holog_params['cell_size'] == 'None'):
         holog_params['cell_size'] = None
+
     else:
         holog_params['cell_size'] = np.array(holog_params['cell_size'])
 

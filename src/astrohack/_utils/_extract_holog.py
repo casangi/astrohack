@@ -1,5 +1,6 @@
 import os
 import json
+import inspect
 import numpy as np
 import xarray as xr
 import astropy
@@ -14,6 +15,7 @@ from astrohack._utils._algorithms import _get_grid_parms, _significant_digits
 
 from astrohack._utils._dio import _load_point_file
 
+CURRENT_FUNCTION=0
 
 def _extract_holog_chunk(extract_holog_params):
     """Perform data query on holography data chunk and get unique time and state_ids/
@@ -29,6 +31,8 @@ def _extract_holog_chunk(extract_holog_params):
     """
     logger = _get_astrohack_logger()
 
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
+
     ms_name = extract_holog_params["ms_name"]
     pnt_name = extract_holog_params["point_name"]
     data_column = extract_holog_params["data_column"]
@@ -43,11 +47,12 @@ def _extract_holog_chunk(extract_holog_params):
     holog_map_key = extract_holog_params["holog_map_key"]
     telescope_name = extract_holog_params["telescope_name"]
     
-    assert len(ref_ant_per_map_ant_tuple) == len(map_ant_tuple), "ref_ant_per_map_ant_tuple and map_ant_tuple should have same length."
+    if len(ref_ant_per_map_ant_tuple) != len(map_ant_tuple):
+        logger.error("[{function_name}]: Reference antanna per mapping antenna list and mapping antenna list should have same length.".format(function_name=function_name))
+        raise Exception("Inconsistancy between antenna list length, see error above for more info.")
     
     sel_state_ids = extract_holog_params["sel_state_ids"]
     holog_name = extract_holog_params["holog_name"]
-    overwrite = extract_holog_params["overwrite"]
 
     chan_freq = extract_holog_params["chan_setup"]["chan_freq"]
     pol = extract_holog_params["pol_setup"]["pol"]
@@ -126,14 +131,11 @@ def _extract_holog_chunk(extract_holog_params):
         ddi,
         ms_name,
         ant_names,
-        grid_parms,
-        overwrite=overwrite,
+        grid_parms
     )
 
-    logger.info(
-        "Finished extracting holography chunk for ddi: {ddi} holog_map_key: {holog_map_key}".format(
-            ddi=ddi, holog_map_key=holog_map_key
-        )
+    logger.info("[{function_name}]: Finished extracting holography chunk for ddi: {ddi} holog_map_key: {holog_map_key}".format(
+        ddi=ddi, holog_map_key=holog_map_key, function_name=function_name)
     )
 
 
@@ -286,7 +288,6 @@ def _create_holog_file(
     ms_name,
     ant_names,
     grid_parms,
-    overwrite,
 ):
     """Create holog-structured, formatted output file and save to zarr.
 
@@ -302,7 +303,10 @@ def _create_holog_file(
         holog_map_key(string): holog map id string
         ddi (numpy.ndarray): data description id; a combination of polarization and spectral window
     """
+
     logger = _get_astrohack_logger()
+
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     ctb = ctables.table("/".join((ms_name, "ANTENNA")))
     observing_location = ctb.getcol("POSITION")
@@ -349,7 +353,6 @@ def _create_holog_file(
             )
             
             xds.attrs["holog_map_key"] = holog_map_key
-            #xds.attrs["ant_id"] = map_ant_tag
             xds.attrs["ddi"] = ddi
             xds.attrs["parallactic_samples"] = parallactic_samples
             xds.attrs["telescope_name"] = telescope_name
@@ -365,7 +368,7 @@ def _create_holog_file(
             holog_file = holog_name
 
             logger.info(
-                "Writing holog file to {file}".format(file=holog_file)
+                "[{function_name}]: Writing holog file to {file}".format(function_name=function_name, file=holog_file)
             )
             xds.to_zarr(
                 os.path.join(
@@ -378,7 +381,7 @@ def _create_holog_file(
 
         else:
             logger.warning(
-                "[FLAGGED DATA] mapping antenna index {index}".format(index=ant_names[map_ant_index]
+                "[{function_name}]: [FLAGGED DATA] mapping antenna index {index}".format(index=ant_names[map_ant_index], function_name=function_name
                 )
             )
 
@@ -419,16 +422,18 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
 
     # If users specifies a baseline_average_distance we need to create an antenna distance matrix.
     if (baseline_average_distance != 'all') or (baseline_average_nearest != 'all'):
+        
         import pandas as pd
         from scipy.spatial import distance_matrix
+        
         df = pd.DataFrame(ant_pos, columns=['x', 'y', 'z'], index=ant_names)
         df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
         logger.debug('Antenna distance matrix in meters: \n' + str(df_mat))
         
                 
     if (baseline_average_distance != 'all') and (baseline_average_nearest != 'all'):
-        logger.error('baseline_average_distance and baseline_average_nearest can not both be specified.')
-        raise
+        logger.error('[{function_name}]: baseline_average_distance and baseline_average_nearest can not both be specified.'.format(function_name=function_name))
+        raise Exception("Too many baseline parameters specified.")
 
     
     #The reference antennas are then given by ref_ant_set = ant_names_set - map_ant_set.
@@ -516,6 +521,8 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         holog_dict (dict): Dictionary containing msdx data.
     """
     logger = _get_astrohack_logger()
+
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
     
     ant_holog_dict = {}
     cell_sizes = []
@@ -534,23 +541,30 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
                                 ant_holog_dict[ant][ddi] = {mapping:{}}
                     
                             ant_holog_dict[ant][ddi][mapping] = xds.to_dict(data=False)
+
                             cell_sizes.append(xds.attrs["grid_parms"]["cell_size"])
                             n_pixs.append(xds.attrs["grid_parms"]["n_pix"])
                             telescope_names.append(xds.attrs['telescope_name'])
     
     cell_sizes_sigfigs =  _significant_digits(cell_sizes, digits=3)
 
+    meta_data = {
+        'cell_size': np.mean(cell_sizes),
+        'n_pix': n_pixs[0],
+        'telescope_name': telescope_names[0]
+    }
+
     if not (len(set(cell_sizes_sigfigs)) == 1):
         logger.error('Cell size not consistent: ' + str(cell_sizes))
-        raise Exception('Cell size not consistent: ' + str(cell_sizes))
+        meta_data['cell_size'] = None
         
     if not (len(set(n_pixs)) == 1):
         logger.error('Number of pixels not consistent: ' + str(n_pixs))
-        #raise Exception('Number of pixels not consistent: ' + str(n_pixs))
+        meta_data['n_pix'] = None
         
     if not (len(set(telescope_names)) == 1):
         logger.error('Telescope name not consistent: ' + str(telescope_names))
-        raise Exception('Telescope name not consistent: ' + str(telescope_names))
+        meta_data['telescope_name'] = None
 
     output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
     
@@ -559,13 +573,9 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
             json.dump(ant_holog_dict, json_file)
 
     except Exception as error:
-        logger.error("[_create_holog_meta_data] {error}".format(error=error))
-
-    meta_data = {
-        'cell_size': np.mean(cell_sizes),
-        'n_pix': n_pixs[0],
-        'telescope_name': telescope_names[0]
-    }
+        logger.error("[{function_name}}] {error}".format(error=error, function_name=function_name))
+        
+        raise Exception(error)
 
     meta_data.update(input_params)
     

@@ -4,6 +4,8 @@ import numba
 
 import numpy as np
 
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+
 def _apply_mask(data, scaling=0.5):
     """ Applies a cropping mask to the input data according to the scale factor
 
@@ -15,16 +17,16 @@ def _apply_mask(data, scaling=0.5):
     Returns:
         numpy.ndarray: cropped aperture grid data
     """
+    logger = _get_astrohack_logger()
 
     x, y = data.shape
-    assert scaling > 0, console.error("Scaling must be > 0")
+
+    assert scaling > 0, logger.error("Scaling must be > 0")
 
     mask = int(x // (1 // scaling))
 
-    assert mask > 0, console.error(
-        "Scaling values too small. Minimum values is:{}, though search may still fail due to lack of poitns.".format(
-            1 / x
-        )
+    assert mask > 0, logger.error(
+        "Scaling values too small. Minimum values is:{}, though search may still fail due to lack of points.".format(1 / x)
     )
 
     start = int(x // 2 - mask // 2)
@@ -40,6 +42,7 @@ def _calc_coords(image_size, cell_size):
     Returns:
         float, float: center pixel location in coordinates x, y
     """
+    
     image_center = image_size // 2
 
     x = np.arange(-image_center[0], image_size[0] - image_center[0]) * cell_size[0]
@@ -233,21 +236,27 @@ def _get_grid_parms(vis_map_dict, pnt_map_dict, ant_names):
             n_pix = n_pix_y**2
             cell_size = cell_size_y
         
-        grid_parms['ant_'+ant_names[ant_index]] = {'n_pix':n_pix, 'cell_size':cell_size}
+        grid_parms['ant_'+ant_names[ant_index]] = {
+            'n_pix':n_pix, 
+            'cell_size':cell_size
+        }
 
     return grid_parms
 
 def _significant_digits(x, digits):
     if np.isscalar(x):
-        return _significant_digits_scalar(x,digits)
+        return _significant_digits_scalar(x, digits)
+    
     else:
-        return list(map(_significant_digits,x,[digits]*len(x)))
+        return list(map(_significant_digits, x, [digits]*len(x)))
 
 
 def _significant_digits_scalar(x, digits):
     if x == 0 or not np.isfinite(x):
         return x
+    
     digits = int(digits - np.ceil(np.log10(abs(x))))
+    
     return round(x, digits)
     
     

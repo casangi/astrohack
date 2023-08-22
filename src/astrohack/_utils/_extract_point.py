@@ -12,8 +12,6 @@ from numba.core import types
 from numba.typed import Dict
 from scipy import spatial
 
-from casacore import tables
-
 from astropy.time import Time
 
 from astrohack._utils._conversion import convert_dict_from_numba
@@ -74,19 +72,22 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
     ctb.close()
     scan_intent = "MAP_ANTENNA_SURFACE"
     mapping_state_ids = []
+
     for i, mode in enumerate(obs_modes):
         if (scan_intent in mode) and ('REFERENCE' not in mode):
             mapping_state_ids.append(i)
+
     mapping_state_ids = np.array(mapping_state_ids)
 
     #For each ddi get holography scan start and end times:
     scan_time_dict = _extract_scan_time_dict(time, scan_ids, state_ids, ddi, mapping_state_ids)
     
-    logger.debug('Holography Scans Times ' + str(scan_time_dict))
+    #logger.debug('Holography Scans Times ' + str(scan_time_dict))
     
     point_meta_ds = xr.Dataset()
     point_meta_ds.attrs['mapping_state_ids'] = mapping_state_ids
     point_meta_ds.to_zarr(pnt_name,mode="w", compute=True, consolidated=True)
+
     ###########################################################################################
     pnt_parms = {
         'pnt_name': pnt_name,
@@ -105,7 +106,9 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
                     pnt_parms
                 )
             )
+
         dask.compute(delayed_pnt_list)
+
     else:
         for id in antenna_id:
             pnt_parms['ant_id'] = id
@@ -145,11 +148,13 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         encoder = tb.getcol("ENCODER")
         direction_time = tb.getcol("TIME")
         pointing_offset = tb.getcol("POINTING_OFFSET")[:, 0, :]
+
     except Exception as e:
         tb.close()
         logger.warning("Skipping antenna " + str(ant_id) + " no pointing info")
 
         return 0
+    
     tb.close()
     table_obj.close()
     
@@ -224,8 +229,10 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     
     ############### Detect during which scans an antenna is mapping by averaging the POINTING_OFFSET radius.
     mapping_scans_obs_dict={}
-    time_tree = spatial.KDTree(direction_time[:,None]) #Use for nearest interpolation
+    time_tree = spatial.KDTree(direction_time[:, None]) # Use for nearest interpolation
+    
     mapping_scans_obs_dict = {}
+
     for ddi_id, ddi in scan_time_dict.items():
         map_scans_dict = {}
         map_id = 0
@@ -233,20 +240,22 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         for scan_id, scan_time in ddi.items():
             _, time_index = time_tree.query(scan_time[:, None])
             
-            pointing_offset_scan_slice = pnt_xds["POINTING_OFFSET"].isel(time=slice(time_index[0],time_index[1]))
+            pointing_offset_scan_slice = pnt_xds["POINTING_OFFSET"].isel(time=slice(time_index[0], time_index[1]))
             
             r = (np.sqrt(pointing_offset_scan_slice.isel(az_el=0)**2 + pointing_offset_scan_slice.isel(az_el=1)**2)).mean()
             
             if r > 10**-12: #Antenna is mapping since lm is non-zero
                 if ('map_' + str(map_id)) in map_scans_dict:
                     map_scans_dict['map_' + str(map_id)].append(scan_id)
+                    
                 else:
                     map_scans_dict['map_' + str(map_id)] = [scan_id]
+                    
             else:
                 map_id = map_id + 1
                 
         mapping_scans_obs_dict['ddi_'+ str(ddi_id)] = map_scans_dict
-            
+
     pnt_xds.attrs['mapping_scans_obs_dict'] = [mapping_scans_obs_dict]
     ###############
 
@@ -262,10 +271,36 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     pnt_xds.to_zarr(os.path.join(pnt_name, "ant_{}".format(str(ant_name)) ), mode="w", compute=True, consolidated=True)
 
 
+def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_ids):
+    '''
+        [ddi][scan][start, stop]
+    '''
+    scan_time_dict = _extract_scan_time_dict_jit(time, scan_ids, state_ids, ddi_ids, mapping_state_ids)
+
+    # This section cleans up the case of when there was an issue with the scan time data. If the scan start and end 
+    # times are the same the mapping(reference) state identification does not work. For this reason, scans containing 
+    # instance of this are removed and any empty ddi(s) are dorpped as well.
+    drops = {}
+
+    for ddi in scan_time_dict.keys():
+        drops[ddi] = []
+
+        for scan in scan_time_dict[ddi].keys():
+            if scan_time_dict[ddi][scan][0] == scan_time_dict[ddi][scan][1]:
+                drops[ddi].append(scan)
+
+    for ddi, scans in drops.items():
+        for scan in scans:
+            del scan_time_dict[ddi][scan]
+       
+        if len(scan_time_dict[ddi]) == 0:
+            del scan_time_dict[ddi]
+
+    return scan_time_dict
 
 @convert_dict_from_numba
 @njit(cache=False, nogil=True)
-def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_ids):
+def _extract_scan_time_dict_jit(time, scan_ids, state_ids, ddi_ids, mapping_state_ids):
     """For each ddi get holography scan start and end times. A holography scan is detected when a scan_ids appears in mapping_state_ids.
 
     """
@@ -280,6 +315,7 @@ def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_id
     )
     
     mapping_scans = set()
+
     for i, s in enumerate(scan_ids):
         s = types.int64(s)
         t = time[i]
@@ -293,11 +329,14 @@ def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_id
                 if s in scan_time_dict[ddi]:
                     if  scan_time_dict[ddi][s][0] > t:
                         scan_time_dict[ddi][s][0] = t
+
                     if  scan_time_dict[ddi][s][1] < t:
                         scan_time_dict[ddi][s][1] = t
+
                 else:
-                    scan_time_dict[ddi][s] = np.array([t,t])
+                    scan_time_dict[ddi][s] = np.array([t, t])
+
             else:
-                scan_time_dict[ddi] = {s: np.array([t,t])}
+                scan_time_dict[ddi] = {s: np.array([t, t])}
   
     return scan_time_dict

@@ -1,5 +1,8 @@
+import inspect
+
 import numpy as np
 import xarray as xr
+
 from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
 
@@ -29,6 +32,7 @@ from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
+CURRENT_FUNCTION=0
 
 def _holog_chunk(holog_chunk_params):
     """ Process chunk holography data along the antenna axis. Works with holography file to properly grid , normalize, average and correct data
@@ -38,7 +42,9 @@ def _holog_chunk(holog_chunk_params):
         holog_chunk_params (dict): Dictionary containing holography parameters.
     """
     logger = _get_astrohack_logger()
-    fname = 'holog'
+    
+    
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     holog_file, ant_data_dict = _load_holog_file(
         holog_chunk_params["holog_name"],
@@ -52,8 +58,9 @@ def _holog_chunk(holog_chunk_params):
 
     # Calculate lm coordinates
     l, m = _calc_coords(holog_chunk_params["grid_size"], holog_chunk_params["cell_size"])
-    grid_l, grid_m = list(map(np.transpose, np.meshgrid(l, m)))
     
+    grid_l, grid_m = list(map(np.transpose, np.meshgrid(l, m)))
+        
     to_stokes = holog_chunk_params["to_stokes"]
 
     ddi = holog_chunk_params["this_ddi"]
@@ -116,12 +123,18 @@ def _holog_chunk(holog_chunk_params):
             try:
                 xx_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
                 yy_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
+
             except:
                 center_pixel = np.array(beam_grid.shape[-2:])//2
                 xx_peak = beam_grid[holog_map_index, chan, 0, center_pixel[0], center_pixel[1]]
                 yy_peak = beam_grid[holog_map_index, chan, 3, center_pixel[0], center_pixel[1]]
 
             normalization = np.abs(0.5 * (xx_peak + yy_peak))
+            
+            if normalization == 0:
+                logger.warning("Peak of zero found! Setting normalization to unity.")
+                normalization = 1
+                
             beam_grid[holog_map_index, chan, ...] /= normalization
 
     beam_grid = _parallactic_derotation(data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi])
@@ -158,7 +171,7 @@ def _holog_chunk(holog_chunk_params):
         telescope_name = 'VLA'
 
     else:
-        raise Exception("Antenna type not found: {}".format(meta_data['ant_name']))
+        raise Exception("{function_name}: Antenna type not found: {name}".format(function_name=function_name, name=meta_data['ant_name']))
 
     telescope = Telescope(telescope_name)
 
@@ -205,22 +218,23 @@ def _holog_chunk(holog_chunk_params):
             do_sub_til = True
         else:
             do_sub_til = False
+
     elif isinstance(phase_fit_par, (np.ndarray, list, tuple)):
         if len(phase_fit_par) != 5:
-            logger.error(f'[{fname}]: Phase fit parameter must have 5 elements')
-            raise Exception
+            raise Exception("[{function_name}]: Phase fit parameter must have 5 elements".format(function_name=function_name))
+
         else:
             if np.sum(phase_fit_par) == 0:
                 do_phase_fit = False
             else:
                 do_phase_fit = True
                 do_pnt_off, do_xy_foc_off, do_z_foc_off, do_sub_til, do_cass_off = phase_fit_par
+    
     else:
-        logger.error(f'[{fname}]: Phase fit parameter is neither a boolean nor an array of booleans.')
-        raise Exception
+        raise Exception('[{function_name}]: Phase fit parameter is neither a boolean nor an array of booleans.'.format(function_name=function_name))
 
     if do_phase_fit:
-        logger.info(f'[{fname}]: Applying phase correction')
+        logger.info(f'[{function_name}]: Applying phase correction')
         
         if to_stokes:
             pols = (0,)
@@ -243,7 +257,7 @@ def _holog_chunk(holog_chunk_params):
                     subreflector_tilt=do_sub_til,
                     cassegrain_offset=do_cass_off)
     else:
-        logger.info('[{fname}]: Skipping phase correction')
+        logger.info('[{function_name}]: Skipping phase correction')
 
     # Here we compute the aperture resolution from Equation 7 In EVLA memo 212
     # https://library.nrao.edu/public/memos/evla/EVLAM_212.pdf
@@ -333,28 +347,38 @@ def _export_to_fits_holog_chunk(parm_dict):
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
     basename = f'{destination}/{antenna}_{ddi}'
-    fname = 'export_to_fits'
+    
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-    logger.info(f'[{fname}]: Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
+    logger.info(f'[{function_name}]: Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
 
     try:
         aperture_resolution = inputxds.attrs["aperture_resolution"]
+
     except KeyError:
-        logger.warning(f"[{fname}]: holog image does not have resolution information")
-        logger.warning(f"[{fname}]: Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+        logger.warning(f"[{function_name}]: holog image does not have resolution information")
+        logger.warning(f"[{function_name}]: Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+        
         aperture_resolution = None
 
     nchan = len(inputxds.chan)
+    
     if nchan == 1:
         reffreq = inputxds.chan.values[0]
+    
     else:
         reffreq = inputxds.chan.values[nchan//2]
+    
     telname = inputxds.attrs['telescope_name']
+    
     if telname in ['EVLA', 'VLA', 'JVLA']:
         telname = 'VLA'
+    
     polist = []
+    
     for pol in inputxds.pol:
         polist.append(str(pol.values))
+    
     baseheader = {
         'STOKES'  : ", ".join(polist),
         'WAVELENG': clight/reffreq,
@@ -371,8 +395,7 @@ def _export_to_fits_holog_chunk(parm_dict):
     }
     ntime = len(inputxds.time)
     if ntime != 1:
-        logger.error(f"[{fname}]: Data with multiple times not supported for FITS export")
-        raise Exception(f"[{fname}]: Data with multiple times not supported for FITS export")
+        raise Exception("[{function_name}]: Data with multiple times not supported for FITS export")
 
     carta_dim_order = (1, 0, 2, 3, )
 
@@ -458,8 +481,10 @@ def _plot_beam_chunk(parm_dict):
     maxis = inputxds.m.values
     if inputxds.dims['chan'] != 1:
         raise Exception("Only single channel holographies supported")
+
     if inputxds.dims['time'] != 1:
         raise Exception("Only single mapping holographies supported")
+
     full_beam = inputxds.BEAM.isel(time=0, chan=0).values
     pol_axis = inputxds.pol.values
     if parm_dict['complex_split'] == 'cartesian':
@@ -500,25 +525,32 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit
         colormap: Colormap for plot
         display: Display plots?
     """
-    fname = 'plot_beams'
+    
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
+    
     logger = _get_astrohack_logger()
+    
     if colormap is None:
         colormap = 'viridis'
+    
     if figuresize is None or figuresize == 'None':
         figuresize = figsize
+    
     n_pol = len(pol_axis)
+    
     if n_pol == 4:
         fig, axes = plt.subplots(2, 2, figsize=figuresize)
         axes = axes.flat
+    
     elif n_pol == 2:
         fig, axes = plt.subplots(2, 1, figsize=figuresize)
+    
     elif n_pol == 1:
         fig, ax = plt.subplots(1, 1, figsize=figuresize)
         axes = [ax]
+    
     else:
-        msg = f'[{fname}]: Do not know how to handle polarization axis with {n_pol} elements'
-        logger.error(msg)
-        raise Exception(msg)
+        raise Exception(f'[{function_name}]: Do not know how to handle polarization axis with {n_pol} elements')
 
     extent = [laxis[0], laxis[-1], maxis[0], maxis[-1]]
     for ipol, pol, in enumerate(pol_axis):
@@ -531,8 +563,11 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit
 
     fig.suptitle(f'Beam {label}, Antenna: {antenna.split("_")[1]}, DDI: {ddi.split("_")[1]}')
     fig.tight_layout()
-    fname = _add_prefix(_add_prefix(basename, label), 'image_beam')
-    plt.savefig(fname, dpi=dpi)
+    
+    function_name = _add_prefix(_add_prefix(basename, label), 'image_beam')
+    plt.savefig(function_name, dpi=dpi)
+    
     if not display:
         plt.close()
+    
     return

@@ -89,7 +89,7 @@ def download(file, folder='.', unpack=False):
             # Let's clean up after ourselves
             os.remove(fullname)
         
-
+# DEPRECATED
 def gdown_data(ms_name, download_folder='.'):
     assert ms_name in gdown_ids, "Measurement set not available. Available measurement sets are:" + str(gdown_ids.keys())
     
