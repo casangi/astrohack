@@ -17,7 +17,7 @@ from astrohack._utils._panel_classes.telescope import Telescope
 
 def _locit_separated_chunk(locit_parms):
     """
-    This is the chunk function for locit
+    This is the chunk function for locit when treating each DDI separately
     Args:
         locit_parms: the locit parameter dictionary
 
@@ -42,6 +42,14 @@ def _locit_separated_chunk(locit_parms):
 
 
 def _locit_combined_chunk(locit_parms):
+    """
+    This is the chunk function for locit when we are combining the DDIs for an antenna for a single solution
+    Args:
+        locit_parms: the locit parameter dictionary
+
+    Returns:
+    xds save to disk in the .zarr format
+    """
     data = locit_parms['data_dict']
 
     delay_list = []
@@ -74,6 +82,18 @@ def _locit_combined_chunk(locit_parms):
 
 
 def _get_data_from_locit_xds(xds_data, pol_selection):
+    """
+    Extract data from a .locit.zarr xds, converts the phase gains to delays using the xds frequency
+    Args:
+        xds_data: The .locit.zarr xds
+        pol_selection: Which polarization is requested from the xds
+
+    Returns:
+        the field ids
+        the time in mjd
+        The delays in seconds
+
+    """
     logger = _get_astrohack_logger()
     pol = xds_data.attrs['polarization_scheme']
     freq = xds_data.attrs['frequency']
@@ -98,6 +118,21 @@ def _get_data_from_locit_xds(xds_data, pol_selection):
 
 
 def _create_output_xds(coordinates, lst, delays, fit, variance, locit_parms, frequency, elevation_limit):
+    """
+    Create the output xds from the computed quantities and the fit results
+    Args:
+        coordinates: The coordinate array used in the fitting
+        lst: The local sidereal time
+        delays: The fitted delays
+        fit: The fit results
+        variance: the fit error bars
+        locit_parms: the input parameters
+        frequency: The frequency or frequencies of the input xds or xdses
+        elevation_limit: the elevation cutoff
+
+    Returns:
+    The xds on zarr format on disk
+    """
     fit_kterm = locit_parms['fit_kterm']
     fit_slope = locit_parms['fit_slope']
     antenna = locit_parms['ant_info'][locit_parms['this_ant']]
@@ -142,6 +177,17 @@ def _create_output_xds(coordinates, lst, delays, fit, variance, locit_parms, fre
 
 
 def _fit_data(coordinates, delays, locit_parms):
+    """
+    Execute the fitting using the desired engine, scipy or linear algebra
+    Args:
+        coordinates: the shape [4, : ] array with the ha, dec, elevation and time arrays
+        delays: The delays to be fitted
+        locit_parms: the locit input paramters
+
+    Returns:
+    fit: the fit results
+    variance: the diagonal of the covariance matrix
+    """
     logger = _get_astrohack_logger()
     fit_kterm = locit_parms['fit_kterm']
     fit_slope = locit_parms['fit_slope']
@@ -408,6 +454,7 @@ def _export_fit_results(data_dict, parm_dict):
 
 
 def _export_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, slope_present, telescope):
+    """Export data from the xds to the proper units as a row to be added to a pretty table"""
     row.append(_format_value_error(attributes['fixed_delay_fit'], attributes['fixed_delay_error'], scaling=del_fact))
     if telescope is None:
         for i_pos in range(3):
@@ -629,6 +676,7 @@ def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None,
 
 
 def _rotate_to_array_center(positions, errors, antenna, telescope):
+    """Rotate positions to the array center longitude"""
     xpos, ypos = positions[0:2]
     antennalon = antenna['longitude']
     telescopelon = telescope.array_center['m0']['value']
@@ -647,6 +695,7 @@ def _rotate_to_array_center(positions, errors, antenna, telescope):
 
 
 def _open_telescope(telname):
+    """Open correct telescope based on the telescope string"""
     if 'VLA' in telname:
         telname = 'VLA'
     elif 'ALMA' in telname:
