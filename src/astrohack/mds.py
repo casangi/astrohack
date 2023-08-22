@@ -951,10 +951,10 @@ class AstrohackLocitFile(dict):
         alignment = 'l'
         print("\nSources:")
         table = PrettyTable()
-        table.field_names = ['Id', 'Name', 'RA J2000', 'DEC J2000', 'RA precessed', 'DEC precessed']
+        table.field_names = ['Id', 'Name', 'RA FK5', 'DEC FK5', 'RA precessed', 'DEC precessed']
         for source in self['obs_info']['src_dict'].values():
-            table.add_row([source['id'], source['name'], _rad_to_hour_str(source['j2000'][0]),
-                           _rad_to_deg_str(source['j2000'][1]), _rad_to_hour_str(source['precessed'][0]),
+            table.add_row([source['id'], source['name'], _rad_to_hour_str(source['fk5'][0]),
+                           _rad_to_deg_str(source['fk5'][1]), _rad_to_hour_str(source['precessed'][0]),
                            _rad_to_deg_str(source['precessed'][1])])
         table.align = alignment
         print(table)
@@ -978,13 +978,13 @@ class AstrohackLocitFile(dict):
 
     def plot_source_positions(self, destination, display_labels=False, precessed=False, display=True, figure_size=None,
                               dpi=300):
-        """ Plot source positions in either J2000 or precessed right ascension and declination.
+        """ Plot source positions in either FK5 or precessed right ascension and declination.
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
         :param display_labels: Add source labels to the plot, defaults to False
         :type display_labels: bool, optional
-        :param precessed: Plot in precessed coordinates? defaults to False (J2000)
+        :param precessed: Plot in precessed coordinates? defaults to False (FK5)
         :type precessed: bool, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
@@ -997,7 +997,7 @@ class AstrohackLocitFile(dict):
 
         Plot the sources on the source list to a full 24 hours 180 degrees flat 2D representation of the full sky.
         If precessed is set to True the coordinates precessd to the midpoint of the observations is plotted, otherwise
-        the J2000 coordinates are plotted.
+        the FK5 coordinates are plotted.
         The source names can be plotted next to their positions if label is True, however plots may become too crowded
         if that is the case.
 
@@ -1023,18 +1023,18 @@ class AstrohackLocitFile(dict):
         _create_destination_folder(parm_dict['destination'])
 
         if precessed:
-            filename = destination + '/source_table_precessed.png'
+            filename = destination + '/locit_source_table_precessed.png'
             time_range = self['obs_info']['time_range']
             obs_midpoint = (time_range[1] + time_range[0]) / 2.
         else:
-            filename = destination + '/source_table_j2000.png'
+            filename = destination + '/locit_source_table_fk5.png'
             obs_midpoint = None
         _plot_source_table(filename, self['obs_info']['src_dict'], precessed=precessed, obs_midpoint=obs_midpoint,
                            display=display, figure_size=figure_size, dpi=dpi, label=display_labels)
         return
 
     def plot_antenna_positions(self, destination, display_stations=True, display=True, figure_size=None, dpi=300):
-        """ Plot source positions in either J2000 or precessed right ascension and declination.
+        """ Plot antenna positions.
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
@@ -1070,7 +1070,7 @@ class AstrohackLocitFile(dict):
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
 
-        filename = destination + '/antenna_positions.png'
+        filename = destination + '/locit_antenna_positions.png'
         _plot_antenna_table(filename, self['ant_info'], self['obs_info']['array_center_lonlatrad'], display=display,
                             figure_size=figure_size, dpi=dpi, stations=display_stations)
         return

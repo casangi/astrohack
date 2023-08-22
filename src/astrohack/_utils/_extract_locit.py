@@ -131,13 +131,13 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
     basename = extract_locit_parms['locit_name']
     src_table = ctables.table(cal_table+'::FIELD', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     src_ids = src_table.getcol('SOURCE_ID')
-    phase_center_j2000 = src_table.getcol('PHASE_DIR')[:, 0, :]
+    phase_center_fk5 = src_table.getcol('PHASE_DIR')[:, 0, :]
     src_name = src_table.getcol('NAME')
     src_table.close()
     n_src = len(src_ids)
 
-    phase_center_j2000[:, 0] = np.where(phase_center_j2000[:, 0] < 0, phase_center_j2000[:, 0]+twopi,
-                                        phase_center_j2000[:, 0])
+    phase_center_fk5[:, 0] = np.where(phase_center_fk5[:, 0] < 0, phase_center_fk5[:, 0]+twopi,
+                                        phase_center_fk5[:, 0])
 
     obs_table = ctables.table(cal_table+'::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     time_range = _casa_time_to_mjd(obs_table.getcol('TIME_RANGE')[0])
@@ -146,8 +146,8 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
 
     mid_time = Time((time_range[-1]+time_range[0])/2, scale='utc', format='mjd')
 
-    astropy_j2000 = SkyCoord(phase_center_j2000[:, 0], phase_center_j2000[:, 1], unit=units.rad, frame='fk5')
-    astropy_precessed = astropy_j2000.transform_to(CIRS(obstime=mid_time))
+    astropy_fk5 = SkyCoord(phase_center_fk5[:, 0], phase_center_fk5[:, 1], unit=units.rad, frame='fk5')
+    astropy_precessed = astropy_fk5.transform_to(CIRS(obstime=mid_time))
     phase_center_precessed = np.ndarray((n_src, 2))
     phase_center_precessed[:, 0] = astropy_precessed.ra
     phase_center_precessed[:, 1] = astropy_precessed.dec
@@ -156,7 +156,7 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
     src_dict = {}
     for i_src in range(n_src):
         src_id = int(src_ids[i_src])
-        src_dict[src_id] = {'id': src_id, 'name': src_name[i_src], 'j2000': phase_center_j2000[i_src].tolist(),
+        src_dict[src_id] = {'id': src_id, 'name': src_name[i_src], 'fk5': phase_center_fk5[i_src].tolist(),
                             'precessed': phase_center_precessed[i_src].tolist()}
 
     obs_dict = {'src_dict': src_dict, 'time_range': time_range.tolist(), 'telescope_name': telescope_name}
@@ -306,8 +306,8 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
         time = Time(obs_midpoint, format='mjd')
         title = f'Coordinates precessed to {time.iso}'
     else:
-        coorkey = 'j2000'
-        title = 'J2000 reference frame'
+        coorkey = 'fk5'
+        title = 'FK5 reference frame'
 
     for i_src, src in src_dict.items():
         radec[int(i_src)] = src[coorkey]
