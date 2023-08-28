@@ -101,7 +101,7 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
     
     #print('cores',cores,memory_limit)
     
-    cluster = dask.distributed.LocalCluster(n_workers=cores, threads_per_worker=1, processes=True, memory_limit=memory_limit,silence_logs=logging.ERROR) #, silence_logs=logging.ERROR #,resources={'GPU': 2}
+    cluster = dask.distributed.LocalCluster(n_workers=cores, threads_per_worker=1, processes=True, memory_limit=memory_limit, silence_logs=logging.ERROR) #, silence_logs=logging.ERROR #,resources={'GPU': 2}
     client = dask.distributed.Client(cluster)
     client.get_versions(check=True)
 

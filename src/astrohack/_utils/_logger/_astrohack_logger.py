@@ -81,7 +81,7 @@ def _get_astrohack_logger(name = hack_logger_name):
     except:
         return logging.getLogger()
 
-def _setup_astrohack_logger(log_to_term=False,log_to_file=True,log_file='astrohack_', log_level='INFO', name=hack_logger_name):
+def _setup_astrohack_logger(log_to_term=False, log_to_file=True, log_file='astrohack_', log_level='INFO', name=hack_logger_name):
     """To setup as many loggers as you want"""
     logger = logging.getLogger(name)
     logger.setLevel(logging.getLevelName(log_level))
@@ -124,7 +124,7 @@ class _astrohack_worker_logger_plugin(WorkerPlugin):
         self.logger = _setup_astrohack_worker_logger(self.log_to_term,self.log_to_file,self.log_file,self.level)
 '''
 
-def _setup_astrohack_worker_logger(log_to_term,log_to_file,log_file, log_level, worker_id):
+def _setup_astrohack_worker_logger(log_to_term, log_to_file, log_file, log_level, worker_id):
     from dask.distributed import get_worker
     #parallel_logger_name = _get_astrohack_worker_logger_name()
     parallel_logger_name = hack_logger_name + '_' + str(worker_id)
