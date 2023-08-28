@@ -67,3 +67,36 @@ class TestAstrohack():
             
         finally:
             client.shutdown()
+
+    def test_client_logger(self):
+        """ Test astrohack_client """
+        import os
+        import re
+        import distributed
+
+        from astrohack.astrohack_client import astrohack_local_client
+
+        DEFAULT_DASK_ADDRESS="127.0.0.1:8786"
+
+        log_parms = {
+            'log_level':'DEBUG',
+            'log_to_file':True,
+            'log_file': 'astrohack_log_file'
+        }
+
+        client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
+        
+        files = os.listdir(".")
+
+        try:
+            for file in files:
+                if re.match("^astrohack_log_file+[0-9].*log", file) is not None:
+                    return
+                    
+            raise FileNotFoundError
+
+        except FileNotFoundError:
+            assert False
+            
+        finally:
+            client.shutdown()
