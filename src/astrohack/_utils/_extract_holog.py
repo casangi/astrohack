@@ -461,6 +461,8 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
                 if baseline_average_nearest != 'all':
                     sub_ref_ant_set = []
                     nearest_ant_list = df_mat.loc[map_ant_key,:].loc[list(ref_ant_set)].sort_values().index.tolist()[0:baseline_average_nearest]
+                    
+                    logger.debug(nearest_ant_list)
                     for ref_ant in ref_ant_set:
                         if ref_ant in nearest_ant_list:
                             sub_ref_ant_set.append(ref_ant)

@@ -241,7 +241,7 @@ def extract_holog(
                         del holog_obs_dict[ddi_key]
 
             
-    logger.info(f"[{function_name}]: holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0], indent=2, width=2))
+    #logger.info(f"[{function_name}]: holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0], indent=2, width=2))
 
     encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
 

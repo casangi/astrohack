@@ -24,8 +24,7 @@ class TestAstrohack():
 
     def setup_method(self):
         """ setup any state specific to all methods of the given class """
-        os.mkdir("data")
-        
+                
         astrohack.gdown_utils.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/", unpack=True)
 
     def teardown_method(self):
@@ -151,14 +150,6 @@ class TestAstrohack():
 
     def test_extract_holog_baseline_average_distance(self):
 
-        # Generate pointing file
-        extract_pointing(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
-            overwrite=True,
-            parallel=False
-        )
-
         # extract pointing data
         pnt_mds = extract_pointing(
             ms_name='data/ea25_cal_small_after_fixed.split.ms',
@@ -179,3 +170,26 @@ class TestAstrohack():
         
         # Check that the expected antenna is present.
         assert list(holog_mds['ddi_0']['map_0'].keys()) == ['ant_ea25']
+
+    def test_extract_holog_baseline_average_nearest(self):
+
+        # extract pointing data
+        pnt_mds = extract_pointing(
+            ms_name='data/ea25_cal_small_after_fixed.split.ms',
+            point_name='data/ea25_cal_small_after_fixed.split.point.zarr',
+            parallel=False,
+            overwrite=True
+        )
+
+        # Extract holography data
+        holog_mds = extract_holog(
+            ms_name="data/ea25_cal_small_after_fixed.split.ms",
+            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            baseline_average_nearest=1,
+            data_column="CORRECTED_DATA",
+            parallel=False,
+            overwrite=True
+        )
+        
+        # Check that the expected antenna is present.
+        assert list(holog_mds['ddi_0']['map_0'].keys()) == ['ant_ea25', 'ant_ea06']
