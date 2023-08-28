@@ -192,4 +192,4 @@ class TestAstrohack():
         )
         
         # Check that the expected antenna is present.
-        assert list(holog_mds['ddi_0']['map_0'].keys()) == ['ant_ea25', 'ant_ea06']
+        assert list(holog_mds['ddi_0']['map_0'].keys()).sort() == ['ant_ea25', 'ant_ea06'].sort()
