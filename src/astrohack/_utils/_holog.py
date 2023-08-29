@@ -141,16 +141,19 @@ def _holog_chunk(holog_chunk_params):
     
 
     ###############
-    pol = beam_grid,ant_data_dict[ddi][holog_map].pol.values
+    pol = ant_data_dict[ddi][holog_map].pol.values
     if to_stokes:
         beam_grid = _to_stokes(beam_grid, ant_data_dict[ddi][holog_map].pol.values)
         pol = ['I', 'Q', 'U', 'V']
+    
     ###############
     
     if holog_chunk_params["scan_average"]:
         beam_grid = np.mean(beam_grid,axis=0)[None,...]
         time_centroid = np.mean(np.array(time_centroid))
     
+
+    logger.info("Calculating aperture pattern ...")
     # Current bottleneck
     aperture_grid, u, v, uv_cell_size = _calculate_aperture_pattern(
         grid=beam_grid,
@@ -172,7 +175,7 @@ def _holog_chunk(holog_chunk_params):
 
     else:
         raise Exception("{function_name}: Antenna type not found: {name}".format(function_name=function_name, name=meta_data['ant_name']))
-
+    
     telescope = Telescope(telescope_name)
 
     min_wavelength = clight/freq_chan[0]
@@ -256,6 +259,7 @@ def _holog_chunk(holog_chunk_params):
                     focus_z_offset=do_z_foc_off,
                     subreflector_tilt=do_sub_til,
                     cassegrain_offset=do_cass_off)
+
     else:
         logger.info('[{function_name}]: Skipping phase correction')
 
@@ -281,7 +285,7 @@ def _holog_chunk(holog_chunk_params):
     xds.attrs["telescope_name"] = meta_data['telescope_name']
     xds.attrs["time_centroid"] = np.array(time_centroid)
     xds.attrs["ddi"] = ddi
-
+    
     coords = {
         "ddi": list(ant_data_dict.keys()), 
         "pol": pol, 
@@ -293,12 +297,11 @@ def _holog_chunk(holog_chunk_params):
         "v_prime": v_prime, 
         "chan": freq_chan
     }
-    
-    xds = xds.assign_coords(coords)
 
+    xds = xds.assign_coords(coords)
+    
     xds.to_zarr("{name}/{ant}/{ddi}".format(name=holog_chunk_params["image_name"], ant=holog_chunk_params["this_ant"],
                                             ddi=ddi), mode="w", compute=True, consolidated=True)
-
 
 def _create_average_chan_map(freq_chan, chan_tolerance_factor):
     n_chan = len(freq_chan)
@@ -393,6 +396,7 @@ def _export_to_fits_holog_chunk(parm_dict):
         'SCAN_AVE': _bool_to_string(metadata['scan_average']),
         'TO_STOKE': _bool_to_string(metadata['to_stokes']),
     }
+
     ntime = len(inputxds.time)
     if ntime != 1:
         raise Exception("[{function_name}]: Data with multiple times not supported for FITS export")
