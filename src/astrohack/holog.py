@@ -105,6 +105,9 @@ def holog(
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
+    # Shouldn't have to do this but the name changes ant_id->ant for some reason. Fix later.
+    holog_params['ant']=ant_id
+
     ######### Parameter Checking #########
     holog_params = _check_holog_params(function_name=function_name, holog_params=holog_params)
     
