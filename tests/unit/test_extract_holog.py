@@ -9,27 +9,27 @@ from astrohack.extract_holog import extract_holog
 from astrohack.extract_pointing import extract_pointing
 from astrohack.extract_holog import generate_holog_obs_dict
 
-class TestAstrohack():
+class TestExtractHolog():
     @classmethod
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
-        pass
+        astrohack.gdown_utils.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/", unpack=True)
 
     @classmethod
     def teardown_class(cls):
         """ teardown any state that was previously setup with a call to setup_class
         such as deleting test data """
-        pass
+        shutil.rmtree("data")
 
     def setup_method(self):
         """ setup any state specific to all methods of the given class """
                 
-        astrohack.gdown_utils.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/", unpack=True)
+        pass
 
     def teardown_method(self):
         """ teardown any state that was previously setup for all methods of the given class """
-        shutil.rmtree("data")
+        pass
 
     def test_extract_holog_obs_dict(self):
 
