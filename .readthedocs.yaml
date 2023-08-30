@@ -13,4 +13,5 @@ build:
 # Configuration for Sphinx documentation
 sphinx:
    configuration: docs/conf.py
+   requirements_file: docs/sphinx.txt
    fail_on_warning: true
