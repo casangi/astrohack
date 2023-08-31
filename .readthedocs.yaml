@@ -10,13 +10,6 @@ build:
   tools:
     python: "3.7"
 
-dependencies:
-   - sphinx==4.2.0
-   - pip
-   - pip:
-      - nbsphinx==0.8.7
-      - sphinx-rtd-theme==1.0.0
-
 # Configuration for Sphinx documentation
 sphinx:
    configuration: docs/conf.py
