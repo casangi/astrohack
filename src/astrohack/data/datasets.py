@@ -3,7 +3,7 @@ import astrohack
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
-def download(file, folder='.', unpack=False, source='gdrive'):
+def download(file, folder='.', unpack=False, source='dropbox'):
   logger = _get_astrohack_logger()
 
   if os.path.exists(folder) == False:

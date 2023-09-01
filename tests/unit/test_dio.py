@@ -22,7 +22,7 @@ class TestAstrohackDio():
     @classmethod
     def setup_class(cls):
         
-        astrohack.data.datasets.download(file="ea25_cal_small_after_fixed.split.ms", folder=cls.datafolder, unpack=True)
+        astrohack.data.datasets.download(file="ea25_cal_small_after_fixed.split.ms", folder=cls.datafolder)
         
         extract_pointing(
             ms_name=cls.datafolder + '/ea25_cal_small_after_fixed.split.ms',

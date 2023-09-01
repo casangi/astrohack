@@ -12,7 +12,7 @@ class TestExtractPointing:
         cls.datafolder = "point_data"
         cls.ms = "ea25_cal_small_after_fixed.split.ms"
         
-        astrohack.data.datasets.download(file=cls.ms, folder=cls.datafolder, unpack=True)
+        astrohack.data.datasets.download(file=cls.ms, folder=cls.datafolder)
         
         cls.ms_name = os.path.join(cls.datafolder, cls.ms)
 

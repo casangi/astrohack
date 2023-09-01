@@ -25,7 +25,7 @@ def set_data(tmp_path_factory):
   data_dir = tmp_path_factory.mktemp("data")
     
   # Data files
-  astrohack.astrohack.data.datasets.download('J1924-2914.ms.calibrated.split.SPW3', folder=str(data_dir), unpack=True)
+  astrohack.astrohack.data.datasets.download('J1924-2914.ms.calibrated.split.SPW3', folder=str(data_dir))
 
   # Verification json information
   astrohack.astrohack.data.datasets.download(file='extract_holog_verification.json', folder=str(data_dir))

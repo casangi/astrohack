@@ -20,7 +20,7 @@ class TestHolog():
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
-        astrohack.data.datasets.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/", unpack=True)
+        astrohack.data.datasets.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/")
         
         astrohack.data.datasets.download(file='extract_holog_verification.json')
         astrohack.data.datasets.download(file='holog_numerical_verification.json')

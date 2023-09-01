@@ -7,12 +7,38 @@ from tqdm import tqdm
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 FILE_ID = {
-        'ea25_cal_small_before_fixed.split.ms':
-        {
-            'file':'ea25_cal_small_before_fixed.split.ms.zip',
-            'id':'AAAK_b89NVwTLYGLRmDs8_fBa'
-        },
-    }
+  'ea25_cal_small_before_fixed.split.ms':
+  {
+    'file':'ea25_cal_small_before_fixed.split.ms.zip',
+    'id':'m2qnd2w6g9fhdxyzi6h7f',
+    'rlkey':'d4dgztykxpnnqrei7jhb1cu7m'
+  },
+  'ea25_cal_small_after_fixed.split.ms':
+  {
+    'file':'ea25_cal_small_after_fixed.split.ms.zip',
+    'id':'o3tl05e3qa440s4rk5owf',
+    'rlkey':'hoxte3zzeqgkju2ywnif2t7ko'
+  },
+  'J1924-2914.ms.calibrated.split.SPW3':
+  {
+    'file':'J1924-2914.ms.calibrated.split.SPW3.zip',
+    'id':'kyrwc5y6u7lxbmqw7fveh',
+    'rlkey':'r23qakcm24bid2x2cojsd96gs'
+  },
+  'extract_holog_verification.json':
+  {
+    'file': 'extract_holog_verification.json',
+    'id':'6pzucjd48a4n0eb74wys9',
+    'rlkey':'azuynw358zxvse9i225sbl59s'
+  },
+  'holog_numerical_verification.json':
+  {
+    'file':'holog_numerical_verification.json',
+    'id':'x69700pznt7uktwprdqpk',
+    'rlkey':'bxn9me7dgnxrtzvvay7xgicmi'
+  },
+        
+}
 
 def download(file, folder='.'):
   logger = _get_astrohack_logger()
@@ -25,16 +51,19 @@ def download(file, folder='.'):
     logger.info("Requested file not found")
     
     return 
-
+  
   fullname=FILE_ID[file]['file']
   id=FILE_ID[file]['id']
+  rlkey=FILE_ID[file]['rlkey']
     
-  url = 'https://www.dropbox.com/sh/mrwny1055w35ofk/'+ id + '/' + fullname
+  url = 'https://www.dropbox.com/scl/fi/{id}/{file}?rlkey={rlkey}'.format(id=id, file=fullname, rlkey=rlkey)
     
   headers = {'user-agent': 'Wget/1.16 (linux-gnu)'}
 
   r = requests.get(url, stream=True, headers=headers)
   total = int(r.headers.get('content-length', 0))
+
+  fullname = '/'.join((folder, fullname))
 
   with open(fullname, 'wb') as fd, tqdm(
     desc=fullname,

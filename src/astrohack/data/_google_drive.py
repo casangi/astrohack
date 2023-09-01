@@ -5,6 +5,7 @@ import shutil
 import json
 
 from astrohack._utils._tools import _remove_suffix
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 from prettytable import PrettyTable
 
@@ -53,6 +54,8 @@ def download(file, folder='.', unpack=False):
     :param unpack: Unzip file, defaults to False
     :type unpack: bool, optional
     """
+    logger = _get_astrohack_logger()
+    logger.warning("The google-drive download option is deprecated adn will be removed soon!! Please use the dropbox option in download.")
 
     if file == 'vla-test':
         matched = [(key, value) for key, value in FILE_ID.items() if re.search(r"^vla.+(before|after).split.+(holog|image|panel|point).*zarr$", key)]
