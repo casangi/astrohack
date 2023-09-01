@@ -8,8 +8,6 @@ import astrohack
 
 import numpy as np
 
-from astrohack.gdown_utils import gdown_data
-
 from astrohack.extract_pointing import extract_pointing
 from astrohack.extract_holog import extract_holog
 from astrohack.holog import holog
@@ -27,11 +25,11 @@ def set_data(tmp_path_factory):
   data_dir = tmp_path_factory.mktemp("data")
     
   # Data files
-  astrohack.gdown_utils.download('J1924-2914.ms.calibrated.split.SPW3', folder=str(data_dir), unpack=True)
+  astrohack.astrohack.data.datasets.download('J1924-2914.ms.calibrated.split.SPW3', folder=str(data_dir))
 
   # Verification json information
-  astrohack.gdown_utils.download(file='extract_holog_verification.json', folder=str(data_dir))
-  astrohack.gdown_utils.download(file='holog_numerical_verification.json', folder=str(data_dir))
+  astrohack.astrohack.data.datasets.download(file='extract_holog_verification.json', folder=str(data_dir))
+  astrohack.astrohack.data.datasets.download(file='holog_numerical_verification.json', folder=str(data_dir))
 
   return data_dir
 

@@ -1,4 +1,9 @@
-from astrohack.gdown_utils import gdown_data
+import astrohack
+
+import pytest
+import numpy as np
+import shutil
+
 from astrohack.dio import open_holog
 from astrohack.dio import open_image
 from astrohack.dio import open_panel
@@ -7,12 +12,6 @@ from astrohack.extract_holog import extract_holog
 from astrohack.extract_holog import extract_pointing
 from astrohack.panel import panel
 from astrohack import holog
-
-import astrohack
-
-import pytest
-import numpy as np
-import shutil
 
 class TestAstrohackDio():
     datafolder = 'dioData'
@@ -23,7 +22,7 @@ class TestAstrohackDio():
     @classmethod
     def setup_class(cls):
         
-        astrohack.gdown_utils.download(file="ea25_cal_small_after_fixed.split.ms", folder=cls.datafolder, unpack=True)
+        astrohack.data.datasets.download(file="ea25_cal_small_after_fixed.split.ms", folder=cls.datafolder)
         
         extract_pointing(
             ms_name=cls.datafolder + '/ea25_cal_small_after_fixed.split.ms',
