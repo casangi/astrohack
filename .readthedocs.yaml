@@ -10,12 +10,9 @@ build:
   tools:
     python: "3.7"
 
-#python:
-#  install:
-#    - requirements: docs/sphinx.txt
-conda:
-  environment: environment.yml
-
+python:
+  install:
+    - requirements: docs/sphinx.txt
 
 # Configuration for Sphinx documentation
 sphinx:
