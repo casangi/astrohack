@@ -12,7 +12,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
 
-    :param locit_name: Name of input measurement file name.
+    :param locit_name: Name of input *.locit.zarr file.
     :type locit_name: str
     :param position_name: Name of *<position_name>.position.zarr* file to create. Defaults to measurement set name with *position.zarr* extension.
     :type position_name: str, optional
