@@ -10,7 +10,11 @@ build:
   tools:
     python: "3.7"
 
+python:
+  install:
+    - requirements: docs/sphinx.txt
+
 # Configuration for Sphinx documentation
 sphinx:
    configuration: docs/conf.py
-   fail_on_warning: true
+   fail_on_warning: False

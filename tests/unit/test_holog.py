@@ -20,10 +20,10 @@ class TestHolog():
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
-        astrohack.gdown_utils.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/", unpack=True)
+        astrohack.data.datasets.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/")
         
-        astrohack.gdown_utils.download(file='extract_holog_verification.json')
-        astrohack.gdown_utils.download(file='holog_numerical_verification.json')
+        astrohack.data.datasets.download(file='extract_holog_verification.json')
+        astrohack.data.datasets.download(file='holog_numerical_verification.json')
 
         extract_pointing(
             ms_name="data/ea25_cal_small_after_fixed.split.ms",
@@ -105,15 +105,9 @@ class TestHolog():
 
         image_mds = holog(
             holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr', 
-            grid_interpolation_mode='linear',
-            chan_average=True,
-            scan_average=True,
+            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',     
             ant_id=['ea25'],
             overwrite=True,
-            phase_fit=True,
-            apply_mask=True,
-            to_stokes=True,
             parallel=False
         )
 
@@ -124,15 +118,8 @@ class TestHolog():
         image_mds = holog(
             holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
             image_name='data/ea25_cal_small_after_fixed.split.image.zarr', 
-            padding_factor=50, 
-            grid_interpolation_mode='linear',
-            chan_average=True,
-            scan_average=True,
             overwrite=True,
             ddi=[0],
-            phase_fit=True,
-            apply_mask=True,
-            to_stokes=True,
             parallel=False
         )
 
@@ -148,13 +135,7 @@ class TestHolog():
             holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
             image_name='data/ea25_cal_small_after_fixed.split.image.zarr', 
             padding_factor=50, 
-            grid_interpolation_mode='linear',
-            chan_average=True,
-            scan_average=True,
             overwrite=True,
-            phase_fit=True,
-            apply_mask=True,
-            to_stokes=True,
             parallel=False
         )
 
@@ -222,7 +203,7 @@ class TestHolog():
         image_mds = holog(
             holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
             image_name='data/ea25_cal_small_after_fixed.split.image.zarr', 
-            to_stokes=False,
+            to_stokes=True,
             overwrite=True,
             parallel=False
         )
@@ -230,7 +211,9 @@ class TestHolog():
         with open('data/ea25_cal_small_after_fixed.split.image.zarr/.image_attr') as json_attr:
             json_file = json.load(json_attr)     
 
-        assert json_file['to_stokes'] == False
+        assert json_file['to_stokes'] == True
+
+        assert (image_mds['ant_ea25']['ddi_0'].pol.values == np.array(['I', 'Q', 'U', 'V'])).all()
 
     def test_holog_overwrite(self):
         initial_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.image.zarr')

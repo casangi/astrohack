@@ -5,10 +5,11 @@ import shutil
 import json
 
 from astrohack._utils._tools import _remove_suffix
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 from prettytable import PrettyTable
 
-gdown_ids = {
+FILE_ID = {
     'ea25_cal_small_before_fixed.split.ms':'1oydlR7kA7F4n0i9KF9HgRc2jq1ziUslt',
     'ea25_cal_small_after_fixed.split.ms':'1TATMxKTFYIEO-l9L3jdYj62lZ8TZex4T',
     'J1924-2914.ms.calibrated.split.SPW3': '1OSDjWM1IskPOlC0w1wVBqsTp8JAbNGzL',
@@ -46,29 +47,31 @@ def build_folder_structure(dataname, resultname):
 def download(file, folder='.', unpack=False):
     """ Allows access to stakeholder and unit testing data and configuration files via gdown.
 
-    :param file: File to download for gdirve storage. A list of the available measurement sets can be accessed via `astrohack.gdown_utils.list_datasets()`. 
+    :param file: File to download for gdirve storage. A list of the available measurement sets can be accessed via `astrohack.datasets.list_datasets()`. 
     :type file: str
     :param folder: Destination folder if not the current directory, defaults to '.'
     :type folder: str, optional
     :param unpack: Unzip file, defaults to False
     :type unpack: bool, optional
     """
+    logger = _get_astrohack_logger()
+    logger.warning("The google-drive download option is deprecated adn will be removed soon!! Please use the dropbox option in download.")
 
-    if file == 'vla-test': 
-        matched = [(key, value) for key, value in gdown_ids.items() if re.search(r"^vla.+(before|after).split.+(holog|image|panel|point).*zarr$", key)]
+    if file == 'vla-test':
+        matched = [(key, value) for key, value in FILE_ID.items() if re.search(r"^vla.+(before|after).split.+(holog|image|panel|point).*zarr$", key)]
         files = files = list(dict(matched).keys())
 
     elif file == 'alma-test':
-        matched = [(key, value) for key, value in gdown_ids.items() if re.search(r"^alma.split.+(holog|image|panel|point).*zarr$", key)]
+        matched = [(key, value) for key, value in FILE_ID.items() if re.search(r"^alma.split.+(holog|image|panel|point).*zarr$", key)]
         files = list(dict(matched).keys())
 
     else:
         files = [file]
 
     for file in files:
-        assert file in gdown_ids, "File {file} not available. Available files are:".format(file=file) + str(gdown_ids.keys())
+        assert file in FILE_ID, "File {file} not available. Available files are:".format(file=file) + str(FILE_ID.keys())
 
-        id = gdown_ids[file]
+        id = FILE_ID[file]
         create_folder(folder)
 
         fullname = os.path.join(folder, file)
@@ -91,9 +94,9 @@ def download(file, folder='.', unpack=False):
         
 # DEPRECATED
 def gdown_data(ms_name, download_folder='.'):
-    assert ms_name in gdown_ids, "Measurement set not available. Available measurement sets are:" + str(gdown_ids.keys())
+    assert ms_name in FILE_ID, "Measurement set not available. Available measurement sets are:" + str(FILE_ID.keys())
     
-    id = gdown_ids[ms_name]
+    id = FILE_ID[ms_name]
     create_folder(download_folder)
     check_download(ms_name, download_folder, id)
 
@@ -102,7 +105,7 @@ def list_datasets():
     table.field_names = ["Measurement Table", "Description"]
     table.align = "l"
 
-    for key, _ in gdown_ids.items():
+    for key, _ in FILE_ID.items():
         basename = key.split('.')[0]
         file = ''.join((basename, '.json'))
         path = os.path.dirname(__file__)       

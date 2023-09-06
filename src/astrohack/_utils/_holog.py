@@ -191,8 +191,6 @@ def _holog_chunk(holog_chunk_params):
     else:
         radius = radius_u
 
-    logger.debug(radius)
-
     if holog_chunk_params['apply_mask']:
     # Masking Aperture image
         mask = _mask_circular_disk(
