@@ -36,8 +36,10 @@ def _locit_separated_chunk(locit_parms):
         return
 
     fit, variance = _fit_data(coordinates, delays, locit_parms)
-    _create_output_xds(coordinates, lst, delays, fit, variance, locit_parms, xds_data.attrs['frequency'],
-                       elevation_limit)
+    model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                              locit_parms['fit_slope'])
+    _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms,
+                       xds_data.attrs['frequency'], elevation_limit)
     return
 
 
@@ -76,7 +78,9 @@ def _locit_combined_chunk(locit_parms):
         return
 
     fit, variance = _fit_data(coordinates, delays, locit_parms)
-    _create_output_xds(coordinates, lst, delays, fit, variance, locit_parms, freq_list,
+    model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                              locit_parms['fit_slope'])
+    _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq_list,
                        elevation_limit)
     return
 
@@ -117,7 +121,8 @@ def _get_data_from_locit_xds(xds_data, pol_selection):
     return field_id, time, phases/twopi/freq  # field_id, time, delays
 
 
-def _create_output_xds(coordinates, lst, delays, fit, variance, locit_parms, frequency, elevation_limit):
+def _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, frequency,
+                       elevation_limit):
     """
     Create the output xds from the computed quantities and the fit results
     Args:
@@ -146,6 +151,7 @@ def _create_output_xds(coordinates, lst, delays, fit, variance, locit_parms, fre
     output_xds.attrs['fixed_delay_error'] = variance[0]
     output_xds.attrs['antenna_info'] = antenna
     output_xds.attrs['elevation_limit'] = elevation_limit
+    output_xds.attrs['chi_squared'] = chi_squared
 
     if fit_kterm and fit_slope:
         output_xds.attrs['koff_fit'] = fit[4]
@@ -163,6 +169,7 @@ def _create_output_xds(coordinates, lst, delays, fit, variance, locit_parms, fre
 
     coords = {'time': coordinates[3, :]}
     output_xds['DELAYS'] = xr.DataArray(delays, dims=['time'])
+    output_xds['MODEL'] = xr.DataArray(model, dims=['time'])
     output_xds['HOUR_ANGLE'] = xr.DataArray(coordinates[0, :], dims=['time'])
     output_xds['DECLINATION'] = xr.DataArray(coordinates[1, :], dims=['time'])
     output_xds['ELEVATION'] = xr.DataArray(coordinates[2, :], dims=['time'])
@@ -203,6 +210,14 @@ def _fit_data(coordinates, delays, locit_parms):
             logger.error(msg)
             raise Exception(msg)
     return fit, variance
+
+
+def _compute_chi_squared(delays, fit, coordinates, fit_kterm, fit_slope):
+    model_function, _ = _define_fit_function(fit_kterm, fit_slope)
+    model = model_function(coordinates, *fit)
+    ndelays = len(delays)
+    chi_squared = np.sum((model-delays)**2)/ndelays
+    return model, chi_squared
 
 
 def _build_filtered_arrays(field_id, time, delays, locit_parms):
@@ -317,19 +332,24 @@ def _coeff_system_kterm_slope(coordinates):
     return coeffs
 
 
+def _define_fit_function(fit_kterm, fit_slope):
+    npar = 4 + fit_slope + fit_kterm
+    if fit_kterm and fit_slope:
+        fit_function = _phase_model_kterm_slope
+    elif fit_kterm and not fit_slope:
+        fit_function = _phase_model_kterm_noslope
+    elif not fit_kterm and fit_slope:
+        fit_function = _phase_model_nokterm_slope
+    else:
+        fit_function = _phase_model_nokterm_noslope
+    return fit_function, npar
+
+
 def _solve_scipy_optimize_curve_fit(coordinates, gains, fit_kterm, fit_slope, verbose=False):
     """Fit a phase model to the gain solutions using scipy optimize curve_fit algorithm"""
     logger = _get_astrohack_logger()
 
-    npar = 4 + fit_slope + fit_kterm
-    if fit_kterm and fit_slope:
-        func_function = _phase_model_kterm_slope
-    elif fit_kterm and not fit_slope:
-        func_function = _phase_model_kterm_noslope
-    elif not fit_kterm and fit_slope:
-        func_function = _phase_model_nokterm_slope
-    else:
-        func_function = _phase_model_nokterm_noslope
+    fit_function, npar = _define_fit_function(fit_kterm, fit_slope)
 
     # First guess is no errors in positions, no fixed delay and no delay rate
     p0 = np.zeros(npar)
@@ -339,7 +359,7 @@ def _solve_scipy_optimize_curve_fit(coordinates, gains, fit_kterm, fit_slope, ve
     maxfevs = [100000, 1000000, 10000000]
     for maxfev in maxfevs:
         try:
-            fit, covar = opt.curve_fit(func_function, coordinates, gains, p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
+            fit, covar = opt.curve_fit(fit_function, coordinates, gains, p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
         except RuntimeError:
             if verbose:
                 logger.info("Increasing number of iterations")
