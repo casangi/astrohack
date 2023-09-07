@@ -37,6 +37,12 @@ FILE_ID = {
     'id':'x69700pznt7uktwprdqpk',
     'rlkey':'bxn9me7dgnxrtzvvay7xgicmi'
   },
+  'locit-input-pha.cal':
+  {
+    'file':'locit-input-pha.cal.zip',
+    'id':'8fftz5my9h8ca2xdlupym',
+    'rlkey':'fxfid92953ycorh5wrhfgh78b'
+  }
         
 }
 

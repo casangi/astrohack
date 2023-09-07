@@ -1,7 +1,6 @@
 import json
 
 import numpy as np
-
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from prettytable import PrettyTable
 from textwrap import fill
@@ -11,6 +10,8 @@ import astropy.units as units
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._conversion import _convert_unit
+from astrohack._utils._algorithms import _significant_digits
+
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -29,13 +30,14 @@ class NumpyEncoder(json.JSONEncoder):
 
         return json.JSONEncoder.default(self, obj)
 
+
 def _casa_time_to_mjd(times):
     corrected = times/3600/24.0
     return corrected
 
 
 def _altaz_to_hadec(az, el, lat):
-    """Convert Local to HA + DEC coordinates.
+    """Convert AltAz to HA + DEC coordinates.
 
     (HA [rad], dec [rad])
 
@@ -49,11 +51,48 @@ def _altaz_to_hadec(az, el, lat):
     sindec = sinlat*sinel+coslat*cosel*cosaz
     dec = np.arcsin(sindec)
     argarccos = (sinel-sinlat*sindec)/(coslat*np.cos(dec))
-
     lt1 = argarccos < -1
     argarccos[lt1] = -1.0
     ha = np.arccos(argarccos)
     return ha, dec
+
+
+def _hadec_to_altaz(ha, dec, lat):
+    """Convert HA + DEC to Alt + Az coordinates.
+
+    (HA [rad], dec [rad])
+
+    Provided by D. Faes DSOC
+    """
+    #
+    sinha = np.sin(ha)
+    cosha = np.cos(ha)
+    coslat = np.cos(lat)
+    sinlat = np.sin(lat)
+    bottom = cosha * sinlat - np.tan(dec) * coslat
+    sin_el = sinlat * np.sin(dec) + coslat * np.cos(dec) * cosha
+    az = np.arctan2(sinha, bottom)
+    el = np.arcsin(sin_el)
+    az += np.pi  # formula is starting from *South* instead of North
+    if az > 2*np.pi:
+        az -= 2*np.pi
+    return az, el
+
+
+def _hadec_to_elevation(hadec, lat):
+    """Convert HA + DEC to elevation.
+
+    (HA [rad], dec [rad])
+
+    Provided by D. Faes DSOC
+    """
+    #
+    cosha = np.cos(hadec[0])
+    coslat = np.cos(lat)
+    sinlat = np.sin(lat)
+    sin_el = sinlat * np.sin(hadec[1]) + coslat * np.cos(hadec[1]) * cosha
+    el = np.arcsin(sin_el)
+    return el
 
 
 def _altaz_to_hadec_astropy(az, el, time, x_ant, y_ant, z_ant):
@@ -114,6 +153,7 @@ def _remove_suffix(input_string, suffix):
         return input_string[:-len(suffix)]
         
     return input_string
+
 
 # DEPRECATED
 def _jsonify(holog_obj):
@@ -234,6 +274,7 @@ def _parm_to_list(caller, parm, data_dict, prefix):
         raise Exception(msg)
         
     return oulist
+
 
 def _split_pointing_table(ms_name, antennas):
     """ Split pointing table to contain only specified antennas
@@ -521,6 +562,7 @@ def _print_centralized(string, nlead, ntrail, frame_width, frame_char):
 
 
 def _print_method_list(method_list, alignment='l', print_len=100):
+    """Print the method list of an mds object"""
     name_len = 0
     for obj_method in method_list:
         meth_len = len(obj_method.__name__)
@@ -536,3 +578,40 @@ def _print_method_list(method_list, alignment='l', print_len=100):
         table.add_row([obj_method.__name__, fill(obj_method.__doc__.splitlines()[0][1:], width=desc_len)])
     print(table)
     print()
+
+
+def _format_value_error(value, error, scaling):
+    """Format values based and errors based on the significant digits"""
+    if np.isfinite(value) and np.isfinite(error):
+        value *= scaling
+        error *= scaling
+        if abs(value) < 1e-7:
+            value = 0.0
+        if abs(error) < 1e-7:
+            error = 0.0
+        if value == 0 and error == 0:
+            return f'{value} \u00b1 {error}'
+        elif error > abs(value):
+            places = round(np.log10(error))
+            if places < 0:
+                places = abs(places)
+                return f'{value:.{places}f} \u00B1 {error:.{places}f}'
+            else:
+                if places in [-1, 0, 1]:
+                    places = 2
+                if value == 0:
+                    digits = places - round(np.log10(abs(error)))
+                else:
+                    digits = places - round(np.log10(abs(value)))
+                value = _significant_digits(value, digits)
+                error = _significant_digits(error, places)
+                return f'{value} \u00b1 {error}'
+        else:
+            digits = round(abs(np.log10(abs(value))))-1
+            if digits in [-1, 0, 1]:
+                digits = 2
+            value = _significant_digits(value, digits)
+            error = _significant_digits(error, digits-1)
+            return f'{value} \u00b1 {error}'
+    else:
+        return f'{value} \u00b1 {error}'

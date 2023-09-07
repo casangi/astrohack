@@ -131,13 +131,13 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
     basename = extract_locit_parms['locit_name']
     src_table = ctables.table(cal_table+'::FIELD', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     src_ids = src_table.getcol('SOURCE_ID')
-    phase_center_j2000 = src_table.getcol('PHASE_DIR')[:, 0, :]
+    phase_center_fk5 = src_table.getcol('PHASE_DIR')[:, 0, :]
     src_name = src_table.getcol('NAME')
     src_table.close()
     n_src = len(src_ids)
 
-    phase_center_j2000[:, 0] = np.where(phase_center_j2000[:, 0] < 0, phase_center_j2000[:, 0]+twopi,
-                                        phase_center_j2000[:, 0])
+    phase_center_fk5[:, 0] = np.where(phase_center_fk5[:, 0] < 0, phase_center_fk5[:, 0]+twopi,
+                                        phase_center_fk5[:, 0])
 
     obs_table = ctables.table(cal_table+'::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     time_range = _casa_time_to_mjd(obs_table.getcol('TIME_RANGE')[0])
@@ -146,8 +146,8 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
 
     mid_time = Time((time_range[-1]+time_range[0])/2, scale='utc', format='mjd')
 
-    astropy_j2000 = SkyCoord(phase_center_j2000[:, 0], phase_center_j2000[:, 1], unit=units.rad, frame='fk5')
-    astropy_precessed = astropy_j2000.transform_to(CIRS(obstime=mid_time))
+    astropy_fk5 = SkyCoord(phase_center_fk5[:, 0], phase_center_fk5[:, 1], unit=units.rad, frame='fk5')
+    astropy_precessed = astropy_fk5.transform_to(CIRS(obstime=mid_time))
     phase_center_precessed = np.ndarray((n_src, 2))
     phase_center_precessed[:, 0] = astropy_precessed.ra
     phase_center_precessed[:, 1] = astropy_precessed.dec
@@ -156,7 +156,7 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
     src_dict = {}
     for i_src in range(n_src):
         src_id = int(src_ids[i_src])
-        src_dict[src_id] = {'id': src_id, 'name': src_name[i_src], 'j2000': phase_center_j2000[i_src].tolist(),
+        src_dict[src_id] = {'id': src_id, 'name': src_name[i_src], 'fk5': phase_center_fk5[i_src].tolist(),
                             'precessed': phase_center_precessed[i_src].tolist()}
 
     obs_dict = {'src_dict': src_dict, 'time_range': time_range.tolist(), 'telescope_name': telescope_name}
@@ -184,15 +184,24 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
     Reference antenna
     """
     logger = _get_astrohack_logger()
+
     cal_table = extract_locit_parms['cal_table']
     basename = extract_locit_parms['locit_name']
+
+    obs_table = ctables.table(cal_table + '::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    telescope_name = obs_table.getcol('TELESCOPE_NAME')[0]
+    obs_table.close()
+
     main_table = ctables.table(cal_table, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+
     antenna1 = main_table.getcol('ANTENNA1')
     antenna2 = main_table.getcol('ANTENNA2')
-    gain_time = main_table.getcol('TIME')
+    gain_time = _casa_time_to_mjd(main_table.getcol('TIME'))
     gains = main_table.getcol('CPARAM')
     fields = main_table.getcol('FIELD_ID')
     spw_id = main_table.getcol('SPECTRAL_WINDOW_ID')
+    flagged = main_table.getcol('FLAG')
+
     main_table.close()
     n_gains = len(gains)
 
@@ -215,10 +224,28 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
                 gains = gains[sel_refant]
                 fields = fields[sel_refant]
                 spw_id = spw_id[sel_refant]
+                flagged = flagged[sel_refant]
         ref_antenna = ref_antennas[i_best_ant]
     else:
         # No data to discard we can go on and compute the phase gains
         ref_antenna = ref_antennas[0]
+
+    # Calibration tables do not retain a polarization sub table, hence we are going to infer the polarizations present
+    # from the telescope
+    if 'VLA' in telescope_name or telescope_name == 'VLBA':
+        polarization_scheme = ['R', 'L']
+    elif 'ALMA' == telescope_name:
+        polarization_scheme = ['X', 'Y']
+    else:
+        msg = f'Unrecognized telescope {extract_locit_parms["telescope_name"]}'
+        logger.error(msg)
+        raise Exception(msg)
+
+    n_pol = gains.shape[2]
+    if n_pol != 2:
+        msg = f'Calibration table has {n_pol} polarizations, which is not supported'
+        logger.erro(msg)
+        raise Exception(msg)
 
     used_sources = []
     extract_locit_parms['reference_antenna'] = extract_locit_parms['full_antenna_list'][ref_antenna]
@@ -229,6 +256,7 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
         ant_field = fields[ant_sel]
         ant_phase_gains = phase_gains[ant_sel]
         ant_spw_id = spw_id[ant_sel]
+        ant_flagged = flagged[ant_sel]
         if ant_id == ref_antenna:
             antenna['reference'] = True
         else:
@@ -237,15 +265,26 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
         for ddi_id, ddi in extract_locit_parms['ddi_dict'].items():
             this_ddi_xds = xr.Dataset()
             ddi_sel = ant_spw_id == ddi_id
-            coords = {"time": ant_time[ddi_sel]}
-            this_ddi_xds.assign_coords(coords)
-            this_ddi_xds['PHASE_GAINS'] = xr.DataArray(ant_phase_gains[ddi_sel], dims=('time', 'chan', 'pol'))
-            this_ddi_xds['FIELD_ID'] = xr.DataArray(ant_field[ddi_sel], dims='time')
+            ddi_gains = ant_phase_gains[ddi_sel]
+            ddi_time = ant_time[ddi_sel]
+            ddi_field = ant_field[ddi_sel]
+            ddi_not_flagged = np.invert(ant_flagged[ddi_sel])
+
+            coords = {}
+            for i_pol in range(n_pol):
+                timekey = f'p{i_pol}_time'
+                coords[timekey] = ddi_time[ddi_not_flagged[:, 0, i_pol]]
+                this_ddi_xds[f'P{i_pol}_PHASE_GAINS'] = xr.DataArray(ddi_gains[ddi_not_flagged[:, 0, i_pol], 0, i_pol],
+                                                                     dims=timekey)
+                this_ddi_xds[f'P{i_pol}_FIELD_ID'] = xr.DataArray(ddi_field[ddi_not_flagged[:, 0, i_pol]], dims=timekey)
+                used_sources.extend(ddi_field[ddi_not_flagged[:, 0, i_pol]])
+
             this_ddi_xds.attrs['frequency'] = ddi['frequency']
             this_ddi_xds.attrs['bandwidth'] = ddi['bandwidth']
+            this_ddi_xds.attrs['polarization_scheme'] = polarization_scheme
             outname = "/".join([basename, 'ant_'+antenna['name'], f'ddi_{ddi["id"]}'])
+            this_ddi_xds = this_ddi_xds.assign_coords(coords)
             this_ddi_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
-            used_sources.extend(ant_field[ddi_sel])
         _write_meta_data("/".join([basename, 'ant_'+antenna['name'], ".antenna_info"]), antenna)
     extract_locit_parms['used_sources'] = np.unique(np.array(used_sources))
     return
@@ -253,6 +292,7 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
 
 def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midpoint=None, display=True,
                        figure_size=figsize, dpi=300):
+    """ Backend function for plotting the source table"""
     logger = _get_astrohack_logger()
     n_src = len(src_dict)
     radec = np.ndarray((n_src, 2))
@@ -266,8 +306,8 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
         time = Time(obs_midpoint, format='mjd')
         title = f'Coordinates precessed to {time.iso}'
     else:
-        coorkey = 'j2000'
-        title = 'J2000 reference frame'
+        coorkey = 'fk5'
+        title = 'FK5 reference frame'
 
     for i_src, src in src_dict.items():
         radec[int(i_src)] = src[coorkey]
@@ -301,6 +341,7 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
 
 
 def _plot_antenna_table(filename, ant_dict, array_center, stations=True, display=True, figure_size=figsize, dpi=300):
+    """Plot antenna positions"""
     if figure_size is None or figure_size == 'None':
         fig, ax = plt.subplots(1, 1, figsize=figsize)
     else:

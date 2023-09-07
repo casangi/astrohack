@@ -12,10 +12,11 @@ from astrohack._utils._dio import _load_image_file
 from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _load_locit_file
+from astrohack._utils._dio import _load_position_file
 
 from astrohack._utils._dio import _create_destination_folder
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
-from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits
+from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits, time_units
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._tools import _print_method_list, _print_attributes, _print_data_contents, _print_summary_header
 from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
@@ -24,6 +25,8 @@ from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_c
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table
+from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
+from astrohack._utils._locit import _plot_delays_chunk
 
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
@@ -884,7 +887,7 @@ class AstrohackPointFile(dict):
 
 
 class AstrohackLocitFile(dict):
-    """ Data Class for extracted antenna location determination
+    """ Data Class for extracted gains for antenna location determination
     """
 
     def __init__(self, file):
@@ -948,10 +951,10 @@ class AstrohackLocitFile(dict):
         alignment = 'l'
         print("\nSources:")
         table = PrettyTable()
-        table.field_names = ['Id', 'Name', 'RA J2000', 'DEC J2000', 'RA precessed', 'DEC precessed']
+        table.field_names = ['Id', 'Name', 'RA FK5', 'DEC FK5', 'RA precessed', 'DEC precessed']
         for source in self['obs_info']['src_dict'].values():
-            table.add_row([source['id'], source['name'], _rad_to_hour_str(source['j2000'][0]),
-                           _rad_to_deg_str(source['j2000'][1]), _rad_to_hour_str(source['precessed'][0]),
+            table.add_row([source['id'], source['name'], _rad_to_hour_str(source['fk5'][0]),
+                           _rad_to_deg_str(source['fk5'][1]), _rad_to_hour_str(source['precessed'][0]),
                            _rad_to_deg_str(source['precessed'][1])])
         table.align = alignment
         print(table)
@@ -962,7 +965,7 @@ class AstrohackLocitFile(dict):
         alignment = 'l'
         print(f"\n{self['obs_info']['telescope_name']} Antennae:")
         table = PrettyTable()
-        table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Distance to earth center (m)']
+        table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Distance to earth center [m]']
         for antenna in self['ant_info'].values():
             if antenna['reference']:
                 table.add_row([antenna['name']+' (ref)', antenna['station'], _rad_to_deg_str(antenna['longitude']),
@@ -975,13 +978,13 @@ class AstrohackLocitFile(dict):
 
     def plot_source_positions(self, destination, display_labels=False, precessed=False, display=True, figure_size=None,
                               dpi=300):
-        """ Plot source positions in either J2000 or precessed right ascension and declination.
+        """ Plot source positions in either FK5 or precessed right ascension and declination.
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
         :param display_labels: Add source labels to the plot, defaults to False
         :type display_labels: bool, optional
-        :param precessed: Plot in precessed coordinates? defaults to False (J2000)
+        :param precessed: Plot in precessed coordinates? defaults to False (FK5)
         :type precessed: bool, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
@@ -994,7 +997,7 @@ class AstrohackLocitFile(dict):
 
         Plot the sources on the source list to a full 24 hours 180 degrees flat 2D representation of the full sky.
         If precessed is set to True the coordinates precessd to the midpoint of the observations is plotted, otherwise
-        the J2000 coordinates are plotted.
+        the FK5 coordinates are plotted.
         The source names can be plotted next to their positions if label is True, however plots may become too crowded
         if that is the case.
 
@@ -1017,21 +1020,21 @@ class AstrohackLocitFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
 
         _parm_check_passed(fname, parms_passed)
-        _create_destination_folder(fname, parm_dict['destination'])
+        _create_destination_folder(parm_dict['destination'])
 
         if precessed:
-            filename = destination + '/source_table_precessed.png'
+            filename = destination + '/locit_source_table_precessed.png'
             time_range = self['obs_info']['time_range']
             obs_midpoint = (time_range[1] + time_range[0]) / 2.
         else:
-            filename = destination + '/source_table_j2000.png'
+            filename = destination + '/locit_source_table_fk5.png'
             obs_midpoint = None
         _plot_source_table(filename, self['obs_info']['src_dict'], precessed=precessed, obs_midpoint=obs_midpoint,
                            display=display, figure_size=figure_size, dpi=dpi, label=display_labels)
         return
 
     def plot_antenna_positions(self, destination, display_stations=True, display=True, figure_size=None, dpi=300):
-        """ Plot source positions in either J2000 or precessed right ascension and declination.
+        """ Plot antenna positions.
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
@@ -1065,9 +1068,9 @@ class AstrohackLocitFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
 
         _parm_check_passed(fname, parms_passed)
-        _create_destination_folder(fname, parm_dict['destination'])
+        _create_destination_folder(parm_dict['destination'])
 
-        filename = destination + '/antenna_positions.png'
+        filename = destination + '/locit_antenna_positions.png'
         _plot_antenna_table(filename, self['ant_info'], self['obs_info']['array_center_lonlatrad'], display=display,
                             figure_size=figure_size, dpi=dpi, stations=display_stations)
         return
@@ -1080,3 +1083,278 @@ class AstrohackLocitFile(dict):
         _print_data_contents(self, ["Antenna", "Contents"])
         _print_method_list([self.summary, self.print_source_table, self.print_antenna_table,
                             self.plot_source_positions, self.plot_antenna_positions])
+
+
+class AstrohackPositionFile(dict):
+    """ Data Class for extracted antenna location determination
+    """
+
+    def __init__(self, file):
+        """ Initialize an AstrohackPositionFile object.
+        :param file: File to be linked to this object
+        :type file: str
+
+        :return: AstrohackPositionFile object
+        :rtype: AstrohackPositionFile
+        """
+        super().__init__()
+
+        self.file = file
+        self._meta_data = None
+        self._file_is_open = False
+
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+
+    def __setitem__(self, key, value):
+        return super().__setitem__(key, value)
+
+    def _is_open(self):
+        """ Check wether the object has opened the corresponding hack file.
+
+        :return: True if open, else False.
+        :rtype: bool
+        """
+        return self._file_is_open
+
+    def _open(self, file=None, dask_load=True):
+        """ Open antenna location file.
+        :param file: File to be opened, if None defaults to the previously defined file
+        :type file: str, optional
+        :param dask_load: Is file to be loaded with dask?, default is True
+        :type dask_load: bool, optional
+
+        :return: True if file is properly opened, else returns False
+        :rtype: bool
+        """
+        logger = _get_astrohack_logger()
+
+        if file is None:
+            file = self.file
+
+        self._meta_data = _read_meta_data(file + '/.position_attr')
+        self.combined = self._meta_data['combine_ddis']
+
+        try:
+            _load_position_file(file=file, dask_load=dask_load, position_dict=self,
+                                combine=self.combined)
+            self._file_is_open = True
+
+        except Exception as e:
+            logger.error("[AstrohackpositionFile]: {}".format(e))
+            self._file_is_open = False
+
+        return self._file_is_open
+
+    def export_fit_results(self, destination, combine_ddis=False, position_unit='m', time_unit='hour',
+                           delay_unit='nsec', rotate_results=False):
+        """ Export antenna position fit results to a text file.
+
+        :param destination: Name of the destination folder to contain exported fit results
+        :type destination: str
+        :param combine_ddis: Combine DDIS for a lower uncertainty value, defaults to False
+        :type combine_ddis: bool, optional
+        :param position_unit: Unit to list position fit results, defaults to 'm'
+        :type position_unit: str, optional
+        :param time_unit: Unit for time in position fit results, defaults to 'hour'
+        :type time_unit: str, optional
+        :param delay_unit: Unit for delays, defaults to 'ns'
+        :type delay_unit: str, optional
+        :param rotate_results: Rotate position fit results to array center, defaults to Fale
+        :type rotate_results: bool, optional
+
+        .. _Description:
+
+        Produce a text file with the fit results from astrohack.locit for better determination of antenna locations.
+        """
+        
+        parm_dict = {'destination': destination,
+                     'combine_ddis': combine_ddis,
+                     'position_unit': position_unit,
+                     'delay_unit': delay_unit,
+                     'time_unit': time_unit,
+                     'rotate_results': rotate_results}
+
+        fname = 'export_fit_results'
+        parms_passed = True
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
+                                                     default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'combine_ddis', [bool],
+                                                     default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'position_unit', [str],
+                                                     acceptable_data=length_units, default='m')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'time_unit', [str],
+                                                     acceptable_data=time_units, default='hour')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delay_unit', [str],
+                                                     acceptable_data=time_units, default='nsec')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'rotate_results', [bool],
+                                                     default=False)
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(parm_dict['destination'])
+        _export_fit_results(self, parm_dict)
+
+    def plot_sky_coverage(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', display=True,
+                          figure_size=None, dpi=300, parallel=False):
+        """ Plot the sky coverage of the data used for antenna position fitting
+
+        :param destination: Name of the destination folder to contain the plots
+        :type destination: str
+        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param angle_unit: Unit for angle in plots, defaults to 'deg'
+        :type angle_unit: str, optional
+        :param time_unit: Unit for time in plots, defaults to 'hour'
+        :type time_unit: str, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+        :param figure_size: 2 element array/list/tuple with the plot size in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: plot resolution in pixels per inch, default is 300
+        :type dpi: int, optional
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is False
+        :type parallel: bool, optional
+
+        .. _Description:
+
+        This method produces 4 plots for each selected antenna and DDI. These plots are:
+        1) Time vs Elevation
+        2) Time vs Hour Angle
+        3) Time vs Declination
+        4) Hour Angle vs Declination
+
+        These plots are intended to display the coverage of the sky of the fitted data
+
+        """
+        
+        parm_dict = {'ant': ant_id,
+                     'ddi': ddi,
+                     'destination': destination,
+                     'time_unit': time_unit,
+                     'angle_unit': angle_unit,
+                     'display': display,
+                     'figure_size': figure_size,
+                     'dpi': dpi,
+                     'parallel': parallel}
+
+        fname = 'plot_sky_coverage'
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
+                                    list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
+                                                     default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'time_unit', [str], acceptable_data=time_units,
+                                                     default='hour')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'angle_unit', [str], acceptable_data=trigo_units,
+                                                     default='deg')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool],
+                                                     default=False)
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(parm_dict['destination'])
+        parm_dict['combined'] = self.combined
+        if self.combined:
+            _dask_general_compute(fname, self, _plot_sky_coverage_chunk, parm_dict, ['ant'], parallel=parallel)
+        else:
+            _dask_general_compute(fname, self, _plot_sky_coverage_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+
+    def plot_delays(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', delay_unit='nsec',
+                    plot_fit=True, display=True, figure_size=None, dpi=300, parallel=False):
+        """ Plot the delays used for antenna position fitting and optionally the resulting fit.
+
+        :param destination: Name of the destination folder to contain the plots
+        :type destination: str
+        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param angle_unit: Unit for angle in plots, defaults to 'deg'
+        :type angle_unit: str, optional
+        :param time_unit: Unit for time in plots, defaults to 'hour'
+        :type time_unit: str, optional
+        :param delay_unit: Unit for delay in plots, defaults to 'nsec'
+        :type delay_unit: str, optional
+        :param plot_fit: Plot the fit results alongside the data.
+        :type plot_fit: bool, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+        :param figure_size: 2 element array/list/tuple with the plot size in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: plot resolution in pixels per inch, default is 300
+        :type dpi: int, optional
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is False
+        :type parallel: bool, optional
+
+        .. _Description:
+
+        This method produces 4 plots for each selected antenna and DDI. These plots are:
+        1) Time vs Delays
+        2) Elevation vs Delays
+        3) Hour Angle vs Delays
+        4) Declination vs Delays
+
+        These plots are intended to display the gain variation with the 4 relevant parameters for the fitting and also
+        asses the quality of the position fit.
+
+        """
+
+        parm_dict = {'ant': ant_id,
+                     'ddi': ddi,
+                     'destination': destination,
+                     'time_unit': time_unit,
+                     'angle_unit': angle_unit,
+                     'delay_unit': delay_unit,
+                     'plot_fit': plot_fit,
+                     'display': display,
+                     'figure_size': figure_size,
+                     'dpi': dpi,
+                     'parallel': parallel}
+
+        fname = 'plot_delays'
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
+                                    list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
+                                                     default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'time_unit', [str], acceptable_data=time_units,
+                                                     default='hour')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'angle_unit', [str], acceptable_data=trigo_units,
+                                                     default='deg')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delay_unit', [str], acceptable_data=time_units,
+                                                     default='nsec')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_fit', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool],
+                                                     default=False)
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(parm_dict['destination'])
+
+        parm_dict['combined'] = self.combined
+        if self.combined:
+            _dask_general_compute(fname, self, _plot_delays_chunk, parm_dict, ['ant'], parallel=parallel)
+        else:
+            _dask_general_compute(fname, self, _plot_delays_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+
+    def summary(self):
+        """ Prints summary of the AstrohackpositionFile object, with available data, attributes and available methods
+        """
+        _print_summary_header(self.file)
+        _print_attributes(self._meta_data)
+        if self.combined:
+            _print_data_contents(self, ["Antenna"])
+        else:
+            _print_data_contents(self, ["Antenna", "Contents"])
+        _print_method_list([self.summary, self.export_fit_results, self.plot_sky_coverage, self.plot_delays])
