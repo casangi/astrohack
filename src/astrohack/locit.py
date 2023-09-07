@@ -8,7 +8,7 @@ from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 
 def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='both', fit_engine='linear algebra',
-          fit_kterm=False, fit_slope=True, ant_id=None, ddi=None, combine_ddis=False, parallel=False, overwrite=False):
+          fit_kterm=False, fit_slope=True, ant_id=None, ddi=None, combine_ddis=True, parallel=False, overwrite=False):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
 

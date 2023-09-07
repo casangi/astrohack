@@ -1146,22 +1146,18 @@ class AstrohackPositionFile(dict):
 
         return self._file_is_open
 
-    def export_fit_results(self, destination, combine_ddis=False, position_unit='m', time_unit='hour',
-                           delay_unit='nsec', rotate_results=False):
+    def export_fit_results(self, destination, position_unit='m', time_unit='hour',
+                           delay_unit='nsec'):
         """ Export antenna position fit results to a text file.
 
         :param destination: Name of the destination folder to contain exported fit results
         :type destination: str
-        :param combine_ddis: Combine DDIS for a lower uncertainty value, defaults to False
-        :type combine_ddis: bool, optional
         :param position_unit: Unit to list position fit results, defaults to 'm'
         :type position_unit: str, optional
         :param time_unit: Unit for time in position fit results, defaults to 'hour'
         :type time_unit: str, optional
         :param delay_unit: Unit for delays, defaults to 'ns'
         :type delay_unit: str, optional
-        :param rotate_results: Rotate position fit results to array center, defaults to Fale
-        :type rotate_results: bool, optional
 
         .. _Description:
 
@@ -1169,26 +1165,20 @@ class AstrohackPositionFile(dict):
         """
         
         parm_dict = {'destination': destination,
-                     'combine_ddis': combine_ddis,
                      'position_unit': position_unit,
                      'delay_unit': delay_unit,
-                     'time_unit': time_unit,
-                     'rotate_results': rotate_results}
+                     'time_unit': time_unit}
 
         fname = 'export_fit_results'
         parms_passed = True
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
                                                      default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'combine_ddis', [bool],
-                                                     default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'position_unit', [str],
                                                      acceptable_data=length_units, default='m')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'time_unit', [str],
                                                      acceptable_data=time_units, default='hour')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delay_unit', [str],
                                                      acceptable_data=time_units, default='nsec')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'rotate_results', [bool],
-                                                     default=False)
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         _export_fit_results(self, parm_dict)

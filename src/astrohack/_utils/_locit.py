@@ -427,25 +427,18 @@ def _export_fit_results(data_dict, parm_dict):
         slo_unit = 'N/A'
         slo_fact = 1.0
 
-    if parm_dict['rotate_results']:
-        telescope = _open_telescope(data_dict._meta_data["telescope_name"])
-    else:
-        telescope = None
-
     table = PrettyTable()
     table.field_names = field_names
     table.align = 'l'
     if combined:
         for ant_key, antenna in data_dict.items():
             row = [ant_key]
-            table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present, slope_present,
-                                      telescope))
+            table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present, slope_present))
     else:
         for ant_key, antenna in data_dict.items():
             for ddi_key, ddi in antenna.items():
                 row = [ant_key, ddi_key]
-                table.add_row(_export_xds(row, ddi.attrs, del_fact, pos_fact, slo_fact, kterm_present, slope_present,
-                                          telescope))
+                table.add_row(_export_xds(row, ddi.attrs, del_fact, pos_fact, slo_fact, kterm_present, slope_present))
 
     outname = parm_dict['destination']+'/locit_fit_results.txt'
     outfile = open(outname, 'w')
@@ -453,19 +446,19 @@ def _export_fit_results(data_dict, parm_dict):
     outfile.close()
 
 
-def _export_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, slope_present, telescope):
+def _export_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, slope_present):
+    tolerance = 1e-4
     """Export data from the xds to the proper units as a row to be added to a pretty table"""
-    row.append(_format_value_error(attributes['fixed_delay_fit'], attributes['fixed_delay_error'], scaling=del_fact))
+    row.append(_format_value_error(attributes['fixed_delay_fit'], attributes['fixed_delay_error'], del_fact,
+               tolerance))
     position, poserr = _rotate_to_gmt(attributes['position_fit'], attributes['position_error'],
                                       attributes['antenna_info']['longitude'])
-    if telescope is not None:
-        position, poserr = _rotate_to_array_center(position, poserr, attributes['antenna_info'], telescope)
     for i_pos in range(3):
-        row.append(_format_value_error(position[i_pos], poserr[i_pos],  scaling=pos_fact))
+        row.append(_format_value_error(position[i_pos], poserr[i_pos],  pos_fact, tolerance))
     if kterm_present:
-        row.append(_format_value_error(attributes['koff_fit'], attributes['koff_error'], scaling=pos_fact))
+        row.append(_format_value_error(attributes['koff_fit'], attributes['koff_error'], pos_fact, tolerance))
     if slope_present:
-        row.append(_format_value_error(attributes['slope_fit'], attributes['slope_error'], scaling=slo_fact))
+        row.append(_format_value_error(attributes['slope_fit'], attributes['slope_error'], slo_fact, tolerance))
     return row
 
 
@@ -672,33 +665,16 @@ def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None,
     return
 
 
-def _rotate_to_array_center(positions, errors, antenna, telescope):
-    """Rotate positions to the array center longitude"""
-    xpos, ypos = positions[0:2]
-    antennalon = antenna['longitude']
-    telescopelon = telescope.array_center['m0']['value']
-    delta_lon = antennalon-telescopelon
-    cosdelta = np.cos(delta_lon)
-    sindelta = np.sin(delta_lon)
-    newpositions = positions
-    newpositions[0] = xpos*cosdelta - ypos*sindelta
-    newpositions[1] = ypos*cosdelta - xpos*sindelta
-    newerrors = errors
-    xerr, yerr = errors[0:2]
-    newerrors[0] = np.sqrt((xerr*cosdelta)**2 + (yerr*sindelta)**2)
-    newerrors[1] = np.sqrt((yerr*cosdelta)**2 + (xerr*sindelta)**2)
-
-    return newpositions, newerrors
-
-
 def _rotate_to_gmt(positions, errors, longitude):
     xpos, ypos = positions[0:2]
-    delta_lon = -longitude
+    delta_lon = longitude
     cosdelta = np.cos(delta_lon)
     sindelta = np.sin(delta_lon)
     newpositions = positions
+    #
     newpositions[0] = xpos*cosdelta - ypos*sindelta
-    newpositions[1] = ypos*cosdelta - xpos*sindelta
+    newpositions[1] = xpos*sindelta + ypos*cosdelta
+
     newerrors = errors
     xerr, yerr = errors[0:2]
     newerrors[0] = np.sqrt((xerr*cosdelta)**2 + (yerr*sindelta)**2)
