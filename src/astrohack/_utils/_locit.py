@@ -215,8 +215,8 @@ def _fit_data(coordinates, delays, locit_parms):
 def _compute_chi_squared(delays, fit, coordinates, fit_kterm, fit_slope):
     model_function, _ = _define_fit_function(fit_kterm, fit_slope)
     model = model_function(coordinates, *fit)
-    ndelays = len(delays)
-    chi_squared = np.sum((model-delays)**2)/ndelays
+    n_delays = len(delays)
+    chi_squared = np.sum((model-delays)**2/n_delays)
     return model, chi_squared
 
 
@@ -429,10 +429,10 @@ def _export_fit_results(data_dict, parm_dict):
     combined = data_dict._meta_data['combine_ddis']
 
     if combined:
-        field_names = ['Antenna', f'Fixed delay  [{del_unit}]', f'X offset [{pos_unit}]',
+        field_names = ['Antenna', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
     else:
-        field_names = ['Antenna', 'DDI', f'Fixed delay  [{del_unit}]', f'X offset [{pos_unit}]',
+        field_names = ['Antenna', 'DDI', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
     kterm_present = data_dict._meta_data["fit_kterm"]
     slope_present = data_dict._meta_data["fit_slope"]
@@ -442,7 +442,7 @@ def _export_fit_results(data_dict, parm_dict):
         tim_unit = parm_dict['time_unit']
         slo_unit = f'{del_unit}/{tim_unit}'
         slo_fact = del_fact / _convert_unit('day', tim_unit, 'time')
-        field_names.extend([f'Delay rate [{slo_unit}]'])
+        field_names.extend([f'Rate [{slo_unit}]'])
     else:
         slo_unit = 'N/A'
         slo_fact = 1.0
@@ -452,12 +452,12 @@ def _export_fit_results(data_dict, parm_dict):
     table.align = 'l'
     if combined:
         for ant_key, antenna in data_dict.items():
-            row = [ant_key]
+            row = [ant_key.split('_')[1]]
             table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present, slope_present))
     else:
         for ant_key, antenna in data_dict.items():
             for ddi_key, ddi in antenna.items():
-                row = [ant_key, ddi_key]
+                row = [ant_key.split('_')[1], ddi_key.split('_')[1]]
                 table.add_row(_export_xds(row, ddi.attrs, del_fact, pos_fact, slo_fact, kterm_present, slope_present))
 
     outname = parm_dict['destination']+'/locit_fit_results.txt'
@@ -469,6 +469,9 @@ def _export_fit_results(data_dict, parm_dict):
 def _export_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, slope_present):
     tolerance = 1e-4
     """Export data from the xds to the proper units as a row to be added to a pretty table"""
+
+    rms = np.sqrt(attributes["chi_squared"])*del_fact
+    row.append(f'{rms:.2e}')
     row.append(_format_value_error(attributes['fixed_delay_fit'], attributes['fixed_delay_error'], del_fact,
                tolerance))
     position, poserr = _rotate_to_gmt(attributes['position_fit'], attributes['position_error'],
