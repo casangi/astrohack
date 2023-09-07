@@ -1256,7 +1256,7 @@ class AstrohackPositionFile(dict):
             _dask_general_compute(fname, self, _plot_sky_coverage_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_delays(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', delay_unit='nsec',
-                    plot_fit=True, display=True, figure_size=None, dpi=300, parallel=False):
+                    plot_model=True, display=True, figure_size=None, dpi=300, parallel=False):
         """ Plot the delays used for antenna position fitting and optionally the resulting fit.
 
         :param destination: Name of the destination folder to contain the plots
@@ -1271,8 +1271,8 @@ class AstrohackPositionFile(dict):
         :type time_unit: str, optional
         :param delay_unit: Unit for delay in plots, defaults to 'nsec'
         :type delay_unit: str, optional
-        :param plot_fit: Plot the fit results alongside the data.
-        :type plot_fit: bool, optional
+        :param plot_model: Plot the fitted model results alongside the data.
+        :type plot_model: bool, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param figure_size: 2 element array/list/tuple with the plot size in inches
@@ -1301,7 +1301,7 @@ class AstrohackPositionFile(dict):
                      'time_unit': time_unit,
                      'angle_unit': angle_unit,
                      'delay_unit': delay_unit,
-                     'plot_fit': plot_fit,
+                     'plot_model': plot_model,
                      'display': display,
                      'figure_size': figure_size,
                      'dpi': dpi,

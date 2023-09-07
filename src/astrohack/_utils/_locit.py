@@ -539,7 +539,7 @@ def _plot_sky_coverage_chunk(parm_dict):
 def _plot_delays_chunk(parm_dict):
     """Plot the delays for an antenna and DDI, optionally with the fit included"""
     combined = parm_dict['combined']
-    plot_fit = parm_dict['plot_fit']
+    plot_model = parm_dict['plot_model']
     antenna = parm_dict['this_ant']
     destination = parm_dict['destination']
     if combined:
@@ -579,50 +579,18 @@ def _plot_delays_chunk(parm_dict):
         fig, axes = plt.subplots(2, 2, figsize=figuresize)
 
     ylabel = f'Delays [{delay_unit}]'
-    if plot_fit:
-        n_samp = len(time)
-        coordinates = np.ndarray([4, n_samp])
-        coordinates[0, :] = ha
-        coordinates[1, :] = dec
-        coordinates[2, :] = ele
-        coordinates[3, :] = time
-
-        phase = xds.attrs['fixed_delay_fit']
-        xoff, yoff, zoff = xds.attrs['position_fit']
-        try:
-            kterm = xds.attrs['koff_fit']
-        except KeyError:
-            kterm = None
-        try:
-            slope = xds.attrs['slope_fit']
-        except KeyError:
-            slope = None
-
-        if slope is None and kterm is None:
-            fit = _phase_model_nokterm_noslope(coordinates, phase, xoff, yoff, zoff)
-        elif slope is None and kterm is not None:
-            fit = _phase_model_kterm_noslope(coordinates, phase, xoff, yoff, zoff, kterm)
-        elif slope is not None and kterm is None:
-            fit = _phase_model_nokterm_slope(coordinates,  phase, xoff, yoff, zoff, slope)
-        else:
-            fit = _phase_model_kterm_slope(coordinates, phase, xoff, yoff, zoff, kterm, slope)
-        fit *= delay_fact
-
-        _scatter_plot(axes[0, 0], time, _time_label(time_unit), delays, ylabel, 'Time vs Delays', fit=fit, ylim=delaylim)
-        _scatter_plot(axes[0, 1], ele, _elevation_label(angle_unit), delays, ylabel, 'Elevation vs Delays',
-                      xlim=elelim, vlines=elelines, fit=fit, ylim=delaylim)
-        _scatter_plot(axes[1, 0], ha, _hour_angle_label(angle_unit), delays, ylabel, 'Hour Angle vs Delays', xlim=halim,
-                      fit=fit, ylim=delaylim)
-        _scatter_plot(axes[1, 1], dec, _declination_label(angle_unit), delays, ylabel, 'Declination vs Delays',
-                      xlim=declim, vlines=declines, fit=fit, ylim=delaylim)
+    if plot_model:
+        model = xds['MODEL'].values * delay_fact
     else:
-        _scatter_plot(axes[0, 0], time, _time_label(time_unit), delays, ylabel, 'Time vs Delays', ylim=delaylim)
-        _scatter_plot(axes[0, 1], ele, _elevation_label(angle_unit), delays, ylabel, 'Elevation vs Delays',
-                      xlim=elelim, vlines=elelines, ylim=delaylim)
-        _scatter_plot(axes[1, 0], ha, _hour_angle_label(angle_unit), delays, ylabel, 'Hour Angle vs Delays', xlim=halim,
-                      ylim=delaylim)
-        _scatter_plot(axes[1, 1], dec, _declination_label(angle_unit), delays, ylabel, 'Declination vs Delays',
-                      xlim=declim, vlines=declines, ylim=delaylim)
+        model = None
+    _scatter_plot(axes[0, 0], time, _time_label(time_unit), delays, ylabel, 'Time vs Delays', ylim=delaylim,
+                  model=model)
+    _scatter_plot(axes[0, 1], ele, _elevation_label(angle_unit), delays, ylabel, 'Elevation vs Delays',
+                  xlim=elelim, vlines=elelines, ylim=delaylim, model=model)
+    _scatter_plot(axes[1, 0], ha, _hour_angle_label(angle_unit), delays, ylabel, 'Hour Angle vs Delays', xlim=halim,
+                  ylim=delaylim, model=model)
+    _scatter_plot(axes[1, 1], dec, _declination_label(angle_unit), delays, ylabel, 'Declination vs Delays',
+                  xlim=declim, vlines=declines, ylim=delaylim, model=model)
     fig.suptitle(suptitle)
     fig.tight_layout()
     plt.savefig(export_name, dpi=dpi)
@@ -663,7 +631,7 @@ def _plot_borders(angle_fact, latitude, elevation_limit):
     return elelim, elelines, declim, declines, halim
 
 
-def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None, hlines=None, vlines=None, fit=None):
+def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None, hlines=None, vlines=None, model=None):
     """Plot the data"""
     ax.plot(xdata, ydata, ls='', marker='+', color='red', label='data')
     ax.set_xlabel(xlabel)
@@ -679,8 +647,8 @@ def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None,
     if vlines is not None:
         for vline in vlines:
             ax.axvline(vline, color='black', ls='--')
-    if fit is not None:
-        ax.plot(xdata, fit, ls='', marker='x', color='blue', label='fit')
+    if model is not None:
+        ax.plot(xdata, model, ls='', marker='x', color='blue', label='model')
         ax.legend()
     return
 
@@ -691,10 +659,8 @@ def _rotate_to_gmt(positions, errors, longitude):
     cosdelta = np.cos(delta_lon)
     sindelta = np.sin(delta_lon)
     newpositions = positions
-    #
     newpositions[0] = xpos*cosdelta - ypos*sindelta
     newpositions[1] = xpos*sindelta + ypos*cosdelta
-
     newerrors = errors
     xerr, yerr = errors[0:2]
     newerrors[0] = np.sqrt((xerr*cosdelta)**2 + (yerr*sindelta)**2)
