@@ -580,14 +580,14 @@ def _print_method_list(method_list, alignment='l', print_len=100):
     print()
 
 
-def _format_value_error(value, error, scaling):
+def _format_value_error(value, error, scaling, tolerance):
     """Format values based and errors based on the significant digits"""
     if np.isfinite(value) and np.isfinite(error):
         value *= scaling
         error *= scaling
-        if abs(value) < 1e-7:
+        if abs(value) < tolerance:
             value = 0.0
-        if abs(error) < 1e-7:
+        if abs(error) < tolerance:
             error = 0.0
         if value == 0 and error == 0:
             return f'{value} \u00b1 {error}'
