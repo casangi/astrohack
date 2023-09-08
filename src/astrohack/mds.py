@@ -1036,13 +1036,20 @@ class AstrohackLocitFile(dict):
                            display=display, figure_size=figure_size, dpi=dpi, label=display_labels)
         return
 
-    def plot_antenna_positions(self, destination, display_stations=True, display=True, figure_size=None, dpi=300):
+    def plot_antenna_positions(self, destination, display_stations=True, display_zoff=False, unit='m', box_size=5000,
+                               display=True, figure_size=None, dpi=300):
         """ Plot antenna positions.
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
         :param display_stations: Add station names to the plot, defaults to True
         :type display_stations: bool, optional
+        :param display_zoff: Add Elevation offsets to the plots, defaults to False
+        :type display_zoff: bool, optional
+        :param unit: Unit for the plot, valid values are length units, default is m
+        :type unit: str, optional
+        :param box_size: Size of the box for plotting the inner part of the array in unit, default is 5000 meters
+        :type box_size: int, float, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param figure_size: 2 element array/list/tuple with the plot sizes in inches
@@ -1058,24 +1065,28 @@ class AstrohackLocitFile(dict):
                      'display': display,
                      'figuresize': figure_size,
                      'stations': display_stations,
+                     'zoff': display_zoff,
+                     'unit': unit,
+                     'box_size': box_size,
                      'dpi': dpi}
 
         fname = 'plot_source_positions'
         parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'precessed', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'stations', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'zoff', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units,
+                                                     default='m')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'box_size', [int,float], default=5000)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
 
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
 
-        filename = destination + '/locit_antenna_positions.png'
-        _plot_antenna_table(filename, self['ant_info'], self['obs_info']['array_center_lonlatrad'], display=display,
-                            figure_size=figure_size, dpi=dpi, stations=display_stations)
+        _plot_antenna_table(self['ant_info'], self['obs_info']['telescope_name'], parm_dict)
         return
 
     def summary(self):
