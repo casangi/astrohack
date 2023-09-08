@@ -24,7 +24,7 @@ from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
-from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table
+from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table, _print_antenna_table
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
 from astrohack._utils._locit import _plot_delays_chunk
 
@@ -959,22 +959,25 @@ class AstrohackLocitFile(dict):
         table.align = alignment
         print(table)
 
-    def print_antenna_table(self):
+    def print_antenna_table(self, relative=True):
         """ Prints a table of the antennas included in the dataset
+
+        :param relative: Print relative antenna coordinates or geocentric coordinates, default is True
+        :type relative: bool, optional
+
+        .. _Description:
+
+        Print Antenna table for the antennas in the dataset. Also marks the reference antenna and the antennas that are
+        absent from the dataset. Coordinates of antenna stations can be relative to the array center or Geocentric
+        (longitude, latitude and radius)
+
         """
-        alignment = 'l'
-        print(f"\n{self['obs_info']['telescope_name']} Antennae:")
-        table = PrettyTable()
-        table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Distance to earth center [m]']
-        for antenna in self['ant_info'].values():
-            if antenna['reference']:
-                table.add_row([antenna['name']+' (ref)', antenna['station'], _rad_to_deg_str(antenna['longitude']),
-                               _rad_to_deg_str(antenna['latitude']), antenna['radius']])
-            else:
-                table.add_row([antenna['name'], antenna['station'], _rad_to_deg_str(antenna['longitude']),
-                              _rad_to_deg_str(antenna['latitude']), antenna['radius']])
-        table.align = alignment
-        print(table)
+        fname = 'print_antenna_table'
+        parm_dict = {'relative': relative}
+        parms_passed = _check_parms(fname, parm_dict, 'relative', [bool], default=True)
+        _parm_check_passed(fname, parms_passed)
+
+        _print_antenna_table(parm_dict, self['ant_info'], self['obs_info']['telescope_name'])
 
     def plot_source_positions(self, destination, display_labels=False, precessed=False, display=True, figure_size=None,
                               dpi=300):

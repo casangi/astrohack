@@ -7,12 +7,14 @@ from astropy.time import Time
 import astropy.units as units
 from astropy.coordinates import EarthLocation
 import xarray as xr
+from prettytable import PrettyTable
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _casa_time_to_mjd
+from astrohack._utils._tools import _casa_time_to_mjd, _rad_to_deg_str
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._constants import figsize, twopi, fontsize
 from astrohack._utils._dio import _write_meta_data
+from astrohack._utils._locit import _open_telescope
 
 
 def _extract_antenna_data(fname, extract_locit_parms):
@@ -160,13 +162,6 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
                             'precessed': phase_center_precessed[i_src].tolist()}
 
     obs_dict = {'src_dict': src_dict, 'time_range': time_range.tolist(), 'telescope_name': telescope_name}
-    if telescope_name == 'EVLA':
-        tel_pos = EarthLocation.of_site('VLA')
-    else:
-        tel_pos = EarthLocation.of_site(telescope_name)
-    obs_dict['array_center_geocentric'] = [tel_pos.x.value, tel_pos.y.value, tel_pos.z.value]
-    obs_dict['array_center_lonlatrad'] = [tel_pos.lon.value, tel_pos.lat.value,
-                                          np.sqrt(tel_pos.x**2+tel_pos.y**2+tel_pos.z**2).value]
 
     _write_meta_data("/".join([basename, ".observation_info"]), obs_dict)
     extract_locit_parms['telescope_name'] = telescope_name
@@ -378,3 +373,52 @@ def _plot_antenna_table(filename, ant_dict, array_center, stations=True, display
     if not display:
         plt.close()
     return
+
+
+def _print_antenna_table(params, ant_dict, telescope_name):
+    telescope = _open_telescope(telescope_name)
+    relative = params['relative']
+
+    print(f"\n{telescope_name} antennae:")
+    table = PrettyTable()
+    table.align = 'c'
+    if relative:
+        nfields = 5
+        table.field_names = ['Name', 'Station', 'East [m]', 'North [m]', 'Elevation [m]', 'Distance [m]']
+        tel_lon = telescope.array_center['m0']['value']
+        tel_lat = telescope.array_center['m1']['value']
+        tel_rad = telescope.array_center['m2']['value']
+    else:
+        nfields = 4
+        table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Radius [m]']
+
+    for ant_name in telescope.ant_list:
+        ant_key = 'ant_'+ant_name
+        if ant_key in ant_dict:
+            antenna = ant_dict[ant_key]
+            if antenna['reference']:
+                ant_name += ' (ref)'
+            row = [ant_name, antenna['station']]
+            if relative:
+                offsets = _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad)
+                row.extend([f'{offsets[0]:.4f}', f'{offsets[1]:.4f}', f'{offsets[2]:.4f}', f'{offsets[3]:.4f}'])
+            else:
+                row.extend([_rad_to_deg_str(antenna['longitude']),  _rad_to_deg_str(antenna['latitude']),
+                           f'{antenna["radius"]:.4f}'])
+            table.add_row(row)
+        else:
+            row = [ant_name]
+            for i_field in range(nfields):
+                row.append('N/A')
+            table.add_row(row)
+
+    print(table)
+    return
+
+
+def _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad):
+    antenna_off_east = tel_rad * (antenna['longitude'] - tel_lon) * np.cos(tel_lat)
+    antenna_off_north = tel_rad * (antenna['latitude'] - tel_lat)
+    antenna_off_ele = antenna['radius'] - tel_rad
+    antenna_dist = np.sqrt(antenna_off_east ** 2 + antenna_off_north ** 2 + antenna_off_ele ** 2)
+    return antenna_off_east, antenna_off_north, antenna_off_ele, antenna_dist
