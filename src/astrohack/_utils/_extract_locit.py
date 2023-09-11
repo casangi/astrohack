@@ -12,7 +12,7 @@ from prettytable import PrettyTable
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._tools import _casa_time_to_mjd, _rad_to_deg_str
 from astrohack._utils._conversion import _convert_unit
-from astrohack._utils._constants import figsize, twopi, fontsize
+from astrohack._utils._constants import figsize, twopi, fontsize, notavail
 from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._locit import _open_telescope
 
@@ -454,7 +454,7 @@ def _print_antenna_table(params, ant_dict, telescope_name):
         else:
             row = [ant_name]
             for i_field in range(nfields):
-                row.append('N/A')
+                row.append(notavail)
             table.add_row(row)
 
     print(table)
