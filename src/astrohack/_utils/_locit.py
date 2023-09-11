@@ -427,6 +427,7 @@ def _export_fit_results(data_dict, parm_dict):
     del_fact = _convert_unit('sec', del_unit, kind='time')
     pos_fact = len_fact * clight
     combined = data_dict._meta_data['combine_ddis']
+    include_missing = parm_dict['include_missing']
 
     if combined:
         field_names = ['Antenna', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
@@ -470,18 +471,10 @@ def _export_fit_results(data_dict, parm_dict):
                     table.add_row(_export_xds(row, ddi.attrs, del_fact, pos_fact, slo_fact, kterm_present,
                                               slope_present))
         else:
-            for ifield in range(nfields):
-                row.append(notavail)
-            table.add_row(row)
-    # if combined:
-    #     for ant_key, antenna in data_dict.items():
-    #         row = [ant_key.split('_')[1]]
-    #         table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present, slope_present))
-    # else:
-    #     for ant_key, antenna in data_dict.items():
-    #         for ddi_key, ddi in antenna.items():
-    #             row = [ant_key.split('_')[1], ddi_key.split('_')[1]]
-    #             table.add_row(_export_xds(row, ddi.attrs, del_fact, pos_fact, slo_fact, kterm_present, slope_present))
+            if include_missing:
+                for ifield in range(nfields):
+                    row.append(notavail)
+                table.add_row(row)
 
     outname = parm_dict['destination']+'/locit_fit_results.txt'
     outfile = open(outname, 'w')

@@ -1161,7 +1161,7 @@ class AstrohackPositionFile(dict):
         return self._file_is_open
 
     def export_fit_results(self, destination, position_unit='m', time_unit='hour',
-                           delay_unit='nsec'):
+                           delay_unit='nsec', include_missing=True):
         """ Export antenna position fit results to a text file.
 
         :param destination: Name of the destination folder to contain exported fit results
@@ -1172,6 +1172,8 @@ class AstrohackPositionFile(dict):
         :type time_unit: str, optional
         :param delay_unit: Unit for delays, defaults to 'ns'
         :type delay_unit: str, optional
+        :param include_missing: include missing antennas in the dataset in the table?, default is True
+        :type include_missing: bool, optional
 
         .. _Description:
 
@@ -1181,7 +1183,8 @@ class AstrohackPositionFile(dict):
         parm_dict = {'destination': destination,
                      'position_unit': position_unit,
                      'delay_unit': delay_unit,
-                     'time_unit': time_unit}
+                     'time_unit': time_unit,
+                     'include_missing': include_missing}
 
         fname = 'export_fit_results'
         parms_passed = True
@@ -1193,6 +1196,8 @@ class AstrohackPositionFile(dict):
                                                      acceptable_data=time_units, default='hour')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delay_unit', [str],
                                                      acceptable_data=time_units, default='nsec')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'include_missing', [bool],
+                                                     default=True)
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         _export_fit_results(self, parm_dict)
