@@ -93,6 +93,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     locit_parms['ant_info'] = locit_mds['ant_info']
     locit_parms['obs_info'] = locit_mds['obs_info']
     attributes['telescope_name'] = locit_mds._meta_data['telescope_name']
+    attributes['reference_antenna'] = locit_mds._meta_data['reference_antenna']
 
     if combine_ddis:
         function = _locit_combined_chunk

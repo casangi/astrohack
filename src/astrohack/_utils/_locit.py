@@ -459,6 +459,8 @@ def _export_fit_results(data_dict, parm_dict):
 
     for ant_name in antenna_list:
         ant_key = 'ant_'+ant_name
+        if ant_name == data_dict._meta_data['reference_antenna']:
+            ant_name += ' (ref)'
         row = [ant_name]
         if ant_key in data_dict.keys():
             antenna = data_dict[ant_key]
