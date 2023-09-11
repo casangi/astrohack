@@ -431,34 +431,57 @@ def _export_fit_results(data_dict, parm_dict):
     if combined:
         field_names = ['Antenna', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
+        nfields = 5
     else:
         field_names = ['Antenna', 'DDI', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
+        nfields = 6
     kterm_present = data_dict._meta_data["fit_kterm"]
     slope_present = data_dict._meta_data["fit_slope"]
     if kterm_present:
         field_names.extend([f'K offset [{pos_unit}]'])
+        nfields += 1
     if slope_present:
         tim_unit = parm_dict['time_unit']
         slo_unit = f'{del_unit}/{tim_unit}'
         slo_fact = del_fact / _convert_unit('day', tim_unit, 'time')
         field_names.extend([f'Rate [{slo_unit}]'])
+        nfields += 1
     else:
-        slo_unit = 'N/A'
+        slo_unit = notavail
         slo_fact = 1.0
 
     table = PrettyTable()
     table.field_names = field_names
-    table.align = 'l'
-    if combined:
-        for ant_key, antenna in data_dict.items():
-            row = [ant_key.split('_')[1]]
-            table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present, slope_present))
-    else:
-        for ant_key, antenna in data_dict.items():
-            for ddi_key, ddi in antenna.items():
-                row = [ant_key.split('_')[1], ddi_key.split('_')[1]]
-                table.add_row(_export_xds(row, ddi.attrs, del_fact, pos_fact, slo_fact, kterm_present, slope_present))
+    table.align = 'c'
+    antenna_list = _open_telescope(data_dict._meta_data['telescope_name']).ant_list
+
+    for ant_name in antenna_list:
+        ant_key = 'ant_'+ant_name
+        row = [ant_name]
+        if ant_key in data_dict.keys():
+            antenna = data_dict[ant_key]
+            if combined:
+                table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
+                                          slope_present))
+            else:
+                for ddi_key, ddi in antenna.items():
+                    row = [ant_name, ddi_key.split('_')[1]]
+                    table.add_row(_export_xds(row, ddi.attrs, del_fact, pos_fact, slo_fact, kterm_present,
+                                              slope_present))
+        else:
+            for ifield in range(nfields):
+                row.append(notavail)
+            table.add_row(row)
+    # if combined:
+    #     for ant_key, antenna in data_dict.items():
+    #         row = [ant_key.split('_')[1]]
+    #         table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present, slope_present))
+    # else:
+    #     for ant_key, antenna in data_dict.items():
+    #         for ddi_key, ddi in antenna.items():
+    #             row = [ant_key.split('_')[1], ddi_key.split('_')[1]]
+    #             table.add_row(_export_xds(row, ddi.attrs, del_fact, pos_fact, slo_fact, kterm_present, slope_present))
 
     outname = parm_dict['destination']+'/locit_fit_results.txt'
     outfile = open(outname, 'w')
