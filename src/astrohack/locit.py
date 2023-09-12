@@ -30,6 +30,8 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     :type ant_id: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
+    :param combine_ddis: Combine DDIs for
+    :type combine_ddis: bool, optional
     :param parallel: Run in parallel. Defaults to False.
     :type parallel: bool, optional
     :param overwrite: Boolean for whether to overwrite current position.zarr file, defaults to False.
@@ -45,16 +47,25 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     `ant` -> `ddi`. The position object also provides a `summary()` helper function to list available keys for each file.
     An outline of the position object structure is show below:
 
+    .. rubric:: Combine_ddis = False:
     .. parsed-literal::
         position_mds =
         {
             ant_0:{
-                ddi_0: panel_ds,
+                ddi_0: position_ds,
                  ⋮
-                ddi_m: panel_ds
+                ddi_m: position_ds
             },
             ⋮
             ant_n: …
+        }
+
+    .. rubric:: Combine_ddis = True:
+    .. parsed-literal::
+        position_mds =
+        {
+            ant_0: position_ds
+            ant_n: position_ds
         }
 
     **Additional Information**
@@ -72,11 +83,18 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     * scipy: This fitting engine uses the well estabilished scipy.optimize.curve_fit routine. This engine is
              slower than the linear algebra engine, but it is more robust with better estimated uncertainties.
 
-    . rubric:: Choosing a polarization
+    .. rubric:: Choosing a polarization
 
     The position fit may be done on either polarization (R or L for the VLA, X or Y for ALMA) or for both polarizations
     at once. When choosing both polarizations we increase the robustness of the solution by doubling the amount of data
     fitted.
+
+    .. rubric:: Combining DDIs
+
+    By default locit combines different DDIs so that there is a single position solution per antenna with a higher
+    signal to noise ratio. If a solution per DDIs is desired then one must specify combine_ddis as False. In this case a
+    solution will be computed for each DDI resulting in as many solutions per antenna  as there are selected DDIs.
+
     """
     logger = _get_astrohack_logger()
 
