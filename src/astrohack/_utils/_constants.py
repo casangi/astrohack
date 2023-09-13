@@ -3,6 +3,7 @@ import scipy.constants as constants
 
 # Physical constants
 clight = constants.speed_of_light
+notavail = 'N/A'
 
 # Length units
 length_units = ['km', 'mi', 'm', 'yd', 'ft', 'in', 'cm', 'mm', 'um', 'mils']

@@ -1,6 +1,36 @@
 {
     "metadata": {
         ".zattrs": {
+            "ant_list": [
+                "ea01",
+                "ea02",
+                "ea03",
+                "ea04",
+                "ea05",
+                "ea06",
+                "ea07",
+                "ea08",
+                "ea09",
+                "ea10",
+                "ea11",
+                "ea12",
+                "ea13",
+                "ea14",
+                "ea15",
+                "ea16",
+                "ea17",
+                "ea18",
+                "ea19",
+                "ea20",
+                "ea21",
+                "ea22",
+                "ea23",
+                "ea24",
+                "ea25",
+                "ea26",
+                "ea27",
+                "ea28"
+            ],
             "array_center": {
                 "m0": {
                     "unit": "rad",

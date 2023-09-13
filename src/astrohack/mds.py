@@ -24,7 +24,7 @@ from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
-from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table
+from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table, _print_antenna_table
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
 from astrohack._utils._locit import _plot_delays_chunk
 
@@ -959,22 +959,25 @@ class AstrohackLocitFile(dict):
         table.align = alignment
         print(table)
 
-    def print_antenna_table(self):
+    def print_antenna_table(self, relative=True):
         """ Prints a table of the antennas included in the dataset
+
+        :param relative: Print relative antenna coordinates or geocentric coordinates, default is True
+        :type relative: bool, optional
+
+        .. _Description:
+
+        Print Antenna table for the antennas in the dataset. Also marks the reference antenna and the antennas that are
+        absent from the dataset. Coordinates of antenna stations can be relative to the array center or Geocentric
+        (longitude, latitude and radius)
+
         """
-        alignment = 'l'
-        print(f"\n{self['obs_info']['telescope_name']} Antennae:")
-        table = PrettyTable()
-        table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Distance to earth center [m]']
-        for antenna in self['ant_info'].values():
-            if antenna['reference']:
-                table.add_row([antenna['name']+' (ref)', antenna['station'], _rad_to_deg_str(antenna['longitude']),
-                               _rad_to_deg_str(antenna['latitude']), antenna['radius']])
-            else:
-                table.add_row([antenna['name'], antenna['station'], _rad_to_deg_str(antenna['longitude']),
-                              _rad_to_deg_str(antenna['latitude']), antenna['radius']])
-        table.align = alignment
-        print(table)
+        fname = 'print_antenna_table'
+        parm_dict = {'relative': relative}
+        parms_passed = _check_parms(fname, parm_dict, 'relative', [bool], default=True)
+        _parm_check_passed(fname, parms_passed)
+
+        _print_antenna_table(parm_dict, self['ant_info'], self['obs_info']['telescope_name'])
 
     def plot_source_positions(self, destination, display_labels=False, precessed=False, display=True, figure_size=None,
                               dpi=300):
@@ -1033,13 +1036,20 @@ class AstrohackLocitFile(dict):
                            display=display, figure_size=figure_size, dpi=dpi, label=display_labels)
         return
 
-    def plot_antenna_positions(self, destination, display_stations=True, display=True, figure_size=None, dpi=300):
+    def plot_antenna_positions(self, destination, display_stations=True, display_zoff=False, unit='m', box_size=5000,
+                               display=True, figure_size=None, dpi=300):
         """ Plot antenna positions.
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
         :param display_stations: Add station names to the plot, defaults to True
         :type display_stations: bool, optional
+        :param display_zoff: Add Elevation offsets to the plots, defaults to False
+        :type display_zoff: bool, optional
+        :param unit: Unit for the plot, valid values are length units, default is m
+        :type unit: str, optional
+        :param box_size: Size of the box for plotting the inner part of the array in unit, default is 5000 meters
+        :type box_size: int, float, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param figure_size: 2 element array/list/tuple with the plot sizes in inches
@@ -1055,24 +1065,28 @@ class AstrohackLocitFile(dict):
                      'display': display,
                      'figuresize': figure_size,
                      'stations': display_stations,
+                     'zoff': display_zoff,
+                     'unit': unit,
+                     'box_size': box_size,
                      'dpi': dpi}
 
         fname = 'plot_source_positions'
         parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'precessed', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'stations', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'zoff', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units,
+                                                     default='m')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'box_size', [int,float], default=5000)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
 
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
 
-        filename = destination + '/locit_antenna_positions.png'
-        _plot_antenna_table(filename, self['ant_info'], self['obs_info']['array_center_lonlatrad'], display=display,
-                            figure_size=figure_size, dpi=dpi, stations=display_stations)
+        _plot_antenna_table(self['ant_info'], self['obs_info']['telescope_name'], parm_dict)
         return
 
     def summary(self):
@@ -1146,22 +1160,20 @@ class AstrohackPositionFile(dict):
 
         return self._file_is_open
 
-    def export_fit_results(self, destination, combine_ddis=False, position_unit='m', time_unit='hour',
-                           delay_unit='nsec', rotate_results=False):
+    def export_fit_results(self, destination, position_unit='m', time_unit='hour',
+                           delay_unit='nsec', include_missing=True):
         """ Export antenna position fit results to a text file.
 
         :param destination: Name of the destination folder to contain exported fit results
         :type destination: str
-        :param combine_ddis: Combine DDIS for a lower uncertainty value, defaults to False
-        :type combine_ddis: bool, optional
         :param position_unit: Unit to list position fit results, defaults to 'm'
         :type position_unit: str, optional
         :param time_unit: Unit for time in position fit results, defaults to 'hour'
         :type time_unit: str, optional
         :param delay_unit: Unit for delays, defaults to 'ns'
         :type delay_unit: str, optional
-        :param rotate_results: Rotate position fit results to array center, defaults to Fale
-        :type rotate_results: bool, optional
+        :param include_missing: include missing antennas in the dataset in the table?, default is True
+        :type include_missing: bool, optional
 
         .. _Description:
 
@@ -1169,26 +1181,23 @@ class AstrohackPositionFile(dict):
         """
         
         parm_dict = {'destination': destination,
-                     'combine_ddis': combine_ddis,
                      'position_unit': position_unit,
                      'delay_unit': delay_unit,
                      'time_unit': time_unit,
-                     'rotate_results': rotate_results}
+                     'include_missing': include_missing}
 
         fname = 'export_fit_results'
         parms_passed = True
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
                                                      default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'combine_ddis', [bool],
-                                                     default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'position_unit', [str],
                                                      acceptable_data=length_units, default='m')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'time_unit', [str],
                                                      acceptable_data=time_units, default='hour')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delay_unit', [str],
                                                      acceptable_data=time_units, default='nsec')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'rotate_results', [bool],
-                                                     default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'include_missing', [bool],
+                                                     default=True)
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         _export_fit_results(self, parm_dict)
@@ -1266,7 +1275,7 @@ class AstrohackPositionFile(dict):
             _dask_general_compute(fname, self, _plot_sky_coverage_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_delays(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', delay_unit='nsec',
-                    plot_fit=True, display=True, figure_size=None, dpi=300, parallel=False):
+                    plot_model=True, display=True, figure_size=None, dpi=300, parallel=False):
         """ Plot the delays used for antenna position fitting and optionally the resulting fit.
 
         :param destination: Name of the destination folder to contain the plots
@@ -1281,8 +1290,8 @@ class AstrohackPositionFile(dict):
         :type time_unit: str, optional
         :param delay_unit: Unit for delay in plots, defaults to 'nsec'
         :type delay_unit: str, optional
-        :param plot_fit: Plot the fit results alongside the data.
-        :type plot_fit: bool, optional
+        :param plot_model: Plot the fitted model results alongside the data.
+        :type plot_model: bool, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param figure_size: 2 element array/list/tuple with the plot size in inches
@@ -1311,7 +1320,7 @@ class AstrohackPositionFile(dict):
                      'time_unit': time_unit,
                      'angle_unit': angle_unit,
                      'delay_unit': delay_unit,
-                     'plot_fit': plot_fit,
+                     'plot_model': plot_model,
                      'display': display,
                      'figure_size': figure_size,
                      'dpi': dpi,

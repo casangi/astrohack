@@ -1,18 +1,20 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.patches import Rectangle
 
 from casacore import tables as ctables
 from astropy.coordinates import SkyCoord, CIRS
 from astropy.time import Time
 import astropy.units as units
-from astropy.coordinates import EarthLocation
 import xarray as xr
+from prettytable import PrettyTable
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _casa_time_to_mjd
+from astrohack._utils._tools import _casa_time_to_mjd, _rad_to_deg_str
 from astrohack._utils._conversion import _convert_unit
-from astrohack._utils._constants import figsize, twopi, fontsize
+from astrohack._utils._constants import figsize, twopi, fontsize, notavail
 from astrohack._utils._dio import _write_meta_data
+from astrohack._utils._locit import _open_telescope
 
 
 def _extract_antenna_data(fname, extract_locit_parms):
@@ -160,13 +162,6 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
                             'precessed': phase_center_precessed[i_src].tolist()}
 
     obs_dict = {'src_dict': src_dict, 'time_range': time_range.tolist(), 'telescope_name': telescope_name}
-    if telescope_name == 'EVLA':
-        tel_pos = EarthLocation.of_site('VLA')
-    else:
-        tel_pos = EarthLocation.of_site(telescope_name)
-    obs_dict['array_center_geocentric'] = [tel_pos.x.value, tel_pos.y.value, tel_pos.z.value]
-    obs_dict['array_center_lonlatrad'] = [tel_pos.lon.value, tel_pos.lat.value,
-                                          np.sqrt(tel_pos.x**2+tel_pos.y**2+tel_pos.z**2).value]
 
     _write_meta_data("/".join([basename, ".observation_info"]), obs_dict)
     extract_locit_parms['telescope_name'] = telescope_name
@@ -340,41 +335,135 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
     return
 
 
-def _plot_antenna_table(filename, ant_dict, array_center, stations=True, display=True, figure_size=figsize, dpi=300):
+def _plot_antenna_table(ant_dict, telescope_name, parm_dict):
     """Plot antenna positions"""
-    if figure_size is None or figure_size == 'None':
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-    else:
-        fig, ax = plt.subplots(1, 1, figsize=figure_size)
 
-    rad2deg = _convert_unit('rad', 'deg', 'trigonometric')
-    # ax.plot(array_center[0], array_center[1], marker='x', color='blue')
-    title = 'Antenna positions during observation'
+    telescope = _open_telescope(telescope_name)
+    stations = parm_dict['stations']
+    display = parm_dict['display']
+    figure_size = parm_dict['figuresize']
+    dpi = parm_dict['dpi']
+    filename = parm_dict['destination'] + '/locit_antenna_positions.png'
+    length_unit = parm_dict['unit']
+    box_size = parm_dict['box_size']  # In user input unit
+    plot_zoff = parm_dict['zoff']
+
+    if figure_size is None or figure_size == 'None':
+        fig, axes = plt.subplots(1, 2, figsize=[10, 5])
+    else:
+        fig, axes = plt.subplots(1, 2, figsize=figure_size)
+
+    len_fac = _convert_unit('m', length_unit, 'length')
+    half_box = box_size / 2
+
+    ax_box = axes[1]
+    ax_all = axes[0]
+
+    tel_lon = telescope.array_center['m0']['value']
+    tel_lat = telescope.array_center['m1']['value']
+    tel_rad = telescope.array_center['m2']['value']
+
     for antenna in ant_dict.values():
-        long = antenna['longitude']*rad2deg
-        lati = antenna['latitude']*rad2deg
-        ax.plot(long, lati, marker='+', color='black')
+        ew_off, ns_off, el_off, _ = _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad)
+        ew_off *= len_fac
+        ns_off *= len_fac
+        el_off *= len_fac
         text = f'  {antenna["name"]}'
         if stations:
             text += f'@{antenna["station"]}'
-        ax.text(long, lati, text, fontsize=fontsize, ha='left', va='center', rotation=0)
+        if plot_zoff:
+            text += f' {el_off:.1f} {length_unit}'
+        if abs(ew_off) > half_box or abs(ns_off) > half_box:
+            ax_all.plot(ew_off, ns_off, marker='+', color='black')
+            ax_all.text(ew_off, ns_off, text, fontsize=fontsize, ha='left', va='center')
+        else:
+            ax_box.plot(ew_off, ns_off, marker='+', color='black')
+            ax_box.text(ew_off, ns_off, text, fontsize=fontsize, ha='left', va='center')
 
-    x_lim, y_lim = ax.get_xlim(), ax.get_ylim()
+    # axes labels
+    xlabel = f'East [{length_unit}]'
+    ylabel = f'North [{length_unit}]'
+
+    # Larger box limits and labels
+    x_lim, y_lim = ax_all.get_xlim(), ax_all.get_ylim()
     x_half, x_mid = (x_lim[1] - x_lim[0])/2, (x_lim[1] + x_lim[0]) / 2
     y_half, y_mid = (y_lim[1] - y_lim[0])/2, (y_lim[1] + y_lim[0]) / 2
     if x_half > y_half:
         y_lim = [y_mid-x_half, y_mid+x_half]
     else:
         x_lim = [x_mid-y_half, x_mid+y_half]
+    ax_all.set_xlim(x_lim)
+    ax_all.set_ylim(y_lim)
+    ax_all.set_xlabel(xlabel)
+    ax_all.set_ylabel(ylabel)
+    ax_all.plot(0, 0, marker='x', color='blue')
+    box = Rectangle([-half_box, -half_box], 2*half_box, 2*half_box, linewidth=0.5, edgecolor='red', facecolor='none')
+    ax_all.add_patch(box)
+    ax_all.set_title('Whole array')
+    ax_all.set_aspect(1)
 
-    ax.set_xlim(x_lim)
-    ax.set_ylim(y_lim)
-    ax.set_xlabel('Longitude [\u00b0]')
-    ax.set_ylabel('Latitude [\u00b0]')
+    # Smaller box limits and labels
+    ax_box.set_xlim([-half_box, half_box])
+    ax_box.set_ylim([-half_box, half_box])
+    ax_box.set_xlabel(xlabel)
+    ax_box.set_ylabel(ylabel)
+    ax_box.plot(0, 0, marker='x', color='blue')
+    ax_box.set_title('Inner array')
+    ax_box.set_aspect(1)
 
+    title = 'Antenna positions during observation'
     fig.suptitle(title)
     fig.tight_layout()
     plt.savefig(filename, dpi=dpi)
     if not display:
         plt.close()
     return
+
+
+def _print_antenna_table(params, ant_dict, telescope_name):
+    telescope = _open_telescope(telescope_name)
+    relative = params['relative']
+
+    print(f"\n{telescope_name} antennae:")
+    table = PrettyTable()
+    table.align = 'c'
+    if relative:
+        nfields = 5
+        table.field_names = ['Name', 'Station', 'East [m]', 'North [m]', 'Elevation [m]', 'Distance [m]']
+        tel_lon = telescope.array_center['m0']['value']
+        tel_lat = telescope.array_center['m1']['value']
+        tel_rad = telescope.array_center['m2']['value']
+    else:
+        nfields = 4
+        table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Radius [m]']
+
+    for ant_name in telescope.ant_list:
+        ant_key = 'ant_'+ant_name
+        if ant_key in ant_dict:
+            antenna = ant_dict[ant_key]
+            if antenna['reference']:
+                ant_name += ' (ref)'
+            row = [ant_name, antenna['station']]
+            if relative:
+                offsets = _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad)
+                row.extend([f'{offsets[0]:.4f}', f'{offsets[1]:.4f}', f'{offsets[2]:.4f}', f'{offsets[3]:.4f}'])
+            else:
+                row.extend([_rad_to_deg_str(antenna['longitude']),  _rad_to_deg_str(antenna['latitude']),
+                           f'{antenna["radius"]:.4f}'])
+            table.add_row(row)
+        else:
+            row = [ant_name]
+            for i_field in range(nfields):
+                row.append(notavail)
+            table.add_row(row)
+
+    print(table)
+    return
+
+
+def _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad):
+    antenna_off_east = tel_rad * (antenna['longitude'] - tel_lon) * np.cos(tel_lat)
+    antenna_off_north = tel_rad * (antenna['latitude'] - tel_lat)
+    antenna_off_ele = antenna['radius'] - tel_rad
+    antenna_dist = np.sqrt(antenna_off_east ** 2 + antenna_off_north ** 2 + antenna_off_ele ** 2)
+    return antenna_off_east, antenna_off_north, antenna_off_ele, antenna_dist
