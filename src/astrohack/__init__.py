@@ -2,8 +2,9 @@ from importlib.metadata import version
 
 __version__ = version('astrohack')
 
-from .astrohack_client import *
+from .client import *
 from .extract_holog import *
+from .extract_holog import generate_holog_obs_dict
 from .extract_pointing import *
 from .holog import *
 from .dio import *

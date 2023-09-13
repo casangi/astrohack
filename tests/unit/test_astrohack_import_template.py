@@ -21,10 +21,10 @@ class TestAstrohack():
         """ teardown any state that was previously setup for all methods of the given class """
         pass
 
-    def test_import_astrohack_client(self):
-        """ Import astrohack_client """
+    def test_import_client(self):
+        """ Import client """
         try:
-            from astrohack.astrohack_client import astrohack_local_client
+            from astrohack.client import astrohack_local_client
         except ImportError:
             assert False
 

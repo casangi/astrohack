@@ -260,9 +260,9 @@ def fix_pointing_table(ms_name, reference_antenna):
     The `fix_pointing_table` function takes the measurement set name and a list of reference antennae.
 
     .. parsed-literal::
-        from astrohack.dio import fix_pointing_table
+        import astrohack
 
-        fix_pointing_table(
+        astrohack.dio.fix_pointing_table(
             ms_name="data/ea25_cal_small_before_fixed.split.ms", 
             reference_antenna=["ea15"]
         )
@@ -343,6 +343,37 @@ def inspect_holog_obs_dict(file='.holog_obs_dict.json', style='static', indent=6
     :type indent: int, optional
     :param columns: Columns used to reshape the antenna list., defaults to 7
     :type columns: int, optional
+
+    .. _Description:
+
+    **Example Usage**
+    The `inspect_holog_obs_dict` loads a holography observation dict either from disk or from memory (as an return value from `generate_holog_obs_dict`) and displays it in a more readable way like JSON.stringify() in javascript.
+
+    .. parsed-literal::
+        import astrohack
+
+        astrohack.dio.inspect_holog_obs_dict(file=holog_obs_obj)
+
+        >> ddi_0:{
+            map_0:{
+                scans:{
+                        [
+                            8,   9,  10,  12,  13,  14,  16
+                            17,  18,  23,  24,  25,  27,  28
+                            29,  31,  32,  33,  38,  39,  40
+                            42,  43,  44,  46,  47,  48,  53
+                            54,  55,  57
+                        ]
+                }
+                ant:{
+                    ea06:{
+                        [
+                            ea04, ea25
+                        ]
+                    }
+                }
+            }
+        } 
     """
     logger = _get_astrohack_logger()
 

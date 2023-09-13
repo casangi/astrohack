@@ -453,7 +453,7 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
                             sub_ref_ant_set.append(ref_ant)
                         
                     if (not sub_ref_ant_set) and (ref_ant_set):
-                        logger.warning('DDI ' + str(ddi) + ' and mapping antenna ' + str(map_ant_key) + ' has no reference antennas. If baseline_average_distance was specified increase this distance. See antenna distance matrix in log by setting debug level to DEBUG in astrohack_client function.')
+                        logger.warning('DDI ' + str(ddi) + ' and mapping antenna ' + str(map_ant_key) + ' has no reference antennas. If baseline_average_distance was specified increase this distance. See antenna distance matrix in log by setting debug level to DEBUG in client function.')
                      
                     ref_ant_set = sub_ref_ant_set
                     

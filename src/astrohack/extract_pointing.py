@@ -63,6 +63,17 @@ def extract_pointing(
 
     .. _Description:
 
+    **Example Usage**
+    In this case, the pointing_name is the file name to be created after extraction.
+
+    .. parsed-literal::
+        from astrohack.extract_pointing import extract_pointing
+
+        extract_pointing(
+            ms_name="astrohack_observation.ms",
+            point_name="astrohack_observation.point.zarr"
+        )
+
     **AstrohackPointFile**
 
     Point object allows the user to access point data via dictionary keys with values `ant`. The point object also provides a `summary()` helper function to list available keys for each file. 
