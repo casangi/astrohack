@@ -1036,7 +1036,7 @@ class AstrohackLocitFile(dict):
                            display=display, figure_size=figure_size, dpi=dpi, label=display_labels)
         return
 
-    def plot_antenna_positions(self, destination, display_stations=True, display_zoff=False, unit='m', box_size=5000,
+    def plot_antenna_positions(self, destination, display_stations=True, display_zoff=False, unit='km', box_size=5,
                                display=True, figure_size=None, dpi=300):
         """ Plot antenna positions.
 
@@ -1046,9 +1046,9 @@ class AstrohackLocitFile(dict):
         :type display_stations: bool, optional
         :param display_zoff: Add Elevation offsets to the plots, defaults to False
         :type display_zoff: bool, optional
-        :param unit: Unit for the plot, valid values are length units, default is m
+        :param unit: Unit for the plot, valid values are length units, default is km
         :type unit: str, optional
-        :param box_size: Size of the box for plotting the inner part of the array in unit, default is 5000 meters
+        :param box_size: Size of the box for plotting the inner part of the array in unit, default is 5 km
         :type box_size: int, float, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
@@ -1079,8 +1079,8 @@ class AstrohackLocitFile(dict):
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'zoff', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units,
-                                                     default='m')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'box_size', [int,float], default=5000)
+                                                     default='km')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'box_size', [int, float], default=5)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
 
         _parm_check_passed(fname, parms_passed)
