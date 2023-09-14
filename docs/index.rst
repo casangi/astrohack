@@ -18,3 +18,4 @@ Holography Antenna Commissioning Kit
    api
    tutorial_vla
    visualization_tutorial
+   locit_tutorial
