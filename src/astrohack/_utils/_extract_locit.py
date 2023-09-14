@@ -337,7 +337,7 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
     return
 
 
-def _plot_antenna_table(ant_dict, telescope_name, parm_dict):
+def _plot_array_configuration(ant_dict, telescope_name, parm_dict):
     """Plot antenna positions"""
 
     telescope = _open_telescope(telescope_name)
@@ -379,7 +379,7 @@ def _plot_antenna_table(ant_dict, telescope_name, parm_dict):
     return
 
 
-def _print_antenna_table(params, ant_dict, telescope_name):
+def _print_array_configuration(params, ant_dict, telescope_name):
     telescope = _open_telescope(telescope_name)
     relative = params['relative']
 

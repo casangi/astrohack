@@ -24,7 +24,7 @@ from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
-from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table, _print_antenna_table
+from astrohack._utils._extract_locit import _plot_source_table, _plot_array_configuration, _print_array_configuration
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
 from astrohack._utils._locit import _plot_delays_chunk, _plot_position_corrections
 
@@ -959,15 +959,15 @@ class AstrohackLocitFile(dict):
         table.align = alignment
         print(table)
 
-    def print_antenna_table(self, relative=True):
-        """ Prints a table of the antennas included in the dataset
+    def print_array_configuration(self, relative=True):
+        """ Prints a table containing the array configuration
 
         :param relative: Print relative antenna coordinates or geocentric coordinates, default is True
         :type relative: bool, optional
 
         .. _Description:
 
-        Print Antenna table for the antennas in the dataset. Also marks the reference antenna and the antennas that are
+        Print arrayx configuration in the dataset. Also marks the reference antenna and the antennas that are
         absent from the dataset. Coordinates of antenna stations can be relative to the array center or Geocentric
         (longitude, latitude and radius)
 
@@ -977,7 +977,7 @@ class AstrohackLocitFile(dict):
         parms_passed = _check_parms(fname, parm_dict, 'relative', [bool], default=True)
         _parm_check_passed(fname, parms_passed)
 
-        _print_antenna_table(parm_dict, self['ant_info'], self['obs_info']['telescope_name'])
+        _print_array_configuration(parm_dict, self['ant_info'], self['obs_info']['telescope_name'])
 
     def plot_source_positions(self, destination, display_labels=False, precessed=False, display=True, figure_size=None,
                               dpi=300):
@@ -1036,9 +1036,9 @@ class AstrohackLocitFile(dict):
                            display=display, figure_size=figure_size, dpi=dpi, label=display_labels)
         return
 
-    def plot_antenna_positions(self, destination, display_stations=True, display_zoff=False, unit='km', box_size=5,
-                               display=True, figure_size=None, dpi=300):
-        """ Plot antenna positions.
+    def plot_array_configuration(self, destination, display_stations=True, display_zoff=False, unit='km', box_size=5,
+                                 display=True, figure_size=None, dpi=300):
+        """ Plot array configuration.
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
@@ -1086,7 +1086,7 @@ class AstrohackLocitFile(dict):
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
 
-        _plot_antenna_table(self['ant_info'], self['obs_info']['telescope_name'], parm_dict)
+        _plot_array_configuration(self['ant_info'], self['obs_info']['telescope_name'], parm_dict)
         return
 
     def summary(self):
@@ -1095,8 +1095,8 @@ class AstrohackLocitFile(dict):
         _print_summary_header(self.file)
         _print_attributes(self._meta_data)
         _print_data_contents(self, ["Antenna", "Contents"])
-        _print_method_list([self.summary, self.print_source_table, self.print_antenna_table,
-                            self.plot_source_positions, self.plot_antenna_positions])
+        _print_method_list([self.summary, self.print_source_table, self.print_array_configuration,
+                            self.plot_source_positions, self.plot_array_configuration])
 
 
 class AstrohackPositionFile(dict):
