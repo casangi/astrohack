@@ -1357,12 +1357,17 @@ class AstrohackPositionFile(dict):
         else:
             _dask_general_compute(fname, self, _plot_delays_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_position_corrections(self, destination, ant_id=None, ddi=None, display=True, figure_size=None, dpi=300):
+    def plot_position_corrections(self, destination, ant_id=None, ddi=None, unit='km', box_size=5, scaling=0.25,
+                                  display=True, figure_size=None, dpi=300):
+
         parm_dict = {'ant': ant_id,
                      'ddi': ddi,
                      'destination': destination,
                      'display': display,
                      'figure_size': figure_size,
+                     'unit': unit,
+                     'box_size': box_size,
+                     'scaling': scaling,
                      'dpi': dpi,
                      }
         _plot_position_corrections(parm_dict, self)

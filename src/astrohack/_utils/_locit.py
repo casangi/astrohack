@@ -694,14 +694,16 @@ def _rotate_to_gmt(positions, errors, longitude):
 def _plot_position_corrections(parm_dict, data_dict):
     telescope = _open_telescope(data_dict._meta_data['telescope_name'])
     tel_lon, tel_lat, tel_rad = _get_telescope_lat_lon_rad(telescope)
-    len_fac = 1e-3
-    scaling = 0.25
-    corr_fac = 1e3 * clight * scaling
+    length_unit = parm_dict['unit']
+    scaling = parm_dict['scaling']
+    len_fac = _convert_unit('m', length_unit, 'length')
+    corr_fac = clight * scaling / len_fac
     figure_size = parm_dict['figure_size']
-    box_size = 5
-    length_unit = 'km'
+    box_size = parm_dict['box_size']
     dpi = parm_dict['dpi']
     display = parm_dict['display']
+    destination = parm_dict['destination']
+    filename = f'{destination}/position_corrections.png'
 
     fig, axes = _create_figure_and_axes(figure_size, [2, 2])
     xy_whole = axes[0, 0]
@@ -727,7 +729,7 @@ def _plot_position_corrections(parm_dict, data_dict):
             _plot_antenna_position(z_whole, z_inner, ew_off, ns_off, text, box_size, marker='.')
             _plot_corrections(z_whole, z_inner, ew_off, ns_off, 0, corrections[2], box_size)
     else:
-        raise Exception('not yet supported')
+        raise Exception('multiple DDIs not yet supported')
     xlabel = f'East [{length_unit}]'
     ylabel = f'North [{length_unit}]'
     _plot_boxes_limits_and_labels(xy_whole, xy_inner, xlabel, ylabel, box_size, 'X & Y, outer array',
@@ -735,7 +737,7 @@ def _plot_position_corrections(parm_dict, data_dict):
     _plot_boxes_limits_and_labels(z_whole, z_inner, xlabel, ylabel, box_size, 'Z, outer array',
                                   'Z, inner array')
 
-    _close_figure(fig, 'Position corrections', 'test_figure.png', dpi, display)
+    _close_figure(fig, 'Position corrections', filename, dpi, display)
 
 
 
