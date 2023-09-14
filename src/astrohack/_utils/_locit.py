@@ -7,12 +7,12 @@ from matplotlib import pyplot as plt
 import astropy.units as units
 import xarray as xr
 
+from astrohack._utils._locit_commons import _open_telescope
 from astrohack._utils._tools import _hadec_to_elevation, _format_value_error
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit
 from astrohack._utils._constants import *
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._panel_classes.telescope import Telescope
 
 
 def _locit_separated_chunk(locit_parms):
@@ -689,11 +689,3 @@ def _rotate_to_gmt(positions, errors, longitude):
     return newpositions, newerrors
 
 
-def _open_telescope(telname):
-    """Open correct telescope based on the telescope string"""
-    if 'VLA' in telname:
-        telname = 'VLA'
-    elif 'ALMA' in telname:
-        telname = 'ALMA_DA'  # It does not matter which ALMA layout since the array center is the same
-    telescope = Telescope(telname)
-    return telescope

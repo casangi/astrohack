@@ -14,7 +14,7 @@ from astrohack._utils._tools import _casa_time_to_mjd, _rad_to_deg_str
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._constants import figsize, twopi, fontsize, notavail
 from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._locit import _open_telescope
+from astrohack._utils._locit_commons import _open_telescope, _compute_antenna_relative_off
 
 
 def _extract_antenna_data(fname, extract_locit_parms):
@@ -461,9 +461,3 @@ def _print_antenna_table(params, ant_dict, telescope_name):
     return
 
 
-def _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad):
-    antenna_off_east = tel_rad * (antenna['longitude'] - tel_lon) * np.cos(tel_lat)
-    antenna_off_north = tel_rad * (antenna['latitude'] - tel_lat)
-    antenna_off_ele = antenna['radius'] - tel_rad
-    antenna_dist = np.sqrt(antenna_off_east ** 2 + antenna_off_north ** 2 + antenna_off_ele ** 2)
-    return antenna_off_east, antenna_off_north, antenna_off_ele, antenna_dist
