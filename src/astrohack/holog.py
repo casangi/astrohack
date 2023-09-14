@@ -97,6 +97,22 @@ def holog(
             ant_n: …
         }
 
+    **Example Usage**
+    
+    .. parsed-literal::
+        from astrohack.holog import holog
+
+        holog(
+            holog_name="astrohack_observation.holog.zarr", 
+            padding_factor=50, 
+            grid_interpolation_mode='linear',
+            chan_average = True,
+            scan_average = True,
+            ant_id=['ea25'],
+            overwrite=True,
+            parallel=True
+        )
+
     """
     
     holog_params = locals()

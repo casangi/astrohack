@@ -502,7 +502,7 @@ class AstrohackHologFile(dict):
                     distributed.Client(DEFAULT_DASK_ADDRESS, timeout=2)
 
                 except Exception:
-                    from astrohack.astrohack_client import astrohack_local_client
+                    from astrohack.client import astrohack_local_client
 
                     logger.info("local client not found, starting ...")
 

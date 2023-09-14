@@ -16,7 +16,7 @@ from astrohack.extract_holog import extract_holog
 
 from astrohack.dio import open_panel
 
-from astrohack.astrohack_client import astrohack_local_client
+from astrohack.client import astrohack_local_client
 
 base_name = 'ea25_cal_small_'
 

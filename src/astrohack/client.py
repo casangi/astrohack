@@ -57,6 +57,19 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
                 'log_file':None
             }
 
+    **Example Usage**
+    
+    .. parsed-literal::
+        from astrohack.client import astrohack_local_client
+
+        client = astrohack_local_client(
+            cores=2, 
+            memory_limit='8GB', 
+            log_parms={
+                'log_level':'DEBUG'
+            }
+        )
+
     """
     
     #Secret parameters user do not need to know about.

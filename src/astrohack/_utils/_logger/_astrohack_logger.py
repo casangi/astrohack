@@ -66,7 +66,7 @@ def _get_astrohack_logger(name = hack_logger_name):
         if name in logger_dict:
             logger = logging.getLogger(name)
         else:
-            #If main logger is not started using astrohack_client function it defaults to printing to term.
+            #If main logger is not started using client function it defaults to printing to term.
             logger = logging.getLogger(name)
             handler = logging.StreamHandler(sys.stdout)
             handler.setFormatter(astrohack_formatter())

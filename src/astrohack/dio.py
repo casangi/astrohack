@@ -245,12 +245,29 @@ def open_pointing(file):
         logger.error(f"Error opening holgraphy pointing file: {file}")
 
 
-def fix_pointing_table(ms_name, reference_antenna):
-    """ Fix pointing table for a user defined subset of reference antennas.
+def fix_pointing_table(ms_name, reference_antenna):    
+    """ Fix pointing table for a user defined subset of reference antennae.
 
-  Args:
-      ms_name (str): Measurement set.
-      reference_antenna (list): List of reference antennas.
+    :param ms_name: Measurement set name.
+    :type file: str
+
+    :param reference_antenna: List of reference antennas.
+    :type file: list
+  
+    .. _Description:
+
+    **Example Usage**
+    The `fix_pointing_table` function takes the measurement set name and a list of reference antennae.
+
+    .. parsed-literal::
+        import astrohack
+
+        astrohack.dio.fix_pointing_table(
+            ms_name="data/ea25_cal_small_before_fixed.split.ms", 
+            reference_antenna=["ea15"]
+        )
+
+
   """
 
     ms_table = "/".join((ms_name, 'ANTENNA'))
@@ -258,6 +275,7 @@ def fix_pointing_table(ms_name, reference_antenna):
     query = 'select NAME from {table}'.format(table=ms_table)
 
     ant_names = np.array(tables.taql(query).getcol('NAME'))
+    
     ant_id = np.arange(len(ant_names))
 
     query_ant = np.searchsorted(ant_names, reference_antenna)
@@ -325,6 +343,37 @@ def inspect_holog_obs_dict(file='.holog_obs_dict.json', style='static', indent=6
     :type indent: int, optional
     :param columns: Columns used to reshape the antenna list., defaults to 7
     :type columns: int, optional
+
+    .. _Description:
+
+    **Example Usage**
+    The `inspect_holog_obs_dict` loads a holography observation dict either from disk or from memory (as an return value from `generate_holog_obs_dict`) and displays it in a more readable way like JSON.stringify() in javascript.
+
+    .. parsed-literal::
+        import astrohack
+
+        astrohack.dio.inspect_holog_obs_dict(file=holog_obs_obj)
+
+        >> ddi_0:{
+            map_0:{
+                scans:{
+                        [
+                            8,   9,  10,  12,  13,  14,  16
+                            17,  18,  23,  24,  25,  27,  28
+                            29,  31,  32,  33,  38,  39,  40
+                            42,  43,  44,  46,  47,  48,  53
+                            54,  55,  57
+                        ]
+                }
+                ant:{
+                    ea06:{
+                        [
+                            ea04, ea25
+                        ]
+                    }
+                }
+            }
+        } 
     """
     logger = _get_astrohack_logger()
 

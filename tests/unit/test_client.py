@@ -23,10 +23,10 @@ class TestAstrohack():
         pass
 
     def test_client_spawn(self):
-        """ Test astrohack_client """
+        """ Test client """
         import distributed
 
-        from astrohack.astrohack_client import astrohack_local_client
+        from astrohack.client import astrohack_local_client
 
         DEFAULT_DASK_ADDRESS="127.0.0.1:8786"
 
@@ -47,10 +47,10 @@ class TestAstrohack():
         client.shutdown()
 
     def test_client_dask_dir(self):
-        """ Test astrohack_client """
+        """ Test client """
         import distributed
 
-        from astrohack.astrohack_client import astrohack_local_client
+        from astrohack.client import astrohack_local_client
 
         DEFAULT_DASK_ADDRESS="127.0.0.1:8786"
 
@@ -69,12 +69,12 @@ class TestAstrohack():
             client.shutdown()
 
     def test_client_logger(self):
-        """ Test astrohack_client """
+        """ Test client """
         import os
         import re
         import distributed
 
-        from astrohack.astrohack_client import astrohack_local_client
+        from astrohack.client import astrohack_local_client
 
         DEFAULT_DASK_ADDRESS="127.0.0.1:8786"
 

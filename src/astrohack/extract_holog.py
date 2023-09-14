@@ -107,6 +107,21 @@ def extract_holog(
             ddi_m: …
         }
 
+    **Example Usage**
+    In this case the pointing file has already been created. In addition the appropriate data_column value nees to be set for the type of measurement set data you are extracting.
+
+    .. parsed-literal::
+        from astrohack.extract_holog import extract_holog
+
+        holog_mds = extract_holog(
+            ms_name="astrohack_observation.ms",
+            point_name="astrohack_observation.point.ms",
+            holog_name="astrohack_observation.holog.ms",
+            data_column='CORRECTED_DATA',
+            parallel=True,
+            overwrite=True
+        )
+
     **Additional Information**
 
         This function extracts the holography related information from the given measurement file. The data is restructured into an astrohack file format and saved into a file in the form of *<holog_name>.holog.zarr*. The extension *.holog.zarr* is used for all holography files. In addition, the pointing information is recorded into a holography file of format *<pointing_name>.point.zarr*. The extension *.point.zarr* is used for all holography pointing files. 
@@ -524,6 +539,17 @@ def generate_holog_obs_dict(
             ⋮
             ddi_m: …
         }
+
+    **Example Usage**
+    In this case the pointing file has already been created. 
+
+    .. parsed-literal::
+        from astrohack.extract_holog import generate_holog_obs_dict
+
+        holog_obs_obj = generate_holog_obs_dict(
+            ms_name="astrohack_observation.ms",
+            point_name="astrohack_observation.point.zarr"
+        )
 
     **Additional Information**
 
