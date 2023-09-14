@@ -7,12 +7,14 @@ from matplotlib import pyplot as plt
 import astropy.units as units
 import xarray as xr
 
-from astrohack._utils._locit_commons import _open_telescope
+from astrohack._utils._locit_commons import _open_telescope, _get_telescope_lat_lon_rad, _compute_antenna_relative_off
+from astrohack._utils._locit_commons import _create_figure_and_axes, _plot_antenna_position, _close_figure
+from astrohack._utils._locit_commons import _plot_boxes_limits_and_labels, _plot_corrections
 from astrohack._utils._tools import _hadec_to_elevation, _format_value_error
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit
 from astrohack._utils._constants import *
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+from astrohack.client import _get_astrohack_logger
 
 
 def _locit_separated_chunk(locit_parms):
@@ -687,5 +689,53 @@ def _rotate_to_gmt(positions, errors, longitude):
     newerrors[0] = np.sqrt((xerr*cosdelta)**2 + (yerr*sindelta)**2)
     newerrors[1] = np.sqrt((yerr*cosdelta)**2 + (xerr*sindelta)**2)
     return newpositions, newerrors
+
+
+def _plot_position_corrections(parm_dict, data_dict):
+    telescope = _open_telescope(data_dict._meta_data['telescope_name'])
+    tel_lon, tel_lat, tel_rad = _get_telescope_lat_lon_rad(telescope)
+    len_fac = 1e-3
+    scaling = 0.25
+    corr_fac = 1e3 * clight * scaling
+    figure_size = parm_dict['figure_size']
+    box_size = 5
+    length_unit = 'km'
+    dpi = parm_dict['dpi']
+    display = parm_dict['display']
+
+    fig, axes = _create_figure_and_axes(figure_size, [2, 2])
+    xy_whole = axes[0, 0]
+    xy_inner = axes[0, 1]
+    z_whole = axes[1, 0]
+    z_inner = axes[1, 1]
+    ref_ant = data_dict._meta_data['reference_antenna']
+
+    combined = data_dict._meta_data['combine_ddis']
+    if combined:
+        for xds in data_dict.values():
+            attributes = xds.attrs
+            antenna = attributes['antenna_info']
+            ew_off, ns_off, _, _ = _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad, len_fac)
+            corrections, _ = _rotate_to_gmt(attributes['position_fit'], attributes['position_error'],
+                                            antenna['longitude'])
+            corrections = np.array(corrections)*corr_fac
+            text = ' '+antenna['name']
+            if antenna['name'] == ref_ant:
+                text += '*'
+            _plot_antenna_position(xy_whole, xy_inner, ew_off, ns_off, text, box_size, marker='.')
+            _plot_corrections(xy_whole, xy_inner, ew_off, ns_off, corrections[0], corrections[1], box_size)
+            _plot_antenna_position(z_whole, z_inner, ew_off, ns_off, text, box_size, marker='.')
+            _plot_corrections(z_whole, z_inner, ew_off, ns_off, 0, corrections[2], box_size)
+    else:
+        raise Exception('not yet supported')
+    xlabel = f'East [{length_unit}]'
+    ylabel = f'North [{length_unit}]'
+    _plot_boxes_limits_and_labels(xy_whole, xy_inner, xlabel, ylabel, box_size, 'X & Y, outer array',
+                                  'X & Y, inner array')
+    _plot_boxes_limits_and_labels(z_whole, z_inner, xlabel, ylabel, box_size, 'Z, outer array',
+                                  'Z, inner array')
+
+    _close_figure(fig, 'Position corrections', 'test_figure.png', dpi, display)
+
 
 

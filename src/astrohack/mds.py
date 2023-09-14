@@ -26,7 +26,7 @@ from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 from astrohack._utils._extract_locit import _plot_source_table, _plot_antenna_table, _print_antenna_table
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
-from astrohack._utils._locit import _plot_delays_chunk
+from astrohack._utils._locit import _plot_delays_chunk, _plot_position_corrections
 
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
@@ -1356,6 +1356,16 @@ class AstrohackPositionFile(dict):
             _dask_general_compute(fname, self, _plot_delays_chunk, parm_dict, ['ant'], parallel=parallel)
         else:
             _dask_general_compute(fname, self, _plot_delays_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+
+    def plot_position_corrections(self, destination, ant_id=None, ddi=None, display=True, figure_size=None, dpi=300):
+        parm_dict = {'ant': ant_id,
+                     'ddi': ddi,
+                     'destination': destination,
+                     'display': display,
+                     'figure_size': figure_size,
+                     'dpi': dpi,
+                     }
+        _plot_position_corrections(parm_dict, self)
 
     def summary(self):
         """ Prints summary of the AstrohackpositionFile object, with available data, attributes and available methods
