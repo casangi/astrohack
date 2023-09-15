@@ -972,7 +972,7 @@ class AstrohackLocitFile(dict):
         (longitude, latitude and radius)
 
         """
-        fname = 'print_antenna_table'
+        fname = 'print_array_configuration'
         parm_dict = {'relative': relative}
         parms_passed = _check_parms(fname, parm_dict, 'relative', [bool], default=True)
         _parm_check_passed(fname, parms_passed)
@@ -1070,7 +1070,7 @@ class AstrohackLocitFile(dict):
                      'box_size': box_size,
                      'dpi': dpi}
 
-        fname = 'plot_source_positions'
+        fname = 'plot_array_configuration'
         parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'stations', [bool], default=False)
@@ -1357,8 +1357,38 @@ class AstrohackPositionFile(dict):
         else:
             _dask_general_compute(fname, self, _plot_delays_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_position_corrections(self, destination, ant_id=None, ddi=None, unit='km', box_size=5, scaling=0.25,
+    def plot_position_corrections(self, destination, ant_id=None, ddi=None, unit='km', box_size=5, scaling=250,
                                   display=True, figure_size=None, dpi=300):
+        """ Plot Antenna position corrections on an array configuration plot
+
+        :param destination: Name of the destination folder to contain plot
+        :type destination: str
+        :param ant_id: Select which antennae are to be plotted, defaults to all when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param unit: Unit for the plot, valid values are length units, default is km
+        :type unit: str, optional
+        :param box_size: Size of the box for plotting the inner part of the array in unit, default is 5 km
+        :type box_size: int, float, optional
+        :param scaling: scaling factor to plotting the corrections, default is 250
+        :type scaling: int, float, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+        :param figure_size: 2 element array/list/tuple with the plot sizes in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: dots per inch to be used in plots, default is 300
+        :type dpi: int, optional
+
+        .. _Description:
+
+        Plot the position corections computed by locit on top of an array configuration plot.
+        The corrections are too small to be visualized on the array plot since they are of the order of mm and the array
+        is usually spread over km, or at least hundreds of meters.
+        The scaling factor is used to bring the corrections to a scale discernible on the plot, this plot should not be
+        used to estimate correction values, for that pourpouse use export_fit_results instead.
+
+        """
 
         parm_dict = {'ant': ant_id,
                      'ddi': ddi,
@@ -1370,6 +1400,24 @@ class AstrohackPositionFile(dict):
                      'scaling': scaling,
                      'dpi': dpi,
                      }
+        fname = 'plot_position_corrections'
+        parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'stations', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ant', [list, str],
+                                                     list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'box_size', [int, float], default=5)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'scaling', [int, float], default=250)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+
+        _parm_check_passed(fname, parms_passed)
+        _create_destination_folder(parm_dict['destination'])
+
         _plot_position_corrections(parm_dict, self)
 
     def summary(self):
@@ -1381,4 +1429,5 @@ class AstrohackPositionFile(dict):
             _print_data_contents(self, ["Antenna"])
         else:
             _print_data_contents(self, ["Antenna", "Contents"])
-        _print_method_list([self.summary, self.export_fit_results, self.plot_sky_coverage, self.plot_delays])
+        _print_method_list([self.summary, self.export_fit_results, self.plot_sky_coverage, self.plot_delays,
+                            self.plot_position_corrections])

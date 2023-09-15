@@ -683,7 +683,7 @@ def _plot_corrections_sub(attributes_list, filename, telescope, ref_ant, parm_di
     length_unit = parm_dict['unit']
     scaling = parm_dict['scaling']
     len_fac = _convert_unit('m', length_unit, 'length')
-    corr_fac = clight * scaling / len_fac
+    corr_fac = clight * scaling
     figure_size = parm_dict['figure_size']
     box_size = parm_dict['box_size']
     dpi = parm_dict['dpi']
