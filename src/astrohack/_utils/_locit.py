@@ -642,25 +642,8 @@ def _rotate_to_gmt(positions, errors, longitude):
 
 def _plot_position_corrections(parm_dict, data_dict):
     telescope = _open_telescope(data_dict._meta_data['telescope_name'])
-    tel_lon, tel_lat, tel_rad = _get_telescope_lat_lon_rad(telescope)
-    length_unit = parm_dict['unit']
-    scaling = parm_dict['scaling']
-    len_fac = _convert_unit('m', length_unit, 'length')
-    corr_fac = clight * scaling / len_fac
-    figure_size = parm_dict['figure_size']
-    box_size = parm_dict['box_size']
-    dpi = parm_dict['dpi']
-    display = parm_dict['display']
     destination = parm_dict['destination']
-    filename = f'{destination}/position_corrections.png'
-
-    fig, axes = _create_figure_and_axes(figure_size, [2, 2])
-    xy_whole = axes[0, 0]
-    xy_inner = axes[0, 1]
-    z_whole = axes[1, 0]
-    z_inner = axes[1, 1]
     ref_ant = data_dict._meta_data['reference_antenna']
-
     combined = data_dict._meta_data['combine_ddis']
 
     if parm_dict['ant'] == 'all':
@@ -671,31 +654,66 @@ def _plot_position_corrections(parm_dict, data_dict):
             ant_list[i_ant] = 'ant_'+ant_list[i_ant]
 
     if combined:
-        for ant_key in ant_list:
-            xds = data_dict[ant_key]
-            attributes = xds.attrs
-            antenna = attributes['antenna_info']
-            ew_off, ns_off, _, _ = _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad, len_fac)
-            corrections, _ = _rotate_to_gmt(attributes['position_fit'], attributes['position_error'],
-                                            antenna['longitude'])
-            corrections = np.array(corrections)*corr_fac
-            text = ' '+antenna['name']
-            if antenna['name'] == ref_ant:
-                text += '*'
-            _plot_antenna_position(xy_whole, xy_inner, ew_off, ns_off, text, box_size, marker='.')
-            _plot_corrections(xy_whole, xy_inner, ew_off, ns_off, corrections[0], corrections[1], box_size)
-            _plot_antenna_position(z_whole, z_inner, ew_off, ns_off, text, box_size, marker='.')
-            _plot_corrections(z_whole, z_inner, ew_off, ns_off, 0, corrections[2], box_size)
+        filename = f'{destination}/position_corrections_combined_ddis.png'
+        attribute_list = []
+        for ant in ant_list:
+            attribute_list.append(data_dict[ant].attrs)
+        _plot_corrections_sub(attribute_list, filename, telescope, ref_ant, parm_dict)
     else:
-        raise Exception('multiple DDIs not yet supported')
+        ddi_list = []
+        if parm_dict['ddi'] == 'all':
+            for ant in ant_list:
+                ddi_list.extend(data_dict[ant].keys())
+            ddi_list = np.unique(ddi_list)
+        else:
+            ddi_list = parm_dict['ddi']
+            for i_ddi in range(len(ddi_list)):
+                ddi_list[i_ddi] = 'ddi_'+ddi_list[i_ddi]
+        for ddi in ddi_list:
+            filename = f'{destination}/position_corrections_{ddi}.png'
+            attribute_list = []
+            for ant in ant_list:
+                if ddi in data_dict[ant].keys():
+                    attribute_list.append(data_dict[ant][ddi].attrs)
+            _plot_corrections_sub(attribute_list, filename, telescope, ref_ant, parm_dict)
+
+
+def _plot_corrections_sub(attributes_list, filename, telescope, ref_ant, parm_dict):
+    tel_lon, tel_lat, tel_rad = _get_telescope_lat_lon_rad(telescope)
+    length_unit = parm_dict['unit']
+    scaling = parm_dict['scaling']
+    len_fac = _convert_unit('m', length_unit, 'length')
+    corr_fac = clight * scaling / len_fac
+    figure_size = parm_dict['figure_size']
+    box_size = parm_dict['box_size']
+    dpi = parm_dict['dpi']
+    display = parm_dict['display']
+
     xlabel = f'East [{length_unit}]'
     ylabel = f'North [{length_unit}]'
+
+    fig, axes = _create_figure_and_axes(figure_size, [2, 2])
+    xy_whole = axes[0, 0]
+    xy_inner = axes[0, 1]
+    z_whole = axes[1, 0]
+    z_inner = axes[1, 1]
+
+    for attributes in attributes_list:
+        antenna = attributes['antenna_info']
+        ew_off, ns_off, _, _ = _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad, len_fac)
+        corrections, _ = _rotate_to_gmt(attributes['position_fit'], attributes['position_error'],
+                                        antenna['longitude'])
+        corrections = np.array(corrections)*corr_fac
+        text = ' '+antenna['name']
+        if antenna['name'] == ref_ant:
+            text += '*'
+        _plot_antenna_position(xy_whole, xy_inner, ew_off, ns_off, text, box_size, marker='.')
+        _plot_corrections(xy_whole, xy_inner, ew_off, ns_off, corrections[0], corrections[1], box_size)
+        _plot_antenna_position(z_whole, z_inner, ew_off, ns_off, text, box_size, marker='.')
+        _plot_corrections(z_whole, z_inner, ew_off, ns_off, 0, corrections[2], box_size)
+
     _plot_boxes_limits_and_labels(xy_whole, xy_inner, xlabel, ylabel, box_size, 'X & Y, outer array',
                                   'X & Y, inner array')
     _plot_boxes_limits_and_labels(z_whole, z_inner, xlabel, ylabel, box_size, 'Z, outer array',
                                   'Z, inner array')
-
     _close_figure(fig, 'Position corrections', filename, dpi, display)
-
-
-
