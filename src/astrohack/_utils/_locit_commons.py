@@ -107,3 +107,46 @@ def _close_figure(figure, title, filename, dpi, display, tight_layout=True):
         plt.close()
     return
 
+
+def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title=None, labels=None, xlim=None, ylim=None, hlines=None, vlines=None,
+                  model=None):
+    """Plot the data"""
+    ax.plot(xdata, ydata, ls='', marker='+', color='red', label='data')
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title is not None:
+        ax.set_title(title)
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    if hlines is not None:
+        for hline in hlines:
+            ax.axhline(hline, color='black', ls='--')
+    if vlines is not None:
+        for vline in vlines:
+            ax.axvline(vline, color='black', ls='--')
+    if labels is not None:
+        nlabels = len(labels)
+        for ilabel in range(nlabels):
+            ax.text(xdata[ilabel], ydata[ilabel], labels[ilabel], fontsize=.8*fontsize, ha='left', va='center', rotation=20)
+    if model is not None:
+        ax.plot(xdata, model, ls='', marker='x', color='blue', label='model')
+        ax.legend()
+    return
+
+
+def _time_label(unit):
+    return f'Time from observation start [{unit}]'
+
+
+def _elevation_label(unit):
+    return f'Elevation [{unit}]'
+
+
+def _declination_label(unit):
+    return f'Declination [{unit}]'
+
+
+def _hour_angle_label(unit):
+    return f'Hour Angle [{unit}]'

@@ -2,14 +2,14 @@ from prettytable import PrettyTable
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from scipy import optimize as opt
-from matplotlib import pyplot as plt
 
 import astropy.units as units
 import xarray as xr
 
 from astrohack._utils._locit_commons import _open_telescope, _get_telescope_lat_lon_rad, _compute_antenna_relative_off
+from astrohack._utils._locit_commons import  _scatter_plot, _time_label, _elevation_label, _declination_label
 from astrohack._utils._locit_commons import _create_figure_and_axes, _plot_antenna_position, _close_figure
-from astrohack._utils._locit_commons import _plot_boxes_limits_and_labels, _plot_corrections
+from astrohack._utils._locit_commons import _plot_boxes_limits_and_labels, _plot_corrections, _hour_angle_label
 from astrohack._utils._tools import _hadec_to_elevation, _format_value_error
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit
@@ -609,22 +609,6 @@ def _plot_delays_chunk(parm_dict):
     return
 
 
-def _time_label(unit):
-    return f'Time from observation start [{unit}]'
-
-
-def _elevation_label(unit):
-    return f'Elevation [{unit}]'
-
-
-def _declination_label(unit):
-    return f'Declination [{unit}]'
-
-
-def _hour_angle_label(unit):
-    return f'Hour Angle [{unit}]'
-
-
 def _plot_borders(angle_fact, latitude, elevation_limit):
     """Compute plot borders and and lines to be added to plots"""
     latitude *= angle_fact
@@ -639,28 +623,6 @@ def _plot_borders(angle_fact, latitude, elevation_limit):
     elelines = [0, elevation_limit]  # lines at zero and elevation limit
     declines = [latitude-right_angle, latitude+right_angle]
     return elelim, elelines, declim, declines, halim
-
-
-def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None, hlines=None, vlines=None, model=None):
-    """Plot the data"""
-    ax.plot(xdata, ydata, ls='', marker='+', color='red', label='data')
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.set_title(title)
-    if xlim is not None:
-        ax.set_xlim(xlim)
-    if ylim is not None:
-        ax.set_ylim(ylim)
-    if hlines is not None:
-        for hline in hlines:
-            ax.axhline(hline, color='black', ls='--')
-    if vlines is not None:
-        for vline in vlines:
-            ax.axvline(vline, color='black', ls='--')
-    if model is not None:
-        ax.plot(xdata, model, ls='', marker='x', color='blue', label='model')
-        ax.legend()
-    return
 
 
 def _rotate_to_gmt(positions, errors, longitude):

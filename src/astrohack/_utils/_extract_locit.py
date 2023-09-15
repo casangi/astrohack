@@ -1,6 +1,4 @@
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib.patches import Rectangle
 
 from casacore import tables as ctables
 from astropy.coordinates import SkyCoord, CIRS
@@ -16,7 +14,7 @@ from astrohack._utils._constants import figsize, twopi, fontsize, notavail
 from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._locit_commons import _open_telescope, _compute_antenna_relative_off, _get_telescope_lat_lon_rad
 from astrohack._utils._locit_commons import _create_figure_and_axes, _plot_boxes_limits_and_labels
-from astrohack._utils._locit_commons import _plot_antenna_position, _close_figure
+from astrohack._utils._locit_commons import _plot_antenna_position, _close_figure, _scatter_plot
 
 
 def _extract_antenna_data(fname, extract_locit_parms):
@@ -314,17 +312,15 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
     radec[:, 0] *= _convert_unit('rad', 'hour', 'trigonometric')
     radec[:, 1] *= _convert_unit('rad', 'deg', 'trigonometric')
 
+    xlabel = 'Right Ascension [h]'
+    ylabel = 'Declination [\u00b0]'
     if label:
-        for i_src in range(n_src):
-            ax.plot(radec[i_src, 0], radec[i_src, 1], marker='+', ls='', color='red')
-            ax.text(radec[i_src, 0]+0.05, radec[i_src, 1], name[i_src], fontsize=.8*fontsize, ha='left', va='center',
-                    rotation=20)
+        labels = name
     else:
-        ax.plot(radec[:, 0], radec[:, 1], marker='+', ls='', color='red')
-    ax.set_xlim([-0.5, 24.5])
-    ax.set_ylim([-95, 95])
-    ax.set_xlabel('Right Ascension [h]')
-    ax.set_ylabel('Declination [\u00b0]')
+        labels = None
+
+    _scatter_plot(ax, radec[:, 0], xlabel, radec[:, 1], ylabel, title=None, labels=labels, xlim=[-0.5, 24.5],
+                  ylim=[-95, 95])
 
     _close_figure(fig, title, filename, dpi, display)
     return
