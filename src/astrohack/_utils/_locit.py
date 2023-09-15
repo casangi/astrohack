@@ -534,10 +534,7 @@ def _plot_sky_coverage_chunk(parm_dict):
     dec = xds['DECLINATION'] * angle_fact
     ele = xds['ELEVATION'] * angle_fact
 
-    if figuresize is None or figuresize == 'None':
-        fig, axes = plt.subplots(2, 2, figsize=figsize)
-    else:
-        fig, axes = plt.subplots(2, 2, figsize=figuresize)
+    fig, axes = _create_figure_and_axes(figuresize, [2, 2])
 
     elelim, elelines, declim, declines, halim = _plot_borders(angle_fact, antenna_info['latitude'],
                                                               xds.attrs['elevation_limit'])
@@ -551,11 +548,7 @@ def _plot_sky_coverage_chunk(parm_dict):
     _scatter_plot(axes[1, 1], ha, halabel, dec, declabel, 'Hour angle vs Declination', ylim=declim, xlim=halim,
                   hlines=declines)
 
-    fig.suptitle(suptitle)
-    fig.tight_layout()
-    plt.savefig(export_name, dpi=dpi)
-    if not display:
-        plt.close()
+    _close_figure(fig, suptitle, export_name, dpi, display)
     return
 
 
@@ -596,10 +589,7 @@ def _plot_delays_chunk(parm_dict):
     delay_border = 0.05*(delay_minmax[1]-delay_minmax[0])
     delaylim = [delay_minmax[0]-delay_border, delay_minmax[1]+delay_border]
 
-    if figuresize is None or figuresize == 'None':
-        fig, axes = plt.subplots(2, 2, figsize=figsize)
-    else:
-        fig, axes = plt.subplots(2, 2, figsize=figuresize)
+    fig, axes = _create_figure_and_axes(figuresize, [2, 2])
 
     ylabel = f'Delays [{delay_unit}]'
     if plot_model:
@@ -614,11 +604,8 @@ def _plot_delays_chunk(parm_dict):
                   ylim=delaylim, model=model)
     _scatter_plot(axes[1, 1], dec, _declination_label(angle_unit), delays, ylabel, 'Declination vs Delays',
                   xlim=declim, vlines=declines, ylim=delaylim, model=model)
-    fig.suptitle(suptitle)
-    fig.tight_layout()
-    plt.savefig(export_name, dpi=dpi)
-    if not display:
-        plt.close()
+
+    _close_figure(fig, suptitle, export_name, dpi, display)
     return
 
 

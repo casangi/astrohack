@@ -310,10 +310,7 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
         radec[int(i_src)] = src[coorkey]
         name.append(src['name'])
 
-    if figure_size is None or figure_size == 'None':
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-    else:
-        fig, ax = plt.subplots(1, 1, figsize=figure_size)
+    fig, ax  = _create_figure_and_axes(figure_size, [1, 1])
     radec[:, 0] *= _convert_unit('rad', 'hour', 'trigonometric')
     radec[:, 1] *= _convert_unit('rad', 'deg', 'trigonometric')
 
@@ -329,11 +326,7 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
     ax.set_xlabel('Right Ascension [h]')
     ax.set_ylabel('Declination [\u00b0]')
 
-    fig.suptitle(title)
-    fig.tight_layout()
-    plt.savefig(filename, dpi=dpi)
-    if not display:
-        plt.close()
+    _close_figure(fig, title, filename, dpi, display)
     return
 
 
