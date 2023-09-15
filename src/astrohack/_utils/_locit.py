@@ -662,8 +662,17 @@ def _plot_position_corrections(parm_dict, data_dict):
     ref_ant = data_dict._meta_data['reference_antenna']
 
     combined = data_dict._meta_data['combine_ddis']
+
+    if parm_dict['ant'] == 'all':
+        ant_list = data_dict.keys()
+    else:
+        ant_list = parm_dict['ant']
+        for i_ant in range(len(ant_list)):
+            ant_list[i_ant] = 'ant_'+ant_list[i_ant]
+
     if combined:
-        for xds in data_dict.values():
+        for ant_key in ant_list:
+            xds = data_dict[ant_key]
             attributes = xds.attrs
             antenna = attributes['antenna_info']
             ew_off, ns_off, _, _ = _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad, len_fac)
