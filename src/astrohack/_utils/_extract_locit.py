@@ -10,7 +10,7 @@ from prettytable import PrettyTable
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._tools import _casa_time_to_mjd, _rad_to_deg_str
 from astrohack._utils._conversion import _convert_unit
-from astrohack._utils._constants import figsize, twopi, fontsize, notavail
+from astrohack._utils._constants import figsize, twopi, notavail
 from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._locit_commons import _open_telescope, _compute_antenna_relative_off, _get_telescope_lat_lon_rad
 from astrohack._utils._locit_commons import _create_figure_and_axes, _plot_boxes_limits_and_labels
@@ -287,7 +287,17 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
 
 def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midpoint=None, display=True,
                        figure_size=figsize, dpi=300):
-    """ Backend function for plotting the source table"""
+    """ Backend function for plotting the source table
+    Args:
+        filename: Name for the png plot file
+        src_dict: The dictionary containing the observed sources
+        label: Add source labels
+        precessed: Plot sources with precessed coordinates
+        obs_midpoint: Time to which precesses the coordiantes
+        display: Display plots in matplotlib
+        figure_size: plot dimensions in inches
+        dpi: Dots per inch (plot resolution)
+    """
     logger = _get_astrohack_logger()
     n_src = len(src_dict)
     radec = np.ndarray((n_src, 2))
@@ -327,7 +337,13 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
 
 
 def _plot_array_configuration(ant_dict, telescope_name, parm_dict):
-    """Plot antenna positions"""
+    """ backend for plotting array configuration
+
+    Args:
+        ant_dict: Dictionary containing antenna information
+        telescope_name: Name of the telescope used in observations
+        parm_dict: Parameter dictionary crafted by the calling function
+    """
 
     telescope = _open_telescope(telescope_name)
     stations = parm_dict['stations']
@@ -369,6 +385,13 @@ def _plot_array_configuration(ant_dict, telescope_name, parm_dict):
 
 
 def _print_array_configuration(params, ant_dict, telescope_name):
+    """ Backend for printing the array configuration onto a table
+
+    Args:
+        params: Parameter dictionary crafted by the calling function
+        ant_dict: Parameter dictionary crafted by the calling function
+        telescope_name: Name of the telescope used in observations
+    """
     telescope = _open_telescope(telescope_name)
     relative = params['relative']
 
