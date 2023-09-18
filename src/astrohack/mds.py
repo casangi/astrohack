@@ -1160,8 +1160,8 @@ class AstrohackPositionFile(dict):
 
         return self._file_is_open
 
-    def export_fit_results(self, destination, position_unit='m', time_unit='hour',
-                           delay_unit='nsec', include_missing=True):
+    def export_fit_results(self, destination, position_unit='m', time_unit='hour', delay_unit='nsec',
+                           include_missing=True):
         """ Export antenna position fit results to a text file.
 
         :param destination: Name of the destination folder to contain exported fit results

@@ -614,7 +614,7 @@ def _export_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, sl
     row.append(f'{rms:.2e}')
     row.append(_format_value_error(attributes['fixed_delay_fit'], attributes['fixed_delay_error'], del_fact,
                tolerance))
-    position, poserr = _rotate_to_gmt(attributes['position_fit'], attributes['position_error'],
+    position, poserr = _rotate_to_gmt(np.copy(attributes['position_fit']), attributes['position_error'],
                                       attributes['antenna_info']['longitude'])
     for i_pos in range(3):
         row.append(_format_value_error(position[i_pos], poserr[i_pos],  pos_fact, tolerance))
@@ -875,7 +875,7 @@ def _plot_corrections_sub(attributes_list, filename, telescope, ref_ant, parm_di
     for attributes in attributes_list:
         antenna = attributes['antenna_info']
         ew_off, ns_off, _, _ = _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad, len_fac)
-        corrections, _ = _rotate_to_gmt(attributes['position_fit'], attributes['position_error'],
+        corrections, _ = _rotate_to_gmt(np.copy(attributes['position_fit']), attributes['position_error'],
                                         antenna['longitude'])
         corrections = np.array(corrections)*corr_fac
         text = ' '+antenna['name']
