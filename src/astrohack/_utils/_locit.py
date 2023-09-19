@@ -10,7 +10,7 @@ from astrohack._utils._locit_commons import _open_telescope, _get_telescope_lat_
 from astrohack._utils._locit_commons import  _scatter_plot, _time_label, _elevation_label, _declination_label
 from astrohack._utils._locit_commons import _create_figure_and_axes, _plot_antenna_position, _close_figure
 from astrohack._utils._locit_commons import _plot_boxes_limits_and_labels, _plot_corrections, _hour_angle_label
-from astrohack._utils._tools import _hadec_to_elevation, _format_value_error
+from astrohack._utils._tools import _hadec_to_elevation, _format_value_error, _parm_to_list, _add_prefix
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit
 from astrohack._utils._constants import *
@@ -536,27 +536,22 @@ def _export_fit_results(data_dict, parm_dict):
     del_fact = _convert_unit('sec', del_unit, kind='time')
     pos_fact = len_fact * clight
     combined = data_dict._meta_data['combine_ddis']
-    include_missing = parm_dict['include_missing']
 
     if combined:
         field_names = ['Antenna', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
-        nfields = 5
     else:
         field_names = ['Antenna', 'DDI', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
-        nfields = 6
     kterm_present = data_dict._meta_data["fit_kterm"]
     slope_present = data_dict._meta_data["fit_slope"]
     if kterm_present:
         field_names.extend([f'K offset [{pos_unit}]'])
-        nfields += 1
     if slope_present:
         tim_unit = parm_dict['time_unit']
         slo_unit = f'{del_unit}/{tim_unit}'
         slo_fact = del_fact / _convert_unit('day', tim_unit, 'time')
         field_names.extend([f'Rate [{slo_unit}]'])
-        nfields += 1
     else:
         slo_unit = notavail
         slo_fact = 1.0
@@ -564,30 +559,29 @@ def _export_fit_results(data_dict, parm_dict):
     table = PrettyTable()
     table.field_names = field_names
     table.align = 'c'
-    antenna_list = _open_telescope(data_dict._meta_data['telescope_name']).ant_list
+    full_antenna_list = _open_telescope(data_dict._meta_data['telescope_name']).ant_list
+    selected_antenna_list = _parm_to_list('export_fit_results', parm_dict['ant'], data_dict, 'ant')
 
-    for ant_name in antenna_list:
-        ant_key = 'ant_'+ant_name
-        if ant_name == data_dict._meta_data['reference_antenna']:
-            ant_name += ' (ref)'
+    for ant_name in full_antenna_list:
+        ant_key = _add_prefix(ant_name, 'ant')
         row = [ant_name]
-        if ant_key in data_dict.keys():
-            antenna = data_dict[ant_key]
-            if combined:
-                table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
-                                          slope_present))
-            else:
-                for ddi_key, ddi in antenna.items():
-                    row = [ant_name, ddi_key.split('_')[1]]
-                    table.add_row(_export_xds(row, ddi.attrs, del_fact, pos_fact, slo_fact, kterm_present,
-                                              slope_present))
-        else:
-            if include_missing:
-                for ifield in range(nfields):
-                    row.append(notavail)
-                table.add_row(row)
+        if ant_key in selected_antenna_list:
+            if ant_key in data_dict.keys():
+                if ant_name == data_dict._meta_data['reference_antenna']:
+                    ant_name += ' (ref)'
 
-    outname = parm_dict['destination']+'/locit_fit_results.txt'
+                antenna = data_dict[ant_key]
+                if combined:
+                    table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
+                                              slope_present))
+                else:
+                    ddi_list = _parm_to_list('export_fit_results', parm_dict['ddi'], data_dict[ant_key], 'ddi')
+                    for ddi_key in ddi_list:
+                        row = [ant_name, ddi_key.split('_')[1]]
+                        table.add_row(_export_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pos_fact, slo_fact,
+                                                  kterm_present, slope_present))
+
+    outname = parm_dict['destination']+'/position_fit_results.txt'
     outfile = open(outname, 'w')
     outfile.write(table.get_string()+'\n')
     outfile.close()
@@ -808,13 +802,7 @@ def _plot_position_corrections(parm_dict, data_dict):
     ref_ant = data_dict._meta_data['reference_antenna']
     combined = data_dict._meta_data['combine_ddis']
 
-    if parm_dict['ant'] == 'all':
-        ant_list = data_dict.keys()
-    else:
-        ant_list = parm_dict['ant']
-        for i_ant in range(len(ant_list)):
-            ant_list[i_ant] = 'ant_'+ant_list[i_ant]
-
+    ant_list = _parm_to_list('plot_position_corractions', parm_dict['ant'], data_dict, 'ant')
     if combined:
         filename = f'{destination}/position_corrections_combined_ddis.png'
         attribute_list = []
@@ -891,3 +879,4 @@ def _plot_corrections_sub(attributes_list, filename, telescope, ref_ant, parm_di
     _plot_boxes_limits_and_labels(z_whole, z_inner, xlabel, ylabel, box_size, 'Z, outer array',
                                   'Z, inner array')
     _close_figure(fig, 'Position corrections', filename, dpi, display)
+

@@ -1160,20 +1160,22 @@ class AstrohackPositionFile(dict):
 
         return self._file_is_open
 
-    def export_fit_results(self, destination, position_unit='m', time_unit='hour', delay_unit='nsec',
-                           include_missing=True):
+    def export_fit_results(self, destination, ant_id=None, ddi=None, position_unit='m', time_unit='hour',
+                           delay_unit='nsec'):
         """ Export antenna position fit results to a text file.
 
         :param destination: Name of the destination folder to contain exported fit results
         :type destination: str
+        :param ant_id: List of antennae/antenna to be exported, defaults to "all" when None, ex. ea25
+        :type ant_id: list or str, optional
+        :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
         :param position_unit: Unit to list position fit results, defaults to 'm'
         :type position_unit: str, optional
         :param time_unit: Unit for time in position fit results, defaults to 'hour'
         :type time_unit: str, optional
         :param delay_unit: Unit for delays, defaults to 'ns'
         :type delay_unit: str, optional
-        :param include_missing: include missing antennas in the dataset in the table?, default is True
-        :type include_missing: bool, optional
 
         .. _Description:
 
@@ -1181,13 +1183,17 @@ class AstrohackPositionFile(dict):
         """
         
         parm_dict = {'destination': destination,
+                     'ant': ant_id,
+                     'ddi': ddi,
                      'position_unit': position_unit,
                      'delay_unit': delay_unit,
-                     'time_unit': time_unit,
-                     'include_missing': include_missing}
+                     'time_unit': time_unit}
 
         fname = 'export_fit_results'
-        parms_passed = True
+        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
+                                    list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+                                                     list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
                                                      default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'position_unit', [str],
@@ -1196,8 +1202,6 @@ class AstrohackPositionFile(dict):
                                                      acceptable_data=time_units, default='hour')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delay_unit', [str],
                                                      acceptable_data=time_units, default='nsec')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'include_missing', [bool],
-                                                     default=True)
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         _export_fit_results(self, parm_dict)
