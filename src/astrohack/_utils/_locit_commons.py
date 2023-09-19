@@ -102,6 +102,7 @@ def _plot_antenna_position(outerax, innerax, xpos, ypos, text, box_size, marker=
         outerax.plot(xpos, ypos, marker=marker, color=color)
         outerax.text(xpos, ypos, text, fontsize=fontsize, ha='left', va='center')
     else:
+        outerax.plot(xpos, ypos, marker=marker, color=color)
         innerax.plot(xpos, ypos, marker=marker, color=color)
         innerax.text(xpos, ypos, text, fontsize=fontsize, ha='left', va='center')
 
@@ -121,15 +122,16 @@ def _plot_corrections(outerax, innerax, xpos, ypos, xcorr, ycorr, box_size, colo
         linewidth: vector line width
     """
     half_box = box_size/2
-    size = np.sqrt(xcorr**2 + ycorr**2)
+    head_size = np.sqrt(xcorr**2 + ycorr**2)/4
     if abs(xpos) > half_box or abs(ypos) > half_box:
-        outerax.arrow(xpos, ypos, xcorr, ycorr, color=color, linewidth=linewidth, head_width=size/4)
+        outerax.arrow(xpos, ypos, xcorr, ycorr, color=color, linewidth=linewidth, head_width=head_size)
     else:
-        innerax.arrow(xpos, ypos, xcorr, ycorr, color=color, linewidth=linewidth, head_width=size/4)
+        outerax.arrow(xpos, ypos, xcorr, ycorr, color=color, linewidth=linewidth, head_width=head_size)
+        innerax.arrow(xpos, ypos, xcorr, ycorr, color=color, linewidth=linewidth, head_width=head_size)
 
 
 def _plot_boxes_limits_and_labels(outerax, innerax, xlabel, ylabel, box_size, outertitle, innertitle, marker='x',
-                                  marker_color='blue', rectangle_color='red', ):
+                                  marker_color='blue', rectangle_color='red', fixed_aspect=None):
     """
     Set limits and axis labels to array configuration boxes
     Args:
@@ -161,7 +163,8 @@ def _plot_boxes_limits_and_labels(outerax, innerax, xlabel, ylabel, box_size, ou
                     facecolor='none')
     outerax.add_patch(box)
     outerax.set_title(outertitle)
-    outerax.set_aspect(1)
+    if fixed_aspect is not None:
+        outerax.set_aspect(fixed_aspect)
 
     # Smaller box limits and labels
     innerax.set_xlim([-half_box, half_box])
@@ -170,7 +173,8 @@ def _plot_boxes_limits_and_labels(outerax, innerax, xlabel, ylabel, box_size, ou
     innerax.set_ylabel(ylabel)
     innerax.plot(0, 0, marker=marker, color=marker_color)
     innerax.set_title(innertitle)
-    innerax.set_aspect(1)
+    if fixed_aspect is not None:
+        innerax.set_aspect(fixed_aspect)
 
 
 def _close_figure(figure, title, filename, dpi, display, tight_layout=True):

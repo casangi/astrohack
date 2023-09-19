@@ -866,7 +866,7 @@ def _plot_corrections_sub(attributes_list, filename, telescope, ref_ant, parm_di
     xlabel = f'East [{length_unit}]'
     ylabel = f'North [{length_unit}]'
 
-    fig, axes = _create_figure_and_axes(figure_size, [2, 2])
+    fig, axes = _create_figure_and_axes(figure_size, [2, 2], default_figsize=[8, 8])
     xy_whole = axes[0, 0]
     xy_inner = axes[0, 1]
     z_whole = axes[1, 0]
@@ -878,12 +878,12 @@ def _plot_corrections_sub(attributes_list, filename, telescope, ref_ant, parm_di
         corrections, _ = _rotate_to_gmt(np.copy(attributes['position_fit']), attributes['position_error'],
                                         antenna['longitude'])
         corrections = np.array(corrections)*corr_fac
-        text = ' '+antenna['name']
+        text = '  '+antenna['name']
         if antenna['name'] == ref_ant:
             text += '*'
-        _plot_antenna_position(xy_whole, xy_inner, ew_off, ns_off, text, box_size, marker='.')
+        _plot_antenna_position(xy_whole, xy_inner, ew_off, ns_off, text, box_size, marker='+')
         _plot_corrections(xy_whole, xy_inner, ew_off, ns_off, corrections[0], corrections[1], box_size)
-        _plot_antenna_position(z_whole, z_inner, ew_off, ns_off, text, box_size, marker='.')
+        _plot_antenna_position(z_whole, z_inner, ew_off, ns_off, text, box_size, marker='+')
         _plot_corrections(z_whole, z_inner, ew_off, ns_off, 0, corrections[2], box_size)
 
     _plot_boxes_limits_and_labels(xy_whole, xy_inner, xlabel, ylabel, box_size, 'X & Y, outer array',
