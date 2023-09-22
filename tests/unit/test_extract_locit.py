@@ -1,13 +1,10 @@
 import pytest
-
-import os
-import json
 import shutil
 import astrohack
 
 from astrohack.extract_locit import extract_locit
 
-class TestExtractHolog():
+class TestExtractLocit():
     cal_table = './data/locit-input-pha.cal'
     locit_name = './data/locit-input-pha.locit.zarr'
 
