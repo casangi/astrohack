@@ -2,17 +2,19 @@ from prettytable import PrettyTable
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from scipy import optimize as opt
-from matplotlib import pyplot as plt
 
 import astropy.units as units
 import xarray as xr
 
-from astrohack._utils._tools import _hadec_to_elevation, _format_value_error
+from astrohack._utils._locit_commons import _open_telescope, _get_telescope_lat_lon_rad, _compute_antenna_relative_off
+from astrohack._utils._locit_commons import  _scatter_plot, _time_label, _elevation_label, _declination_label
+from astrohack._utils._locit_commons import _create_figure_and_axes, _plot_antenna_position, _close_figure
+from astrohack._utils._locit_commons import _plot_boxes_limits_and_labels, _plot_corrections, _hour_angle_label
+from astrohack._utils._tools import _hadec_to_elevation, _format_value_error, _parm_to_list, _add_prefix
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit
 from astrohack._utils._constants import *
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._panel_classes.telescope import Telescope
+from astrohack.client import _get_astrohack_logger
 
 
 def _locit_separated_chunk(locit_parms):
@@ -213,6 +215,18 @@ def _fit_data(coordinates, delays, locit_parms):
 
 
 def _compute_chi_squared(delays, fit, coordinates, fit_kterm, fit_slope):
+    """
+    Compute a model from fit results and computes the chi squared value of that model with respect to the data
+    Args:
+        delays: The observed delays
+        fit: The fit results
+        coordinates: ha, dec, elevation, time
+        fit_kterm: K term fitted?
+        fit_slope: delay rate fitted?
+
+    Returns:
+    The delay model and the chi squared value
+    """
     model_function, _ = _define_fit_function(fit_kterm, fit_slope)
     model = model_function(coordinates, *fit)
     n_delays = len(delays)
@@ -221,6 +235,17 @@ def _compute_chi_squared(delays, fit, coordinates, fit_kterm, fit_slope):
 
 
 def _build_filtered_arrays(field_id, time, delays, locit_parms):
+    """Build the coordinate arrays (ha, dec, elevation, time) for use in the fitting and filters data below the elevation limit
+
+    Args:
+        field_id: Array with the observed field per delay
+        time: Time array with the time of each delay
+        delays: The delay array
+        locit_parms: Locit main function parameters
+
+    Returns:
+    coordinates (ha, dec, ele, time), delays, local sidereal time all filtered by elevation limit and the elevation_limit
+    """
     """ Build the coordinate arrays (ha, dec, elevation, angle) for use in the fitting"""
     elevation_limit = locit_parms['elevation_limit'] * _convert_unit('deg', 'rad', 'trigonometric')
     antenna = locit_parms['ant_info'][locit_parms['this_ant']]
@@ -239,7 +264,7 @@ def _build_filtered_arrays(field_id, time, delays, locit_parms):
         coordinates[2, i_sample] = _hadec_to_elevation(src_list[field][key], antenna['latitude'])
         coordinates[3, i_sample] = time[i_sample]-time[0]  # time is set to zero at the beginning of obs
 
-    # convert to actual hour angle
+    # convert to actual hour angle and wrap it to the [-pi, pi) interval
     coordinates[0, :] = lst.value - coordinates[0, :]
     coordinates[0, :] = np.where(coordinates[0, :] < 0, coordinates[0, :] + twopi, coordinates[0, :])
 
@@ -253,7 +278,14 @@ def _build_filtered_arrays(field_id, time, delays, locit_parms):
 
 
 def _geometrical_coeffs(coordinates):
-    """Compute the position related coefficients for the fitting, also the 1 corresponding to the fixed phase"""
+    """
+    Compute the position related coefficients for the fitting, also the 1 corresponding to the fixed delay
+    Args:
+        coordinates: coordinate arrays (ha, dec, ele, time)
+
+    Returns:
+    the fixed delay coefficient (1), the x, y and z position delay coeffcients
+    """
     ha, dec = coordinates[0:2]
     cosdec = np.cos(dec)
     xterm = np.cos(ha) * cosdec
@@ -263,37 +295,53 @@ def _geometrical_coeffs(coordinates):
 
 
 def _kterm_coeff(coordinates):
-    """Compute the k term coefficient from elevation"""
+    """ Compute the k term (offset from antenna elevation axis) coefficient from elevation
+
+    Args:
+        coordinates: coordinate arrays (ha, dec, ele, time)
+
+    Returns:
+    The offset from antenna elevation axis delay coefficient
+    """
     elevation = coordinates[2]
     return np.cos(elevation)
 
 
 def _slope_coeff(coordinates):
-    """Compute the phase slope coefficient (basically the time)"""
+    """Compute the delay slope coefficient (basically the time)
+
+    Args:
+        coordinates: coordinate arrays (ha, dec, ele, time)
+
+    Returns:
+    The delay rate coeeficient (time)
+    """
     return coordinates[3]
 
 
-def _solve_linear_algebra(coordinates, gains, fit_kterm, fit_slope):
-    """Fit a phase model to the gain solutions using linear algebra, AIPS style"""
+def _solve_linear_algebra(coordinates, delays, fit_kterm, fit_slope):
+    """
+
+    Args:
+        coordinates: coordinate arrays (ha, dec, ele, time)
+        delays: The delays
+        fit_kterm: fit elevation axis offset term
+        fit_slope: fit delay rate term
+
+    Returns:
+    The fit results and the diagonal of the covariance matrix.
+    """
     npar = 4 + fit_slope + fit_kterm
-    if fit_kterm and fit_slope:
-        coeff_function = _coeff_system_kterm_slope
-    elif fit_kterm and not fit_slope:
-        coeff_function = _coeff_system_kterm_noslope
-    elif not fit_kterm and fit_slope:
-        coeff_function = _coeff_system_nokterm_slope
-    else:
-        coeff_function = _coeff_system_nokterm_noslope
 
     system = np.zeros([npar, npar])
     vector = np.zeros([npar])
     n_samples = coordinates.shape[1]
     for i_sample in range(n_samples):
-        coeffs = coeff_function(coordinates[:, i_sample])
+        coeffs = _system_coefficients(coordinates[:, i_sample], fit_kterm, fit_slope)
         for irow in range(npar):
             for icol in range(irow + 1):
                 system[irow, icol] += coeffs[irow] * coeffs[icol]
-            vector[irow] += gains[i_sample] * coeffs[irow]
+            vector[irow] += delays[i_sample] * coeffs[irow]
 
     for irow in range(1, npar):
         for icol in range(irow):
@@ -304,49 +352,60 @@ def _solve_linear_algebra(coordinates, gains, fit_kterm, fit_slope):
     return fit, variance
 
 
-def _coeff_system_nokterm_noslope(coordinates):
-    """build coefficient list for linear algebra fit with no k or slope terms"""
+def _system_coefficients(coordinates, fit_kterm, fit_slope):
+    """ Build coefficient list for linear algebra fit
+
+    Args:
+        coordinates: coordinate arrays (ha, dec, ele, time)
+        fit_kterm: fit elevation axis offset term
+        fit_slope: Fit delay rate term
+
+    Returns:
+
+    """
     coeffs = _geometrical_coeffs(coordinates)
-    return coeffs
-
-
-def _coeff_system_kterm_noslope(coordinates):
-    """build coefficient list for linear algebra fit with k term and no slope term"""
-    coeffs = _geometrical_coeffs(coordinates)
-    coeffs.append(_kterm_coeff(coordinates))
-    return coeffs
-
-
-def _coeff_system_nokterm_slope(coordinates):
-    """build coefficient list for linear algebra fit with slope term and no k term"""
-    coeffs = _geometrical_coeffs(coordinates)
-    coeffs.append(_slope_coeff(coordinates))
-    return coeffs
-
-
-def _coeff_system_kterm_slope(coordinates):
-    """build coefficient list for linear algebra fit with slope and k terms"""
-    coeffs = _geometrical_coeffs(coordinates)
-    coeffs.append(_kterm_coeff(coordinates))
-    coeffs.append(_slope_coeff(coordinates))
+    if fit_kterm:
+        coeffs.append(_kterm_coeff(coordinates))
+    if fit_slope:
+        coeffs.append(_slope_coeff(coordinates))
     return coeffs
 
 
 def _define_fit_function(fit_kterm, fit_slope):
+    """
+    Define the fitting function based on the presence of the delay rate and elevation axis offset terms
+    Args:
+        fit_kterm: fit elevation axis offset?
+        fit_slope: fit delay rate?
+
+    Returns:
+    The appropriate fitting function and the total number of parameters
+    """
     npar = 4 + fit_slope + fit_kterm
     if fit_kterm and fit_slope:
-        fit_function = _phase_model_kterm_slope
+        fit_function = _delay_model_kterm_slope
     elif fit_kterm and not fit_slope:
-        fit_function = _phase_model_kterm_noslope
+        fit_function = _delay_model_kterm_noslope
     elif not fit_kterm and fit_slope:
-        fit_function = _phase_model_nokterm_slope
+        fit_function = _delay_model_nokterm_slope
     else:
-        fit_function = _phase_model_nokterm_noslope
+        fit_function = _delay_model_nokterm_noslope
     return fit_function, npar
 
 
-def _solve_scipy_optimize_curve_fit(coordinates, gains, fit_kterm, fit_slope, verbose=False):
-    """Fit a phase model to the gain solutions using scipy optimize curve_fit algorithm"""
+def _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_slope, verbose=False):
+    """
+    Fit a delay model to the observed delays using scipy optimize curve_fit algorithm
+    Args:
+        coordinates: coordinate arrays (ha, dec, ele, time)
+        delays: The observed delays
+        fit_kterm: fit elevation axis offset term
+        fit_slope: Fit delay rate term
+        verbose: Display fitting messages
+
+    Returns:
+    The fit results and the diagonal of the covariance matrix
+    """
     logger = _get_astrohack_logger()
 
     fit_function, npar = _define_fit_function(fit_kterm, fit_slope)
@@ -359,7 +418,7 @@ def _solve_scipy_optimize_curve_fit(coordinates, gains, fit_kterm, fit_slope, ve
     maxfevs = [100000, 1000000, 10000000]
     for maxfev in maxfevs:
         try:
-            fit, covar = opt.curve_fit(fit_function, coordinates, gains, p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
+            fit, covar = opt.curve_fit(fit_function, coordinates, delays, p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
         except RuntimeError:
             if verbose:
                 logger.info("Increasing number of iterations")
@@ -373,14 +432,19 @@ def _solve_scipy_optimize_curve_fit(coordinates, gains, fit_kterm, fit_slope, ve
     return fit, variance
 
 
-def _phase_wrap(values, wrap=pi):
-    """Simple angle wrapping routine to limit values to the -wrap to wrap range"""
-    values = values % 2*wrap
-    return np.where(values > wrap, values-2*wrap, values)
+def _delay_model_nokterm_noslope(coordinates, fixed_delay, xoff, yoff, zoff):
+    """
+    Delay model with no elevation axis offset or delay rate
+    Args:
+        coordinates: coordinate arrays (ha, dec, ele, time)
+        fixed_delay: Fixed delay value
+        xoff: X direction delay in antenna frame
+        yoff: Y direction delay in antenna frame
+        zoff: Z direction delay in antenna frame
 
-
-def _phase_model_nokterm_noslope(coordinates, fixed_delay, xoff, yoff, zoff):
-    """Phase model for scipy fitting with no k or slope terms"""
+    Returns:
+    Delays model at coordinates
+    """
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
@@ -388,8 +452,20 @@ def _phase_model_nokterm_noslope(coordinates, fixed_delay, xoff, yoff, zoff):
     return xterm + yterm + zterm + fixed_delay
 
 
-def _phase_model_kterm_noslope(coordinates, fixed_delay, xoff, yoff, zoff, koff):
-    """Phase model for scipy fitting with k term and no slope term"""
+def _delay_model_kterm_noslope(coordinates, fixed_delay, xoff, yoff, zoff, koff):
+    """
+    Delay model with elevation axis offset and no delay rate
+    Args:
+        coordinates: coordinate arrays (ha, dec, ele, time)
+        fixed_delay: Fixed delay value
+        xoff: X direction delay in antenna frame
+        yoff: Y direction delay in antenna frame
+        zoff: Z direction delay in antenna frame
+        koff: Elevation axis offset delay
+
+    Returns:
+    Delays model at coordinates
+    """
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
@@ -398,8 +474,20 @@ def _phase_model_kterm_noslope(coordinates, fixed_delay, xoff, yoff, zoff, koff)
     return xterm + yterm + zterm + fixed_delay + kterm
 
 
-def _phase_model_nokterm_slope(coordinates, fixed_delay, xoff, yoff, zoff, slope):
-    """Phase model for scipy fitting with slope term and no k term"""
+def _delay_model_nokterm_slope(coordinates, fixed_delay, xoff, yoff, zoff, slope):
+    """
+    Delay model with delay rate and no elevation axis offset
+    Args:
+        coordinates: coordinate arrays (ha, dec, ele, time)
+        fixed_delay: Fixed delay value
+        xoff: X direction delay in antenna frame
+        yoff: Y direction delay in antenna frame
+        zoff: Z direction delay in antenna frame
+        slope: delay rate
+
+    Returns:
+    Delays model at coordinates
+    """
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
@@ -408,8 +496,21 @@ def _phase_model_nokterm_slope(coordinates, fixed_delay, xoff, yoff, zoff, slope
     return xterm + yterm + zterm + fixed_delay + sterm
 
 
-def _phase_model_kterm_slope(coordinates, fixed_delay, xoff, yoff, zoff, koff, slope):
-    """"Phase model for scipy fitting with k and slope terms"""
+def _delay_model_kterm_slope(coordinates, fixed_delay, xoff, yoff, zoff, koff, slope):
+    """
+    Delay model with delay rate and elevation axis offset
+    Args:
+        coordinates: coordinate arrays (ha, dec, ele, time)
+        fixed_delay: Fixed delay value
+        xoff: X direction delay in antenna frame
+        yoff: Y direction delay in antenna frame
+        zoff: Z direction delay in antenna frame
+        koff: Elevation axis offset delay
+        slope: delay rate
+
+    Returns:
+    Delays model at coordinates
+    """
     coeffs = _geometrical_coeffs(coordinates)
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
@@ -420,34 +521,37 @@ def _phase_model_kterm_slope(coordinates, fixed_delay, xoff, yoff, zoff, koff, s
 
 
 def _export_fit_results(data_dict, parm_dict):
-    """Export fit results to a txt file listing the different DDIs as different solutions"""
+    """
+    Export fit results to a txt file listing the different DDIs as different solutions if data is not combined
+    Args:
+        data_dict: the mds content
+        parm_dict: Dictionary of the parameters given to the calling function
+
+    Returns:
+    text file with fit results in convenient units
+    """
     pos_unit = parm_dict['position_unit']
     del_unit = parm_dict['delay_unit']
     len_fact = _convert_unit('m', pos_unit, 'length')
     del_fact = _convert_unit('sec', del_unit, kind='time')
     pos_fact = len_fact * clight
     combined = data_dict._meta_data['combine_ddis']
-    include_missing = parm_dict['include_missing']
 
     if combined:
         field_names = ['Antenna', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
-        nfields = 5
     else:
         field_names = ['Antenna', 'DDI', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
-        nfields = 6
     kterm_present = data_dict._meta_data["fit_kterm"]
     slope_present = data_dict._meta_data["fit_slope"]
     if kterm_present:
         field_names.extend([f'K offset [{pos_unit}]'])
-        nfields += 1
     if slope_present:
         tim_unit = parm_dict['time_unit']
         slo_unit = f'{del_unit}/{tim_unit}'
         slo_fact = del_fact / _convert_unit('day', tim_unit, 'time')
         field_names.extend([f'Rate [{slo_unit}]'])
-        nfields += 1
     else:
         slo_unit = notavail
         slo_fact = 1.0
@@ -455,44 +559,56 @@ def _export_fit_results(data_dict, parm_dict):
     table = PrettyTable()
     table.field_names = field_names
     table.align = 'c'
-    antenna_list = _open_telescope(data_dict._meta_data['telescope_name']).ant_list
+    full_antenna_list = _open_telescope(data_dict._meta_data['telescope_name']).ant_list
+    selected_antenna_list = _parm_to_list('export_fit_results', parm_dict['ant'], data_dict, 'ant')
 
-    for ant_name in antenna_list:
-        ant_key = 'ant_'+ant_name
-        if ant_name == data_dict._meta_data['reference_antenna']:
-            ant_name += ' (ref)'
+    for ant_name in full_antenna_list:
+        ant_key = _add_prefix(ant_name, 'ant')
         row = [ant_name]
-        if ant_key in data_dict.keys():
-            antenna = data_dict[ant_key]
-            if combined:
-                table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
-                                          slope_present))
-            else:
-                for ddi_key, ddi in antenna.items():
-                    row = [ant_name, ddi_key.split('_')[1]]
-                    table.add_row(_export_xds(row, ddi.attrs, del_fact, pos_fact, slo_fact, kterm_present,
-                                              slope_present))
-        else:
-            if include_missing:
-                for ifield in range(nfields):
-                    row.append(notavail)
-                table.add_row(row)
+        if ant_key in selected_antenna_list:
+            if ant_key in data_dict.keys():
+                if ant_name == data_dict._meta_data['reference_antenna']:
+                    ant_name += ' (ref)'
 
-    outname = parm_dict['destination']+'/locit_fit_results.txt'
+                antenna = data_dict[ant_key]
+                if combined:
+                    table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
+                                              slope_present))
+                else:
+                    ddi_list = _parm_to_list('export_fit_results', parm_dict['ddi'], data_dict[ant_key], 'ddi')
+                    for ddi_key in ddi_list:
+                        row = [ant_name, ddi_key.split('_')[1]]
+                        table.add_row(_export_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pos_fact, slo_fact,
+                                                  kterm_present, slope_present))
+
+    outname = parm_dict['destination']+'/position_fit_results.txt'
     outfile = open(outname, 'w')
     outfile.write(table.get_string()+'\n')
     outfile.close()
 
 
 def _export_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, slope_present):
+    """
+    Export the data from a single X array DataSet attributes to a table row (a list)
+    Args:
+        row: row onto which the data results are to be added
+        attributes: The XDS attributes dictionary
+        del_fact: Delay unit scaling factor
+        pos_fact: Position unit scaling factor
+        slo_fact: Delay rate unit scaling factor
+        kterm_present: Is the elevation axis offset term present?
+        slope_present: Is the delay rate term present?
+
+    Returns:
+    The filled table row
+    """
     tolerance = 1e-4
-    """Export data from the xds to the proper units as a row to be added to a pretty table"""
 
     rms = np.sqrt(attributes["chi_squared"])*del_fact
     row.append(f'{rms:.2e}')
     row.append(_format_value_error(attributes['fixed_delay_fit'], attributes['fixed_delay_error'], del_fact,
                tolerance))
-    position, poserr = _rotate_to_gmt(attributes['position_fit'], attributes['position_error'],
+    position, poserr = _rotate_to_gmt(np.copy(attributes['position_fit']), attributes['position_error'],
                                       attributes['antenna_info']['longitude'])
     for i_pos in range(3):
         row.append(_format_value_error(position[i_pos], poserr[i_pos],  pos_fact, tolerance))
@@ -504,7 +620,14 @@ def _export_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, sl
 
 
 def _plot_sky_coverage_chunk(parm_dict):
-    """Plot the sky coverage for an antenna and DDI"""
+    """
+    Plot the sky coverage for a XDS
+    Args:
+        parm_dict: Parameter dictionary from the caller function enriched with the XDS data
+
+    Returns:
+    PNG file with the sky coverage
+    """
     logger = _get_astrohack_logger()
     combined = parm_dict['combined']
     antenna = parm_dict['this_ant']
@@ -532,10 +655,7 @@ def _plot_sky_coverage_chunk(parm_dict):
     dec = xds['DECLINATION'] * angle_fact
     ele = xds['ELEVATION'] * angle_fact
 
-    if figuresize is None or figuresize == 'None':
-        fig, axes = plt.subplots(2, 2, figsize=figsize)
-    else:
-        fig, axes = plt.subplots(2, 2, figsize=figuresize)
+    fig, axes = _create_figure_and_axes(figuresize, [2, 2])
 
     elelim, elelines, declim, declines, halim = _plot_borders(angle_fact, antenna_info['latitude'],
                                                               xds.attrs['elevation_limit'])
@@ -549,16 +669,19 @@ def _plot_sky_coverage_chunk(parm_dict):
     _scatter_plot(axes[1, 1], ha, halabel, dec, declabel, 'Hour angle vs Declination', ylim=declim, xlim=halim,
                   hlines=declines)
 
-    fig.suptitle(suptitle)
-    fig.tight_layout()
-    plt.savefig(export_name, dpi=dpi)
-    if not display:
-        plt.close()
+    _close_figure(fig, suptitle, export_name, dpi, display)
     return
 
 
 def _plot_delays_chunk(parm_dict):
-    """Plot the delays for an antenna and DDI, optionally with the fit included"""
+    """
+    Plot the delays and optionally the delay model for a XDS
+    Args:
+        parm_dict: Parameter dictionary from the caller function enriched with the XDS data
+
+    Returns:
+    PNG file with the delay plots
+    """
     combined = parm_dict['combined']
     plot_model = parm_dict['plot_model']
     antenna = parm_dict['this_ant']
@@ -594,10 +717,7 @@ def _plot_delays_chunk(parm_dict):
     delay_border = 0.05*(delay_minmax[1]-delay_minmax[0])
     delaylim = [delay_minmax[0]-delay_border, delay_minmax[1]+delay_border]
 
-    if figuresize is None or figuresize == 'None':
-        fig, axes = plt.subplots(2, 2, figsize=figsize)
-    else:
-        fig, axes = plt.subplots(2, 2, figsize=figuresize)
+    fig, axes = _create_figure_and_axes(figuresize, [2, 2])
 
     ylabel = f'Delays [{delay_unit}]'
     if plot_model:
@@ -612,32 +732,22 @@ def _plot_delays_chunk(parm_dict):
                   ylim=delaylim, model=model)
     _scatter_plot(axes[1, 1], dec, _declination_label(angle_unit), delays, ylabel, 'Declination vs Delays',
                   xlim=declim, vlines=declines, ylim=delaylim, model=model)
-    fig.suptitle(suptitle)
-    fig.tight_layout()
-    plt.savefig(export_name, dpi=dpi)
-    if not display:
-        plt.close()
+
+    _close_figure(fig, suptitle, export_name, dpi, display)
     return
 
 
-def _time_label(unit):
-    return f'Time from observation start [{unit}]'
-
-
-def _elevation_label(unit):
-    return f'Elevation [{unit}]'
-
-
-def _declination_label(unit):
-    return f'Declination [{unit}]'
-
-
-def _hour_angle_label(unit):
-    return f'Hour Angle [{unit}]'
-
-
 def _plot_borders(angle_fact, latitude, elevation_limit):
-    """Compute plot borders and and lines to be added to plots"""
+    """
+    Compute plot limits and position of lines to be added to the plots
+    Args:
+        angle_fact: Angle scaling unit factor
+        latitude: Antenna latitude
+        elevation_limit: The elevation limit in the data set
+
+    Returns:
+    Elevation limits, elevation lines, declination limits, declination lines and hour angle limits
+    """
     latitude *= angle_fact
     elevation_limit *= angle_fact
     right_angle = pi/2*angle_fact
@@ -652,29 +762,17 @@ def _plot_borders(angle_fact, latitude, elevation_limit):
     return elelim, elelines, declim, declines, halim
 
 
-def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title, xlim=None, ylim=None, hlines=None, vlines=None, model=None):
-    """Plot the data"""
-    ax.plot(xdata, ydata, ls='', marker='+', color='red', label='data')
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.set_title(title)
-    if xlim is not None:
-        ax.set_xlim(xlim)
-    if ylim is not None:
-        ax.set_ylim(ylim)
-    if hlines is not None:
-        for hline in hlines:
-            ax.axhline(hline, color='black', ls='--')
-    if vlines is not None:
-        for vline in vlines:
-            ax.axvline(vline, color='black', ls='--')
-    if model is not None:
-        ax.plot(xdata, model, ls='', marker='x', color='blue', label='model')
-        ax.legend()
-    return
-
-
 def _rotate_to_gmt(positions, errors, longitude):
+    """
+    Rotate geometrical delays from antenna reference frame to GMT reference frame
+    Args:
+        positions: geometrical delays
+        errors: geometrical delay errors
+        longitude: Antenna longitude
+
+    Returns:
+    Rotated geometrical delays and associated errors
+    """
     xpos, ypos = positions[0:2]
     delta_lon = longitude
     cosdelta = np.cos(delta_lon)
@@ -689,11 +787,96 @@ def _rotate_to_gmt(positions, errors, longitude):
     return newpositions, newerrors
 
 
-def _open_telescope(telname):
-    """Open correct telescope based on the telescope string"""
-    if 'VLA' in telname:
-        telname = 'VLA'
-    elif 'ALMA' in telname:
-        telname = 'ALMA_DA'  # It does not matter which ALMA layout since the array center is the same
-    telescope = Telescope(telname)
-    return telescope
+def _plot_position_corrections(parm_dict, data_dict):
+    """
+    Plot the position corrections on top of an array configuration plot
+    Args:
+        parm_dict: Calling function parameter dictionary
+        data_dict: The MDS contents
+
+    Returns:
+    PNG file(s) with the correction plots
+    """
+    telescope = _open_telescope(data_dict._meta_data['telescope_name'])
+    destination = parm_dict['destination']
+    ref_ant = data_dict._meta_data['reference_antenna']
+    combined = data_dict._meta_data['combine_ddis']
+
+    ant_list = _parm_to_list('plot_position_corractions', parm_dict['ant'], data_dict, 'ant')
+    if combined:
+        filename = f'{destination}/position_corrections_combined_ddis.png'
+        attribute_list = []
+        for ant in ant_list:
+            attribute_list.append(data_dict[ant].attrs)
+        _plot_corrections_sub(attribute_list, filename, telescope, ref_ant, parm_dict)
+    else:
+        ddi_list = []
+        if parm_dict['ddi'] == 'all':
+            for ant in ant_list:
+                ddi_list.extend(data_dict[ant].keys())
+            ddi_list = np.unique(ddi_list)
+        else:
+            ddi_list = parm_dict['ddi']
+            for i_ddi in range(len(ddi_list)):
+                ddi_list[i_ddi] = 'ddi_'+ddi_list[i_ddi]
+        for ddi in ddi_list:
+            filename = f'{destination}/position_corrections_{ddi}.png'
+            attribute_list = []
+            for ant in ant_list:
+                if ddi in data_dict[ant].keys():
+                    attribute_list.append(data_dict[ant][ddi].attrs)
+            _plot_corrections_sub(attribute_list, filename, telescope, ref_ant, parm_dict)
+
+
+def _plot_corrections_sub(attributes_list, filename, telescope, ref_ant, parm_dict):
+    """
+    Does the actual individual position correction plots
+    Args:
+        attributes_list: List of XDS attributes
+        filename: Name of the PNG file to be created
+        telescope: Telescope object used in observations
+        ref_ant: Reference antenna in the data set
+        parm_dict: Parameter dictionary of the caller's caller
+
+    Returns:
+    PNG file with the position corrections plot
+    """
+    tel_lon, tel_lat, tel_rad = _get_telescope_lat_lon_rad(telescope)
+    length_unit = parm_dict['unit']
+    scaling = parm_dict['scaling']
+    len_fac = _convert_unit('m', length_unit, 'length')
+    corr_fac = clight * scaling
+    figure_size = parm_dict['figure_size']
+    box_size = parm_dict['box_size']
+    dpi = parm_dict['dpi']
+    display = parm_dict['display']
+
+    xlabel = f'East [{length_unit}]'
+    ylabel = f'North [{length_unit}]'
+
+    fig, axes = _create_figure_and_axes(figure_size, [2, 2], default_figsize=[8, 8])
+    xy_whole = axes[0, 0]
+    xy_inner = axes[0, 1]
+    z_whole = axes[1, 0]
+    z_inner = axes[1, 1]
+
+    for attributes in attributes_list:
+        antenna = attributes['antenna_info']
+        ew_off, ns_off, _, _ = _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad, len_fac)
+        corrections, _ = _rotate_to_gmt(np.copy(attributes['position_fit']), attributes['position_error'],
+                                        antenna['longitude'])
+        corrections = np.array(corrections)*corr_fac
+        text = '  '+antenna['name']
+        if antenna['name'] == ref_ant:
+            text += '*'
+        _plot_antenna_position(xy_whole, xy_inner, ew_off, ns_off, text, box_size, marker='+')
+        _plot_corrections(xy_whole, xy_inner, ew_off, ns_off, corrections[0], corrections[1], box_size)
+        _plot_antenna_position(z_whole, z_inner, ew_off, ns_off, text, box_size, marker='+')
+        _plot_corrections(z_whole, z_inner, ew_off, ns_off, 0, corrections[2], box_size)
+
+    _plot_boxes_limits_and_labels(xy_whole, xy_inner, xlabel, ylabel, box_size, 'X & Y, outer array',
+                                  'X & Y, inner array')
+    _plot_boxes_limits_and_labels(z_whole, z_inner, xlabel, ylabel, box_size, 'Z, outer array',
+                                  'Z, inner array')
+    _close_figure(fig, 'Position corrections', filename, dpi, display)
+
