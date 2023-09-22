@@ -25,6 +25,8 @@ class TestPanel():
         
         astrohack.data.datasets.download(file='extract_holog_verification.json')
         astrohack.data.datasets.download(file='holog_numerical_verification.json')
+        
+        astrohack.data.datasets.download(file='panel_cutoff_mask')
 
         extract_pointing(
             ms_name="data/ea25_cal_small_after_fixed.split.ms",
@@ -161,6 +163,42 @@ class TestPanel():
             modified_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.panel.zarr')
 
             assert initial_time == modified_time
+
+    def test_panel_mode(self):
+        panel_list=['3-4', '5-27', '5-37', '5-38']
+
+        panel_mds = panel(
+            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
+            overwrite=True
+        )
+
+        default_rms = panel_mds["ant_ea25"]["ddi_0"].sel(labels=panel_list).apply(np.std).PANEL_SCREWS.values
+
+        panel_mds = panel(
+            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
+            panel_model='mean',
+            overwrite=True
+        )
+
+        mean_rms = panel_mds["ant_ea25"]["ddi_0"].sel(labels=panel_list).apply(np.std).PANEL_SCREWS.values
+
+        assert mean_rms < default_rms    
+
+    def test_panel_cutoff(self):
+        with open("panel_cutoff_mask,npy", "rb") as array:
+            reference_array = np.load(array)
+
+        panel_mds = panel(
+            image_name='data/ea25_cal_small_after_fixed.split.panel.zarr', 
+            cutoff=0.0,
+            parallel=False,
+            overwrite=True
+        )
+
+        assert np.all(panel_mds == reference_array)
+    
 
         
 
