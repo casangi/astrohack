@@ -187,17 +187,17 @@ class TestPanel():
         assert mean_rms < default_rms    
 
     def test_panel_cutoff(self):
-        with open("panel_cutoff_mask,npy", "rb") as array:
+        with open("panel_cutoff_mask.npy", "rb") as array:
             reference_array = np.load(array)
 
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.panel.zarr', 
+            image_name='data/ea25_cal_small_after_fixed.split.image.zarr', 
             cutoff=0.0,
             parallel=False,
             overwrite=True
         )
 
-        assert np.all(panel_mds == reference_array)
+        assert np.all(panel_mds["ant_ea25"]["ddi_0"].MASK.values == reference_array)
     
 
         
