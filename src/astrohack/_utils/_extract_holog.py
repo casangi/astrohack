@@ -4,6 +4,8 @@ import inspect
 import numpy as np
 import xarray as xr
 import astropy
+import astrohack
+
 from numba import njit
 from numba.core import types
 
@@ -555,14 +557,22 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         'n_pix': n_pixs[0],
         'telescope_name': telescope_names[0]
     }
-
+    
     if not (len(set(cell_sizes_sigfigs)) == 1):
-        logger.error('Cell size not consistent: ' + str(cell_sizes))
-        meta_data['cell_size'] = None
+        logger.warning('Cell size not consistent: ' + str(cell_sizes))
+        logger.warning('Calculating suggested cell size ...')
+
+        meta_data["cell_size"] = astrohack._utils._algorithms._calculate_suggested_grid_paramater(parameter=np.array(cell_sizes))
+        
+        logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))
         
     if not (len(set(n_pixs)) == 1):
-        logger.error('Number of pixels not consistent: ' + str(n_pixs))
-        meta_data['n_pix'] = None
+        logger.warning('Number of pixels not consistent: ' + str(n_pixs))
+        logger.warning('Calculating suggested number of pixels ...')
+
+        meta_data['n_pix'] = int(astrohack._utils._algorithms._calculate_suggested_grid_paramater(parameter=np.array(n_pixs)))
+        
+        logger.info("The suggested number of pixels is calculated to be: {n_pix}".format(n_pix=meta_data["n_pix"]))
         
     if not (len(set(telescope_names)) == 1):
         logger.error('Telescope name not consistent: ' + str(telescope_names))
