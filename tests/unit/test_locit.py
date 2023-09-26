@@ -143,6 +143,19 @@ class TestLocit():
 
         assert position_mds["ant_ea25"].polarization == "R"
 
+    def test_locit_combine_ddis(self):
+
+        position_mds = locit(
+            locit_name="data/locit-input-pha.locit.zarr",
+            position_name="data/locit-input-pha.position.zarr",
+            combine_ddis=True,
+            parallel=False,
+            overwrite=True
+        )
+
+        for key in position_mds.keys():
+            assert list(position_mds[key].keys()) == ['DECLINATION', 'DELAYS', 'ELEVATION', 'HOUR_ANGLE', 'LST', 'MODEL']
+
     def test_locit_overwrite(self):
         initial_time = os.path.getctime("data/locit-input-pha.position.zarr")
         

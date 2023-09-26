@@ -225,8 +225,8 @@ def _get_grid_parms(vis_map_dict, pnt_map_dict, ant_names):
         n_pix_x = np.sum([abs_diff[:,0] > max_dis_x]) + 1
         n_pix_y = np.sum([abs_diff[:,1] > max_dis_y]) + 1
         
-        cell_size_x = np.mean(abs_diff[abs_diff[:,0] > max_dis_x,0])
-        cell_size_y = np.mean(abs_diff[abs_diff[:,1] > max_dis_y,1])
+        cell_size_x = np.mean(abs_diff[abs_diff[:,0] > max_dis_x, 0])
+        cell_size_y = np.mean(abs_diff[abs_diff[:,1] > max_dis_y, 1])
         
         if n_pix_x < n_pix_y:
             n_pix = n_pix_x**2
