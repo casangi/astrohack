@@ -100,6 +100,9 @@ class TestLocit():
     def test_locit_fit_kterm(self):
         """
             As a user, I will run locit specifying fit_kterm=True and I will expect the file to be created on disk to contain a solution for the kterm.
+
+            In the case that the kterm is not included, it will not be included when the xarray data structure is written. Therefore. calling it will
+            throw and error.
         """
 
         position_mds = locit(
@@ -111,11 +114,16 @@ class TestLocit():
             overwrite=True
         )
 
-        position_mds["ant_ea25"]["ddi_0"].koff_fit
+        for ant in position_mds.keys():
+            for ddi in position_mds[ant].keys():
+                position_mds[ant][ddi].koff_fit
 
     def test_locit_fit_slope(self):
         """
             As a user, I will run locit specifying fit_slope=False and I will expect the file to be created on disk to contain no solution for the delay slope.
+
+            In the case that the slope is not included, it will not be included when the xarray data structure is written. Therefore. calling it will
+            throw and error.
         """
 
 
@@ -128,11 +136,16 @@ class TestLocit():
             overwrite=True
         )
 
-        position_mds["ant_ea25"]["ddi_0"].slope_fit
+        for ant in position_mds.keys():
+            for ddi in position_mds[ant].keys():
+                position_mds[ant]["ddi_0"].slope_fit
 
     def test_locit_elevation_limit(self):
         """
             As a user, I will run locit specifying elevation_limit=90 and I will expect locit to fail because there is no available data.
+
+            And exception is thrown when elevation_limit is set to 90 degrees. Catch the exception as it is what is expected and check the 
+            failed variable.
         """
         
         failed = False
@@ -157,6 +170,8 @@ class TestLocit():
     def test_locit_polarization(self):
         """
             As a user, I will run locit specifying polarization='R' and I will expect the file to be created on disk to contain only delays for the R polarization and position solutions derived only with the R polarization.
+
+            As the polarization states for each antenna are written to the xds we check them for each key and make sure they have only the desired polarization.
         """
         
         position_mds = locit(
@@ -167,11 +182,14 @@ class TestLocit():
                 overwrite=True
         )
 
-        assert position_mds["ant_ea25"].polarization == "R"
+        for ant in position_mds.keys():
+            assert position_mds[ant].polarization == "R"
 
     def test_locit_combine_ddis(self):
         """
            As a user I will run locit specifying combine_ddis=False and I will expect the file to be created on disk to contain delays and position solutions for all DDIs.
+
+           Because we have used teh combine_ddis argument here the key order geoes from antenna->ddi to only antenna and the keys list becomes the meta data variable names for the xds file.
         """
 
         position_mds = locit(
@@ -188,6 +206,8 @@ class TestLocit():
     def test_locit_overwrite(self):
         """
              As a user I will run locit specifying combine_ddis=False and I will expect the file to be created on disk to contain delays and position solutions for all DDIs.
+
+             Simply check that the file modification time has been changed after being overwritten. This provides a good confirmation things worked according to plan.
         """
         initial_time = os.path.getctime("data/locit-input-pha.position.zarr")
         
@@ -205,6 +225,9 @@ class TestLocit():
     def test_locit_not_overwrite(self):
         """
              As a user, I will run locit specifying overwrite=False and I will expect the file to be created on disk to be not overwritten.
+
+             If overwtie=False and error is thrown when the same file name is used. We catch the error as it is what we expect and don't want the test to 
+             exit early. We can then assert that the modification time has not changed as a redundant check on the parameter.
         """
         initial_time = os.path.getctime("data/locit-input-pha.position.zarr")
         
