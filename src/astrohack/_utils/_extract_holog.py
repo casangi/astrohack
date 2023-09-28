@@ -388,10 +388,13 @@ def _create_holog_file(
             )
 
 
-def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average_nearest, ant_names, ant_pos, ant_names_main):
+def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average_nearest, ant_names, ant_pos, ant_names_main, write_distance_matrix=False):
     '''
     Generate holog_obs_dict.
     '''
+
+    import pandas as pd
+    from scipy.spatial import distance_matrix
 
     logger = _get_astrohack_logger()
     mapping_scans_dict = {}
@@ -421,17 +424,13 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
                                 holog_obs_dict[ddi][map_key] = {'scans':np.array(scan_list),'ant':{}}
                                 
                             holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
-
-    # If users specifies a baseline_average_distance we need to create an antenna distance matrix.
-    if (baseline_average_distance != 'all') or (baseline_average_nearest != 'all'):
         
-        import pandas as pd
-        from scipy.spatial import distance_matrix
-        
-        df = pd.DataFrame(ant_pos, columns=['x', 'y', 'z'], index=ant_names)
-        df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
-        logger.debug('Antenna distance matrix in meters: \n' + str(df_mat))
-        
+    df = pd.DataFrame(ant_pos, columns=['x', 'y', 'z'], index=ant_names)
+    df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
+    if write_distance_matrix:
+        df_mat.to_csv(path_or_buf="{base}/.baseline_distance_matrix.csv".format(base=os.getcwd()), sep="\t")
+        logger.info("Writing distance matrix to {base}/.baseline_distance_matrix.csv ...".format(base=os.getcwd()))
+      
                 
     if (baseline_average_distance != 'all') and (baseline_average_nearest != 'all'):
         logger.error('[{function_name}]: baseline_average_distance and baseline_average_nearest can not both be specified.'.format(function_name=function_name))
