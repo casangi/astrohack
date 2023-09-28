@@ -53,12 +53,18 @@ class TestLocit():
         pass
     
     def test_locit_name(self):
-        """ Run locit with a specified locit_name and expect a file to be created on disk."""
+        """
+            User story: As a user, I will run locit with a specified locit_name and I will expect the file to be created on disk.
+        """
 
         assert os.path.exists("data/locit-input-pha.locit.zarr")
 
     def test_locit_ant_id(self):
-        """ Run locit with an antenna id and create a file on disk containing delays and position solutions only from that antenna id."""
+        """
+            As a user, I will run locit with a specified antenna id. I will expect the file to be created on disk containing delays and position solutions only from that antenna id.
+
+            The multiple data structure (mds) objects have a dictionary structure; locit is run to include only the specified antenna, thus if the lists are not equal there is an error.
+        """
 
         position_mds = locit(
             locit_name="data/locit-input-pha.locit.zarr",
@@ -71,7 +77,12 @@ class TestLocit():
         assert list(position_mds.keys()) == ['ant_ea25']
 
     def test_locit_ddi(self):
-        """ Run locit with a specified DDI and create a file on disk containing delays and position solutions only from that DDI."""
+        """
+            As a user, I will run locit with a specified DDI. I will expect the file to be created on disk containing delays and position solutions only from that DDI.
+
+            The multiple data structure (mds) objects have a dictionary structure; locit is run to include only the specified ddi. As there are multiple antenna values
+            all of which should include only one ddi, we check all antennae in the list requiring that only one ddi exist for each.
+        """
 
         position_mds = locit(
             locit_name="data/locit-input-pha.locit.zarr",
@@ -87,7 +98,12 @@ class TestLocit():
                 assert ddi == "ddi_0"
 
     def test_locit_fit_kterm(self):
-        """ Run locit with fit_kterm=True and expect a file to be created on disk containing a solution for the kterm."""
+        """
+            As a user, I will run locit specifying fit_kterm=True and I will expect the file to be created on disk to contain a solution for the kterm.
+
+            In the case that the kterm is not included, it will not be included when the xarray data structure is written. Therefore. calling it will
+            throw and error.
+        """
 
         position_mds = locit(
             locit_name="data/locit-input-pha.locit.zarr",
@@ -103,7 +119,12 @@ class TestLocit():
                 position_mds[ant][ddi].koff_fit
 
     def test_locit_fit_slope(self):
-        """ Run locit with fit_slope=False and check that the file created on disk contains no solution for the delay slope."""
+        """
+            As a user, I will run locit specifying fit_slope=False and I will expect the file to be created on disk to contain no solution for the delay slope.
+
+            In the case that the slope is not included, it will not be included when the xarray data structure is written. Therefore. calling it will
+            throw and error.
+        """
 
 
         position_mds = locit(
@@ -120,7 +141,12 @@ class TestLocit():
                 position_mds[ant]["ddi_0"].slope_fit
 
     def test_locit_elevation_limit(self):
-        """ Run locit with elevation_limit=90 and expect locit to fail because there is no available data."""
+        """
+            As a user, I will run locit specifying elevation_limit=90 and I will expect locit to fail because there is no available data.
+
+            And exception is thrown when elevation_limit is set to 90 degrees. Catch the exception as it is what is expected and check the 
+            failed variable.
+        """
         
         failed = False
 
@@ -142,8 +168,11 @@ class TestLocit():
             assert failed == False
 
     def test_locit_polarization(self):
-        """ Run locit with polarization='R' and check that the file created on disk contains only delays for the 
-        R polarization and position solutions derived only with the R polarization."""
+        """
+            As a user, I will run locit specifying polarization='R' and I will expect the file to be created on disk to contain only delays for the R polarization and position solutions derived only with the R polarization.
+
+            As the polarization states for each antenna are written to the xds we check them for each key and make sure they have only the desired polarization.
+        """
         
         position_mds = locit(
                 locit_name="data/locit-input-pha.locit.zarr",
@@ -157,7 +186,11 @@ class TestLocit():
             assert position_mds[ant].polarization == "R"
 
     def test_locit_combine_ddis(self):
-        """ Run locit with combine_ddis=False and check that the file created on disk contains delays and position solutions for all DDIs."""
+        """
+           As a user I will run locit specifying combine_ddis=False and I will expect the file to be created on disk to contain delays and position solutions for all DDIs.
+
+           Because we have used teh combine_ddis argument here the key order geoes from antenna->ddi to only antenna and the keys list becomes the meta data variable names for the xds file.
+        """
 
         position_mds = locit(
             locit_name="data/locit-input-pha.locit.zarr",
@@ -171,8 +204,11 @@ class TestLocit():
             assert list(position_mds[key].keys()) == ['DECLINATION', 'DELAYS', 'ELEVATION', 'HOUR_ANGLE', 'LST', 'MODEL']
 
     def test_locit_overwrite(self):
-        """ Simply check that the file modification time has been changed after being overwritten."""
-            
+        """
+             As a user I will run locit specifying combine_ddis=False and I will expect the file to be created on disk to contain delays and position solutions for all DDIs.
+
+             Simply check that the file modification time has been changed after being overwritten. This provides a good confirmation things worked according to plan.
+        """
         initial_time = os.path.getctime("data/locit-input-pha.position.zarr")
         
         position_mds = locit(
@@ -187,8 +223,12 @@ class TestLocit():
         assert initial_time != modified_time
 
     def test_locit_not_overwrite(self):
-        """ Run locit with overwrite=False and expect the file created on disk to be not overwritten."""
-            
+        """
+             As a user, I will run locit specifying overwrite=False and I will expect the file to be created on disk to be not overwritten.
+
+             If overwtie=False and error is thrown when the same file name is used. We catch the error as it is what we expect and don't want the test to 
+             exit early. We can then assert that the modification time has not changed as a redundant check on the parameter.
+        """
         initial_time = os.path.getctime("data/locit-input-pha.position.zarr")
         
         try:
