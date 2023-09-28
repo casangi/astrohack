@@ -736,7 +736,9 @@ class HologObsDict(dict):
         else:
             return astrohack.dio.inspect_holog_obs_dict(self, style="static")
         
-    def select(self, key, value, inplace=False, **kwargs):     
+    def select(self, key, value, inplace=False, **kwargs):
+        logger = _get_astrohack_logger()  
+
         if inplace == True:
             obs_dict = self
             
@@ -767,6 +769,7 @@ class HologObsDict(dict):
     
     @staticmethod
     def get_nearest_baselines(antenna, n_baselines, path_to_matrix=None):
+        logger = _get_astrohack_logger()
         import pandas as pd
 
         if path_to_matrix == None:
