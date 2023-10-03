@@ -416,13 +416,7 @@ def extract_holog(
                             )
                         )
                     else:
-                        try:
-                            _extract_holog_chunk(extract_holog_params)
-
-                        except Exception as error:
-                            print(
-                                "[{function_name}]: There was an error, see log above for more info :: {error}".format(
-                                    function_name=function_name, error=error))
+                        _extract_holog_chunk(extract_holog_params)
 
                     count += 1
 
@@ -434,12 +428,7 @@ def extract_holog(
     obs_ctb.close()
 
     if parallel:
-        try:
-            dask.compute(delayed_list)
-
-        except Exception as error:
-            print("[{function_name}]: There was an error, see log above for more info :: {error}".format(
-                function_name=function_name, error=error))
+        dask.compute(delayed_list)
 
     if count > 0:
         logger.info(f"[{function_name}]: Finished processing")
@@ -521,7 +510,6 @@ def _check_extract_holog_params(function_name, extract_holog_params):
 def generate_holog_obs_dict(
         ms_name,
         point_name,
-        #ddi='all',
         baseline_average_distance='all',
         baseline_average_nearest='all',
         parallel=False
@@ -722,6 +710,7 @@ class HologObsDict(dict):
     """
     def __init__(self, obj):
         super().__init__(obj)
+        self.logger = _get_astrohack_logger()  
     
     def __getitem__(self, key):
         return super().__getitem__(key)
@@ -737,7 +726,6 @@ class HologObsDict(dict):
             return astrohack.dio.inspect_holog_obs_dict(self, style="static")
         
     def select(self, key, value, inplace=False, **kwargs):
-        logger = _get_astrohack_logger()  
 
         if inplace == True:
             obs_dict = self
@@ -762,9 +750,9 @@ class HologObsDict(dict):
                 return self._select_baseline(value, reference=kwargs["reference"], obs_dict=obs_dict)
             
             else:
-                logger.error("Must specify a list of reference antennae for this option.")
+                self.logger.error("Must specify a list of reference antennae for this option.")
         else:
-            logger.error("Valid key not found: {key}".format(key=key))
+            self.logger.error("Valid key not found: {key}".format(key=key))
             return {}
     
     @staticmethod
@@ -776,15 +764,18 @@ class HologObsDict(dict):
             path_to_matrix = os.getcwd()+"/.baseline_distance_matrix.csv"
         
         if os.path.exists(path_to_matrix) == False:
-            logger.error("Unable to find baseline distance matrix in: {path}".format(path=path_to_matrix))
+            self.logger.error("Unable to find baseline distance matrix in: {path}".format(path=path_to_matrix))
 
         df_matrix = pd.read_csv(path_to_matrix, sep="\t", index_col=0)    
         return df_matrix[antenna].sort_values(ascending=False).index[:n_baselines].values.tolist()
         
     def _select_ddi(self, value, obs_dict):
+        convert = lambda x: "ddi_" + str(x)
+
         if isinstance(value, list) == False:
             value = [value]
         
+        value = list(map(convert, value))
         ddi_list = list(obs_dict.keys())
             
         for ddi in ddi_list:
@@ -794,9 +785,12 @@ class HologObsDict(dict):
         return obs_dict
     
     def _select_map(self, value, obs_dict):
+        convert = lambda x: "map_" + str(x)
+
         if isinstance(value, list) == False:
             value = [value]
         
+        value = list(map(convert, value))
         ddi_list = list(obs_dict.keys())
             
         for ddi in ddi_list:

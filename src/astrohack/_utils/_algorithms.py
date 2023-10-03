@@ -251,8 +251,6 @@ def _get_grid_parms(vis_map_dict, pnt_map_dict, ant_names):
 
         n_pix_x = np.sum([abs_diff[:,0] > max_dis_x]) + 1
         n_pix_y = np.sum([abs_diff[:,1] > max_dis_y]) + 1
-
-        logger.debug("{ant}: {x}, {y}".format(ant=ant_names, x=n_pix_x, y=n_pix_y))
         
         cell_size_x = np.mean(abs_diff[abs_diff[:,0] > max_dis_x, 0])
         cell_size_y = np.mean(abs_diff[abs_diff[:,1] > max_dis_y, 1])
