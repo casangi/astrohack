@@ -42,7 +42,14 @@ FILE_ID = {
     'file':'locit-input-pha.cal.zip',
     'id':'8fftz5my9h8ca2xdlupym',
     'rlkey':'fxfid92953ycorh5wrhfgh78b'
+  },
+  'panel_cutoff_mask':
+  {
+    'file':'panel_cutoff_mask.npy',
+    'id':'8ta02t72vwcv4ketv8rfw',
+    'rlkey':'qsmos4hx2duz8upb83hghi6q8'
   }
+  
         
 }
 
