@@ -9,6 +9,7 @@ from astrohack.extract_holog import extract_holog
 from astrohack.extract_pointing import extract_pointing
 from astrohack.extract_holog import generate_holog_obs_dict
 
+
 class TestExtractHolog():
     @classmethod
     def setup_class(cls):
@@ -24,7 +25,7 @@ class TestExtractHolog():
 
     def setup_method(self):
         """ setup any state specific to all methods of the given class """
-                
+
         pass
 
     def teardown_method(self):
@@ -32,9 +33,9 @@ class TestExtractHolog():
         pass
 
     def test_extract_holog_obs_dict(self):
-        '''
+        """
            Specify a holography observations dictionary and check that the proper dictionary is created.
-        '''
+        """
 
         # Generate pointing file
         extract_pointing(
@@ -68,16 +69,16 @@ class TestExtractHolog():
         # Get holog_obs_dict created by extract_holog
         with open(".holog_obs_dict.json") as holog_dict_file:
             holog_obs_test_dict = json.load(holog_dict_file)
-            
+
         holog_obs_test_dict = json.loads(holog_obs_test_dict)
 
         # Check that the holog_obs_dict used in extract_holog matches the input holog_obs_dict
         assert holog_obs_test_dict == holog_obs_dict
 
     def test_extract_holog_ddi(self):
-        '''
+        """
             Specify a ddi value to be process and check that it is the only one processed.
-        '''
+        """
 
         # Generate pointing file
         extract_pointing(
@@ -107,15 +108,14 @@ class TestExtractHolog():
             parallel=False,
             overwrite=True
         )
-        
 
         # Check that the holog_obs_dict used in extract_holog matches the input holog_obs_dict
         assert list(holog_mds.keys()) == ['ddi_1']
 
     def test_extract_holog_overwrite(self):
-        '''
+        """
             Specify that the output file should be overwritten if it exists; check that it is overwritten.
-        '''
+        """
 
         # Generate pointing file
         extract_pointing(
@@ -142,7 +142,7 @@ class TestExtractHolog():
             parallel=False,
             overwrite=True
         )
-        
+
         initial_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.holog.zarr')
 
         # Extract holography data
@@ -160,10 +160,10 @@ class TestExtractHolog():
         assert initial_time != final_time
 
     def test_extract_holog_baseline_average_distance(self):
-        '''
+        """
             Run extract_holog using the baseline average distance as a filter; check that only the baselines with this
             average distance are returned.
-        '''
+        """
 
         # extract pointing data
         pnt_mds = extract_pointing(
@@ -182,14 +182,14 @@ class TestExtractHolog():
             parallel=False,
             overwrite=True
         )
-        
+
         # Check that the expected antenna is present.
         assert list(holog_mds['ddi_0']['map_0'].keys()) == ['ant_ea25']
 
     def test_extract_holog_baseline_average_nearest(self):
-        '''
+        """
             Run extract_holog using the nearest baseline as a filter; check that only the nearest baselines are returned.
-        '''
+        """
 
         # extract pointing data
         pnt_mds = extract_pointing(
@@ -208,6 +208,6 @@ class TestExtractHolog():
             parallel=False,
             overwrite=True
         )
-        
+
         # Check that the expected antenna is present.
         assert list(holog_mds['ddi_0']['map_0'].keys()).sort() == ['ant_ea25', 'ant_ea06'].sort()

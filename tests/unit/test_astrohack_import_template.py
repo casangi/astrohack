@@ -1,5 +1,6 @@
 import pytest
 
+
 class TestAstrohack():
     @classmethod
     def setup_class(cls):

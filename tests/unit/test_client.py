@@ -1,6 +1,7 @@
 import os
 import pytest
 
+
 class TestAstrohack():
     @classmethod
     def setup_class(cls):
@@ -31,19 +32,19 @@ class TestAstrohack():
 
         from astrohack.client import astrohack_local_client
 
-        DEFAULT_DASK_ADDRESS="127.0.0.1:8786"
+        DEFAULT_DASK_ADDRESS = "127.0.0.1:8786"
 
-        log_parms = {'log_level':'DEBUG'}
+        log_parms = {'log_level': 'DEBUG'}
 
         client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
-        
+
         if not distributed.client._get_global_client():
             try:
                 distributed.Client(DEFAULT_DASK_ADDRESS, timeout=2)
 
             except OSError:
                 assert False
-            
+
             finally:
                 client.shutdown()
 
@@ -58,9 +59,9 @@ class TestAstrohack():
 
         from astrohack.client import astrohack_local_client
 
-        DEFAULT_DASK_ADDRESS="127.0.0.1:8786"
+        DEFAULT_DASK_ADDRESS = "127.0.0.1:8786"
 
-        log_parms = {'log_level':'DEBUG'}
+        log_parms = {'log_level': 'DEBUG'}
 
         client = astrohack_local_client(
             cores=2,
@@ -68,14 +69,14 @@ class TestAstrohack():
             log_parms=log_parms,
             dask_local_dir='./dask_test_dir'
         )
-        
+
         try:
             if os.path.exists('./dask_test_dir') is False:
                 raise FileNotFoundError
 
         except FileNotFoundError:
             assert False
-            
+
         finally:
             client.shutdown()
 
@@ -90,27 +91,27 @@ class TestAstrohack():
 
         from astrohack.client import astrohack_local_client
 
-        DEFAULT_DASK_ADDRESS="127.0.0.1:8786"
+        DEFAULT_DASK_ADDRESS = "127.0.0.1:8786"
 
         log_parms = {
-            'log_level':'DEBUG',
-            'log_to_file':True,
+            'log_level': 'DEBUG',
+            'log_to_file': True,
             'log_file': 'astrohack_log_file'
         }
 
         client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
-        
+
         files = os.listdir(".")
 
         try:
             for file in files:
                 if re.match("^astrohack_log_file+[0-9].*log", file) is not None:
                     return
-                    
+
             raise FileNotFoundError
 
         except FileNotFoundError:
             assert False
-            
+
         finally:
             client.shutdown()
