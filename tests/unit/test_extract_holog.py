@@ -32,6 +32,9 @@ class TestExtractHolog():
         pass
 
     def test_extract_holog_obs_dict(self):
+        '''
+           Specify a holography observations dictionary and check that the proper dictionary is created.
+        '''
 
         # Generate pointing file
         extract_pointing(
@@ -72,6 +75,9 @@ class TestExtractHolog():
         assert holog_obs_test_dict == holog_obs_dict
 
     def test_extract_holog_ddi(self):
+        '''
+            Specify a ddi value to be process and check that it is the only one processed.
+        '''
 
         # Generate pointing file
         extract_pointing(
@@ -107,6 +113,9 @@ class TestExtractHolog():
         assert list(holog_mds.keys()) == ['ddi_1']
 
     def test_extract_holog_overwrite(self):
+        '''
+            Specify that the output file should be overwritten if it exists; check that it is overwritten.
+        '''
 
         # Generate pointing file
         extract_pointing(
@@ -151,6 +160,10 @@ class TestExtractHolog():
         assert initial_time != final_time
 
     def test_extract_holog_baseline_average_distance(self):
+        '''
+            Run extract_holog using the baseline average distance as a filter; check that only the baselines with this
+            average distance are returned.
+        '''
 
         # extract pointing data
         pnt_mds = extract_pointing(
@@ -174,6 +187,9 @@ class TestExtractHolog():
         assert list(holog_mds['ddi_0']['map_0'].keys()) == ['ant_ea25']
 
     def test_extract_holog_baseline_average_nearest(self):
+        '''
+            Run extract_holog using the nearest baseline as a filter; check that only the nearest baselines are returned.
+        '''
 
         # extract pointing data
         pnt_mds = extract_pointing(

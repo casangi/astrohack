@@ -23,7 +23,10 @@ class TestAstrohack():
         pass
 
     def test_client_spawn(self):
-        """ Test client """
+        """
+            Run astrohack_local_client with N cores and with a memory_limit of M GB to create an instance of the
+            astrohack Dask client.
+        """
         import distributed
 
         from astrohack.client import astrohack_local_client
@@ -47,7 +50,10 @@ class TestAstrohack():
         client.shutdown()
 
     def test_client_dask_dir(self):
-        """ Test client """
+        """
+            Run astrohack_local_client with N cores and with a memory_limit of M GB to create an instance of the
+            astrohack Dask client. Check that temporary files are written to dask_local_dir.
+        """
         import distributed
 
         from astrohack.client import astrohack_local_client
@@ -56,7 +62,12 @@ class TestAstrohack():
 
         log_parms = {'log_level':'DEBUG'}
 
-        client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms, dask_local_dir='./dask_test_dir')
+        client = astrohack_local_client(
+            cores=2,
+            memory_limit='8GB',
+            log_parms=log_parms,
+            dask_local_dir='./dask_test_dir'
+        )
         
         try:
             if os.path.exists('./dask_test_dir') is False:
@@ -69,7 +80,10 @@ class TestAstrohack():
             client.shutdown()
 
     def test_client_logger(self):
-        """ Test client """
+        """
+            Run astrohack_local_client with N cores and with a memory_limit of M GB without any errors and the messages
+            will be logged in the terminal.
+        """
         import os
         import re
         import distributed
