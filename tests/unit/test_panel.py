@@ -1,5 +1,3 @@
-import pytest
-
 import os
 import json
 import shutil
@@ -26,8 +24,6 @@ class TestPanel():
 
         astrohack.data.datasets.download(file='extract_holog_verification.json')
         astrohack.data.datasets.download(file='holog_numerical_verification.json')
-
-        astrohack.data.datasets.download(file='panel_cutoff_mask')
 
         extract_pointing(
             ms_name="data/ea25_cal_small_after_fixed.split.ms",
@@ -208,6 +204,8 @@ class TestPanel():
         """
            Set cutoff=0 and compare results to known truth value array.
         """
+        astrohack.data.datasets.download(file='panel_cutoff_mask')
+
         with open("panel_cutoff_mask.npy", "rb") as array:
             reference_array = np.load(array)
 

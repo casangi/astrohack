@@ -12,8 +12,11 @@ class TestExtractLocit():
 
     @classmethod
     def setup_class(cls):
-        """ setup any state specific to the execution of the given test class
-        such as fetching test data """
+        """
+            Setup any state specific to the execution of the given test class
+            such as fetching test data
+        """
+
         astrohack.data.datasets.download(file="locit-input-pha.cal", folder="data")
 
     @classmethod
@@ -58,7 +61,7 @@ class TestExtractLocit():
         assert len(locit_mds.keys()) == 3
 
         # Check that only the specific antenna is in the keys.
-        assert list(locit_mds.keys()) == ['ant_ea17']
+        assert list(locit_mds.keys()) == ['obs_info', 'ant_info', 'ant_ea17']
 
     def test_extract_locit_ddi(self):
         """
@@ -75,6 +78,11 @@ class TestExtractLocit():
         """
            Specify the output file should be overwritten; check that it WAS.
         """
+
+        extract_locit(
+            self.cal_table,
+            locit_name=self.locit_name
+        )
 
         # To check this properly we need to not only know an exception was not thrown but that the file is ACTUALLY
         # overwritten. We do this by checking the modification time.
@@ -94,6 +102,11 @@ class TestExtractLocit():
         """
             Specify the output file should be NOT be overwritten; check that it WAS NOT.
         """
+        extract_locit(
+            self.cal_table,
+            locit_name=self.locit_name
+        )
+
         initial_time = os.path.getctime(self.locit_name)
 
         try:
