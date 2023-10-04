@@ -1,3 +1,4 @@
+import numpy as np
 from prettytable import PrettyTable
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
@@ -89,28 +90,18 @@ def _locit_combined_chunk(locit_parms):
 
 def _locit_difference_chunk(locit_parms):
     data = locit_parms['data_dict']
-    nddis = len(data.keys())
+    ddi_list = data.keys()
+    nddis = len(ddi_list)
     logger = _get_astrohack_logger()
     if nddis != 2:
         msg = f'The difference method support only 2 DDIs, {nddis} DDIs provided.'
         logger.error(msg)
         return
 
-    freq_list = []
-    phase_list = []
-    time_list = []
-    field_list = []
+    ddi_0 = _get_data_from_locit_xds(data[ddi_list[0]], locit_parms['polarization'], get_phases=True, split_pols=True)
+    ddi_1 = _get_data_from_locit_xds(data[ddi_list[1]], locit_parms['polarization'], get_phases=True, split_pols=True)
 
-    for ddi, xds_data in data.items():
-        this_field_id, this_time, this_phases = _get_data_from_locit_xds(xds_data, locit_parms['polarization'],
-                                                                         get_phases=True)
-        field_list.append(this_field_id)
-        time_list.append(this_time)
-        phase_list.append(this_phases)
-        freq_list.append(xds_data.attrs['frequency'])
-
-    time, field_id, delays, freq = _match_times_and_compute_delays_from_phase_differences(freq_list, phase_list,
-                                                                                          time_list, field_list)
+    time, field_id, delays, freq = _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1)
 
     coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
     logger = _get_astrohack_logger()
@@ -126,12 +117,73 @@ def _locit_difference_chunk(locit_parms):
     return
 
 
-def _match_times_and_compute_delays_from_phase_differences(freq_list, phase_list, time_list, field_list):
-    time, field_id, delays, freq = 0, 0, 0, 0
+def _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
+    logger = _get_astrohack_logger()
+    freq = ddi_0[3] - ddi_1[3]
+    if freq > 0:
+        pos_phase = ddi_0[2]
+        neg_phase = ddi_1[2]
+    elif freq < 0:
+        pos_phase = ddi_1[2]
+        neg_phase = ddi_0[2]
+        freq *= -1
+    else:
+        msg = f'The two DDIs must have different frequencies'
+        logger.error(msg)
+        raise Exception(msg)
+
+    if multi_pol:
+        time = []
+        field_id = []
+        phase = []
+        for i_pol in range(2):
+            this_time, this_field_id, this_phase = _actual_matching_and_difference(ddi_0[0][i_pol], ddi_1[0][i_pol],
+                                                                                   pos_phase[i_pol], neg_phase[i_pol],
+                                                                                   ddi_0[1][i_pol])
+            time.append(this_time)
+            field_id.append(this_field_id)
+            phase.append(this_phase)
+
+        time = np.concatenate(time)
+        field_id = np.concatenate(field_id)
+        phase = np.concatenate(phase)
+
+    else:
+        time, field_id, phase = _actual_matching_and_difference(ddi_0[0], ddi_1[0], pos_phase, neg_phase, ddi_0[1])
+
+    delays = phase/twopi/freq
+
     return time, field_id, delays, freq
 
 
-def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False):
+def _actual_matching_and_difference(t0, t1, p0, p1, f0):
+    nt0, nt1 = len(t0), len(t1)
+    if nt0 == nt1:
+        if np.sum(t0 == t1) == nt0:  # this the simplest case times are already matched!
+            return t0, f0, _phase_wrapping(p0-p1)
+        else:
+            return _different_times(t0, t1, f0, p0, p1)
+    else:
+        return _different_times(t0, t1, f0, p0, p1)
+
+
+def _different_times(t0, t1, p0, p1, f0):
+    unique_times = np.intersect1d(t0, t1)
+    diff = []
+    field = []
+    for time in unique_times:
+        i_t0 = t0 == time
+        i_t1 = t1 == time
+        field.append(f0[i_t0])
+        diff.append(p0[i_t0] - p1[i_t1])
+    return unique_times, np.array(field), _phase_wrapping(np.array(diff))
+
+
+def _phase_wrapping(phase):
+    return (phase + pi) % (2 * pi) - pi
+
+
+def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False, split_pols=False):
     """
     Extract data from a .locit.zarr xds, converts the phase gains to delays using the xds frequency
     Args:
@@ -157,15 +209,19 @@ def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False):
         time = getattr(xds_data, f'p{i_pol}_time').values
         field_id = xds_data[f'P{i_pol}_FIELD_ID'].values
     elif pol_selection == 'both':
-        phases = np.concatenate([xds_data[f'P0_PHASE_GAINS'].values, xds_data[f'P1_PHASE_GAINS'].values])
-        field_id = np.concatenate([xds_data[f'P0_FIELD_ID'].values, xds_data[f'P1_FIELD_ID'].values])
-        time = np.concatenate([xds_data.p0_time.values, xds_data.p1_time.values])
+        phases = [xds_data[f'P0_PHASE_GAINS'].values, xds_data[f'P1_PHASE_GAINS'].values]
+        field_id = [xds_data[f'P0_FIELD_ID'].values, xds_data[f'P1_FIELD_ID'].values]
+        time = [xds_data.p0_time.values, xds_data.p1_time.values]
+        if not split_pols:
+            phases = np.concatenate(phases)
+            field_id = np.concatenate(field_id)
+            time = np.concatenate(time)
     else:
         msg = f'Polarization {pol_selection} is not found in data'
         logger.error(msg)
         raise Exception(msg)
     if get_phases:
-        return field_id, time, phases  # field_id, time, phases
+        return field_id, time, phases, freq  # field_id, time, phases
     else:
         return field_id, time, phases/twopi/freq  # field_id, time, delays
 
