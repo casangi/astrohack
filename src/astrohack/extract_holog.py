@@ -767,7 +767,7 @@ class HologObsDict(dict):
             self.logger.error("Unable to find baseline distance matrix in: {path}".format(path=path_to_matrix))
 
         df_matrix = pd.read_csv(path_to_matrix, sep="\t", index_col=0)    
-        return df_matrix[antenna].sort_values(ascending=False).index[:n_baselines].values.tolist()
+        return df_matrix[antenna].sort_values(ascending=True).index[:n_baselines].values.tolist()
         
     def _select_ddi(self, value, obs_dict):
         convert = lambda x: "ddi_" + str(x)
