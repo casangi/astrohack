@@ -3,7 +3,9 @@ import json
 import os
 
 import dask
+import astrohack
 import numpy as np
+
 from astrohack._utils._constants import pol_str
 from astrohack._utils._conversion import _convert_ant_name_to_id
 from astrohack._utils._dio import _check_if_file_exists
@@ -414,13 +416,7 @@ def extract_holog(
                             )
                         )
                     else:
-                        try:
-                            _extract_holog_chunk(extract_holog_params)
-
-                        except Exception as error:
-                            print(
-                                "[{function_name}]: There was an error, see log above for more info :: {error}".format(
-                                    function_name=function_name, error=error))
+                        _extract_holog_chunk(extract_holog_params)
 
                     count += 1
 
@@ -432,12 +428,7 @@ def extract_holog(
     obs_ctb.close()
 
     if parallel:
-        try:
-            dask.compute(delayed_list)
-
-        except Exception as error:
-            print("[{function_name}]: There was an error, see log above for more info :: {error}".format(
-                function_name=function_name, error=error))
+        dask.compute(delayed_list)
 
     if count > 0:
         logger.info(f"[{function_name}]: Finished processing")
@@ -519,7 +510,6 @@ def _check_extract_holog_params(function_name, extract_holog_params):
 def generate_holog_obs_dict(
         ms_name,
         point_name,
-        ddi='all',
         baseline_average_distance='all',
         baseline_average_nearest='all',
         parallel=False
@@ -680,7 +670,7 @@ def generate_holog_obs_dict(
     ctb.close()
 
     # Create holog_obs_dict or modify user supplied holog_obs_dict.
-    ddi = extract_holog_params['ddi']
+    #ddi = extract_holog_params['ddi']
 
     pnt_mds = AstrohackPointFile(extract_holog_params['point_name'])
     pnt_mds._open()
@@ -691,21 +681,173 @@ def generate_holog_obs_dict(
         extract_holog_params['baseline_average_nearest'],
         ant_names,
         ant_pos,
-        ant_names_main
+        ant_names_main,
+        write_distance_matrix=True
     )
 
     # From the generated holog_obs_dict subselect user supplied ddis.
-    if ddi != 'all':
-        holog_obs_dict_keys = list(holog_obs_dict.keys())
-        for ddi_key in holog_obs_dict_keys:
-            if 'ddi' in ddi_key:
-                ddi_id = int(ddi_key.replace('ddi_', ''))
-                if ddi_id not in ddi:
-                    del holog_obs_dict[ddi_key]
+    #if ddi != 'all':
+    #    holog_obs_dict_keys = list(holog_obs_dict.keys())
+    #    for ddi_key in holog_obs_dict_keys:
+    #        if 'ddi' in ddi_key:
+    #            ddi_id = int(ddi_key.replace('ddi_', ''))
+    #            if ddi_id not in ddi:
+    #                del holog_obs_dict[ddi_key]
 
     encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
 
     with open(".holog_obs_dict.json", "w") as outfile:
         json.dump(encoded_obj, outfile)
 
-    return json.loads(encoded_obj)
+    return HologObsDict(json.loads(encoded_obj))
+
+
+class HologObsDict(dict):
+    """
+      ddi --> map --> ant, scan
+                      |
+                      o--> map: [reference, ...]
+    """
+    def __init__(self, obj):
+        super().__init__(obj)
+        self.logger = _get_astrohack_logger()  
+    
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+    
+    def __setitem__(self, key, value):
+        return super().__setitem__(key, value)
+    
+    def print(self, style="static"):
+        if style == "dynamic":
+            return astrohack.dio.inspect_holog_obs_dict(self, style="dynamic")
+        
+        else:
+            return astrohack.dio.inspect_holog_obs_dict(self, style="static")
+        
+    def select(self, key, value, inplace=False, **kwargs):
+
+        if inplace == True:
+            obs_dict = self
+            
+        else:
+            obs_dict = HologObsDict(self)
+        
+        if key == "ddi":
+            return self._select_ddi(value, obs_dict=obs_dict)
+        
+        elif key == "map":
+            return self._select_ddi(value, obs_dict=obs_dict)
+        
+        elif key == "antenna":
+            return self._select_antenna(value, obs_dict=obs_dict)
+        
+        elif key == "scan":
+            return self._select_scan(value, obs_dict=obs_dict)
+        
+        elif key == "baseline":
+            if kwargs["reference"]:
+                return self._select_baseline(value, reference=kwargs["reference"], obs_dict=obs_dict)
+            
+            else:
+                self.logger.error("Must specify a list of reference antennae for this option.")
+        else:
+            self.logger.error("Valid key not found: {key}".format(key=key))
+            return {}
+    
+    @staticmethod
+    def get_nearest_baselines(antenna, n_baselines, path_to_matrix=None):
+        logger = _get_astrohack_logger()
+        import pandas as pd
+
+        if path_to_matrix == None:
+            path_to_matrix = os.getcwd()+"/.baseline_distance_matrix.csv"
+        
+        if os.path.exists(path_to_matrix) == False:
+            self.logger.error("Unable to find baseline distance matrix in: {path}".format(path=path_to_matrix))
+
+        df_matrix = pd.read_csv(path_to_matrix, sep="\t", index_col=0)    
+        return df_matrix[antenna].sort_values(ascending=False).index[:n_baselines].values.tolist()
+        
+    def _select_ddi(self, value, obs_dict):
+        convert = lambda x: "ddi_" + str(x)
+
+        if isinstance(value, list) == False:
+            value = [value]
+        
+        value = list(map(convert, value))
+        ddi_list = list(obs_dict.keys())
+            
+        for ddi in ddi_list:
+            if ddi not in value:
+                obs_dict.pop(ddi)
+                
+        return obs_dict
+    
+    def _select_map(self, value, obs_dict):
+        convert = lambda x: "map_" + str(x)
+
+        if isinstance(value, list) == False:
+            value = [value]
+        
+        value = list(map(convert, value))
+        ddi_list = list(obs_dict.keys())
+            
+        for ddi in ddi_list:
+            map_list = list(obs_dict[ddi].keys())
+            for mp in map_list: 
+                if mp not in value:
+                    obs_dict[ddi].pop(mp)
+                
+        return obs_dict
+    
+    def _select_antenna(self, value, obs_dict):
+        if isinstance(value, list) == False:
+            value = [value]
+        
+        ddi_list = list(obs_dict.keys())
+            
+        for ddi in ddi_list:
+            map_list = list(obs_dict[ddi].keys())
+            for mp in map_list: 
+                ant_list = list(obs_dict[ddi][mp]["ant"].keys())
+                for ant in ant_list:
+                    if ant not in value:
+                        obs_dict[ddi][mp]["ant"].pop(ant)
+                
+        return obs_dict
+    
+    def _select_scan(self, value, obs_dict):
+        if isinstance(value, list) == False:
+            value = [value]
+        
+        ddi_list = list(obs_dict.keys())
+            
+        for ddi in ddi_list:
+            map_list = list(obs_dict[ddi].keys())
+            for mp in map_list: 
+                obs_dict[ddi][mp]["scans"] = value
+                
+        return obs_dict
+    
+    def _select_baseline(self, value, reference, obs_dict):
+        if isinstance(value, list) == False:
+            value = [value]
+        
+        if isinstance(reference, list) == False:
+            value = [reference]
+        
+        ddi_list = list(obs_dict.keys())
+            
+        for ddi in ddi_list:
+            map_list = list(obs_dict[ddi].keys())
+            for mp in map_list: 
+                ant_list = list(obs_dict[ddi][mp]["ant"].keys())
+                for ant in ant_list:
+                    if ant not in value:
+                        obs_dict[ddi][mp]["ant"].pop(ant)
+                        continue
+                        
+                    obs_dict[ddi][mp]["ant"][ant] = reference
+                
+        return obs_dict

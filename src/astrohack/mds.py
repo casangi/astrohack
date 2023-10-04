@@ -229,7 +229,7 @@ class AstrohackImageFile(dict):
         parm_dict['metadata'] = self._meta_data
         _dask_general_compute(fname, self, _export_to_fits_holog_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, unit=None, display=True,
+    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, unit=None, display=False,
                        colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Aperture amplitude and phase plots from the data in an AstrohackImageFIle object.
 
@@ -291,7 +291,7 @@ class AstrohackImageFile(dict):
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(fname, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_beams(self, destination, ant_id=None, ddi=None, complex_split='polar', display=True, colormap='viridis',
+    def plot_beams(self, destination, ant_id=None, ddi=None, complex_split='polar', display=False, colormap='viridis',
                    figure_size=None, dpi=300, parallel=False):
         """ Beam plots from the data in an AstrohackImageFIle object.
 
@@ -453,7 +453,7 @@ class AstrohackHologFile(dict):
         return self._meta_data
 
     def plot_diagnostics(self, destination, delta=0.01, ant_id=None, ddi=None, map_id=None, complex_split='polar',
-                         display=True, figure_size=None, dpi=300, parallel=False):
+                         display=False, figure_size=None, dpi=300, parallel=False):
         """ Plot diagnostic calibration plots from the holography data file.
 
         :param destination: Name of the destination folder to contain diagnostic plots
@@ -630,7 +630,7 @@ class AstrohackPanelFile(dict):
         telescope = Telescope(xds.attrs['telescope_name'])
         return AntennaSurface(xds, telescope, reread=True)
 
-    def export_screws(self, destination, ant_id=None, ddi=None, unit='mm', threshold=None, display=True,
+    def export_screws(self, destination, ant_id=None, ddi=None, unit='mm', threshold=None, display=False,
                       colormap='RdBu_r', figure_size=None, dpi=300):
         """ Export screw adjustments to text files and optionally plots.
 
@@ -690,7 +690,7 @@ class AstrohackPanelFile(dict):
         _dask_general_compute(fname, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
     def plot_antennae(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False, unit=None,
-                      display=True, colormap='viridis', figure_size=None, dpi=300, parallel=False):
+                      display=False, colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Create diagnostic plots of antenna surfaces from panel data file.
 
         :param destination: Name of the destination folder to contain plots
@@ -979,7 +979,7 @@ class AstrohackLocitFile(dict):
 
         _print_array_configuration(parm_dict, self['ant_info'], self['obs_info']['telescope_name'])
 
-    def plot_source_positions(self, destination, display_labels=False, precessed=False, display=True, figure_size=None,
+    def plot_source_positions(self, destination, display_labels=False, precessed=False, display=False, figure_size=None,
                               dpi=300):
         """ Plot source positions in either FK5 or precessed right ascension and declination.
 
@@ -1036,9 +1036,9 @@ class AstrohackLocitFile(dict):
                            display=display, figure_size=figure_size, dpi=dpi, label=display_labels)
         return
 
-    def plot_array_configuration(self, destination, display_stations=True, display_zoff=False, unit='km', box_size=5,
-                                 display=True, figure_size=None, dpi=300):
-        """ Plot array configuration.
+    def plot_antenna_positions(self, destination, display_stations=True, display_zoff=False, unit='m', box_size=5000,
+                               display=False, figure_size=None, dpi=300):
+        """ Plot antenna positions.
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
@@ -1206,7 +1206,7 @@ class AstrohackPositionFile(dict):
         _create_destination_folder(parm_dict['destination'])
         _export_fit_results(self, parm_dict)
 
-    def plot_sky_coverage(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', display=True,
+    def plot_sky_coverage(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', display=False,
                           figure_size=None, dpi=300, parallel=False):
         """ Plot the sky coverage of the data used for antenna position fitting
 
@@ -1279,7 +1279,7 @@ class AstrohackPositionFile(dict):
             _dask_general_compute(fname, self, _plot_sky_coverage_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_delays(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', delay_unit='nsec',
-                    plot_model=True, display=True, figure_size=None, dpi=300, parallel=False):
+                    plot_model=True, display=False, figure_size=None, dpi=300, parallel=False):
         """ Plot the delays used for antenna position fitting and optionally the resulting fit.
 
         :param destination: Name of the destination folder to contain the plots

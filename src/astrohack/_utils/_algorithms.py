@@ -6,6 +6,33 @@ import numpy as np
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
+def _calculate_suggested_grid_paramater(parameter, quantile=0.01):
+    import scipy
+
+    logger = _get_astrohack_logger()
+
+    # Determine skew properties and return median
+    if np.abs(scipy.stats.skew(parameter)) > 0.5:
+        if scipy.stats.skew(parameter) > 0:
+            cutoff = np.quantile(parameter, 1 - quantile)
+            parameter = parameter[parameter <= cutoff]
+
+        else:
+            cutoff = np.quantile(parameter, quantile)
+            parameter = parameter[parameter >= cutoff]
+
+        return np.median(parameter)
+
+    # Process as mean
+    else:
+        upper_cutoff = np.quantile(parameter, 1 - quantile)
+        lower_cutoff = np.quantile(parameter, quantile)
+
+        parameter = parameter[parameter >= lower_cutoff]
+        parameter = parameter[parameter <= upper_cutoff]    
+
+        return np.mean(parameter)
+
 def _apply_mask(data, scaling=0.5):
     """ Applies a cropping mask to the input data according to the scale factor
 
@@ -225,8 +252,8 @@ def _get_grid_parms(vis_map_dict, pnt_map_dict, ant_names):
         n_pix_x = np.sum([abs_diff[:,0] > max_dis_x]) + 1
         n_pix_y = np.sum([abs_diff[:,1] > max_dis_y]) + 1
         
-        cell_size_x = np.mean(abs_diff[abs_diff[:,0] > max_dis_x,0])
-        cell_size_y = np.mean(abs_diff[abs_diff[:,1] > max_dis_y,1])
+        cell_size_x = np.mean(abs_diff[abs_diff[:,0] > max_dis_x, 0])
+        cell_size_y = np.mean(abs_diff[abs_diff[:,1] > max_dis_y, 1])
         
         if n_pix_x < n_pix_y:
             n_pix = n_pix_x**2

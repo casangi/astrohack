@@ -4,6 +4,8 @@ import inspect
 import numpy as np
 import xarray as xr
 import astropy
+import astrohack
+
 from numba import njit
 from numba.core import types
 
@@ -386,10 +388,13 @@ def _create_holog_file(
             )
 
 
-def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average_nearest, ant_names, ant_pos, ant_names_main):
+def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average_nearest, ant_names, ant_pos, ant_names_main, write_distance_matrix=False):
     '''
     Generate holog_obs_dict.
     '''
+
+    import pandas as pd
+    from scipy.spatial import distance_matrix
 
     logger = _get_astrohack_logger()
     mapping_scans_dict = {}
@@ -419,17 +424,13 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
                                 holog_obs_dict[ddi][map_key] = {'scans':np.array(scan_list),'ant':{}}
                                 
                             holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
-
-    # If users specifies a baseline_average_distance we need to create an antenna distance matrix.
-    if (baseline_average_distance != 'all') or (baseline_average_nearest != 'all'):
         
-        import pandas as pd
-        from scipy.spatial import distance_matrix
-        
-        df = pd.DataFrame(ant_pos, columns=['x', 'y', 'z'], index=ant_names)
-        df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
-        logger.debug('Antenna distance matrix in meters: \n' + str(df_mat))
-        
+    df = pd.DataFrame(ant_pos, columns=['x', 'y', 'z'], index=ant_names)
+    df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
+    if write_distance_matrix:
+        df_mat.to_csv(path_or_buf="{base}/.baseline_distance_matrix.csv".format(base=os.getcwd()), sep="\t")
+        logger.info("Writing distance matrix to {base}/.baseline_distance_matrix.csv ...".format(base=os.getcwd()))
+      
                 
     if (baseline_average_distance != 'all') and (baseline_average_nearest != 'all'):
         logger.error('[{function_name}]: baseline_average_distance and baseline_average_nearest can not both be specified.'.format(function_name=function_name))
@@ -555,14 +556,22 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         'n_pix': n_pixs[0],
         'telescope_name': telescope_names[0]
     }
-
+    
     if not (len(set(cell_sizes_sigfigs)) == 1):
-        logger.error('Cell size not consistent: ' + str(cell_sizes))
-        meta_data['cell_size'] = None
+        logger.warning('Cell size not consistent: ' + str(cell_sizes))
+        logger.warning('Calculating suggested cell size ...')
+
+        meta_data["cell_size"] = astrohack._utils._algorithms._calculate_suggested_grid_paramater(parameter=np.array(cell_sizes))
+        
+        logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))
         
     if not (len(set(n_pixs)) == 1):
-        logger.error('Number of pixels not consistent: ' + str(n_pixs))
-        meta_data['n_pix'] = None
+        logger.warning('Number of pixels not consistent: ' + str(n_pixs))
+        logger.warning('Calculating suggested number of pixels ...')
+
+        meta_data['n_pix'] = int(astrohack._utils._algorithms._calculate_suggested_grid_paramater(parameter=np.array(n_pixs)))
+        
+        logger.info("The suggested number of pixels is calculated to be: {n_pix}".format(n_pix=meta_data["n_pix"]))
         
     if not (len(set(telescope_names)) == 1):
         logger.error('Telescope name not consistent: ' + str(telescope_names))

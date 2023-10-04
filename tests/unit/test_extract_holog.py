@@ -45,11 +45,12 @@ class TestExtractHolog():
         holog_obs_dict = generate_holog_obs_dict(
             ms_name="data/ea25_cal_small_after_fixed.split.ms",
             point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
-            ddi=[1],
             baseline_average_distance='all',
             baseline_average_nearest='all',
             parallel=False
         )
+
+        holog_obs_dict.select(key="ddi", value=0, inplace=True)
 
         # Extract holography data using holog_obd_dict
         holog_mds = extract_holog(
@@ -84,11 +85,12 @@ class TestExtractHolog():
         holog_obs_dict = generate_holog_obs_dict(
             ms_name="data/ea25_cal_small_after_fixed.split.ms",
             point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
-            ddi=[1],
             baseline_average_distance='all',
             baseline_average_nearest='all',
             parallel=False
         )
+
+        holog_obs_dict.select(key="ddi", value=0, inplace=True)
 
         # Extract holography data using holog_obd_dict
         holog_mds = extract_holog(

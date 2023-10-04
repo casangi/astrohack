@@ -10,7 +10,6 @@ import numpy as np
 from astrohack.holog import holog
 from astrohack.extract_holog import extract_holog
 from astrohack.extract_pointing import extract_pointing
-from astrohack.extract_holog import generate_holog_obs_dict
 
 def relative_difference(result, expected):
         return 2*np.abs(result - expected)/(abs(result) + abs(expected))
