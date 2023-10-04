@@ -87,7 +87,51 @@ def _locit_combined_chunk(locit_parms):
     return
 
 
-def _get_data_from_locit_xds(xds_data, pol_selection):
+def _locit_difference_chunk(locit_parms):
+    data = locit_parms['data_dict']
+    nddis = len(data.keys())
+    logger = _get_astrohack_logger()
+    if nddis != 2:
+        msg = f'The difference method support only 2 DDIs, {nddis} DDIs provided.'
+        logger.error(msg)
+        return
+
+    freq_list = []
+    phase_list = []
+    time_list = []
+    field_list = []
+
+    for ddi, xds_data in data.items():
+        this_field_id, this_time, this_phases = _get_data_from_locit_xds(xds_data, locit_parms['polarization'],
+                                                                         get_phases=True)
+        field_list.append(this_field_id)
+        time_list.append(this_time)
+        phase_list.append(this_phases)
+        freq_list.append(xds_data.attrs['frequency'])
+
+    time, field_id, delays, freq = _match_times_and_compute_delays_from_phase_differences(freq_list, phase_list,
+                                                                                          time_list, field_list)
+
+    coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
+    logger = _get_astrohack_logger()
+    if len(delays) == 0:
+        msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
+        logger.warning(msg)
+        return
+    fit, variance = _fit_data(coordinates, delays, locit_parms)
+    model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                              locit_parms['fit_slope'])
+    _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
+                       elevation_limit)
+    return
+
+
+def _match_times_and_compute_delays_from_phase_differences(freq_list, phase_list, time_list, field_list):
+    time, field_id, delays, freq = 0, 0, 0, 0
+    return time, field_id, delays, freq
+
+
+def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False):
     """
     Extract data from a .locit.zarr xds, converts the phase gains to delays using the xds frequency
     Args:
@@ -120,7 +164,10 @@ def _get_data_from_locit_xds(xds_data, pol_selection):
         msg = f'Polarization {pol_selection} is not found in data'
         logger.error(msg)
         raise Exception(msg)
-    return field_id, time, phases/twopi/freq  # field_id, time, delays
+    if get_phases:
+        return field_id, time, phases  # field_id, time, phases
+    else:
+        return field_id, time, phases/twopi/freq  # field_id, time, delays
 
 
 def _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, frequency,
