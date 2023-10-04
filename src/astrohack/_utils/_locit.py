@@ -1,4 +1,3 @@
-import numpy as np
 from prettytable import PrettyTable
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
@@ -90,7 +89,7 @@ def _locit_combined_chunk(locit_parms):
 
 def _locit_difference_chunk(locit_parms):
     data = locit_parms['data_dict']
-    ddi_list = data.keys()
+    ddi_list = list(data.keys())
     nddis = len(ddi_list)
     logger = _get_astrohack_logger()
     if nddis != 2:
@@ -101,7 +100,7 @@ def _locit_difference_chunk(locit_parms):
     ddi_0 = _get_data_from_locit_xds(data[ddi_list[0]], locit_parms['polarization'], get_phases=True, split_pols=True)
     ddi_1 = _get_data_from_locit_xds(data[ddi_list[1]], locit_parms['polarization'], get_phases=True, split_pols=True)
 
-    time, field_id, delays, freq = _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1)
+    time, field_id, delays, freq = _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1, multi_pol=locit_parms['polarization']=='both')
 
     coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
     logger = _get_astrohack_logger()
@@ -137,9 +136,9 @@ def _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1, multi_p
         field_id = []
         phase = []
         for i_pol in range(2):
-            this_time, this_field_id, this_phase = _actual_matching_and_difference(ddi_0[0][i_pol], ddi_1[0][i_pol],
+            this_time, this_field_id, this_phase = _actual_matching_and_difference(ddi_0[1][i_pol], ddi_1[1][i_pol],
                                                                                    pos_phase[i_pol], neg_phase[i_pol],
-                                                                                   ddi_0[1][i_pol])
+                                                                                   ddi_0[0][i_pol])
             time.append(this_time)
             field_id.append(this_field_id)
             phase.append(this_phase)
@@ -149,22 +148,31 @@ def _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1, multi_p
         phase = np.concatenate(phase)
 
     else:
-        time, field_id, phase = _actual_matching_and_difference(ddi_0[0], ddi_1[0], pos_phase, neg_phase, ddi_0[1])
+        time, field_id, phase = _actual_matching_and_difference(ddi_0[1], ddi_1[1], pos_phase, neg_phase, ddi_0[0])
 
     delays = phase/twopi/freq
 
+    print(time)
+    print(field_id)
+    print(delays)
+    print(freq)
     return time, field_id, delays, freq
 
 
 def _actual_matching_and_difference(t0, t1, p0, p1, f0):
     nt0, nt1 = len(t0), len(t1)
+    t0 = np.array(t0)
+    t1 = np.array(t1)
+    p0 = np.array(p0)
+    p1 = np.array(p1)
+    f0 = np.array(f0)
     if nt0 == nt1:
-        if np.sum(t0 == t1) == nt0:  # this the simplest case times are already matched!
+        if np.all(t0 == t1):  # this the simplest case times are already matched!
             return t0, f0, _phase_wrapping(p0-p1)
         else:
-            return _different_times(t0, t1, f0, p0, p1)
+            return _different_times(t0, t1, p0, p1, f0)
     else:
-        return _different_times(t0, t1, f0, p0, p1)
+        return _different_times(t0, t1, f0, p0, p1, f0)
 
 
 def _different_times(t0, t1, p0, p1, f0):

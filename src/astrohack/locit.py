@@ -1,5 +1,5 @@
 from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
-from astrohack._utils._locit import _locit_separated_chunk, _locit_combined_chunk
+from astrohack._utils._locit import _locit_separated_chunk, _locit_combined_chunk, _locit_difference_chunk
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
@@ -114,7 +114,8 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     attributes['reference_antenna'] = locit_mds._meta_data['reference_antenna']
 
     if combine_ddis:
-        function = _locit_combined_chunk
+        #function = _locit_combined_chunk
+        function = _locit_difference_chunk
         key_order = ['ant']
     else:
         function = _locit_separated_chunk
