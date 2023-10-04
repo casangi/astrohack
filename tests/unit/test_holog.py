@@ -209,7 +209,7 @@ class TestHolog():
 
     def test_holog_chan_tolerance(self):
         """
-            Check that channel tolerance ir propagated correctly.
+            Check that channel tolerance is propagated correctly.
         """
         image_mds = holog(
             holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
