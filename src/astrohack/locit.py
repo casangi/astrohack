@@ -8,7 +8,8 @@ from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 
 def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='both', fit_engine='linear algebra',
-          fit_kterm=False, fit_slope=True, ant_id=None, ddi=None, combine_ddis=True, parallel=False, overwrite=False):
+          fit_kterm=False, fit_slope=True, ant_id=None, ddi=None, combine_ddis='simple', parallel=False,
+          overwrite=False):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
 
@@ -30,8 +31,8 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     :type ant_id: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
-    :param combine_ddis: Combine DDIs for
-    :type combine_ddis: bool, optional
+    :param combine_ddis: Type of DDI combination, if desired, defaults to simple
+    :type combine_ddis: str, optional
     :param parallel: Run in parallel. Defaults to False.
     :type parallel: bool, optional
     :param overwrite: Boolean for whether to overwrite current position.zarr file, defaults to False.
@@ -47,7 +48,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     `ant` -> `ddi`. The position object also provides a `summary()` helper function to list available keys for each file.
     An outline of the position object structure is show below:
 
-    .. rubric:: Combine_ddis = False:
+    .. rubric:: combine_ddis = no:
     .. parsed-literal::
         position_mds =
         {
@@ -60,7 +61,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
             ant_n: …
         }
 
-    .. rubric:: Combine_ddis = True:
+    .. rubric:: combine_ddis = ["simple", "difference"]:
     .. parsed-literal::
         position_mds =
         {
@@ -91,10 +92,16 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
 
     .. rubric:: Combining DDIs
 
-    By default locit combines different DDIs so that there is a single position solution per antenna with a higher
-    signal to noise ratio. If a solution per DDIs is desired then one must specify combine_ddis as False. In this case a
-    solution will be computed for each DDI resulting in as many solutions per antenna  as there are selected DDIs.
+    By default (combine_ddis='simple') locit combines different DDIs so that there is a single position solution per
+    antenna. The other options are, a solution for each of the DDIs for each antenna (combine_ddis='no') or combining
+    two DDIs by computing the delays from the difference in phases between the two DDIs of different frequencies
+    (combine_ddis='difference').
 
+    combine_ddis='simple'     : Generates higher antenna position correction solutions of higher SNR as more data is used
+                                each delay fit.
+    combine_ddis='no'         : Useful for detecting systematic differences between different DDIs.
+    combine_ddis='difference' : This method is useful for cases where phase wrapping may have occured due to large
+                                delays.
     """
     logger = _get_astrohack_logger()
 
@@ -113,8 +120,10 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     attributes['telescope_name'] = locit_mds._meta_data['telescope_name']
     attributes['reference_antenna'] = locit_mds._meta_data['reference_antenna']
 
-    if combine_ddis:
-        #function = _locit_combined_chunk
+    if combine_ddis == 'simple':
+        function = _locit_combined_chunk
+        key_order = ['ant']
+    elif combine_ddis == 'difference':
         function = _locit_difference_chunk
         key_order = ['ant']
     else:
@@ -153,7 +162,7 @@ def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polari
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'elevation_limit', [float],
                                                  acceptable_range=[0, 90], default=10)
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'polarization', [str],
-                                                 acceptable_data=['X', 'Y', 'R', 'L', 'both'], default='I')
+                                                 acceptable_data=['X', 'Y', 'R', 'L', 'both'], default='both')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'fit_engine', [str],
                                                  acceptable_data=['linear algebra', 'scipy'], default='linear algebra')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'fit_kterm', [bool], default=False)
@@ -162,7 +171,8 @@ def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polari
                                                  list_acceptable_data_types=[str], default='all')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'ddi', [list, int],
                                                  list_acceptable_data_types=[int], default='all')
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'combine_ddis', [bool], default=True)
+    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'combine_ddis', [str],
+                                                 default='simple', acceptable_data=['no', 'simple', 'difference'])
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'parallel', [bool], default=False)
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'overwrite', [bool], default=False)
 
