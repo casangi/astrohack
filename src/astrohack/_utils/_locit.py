@@ -1,3 +1,4 @@
+import numpy as np
 from prettytable import PrettyTable
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
@@ -27,7 +28,7 @@ def _locit_separated_chunk(locit_parms):
     xds save to disk in the .zarr format
     """
     xds_data = locit_parms['xds_data']
-    field_id, time, delays = _get_data_from_locit_xds(xds_data, locit_parms['polarization'])
+    field_id, time, delays, freq = _get_data_from_locit_xds(xds_data, locit_parms['polarization'])
 
     coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
 
@@ -40,8 +41,7 @@ def _locit_separated_chunk(locit_parms):
     fit, variance = _fit_data(coordinates, delays, locit_parms)
     model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
                                               locit_parms['fit_slope'])
-    _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms,
-                       xds_data.attrs['frequency'], elevation_limit)
+    _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq, elevation_limit)
     return
 
 
@@ -61,8 +61,8 @@ def _locit_combined_chunk(locit_parms):
     field_list = []
     freq_list = []
     for ddi, xds_data in data.items():
-        this_field_id, this_time, this_delays = _get_data_from_locit_xds(xds_data, locit_parms['polarization'])
-        freq_list.append(xds_data.attrs['frequency'])
+        this_field_id, this_time, this_delays, freq = _get_data_from_locit_xds(xds_data, locit_parms['polarization'])
+        freq_list.append(freq)
         field_list.append(this_field_id)
         time_list.append(this_time)
         delay_list.append(this_delays)
@@ -88,6 +88,15 @@ def _locit_combined_chunk(locit_parms):
 
 
 def _locit_difference_chunk(locit_parms):
+    """
+    This is the chunk function for locit when we are combining two DDIs for an antenna for a single solution by using
+    the difference in phase between the two DDIs of different frequencies
+    Args:
+        locit_parms: the locit parameter dictionary
+
+    Returns:
+    xds save to disk in the .zarr format
+    """
     data = locit_parms['data_dict']
     ddi_list = list(data.keys())
     nddis = len(ddi_list)
@@ -100,7 +109,8 @@ def _locit_difference_chunk(locit_parms):
     ddi_0 = _get_data_from_locit_xds(data[ddi_list[0]], locit_parms['polarization'], get_phases=True, split_pols=True)
     ddi_1 = _get_data_from_locit_xds(data[ddi_list[1]], locit_parms['polarization'], get_phases=True, split_pols=True)
 
-    time, field_id, delays, freq = _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1, multi_pol=locit_parms['polarization']=='both')
+    time, field_id, delays, freq = _delays_from_phase_differences(ddi_0, ddi_1,
+                                                                  multi_pol=locit_parms['polarization'] == 'both')
 
     coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
     logger = _get_astrohack_logger()
@@ -116,7 +126,17 @@ def _locit_difference_chunk(locit_parms):
     return
 
 
-def _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
+def _delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
+    """
+    Compute delays from the difference in phase between two DDIs of different frequencies
+    Args:
+        ddi_0: First DDI
+        ddi_1: Second DDI
+        multi_pol: is the DDI data split by polarization?
+
+    Returns:
+    Matched times, matched field ids, matched phase difference delays, difference in frequency
+    """
     logger = _get_astrohack_logger()
     freq = ddi_0[3] - ddi_1[3]
     fields = ddi_0[0]
@@ -137,9 +157,9 @@ def _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1, multi_p
         field_id = []
         phase = []
         for i_pol in range(2):
-            this_time, this_field_id, this_phase = _actual_matching_and_difference(pos_time[i_pol], neg_time[i_pol],
-                                                                                   pos_phase[i_pol], neg_phase[i_pol],
-                                                                                   fields[i_pol])
+            this_time, this_field_id, this_phase = _match_times_and_phase_difference(pos_time[i_pol], neg_time[i_pol],
+                                                                                     pos_phase[i_pol], neg_phase[i_pol],
+                                                                                     fields[i_pol])
             time.append(this_time)
             field_id.append(this_field_id)
             phase.append(this_phase)
@@ -149,37 +169,72 @@ def _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1, multi_p
         phase = np.concatenate(phase)
 
     else:
-        time, field_id, phase = _actual_matching_and_difference(pos_time, neg_time, pos_phase, neg_phase, fields)
+        time, field_id, phase = _match_times_and_phase_difference(pos_time, neg_time, pos_phase, neg_phase, fields)
 
     delays = phase/twopi/freq
     return time, field_id, delays, freq
 
 
-def _actual_matching_and_difference(t0, t1, p0, p1, f0, tolerance=1e-8):
-    nt0, nt1 = len(t0), len(t1)
-    if nt0 == nt1:
-        if np.all(np.isclose(t0, t1, tolerance)):  # this the simplest case times are already matched!
-            return t0, f0, _phase_wrapping(p0-p1)
+def _match_times_and_phase_difference(pos_time, neg_time, pos_phase, neg_phase, fields, tolerance=1e-8):
+    """
+    match times and compute the phase differences for the simple case, calls _different_times for the complicated case
+    Args:
+        pos_time: Time for the positive phase
+        neg_time: Time for the negative phase
+        pos_phase: Positive phase
+        neg_phase: Negative phase
+        fields: Field ids
+        tolerance: Tolerance in time to match time arrays
+
+    Returns:
+    Matched times, matched field ids, -pi, pi wrapped matched phase difference
+    """
+    n_pos_time, n_neg_time = len(pos_time), len(neg_time)
+    if n_pos_time == n_neg_time:
+        if np.all(np.isclose(pos_time, neg_time, tolerance)):  # this the simplest case times are already matched!
+            return pos_time, fields, _phase_wrapping(pos_phase - neg_phase)
         else:
-            return _different_times(t0, t1, p0, p1, f0, tolerance)
+            return _different_times(pos_time, neg_time, pos_phase, neg_phase, fields, tolerance)
     else:
-        return _different_times(t0, t1, f0, p0, p1, f0, tolerance)
+        return _different_times(pos_time, neg_time, pos_phase, neg_phase, fields, tolerance)
 
 
-def _different_times(t0, t1, p0, p1, f0, tolerance=1e-8):
+def _different_times(pos_time, neg_time, pos_phase, neg_phase, fields, tolerance=1e-8):
+    """
+    match times and compute the phase differences for the complicated case
+    Args:
+        pos_time: Time for the positive phase
+        neg_time: Time for the negative phase
+        pos_phase: Positive phase
+        neg_phase: Negative phase
+        fields: Field ids
+        tolerance: Tolerance in time to match time arrays
+
+    Returns:
+    Matched times, matched field ids, -pi, pi wrapped matched phase difference
+    """
     # This solution is not optimal but numpy does not have a task for it, if it ever becomes a bottleneck we can JIT it
-    unique_times = np.sort([time for time in t0 if np.isclose(t1, time, tolerance).any()])
-    diff = []
-    field = []
-    for time in unique_times:
-        i_t0 = abs(t0 - time) < tolerance
-        i_t1 = abs(t1 - time) < tolerance
-        field.append(f0[i_t0][0])
-        diff.append(p0[i_t0][0] - p1[i_t1][0])
-    return unique_times, np.array(field), _phase_wrapping(np.array(diff))
+    out_times = np.sort([time for time in pos_time if np.isclose(neg_time, time, tolerance).any()])
+    ntimes = out_times.shape[0]
+    out_phase = np.ndarray(ntimes)
+    out_field = np.ndarray(ntimes, dtype=np.integer)
+    for i_time in range(ntimes):
+        i_t0 = abs(pos_time - out_times[i_time]) < tolerance
+        i_t1 = abs(neg_time - out_times[i_time]) < tolerance
+        out_phase[i_time] = pos_phase[i_t0][0] - neg_phase[i_t1][0]
+        out_field[i_time] = fields[i_t0][0]
+    return out_times, out_field, _phase_wrapping(out_phase)
 
 
 def _phase_wrapping(phase):
+    """
+    Wraps phase to the -pi to pi interval
+    Args:
+        phase: phase to be wrapped
+
+    Returns:
+    Phase wrapped to the -pi to pi interval
+    """
     return (phase + pi) % (2 * pi) - pi
 
 
@@ -189,11 +244,15 @@ def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False, split_po
     Args:
         xds_data: The .locit.zarr xds
         pol_selection: Which polarization is requested from the xds
+        get_phases: return phases rather than delays
+        split_pols: Different polarizations are not concatenated in a single array if True
+
 
     Returns:
         the field ids
         the time in mjd
-        The delays in seconds
+        The delays in seconds or phases in radians
+        Xds frequency
 
     """
     logger = _get_astrohack_logger()
@@ -221,9 +280,9 @@ def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False, split_po
         logger.error(msg)
         raise Exception(msg)
     if get_phases:
-        return field_id, time, phases, freq  # field_id, time, phases
+        return field_id, time, phases, freq  # field_id, time, phases, frequency
     else:
-        return field_id, time, phases/twopi/freq  # field_id, time, delays
+        return field_id, time, phases/twopi/freq, freq  # field_id, time, delays, frequency
 
 
 def _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, frequency,
