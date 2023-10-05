@@ -119,12 +119,13 @@ def _locit_difference_chunk(locit_parms):
 def _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
     logger = _get_astrohack_logger()
     freq = ddi_0[3] - ddi_1[3]
+    fields = ddi_0[0]
     if freq > 0:
-        pos_phase = ddi_0[2]
-        neg_phase = ddi_1[2]
+        pos_time, pos_phase = ddi_0[1:3]
+        neg_time, neg_phase = ddi_1[1:3]
     elif freq < 0:
-        pos_phase = ddi_1[2]
-        neg_phase = ddi_0[2]
+        pos_time, pos_phase = ddi_1[1:3]
+        neg_time, neg_phase = ddi_0[1:3]
         freq *= -1
     else:
         msg = f'The two DDIs must have different frequencies'
@@ -136,9 +137,9 @@ def _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1, multi_p
         field_id = []
         phase = []
         for i_pol in range(2):
-            this_time, this_field_id, this_phase = _actual_matching_and_difference(ddi_0[1][i_pol], ddi_1[1][i_pol],
+            this_time, this_field_id, this_phase = _actual_matching_and_difference(pos_time[i_pol], neg_time[i_pol],
                                                                                    pos_phase[i_pol], neg_phase[i_pol],
-                                                                                   ddi_0[0][i_pol])
+                                                                                   fields[i_pol])
             time.append(this_time)
             field_id.append(this_field_id)
             phase.append(this_phase)
@@ -148,42 +149,33 @@ def _match_times_and_compute_delays_from_phase_differences(ddi_0, ddi_1, multi_p
         phase = np.concatenate(phase)
 
     else:
-        time, field_id, phase = _actual_matching_and_difference(ddi_0[1], ddi_1[1], pos_phase, neg_phase, ddi_0[0])
+        time, field_id, phase = _actual_matching_and_difference(pos_time, neg_time, pos_phase, neg_phase, fields)
 
     delays = phase/twopi/freq
-
-    print(time)
-    print(field_id)
-    print(delays)
-    print(freq)
     return time, field_id, delays, freq
 
 
-def _actual_matching_and_difference(t0, t1, p0, p1, f0):
+def _actual_matching_and_difference(t0, t1, p0, p1, f0, tolerance=1e-8):
     nt0, nt1 = len(t0), len(t1)
-    t0 = np.array(t0)
-    t1 = np.array(t1)
-    p0 = np.array(p0)
-    p1 = np.array(p1)
-    f0 = np.array(f0)
     if nt0 == nt1:
-        if np.all(t0 == t1):  # this the simplest case times are already matched!
+        if np.all(np.isclose(t0, t1, tolerance)):  # this the simplest case times are already matched!
             return t0, f0, _phase_wrapping(p0-p1)
         else:
-            return _different_times(t0, t1, p0, p1, f0)
+            return _different_times(t0, t1, p0, p1, f0, tolerance)
     else:
-        return _different_times(t0, t1, f0, p0, p1, f0)
+        return _different_times(t0, t1, f0, p0, p1, f0, tolerance)
 
 
-def _different_times(t0, t1, p0, p1, f0):
-    unique_times = np.intersect1d(t0, t1)
+def _different_times(t0, t1, p0, p1, f0, tolerance=1e-8):
+    # This solution is not optimal but numpy does not have a task for it, if it ever becomes a bottleneck we can JIT it
+    unique_times = np.sort([time for time in t0 if np.isclose(t1, time, tolerance).any()])
     diff = []
     field = []
     for time in unique_times:
-        i_t0 = t0 == time
-        i_t1 = t1 == time
-        field.append(f0[i_t0])
-        diff.append(p0[i_t0] - p1[i_t1])
+        i_t0 = abs(t0 - time) < tolerance
+        i_t1 = abs(t1 - time) < tolerance
+        field.append(f0[i_t0][0])
+        diff.append(p0[i_t0][0] - p1[i_t1][0])
     return unique_times, np.array(field), _phase_wrapping(np.array(diff))
 
 
