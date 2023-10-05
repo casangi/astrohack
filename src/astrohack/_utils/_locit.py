@@ -341,7 +341,7 @@ def _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, mod
 
     basename = locit_parms['position_name']
     outname = "/".join([basename, 'ant_'+antenna['name']])
-    if not locit_parms['combine_ddis']:
+    if locit_parms['combine_ddis'] == 'no':
         outname += "/"+f'{locit_parms["this_ddi"]}'
     output_xds = output_xds.assign_coords(coords)
     output_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
@@ -697,7 +697,7 @@ def _export_fit_results(data_dict, parm_dict):
     len_fact = _convert_unit('m', pos_unit, 'length')
     del_fact = _convert_unit('sec', del_unit, kind='time')
     pos_fact = len_fact * clight
-    combined = data_dict._meta_data['combine_ddis']
+    combined = parm_dict['combined']
 
     if combined:
         field_names = ['Antenna', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
@@ -962,7 +962,7 @@ def _plot_position_corrections(parm_dict, data_dict):
     telescope = _open_telescope(data_dict._meta_data['telescope_name'])
     destination = parm_dict['destination']
     ref_ant = data_dict._meta_data['reference_antenna']
-    combined = data_dict._meta_data['combine_ddis']
+    combined = parm_dict['combined']
 
     ant_list = _parm_to_list('plot_position_corractions', parm_dict['ant'], data_dict, 'ant')
     if combined:

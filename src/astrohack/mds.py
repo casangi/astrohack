@@ -1036,8 +1036,8 @@ class AstrohackLocitFile(dict):
                            display=display, figure_size=figure_size, dpi=dpi, label=display_labels)
         return
 
-    def plot_antenna_positions(self, destination, display_stations=True, display_zoff=False, unit='m', box_size=5000,
-                               display=False, figure_size=None, dpi=300):
+    def plot_array_configuration(self, destination, display_stations=True, display_zoff=False, unit='m', box_size=5000,
+                                 display=False, figure_size=None, dpi=300):
         """ Plot antenna positions.
 
         :param destination: Name of the destination folder to contain plot
@@ -1147,7 +1147,7 @@ class AstrohackPositionFile(dict):
             file = self.file
 
         self._meta_data = _read_meta_data(file + '/.position_attr')
-        self.combined = self._meta_data['combine_ddis']
+        self.combined = self._meta_data['combine_ddis'] != 'no'
 
         try:
             _load_position_file(file=file, dask_load=dask_load, position_dict=self,
@@ -1204,6 +1204,7 @@ class AstrohackPositionFile(dict):
                                                      acceptable_data=time_units, default='nsec')
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
+        parm_dict['combined'] = self.combined
         _export_fit_results(self, parm_dict)
 
     def plot_sky_coverage(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', display=False,
@@ -1421,7 +1422,7 @@ class AstrohackPositionFile(dict):
 
         _parm_check_passed(fname, parms_passed)
         _create_destination_folder(parm_dict['destination'])
-
+        parm_dict['combined'] = self.combined
         _plot_position_corrections(parm_dict, self)
 
     def summary(self):

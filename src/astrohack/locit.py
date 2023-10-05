@@ -120,6 +120,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     attributes['telescope_name'] = locit_mds._meta_data['telescope_name']
     attributes['reference_antenna'] = locit_mds._meta_data['reference_antenna']
 
+    print(combine_ddis)
     if combine_ddis == 'simple':
         function = _locit_combined_chunk
         key_order = ['ant']
@@ -127,6 +128,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
         function = _locit_difference_chunk
         key_order = ['ant']
     else:
+        print('Am I in the correct spot?')
         function = _locit_separated_chunk
         key_order = ['ant', 'ddi']
 
