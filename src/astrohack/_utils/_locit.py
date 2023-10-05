@@ -702,9 +702,12 @@ def _export_fit_results(data_dict, parm_dict):
     if combined:
         field_names = ['Antenna', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
+        specifier = 'combined_'+data_dict._meta_data['combine_ddis']
+
     else:
         field_names = ['Antenna', 'DDI', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
+        specifier = 'separated_ddis'
     kterm_present = data_dict._meta_data["fit_kterm"]
     slope_present = data_dict._meta_data["fit_slope"]
     if kterm_present:
@@ -743,7 +746,7 @@ def _export_fit_results(data_dict, parm_dict):
                         table.add_row(_export_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pos_fact, slo_fact,
                                                   kterm_present, slope_present))
 
-    outname = parm_dict['destination']+'/position_fit_results.txt'
+    outname = parm_dict['destination']+f'/position_{specifier}_fit_results.txt'
     outfile = open(outname, 'w')
     outfile.write(table.get_string()+'\n')
     outfile.close()
@@ -966,11 +969,12 @@ def _plot_position_corrections(parm_dict, data_dict):
 
     ant_list = _parm_to_list('plot_position_corractions', parm_dict['ant'], data_dict, 'ant')
     if combined:
-        filename = f'{destination}/position_corrections_combined_ddis.png'
+        filename = f'{destination}/position_corrections_combined_{data_dict._meta_data["combine_ddis"]}.png'
         attribute_list = []
         for ant in ant_list:
             attribute_list.append(data_dict[ant].attrs)
         _plot_corrections_sub(attribute_list, filename, telescope, ref_ant, parm_dict)
+
     else:
         ddi_list = []
         if parm_dict['ddi'] == 'all':
@@ -982,7 +986,7 @@ def _plot_position_corrections(parm_dict, data_dict):
             for i_ddi in range(len(ddi_list)):
                 ddi_list[i_ddi] = 'ddi_'+ddi_list[i_ddi]
         for ddi in ddi_list:
-            filename = f'{destination}/position_corrections_{ddi}.png'
+            filename = f'{destination}/position_corrections_separated_{ddi}.png'
             attribute_list = []
             for ant in ant_list:
                 if ddi in data_dict[ant].keys():

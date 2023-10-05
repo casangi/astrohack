@@ -1363,7 +1363,7 @@ class AstrohackPositionFile(dict):
             _dask_general_compute(fname, self, _plot_delays_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_position_corrections(self, destination, ant_id=None, ddi=None, unit='km', box_size=5, scaling=250,
-                                  display=True, figure_size=None, dpi=300):
+                                  display=False, figure_size=None, dpi=300):
         """ Plot Antenna position corrections on an array configuration plot
 
         :param destination: Name of the destination folder to contain plot
