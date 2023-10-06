@@ -77,7 +77,7 @@ class TestLocit():
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
             ddi=[0],
-            combine_ddis=False,
+            combine_ddis='no',
             parallel=False,
             overwrite=True
         )
@@ -93,7 +93,7 @@ class TestLocit():
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
             fit_kterm = True,
-            combine_ddis=False,
+            combine_ddis='no',
             parallel=False,
             overwrite=True
         )
@@ -110,7 +110,7 @@ class TestLocit():
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
             fit_delay_rate= True,
-            combine_ddis=False,
+            combine_ddis='no',
             parallel=False,
             overwrite=True
         )
@@ -161,7 +161,7 @@ class TestLocit():
         position_mds = locit(
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
-            combine_ddis=True,
+            combine_ddis='simple',
             parallel=False,
             overwrite=True
         )
