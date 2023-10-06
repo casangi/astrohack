@@ -852,11 +852,11 @@ def _plot_delays_chunk(parm_dict):
     antenna = parm_dict['this_ant']
     destination = parm_dict['destination']
     if combined:
-        export_name = f'{destination}/position_delays_{antenna}.png'
+        export_name = f'{destination}/position_delays_{antenna}_combined_{parm_dict["comb_type"]}.png'
         suptitle = f'Delays for antenna {antenna.split("_")[1]}'
     else:
         ddi = parm_dict['this_ddi']
-        export_name = f'{destination}/position_delays_{antenna}_{ddi}.png'
+        export_name = f'{destination}/position_delays_{antenna}_separated_{ddi}.png'
         suptitle = f'Delays for antenna {antenna.split("_")[1]}, DDI {ddi.split("_")[1]}'
 
     xds = parm_dict['xds_data']

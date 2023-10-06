@@ -1357,6 +1357,7 @@ class AstrohackPositionFile(dict):
         _create_destination_folder(parm_dict['destination'])
 
         parm_dict['combined'] = self.combined
+        parm_dict['comb_type'] = self._meta_data["combine_ddis"]
         if self.combined:
             _dask_general_compute(fname, self, _plot_delays_chunk, parm_dict, ['ant'], parallel=parallel)
         else:
