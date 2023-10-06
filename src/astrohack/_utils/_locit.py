@@ -40,7 +40,7 @@ def _locit_separated_chunk(locit_parms):
 
     fit, variance = _fit_data(coordinates, delays, locit_parms)
     model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_slope'])
+                                              locit_parms['fit_rate'])
     _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq, elevation_limit)
     return
 
@@ -81,7 +81,7 @@ def _locit_combined_chunk(locit_parms):
 
     fit, variance = _fit_data(coordinates, delays, locit_parms)
     model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_slope'])
+                                              locit_parms['fit_rate'])
     _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq_list,
                        elevation_limit)
     return
@@ -120,7 +120,7 @@ def _locit_difference_chunk(locit_parms):
         return
     fit, variance = _fit_data(coordinates, delays, locit_parms)
     model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_slope'])
+                                              locit_parms['fit_rate'])
     _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
                        elevation_limit)
     return
@@ -303,7 +303,7 @@ def _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, mod
     The xds on zarr format on disk
     """
     fit_kterm = locit_parms['fit_kterm']
-    fit_slope = locit_parms['fit_slope']
+    fit_rate = locit_parms['fit_rate']
     antenna = locit_parms['ant_info'][locit_parms['this_ant']]
 
     output_xds = xr.Dataset()
@@ -317,17 +317,17 @@ def _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, mod
     output_xds.attrs['elevation_limit'] = elevation_limit
     output_xds.attrs['chi_squared'] = chi_squared
 
-    if fit_kterm and fit_slope:
+    if fit_kterm and fit_rate:
         output_xds.attrs['koff_fit'] = fit[4]
         output_xds.attrs['koff_error'] = variance[4]
-        output_xds.attrs['slope_fit'] = fit[5]
-        output_xds.attrs['slope_error'] = variance[5]
-    elif fit_kterm and not fit_slope:
+        output_xds.attrs['rate_fit'] = fit[5]
+        output_xds.attrs['rate_error'] = variance[5]
+    elif fit_kterm and not fit_rate:
         output_xds.attrs['koff_fit'] = fit[4]
         output_xds.attrs['koff_error'] = variance[4]
-    elif not fit_kterm and fit_slope:
-        output_xds.attrs['slope_fit'] = fit[4]
-        output_xds.attrs['slope_error'] = variance[4]
+    elif not fit_kterm and fit_rate:
+        output_xds.attrs['rate_fit'] = fit[4]
+        output_xds.attrs['rate_error'] = variance[4]
     else:
         pass  # Nothing to be added to the attributes
 
@@ -361,14 +361,14 @@ def _fit_data(coordinates, delays, locit_parms):
     """
     logger = _get_astrohack_logger()
     fit_kterm = locit_parms['fit_kterm']
-    fit_slope = locit_parms['fit_slope']
+    fit_rate = locit_parms['fit_rate']
 
     linalg = locit_parms['fit_engine'] == 'linear algebra'
     if linalg:
-        fit, variance = _solve_linear_algebra(coordinates, delays, fit_kterm, fit_slope)
+        fit, variance = _solve_linear_algebra(coordinates, delays, fit_kterm, fit_rate)
     else:
         if locit_parms['fit_engine'] == 'scipy':
-            fit, variance = _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_slope, verbose=True)
+            fit, variance = _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_rate, verbose=True)
         else:
             msg = f'Unrecognized fitting engine: {locit_parms["fit_engine"]}'
             logger.error(msg)
@@ -376,7 +376,7 @@ def _fit_data(coordinates, delays, locit_parms):
     return fit, variance
 
 
-def _compute_chi_squared(delays, fit, coordinates, fit_kterm, fit_slope):
+def _compute_chi_squared(delays, fit, coordinates, fit_kterm, fit_rate):
     """
     Compute a model from fit results and computes the chi squared value of that model with respect to the data
     Args:
@@ -384,12 +384,12 @@ def _compute_chi_squared(delays, fit, coordinates, fit_kterm, fit_slope):
         fit: The fit results
         coordinates: ha, dec, elevation, time
         fit_kterm: K term fitted?
-        fit_slope: delay rate fitted?
+        fit_rate: delay rate fitted?
 
     Returns:
     The delay model and the chi squared value
     """
-    model_function, _ = _define_fit_function(fit_kterm, fit_slope)
+    model_function, _ = _define_fit_function(fit_kterm, fit_rate)
     model = model_function(coordinates, *fit)
     n_delays = len(delays)
     chi_squared = np.sum((model-delays)**2/n_delays)
@@ -469,8 +469,8 @@ def _kterm_coeff(coordinates):
     return np.cos(elevation)
 
 
-def _slope_coeff(coordinates):
-    """Compute the delay slope coefficient (basically the time)
+def _rate_coeff(coordinates):
+    """Compute the delay rate coefficient (basically the time)
 
     Args:
         coordinates: coordinate arrays (ha, dec, ele, time)
@@ -481,25 +481,25 @@ def _slope_coeff(coordinates):
     return coordinates[3]
 
 
-def _solve_linear_algebra(coordinates, delays, fit_kterm, fit_slope):
+def _solve_linear_algebra(coordinates, delays, fit_kterm, fit_rate):
     """
 
     Args:
         coordinates: coordinate arrays (ha, dec, ele, time)
         delays: The delays
         fit_kterm: fit elevation axis offset term
-        fit_slope: fit delay rate term
+        fit_rate: fit delay rate term
 
     Returns:
     The fit results and the diagonal of the covariance matrix.
     """
-    npar = 4 + fit_slope + fit_kterm
+    npar = 4 + fit_rate + fit_kterm
 
     system = np.zeros([npar, npar])
     vector = np.zeros([npar])
     n_samples = coordinates.shape[1]
     for i_sample in range(n_samples):
-        coeffs = _system_coefficients(coordinates[:, i_sample], fit_kterm, fit_slope)
+        coeffs = _system_coefficients(coordinates[:, i_sample], fit_kterm, fit_rate)
         for irow in range(npar):
             for icol in range(irow + 1):
                 system[irow, icol] += coeffs[irow] * coeffs[icol]
@@ -514,13 +514,13 @@ def _solve_linear_algebra(coordinates, delays, fit_kterm, fit_slope):
     return fit, variance
 
 
-def _system_coefficients(coordinates, fit_kterm, fit_slope):
+def _system_coefficients(coordinates, fit_kterm, fit_rate):
     """ Build coefficient list for linear algebra fit
 
     Args:
         coordinates: coordinate arrays (ha, dec, ele, time)
         fit_kterm: fit elevation axis offset term
-        fit_slope: Fit delay rate term
+        fit_rate: Fit delay rate term
 
     Returns:
 
@@ -528,41 +528,41 @@ def _system_coefficients(coordinates, fit_kterm, fit_slope):
     coeffs = _geometrical_coeffs(coordinates)
     if fit_kterm:
         coeffs.append(_kterm_coeff(coordinates))
-    if fit_slope:
-        coeffs.append(_slope_coeff(coordinates))
+    if fit_rate:
+        coeffs.append(_rate_coeff(coordinates))
     return coeffs
 
 
-def _define_fit_function(fit_kterm, fit_slope):
+def _define_fit_function(fit_kterm, fit_rate):
     """
     Define the fitting function based on the presence of the delay rate and elevation axis offset terms
     Args:
         fit_kterm: fit elevation axis offset?
-        fit_slope: fit delay rate?
+        fit_rate: fit delay rate?
 
     Returns:
     The appropriate fitting function and the total number of parameters
     """
-    npar = 4 + fit_slope + fit_kterm
-    if fit_kterm and fit_slope:
-        fit_function = _delay_model_kterm_slope
-    elif fit_kterm and not fit_slope:
-        fit_function = _delay_model_kterm_noslope
-    elif not fit_kterm and fit_slope:
-        fit_function = _delay_model_nokterm_slope
+    npar = 4 + fit_rate + fit_kterm
+    if fit_kterm and fit_rate:
+        fit_function = _delay_model_kterm_rate
+    elif fit_kterm and not fit_rate:
+        fit_function = _delay_model_kterm_norate
+    elif not fit_kterm and fit_rate:
+        fit_function = _delay_model_nokterm_rate
     else:
-        fit_function = _delay_model_nokterm_noslope
+        fit_function = _delay_model_nokterm_norate
     return fit_function, npar
 
 
-def _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_slope, verbose=False):
+def _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_rate, verbose=False):
     """
     Fit a delay model to the observed delays using scipy optimize curve_fit algorithm
     Args:
         coordinates: coordinate arrays (ha, dec, ele, time)
         delays: The observed delays
         fit_kterm: fit elevation axis offset term
-        fit_slope: Fit delay rate term
+        fit_rate: Fit delay rate term
         verbose: Display fitting messages
 
     Returns:
@@ -570,7 +570,7 @@ def _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_slope, v
     """
     logger = _get_astrohack_logger()
 
-    fit_function, npar = _define_fit_function(fit_kterm, fit_slope)
+    fit_function, npar = _define_fit_function(fit_kterm, fit_rate)
 
     # First guess is no errors in positions, no fixed delay and no delay rate
     p0 = np.zeros(npar)
@@ -594,7 +594,7 @@ def _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_slope, v
     return fit, variance
 
 
-def _delay_model_nokterm_noslope(coordinates, fixed_delay, xoff, yoff, zoff):
+def _delay_model_nokterm_norate(coordinates, fixed_delay, xoff, yoff, zoff):
     """
     Delay model with no elevation axis offset or delay rate
     Args:
@@ -614,7 +614,7 @@ def _delay_model_nokterm_noslope(coordinates, fixed_delay, xoff, yoff, zoff):
     return xterm + yterm + zterm + fixed_delay
 
 
-def _delay_model_kterm_noslope(coordinates, fixed_delay, xoff, yoff, zoff, koff):
+def _delay_model_kterm_norate(coordinates, fixed_delay, xoff, yoff, zoff, koff):
     """
     Delay model with elevation axis offset and no delay rate
     Args:
@@ -636,7 +636,7 @@ def _delay_model_kterm_noslope(coordinates, fixed_delay, xoff, yoff, zoff, koff)
     return xterm + yterm + zterm + fixed_delay + kterm
 
 
-def _delay_model_nokterm_slope(coordinates, fixed_delay, xoff, yoff, zoff, slope):
+def _delay_model_nokterm_rate(coordinates, fixed_delay, xoff, yoff, zoff, rate):
     """
     Delay model with delay rate and no elevation axis offset
     Args:
@@ -645,7 +645,7 @@ def _delay_model_nokterm_slope(coordinates, fixed_delay, xoff, yoff, zoff, slope
         xoff: X direction delay in antenna frame
         yoff: Y direction delay in antenna frame
         zoff: Z direction delay in antenna frame
-        slope: delay rate
+        rate: delay rate
 
     Returns:
     Delays model at coordinates
@@ -654,11 +654,11 @@ def _delay_model_nokterm_slope(coordinates, fixed_delay, xoff, yoff, zoff, slope
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
     zterm = coeffs[3] * zoff
-    sterm = _slope_coeff(coordinates) * slope
+    sterm = _rate_coeff(coordinates) * rate
     return xterm + yterm + zterm + fixed_delay + sterm
 
 
-def _delay_model_kterm_slope(coordinates, fixed_delay, xoff, yoff, zoff, koff, slope):
+def _delay_model_kterm_rate(coordinates, fixed_delay, xoff, yoff, zoff, koff, rate):
     """
     Delay model with delay rate and elevation axis offset
     Args:
@@ -668,7 +668,7 @@ def _delay_model_kterm_slope(coordinates, fixed_delay, xoff, yoff, zoff, koff, s
         yoff: Y direction delay in antenna frame
         zoff: Z direction delay in antenna frame
         koff: Elevation axis offset delay
-        slope: delay rate
+        rate: delay rate
 
     Returns:
     Delays model at coordinates
@@ -677,7 +677,7 @@ def _delay_model_kterm_slope(coordinates, fixed_delay, xoff, yoff, zoff, koff, s
     xterm = coeffs[1] * xoff
     yterm = coeffs[2] * yoff
     zterm = coeffs[3] * zoff
-    sterm = _slope_coeff(coordinates) * slope
+    sterm = _rate_coeff(coordinates) * rate
     kterm = _kterm_coeff(coordinates) * koff
     return xterm + yterm + zterm + fixed_delay + kterm + sterm
 
@@ -709,10 +709,10 @@ def _export_fit_results(data_dict, parm_dict):
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
         specifier = 'separated_ddis'
     kterm_present = data_dict._meta_data["fit_kterm"]
-    slope_present = data_dict._meta_data["fit_slope"]
+    rate_present = data_dict._meta_data["fit_rate"]
     if kterm_present:
         field_names.extend([f'K offset [{pos_unit}]'])
-    if slope_present:
+    if rate_present:
         tim_unit = parm_dict['time_unit']
         slo_unit = f'{del_unit}/{tim_unit}'
         slo_fact = del_fact / _convert_unit('day', tim_unit, 'time')
@@ -738,13 +738,13 @@ def _export_fit_results(data_dict, parm_dict):
                 antenna = data_dict[ant_key]
                 if combined:
                     table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
-                                              slope_present))
+                                              rate_present))
                 else:
                     ddi_list = _parm_to_list('export_fit_results', parm_dict['ddi'], data_dict[ant_key], 'ddi')
                     for ddi_key in ddi_list:
                         row = [ant_name, ddi_key.split('_')[1]]
                         table.add_row(_export_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pos_fact, slo_fact,
-                                                  kterm_present, slope_present))
+                                                  kterm_present, rate_present))
 
     outname = parm_dict['destination']+f'/position_{specifier}_fit_results.txt'
     outfile = open(outname, 'w')
@@ -752,7 +752,7 @@ def _export_fit_results(data_dict, parm_dict):
     outfile.close()
 
 
-def _export_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, slope_present):
+def _export_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, rate_present):
     """
     Export the data from a single X array DataSet attributes to a table row (a list)
     Args:
@@ -762,7 +762,7 @@ def _export_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, sl
         pos_fact: Position unit scaling factor
         slo_fact: Delay rate unit scaling factor
         kterm_present: Is the elevation axis offset term present?
-        slope_present: Is the delay rate term present?
+        rate_present: Is the delay rate term present?
 
     Returns:
     The filled table row
@@ -779,8 +779,8 @@ def _export_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, sl
         row.append(_format_value_error(position[i_pos], poserr[i_pos],  pos_fact, tolerance))
     if kterm_present:
         row.append(_format_value_error(attributes['koff_fit'], attributes['koff_error'], pos_fact, tolerance))
-    if slope_present:
-        row.append(_format_value_error(attributes['slope_fit'], attributes['slope_error'], slo_fact, tolerance))
+    if rate_present:
+        row.append(_format_value_error(attributes['rate_fit'], attributes['rate_error'], slo_fact, tolerance))
     return row
 
 
