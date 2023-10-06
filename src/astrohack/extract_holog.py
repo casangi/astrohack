@@ -1,3 +1,4 @@
+import copy
 import inspect
 import json
 import os
@@ -733,7 +734,7 @@ class HologObsDict(dict):
             obs_dict = self
 
         else:
-            obs_dict = HologObsDict(self)
+            obs_dict = HologObsDict(copy.deepcopy(self))
 
         if key == "ddi":
             return self._select_ddi(value, obs_dict=obs_dict)
@@ -748,8 +749,21 @@ class HologObsDict(dict):
             return self._select_scan(value, obs_dict=obs_dict)
 
         elif key == "baseline":
-            if kwargs["reference"]:
-                return self._select_baseline(value, reference=kwargs["reference"], obs_dict=obs_dict)
+            if "reference" in kwargs.keys():
+                return self._select_baseline(
+                    value,
+                    reference=kwargs["reference"],
+                    obs_dict=obs_dict
+                )
+
+            elif "n_baselines" in kwargs.keys():
+                return self._select_baseline(
+                    value,
+                    n_baselines=kwargs["n_baselines"],
+                    reference=None,
+                    obs_dict=obs_dict
+                )
+
 
             else:
                 self.logger.error("Must specify a list of reference antennae for this option.")
@@ -757,8 +771,7 @@ class HologObsDict(dict):
             self.logger.error("Valid key not found: {key}".format(key=key))
             return {}
 
-    @staticmethod
-    def get_nearest_baselines(antenna, n_baselines, path_to_matrix=None):
+    def get_nearest_baselines(self, antenna, n_baselines=None, path_to_matrix=None):
         logger = _get_astrohack_logger()
         import pandas as pd
 
@@ -766,11 +779,14 @@ class HologObsDict(dict):
             path_to_matrix = os.getcwd() + "/.baseline_distance_matrix.csv"
 
         if not os.path.exists(path_to_matrix):
-            self.logger.error("Unable to find baseline distance matrix in: {path}".format(path=path_to_matrix))
+            logger.error("Unable to find baseline distance matrix in: {path}".format(path=path_to_matrix))
 
         df_matrix = pd.read_csv(path_to_matrix, sep="\t", index_col=0)
 
         # Skip the first index because it is a self distance
+        if n_baselines is None:
+            return df_matrix[antenna].sort_values(ascending=True).index[1:].values.tolist()
+
         return df_matrix[antenna].sort_values(ascending=True).index[1:n_baselines].values.tolist()
 
     def _select_ddi(self, value, obs_dict):
@@ -834,12 +850,10 @@ class HologObsDict(dict):
 
         return obs_dict
 
-    def _select_baseline(self, value, reference, obs_dict):
-        if not isinstance(value, list):
-            value = [value]
-
-        if not isinstance(reference, list):
-            value = [reference]
+    def _select_baseline(self, value, n_baselines, obs_dict, reference=None):
+        if reference is not None:
+            if not isinstance(reference, list):
+                reference = [reference]
 
         ddi_list = list(obs_dict.keys())
 
@@ -852,6 +866,20 @@ class HologObsDict(dict):
                         obs_dict[ddi][mp]["ant"].pop(ant)
                         continue
 
-                    obs_dict[ddi][mp]["ant"][ant] = reference
+                    if reference is None:
+                        reference_antennas = obs_dict[ddi][mp]["ant"][ant]
+
+                        if n_baselines > len(reference_antennas):
+                            n_baselines = len(reference_antennas)
+
+                        sorted_antennas = np.array(obs_dict.get_nearest_baselines(antenna=ant))
+
+                        values, i, j = np.intersect1d(reference_antennas, sorted_antennas, return_indices=True)
+                        index = np.sort(j)
+
+                        obs_dict[ddi][mp]["ant"][ant] = sorted_antennas[index][:n_baselines]
+
+                    else:
+                        obs_dict[ddi][mp]["ant"][ant] = reference
 
         return obs_dict
