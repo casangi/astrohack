@@ -77,7 +77,7 @@ class TestLocit():
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
             ddi=[0],
-            combine_ddis=False,
+            combine_ddis='no',
             parallel=False,
             overwrite=True
         )
@@ -93,7 +93,7 @@ class TestLocit():
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
             fit_kterm = True,
-            combine_ddis=False,
+            combine_ddis='no',
             parallel=False,
             overwrite=True
         )
@@ -102,22 +102,22 @@ class TestLocit():
             for ddi in position_mds[ant].keys():
                 position_mds[ant][ddi].koff_fit
 
-    def test_locit_fit_slope(self):
-        """ Run locit with fit_slope=False and check that the file created on disk contains no solution for the delay slope."""
+    def test_locit_fit_rate(self):
+        """ Run locit with fit_rate=False and check that the file created on disk contains no solution for the delay rate."""
 
 
         position_mds = locit(
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
-            fit_slope = True,
-            combine_ddis=False,
+            fit_delay_rate= True,
+            combine_ddis='no',
             parallel=False,
             overwrite=True
         )
 
         for ant in position_mds.keys():
             for ddi in position_mds[ant].keys():
-                position_mds[ant]["ddi_0"].slope_fit
+                position_mds[ant]["ddi_0"].rate_fit
 
     def test_locit_elevation_limit(self):
         """ Run locit with elevation_limit=90 and expect locit to fail because there is no available data."""
@@ -161,7 +161,7 @@ class TestLocit():
         position_mds = locit(
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
-            combine_ddis=True,
+            combine_ddis='simple',
             parallel=False,
             overwrite=True
         )
