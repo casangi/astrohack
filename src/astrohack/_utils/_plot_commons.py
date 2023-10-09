@@ -38,8 +38,9 @@ def _close_figure(figure, title, filename, dpi, display, tight_layout=True):
     if tight_layout:
         figure.tight_layout()
     plt.savefig(filename, dpi=dpi)
-    if not display:
-        plt.close()
+    if display:
+        plt.show()
+    plt.close()
     return
 
 
