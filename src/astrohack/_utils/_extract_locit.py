@@ -13,8 +13,9 @@ from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._constants import figsize, twopi, notavail
 from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._locit_commons import _open_telescope, _compute_antenna_relative_off, _get_telescope_lat_lon_rad
-from astrohack._utils._locit_commons import _create_figure_and_axes, _plot_boxes_limits_and_labels
-from astrohack._utils._locit_commons import _plot_antenna_position, _close_figure, _scatter_plot
+from astrohack._utils._locit_commons import _plot_boxes_limits_and_labels
+from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _scatter_plot
+from astrohack._utils._locit_commons import _plot_antenna_position
 
 
 def _extract_antenna_data(fname, extract_locit_parms):
