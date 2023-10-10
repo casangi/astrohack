@@ -319,7 +319,7 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
         radec[int(i_src)] = src[coorkey]
         name.append(src['name'])
 
-    fig, ax  = _create_figure_and_axes(figure_size, [1, 1])
+    fig, ax = _create_figure_and_axes(figure_size, [1, 1])
     radec[:, 0] *= _convert_unit('rad', 'hour', 'trigonometric')
     radec[:, 1] *= _convert_unit('rad', 'deg', 'trigonometric')
 
@@ -380,7 +380,7 @@ def _plot_array_configuration(ant_dict, telescope_name, parm_dict):
 
     _plot_boxes_limits_and_labels(outer_ax, inner_ax, xlabel, ylabel, box_size, 'Outer array', 'Inner array')
 
-    title = 'Antenna positions during observation'
+    title = f'{len(ant_dict.keys())} Antennae during observation'
     _close_figure(fig, title, filename, dpi, display)
     return
 
@@ -396,7 +396,7 @@ def _print_array_configuration(params, ant_dict, telescope_name):
     telescope = _open_telescope(telescope_name)
     relative = params['relative']
 
-    print(f"\n{telescope_name} antennae:")
+    print(f"\n{telescope_name} antennae, # of antennae {len(ant_dict.keys())}:")
     table = PrettyTable()
     table.align = 'c'
     if relative:

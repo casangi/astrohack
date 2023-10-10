@@ -39,6 +39,7 @@ def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=F
     fname = 'extract_locit'
     ######### Parameter Checking #########
     extract_locit_parms = _check_extract_locit_parms(fname, cal_table, locit_name, ant_id, ddi, overwrite)
+    input_parms = extract_locit_parms.copy()
     attributes = extract_locit_parms.copy()
 
     _check_if_file_exists(extract_locit_parms['cal_table'])
@@ -53,6 +54,8 @@ def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=F
     attributes['n_sources'] = n_sources
     attributes['reference_antenna'] = extract_locit_parms['reference_antenna']
     attributes['n_antennae'] = len(extract_locit_parms['ant_dict'])
+    output_attr_file = "{name}/{ext}".format(name=extract_locit_parms['locit_name'], ext=".locit_input")
+    _write_meta_data(output_attr_file, input_parms)
     output_attr_file = "{name}/{ext}".format(name=extract_locit_parms['locit_name'], ext=".locit_attr")
     _write_meta_data(output_attr_file, attributes)
 

@@ -928,6 +928,7 @@ class AstrohackLocitFile(dict):
         super().__init__()
 
         self.file = file
+        self._input_pars = None
         self._meta_data = None
         self._file_is_open = False
 
@@ -968,7 +969,8 @@ class AstrohackLocitFile(dict):
             logger.error("[AstrohackLocitFile]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file+'/.locit_attr')
+        self._input_pars = _read_meta_data(file + '/.locit_input')
+        self._meta_data = _read_meta_data(file + '/.locit_attr')
 
         return self._file_is_open
 
@@ -1120,7 +1122,7 @@ class AstrohackLocitFile(dict):
         """ Prints summary of the AstrohackLocitFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_dict_table(self._meta_data)
+        _print_dict_table(self._input_pars)
         _print_data_contents(self, ["Antenna", "Contents"])
         _print_method_list([self.summary, self.print_source_table, self.print_array_configuration,
                             self.plot_source_positions, self.plot_array_configuration])
