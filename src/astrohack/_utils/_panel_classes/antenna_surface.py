@@ -9,7 +9,8 @@ from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar, _axis_to_fits_header, _resolution_to_fits_header
+from astrohack._utils._tools import _add_prefix, _axis_to_fits_header, _resolution_to_fits_header
+from astrohack._utils._plot_commons import _well_positioned_colorbar
 from astrohack._utils._dio import _write_fits
 
 lnbr = "\n"

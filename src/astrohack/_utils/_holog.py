@@ -21,7 +21,8 @@ from astrohack._utils._algorithms import _calc_coords
 from astrohack._utils._conversion import _to_stokes
 from astrohack._utils._constants import clight, figsize
 from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header, _stokes_axis_to_fits_header, \
-    _resolution_to_fits_header, _add_prefix, _well_positioned_colorbar
+    _resolution_to_fits_header, _add_prefix
+from astrohack._utils._plot_commons import _well_positioned_colorbar
 
 from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk

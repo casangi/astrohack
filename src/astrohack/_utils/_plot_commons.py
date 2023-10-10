@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from astrohack._utils import figsize, fontsize
 
@@ -85,3 +86,23 @@ def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title=None, labels=None, xli
         ax.plot(xdata, model, ls='', marker='x', color='blue', label='model')
         ax.legend()
     return
+
+
+def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
+    """
+    Adds a well positioned colorbar to a plot
+    Args:
+        ax: Axes instance to add the colorbar
+        fig: Figure in which the axes are embedded
+        image: The plt.imshow instance associated to the colorbar
+        label: Colorbar label
+        location: Colorbar location
+        size: Colorbar size
+        pad: Colorbar padding
+
+    Returns: the well positioned colorbar
+
+    """
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes(location, size=size, pad=pad)
+    return fig.colorbar(image, label=label, cax=cax)
