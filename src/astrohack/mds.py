@@ -229,8 +229,9 @@ class AstrohackImageFile(dict):
         parm_dict['metadata'] = self._meta_data
         _dask_general_compute(fname, self, _export_to_fits_holog_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, unit=None, display=False,
-                       colormap='viridis', figure_size=None, dpi=300, parallel=False):
+    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, phase_unit='deg', phase_limits=None,
+                       deviation_unit='mm', deviation_limits=None, display=False, colormap='viridis', figure_size=None,
+                       dpi=300, parallel=False):
         """ Aperture amplitude and phase plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
@@ -241,8 +242,14 @@ class AstrohackImageFile(dict):
         :type ddi: list or int, optional
         :param plot_screws: Add screw positions to plot, default is False
         :type plot_screws: bool, optional
-        :param unit: Unit for phase plots, defaults to 'deg'
-        :type unit: str, optional
+        :param phase_unit: Unit for phase plots, defaults is 'deg'
+        :type phase_unit: str, optional
+        :param phase_limits: Lower then Upper limit for phase, value in phase_unit, default is None (Guess from data)
+        :type phase_limits: numpy.ndarray, list, tuple, optional
+        :param deviation_unit: Unit for deviation plots, defaults is 'mm'
+        :type deviation_unit: str, optional
+        :param deviation_limits: Lower then Upper limit for deviation, value in deviation_unit, default is None (Guess from data)
+        :type deviation_limits: numpy.ndarray, list, tuple, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param colormap: Colormap for plots, default is viridis
@@ -261,7 +268,10 @@ class AstrohackImageFile(dict):
         parm_dict = {'ant': ant_id,
                      'ddi': ddi,
                      'destination': destination,
-                     'unit': unit,
+                     'phase_unit': phase_unit,
+                     'phase_limits': phase_limits,
+                     'deviation_unit': deviation_unit,
+                     'deviation_limits': deviation_limits,
                      'plot_screws': plot_screws,
                      'display': display,
                      'colormap': colormap,
@@ -275,8 +285,17 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=trigo_units,
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'phase_limits', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_unit', [str],
+                                                     acceptable_data=length_units, default='mm')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_limits', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)

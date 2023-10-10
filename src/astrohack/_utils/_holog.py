@@ -3,7 +3,6 @@ import inspect
 import numpy as np
 import xarray as xr
 
-from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
 
 from astrohack._utils._panel_classes.telescope import Telescope
@@ -19,7 +18,7 @@ from astrohack._utils._algorithms import _find_nearest
 from astrohack._utils._algorithms import _calc_coords
 
 from astrohack._utils._conversion import _to_stokes
-from astrohack._utils._constants import clight, figsize
+from astrohack._utils._constants import clight
 from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header, _stokes_axis_to_fits_header, \
     _resolution_to_fits_header, _add_prefix
 from astrohack._utils._plot_commons import _well_positioned_colorbar
@@ -466,8 +465,6 @@ def _plot_aperture_chunk(parm_dict):
     telescope = _get_correct_telescope_from_name(inputxds)
     surface = AntennaSurface(inputxds, telescope, nan_out_of_bounds=False)
 
-    parm_dict['phase_unit'] = None
-    parm_dict['deviation_unit'] = None
     surface.plot_phase(basename, 'image', parm_dict)
     surface.plot_deviation(basename, 'image', parm_dict)
     surface.plot_amplitude(basename, parm_dict)
