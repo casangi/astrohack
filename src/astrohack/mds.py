@@ -388,6 +388,7 @@ class AstrohackHologFile(dict):
         
         self.file = file
         self._meta_data = None
+        self._input_pars = None
         self._file_is_open = False
 
     def __getitem__(self, key):
@@ -427,7 +428,8 @@ class AstrohackHologFile(dict):
             logger.error("[AstrohackHologFile]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file+'/.holog_attr')
+        self._meta_data = _read_meta_data(file + '/.holog_attr')
+        self._input_pars = _read_meta_data(file + '/.holog_input')
 
         return self._file_is_open
 
@@ -435,7 +437,7 @@ class AstrohackHologFile(dict):
         """ Prints summary of the AstrohackHologFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_dict_table(self._meta_data)
+        _print_dict_table(self._input_pars)
         _print_data_contents(self, ["DDI", "Map", "Antenna"])
         _print_method_list([self.summary, self.select, self.plot_diagnostics])
 
