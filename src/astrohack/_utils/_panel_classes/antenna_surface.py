@@ -10,14 +10,15 @@ from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._tools import _add_prefix, _axis_to_fits_header, _resolution_to_fits_header
-from astrohack._utils._plot_commons import _well_positioned_colorbar
+from astrohack._utils._plot_commons import _well_positioned_colorbar, _create_figure_and_axes, _close_figure
 from astrohack._utils._dio import _write_fits
 
 lnbr = "\n"
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, nan_out_of_bounds=True, panel_margins=None, reread=False):
+    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, nan_out_of_bounds=True,
+                 panel_margins=None, reread=False):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -563,7 +564,7 @@ class AntennaSurface:
         if len(maps) != len(labels):
             raise Exception('Map list and label list must be of the same size')
         nplots = len(maps)
-        vmax = np.nanmax(np.abs(conversion*maps[0]))
+        vmax = np.nanmax(np.abs(conversion*maps[0]))  # Gotten from the original map (displays the biggest variation)
         vmin = -vmax
         for iplot in range(nplots):
             title = f'{prefix.capitalize()} {labels[iplot]}'
@@ -576,12 +577,7 @@ class AntennaSurface:
                   colorbar=True, caller='panel', display=True):
         if colormap is None:
             colormap = 'viridis'
-        if figuresize is None:
-            figuresize = figsize
-        if figuresize is None or figuresize == 'None':
-            fig, ax = plt.subplots(1, 1, figsize=figsize)
-        else:
-            fig, ax = plt.subplots(1, 1, figsize=figuresize)
+        fig, ax = _create_figure_and_axes(figuresize, [1, 1])
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
         extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
@@ -595,11 +591,8 @@ class AntennaSurface:
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
             panel.plot(ax, screws=screws)
-        fig.suptitle(f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}')
-        fig.tight_layout()
-        plt.savefig(_add_prefix(filename, caller), dpi=dpi)
-        if not display:
-            plt.close()
+        suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}'
+        _close_figure(fig, suptitle, filename, dpi, display)
 
     def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
         lw = 0.5
@@ -632,10 +625,8 @@ class AntennaSurface:
             cmap = cmaps['RdBu_r']
         else:
             cmap = cmaps[colormap]
-        if figuresize is None or figuresize == 'None':
-            fig, ax = plt.subplots(1, 1, figsize=figsize)
-        else:
-            fig, ax = plt.subplots(1, 1, figsize=figuresize)
+        fig, ax = _create_figure_and_axes(figuresize, [1, 1])
+
         fac = _convert_unit('m', unit, 'length')
         vmax = np.nanmax(np.abs(fac * self.screw_adjustments))
         vmin = -vmax
@@ -644,7 +635,6 @@ class AntennaSurface:
         else:
             threshold = np.abs(threshold)
 
-        fig.suptitle('Screw corrections', y=0.92, fontsize='large')
         ax.set_title(f'\nThreshold = {threshold:.2f} {unit}', fontsize='small')
         # set the limits of the plot to the limits of the data
         extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
@@ -664,11 +654,9 @@ class AntennaSurface:
         for ipanel in range(len(self.panels)):
             self.panels[ipanel].plot(ax, screws=False)
             self.panels[ipanel].plot_corrections(ax, cmap, fac*self.screw_adjustments[ipanel], threshold, vmin, vmax)
-        fig.suptitle(f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}')
-        fig.tight_layout()
-        plt.savefig(filename, dpi=dpi)
-        if not display:
-            plt.close()
+
+        suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}'
+        _close_figure(fig, suptitle, filename, dpi, display)
 
     def _build_panel_data_arrays(self):
         """
