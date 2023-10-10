@@ -583,7 +583,7 @@ class AstrohackPanelFile(dict):
 
         self.file = file
         self._file_is_open = False
-        self._meta_data = None
+        self._input_pars = None
 
     def __getitem__(self, key):
         return super().__getitem__(key)
@@ -619,7 +619,7 @@ class AstrohackPanelFile(dict):
             logger.error("[AstroHackPanelFile.open()]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file+'/.panel_attr')
+        self._input_pars = _read_meta_data(file+'/.panel_input')
 
         return self._file_is_open
 
@@ -627,7 +627,7 @@ class AstrohackPanelFile(dict):
         """ Prints summary of the AstrohackPanelFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_dict_table(self._meta_data)
+        _print_dict_table(self._input_pars)
         _print_data_contents(self, ["Antenna", "DDI"])
         _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
                             self.plot_antennae])

@@ -109,7 +109,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
         panel_params['origin'] = 'astrohack'
         if _dask_general_compute(fname, image_mds, _panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
             logger.info(f"[{fname}]: Finished processing")
-            output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_attr")
+            output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_input")
             _write_meta_data(output_attr_file, input_params)
             panel_mds = AstrohackPanelFile(panel_params['panel_name'])
             panel_mds._open()
