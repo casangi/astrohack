@@ -429,32 +429,37 @@ def _print_data_contents(data_dict, field_names, alignment='l'):
     print(table)
 
 
-def _print_attributes(meta_dict, split_key=None, alignment='l'):
+def _print_dict_table(input_parameters, split_key=None, alignment='l', heading="Input Parameters"):
     """
     Print a summary of the atributes
     Args:
-        meta_dict: Dictionary containing metadata attributes
+        input_parameters: Dictionary containing metadata attributes
         split_key: key to be sqrt and displayed as nx X ny
 
     Returns:
 
     """
-    print("\nAttributes:")
+    print(f"\n{heading}:")
     table = PrettyTable()
-    table.field_names = ['Attribute', 'Value']
+    table.field_names = ['Parameter', 'Value']
     table.align = alignment
-    if split_key is None:
-        for key in meta_dict.keys():
-            table.add_row([key, meta_dict[key]])
 
-    else:
-        for key in meta_dict.keys():
-            if key == split_key:
-                n_side = int(np.sqrt(meta_dict[key]))
-                table.add_row([key, f'{n_side:d} x {n_side:d}'])
-            else:
-                table.add_row([key, meta_dict[key]])
+    for key, item in input_parameters.items():
+        if key == split_key:
+            n_side = int(np.sqrt(input_parameters[key]))
+            table.add_row([key, f'{n_side:d} x {n_side:d}'])
+        if isinstance(item, dict):
+            table.add_row([key, _dict_to_key_list(item)])
+        else:
+            table.add_row([key, item])
     print(table)
+
+
+def _dict_to_key_list(attr_dict):
+    outlist = []
+    for key in attr_dict.keys():
+        outlist.append(f'{key}: ...')
+    return outlist
 
 
 def _rad_to_hour_str(rad):

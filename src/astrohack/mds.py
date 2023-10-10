@@ -18,7 +18,7 @@ from astrohack._utils._dio import _create_destination_folder
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits, time_units
 from astrohack._utils._dask_graph_tools import _dask_general_compute
-from astrohack._utils._tools import _print_method_list, _print_attributes, _print_data_contents, _print_summary_header
+from astrohack._utils._tools import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
 from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
@@ -147,7 +147,7 @@ class AstrohackImageFile(dict):
         """ Prints summary of the AstrohackImageFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_attributes(self._meta_data)
+        _print_dict_table(self._meta_data)
         _print_data_contents(self, ["Antenna", "DDI"])
         _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
 
@@ -433,7 +433,7 @@ class AstrohackHologFile(dict):
         """ Prints summary of the AstrohackHologFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_attributes(self._meta_data)
+        _print_dict_table(self._meta_data)
         _print_data_contents(self, ["DDI", "Map", "Antenna"])
         _print_method_list([self.summary, self.select, self.plot_diagnostics])
 
@@ -627,7 +627,7 @@ class AstrohackPanelFile(dict):
         """ Prints summary of the AstrohackPanelFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_attributes(self._meta_data)
+        _print_dict_table(self._meta_data)
         _print_data_contents(self, ["Antenna", "DDI"])
         _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
                             self.plot_antennae])
@@ -908,7 +908,7 @@ class AstrohackPointFile(dict):
         """ Prints summary of the AstrohackPointFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_attributes(self._meta_data)
+        _print_dict_table(self._meta_data)
         _print_data_contents(self, ["Antenna"])
         _print_method_list([self.summary])
 
@@ -1120,7 +1120,7 @@ class AstrohackLocitFile(dict):
         """ Prints summary of the AstrohackLocitFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_attributes(self._meta_data)
+        _print_dict_table(self._meta_data)
         _print_data_contents(self, ["Antenna", "Contents"])
         _print_method_list([self.summary, self.print_source_table, self.print_array_configuration,
                             self.plot_source_positions, self.plot_array_configuration])
@@ -1457,7 +1457,7 @@ class AstrohackPositionFile(dict):
         """ Prints summary of the AstrohackpositionFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_attributes(self._meta_data)
+        _print_dict_table(self._meta_data)
         if self.combined:
             _print_data_contents(self, ["Antenna"])
         else:
