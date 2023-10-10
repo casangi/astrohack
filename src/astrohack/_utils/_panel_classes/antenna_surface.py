@@ -535,12 +535,17 @@ class AntennaSurface:
         fac = _convert_unit('m', parm_dict['unit'], 'length')
         prefix = 'deviation'
         rms = self.get_rms(unit=parm_dict['unit'])
-        if self.residuals is None:
+        if caller == 'image':
+            prefix = 'original'
             maps = [self.deviation]
-            labels = [f'original RMS={rms:.2f} {parm_dict["unit"]}']
+            labels = ['deviation']
         else:
-            maps = [self.deviation, self.corrections, self.residuals]
-            labels = [f'original RMS={rms[0]:.2f} {parm_dict["unit"]}', 'correction', f'residual RMS={rms[1]:.2f} {parm_dict["unit"]}']
+            if self.residuals is None:
+                maps = [self.deviation]
+                labels = [f'original RMS={rms:.2f} {parm_dict["unit"]}']
+            else:
+                maps = [self.deviation, self.corrections, self.residuals]
+                labels = [f'original RMS={rms[0]:.2f} {parm_dict["unit"]}', 'correction', f'residual RMS={rms[1]:.2f} {parm_dict["unit"]}']
         self._multi_plot(maps, labels, prefix, basename, fac, parm_dict)
 
     def _multi_plot(self, maps, labels, prefix, basename, factor, parm_dict):

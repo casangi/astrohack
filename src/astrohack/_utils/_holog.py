@@ -467,7 +467,9 @@ def _plot_aperture_chunk(parm_dict):
     surface = AntennaSurface(inputxds, telescope, nan_out_of_bounds=False)
 
     parm_dict['phase_unit'] = None
+    parm_dict['deviation_unit'] = None
     surface.plot_phase(basename, 'image', parm_dict)
+    surface.plot_deviation(basename, 'image', parm_dict)
     surface.plot_amplitude(basename, parm_dict)
 
 
