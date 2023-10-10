@@ -1144,6 +1144,7 @@ class AstrohackPositionFile(dict):
 
         self.file = file
         self._meta_data = None
+        self._input_pars = None
         self._file_is_open = False
 
     def __getitem__(self, key):
@@ -1177,6 +1178,7 @@ class AstrohackPositionFile(dict):
 
         self._meta_data = _read_meta_data(file + '/.position_attr')
         self.combined = self._meta_data['combine_ddis'] != 'no'
+        self._input_pars = _read_meta_data(file + '/.position_input')
 
         try:
             _load_position_file(file=file, dask_load=dask_load, position_dict=self,
@@ -1459,7 +1461,7 @@ class AstrohackPositionFile(dict):
         """ Prints summary of the AstrohackpositionFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_dict_table(self._meta_data)
+        _print_dict_table(self._input_pars)
         if self.combined:
             _print_data_contents(self, ["Antenna"])
         else:

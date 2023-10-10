@@ -109,6 +109,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     ######### Parameter Checking #########
     locit_parms = _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, fit_engine,
                                      fit_kterm, fit_delay_rate, ant_id, ddi, combine_ddis, parallel, overwrite)
+    input_parms = locit_parms.copy()
     attributes = locit_parms.copy()
 
     _check_if_file_exists(locit_parms['locit_name'])
@@ -120,7 +121,6 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     attributes['telescope_name'] = locit_mds._meta_data['telescope_name']
     attributes['reference_antenna'] = locit_mds._meta_data['reference_antenna']
 
-    print(combine_ddis)
     if combine_ddis == 'simple':
         function = _locit_combined_chunk
         key_order = ['ant']
@@ -128,7 +128,6 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
         function = _locit_difference_chunk
         key_order = ['ant']
     else:
-        print('Am I in the correct spot?')
         function = _locit_separated_chunk
         key_order = ['ant', 'ddi']
 
@@ -136,6 +135,8 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
         logger.info(f"[{fname}]: Finished processing")
         output_attr_file = "{name}/{ext}".format(name=locit_parms['position_name'], ext=".position_attr")
         _write_meta_data(output_attr_file, attributes)
+        output_attr_file = "{name}/{ext}".format(name=locit_parms['position_name'], ext=".position_input")
+        _write_meta_data(output_attr_file, input_parms)
         position_mds = AstrohackPositionFile(locit_parms['position_name'])
         position_mds._open()
         return position_mds
