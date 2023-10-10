@@ -101,6 +101,7 @@ class AstrohackImageFile(dict):
         """
         super().__init__()
         self._meta_data = None
+        self._input_pars = None
         self.file = file
         self._file_is_open = False
 
@@ -139,7 +140,8 @@ class AstrohackImageFile(dict):
             logger.error("[AstroHackImageFile.open()]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file+'/.image_attr')
+        self._meta_data = _read_meta_data(file + '/.image_attr')
+        self._input_pars = _read_meta_data(file + '/.image_input')
 
         return self._file_is_open
 
@@ -147,7 +149,7 @@ class AstrohackImageFile(dict):
         """ Prints summary of the AstrohackImageFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_dict_table(self._meta_data)
+        _print_dict_table(self._input_pars)
         _print_data_contents(self, ["Antenna", "DDI"])
         _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
 

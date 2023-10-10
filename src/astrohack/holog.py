@@ -126,6 +126,7 @@ def holog(
 
     ######### Parameter Checking #########
     holog_params = _check_holog_params(function_name=function_name, holog_params=holog_params)
+    input_parms = holog_params.copy()
     
     _check_if_file_exists(holog_params['holog_name'])
     _check_if_file_will_be_overwritten(holog_params['image_name'], holog_params['overwrite'])
@@ -172,10 +173,12 @@ def holog(
     
     try:
         if _dask_general_compute(function_name, holog_json, _holog_chunk, holog_params, ['ant', 'ddi'], parallel=parallel):
-        
+
             output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_attr")
-            _write_meta_data(output_attr_file, holog_params.copy())
-        
+            _write_meta_data(output_attr_file, holog_params)
+            output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_input")
+            _write_meta_data(output_attr_file, input_parms)
+
             image_mds = AstrohackImageFile(holog_params['image_name'])
             image_mds._open()
         
