@@ -708,7 +708,8 @@ class AstrohackPanelFile(dict):
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(fname, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
-    def plot_antennae(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False, unit=None,
+    def plot_antennae(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False,
+                      phase_unit='deg', phase_limits=None, deviation_unit='mm', deviation_limits=None,
                       display=False, colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Create diagnostic plots of antenna surfaces from panel data file.
 
@@ -722,8 +723,14 @@ class AstrohackPanelFile(dict):
         :type plot_type: str, optional
         :param plot_screws: Add screw positions to plot
         :type plot_screws: bool, optional
-        :param unit: Unit for phase or deviation plots, defaults to "mm" for deviation and 'deg' for phase
-        :type unit: str, optional
+        :param phase_unit: Unit for phase plots, defaults is 'deg'
+        :type phase_unit: str, optional
+        :param phase_limits: Lower then Upper limit for phase, value in phase_unit, default is None (Guess from data)
+        :type phase_limits: numpy.ndarray, list, tuple, optional
+        :param deviation_unit: Unit for deviation plots, defaults is 'mm'
+        :type deviation_unit: str, optional
+        :param deviation_limits: Lower then Upper limit for deviation, value in deviation_unit, default is None (Guess from data)
+        :type deviation_limits: numpy.ndarray, list, tuple, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param colormap: Colormap for plots, default is viridis
@@ -756,7 +763,10 @@ class AstrohackPanelFile(dict):
         parm_dict = {'ant': ant_id,
                      'ddi': ddi,
                      'destination': destination,
-                     'unit': unit,
+                     'phase_unit': phase_unit,
+                     'phase_limits': phase_limits,
+                     'deviation_unit': deviation_unit,
+                     'deviation_limits': deviation_limits,
                      'display': display,
                      'plot_type': plot_type,
                      'plot_screws': plot_screws,
@@ -773,18 +783,16 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_type', [str], acceptable_data=plot_types,
                                                      default=plot_types[0])
-        if parm_dict['plot_type'] == plot_types[0]:  # Length units for deviation plots
-            parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units,
-                                                         default='mm')
-        elif parm_dict['plot_type'] == plot_types[1]:  # Trigonometric units for phase plots
-            parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=trigo_units,
-                                                         default='deg')
-        elif parm_dict['plot_type'] == plot_types[2]:  # Ancillary plots, no units
-            logger.info(f'[{fname}]: Unit ignored for ancillary plots')
-        else:  # Unit is taken for the deviation plot, phase is then in degrees
-            parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units,
-                                                         default='mm')
-            logger.info(f'[{fname}]: Unit for phase plots set to degrees')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
+                                                     default='deg')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'phase_limits', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_unit', [str],
+                                                     acceptable_data=length_units, default='mm')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_limits', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)

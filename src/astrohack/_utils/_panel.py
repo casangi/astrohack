@@ -70,8 +70,6 @@ def _plot_antenna_chunk(parm_dict):
     xds = parm_dict['xds_data']
     telescope = Telescope(xds.attrs['telescope_name'])
     surface = AntennaSurface(xds, telescope, reread=True)
-    parm_dict['phase_unit'] = None
-    parm_dict['deviation_unit'] = None
     if plot_type == plot_types[0]:  # deviation plot
         surface.plot_deviation(basename, 'panel', parm_dict)
     elif plot_type == plot_types[1]:  # phase plot
