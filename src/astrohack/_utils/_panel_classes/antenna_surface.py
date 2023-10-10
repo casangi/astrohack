@@ -465,59 +465,47 @@ class AntennaSurface:
         for panel in self.panels:
             panel.print_misc()
 
-    def plot_mask(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, caller='panel', display=True):
+    def plot_mask(self, basename, parm_dict):
         """
         Plot mask used in the selection of points to be fitted
         Args:
             basename: basename for the plot, the prefix 'ancillary_mask' will be added to it
-            screws: Are screw positions to be shown in plot?
-            colormap: Colormap for amplitude plot
-            figuresize: 2 element array with the image sizes in inches
-            dpi: Plot resolution
-            caller: Which mds called this plotting function
-            display: display plot inline in notebook
+            parm_dict: dictionary with plotting parameters
         """
         plotmask = np.where(self.mask, 1, np.nan)
         plotname = _add_prefix(basename, 'mask')
-        self._plot_map(plotname, plotmask, 'Mask', 0, 1, None, screws=screws, colormap=colormap, figuresize=figuresize,
-                       dpi=dpi, colorbar=False, caller=caller, display=display)
+        parm_dict['z_lim'] = [0, 1]
+        parm_dict['unit'] = ' '
+        self._plot_map(plotname, plotmask, 'Mask', parm_dict, colorbar=False)
 
-    def plot_amplitude(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, caller='panel',
-                       display=True):
+    def plot_amplitude(self, basename, parm_dict):
         """
         Plot Amplitude map
         Args:
             basename: basename for the plot, the prefix 'ancillary_amplitude' will be added to it
-            screws: Are screw positions to be shown in plot?
-            colormap: Colormap for amplitude plot
-            figuresize: 2 element array with the image sizes in inches
-            dpi: Plot resolution
-            caller: Which mds called this plotting function
-            display: display plot inline in notebook
+            parm_dict: dictionary with plotting parameters
         """
         vmin, vmax = np.nanmin(self.amplitude), np.nanmax(self.amplitude)
         title = "Amplitude, min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
         plotname = _add_prefix(basename, 'amplitude')
-        self._plot_map(plotname, self.amplitude, title, vmin, vmax, self.amp_unit, screws=screws, colormap=colormap,
-                       figuresize=figuresize, dpi=dpi, caller=caller, display=display)
+        parm_dict['z_lim'] = [vmin, vmax]
+        parm_dict['unit'] = self.amp_unit
+        self._plot_map(plotname, self.amplitude, title, parm_dict)
 
-    def plot_phase(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None, caller='panel',
-                   display=True):
+    def plot_phase(self, basename, caller, parm_dict):
         """
         Plot phase map(s)
         Args:
             basename: basename for the plot(s), the prefix 'phase_{original|corrections|residuals}' will be added to it/them
-            screws: Are screw positions to be shown in plot(s)?
-            colormap: Colormap for phase plots
-            figuresize: 2 element array with the image sizes in inches
-            dpi: Plot resolution
-            unit: Angle unit for plot(s)
             caller: Which mds called this plotting function
-            display: display plot inline in notebook
+            parm_dict: dictionary with plotting parameters
         """
-        if unit is None:
-            unit = 'deg'
-        fac = _convert_unit('rad', unit, 'trigonometric')
+
+        if parm_dict['phase_unit'] is None:
+            parm_dict['unit'] = 'deg'
+        else:
+            parm_dict['unit'] = parm_dict['phase_unit']
+        fac = _convert_unit('rad', parm_dict['unit'], 'trigonometric')
         prefix = 'phase'
         if caller == 'image':
             prefix = 'corrected'
@@ -530,69 +518,63 @@ class AntennaSurface:
             else:
                 maps = [self.phase, self.phase_corrections, self.phase_residuals]
                 labels = ['original', 'correction', 'residual']
-        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller, display)
+        self._multi_plot(maps, labels, prefix, basename, fac, parm_dict)
 
-    def plot_deviation(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None, caller='panel',
-                       display=True):
+    def plot_deviation(self, basename, caller, parm_dict):
         """
         Plot deviation map(s)
         Args:
             basename: basename for the plot(s), the prefix 'deviation_{original|corrections|residuals}' will be added to it/them
-            screws: Are screw positions to be shown in plot(s)?
-            colormap: Colormap for deviation plots
-            figuresize: 2 element array with the image sizes in inches
-            dpi: Plot resolution
-            unit: Length unit for plot(s)
             caller: Which mds called this plotting function
-            display: display plot inline in notebook
+            parm_dict: dictionary with plotting parameters
         """
-        if unit is None:
-            unit = 'mm'
-        fac = _convert_unit('m', unit, 'length')
+        if parm_dict['deviation_unit'] is None:
+            parm_dict['unit'] = 'mm'
+        else:
+            parm_dict['unit'] = parm_dict['deviation_unit']
+        fac = _convert_unit('m', parm_dict['unit'], 'length')
         prefix = 'deviation'
-        rms = self.get_rms(unit=unit)
+        rms = self.get_rms(unit=parm_dict['unit'])
         if self.residuals is None:
             maps = [self.deviation]
-            labels = [f'original RMS={rms:.2f} {unit}']
+            labels = [f'original RMS={rms:.2f} {parm_dict["unit"]}']
         else:
             maps = [self.deviation, self.corrections, self.residuals]
-            labels = [f'original RMS={rms[0]:.2f} {unit}', 'correction', f'residual RMS={rms[1]:.2f} {unit}']
-        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller, display)
+            labels = [f'original RMS={rms[0]:.2f} {parm_dict["unit"]}', 'correction', f'residual RMS={rms[1]:.2f} {parm_dict["unit"]}']
+        self._multi_plot(maps, labels, prefix, basename, fac, parm_dict)
 
-    def _multi_plot(self, maps, labels, prefix, basename, unit, conversion, screws, colormap=None, figuresize=None,
-                    dpi=300, caller='panel', display=True):
+    def _multi_plot(self, maps, labels, prefix, basename, factor, parm_dict):
         if len(maps) != len(labels):
             raise Exception('Map list and label list must be of the same size')
         nplots = len(maps)
-        vmax = np.nanmax(np.abs(conversion*maps[0]))  # Gotten from the original map (displays the biggest variation)
-        vmin = -vmax
+        vmax = np.nanmax(np.abs(factor * maps[0]))  # Gotten from the original map (displays the biggest variation)
+        parm_dict['z_lim'] = [-vmax, vmax]
         for iplot in range(nplots):
             title = f'{prefix.capitalize()} {labels[iplot]}'
             plotname = _add_prefix(basename, labels[iplot].split()[0])
             plotname = _add_prefix(plotname, prefix)
-            self._plot_map(plotname, conversion*maps[iplot], title, vmin, vmax, unit, screws=screws, dpi=dpi,
-                           colormap=colormap, figuresize=figuresize, caller=caller, display=display)
+            self._plot_map(plotname, factor * maps[iplot], title, parm_dict)
 
-    def _plot_map(self, filename, data, title, vmin, vmax, unit, screws=False, colormap=None, figuresize=None, dpi=300,
-                  colorbar=True, caller='panel', display=True):
-        if colormap is None:
-            colormap = 'viridis'
-        fig, ax = _create_figure_and_axes(figuresize, [1, 1])
+    def _plot_map(self, filename, data, title, parm_dict, colorbar=True):
+        if parm_dict['colormap'] is None:
+            parm_dict['colormap'] = 'viridis'
+        fig, ax = _create_figure_and_axes(parm_dict['figuresize'], [1, 1])
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
         extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
-        im = ax.imshow(data, cmap=colormap, interpolation="nearest", extent=extent,
+        vmin, vmax = parm_dict['z_lim']
+        im = ax.imshow(data, cmap=parm_dict['colormap'], interpolation="nearest", extent=extent,
                        vmin=vmin, vmax=vmax,)
         self._add_resolution_to_plot(ax, extent)
         if colorbar:
-            _well_positioned_colorbar(ax, fig, im, "Z Scale [" + unit + "]")
+            _well_positioned_colorbar(ax, fig, im, "Z Scale [" + parm_dict['unit'] + "]")
         self._add_resolution_to_plot(ax, extent)
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
-            panel.plot(ax, screws=screws)
+            panel.plot(ax, screws=parm_dict['plot_screws'])
         suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}'
-        _close_figure(fig, suptitle, filename, dpi, display)
+        _close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
     def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
         lw = 0.5

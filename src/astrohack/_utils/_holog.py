@@ -466,12 +466,9 @@ def _plot_aperture_chunk(parm_dict):
     telescope = _get_correct_telescope_from_name(inputxds)
     surface = AntennaSurface(inputxds, telescope, nan_out_of_bounds=False)
 
-    surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'],
-                       colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='image',
-                       display=parm_dict['display'])
-    surface.plot_amplitude(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
-                           colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='image',
-                           display=parm_dict['display'])
+    parm_dict['phase_unit'] = None
+    surface.plot_phase(basename, 'image', parm_dict)
+    surface.plot_amplitude(basename, parm_dict)
 
 
 def _plot_beam_chunk(parm_dict):
