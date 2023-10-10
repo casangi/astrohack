@@ -4,7 +4,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from astrohack._utils import figsize, fontsize
 
 
-def _create_figure_and_axes(figure_size, boxes, default_figsize=figsize):
+def _create_figure_and_axes(figure_size, boxes, default_figsize=figsize, sharex=False, sharey=False):
     """
     Create a figures and plotting axes within according to a desired figure size and number of boxes
     Args:
@@ -16,9 +16,9 @@ def _create_figure_and_axes(figure_size, boxes, default_figsize=figsize):
     Figure and plotting axes array
     """
     if figure_size is None or figure_size == 'None':
-        fig, axes = plt.subplots(boxes[0], boxes[1], figsize=default_figsize)
+        fig, axes = plt.subplots(boxes[0], boxes[1], figsize=default_figsize, sharex=sharex, sharey=sharey)
     else:
-        fig, axes = plt.subplots(boxes[0], boxes[1], figsize=figure_size)
+        fig, axes = plt.subplots(boxes[0], boxes[1], figsize=figure_size, sharex=sharex, sharey=sharey)
 
     return fig, axes
 
