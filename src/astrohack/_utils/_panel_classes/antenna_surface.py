@@ -505,6 +505,7 @@ class AntennaSurface:
             parm_dict['unit'] = 'deg'
         else:
             parm_dict['unit'] = parm_dict['phase_unit']
+        parm_dict['z_lim'] = parm_dict['phase_limits']
         fac = _convert_unit('rad', parm_dict['unit'], 'trigonometric')
         prefix = 'phase'
         if caller == 'image':
@@ -532,6 +533,7 @@ class AntennaSurface:
             parm_dict['unit'] = 'mm'
         else:
             parm_dict['unit'] = parm_dict['deviation_unit']
+        parm_dict['z_lim'] = parm_dict['deviation_limits']
         fac = _convert_unit('m', parm_dict['unit'], 'length')
         prefix = 'deviation'
         rms = self.get_rms(unit=parm_dict['unit'])
@@ -552,8 +554,9 @@ class AntennaSurface:
         if len(maps) != len(labels):
             raise Exception('Map list and label list must be of the same size')
         nplots = len(maps)
-        vmax = np.nanmax(np.abs(factor * maps[0]))  # Gotten from the original map (displays the biggest variation)
-        parm_dict['z_lim'] = [-vmax, vmax]
+        if parm_dict['z_lim'] is None or parm_dict['z_lim'] == "None":
+            vmax = np.nanmax(np.abs(factor * maps[0]))  # Gotten from the original map (displays the biggest variation)
+            parm_dict['z_lim'] = [-vmax, vmax]
         for iplot in range(nplots):
             title = f'{prefix.capitalize()} {labels[iplot]}'
             plotname = _add_prefix(basename, labels[iplot].split()[0])
