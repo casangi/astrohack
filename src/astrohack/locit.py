@@ -103,12 +103,13 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     combine_ddis='difference' : This method is useful for cases where phase wrapping may have occured due to large
                                 delays.
     """
+    locit_parms = locals()
+    locit_parms['ant'] = ant_id
     logger = _get_astrohack_logger()
 
     fname = 'locit'
     ######### Parameter Checking #########
-    locit_parms = _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, fit_engine,
-                                     fit_kterm, fit_delay_rate, ant_id, ddi, combine_ddis, parallel, overwrite)
+    locit_parms = _check_locit_parms(fname, locit_parms)
     input_parms = locit_parms.copy()
     attributes = locit_parms.copy()
 
@@ -145,13 +146,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
         return None
 
 
-def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, fit_engine, fit_kterm,
-                       fit_delay_rate, ant_id, ddi, combine_ddis, parallel, overwrite):
-
-    locit_parms = {"locit_name": locit_name, "position_name": position_name, "elevation_limit": elevation_limit,
-                   "fit_engine": fit_engine, "polarization": polarization, "fit_kterm": fit_kterm,
-                   "fit_rate": fit_delay_rate, "ant": ant_id, "ddi": ddi, "combine_ddis":combine_ddis, "parallel": parallel,
-                   "overwrite": overwrite}
+def _check_locit_parms(fname, locit_parms):
 
     #### Parameter Checking ####
     logger = _get_astrohack_logger()
@@ -159,7 +154,7 @@ def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polari
 
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'locit_name', [str], default=None)
 
-    base_name = _remove_suffix(locit_name, '.locit.zarr')
+    base_name = _remove_suffix(locit_parms['locit_name'], '.locit.zarr')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'position_name', [str],
                                                  default=base_name+'.position.zarr')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'elevation_limit', [float],

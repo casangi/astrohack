@@ -34,11 +34,13 @@ def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=F
     **Additional Information**
 
     """
+    extract_locit_parms = locals()
+    extract_locit_parms['ant'] = ant_id
     logger = _get_astrohack_logger()
 
     fname = 'extract_locit'
     ######### Parameter Checking #########
-    extract_locit_parms = _check_extract_locit_parms(fname, cal_table, locit_name, ant_id, ddi, overwrite)
+    extract_locit_parms = _check_extract_locit_parms(fname, extract_locit_parms)
     input_parms = extract_locit_parms.copy()
     attributes = extract_locit_parms.copy()
 
@@ -65,10 +67,7 @@ def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=F
     return locit_mds
 
 
-def _check_extract_locit_parms(fname, cal_table, locit_name, ant_id, ddi, overwrite):
-
-    extract_locit_parms = {"cal_table": cal_table, "locit_name": locit_name, "ant": ant_id,
-                           "ddi": ddi, "overwrite": overwrite}
+def _check_extract_locit_parms(fname, extract_locit_parms):
 
     #### Parameter Checking ####
     logger = _get_astrohack_logger()
@@ -76,7 +75,7 @@ def _check_extract_locit_parms(fname, cal_table, locit_name, ant_id, ddi, overwr
 
     parms_passed = parms_passed and _check_parms(fname, extract_locit_parms, 'cal_table', [str], default=None)
 
-    base_name = _remove_suffix(cal_table, '.cal')
+    base_name = _remove_suffix(extract_locit_parms['cal_table'], '.cal')
     parms_passed = parms_passed and _check_parms(fname, extract_locit_parms, 'locit_name', [str],
                                                  default=base_name+'.locit.zarr')
     parms_passed = parms_passed and _check_parms(fname, extract_locit_parms, 'ant', [list, str],
