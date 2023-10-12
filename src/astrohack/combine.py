@@ -47,23 +47,28 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
             ant_n: …
         }
     """
+
+    combine_params = locals()
+    combine_params['ant'] = ant_id
     logger = _get_astrohack_logger()
     fname = 'combine'
-    combine_params = _check_combine_parms(fname, image_name, combine_name, ant_id, ddi, weighted, parallel, overwrite)
+    combine_params = _check_combine_parms(fname, combine_params)
     input_params = combine_params.copy()
 
-    _check_if_file_exists(combine_params['image_file'])
-    _check_if_file_will_be_overwritten(combine_params['combine_file'], combine_params['overwrite'])
-
-    image_mds = AstrohackImageFile(combine_params['image_file'])
+    _check_if_file_exists(combine_params['image_name'])
+    _check_if_file_will_be_overwritten(combine_params['combine_name'], combine_params['overwrite'])
+    image_mds = AstrohackImageFile(combine_params['image_name'])
     image_mds._open()
     combine_params['image_mds'] = image_mds
-
+    image_attr = image_mds._meta_data
     if _dask_general_compute(fname, image_mds, _combine_chunk, combine_params, ['ant'], parallel=parallel):
         logger.info(f"[{fname}]: Finished processing")
-        output_attr_file = "{name}/{ext}".format(name=combine_params['combine_file'], ext=".image_attr")
+        output_attr_file = "{name}/{ext}".format(name=combine_params['combine_name'], ext=".image_attr")
+        _write_meta_data(output_attr_file, image_attr)
+        output_attr_file = "{name}/{ext}".format(name=combine_params['combine_name'], ext=".image_input")
         _write_meta_data(output_attr_file, input_params)
-        combine_mds = AstrohackImageFile(combine_params['combine_file'])
+
+        combine_mds = AstrohackImageFile(combine_params['combine_name'])
         combine_mds._open()
         return combine_mds
     else:
@@ -71,20 +76,12 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
         return None
 
 
-def _check_combine_parms(fname, image_name, combine_name, ant_id, ddi_list, weighted, parallel, overwrite):
-
-    combine_params = {"image_file": image_name,
-                      "combine_file": combine_name,
-                      "ant": ant_id,
-                      "ddi": ddi_list,
-                      "weighted": weighted,
-                      "parallel": parallel,
-                      "overwrite": overwrite}
+def _check_combine_parms(fname, combine_params):
 
     #### Parameter Checking ####
-    parms_passed = _check_parms(fname, combine_params, 'image_file', [str], default=None)
-    base_name = _remove_suffix(combine_params['image_file'], '.image.zarr')
-    parms_passed = parms_passed and _check_parms(fname, combine_params, 'combine_file', [str],
+    parms_passed = _check_parms(fname, combine_params, 'image_name', [str], default=None)
+    base_name = _remove_suffix(combine_params['image_name'], '.image.zarr')
+    parms_passed = parms_passed and _check_parms(fname, combine_params, 'combine_name', [str],
                                                  default=base_name+'.combine.zarr')
     parms_passed = parms_passed and _check_parms(fname, combine_params, 'ant', [str, list],
                                                  list_acceptable_data_types=[str], default='all')
