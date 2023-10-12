@@ -116,6 +116,4 @@ def _export_screws_chunk(parm_dict):
     telescope = Telescope(xds.attrs['telescope_name'])
     surface = AntennaSurface(xds, telescope, reread=True)
     surface.export_screws(export_name + 'txt', unit=parm_dict['unit'])
-    surface.plot_screw_adjustments(export_name + 'png', unit=parm_dict['unit'], threshold=parm_dict['threshold'],
-                                   colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'],
-                                   dpi=parm_dict['dpi'], display=parm_dict['display'])
+    surface.plot_screw_adjustments(export_name + 'png', parm_dict)

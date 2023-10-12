@@ -1,6 +1,4 @@
 import xarray as xr
-from matplotlib import pyplot as plt
-from matplotlib import colormaps as cmaps
 from matplotlib import patches
 
 from astrohack._utils._panel_classes.base_panel import panel_models, irigid
@@ -10,7 +8,7 @@ from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._tools import _add_prefix, _axis_to_fits_header, _resolution_to_fits_header
-from astrohack._utils._plot_commons import _well_positioned_colorbar, _create_figure_and_axes, _close_figure
+from astrohack._utils._plot_commons import _well_positioned_colorbar, _create_figure_and_axes, _close_figure, _get_proper_color_map
 from astrohack._utils._dio import _write_fits
 
 lnbr = "\n"
@@ -564,14 +562,13 @@ class AntennaSurface:
             self._plot_map(plotname, factor * maps[iplot], title, parm_dict)
 
     def _plot_map(self, filename, data, title, parm_dict, colorbar=True):
-        if parm_dict['colormap'] is None:
-            parm_dict['colormap'] = 'viridis'
+        cmap = _get_proper_color_map(parm_dict['colormap'])
         fig, ax = _create_figure_and_axes(parm_dict['figuresize'], [1, 1])
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
         extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
         vmin, vmax = parm_dict['z_lim']
-        im = ax.imshow(data, cmap=parm_dict['colormap'], interpolation="nearest", extent=extent,
+        im = ax.imshow(data, cmap=cmap, interpolation="nearest", extent=extent,
                        vmin=vmin, vmax=vmax,)
         self._add_resolution_to_plot(ax, extent)
         if colorbar:
@@ -580,7 +577,7 @@ class AntennaSurface:
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
-            panel.plot(ax, screws=parm_dict['plot_screws'])
+            panel.plot(ax, screws=parm_dict['plot_screws'], label=parm_dict['panel_labels'])
         suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}'
         _close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
@@ -598,24 +595,17 @@ class AntennaSurface:
         ax.axvline(x=center[0], ymin=ypos - halfbeam[1], ymax=ypos + halfbeam[1], color='black', lw=lw / 2)
         ax.axhline(y=center[1], xmin=xpos - halfbeam[0], xmax=xpos + halfbeam[0], color='black', lw=lw / 2)
 
-    def plot_screw_adjustments(self, filename, unit, threshold=None, colormap=None, figuresize=None, dpi=300,
-                               display=True):
+    def plot_screw_adjustments(self, filename, parm_dict):
         """
         Plot screw adjustments as circles over a blank canvas with the panel layout
         Args:
             filename: Name of the output filename for the plot
-            unit: Unit to display the screw adjustments
-            threshold: Threshold below which data is considered negligable, value is assumed to be in the same unit as the plot, if not given defaults to 10% of the maximal deviation
-            colormap: Colormap to display the screw adjustments
-            figuresize: 2 element array with the image sizes in inches
-            dpi: Resolution in pixels per inch
-            display: display plot inline in notebook
+            parm_dict: Dictionary with plotting parameters
         """
-        if colormap is None:
-            cmap = cmaps['RdBu_r']
-        else:
-            cmap = cmaps[colormap]
-        fig, ax = _create_figure_and_axes(figuresize, [1, 1])
+        unit = parm_dict['unit']
+        threshold = parm_dict['threshold']
+        cmap = _get_proper_color_map(parm_dict['colormap'], default_cmap='RdBu_r')
+        fig, ax = _create_figure_and_axes(parm_dict['figuresize'], [1, 1])
 
         fac = _convert_unit('m', unit, 'length')
         vmax = np.nanmax(np.abs(fac * self.screw_adjustments))
@@ -642,11 +632,11 @@ class AntennaSurface:
         ax.set_ylabel("Y axis [m]")
 
         for ipanel in range(len(self.panels)):
-            self.panels[ipanel].plot(ax, screws=False)
+            self.panels[ipanel].plot(ax, screws=False, label=parm_dict['panel_labels'])
             self.panels[ipanel].plot_corrections(ax, cmap, fac*self.screw_adjustments[ipanel], threshold, vmin, vmax)
 
         suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}'
-        _close_figure(fig, suptitle, filename, dpi, display)
+        _close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
     def _build_panel_data_arrays(self):
         """
