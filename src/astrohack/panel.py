@@ -88,11 +88,12 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
         }
 
     """
-    
+
+    panel_params = locals()
+    panel_params['ant'] = ant_id
     logger = _get_astrohack_logger()
     fname = 'panel'
-    panel_params = _check_panel_parms(fname, image_name, panel_name, cutoff, panel_model, panel_margins, ant_id, ddi,
-                                      parallel, overwrite)
+    panel_params = _check_panel_parms(fname, panel_params)
     input_params = panel_params.copy()
     # Doubled this entry for compatibility with the factorized antenna ddi loop
     panel_params['filename'] = panel_params['image_name']
@@ -148,36 +149,13 @@ def _aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, o
     aips_mark.close()
 
 
-def _check_panel_parms(fname, image_name, panel_name, cutoff, panel_kind, panel_margins, ant_id, ddi, parallel,
-                       overwrite):
+def _check_panel_parms(fname, panel_params):
     """
     Tests inputs to panel function
     Args:
         fname: Caller's name
-        image_name: Input holography data, can be from astrohack.holog, but also preprocessed AIPS data
-        panel_name: Name for the output directory structure containing the products
-
-        cutoff: Cut off in amplitude for the physical deviation fitting, None means 20%
-        panel_kind: Type of fitting function used to fit panel surfaces, defaults to corotated_paraboloid for ringed
-                    telescopes
-        ant_id: Which antennas are to be processed by panel, None means all of them
-        ddi: Which DDIs are to be processed by panel, None means all of them
-        parallel: Run chunks of processing in parallel
-        panel_margins: Margin to be ignored at edges of panels when fitting
-
-        overwrite: Overwrite previous hack_file of same name?
+        panel_params: panel parameters
     """
-
-    panel_params = {'image_name': image_name,
-                    'panel_name': panel_name,
-                    'cutoff': cutoff,
-                    'panel_kind': panel_kind,
-                    'panel_margins': panel_margins,
-                    'parallel': parallel,
-                    'ddi': ddi,
-                    'ant': ant_id,
-                    'overwrite': overwrite
-                    }
                           
     #### Parameter Checking ####
 
