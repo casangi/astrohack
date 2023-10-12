@@ -232,7 +232,7 @@ class AstrohackImageFile(dict):
         _dask_general_compute(fname, self, _export_to_fits_holog_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, phase_unit='deg', phase_limits=None,
-                       deviation_unit='mm', deviation_limits=None, display=False, colormap='viridis', figure_size=None,
+                       deviation_unit='mm', deviation_limits=None, panel_labels=False, display=False, colormap='viridis', figure_size=None,
                        dpi=300, parallel=False):
         """ Aperture amplitude and phase plots from the data in an AstrohackImageFIle object.
 
@@ -252,6 +252,8 @@ class AstrohackImageFile(dict):
         :type deviation_unit: str, optional
         :param deviation_limits: Lower then Upper limit for deviation, value in deviation_unit, default is None (Guess from data)
         :type deviation_limits: numpy.ndarray, list, tuple, optional
+        :param panel_labels: Add panel labels to antenna surface plots, default is False
+        :type panel_labels: bool, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param colormap: Colormap for plots, default is viridis
@@ -267,20 +269,8 @@ class AstrohackImageFile(dict):
 
         Produce plots from ``astrohack.holog`` results for analysis
         """
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'phase_unit': phase_unit,
-                     'phase_limits': phase_limits,
-                     'deviation_unit': deviation_unit,
-                     'deviation_limits': deviation_limits,
-                     'plot_screws': plot_screws,
-                     'display': display,
-                     'colormap': colormap,
-                     'figuresize': figure_size,
-                     'dpi': dpi,
-                     'parallel': parallel}
-
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
         fname = 'plot_apertures'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
                                     default='all')
@@ -297,7 +287,7 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_limits', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'panel_labels', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)
@@ -653,8 +643,8 @@ class AstrohackPanelFile(dict):
         telescope = Telescope(xds.attrs['telescope_name'])
         return AntennaSurface(xds, telescope, reread=True)
 
-    def export_screws(self, destination, ant_id=None, ddi=None, unit='mm', threshold=None, display=False,
-                      colormap='RdBu_r', figure_size=None, dpi=300):
+    def export_screws(self, destination, ant_id=None, ddi=None, unit='mm', threshold=None, panel_labels=True,
+                      display=False, colormap='RdBu_r', figure_size=None, dpi=300):
         """ Export screw adjustments to text files and optionally plots.
 
         :param destination: Name of the destination folder to contain exported screw adjustments
@@ -667,6 +657,8 @@ class AstrohackPanelFile(dict):
         :type unit: str, optional
         :param threshold: Threshold below which data is considered negligable, value is assumed to be in the same unit as the plot, if not given defaults to 10% of the maximal deviation
         :type threshold: float, optional
+        :param panel_labels: Add panel labels to antenna surface plots, default is True
+        :type panel_labels: bool, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param colormap: Colormap for screw adjustment map, default is RdBu_r
@@ -681,15 +673,8 @@ class AstrohackPanelFile(dict):
         Produce the screw adjustments from ``astrohack.panel`` results to be used at the antenna site to improve the antenna surface
 
         """
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'unit': unit,
-                     'threshold': threshold,
-                     'display': display,
-                     'colormap': colormap,
-                     'figuresize': figure_size,
-                     'dpi': dpi}
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
 
         fname = 'export_screws'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
@@ -700,6 +685,7 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units, 
                                                      default='mm')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'threshold', [int, float], default='None')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'panel_labels', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps, 
                                                      default='RdBu_r')
@@ -714,7 +700,7 @@ class AstrohackPanelFile(dict):
 
     def plot_antennae(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False,
                       phase_unit='deg', phase_limits=None, deviation_unit='mm', deviation_limits=None,
-                      display=False, colormap='viridis', figure_size=None, dpi=300, parallel=False):
+                      panel_labels=False, display=False, colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Create diagnostic plots of antenna surfaces from panel data file.
 
         :param destination: Name of the destination folder to contain plots
@@ -735,6 +721,8 @@ class AstrohackPanelFile(dict):
         :type deviation_unit: str, optional
         :param deviation_limits: Lower then Upper limit for deviation, value in deviation_unit, default is None (Guess from data)
         :type deviation_limits: numpy.ndarray, list, tuple, optional
+        :param panel_labels: Add panel labels to antenna surface plots, default is False
+        :type panel_labels: bool, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param colormap: Colormap for plots, default is viridis
@@ -764,20 +752,8 @@ class AstrohackPanelFile(dict):
                  phase unit is set to degrees
         """
         logger = _get_astrohack_logger()
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'phase_unit': phase_unit,
-                     'phase_limits': phase_limits,
-                     'deviation_unit': deviation_unit,
-                     'deviation_limits': deviation_limits,
-                     'display': display,
-                     'plot_type': plot_type,
-                     'plot_screws': plot_screws,
-                     'colormap': colormap,
-                     'figuresize': figure_size,
-                     'dpi': dpi,
-                     'parallel': parallel}
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
 
         fname = 'plot_antennae'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
@@ -797,6 +773,7 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_limits', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'panel_labels', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)
