@@ -29,7 +29,7 @@ from astrohack._utils._imaging import _calculate_aperture_pattern
 
 from astrohack._utils._panel import _get_correct_telescope_from_name
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
-from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure
+from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _get_proper_color_map
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
@@ -533,10 +533,9 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit
     function_name = inspect.stack()[CURRENT_FUNCTION].function
     
     logger = _get_astrohack_logger()
-    
-    if colormap is None:
-        colormap = 'viridis'
-    
+
+    colormap = _get_proper_color_map(colormap)
+
     n_pol = len(pol_axis)
     
     if n_pol == 4:
