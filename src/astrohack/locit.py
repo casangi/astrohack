@@ -27,7 +27,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     :type fit_delay_rate: bool, optional
     :param fit_engine: What engine to use on fitting, default is linear algebra
     :type fit_engine: str, optional
-    :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None, ex. ea25
+    :param ant_id: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant_id: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional

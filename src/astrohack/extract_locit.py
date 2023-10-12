@@ -16,7 +16,7 @@ def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=F
     :type cal_table: str
     :param locit_name: Name of *<locit_name>.locit.zarr* file to create. Defaults to measurement set name with *locit.zarr* extension.
     :type locit_name: str, optional
-    :param ant_id: List of antennae/antenna to be extracted, defaults to "all" when None, ex. ea25
+    :param ant_id: List of antennas/antenna to be extracted, defaults to "all" when None, ex. ea25
     :type ant_id: list or str, optional
     :param ddi: List of ddis/ddi to be extracted, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
@@ -53,7 +53,7 @@ def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=F
     attributes['telescope_name'] = telescope_name
     attributes['n_sources'] = n_sources
     attributes['reference_antenna'] = extract_locit_parms['reference_antenna']
-    attributes['n_antennae'] = len(extract_locit_parms['ant_dict'])
+    attributes['n_antennas'] = len(extract_locit_parms['ant_dict'])
     output_attr_file = "{name}/{ext}".format(name=extract_locit_parms['locit_name'], ext=".locit_input")
     _write_meta_data(output_attr_file, input_parms)
     output_attr_file = "{name}/{ext}".format(name=extract_locit_parms['locit_name'], ext=".locit_attr")

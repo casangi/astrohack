@@ -768,7 +768,7 @@ class HologObsDict(dict):
 
 
             else:
-                self.logger.error("Must specify a list of reference antennae for this option.")
+                self.logger.error("Must specify a list of reference antennas for this option.")
         else:
             self.logger.error("Valid key not found: {key}".format(key=key))
             return {}

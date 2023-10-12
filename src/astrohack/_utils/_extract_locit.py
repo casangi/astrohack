@@ -380,7 +380,7 @@ def _plot_array_configuration(ant_dict, telescope_name, parm_dict):
 
     _plot_boxes_limits_and_labels(outer_ax, inner_ax, xlabel, ylabel, box_size, 'Outer array', 'Inner array')
 
-    title = f'{len(ant_dict.keys())} Antennae during observation'
+    title = f'{len(ant_dict.keys())} antennas during observation'
     _close_figure(fig, title, filename, dpi, display)
     return
 
@@ -396,7 +396,7 @@ def _print_array_configuration(params, ant_dict, telescope_name):
     telescope = _open_telescope(telescope_name)
     relative = params['relative']
 
-    print(f"\n{telescope_name} antennae, # of antennae {len(ant_dict.keys())}:")
+    print(f"\n{telescope_name} antennas, # of antennas {len(ant_dict.keys())}:")
     table = PrettyTable()
     table.align = 'c'
     if relative:

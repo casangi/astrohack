@@ -54,7 +54,7 @@ def holog(
     :type chan_tolerance_factor: float, optional
     :param scan_average: Boolean dicating whether averagin is done over scan., defaults to True
     :type scan_average: bool, optional
-    :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None, ex. ea25
+    :param ant_id: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant_id: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional

@@ -187,7 +187,7 @@ class AstrohackImageFile(dict):
         :type destination: str
         :param complex_split: How to split complex data, cartesian (real + imag, default) or polar (amplitude + phase)
         :type complex_split: str, optional
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -238,7 +238,7 @@ class AstrohackImageFile(dict):
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -308,7 +308,7 @@ class AstrohackImageFile(dict):
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -624,7 +624,7 @@ class AstrohackPanelFile(dict):
         _print_dict_table(self._input_pars)
         _print_data_contents(self, ["Antenna", "DDI"])
         _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
-                            self.plot_antennae])
+                            self.plot_antennas])
 
     def get_antenna(self, ant_id, ddi):
         """ Retrieve an AntennaSurface object for interaction
@@ -649,7 +649,7 @@ class AstrohackPanelFile(dict):
 
         :param destination: Name of the destination folder to contain exported screw adjustments
         :type destination: str
-        :param ant_id: List of antennae/antenna to be exported, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -698,14 +698,14 @@ class AstrohackPanelFile(dict):
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(fname, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
-    def plot_antennae(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False,
+    def plot_antennas(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False,
                       phase_unit='deg', phase_limits=None, deviation_unit='mm', deviation_limits=None,
                       panel_labels=False, display=False, colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Create diagnostic plots of antenna surfaces from panel data file.
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -755,7 +755,7 @@ class AstrohackPanelFile(dict):
         parm_dict = locals()
         parm_dict['ant'] = ant_id
 
-        fname = 'plot_antennae'
+        fname = 'plot_antennas'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
                                     default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
@@ -793,7 +793,7 @@ class AstrohackPanelFile(dict):
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -1178,7 +1178,7 @@ class AstrohackPositionFile(dict):
 
         :param destination: Name of the destination folder to contain exported fit results
         :type destination: str
-        :param ant_id: List of antennae/antenna to be exported, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -1225,7 +1225,7 @@ class AstrohackPositionFile(dict):
 
         :param destination: Name of the destination folder to contain the plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -1297,7 +1297,7 @@ class AstrohackPositionFile(dict):
 
         :param destination: Name of the destination folder to contain the plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -1381,7 +1381,7 @@ class AstrohackPositionFile(dict):
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
-        :param ant_id: Select which antennae are to be plotted, defaults to all when None, ex. ea25
+        :param ant_id: Select which antennas are to be plotted, defaults to all when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional

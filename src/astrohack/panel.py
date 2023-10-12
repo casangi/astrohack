@@ -26,7 +26,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     :type panel_model: str, optional
     :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.2.
     :type panel_margins: float, optional
-    :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None, ex. ea25
+    :param ant_id: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant_id: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
@@ -160,7 +160,7 @@ def _check_panel_parms(fname, image_name, panel_name, cutoff, panel_kind, panel_
         cutoff: Cut off in amplitude for the physical deviation fitting, None means 20%
         panel_kind: Type of fitting function used to fit panel surfaces, defaults to corotated_paraboloid for ringed
                     telescopes
-        ant_id: Which Antennae are to be processed by panel, None means all of them
+        ant_id: Which antennas are to be processed by panel, None means all of them
         ddi: Which DDIs are to be processed by panel, None means all of them
         parallel: Run chunks of processing in parallel
         panel_margins: Margin to be ignored at edges of panels when fitting
