@@ -170,7 +170,7 @@ def _check_panel_parms(fname, panel_params):
                                                  list_acceptable_data_types=[int], default='all')
     parms_passed = parms_passed and _check_parms(fname, panel_params, 'cutoff', [float], acceptable_range=[0, 1],
                                                  default=0.2)
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_kind', [str], acceptable_data=panel_models,
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_model', [str], acceptable_data=panel_models,
                                                  default="rigid")
     parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_margins', [float],
                                                  acceptable_range=[0, 0.5], default=0.2)

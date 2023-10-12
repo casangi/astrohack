@@ -44,7 +44,7 @@ def _panel_chunk(panel_chunk_params):
 
         telescope = _get_correct_telescope_from_name(inputxds)
 
-    surface = AntennaSurface(inputxds, telescope, panel_chunk_params['cutoff'], panel_chunk_params['panel_kind'],
+    surface = AntennaSurface(inputxds, telescope, panel_chunk_params['cutoff'], panel_chunk_params['panel_model'],
                              panel_margins=panel_chunk_params['panel_margins'])
 
     surface.compile_panel_points()
