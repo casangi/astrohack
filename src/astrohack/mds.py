@@ -210,12 +210,8 @@ class AstrohackImageFile(dict):
         The FITS files produced by this function have been tested and are known to work with CARTA and DS9
         """
 
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'complex_split': complex_split,
-                     'parallel': parallel}
-        
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
         fname = 'export_to_fits'
         parms_passed = _check_parms(fname, parm_dict, 'complex_split', [str], acceptable_data=possible_splits,
                                     default="cartesian")
@@ -329,15 +325,8 @@ class AstrohackImageFile(dict):
 
         Produce plots from ``astrohack.holog`` results for analysis
         """
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'complex_split': complex_split,
-                     'display': display,
-                     'colormap': colormap,
-                     'figuresize': figure_size,
-                     'dpi': dpi,
-                     'parallel': parallel}
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
 
         fname = 'plot_apertures'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
@@ -509,6 +498,8 @@ class AstrohackHologFile(dict):
 
         logger = _get_astrohack_logger()
 
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
         if parallel:
             if not distributed.client._get_global_client():
                 try:
@@ -523,18 +514,6 @@ class AstrohackHologFile(dict):
                     client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
                     logger.info(client.dashboard_link)
 
-        parm_dict = {
-            'destination': destination,
-            'delta': delta,
-            'ant': ant_id,
-            'ddi': ddi,
-            'map': map_id,
-            'complex_split': complex_split,
-            'display': display,
-            'figuresize': figure_size,
-            'dpi': dpi,
-            'parallel': parallel
-        }
         fname = 'plot_diagnostics'
         parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delta', [float], default=0.01)
@@ -1015,12 +994,7 @@ class AstrohackLocitFile(dict):
         if that is the case.
 
         """
-        parm_dict = {'destination': destination,
-                     'precessed': precessed,
-                     'display': display,
-                     'figuresize': figure_size,
-                     'label': display_labels,
-                     'dpi': dpi}
+        parm_dict = locals()
 
         fname = 'plot_source_positions'
         parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
@@ -1071,14 +1045,7 @@ class AstrohackLocitFile(dict):
 
 
         """
-        parm_dict = {'destination': destination,
-                     'display': display,
-                     'figuresize': figure_size,
-                     'stations': display_stations,
-                     'zoff': display_zoff,
-                     'unit': unit,
-                     'box_size': box_size,
-                     'dpi': dpi}
+        parm_dict = locals()
 
         fname = 'plot_array_configuration'
         parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
@@ -1194,13 +1161,8 @@ class AstrohackPositionFile(dict):
         Produce a text file with the fit results from astrohack.locit for better determination of antenna locations.
         """
         
-        parm_dict = {'destination': destination,
-                     'ant': ant_id,
-                     'ddi': ddi,
-                     'position_unit': position_unit,
-                     'delay_unit': delay_unit,
-                     'time_unit': time_unit}
-
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
         fname = 'export_fit_results'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
                                     list_acceptable_data_types=[str], default='all')
@@ -1254,16 +1216,8 @@ class AstrohackPositionFile(dict):
 
         """
         
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'time_unit': time_unit,
-                     'angle_unit': angle_unit,
-                     'display': display,
-                     'figure_size': figure_size,
-                     'dpi': dpi,
-                     'parallel': parallel}
-
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
         fname = 'plot_sky_coverage'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
                                     list_acceptable_data_types=[str], default='all')
@@ -1331,17 +1285,8 @@ class AstrohackPositionFile(dict):
 
         """
 
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'time_unit': time_unit,
-                     'angle_unit': angle_unit,
-                     'delay_unit': delay_unit,
-                     'plot_model': plot_model,
-                     'display': display,
-                     'figure_size': figure_size,
-                     'dpi': dpi,
-                     'parallel': parallel}
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
 
         fname = 'plot_delays'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
@@ -1408,16 +1353,9 @@ class AstrohackPositionFile(dict):
 
         """
 
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'display': display,
-                     'figure_size': figure_size,
-                     'unit': unit,
-                     'box_size': box_size,
-                     'scaling': scaling,
-                     'dpi': dpi,
-                     }
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
+
         fname = 'plot_position_corrections'
         parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
