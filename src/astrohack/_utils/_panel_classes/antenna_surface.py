@@ -45,9 +45,9 @@ class AntennaSurface:
             else:
                 self.panel_margins = panel_margins
             self.reso = self.telescope.diam / self.npoint
-
             if crop:
                 self._crop_maps()
+
         if self.telescope.ringed:
             self._init_ringed(clip_type, clip_level)
         if not self.reread:
@@ -174,7 +174,7 @@ class AntennaSurface:
             clip = clip_level * np.nanmax(self.amplitude)
         elif clip_type == 'absolute':
             clip = clip_level
-        elif clip_level == 'sigma':
+        elif clip_type == 'sigma':
             noise = np.where(self.rad < self.telescope.diam/2., np.nan, self.amplitude)
             noiserms = np.sqrt(np.nanmean(noise**2))
             clip = clip_level*noiserms
@@ -194,7 +194,8 @@ class AntennaSurface:
         else:
             raise Exception("Unknown panel labeling: "+self.telescope.panel_numbering)
         self._build_polar()
-        self.clip = self._measure_ring_clip(clip_type, clip_level)
+        if not self.reread:
+            self.clip = self._measure_ring_clip(clip_type, clip_level)
         self._build_ring_panels()
         self._build_ring_mask()
         self.fetch_panel = self._fetch_panel_ringed
