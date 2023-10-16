@@ -36,7 +36,6 @@ class AntennaSurface:
         self.telescope = telescope
 
         if not self.reread:
-            self.clip = self._measure_clip(clip_type, clip_level)
             if pmodel is None:
                 self.panelmodel = panel_models[irigid]
             else:
@@ -50,7 +49,7 @@ class AntennaSurface:
             if crop:
                 self._crop_maps()
         if self.telescope.ringed:
-            self._init_ringed()
+            self._init_ringed(clip_type, clip_level)
         if not self.reread:
             if self.computephase:
                 self.phase = self._deviation_to_phase(self.deviation)
@@ -170,21 +169,23 @@ class AntennaSurface:
         self.out_rms = np.nan
         self.fitted = False
 
-    def _measure_clip(self, clip_type, clip_level):
+    def _measure_ring_clip(self, clip_type, clip_level):
         if clip_type == 'relative':
             clip = clip_level * np.nanmax(self.amplitude)
         elif clip_type == 'absolute':
             clip = clip_level
         elif clip_level == 'sigma':
-            clip = None
+            noise = np.where(self.rad < self.telescope.diam/2., np.nan, self.amplitude)
+            noiserms = np.sqrt(np.nanmean(noise**2))
+            clip = clip_level*noiserms
         else:
             msg = f'Unrecognized clipping type: {clip_type}'
             raise Exception(msg)
         return clip
 
-    def _init_ringed(self):
+    def _init_ringed(self, clip_type, clip_level):
         """
-        Do the proper method association for the case of a ringed antenna
+        Do the proper initialization and method association for the case of a ringed antenna
         """
         if self.telescope.panel_numbering == 'ring, clockwise, top':
             self._panel_label = self._vla_panel_labeling
@@ -193,6 +194,7 @@ class AntennaSurface:
         else:
             raise Exception("Unknown panel labeling: "+self.telescope.panel_numbering)
         self._build_polar()
+        self.clip = self._measure_ring_clip(clip_type, clip_level)
         self._build_ring_panels()
         self._build_ring_mask()
         self.fetch_panel = self._fetch_panel_ringed
