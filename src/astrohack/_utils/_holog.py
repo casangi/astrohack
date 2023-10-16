@@ -3,13 +3,12 @@ import inspect
 import numpy as np
 import xarray as xr
 
-from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
 
 from astrohack._utils._panel_classes.telescope import Telescope
 
 from astrohack._utils._dio import _load_holog_file
-from astrohack._utils._dio import _read_meta_data, _write_meta_data, _write_fits
+from astrohack._utils._dio import _read_meta_data, _write_fits
 
 from astrohack._utils._phase_fitting import _phase_fitting_block
 
@@ -19,9 +18,10 @@ from astrohack._utils._algorithms import _find_nearest
 from astrohack._utils._algorithms import _calc_coords
 
 from astrohack._utils._conversion import _to_stokes
-from astrohack._utils._constants import clight, figsize
+from astrohack._utils._constants import clight
 from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header, _stokes_axis_to_fits_header, \
-    _resolution_to_fits_header, _add_prefix, _well_positioned_colorbar
+    _resolution_to_fits_header, _add_prefix
+from astrohack._utils._plot_commons import _well_positioned_colorbar
 
 from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk
@@ -29,10 +29,12 @@ from astrohack._utils._imaging import _calculate_aperture_pattern
 
 from astrohack._utils._panel import _get_correct_telescope_from_name
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
+from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _get_proper_color_map
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 CURRENT_FUNCTION=0
+
 
 def _holog_chunk(holog_chunk_params):
     """ Process chunk holography data along the antenna axis. Works with holography file to properly grid , normalize, average and correct data
@@ -303,6 +305,7 @@ def _holog_chunk(holog_chunk_params):
     xds.to_zarr("{name}/{ant}/{ddi}".format(name=holog_chunk_params["image_name"], ant=holog_chunk_params["this_ant"],
                                             ddi=ddi), mode="w", compute=True, consolidated=True)
 
+
 def _create_average_chan_map(freq_chan, chan_tolerance_factor):
     n_chan = len(freq_chan)
     cf_chan_map = np.zeros((n_chan,), dtype=int)
@@ -462,12 +465,9 @@ def _plot_aperture_chunk(parm_dict):
     telescope = _get_correct_telescope_from_name(inputxds)
     surface = AntennaSurface(inputxds, telescope, nan_out_of_bounds=False)
 
-    surface.plot_phase(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'], unit=parm_dict['unit'],
-                       colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='image',
-                       display=parm_dict['display'])
-    surface.plot_amplitude(basename, screws=parm_dict['plot_screws'], dpi=parm_dict['dpi'],
-                           colormap=parm_dict['colormap'], figuresize=parm_dict['figuresize'], caller='image',
-                           display=parm_dict['display'])
+    surface.plot_phase(basename, 'image', parm_dict)
+    surface.plot_deviation(basename, 'image', parm_dict)
+    surface.plot_amplitude(basename, parm_dict)
 
 
 def _plot_beam_chunk(parm_dict):
@@ -533,26 +533,19 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit
     function_name = inspect.stack()[CURRENT_FUNCTION].function
     
     logger = _get_astrohack_logger()
-    
-    if colormap is None:
-        colormap = 'viridis'
-    
-    if figuresize is None or figuresize == 'None':
-        figuresize = figsize
-    
+
+    colormap = _get_proper_color_map(colormap)
+
     n_pol = len(pol_axis)
     
     if n_pol == 4:
-        fig, axes = plt.subplots(2, 2, figsize=figuresize)
+        fig, axes = _create_figure_and_axes(figuresize, [2, 2])
         axes = axes.flat
-    
     elif n_pol == 2:
-        fig, axes = plt.subplots(2, 1, figsize=figuresize)
-    
+        fig, axes = _create_figure_and_axes(figuresize, [2, 1])
     elif n_pol == 1:
-        fig, ax = plt.subplots(1, 1, figsize=figuresize)
+        fig, ax = _create_figure_and_axes(figuresize, [1, 1])
         axes = [ax]
-    
     else:
         raise Exception(f'[{function_name}]: Do not know how to handle polarization axis with {n_pol} elements')
 
@@ -565,13 +558,7 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit
         axis.set_xlabel('L axis ["]')
         axis.set_ylabel('M axis ["]')
 
-    fig.suptitle(f'Beam {label}, Antenna: {antenna.split("_")[1]}, DDI: {ddi.split("_")[1]}')
-    fig.tight_layout()
-    
-    function_name = _add_prefix(_add_prefix(basename, label), 'image_beam')
-    plt.savefig(function_name, dpi=dpi)
-    
-    if not display:
-        plt.close()
-    
+    plot_name = _add_prefix(_add_prefix(basename, label), 'image_beam')
+    suptitle = f'Beam {label}, Antenna: {antenna.split("_")[1]}, DDI: {ddi.split("_")[1]}'
+    _close_figure(fig, suptitle, plot_name, dpi, display)
     return

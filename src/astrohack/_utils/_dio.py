@@ -416,6 +416,7 @@ def _load_image_xds(file_stem, ant, ddi, dask_load=True):
     else:
         raise FileNotFoundError("Image file: {} not found".format(image_path))
 
+
 def _read_meta_data(file_name):
     """Reads dimensional data from holog meta file.
 
@@ -436,43 +437,6 @@ def _read_meta_data(file_name):
         raise Exception       
 
     return json_dict
-
-
-def _check_mds_origin(file_name, file_type):
-    """
-
-    Args:
-        file_name(str): astrohack file name.
-        file_type(str, list): accepted astrohack file type
-
-    Returns: origin(str) the origin of the mds file
-
-    """
-    logger = _get_astrohack_logger()
-
-    if isinstance(file_type, str):
-        file_type = [file_type]
-
-    for ftype in file_type:
-        try:
-            with open(f'{file_name}/.{ftype}_attr') as json_file:
-                json_dict = json.load(json_file)
-                found = True
-        except FileNotFoundError:
-            found = False
-        if found:
-            break
-    if not found:
-        logger.error("[_check_mds_origin]: metadata not found")
-        raise Exception('Metadata not found')
-
-    try:
-        metadataorigin = json_dict['origin']
-    except KeyError:
-        logger.error("[_check_mds_origin]: Badly formatted metadata in input file")
-        raise Exception('Bad metadata')
-
-    return metadataorigin
 
 
 def _write_meta_data(file_name, input_dict):
@@ -626,6 +590,7 @@ def _get_attrs(zarr_obj):
         k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")
     }
 
+
 def _print_json(object, indent=6, columns=7):
   if isinstance(object, list):
     if indent > 3:
@@ -644,6 +609,7 @@ def _print_json(object, indent=6, columns=7):
       _print_json(value, indent+4, columns=columns)
       print("{close}".format(close="}").rjust(indent-4, ' '))
 
+
 def _reshape(array, columns):
   size = len(array)
   rows = int(size/columns)
@@ -653,6 +619,7 @@ def _reshape(array, columns):
     remainder = size - (rows*columns)
 
     return rows, remainder
+
 
 def _print_array(array, columns, indent=4):
 

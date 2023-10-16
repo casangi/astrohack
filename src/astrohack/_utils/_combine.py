@@ -23,7 +23,7 @@ def _combine_chunk(combine_chunk_params):
     print("DDI_LIST:", ddi_list)
 
     nddi = len(ddi_list)
-    out_xds_name = '/'.join([combine_chunk_params['combine_file'], antenna, ddi_list[0]])
+    out_xds_name = '/'.join([combine_chunk_params['combine_name'], antenna, ddi_list[0]])
     if nddi == 0:
         logger.warning(f'[{fname}]: Nothing to process for {antenna}')
         return
@@ -32,7 +32,7 @@ def _combine_chunk(combine_chunk_params):
         out_xds = ddi_dict[ddi_list[0]]
         out_xds.to_zarr(out_xds_name, mode='w')
     else:
-        out_xds = _load_image_xds(combine_chunk_params['image_file'], antenna, ddi_list[0], dask_load=False)
+        out_xds = _load_image_xds(combine_chunk_params['image_name'], antenna, ddi_list[0], dask_load=False)
         nddi = len(ddi_list)
         shape = list(out_xds['CORRECTED_PHASE'].values.shape)
         if out_xds.dims['chan'] != 1:
@@ -55,7 +55,7 @@ def _combine_chunk(combine_chunk_params):
         dest_v_axis = v.ravel()
         for iddi in range(1, nddi):
             logger.info(f'[{fname}]: Regridding {antenna} {ddi_list[iddi]}')
-            this_xds = _load_image_xds(combine_chunk_params['image_file'], antenna, ddi_list[iddi], dask_load=False)
+            this_xds = _load_image_xds(combine_chunk_params['image_name'], antenna, ddi_list[iddi], dask_load=False)
             wavelength = clight / this_xds.chan.values[0]
             u, v = np.meshgrid(this_xds.u_prime.values * wavelength, this_xds.v_prime.values * wavelength)
             loca_u_axis = u.ravel()

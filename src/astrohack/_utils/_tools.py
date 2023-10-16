@@ -1,7 +1,6 @@
 import json
 
 import numpy as np
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from prettytable import PrettyTable
 from textwrap import fill
 from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord
@@ -117,26 +116,6 @@ def _altaz_to_hadec_astropy(az, el, time, x_ant, y_ant, z_ant):
     ha_dec_coor = azel_coor.transform_to(ha_dec_frame)
     
     return ha_dec_coor.ha, ha_dec_coor.dec
-
-
-def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
-    """
-    Adds a well positioned colorbar to a plot
-    Args:
-        ax: Axes instance to add the colorbar
-        fig: Figure in which the axes are embedded
-        image: The plt.imshow instance associated to the colorbar
-        label: Colorbar label
-        location: Colorbar location
-        size: Colorbar size
-        pad: Colorbar padding
-
-    Returns: the well positioned colorbar
-
-    """
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes(location, size=size, pad=pad)
-    return fig.colorbar(image, label=label, cax=cax)
 
 
 def _remove_suffix(input_string, suffix):
@@ -450,32 +429,37 @@ def _print_data_contents(data_dict, field_names, alignment='l'):
     print(table)
 
 
-def _print_attributes(meta_dict, split_key=None, alignment='l'):
+def _print_dict_table(input_parameters, split_key=None, alignment='l', heading="Input Parameters"):
     """
     Print a summary of the atributes
     Args:
-        meta_dict: Dictionary containing metadata attributes
+        input_parameters: Dictionary containing metadata attributes
         split_key: key to be sqrt and displayed as nx X ny
 
     Returns:
 
     """
-    print("\nAttributes:")
+    print(f"\n{heading}:")
     table = PrettyTable()
-    table.field_names = ['Attribute', 'Value']
+    table.field_names = ['Parameter', 'Value']
     table.align = alignment
-    if split_key is None:
-        for key in meta_dict.keys():
-            table.add_row([key, meta_dict[key]])
 
-    else:
-        for key in meta_dict.keys():
-            if key == split_key:
-                n_side = int(np.sqrt(meta_dict[key]))
-                table.add_row([key, f'{n_side:d} x {n_side:d}'])
-            else:
-                table.add_row([key, meta_dict[key]])
+    for key, item in input_parameters.items():
+        if key == split_key:
+            n_side = int(np.sqrt(input_parameters[key]))
+            table.add_row([key, f'{n_side:d} x {n_side:d}'])
+        if isinstance(item, dict):
+            table.add_row([key, _dict_to_key_list(item)])
+        else:
+            table.add_row([key, item])
     print(table)
+
+
+def _dict_to_key_list(attr_dict):
+    outlist = []
+    for key in attr_dict.keys():
+        outlist.append(f'{key}: ...')
+    return outlist
 
 
 def _rad_to_hour_str(rad):

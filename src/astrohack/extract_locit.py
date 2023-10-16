@@ -16,7 +16,7 @@ def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=F
     :type cal_table: str
     :param locit_name: Name of *<locit_name>.locit.zarr* file to create. Defaults to measurement set name with *locit.zarr* extension.
     :type locit_name: str, optional
-    :param ant_id: List of antennae/antenna to be extracted, defaults to "all" when None, ex. ea25
+    :param ant_id: List of antennas/antenna to be extracted, defaults to "all" when None, ex. ea25
     :type ant_id: list or str, optional
     :param ddi: List of ddis/ddi to be extracted, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
@@ -34,11 +34,14 @@ def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=F
     **Additional Information**
 
     """
+    extract_locit_parms = locals()
+    extract_locit_parms['ant'] = ant_id
     logger = _get_astrohack_logger()
 
     fname = 'extract_locit'
     ######### Parameter Checking #########
-    extract_locit_parms = _check_extract_locit_parms(fname, cal_table, locit_name, ant_id, ddi, overwrite)
+    extract_locit_parms = _check_extract_locit_parms(fname, extract_locit_parms)
+    input_parms = extract_locit_parms.copy()
     attributes = extract_locit_parms.copy()
 
     _check_if_file_exists(extract_locit_parms['cal_table'])
@@ -52,7 +55,9 @@ def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=F
     attributes['telescope_name'] = telescope_name
     attributes['n_sources'] = n_sources
     attributes['reference_antenna'] = extract_locit_parms['reference_antenna']
-    attributes['n_antennae'] = len(extract_locit_parms['ant_dict'])
+    attributes['n_antennas'] = len(extract_locit_parms['ant_dict'])
+    output_attr_file = "{name}/{ext}".format(name=extract_locit_parms['locit_name'], ext=".locit_input")
+    _write_meta_data(output_attr_file, input_parms)
     output_attr_file = "{name}/{ext}".format(name=extract_locit_parms['locit_name'], ext=".locit_attr")
     _write_meta_data(output_attr_file, attributes)
 
@@ -62,10 +67,7 @@ def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=F
     return locit_mds
 
 
-def _check_extract_locit_parms(fname, cal_table, locit_name, ant_id, ddi, overwrite):
-
-    extract_locit_parms = {"cal_table": cal_table, "locit_name": locit_name, "ant": ant_id,
-                           "ddi": ddi, "overwrite": overwrite}
+def _check_extract_locit_parms(fname, extract_locit_parms):
 
     #### Parameter Checking ####
     logger = _get_astrohack_logger()
@@ -73,7 +75,7 @@ def _check_extract_locit_parms(fname, cal_table, locit_name, ant_id, ddi, overwr
 
     parms_passed = parms_passed and _check_parms(fname, extract_locit_parms, 'cal_table', [str], default=None)
 
-    base_name = _remove_suffix(cal_table, '.cal')
+    base_name = _remove_suffix(extract_locit_parms['cal_table'], '.cal')
     parms_passed = parms_passed and _check_parms(fname, extract_locit_parms, 'locit_name', [str],
                                                  default=base_name+'.locit.zarr')
     parms_passed = parms_passed and _check_parms(fname, extract_locit_parms, 'ant', [list, str],

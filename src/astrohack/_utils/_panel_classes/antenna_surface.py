@@ -1,6 +1,4 @@
 import xarray as xr
-from matplotlib import pyplot as plt
-from matplotlib import colormaps as cmaps
 from matplotlib import patches
 
 from astrohack._utils._panel_classes.base_panel import panel_models, irigid
@@ -9,14 +7,16 @@ from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._tools import _add_prefix, _well_positioned_colorbar, _axis_to_fits_header, _resolution_to_fits_header
+from astrohack._utils._tools import _add_prefix, _axis_to_fits_header, _resolution_to_fits_header
+from astrohack._utils._plot_commons import _well_positioned_colorbar, _create_figure_and_axes, _close_figure, _get_proper_color_map
 from astrohack._utils._dio import _write_fits
 
 lnbr = "\n"
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, nan_out_of_bounds=True, panel_margins=None, reread=False):
+    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, nan_out_of_bounds=True,
+                 panel_margins=None, reread=False):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -463,59 +463,48 @@ class AntennaSurface:
         for panel in self.panels:
             panel.print_misc()
 
-    def plot_mask(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, caller='panel', display=True):
+    def plot_mask(self, basename, parm_dict):
         """
         Plot mask used in the selection of points to be fitted
         Args:
             basename: basename for the plot, the prefix 'ancillary_mask' will be added to it
-            screws: Are screw positions to be shown in plot?
-            colormap: Colormap for amplitude plot
-            figuresize: 2 element array with the image sizes in inches
-            dpi: Plot resolution
-            caller: Which mds called this plotting function
-            display: display plot inline in notebook
+            parm_dict: dictionary with plotting parameters
         """
         plotmask = np.where(self.mask, 1, np.nan)
         plotname = _add_prefix(basename, 'mask')
-        self._plot_map(plotname, plotmask, 'Mask', 0, 1, None, screws=screws, colormap=colormap, figuresize=figuresize,
-                       dpi=dpi, colorbar=False, caller=caller, display=display)
+        parm_dict['z_lim'] = [0, 1]
+        parm_dict['unit'] = ' '
+        self._plot_map(plotname, plotmask, 'Mask', parm_dict, colorbar=False)
 
-    def plot_amplitude(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, caller='panel',
-                       display=True):
+    def plot_amplitude(self, basename, parm_dict):
         """
         Plot Amplitude map
         Args:
             basename: basename for the plot, the prefix 'ancillary_amplitude' will be added to it
-            screws: Are screw positions to be shown in plot?
-            colormap: Colormap for amplitude plot
-            figuresize: 2 element array with the image sizes in inches
-            dpi: Plot resolution
-            caller: Which mds called this plotting function
-            display: display plot inline in notebook
+            parm_dict: dictionary with plotting parameters
         """
         vmin, vmax = np.nanmin(self.amplitude), np.nanmax(self.amplitude)
         title = "Amplitude, min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
         plotname = _add_prefix(basename, 'amplitude')
-        self._plot_map(plotname, self.amplitude, title, vmin, vmax, self.amp_unit, screws=screws, colormap=colormap,
-                       figuresize=figuresize, dpi=dpi, caller=caller, display=display)
+        parm_dict['z_lim'] = [vmin, vmax]
+        parm_dict['unit'] = self.amp_unit
+        self._plot_map(plotname, self.amplitude, title, parm_dict)
 
-    def plot_phase(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None, caller='panel',
-                   display=True):
+    def plot_phase(self, basename, caller, parm_dict):
         """
         Plot phase map(s)
         Args:
             basename: basename for the plot(s), the prefix 'phase_{original|corrections|residuals}' will be added to it/them
-            screws: Are screw positions to be shown in plot(s)?
-            colormap: Colormap for phase plots
-            figuresize: 2 element array with the image sizes in inches
-            dpi: Plot resolution
-            unit: Angle unit for plot(s)
             caller: Which mds called this plotting function
-            display: display plot inline in notebook
+            parm_dict: dictionary with plotting parameters
         """
-        if unit is None:
-            unit = 'deg'
-        fac = _convert_unit('rad', unit, 'trigonometric')
+
+        if parm_dict['phase_unit'] is None:
+            parm_dict['unit'] = 'deg'
+        else:
+            parm_dict['unit'] = parm_dict['phase_unit']
+        parm_dict['z_lim'] = parm_dict['phase_limits']
+        fac = _convert_unit('rad', parm_dict['unit'], 'trigonometric')
         prefix = 'phase'
         if caller == 'image':
             prefix = 'corrected'
@@ -528,77 +517,69 @@ class AntennaSurface:
             else:
                 maps = [self.phase, self.phase_corrections, self.phase_residuals]
                 labels = ['original', 'correction', 'residual']
-        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller, display)
+        self._multi_plot(maps, labels, prefix, basename, fac, parm_dict)
 
-    def plot_deviation(self, basename, screws=False, colormap=None, figuresize=None, dpi=300, unit=None, caller='panel',
-                       display=True):
+    def plot_deviation(self, basename, caller, parm_dict):
         """
         Plot deviation map(s)
         Args:
             basename: basename for the plot(s), the prefix 'deviation_{original|corrections|residuals}' will be added to it/them
-            screws: Are screw positions to be shown in plot(s)?
-            colormap: Colormap for deviation plots
-            figuresize: 2 element array with the image sizes in inches
-            dpi: Plot resolution
-            unit: Length unit for plot(s)
             caller: Which mds called this plotting function
-            display: display plot inline in notebook
+            parm_dict: dictionary with plotting parameters
         """
-        if unit is None:
-            unit = 'mm'
-        fac = _convert_unit('m', unit, 'length')
-        prefix = 'deviation'
-        rms = self.get_rms(unit=unit)
-        if self.residuals is None:
-            maps = [self.deviation]
-            labels = [f'original RMS={rms:.2f} {unit}']
+        if parm_dict['deviation_unit'] is None:
+            parm_dict['unit'] = 'mm'
         else:
-            maps = [self.deviation, self.corrections, self.residuals]
-            labels = [f'original RMS={rms[0]:.2f} {unit}', 'correction', f'residual RMS={rms[1]:.2f} {unit}']
-        self._multi_plot(maps, labels, prefix, basename, unit, fac, screws, colormap, figuresize, dpi, caller, display)
+            parm_dict['unit'] = parm_dict['deviation_unit']
+        parm_dict['z_lim'] = parm_dict['deviation_limits']
+        fac = _convert_unit('m', parm_dict['unit'], 'length')
+        prefix = 'deviation'
+        rms = self.get_rms(unit=parm_dict['unit'])
+        if caller == 'image':
+            prefix = 'original'
+            maps = [self.deviation]
+            labels = ['deviation']
+        else:
+            if self.residuals is None:
+                maps = [self.deviation]
+                labels = [f'original RMS={rms:.2f} {parm_dict["unit"]}']
+            else:
+                maps = [self.deviation, self.corrections, self.residuals]
+                labels = [f'original RMS={rms[0]:.2f} {parm_dict["unit"]}', 'correction', f'residual RMS={rms[1]:.2f} {parm_dict["unit"]}']
+        self._multi_plot(maps, labels, prefix, basename, fac, parm_dict)
 
-    def _multi_plot(self, maps, labels, prefix, basename, unit, conversion, screws, colormap=None, figuresize=None,
-                    dpi=300, caller='panel', display=True):
+    def _multi_plot(self, maps, labels, prefix, basename, factor, parm_dict):
         if len(maps) != len(labels):
             raise Exception('Map list and label list must be of the same size')
         nplots = len(maps)
-        vmax = np.nanmax(np.abs(conversion*maps[0]))
-        vmin = -vmax
+        if parm_dict['z_lim'] is None or parm_dict['z_lim'] == "None":
+            vmax = np.nanmax(np.abs(factor * maps[0]))  # Gotten from the original map (displays the biggest variation)
+            parm_dict['z_lim'] = [-vmax, vmax]
         for iplot in range(nplots):
             title = f'{prefix.capitalize()} {labels[iplot]}'
             plotname = _add_prefix(basename, labels[iplot].split()[0])
             plotname = _add_prefix(plotname, prefix)
-            self._plot_map(plotname, conversion*maps[iplot], title, vmin, vmax, unit, screws=screws, dpi=dpi,
-                           colormap=colormap, figuresize=figuresize, caller=caller, display=display)
+            self._plot_map(plotname, factor * maps[iplot], title, parm_dict)
 
-    def _plot_map(self, filename, data, title, vmin, vmax, unit, screws=False, colormap=None, figuresize=None, dpi=300,
-                  colorbar=True, caller='panel', display=True):
-        if colormap is None:
-            colormap = 'viridis'
-        if figuresize is None:
-            figuresize = figsize
-        if figuresize is None or figuresize == 'None':
-            fig, ax = plt.subplots(1, 1, figsize=figsize)
-        else:
-            fig, ax = plt.subplots(1, 1, figsize=figuresize)
+    def _plot_map(self, filename, data, title, parm_dict, colorbar=True):
+        cmap = _get_proper_color_map(parm_dict['colormap'])
+        fig, ax = _create_figure_and_axes(parm_dict['figuresize'], [1, 1])
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
         extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
-        im = ax.imshow(data, cmap=colormap, interpolation="nearest", extent=extent,
+        vmin, vmax = parm_dict['z_lim']
+        im = ax.imshow(data, cmap=cmap, interpolation="nearest", extent=extent,
                        vmin=vmin, vmax=vmax,)
         self._add_resolution_to_plot(ax, extent)
         if colorbar:
-            _well_positioned_colorbar(ax, fig, im, "Z Scale [" + unit + "]")
+            _well_positioned_colorbar(ax, fig, im, "Z Scale [" + parm_dict['unit'] + "]")
         self._add_resolution_to_plot(ax, extent)
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
-            panel.plot(ax, screws=screws)
-        fig.suptitle(f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}')
-        fig.tight_layout()
-        plt.savefig(_add_prefix(filename, caller), dpi=dpi)
-        if not display:
-            plt.close()
+            panel.plot(ax, screws=parm_dict['plot_screws'], label=parm_dict['panel_labels'])
+        suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}'
+        _close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
     def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
         lw = 0.5
@@ -614,27 +595,18 @@ class AntennaSurface:
         ax.axvline(x=center[0], ymin=ypos - halfbeam[1], ymax=ypos + halfbeam[1], color='black', lw=lw / 2)
         ax.axhline(y=center[1], xmin=xpos - halfbeam[0], xmax=xpos + halfbeam[0], color='black', lw=lw / 2)
 
-    def plot_screw_adjustments(self, filename, unit, threshold=None, colormap=None, figuresize=None, dpi=300,
-                               display=True):
+    def plot_screw_adjustments(self, filename, parm_dict):
         """
         Plot screw adjustments as circles over a blank canvas with the panel layout
         Args:
             filename: Name of the output filename for the plot
-            unit: Unit to display the screw adjustments
-            threshold: Threshold below which data is considered negligable, value is assumed to be in the same unit as the plot, if not given defaults to 10% of the maximal deviation
-            colormap: Colormap to display the screw adjustments
-            figuresize: 2 element array with the image sizes in inches
-            dpi: Resolution in pixels per inch
-            display: display plot inline in notebook
+            parm_dict: Dictionary with plotting parameters
         """
-        if colormap is None:
-            cmap = cmaps['RdBu_r']
-        else:
-            cmap = cmaps[colormap]
-        if figuresize is None or figuresize == 'None':
-            fig, ax = plt.subplots(1, 1, figsize=figsize)
-        else:
-            fig, ax = plt.subplots(1, 1, figsize=figuresize)
+        unit = parm_dict['unit']
+        threshold = parm_dict['threshold']
+        cmap = _get_proper_color_map(parm_dict['colormap'], default_cmap='RdBu_r')
+        fig, ax = _create_figure_and_axes(parm_dict['figuresize'], [1, 1])
+
         fac = _convert_unit('m', unit, 'length')
         vmax = np.nanmax(np.abs(fac * self.screw_adjustments))
         vmin = -vmax
@@ -643,7 +615,6 @@ class AntennaSurface:
         else:
             threshold = np.abs(threshold)
 
-        fig.suptitle('Screw corrections', y=0.92, fontsize='large')
         ax.set_title(f'\nThreshold = {threshold:.2f} {unit}', fontsize='small')
         # set the limits of the plot to the limits of the data
         extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
@@ -661,13 +632,11 @@ class AntennaSurface:
         ax.set_ylabel("Y axis [m]")
 
         for ipanel in range(len(self.panels)):
-            self.panels[ipanel].plot(ax, screws=False)
+            self.panels[ipanel].plot(ax, screws=False, label=parm_dict['panel_labels'])
             self.panels[ipanel].plot_corrections(ax, cmap, fac*self.screw_adjustments[ipanel], threshold, vmin, vmax)
-        fig.suptitle(f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}')
-        fig.tight_layout()
-        plt.savefig(filename, dpi=dpi)
-        if not display:
-            plt.close()
+
+        suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}'
+        _close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
     def _build_panel_data_arrays(self):
         """

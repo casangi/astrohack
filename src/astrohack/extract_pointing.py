@@ -85,7 +85,7 @@ def extract_pointing(
 
     logger = _get_astrohack_logger()
     
-    # Pull latest function fromt he stack, this is dynamic and preferred to hardcoding.
+    # Pull latest function from the stack, this is dynamic and preferred to hardcoding.
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     ######### Parameter Checking #########
@@ -122,8 +122,8 @@ def extract_pointing(
     
         # Calling this directly since it is so simple it doesn't need a "_create_{}" function.
         _write_meta_data(
-            file_name="{name}/{ext}".format(name=extract_pointing_params['point_name'], ext=".point_attr"), 
-            input_dict=extract_pointing_params
+            file_name="{name}/{ext}".format(name=extract_pointing_params['point_name'], ext=".point_input"),
+            input_dict=input_params
         )
 
         logger.info(f"[{function_name}]: Finished processing")

@@ -11,6 +11,7 @@ Under development.
    _api/autoapi/astrohack/extract_pointing/index
    _api/autoapi/astrohack/holog/index
    _api/autoapi/astrohack/panel/index
+   _api/autoapi/astrohack/combine/index
    _api/autoapi/astrohack/dio/index
    _api/autoapi/astrohack/mds/index
    _api/autoapi/astrohack/extract_locit/index

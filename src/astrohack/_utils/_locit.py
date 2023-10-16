@@ -8,8 +8,9 @@ import astropy.units as units
 import xarray as xr
 
 from astrohack._utils._locit_commons import _open_telescope, _get_telescope_lat_lon_rad, _compute_antenna_relative_off
-from astrohack._utils._locit_commons import  _scatter_plot, _time_label, _elevation_label, _declination_label
-from astrohack._utils._locit_commons import _create_figure_and_axes, _plot_antenna_position, _close_figure
+from astrohack._utils._locit_commons import _time_label, _elevation_label, _declination_label
+from astrohack._utils._locit_commons import _plot_antenna_position
+from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _scatter_plot
 from astrohack._utils._locit_commons import _plot_boxes_limits_and_labels, _plot_corrections, _hour_angle_label
 from astrohack._utils._tools import _hadec_to_elevation, _format_value_error, _parm_to_list, _add_prefix
 from astrohack._utils._conversion import _convert_unit

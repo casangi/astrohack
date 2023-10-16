@@ -120,12 +120,13 @@ class RingPanel(BasePanel):
         print("{0:20s}={1:8.5f}".format("zeta", self.zeta))
         print()
 
-    def plot(self, ax, screws=False):
+    def plot(self, ax, screws=False, label=False):
         """
         Plot panel outline to ax
         Args:
             ax: matplotlib axes instance
             screws: Display screws in plot
+            label: Add panel labels to plot
         """
         x1 = self.inrad * np.sin(self.theta1)
         y1 = self.inrad * np.cos(self.theta1)
@@ -138,6 +139,7 @@ class RingPanel(BasePanel):
             ourad = plt.Circle((0, 0), self.ourad, color=self.linecolor, fill=False, lw=self.linewidth)
             ax.add_patch(inrad)
             ax.add_patch(ourad)
-        self.plot_label(ax)
+        if label:
+            self.plot_label(ax)
         if screws:
             self.plot_screws(ax)

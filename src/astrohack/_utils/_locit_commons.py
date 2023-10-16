@@ -1,4 +1,3 @@
-from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 
 from astrohack._utils._panel_classes.telescope import Telescope
@@ -63,25 +62,6 @@ def _get_telescope_lat_lon_rad(telescope):
         raise Exception(msg)
 
     return lon, lat, rad
-
-
-def _create_figure_and_axes(figure_size, boxes, default_figsize=figsize):
-    """
-    Create a figures and plotting axes within according to a desired figure size and number of boxes
-    Args:
-        figure_size: Desired figure size in inches
-        boxes: How many subplots in the horizontal and vertical directions
-        default_figsize: Default figure size for when the user specifies no figure size
-
-    Returns:
-    Figure and plotting axes array
-    """
-    if figure_size is None or figure_size == 'None':
-        fig, axes = plt.subplots(boxes[0], boxes[1], figsize=default_figsize)
-    else:
-        fig, axes = plt.subplots(boxes[0], boxes[1], figsize=figure_size)
-
-    return fig, axes
 
 
 def _plot_antenna_position(outerax, innerax, xpos, ypos, text, box_size, marker='+', color='black'):
@@ -175,70 +155,6 @@ def _plot_boxes_limits_and_labels(outerax, innerax, xlabel, ylabel, box_size, ou
     innerax.set_title(innertitle)
     if fixed_aspect is not None:
         innerax.set_aspect(fixed_aspect)
-
-
-def _close_figure(figure, title, filename, dpi, display, tight_layout=True):
-    """
-    Set title, save to disk and optionally close the figure
-    Args:
-        figure: The matplotlib figure object
-        title: The superior title to be added to the figures
-        filename: The file name to which save the figure
-        dpi: dots per inch (resolution)
-        display: Keep the plotting window open?
-        tight_layout: Plots in the figure are tightly packed?
-    """
-    if title is not None:
-        figure.suptitle(title)
-    if tight_layout:
-        figure.tight_layout()
-    plt.savefig(filename, dpi=dpi)
-    if not display:
-        plt.close()
-    return
-
-
-def _scatter_plot(ax, xdata, xlabel, ydata, ylabel, title=None, labels=None, xlim=None, ylim=None, hlines=None, vlines=None,
-                  model=None):
-    """
-    Do scatter simple scatter plots of data to a plotting axis
-    Args:
-        ax: The plotting axis
-        xdata: X axis data
-        xlabel: X axis data label
-        ydata: Y axis data
-        ylabel: Y axis datal label
-        title: Plotting axis title
-        labels: labels to be added to data
-        xlim: X axis limits
-        ylim: Y axis limits
-        hlines: Horizontal lines to be drawn
-        vlines: Vertical lines to be drawn
-        model: Model to be overplotted to the data
-    """
-    ax.plot(xdata, ydata, ls='', marker='+', color='red', label='data')
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    if title is not None:
-        ax.set_title(title)
-    if xlim is not None:
-        ax.set_xlim(xlim)
-    if ylim is not None:
-        ax.set_ylim(ylim)
-    if hlines is not None:
-        for hline in hlines:
-            ax.axhline(hline, color='black', ls='--')
-    if vlines is not None:
-        for vline in vlines:
-            ax.axvline(vline, color='black', ls='--')
-    if labels is not None:
-        nlabels = len(labels)
-        for ilabel in range(nlabels):
-            ax.text(xdata[ilabel], ydata[ilabel], labels[ilabel], fontsize=.8*fontsize, ha='left', va='center', rotation=20)
-    if model is not None:
-        ax.plot(xdata, model, ls='', marker='x', color='blue', label='model')
-        ax.legend()
-    return
 
 
 def _time_label(unit):

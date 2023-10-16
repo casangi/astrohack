@@ -18,7 +18,7 @@ from astrohack._utils._dio import _create_destination_folder
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits, time_units
 from astrohack._utils._dask_graph_tools import _dask_general_compute
-from astrohack._utils._tools import _print_method_list, _print_attributes, _print_data_contents, _print_summary_header
+from astrohack._utils._tools import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
 from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
@@ -101,6 +101,7 @@ class AstrohackImageFile(dict):
         """
         super().__init__()
         self._meta_data = None
+        self._input_pars = None
         self.file = file
         self._file_is_open = False
 
@@ -139,7 +140,8 @@ class AstrohackImageFile(dict):
             logger.error("[AstroHackImageFile.open()]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file+'/.image_attr')
+        self._meta_data = _read_meta_data(file + '/.image_attr')
+        self._input_pars = _read_meta_data(file + '/.image_input')
 
         return self._file_is_open
 
@@ -147,7 +149,7 @@ class AstrohackImageFile(dict):
         """ Prints summary of the AstrohackImageFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_attributes(self._meta_data)
+        _print_dict_table(self._input_pars)
         _print_data_contents(self, ["Antenna", "DDI"])
         _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
 
@@ -185,7 +187,7 @@ class AstrohackImageFile(dict):
         :type destination: str
         :param complex_split: How to split complex data, cartesian (real + imag, default) or polar (amplitude + phase)
         :type complex_split: str, optional
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -208,12 +210,8 @@ class AstrohackImageFile(dict):
         The FITS files produced by this function have been tested and are known to work with CARTA and DS9
         """
 
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'complex_split': complex_split,
-                     'parallel': parallel}
-        
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
         fname = 'export_to_fits'
         parms_passed = _check_parms(fname, parm_dict, 'complex_split', [str], acceptable_data=possible_splits,
                                     default="cartesian")
@@ -229,20 +227,29 @@ class AstrohackImageFile(dict):
         parm_dict['metadata'] = self._meta_data
         _dask_general_compute(fname, self, _export_to_fits_holog_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, unit=None, display=False,
-                       colormap='viridis', figure_size=None, dpi=300, parallel=False):
+    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, phase_unit='deg', phase_limits=None,
+                       deviation_unit='mm', deviation_limits=None, panel_labels=False, display=False, colormap='viridis', figure_size=None,
+                       dpi=300, parallel=False):
         """ Aperture amplitude and phase plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param plot_screws: Add screw positions to plot, default is False
         :type plot_screws: bool, optional
-        :param unit: Unit for phase plots, defaults to 'deg'
-        :type unit: str, optional
+        :param phase_unit: Unit for phase plots, defaults is 'deg'
+        :type phase_unit: str, optional
+        :param phase_limits: Lower then Upper limit for phase, value in phase_unit, default is None (Guess from data)
+        :type phase_limits: numpy.ndarray, list, tuple, optional
+        :param deviation_unit: Unit for deviation plots, defaults is 'mm'
+        :type deviation_unit: str, optional
+        :param deviation_limits: Lower then Upper limit for deviation, value in deviation_unit, default is None (Guess from data)
+        :type deviation_limits: numpy.ndarray, list, tuple, optional
+        :param panel_labels: Add panel labels to antenna surface plots, default is False
+        :type panel_labels: bool, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param colormap: Colormap for plots, default is viridis
@@ -258,25 +265,25 @@ class AstrohackImageFile(dict):
 
         Produce plots from ``astrohack.holog`` results for analysis
         """
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'unit': unit,
-                     'plot_screws': plot_screws,
-                     'display': display,
-                     'colormap': colormap,
-                     'figuresize': figure_size,
-                     'dpi': dpi,
-                     'parallel': parallel}
-
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
         fname = 'plot_apertures'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
                                     default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=trigo_units,
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'phase_limits', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_unit', [str],
+                                                     acceptable_data=length_units, default='mm')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_limits', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'panel_labels', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)
@@ -297,7 +304,7 @@ class AstrohackImageFile(dict):
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -318,15 +325,8 @@ class AstrohackImageFile(dict):
 
         Produce plots from ``astrohack.holog`` results for analysis
         """
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'complex_split': complex_split,
-                     'display': display,
-                     'colormap': colormap,
-                     'figuresize': figure_size,
-                     'dpi': dpi,
-                     'parallel': parallel}
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
 
         fname = 'plot_apertures'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
@@ -367,6 +367,7 @@ class AstrohackHologFile(dict):
         
         self.file = file
         self._meta_data = None
+        self._input_pars = None
         self._file_is_open = False
 
     def __getitem__(self, key):
@@ -406,7 +407,8 @@ class AstrohackHologFile(dict):
             logger.error("[AstrohackHologFile]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file+'/.holog_attr')
+        self._meta_data = _read_meta_data(file + '/.holog_attr')
+        self._input_pars = _read_meta_data(file + '/.holog_input')
 
         return self._file_is_open
 
@@ -414,7 +416,7 @@ class AstrohackHologFile(dict):
         """ Prints summary of the AstrohackHologFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_attributes(self._meta_data)
+        _print_dict_table(self._input_pars)
         _print_data_contents(self, ["DDI", "Map", "Antenna"])
         _print_method_list([self.summary, self.select, self.plot_diagnostics])
 
@@ -496,6 +498,8 @@ class AstrohackHologFile(dict):
 
         logger = _get_astrohack_logger()
 
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
         if parallel:
             if not distributed.client._get_global_client():
                 try:
@@ -510,18 +514,6 @@ class AstrohackHologFile(dict):
                     client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
                     logger.info(client.dashboard_link)
 
-        parm_dict = {
-            'destination': destination,
-            'delta': delta,
-            'ant': ant_id,
-            'ddi': ddi,
-            'map': map_id,
-            'complex_split': complex_split,
-            'display': display,
-            'figuresize': figure_size,
-            'dpi': dpi,
-            'parallel': parallel
-        }
         fname = 'plot_diagnostics'
         parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delta', [float], default=0.01)
@@ -564,7 +556,7 @@ class AstrohackPanelFile(dict):
 
         self.file = file
         self._file_is_open = False
-        self._meta_data = None
+        self._input_pars = None
 
     def __getitem__(self, key):
         return super().__getitem__(key)
@@ -600,7 +592,7 @@ class AstrohackPanelFile(dict):
             logger.error("[AstroHackPanelFile.open()]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file+'/.panel_attr')
+        self._input_pars = _read_meta_data(file+'/.panel_input')
 
         return self._file_is_open
 
@@ -608,10 +600,10 @@ class AstrohackPanelFile(dict):
         """ Prints summary of the AstrohackPanelFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_attributes(self._meta_data)
+        _print_dict_table(self._input_pars)
         _print_data_contents(self, ["Antenna", "DDI"])
         _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
-                            self.plot_antennae])
+                            self.plot_antennas])
 
     def get_antenna(self, ant_id, ddi):
         """ Retrieve an AntennaSurface object for interaction
@@ -630,13 +622,13 @@ class AstrohackPanelFile(dict):
         telescope = Telescope(xds.attrs['telescope_name'])
         return AntennaSurface(xds, telescope, reread=True)
 
-    def export_screws(self, destination, ant_id=None, ddi=None, unit='mm', threshold=None, display=False,
-                      colormap='RdBu_r', figure_size=None, dpi=300):
+    def export_screws(self, destination, ant_id=None, ddi=None, unit='mm', threshold=None, panel_labels=True,
+                      display=False, colormap='RdBu_r', figure_size=None, dpi=300):
         """ Export screw adjustments to text files and optionally plots.
 
         :param destination: Name of the destination folder to contain exported screw adjustments
         :type destination: str
-        :param ant_id: List of antennae/antenna to be exported, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -644,6 +636,8 @@ class AstrohackPanelFile(dict):
         :type unit: str, optional
         :param threshold: Threshold below which data is considered negligable, value is assumed to be in the same unit as the plot, if not given defaults to 10% of the maximal deviation
         :type threshold: float, optional
+        :param panel_labels: Add panel labels to antenna surface plots, default is True
+        :type panel_labels: bool, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param colormap: Colormap for screw adjustment map, default is RdBu_r
@@ -658,15 +652,8 @@ class AstrohackPanelFile(dict):
         Produce the screw adjustments from ``astrohack.panel`` results to be used at the antenna site to improve the antenna surface
 
         """
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'unit': unit,
-                     'threshold': threshold,
-                     'display': display,
-                     'colormap': colormap,
-                     'figuresize': figure_size,
-                     'dpi': dpi}
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
 
         fname = 'export_screws'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
@@ -677,6 +664,7 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units, 
                                                      default='mm')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'threshold', [int, float], default='None')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'panel_labels', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps, 
                                                      default='RdBu_r')
@@ -689,13 +677,14 @@ class AstrohackPanelFile(dict):
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(fname, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
-    def plot_antennae(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False, unit=None,
-                      display=False, colormap='viridis', figure_size=None, dpi=300, parallel=False):
+    def plot_antennas(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False,
+                      phase_unit='deg', phase_limits=None, deviation_unit='mm', deviation_limits=None,
+                      panel_labels=False, display=False, colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Create diagnostic plots of antenna surfaces from panel data file.
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -703,8 +692,16 @@ class AstrohackPanelFile(dict):
         :type plot_type: str, optional
         :param plot_screws: Add screw positions to plot
         :type plot_screws: bool, optional
-        :param unit: Unit for phase or deviation plots, defaults to "mm" for deviation and 'deg' for phase
-        :type unit: str, optional
+        :param phase_unit: Unit for phase plots, defaults is 'deg'
+        :type phase_unit: str, optional
+        :param phase_limits: Lower then Upper limit for phase, value in phase_unit, default is None (Guess from data)
+        :type phase_limits: numpy.ndarray, list, tuple, optional
+        :param deviation_unit: Unit for deviation plots, defaults is 'mm'
+        :type deviation_unit: str, optional
+        :param deviation_limits: Lower then Upper limit for deviation, value in deviation_unit, default is None (Guess from data)
+        :type deviation_limits: numpy.ndarray, list, tuple, optional
+        :param panel_labels: Add panel labels to antenna surface plots, default is False
+        :type panel_labels: bool, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param colormap: Colormap for plots, default is viridis
@@ -734,19 +731,10 @@ class AstrohackPanelFile(dict):
                  phase unit is set to degrees
         """
         logger = _get_astrohack_logger()
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'unit': unit,
-                     'display': display,
-                     'plot_type': plot_type,
-                     'plot_screws': plot_screws,
-                     'colormap': colormap,
-                     'figuresize': figure_size,
-                     'dpi': dpi,
-                     'parallel': parallel}
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
 
-        fname = 'plot_antennae'
+        fname = 'plot_antennas'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
                                     default='all')
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
@@ -754,18 +742,17 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_type', [str], acceptable_data=plot_types,
                                                      default=plot_types[0])
-        if parm_dict['plot_type'] == plot_types[0]:  # Length units for deviation plots
-            parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units,
-                                                         default='mm')
-        elif parm_dict['plot_type'] == plot_types[1]:  # Trigonometric units for phase plots
-            parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=trigo_units,
-                                                         default='deg')
-        elif parm_dict['plot_type'] == plot_types[2]:  # Ancillary plots, no units
-            logger.info(f'[{fname}]: Unit ignored for ancillary plots')
-        else:  # Unit is taken for the deviation plot, phase is then in degrees
-            parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units,
-                                                         default='mm')
-            logger.info(f'[{fname}]: Unit for phase plots set to degrees')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
+                                                     default='deg')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'phase_limits', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_unit', [str],
+                                                     acceptable_data=length_units, default='mm')
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_limits', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'panel_labels', [bool], default=False)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)
@@ -785,7 +772,7 @@ class AstrohackPanelFile(dict):
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -833,7 +820,7 @@ class AstrohackPointFile(dict):
         super().__init__()
 
         self.file = file
-        self._meta_data = None
+        self._input_pars = None
         self._file_is_open = False
 
     def __getitem__(self, key):
@@ -873,7 +860,7 @@ class AstrohackPointFile(dict):
             logger.error("[AstrohackPointFile]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file+'/.point_attr')
+        self._input_pars = _read_meta_data(file+'/.point_input')
 
         return self._file_is_open
 
@@ -881,7 +868,7 @@ class AstrohackPointFile(dict):
         """ Prints summary of the AstrohackPointFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_attributes(self._meta_data)
+        _print_dict_table(self._input_pars)
         _print_data_contents(self, ["Antenna"])
         _print_method_list([self.summary])
 
@@ -901,6 +888,7 @@ class AstrohackLocitFile(dict):
         super().__init__()
 
         self.file = file
+        self._input_pars = None
         self._meta_data = None
         self._file_is_open = False
 
@@ -941,7 +929,8 @@ class AstrohackLocitFile(dict):
             logger.error("[AstrohackLocitFile]: {}".format(e))
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file+'/.locit_attr')
+        self._input_pars = _read_meta_data(file + '/.locit_input')
+        self._meta_data = _read_meta_data(file + '/.locit_attr')
 
         return self._file_is_open
 
@@ -1005,12 +994,7 @@ class AstrohackLocitFile(dict):
         if that is the case.
 
         """
-        parm_dict = {'destination': destination,
-                     'precessed': precessed,
-                     'display': display,
-                     'figuresize': figure_size,
-                     'label': display_labels,
-                     'dpi': dpi}
+        parm_dict = locals()
 
         fname = 'plot_source_positions'
         parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
@@ -1061,14 +1045,7 @@ class AstrohackLocitFile(dict):
 
 
         """
-        parm_dict = {'destination': destination,
-                     'display': display,
-                     'figuresize': figure_size,
-                     'stations': display_stations,
-                     'zoff': display_zoff,
-                     'unit': unit,
-                     'box_size': box_size,
-                     'dpi': dpi}
+        parm_dict = locals()
 
         fname = 'plot_array_configuration'
         parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
@@ -1093,7 +1070,7 @@ class AstrohackLocitFile(dict):
         """ Prints summary of the AstrohackLocitFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_attributes(self._meta_data)
+        _print_dict_table(self._input_pars)
         _print_data_contents(self, ["Antenna", "Contents"])
         _print_method_list([self.summary, self.print_source_table, self.print_array_configuration,
                             self.plot_source_positions, self.plot_array_configuration])
@@ -1115,6 +1092,7 @@ class AstrohackPositionFile(dict):
 
         self.file = file
         self._meta_data = None
+        self._input_pars = None
         self._file_is_open = False
 
     def __getitem__(self, key):
@@ -1148,6 +1126,7 @@ class AstrohackPositionFile(dict):
 
         self._meta_data = _read_meta_data(file + '/.position_attr')
         self.combined = self._meta_data['combine_ddis'] != 'no'
+        self._input_pars = _read_meta_data(file + '/.position_input')
 
         try:
             _load_position_file(file=file, dask_load=dask_load, position_dict=self,
@@ -1166,7 +1145,7 @@ class AstrohackPositionFile(dict):
 
         :param destination: Name of the destination folder to contain exported fit results
         :type destination: str
-        :param ant_id: List of antennae/antenna to be exported, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -1182,13 +1161,8 @@ class AstrohackPositionFile(dict):
         Produce a text file with the fit results from astrohack.locit for better determination of antenna locations.
         """
         
-        parm_dict = {'destination': destination,
-                     'ant': ant_id,
-                     'ddi': ddi,
-                     'position_unit': position_unit,
-                     'delay_unit': delay_unit,
-                     'time_unit': time_unit}
-
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
         fname = 'export_fit_results'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
                                     list_acceptable_data_types=[str], default='all')
@@ -1213,7 +1187,7 @@ class AstrohackPositionFile(dict):
 
         :param destination: Name of the destination folder to contain the plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -1242,16 +1216,8 @@ class AstrohackPositionFile(dict):
 
         """
         
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'time_unit': time_unit,
-                     'angle_unit': angle_unit,
-                     'display': display,
-                     'figure_size': figure_size,
-                     'dpi': dpi,
-                     'parallel': parallel}
-
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
         fname = 'plot_sky_coverage'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
                                     list_acceptable_data_types=[str], default='all')
@@ -1285,7 +1251,7 @@ class AstrohackPositionFile(dict):
 
         :param destination: Name of the destination folder to contain the plots
         :type destination: str
-        :param ant_id: List of antennae/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -1319,17 +1285,8 @@ class AstrohackPositionFile(dict):
 
         """
 
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'time_unit': time_unit,
-                     'angle_unit': angle_unit,
-                     'delay_unit': delay_unit,
-                     'plot_model': plot_model,
-                     'display': display,
-                     'figure_size': figure_size,
-                     'dpi': dpi,
-                     'parallel': parallel}
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
 
         fname = 'plot_delays'
         parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
@@ -1369,7 +1326,7 @@ class AstrohackPositionFile(dict):
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
-        :param ant_id: Select which antennae are to be plotted, defaults to all when None, ex. ea25
+        :param ant_id: Select which antennas are to be plotted, defaults to all when None, ex. ea25
         :type ant_id: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
@@ -1396,16 +1353,9 @@ class AstrohackPositionFile(dict):
 
         """
 
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'display': display,
-                     'figure_size': figure_size,
-                     'unit': unit,
-                     'box_size': box_size,
-                     'scaling': scaling,
-                     'dpi': dpi,
-                     }
+        parm_dict = locals()
+        parm_dict['ant'] = ant_id
+
         fname = 'plot_position_corrections'
         parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
@@ -1430,7 +1380,7 @@ class AstrohackPositionFile(dict):
         """ Prints summary of the AstrohackpositionFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
-        _print_attributes(self._meta_data)
+        _print_dict_table(self._input_pars)
         if self.combined:
             _print_data_contents(self, ["Antenna"])
         else:

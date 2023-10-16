@@ -246,7 +246,7 @@ def open_pointing(file):
 
 
 def fix_pointing_table(ms_name, reference_antenna):    
-    """ Fix pointing table for a user defined subset of reference antennae.
+    """ Fix pointing table for a user defined subset of reference antennas.
 
     :param ms_name: Measurement set name.
     :type file: str
@@ -257,7 +257,7 @@ def fix_pointing_table(ms_name, reference_antenna):
     .. _Description:
 
     **Example Usage**
-    The `fix_pointing_table` function takes the measurement set name and a list of reference antennae.
+    The `fix_pointing_table` function takes the measurement set name and a list of reference antennas.
 
     .. parsed-literal::
         import astrohack

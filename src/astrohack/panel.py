@@ -26,7 +26,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     :type panel_model: str, optional
     :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.2.
     :type panel_margins: float, optional
-    :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None, ex. ea25
+    :param ant_id: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant_id: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
@@ -88,11 +88,12 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
         }
 
     """
-    
+
+    panel_params = locals()
+    panel_params['ant'] = ant_id
     logger = _get_astrohack_logger()
     fname = 'panel'
-    panel_params = _check_panel_parms(fname, image_name, panel_name, cutoff, panel_model, panel_margins, ant_id, ddi,
-                                      parallel, overwrite)
+    panel_params = _check_panel_parms(fname, panel_params)
     input_params = panel_params.copy()
     # Doubled this entry for compatibility with the factorized antenna ddi loop
     panel_params['filename'] = panel_params['image_name']
@@ -109,7 +110,7 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
         panel_params['origin'] = 'astrohack'
         if _dask_general_compute(fname, image_mds, _panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
             logger.info(f"[{fname}]: Finished processing")
-            output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_attr")
+            output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_input")
             _write_meta_data(output_attr_file, input_params)
             panel_mds = AstrohackPanelFile(panel_params['panel_name'])
             panel_mds._open()
@@ -148,36 +149,13 @@ def _aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, o
     aips_mark.close()
 
 
-def _check_panel_parms(fname, image_name, panel_name, cutoff, panel_kind, panel_margins, ant_id, ddi, parallel,
-                       overwrite):
+def _check_panel_parms(fname, panel_params):
     """
     Tests inputs to panel function
     Args:
         fname: Caller's name
-        image_name: Input holography data, can be from astrohack.holog, but also preprocessed AIPS data
-        panel_name: Name for the output directory structure containing the products
-
-        cutoff: Cut off in amplitude for the physical deviation fitting, None means 20%
-        panel_kind: Type of fitting function used to fit panel surfaces, defaults to corotated_paraboloid for ringed
-                    telescopes
-        ant_id: Which Antennae are to be processed by panel, None means all of them
-        ddi: Which DDIs are to be processed by panel, None means all of them
-        parallel: Run chunks of processing in parallel
-        panel_margins: Margin to be ignored at edges of panels when fitting
-
-        overwrite: Overwrite previous hack_file of same name?
+        panel_params: panel parameters
     """
-
-    panel_params = {'image_name': image_name,
-                    'panel_name': panel_name,
-                    'cutoff': cutoff,
-                    'panel_kind': panel_kind,
-                    'panel_margins': panel_margins,
-                    'parallel': parallel,
-                    'ddi': ddi,
-                    'ant': ant_id,
-                    'overwrite': overwrite
-                    }
                           
     #### Parameter Checking ####
 
@@ -192,7 +170,7 @@ def _check_panel_parms(fname, image_name, panel_name, cutoff, panel_kind, panel_
                                                  list_acceptable_data_types=[int], default='all')
     parms_passed = parms_passed and _check_parms(fname, panel_params, 'cutoff', [float], acceptable_range=[0, 1],
                                                  default=0.2)
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_kind', [str], acceptable_data=panel_models,
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_model', [str], acceptable_data=panel_models,
                                                  default="rigid")
     parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_margins', [float],
                                                  acceptable_range=[0, 0.5], default=0.2)

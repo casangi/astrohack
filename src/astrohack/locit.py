@@ -27,7 +27,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     :type fit_delay_rate: bool, optional
     :param fit_engine: What engine to use on fitting, default is linear algebra
     :type fit_engine: str, optional
-    :param ant_id: List of antennae/antenna to be processed, defaults to "all" when None, ex. ea25
+    :param ant_id: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant_id: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
@@ -103,12 +103,14 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     combine_ddis='difference' : This method is useful for cases where phase wrapping may have occured due to large
                                 delays.
     """
+    locit_parms = locals()
+    locit_parms['ant'] = ant_id
     logger = _get_astrohack_logger()
 
     fname = 'locit'
     ######### Parameter Checking #########
-    locit_parms = _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, fit_engine,
-                                     fit_kterm, fit_delay_rate, ant_id, ddi, combine_ddis, parallel, overwrite)
+    locit_parms = _check_locit_parms(fname, locit_parms)
+    input_parms = locit_parms.copy()
     attributes = locit_parms.copy()
 
     _check_if_file_exists(locit_parms['locit_name'])
@@ -120,7 +122,6 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     attributes['telescope_name'] = locit_mds._meta_data['telescope_name']
     attributes['reference_antenna'] = locit_mds._meta_data['reference_antenna']
 
-    print(combine_ddis)
     if combine_ddis == 'simple':
         function = _locit_combined_chunk
         key_order = ['ant']
@@ -128,7 +129,6 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
         function = _locit_difference_chunk
         key_order = ['ant']
     else:
-        print('Am I in the correct spot?')
         function = _locit_separated_chunk
         key_order = ['ant', 'ddi']
 
@@ -136,6 +136,8 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
         logger.info(f"[{fname}]: Finished processing")
         output_attr_file = "{name}/{ext}".format(name=locit_parms['position_name'], ext=".position_attr")
         _write_meta_data(output_attr_file, attributes)
+        output_attr_file = "{name}/{ext}".format(name=locit_parms['position_name'], ext=".position_input")
+        _write_meta_data(output_attr_file, input_parms)
         position_mds = AstrohackPositionFile(locit_parms['position_name'])
         position_mds._open()
         return position_mds
@@ -144,13 +146,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
         return None
 
 
-def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polarization, fit_engine, fit_kterm,
-                       fit_delay_rate, ant_id, ddi, combine_ddis, parallel, overwrite):
-
-    locit_parms = {"locit_name": locit_name, "position_name": position_name, "elevation_limit": elevation_limit,
-                   "fit_engine": fit_engine, "polarization": polarization, "fit_kterm": fit_kterm,
-                   "fit_rate": fit_delay_rate, "ant": ant_id, "ddi": ddi, "combine_ddis":combine_ddis, "parallel": parallel,
-                   "overwrite": overwrite}
+def _check_locit_parms(fname, locit_parms):
 
     #### Parameter Checking ####
     logger = _get_astrohack_logger()
@@ -158,7 +154,7 @@ def _check_locit_parms(fname, locit_name, position_name, elevation_limit, polari
 
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'locit_name', [str], default=None)
 
-    base_name = _remove_suffix(locit_name, '.locit.zarr')
+    base_name = _remove_suffix(locit_parms['locit_name'], '.locit.zarr')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'position_name', [str],
                                                  default=base_name+'.position.zarr')
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'elevation_limit', [float],
