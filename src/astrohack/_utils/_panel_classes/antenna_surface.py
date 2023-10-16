@@ -15,15 +15,15 @@ lnbr = "\n"
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, cutoff=None, pmodel=None, crop=False, nan_out_of_bounds=True,
-                 panel_margins=None, reread=False):
+    def __init__(self, inputxds, telescope, clip_type='sigma', clip_level=3,  pmodel=None, crop=False,
+                 nan_out_of_bounds=True, panel_margins=None, reread=False):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
             inputxds: Input xarray dataset
             telescope: Telescope object
-            cutoff: fractional cutoff on the amplitude image to exclude regions with weak amplitude from the panel,
-                    defaults to 20% if None
+            clip_type: Type of clipping to be applied to amplitude
+            clip_level: Level of clipping
             pmodel: model of panel surface fitting, if is None defaults to telescope default
             crop: Crop apertures to slightly larger frames than the antenna diameter
             nan_out_of_bounds: Should the region outside the dish be replaced with NaNs?
@@ -36,10 +36,7 @@ class AntennaSurface:
         self.telescope = telescope
 
         if not self.reread:
-            if cutoff is None:
-                self.cut = 0.2 * np.nanmax(self.amplitude)
-            else:
-                self.cut = cutoff * np.nanmax(self.amplitude)
+            self.clip = self._measure_clip(clip_type, clip_level)
             if pmodel is None:
                 self.panelmodel = panel_models[irigid]
             else:
@@ -107,7 +104,7 @@ class AntennaSurface:
         self.amp_unit = inputxds.attrs['amp_unit']
         self.panelmodel = inputxds.attrs['panel_model']
         self.panel_margins = inputxds.attrs['panel_margin']
-        self.cut = inputxds.attrs['cutoff']
+        self.clip = inputxds.attrs['clip']
         self.solved = inputxds.attrs['solved']
         self.fitted = inputxds.attrs['fitted']
         # Arrays
@@ -172,6 +169,18 @@ class AntennaSurface:
         self.in_rms = np.nan
         self.out_rms = np.nan
         self.fitted = False
+
+    def _measure_clip(self, clip_type, clip_level):
+        if clip_type == 'relative':
+            clip = clip_level * np.nanmax(self.amplitude)
+        elif clip_type == 'absolute':
+            clip = clip_level
+        elif clip_level == 'sigma':
+            clip = None
+        else:
+            msg = f'Unrecognized clipping type: {clip_type}'
+            raise Exception(msg)
+        return clip
 
     def _init_ringed(self):
         """
@@ -275,7 +284,7 @@ class AntennaSurface:
         Builds the mask on regions to be included in panel surface masks, specific to circular antennas as there is an
         outer and inner limit to the mask based on the antenna's inner receiver hole and outer edge
         """
-        self.mask = np.where(self.amplitude < self.cut, False, True)
+        self.mask = np.where(self.amplitude < self.clip, False, True)
         self.mask = np.where(self.rad > self.telescope.inlim, self.mask, False)
         self.mask = np.where(self.rad < self.telescope.oulim, self.mask, False)
         self.mask = np.where(np.isnan(self.amplitude), False, self.mask)
@@ -701,7 +710,7 @@ class AntennaSurface:
         xds.attrs['amp_unit'] = self.amp_unit
         xds.attrs['panel_model'] = self.panelmodel
         xds.attrs['panel_margin'] = self.panel_margins
-        xds.attrs['cutoff'] = self.cut
+        xds.attrs['clip'] = self.clip
         xds.attrs['solved'] = self.solved
         xds.attrs['fitted'] = self.fitted
         xds.attrs['aperture_resolution'] = self.resolution
@@ -743,7 +752,7 @@ class AntennaSurface:
         head = {
             'PMODEL'  : self.panelmodel,
             'PMARGIN' : self.panel_margins,
-            'CUTOFF'  : self.cut,
+            'CLIP'    : self.clip,
             'TELESCOP': self.antenna_name,
             'INSTRUME': self.telescope.name,
             'WAVELENG': self.wavelength,
