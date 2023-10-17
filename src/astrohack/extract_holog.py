@@ -54,27 +54,27 @@ def extract_holog(
     *holog.zarr* extension.
     :type holog_name: str, optional
 
-    :param holog_obs_dict: The *holog_obs_dict* describes which scan and antenna data to extract from the measurement
-    set. As detailed below, this compound dictionary also includes important metadata needed for preprocessing and
-    extraction of the holography data from the measurement set. If not specified holog_obs_dict will be generated.
-    For auto generation of the holog_obs_dict the assumption is made that the same antenna beam is not mapped twice in
-    a row (alternating sets of antennas is fine). If the holog_obs_dict is specified, the ddi input is ignored. The
+    :param holog_obs_dict: The *holog_obs_dict* describes which scan and antenna data to extract from the measurement \
+    set. As detailed below, this compound dictionary also includes important metadata needed for preprocessing and \
+    extraction of the holography data from the measurement set. If not specified holog_obs_dict will be generated. \
+    For auto generation of the holog_obs_dict the assumption is made that the same antenna beam is not mapped twice in \
+    a row (alternating sets of antennas is fine). If the holog_obs_dict is specified, the ddi input is ignored. The \
     user can self generate this dictionary using `generate_holog_obs_dict`.
     :type holog_obs_dict: dict, optional
 
     :param ddi:  DDI(s) that should be extracted from the measurement set. Defaults to all DDI's in the ms.
     :type ddi: int numpy.ndarray | int list, optional
 
-    :param baseline_average_distance: To increase the signal-to-noise for a mapping antenna multiple reference
-    antennas can be used. The baseline_average_distance is the acceptable distance (in meters) between a mapping
-    antenna and a reference antenna. The baseline_average_distance is only used if the holog_obs_dict is not
-    specified. If no distance is specified all reference antennas will be used. baseline_average_distance and
+    :param baseline_average_distance: To increase the signal-to-noise for a mapping antenna multiple reference \
+    antennas can be used. The baseline_average_distance is the acceptable distance (in meters) between a mapping \
+    antenna and a reference antenna. The baseline_average_distance is only used if the holog_obs_dict is not \
+    specified. If no distance is specified all reference antennas will be used. baseline_average_distance and \
     baseline_average_nearest can not be used together.
     :type baseline_average_distance: float, optional
 
-    :param baseline_average_nearest: To increase the signal-to-noise for a mapping antenna multiple reference antennas
-    can be used. The baseline_average_nearest is the number of nearest reference antennas to use. The
-    baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and
+    :param baseline_average_nearest: To increase the signal-to-noise for a mapping antenna multiple reference antennas \
+    can be used. The baseline_average_nearest is the number of nearest reference antennas to use. The \
+    baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and \
     baseline_average_nearest can not be used together.
     :type baseline_average_nearest: int, optional
 
@@ -361,10 +361,14 @@ def extract_holog(
         extract_holog_params["ddi"] = ddi
         extract_holog_params["chan_setup"] = {}
         extract_holog_params["pol_setup"] = {}
-        extract_holog_params["chan_setup"]["chan_freq"] = spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0, :]
-        extract_holog_params["chan_setup"]["chan_width"] = spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[0, :]
-        extract_holog_params["chan_setup"]["eff_bw"] = spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0, :]
-        extract_holog_params["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[0]
+        extract_holog_params["chan_setup"]["chan_freq"] = spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0,
+                                                          :]
+        extract_holog_params["chan_setup"]["chan_width"] = spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[
+                                                           0, :]
+        extract_holog_params["chan_setup"]["eff_bw"] = spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0,
+                                                       :]
+        extract_holog_params["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[
+            0]
         extract_holog_params["chan_setup"]["total_bw"] = \
             spw_ctb.getcol("TOTAL_BANDWIDTH", startrow=spw_setup_id, nrow=1)[0]
         extract_holog_params["pol_setup"]["pol"] = pol_str[
@@ -493,7 +497,7 @@ def _check_extract_holog_params(function_name, extract_holog_params):
     if (extract_holog_params['baseline_average_distance'] != 'all') and (
             extract_holog_params['baseline_average_nearest'] != 'all'):
         logger.error(
-            f'[{function_name}]: baseline_average_distance: {str(baseline_average_distance)} and 'f'baseline_average_nearest: {str(baseline_average_distance)} can not both be specified.')
+            f'[{function_name}]: baseline_average_distance and 'f'baseline_average_nearest can not both be specified.')
 
         parms_passed = False
 
@@ -523,18 +527,18 @@ def generate_holog_obs_dict(
     :param ms_name: Name of input measurement file name.
     :type ms_name: str
 
-    :param baseline_average_distance: To increase the signal to noise for a mapping antenna mutiple reference
+    :param baseline_average_distance: To increase the signal-to-noise for a mapping antenna multiple reference
     antennas can be used. The baseline_average_distance is the acceptable distance between a mapping antenna and a
     reference antenna. The baseline_average_distance is only used if the holog_obs_dict is not specified. If no
     distance is specified all reference antennas will be used. baseline_average_distance and baseline_average_nearest
     can not be used together.
-    :type holog_obs_dict: float, optional
+    :type baseline_average_distance: float, optional
 
-    :param baseline_average_nearest: To increase the signal to noise for a mapping antenna mutiple reference antennas
+    :param baseline_average_nearest: To increase the signal-to-noise for a mapping antenna multiple reference antennas
     can be used. The baseline_average_nearest is the number of nearest reference antennas to use. The
     baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and
     baseline_average_nearest can not be used together.
-    :type holog_obs_dict: int, optional
+    :type baseline_average_nearest: int, optional
 
     :param point_name: Name of *<point_name>.point.zarr* file to use. 
     :type point_name: str, optional
@@ -750,6 +754,7 @@ class HologObsDict(dict):
             if "reference" in kwargs.keys():
                 return self._select_baseline(
                     value,
+                    n_baselines=None,
                     reference=kwargs["reference"],
                     obs_dict=obs_dict
                 )
@@ -762,14 +767,14 @@ class HologObsDict(dict):
                     obs_dict=obs_dict
                 )
 
-
             else:
                 self.logger.error("Must specify a list of reference antennas for this option.")
         else:
             self.logger.error("Valid key not found: {key}".format(key=key))
             return {}
 
-    def get_nearest_baselines(self, antenna, n_baselines=None, path_to_matrix=None):
+    @staticmethod
+    def get_nearest_baselines(antenna, n_baselines=None, path_to_matrix=None):
         logger = _get_astrohack_logger()
         import pandas as pd
 
@@ -787,7 +792,8 @@ class HologObsDict(dict):
 
         return df_matrix[antenna].sort_values(ascending=True).index[1:n_baselines].values.tolist()
 
-    def _select_ddi(self, value, obs_dict):
+    @staticmethod
+    def _select_ddi(value, obs_dict):
         convert = lambda x: "ddi_" + str(x)
 
         if not isinstance(value, list):
@@ -802,7 +808,8 @@ class HologObsDict(dict):
 
         return obs_dict
 
-    def _select_map(self, value, obs_dict):
+    @staticmethod
+    def _select_map(value, obs_dict):
         convert = lambda x: "map_" + str(x)
 
         if not isinstance(value, list):
@@ -819,7 +826,8 @@ class HologObsDict(dict):
 
         return obs_dict
 
-    def _select_antenna(self, value, obs_dict):
+    @staticmethod
+    def _select_antenna(value, obs_dict):
         if not isinstance(value, list):
             value = [value]
 
@@ -835,7 +843,8 @@ class HologObsDict(dict):
 
         return obs_dict
 
-    def _select_scan(self, value, obs_dict):
+    @staticmethod
+    def _select_scan(value, obs_dict):
         if not isinstance(value, list):
             value = [value]
 
@@ -848,7 +857,8 @@ class HologObsDict(dict):
 
         return obs_dict
 
-    def _select_baseline(self, value, n_baselines, obs_dict, reference=None):
+    @staticmethod
+    def _select_baseline(value, n_baselines, obs_dict, reference=None):
         if reference is not None:
             if not isinstance(reference, list):
                 reference = [reference]
@@ -864,7 +874,7 @@ class HologObsDict(dict):
                         obs_dict[ddi][mp]["ant"].pop(ant)
                         continue
 
-                    if reference is None:
+                    if reference is None and n_baselines is not None:
                         reference_antennas = obs_dict[ddi][mp]["ant"][ant]
 
                         if n_baselines > len(reference_antennas):

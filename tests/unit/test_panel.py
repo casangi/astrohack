@@ -187,7 +187,7 @@ class TestPanel():
             overwrite=True
         )
 
-        default_rms = panel_mds["ant_ea25"]["ddi_0"].sel(labels=panel_list).apply(np.std).PANEL_SCREWS.values
+        default_rms = panel_mds["ant_ea25"]["ddi_0"].sel(labels=panel_list).map(np.std).PANEL_SCREWS.values
 
         panel_mds = panel(
             image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
@@ -196,7 +196,7 @@ class TestPanel():
             overwrite=True
         )
 
-        mean_rms = panel_mds["ant_ea25"]["ddi_0"].sel(labels=panel_list).apply(np.std).PANEL_SCREWS.values
+        mean_rms = panel_mds["ant_ea25"]["ddi_0"].sel(labels=panel_list).map(np.std).PANEL_SCREWS.values
 
         assert mean_rms < default_rms
 

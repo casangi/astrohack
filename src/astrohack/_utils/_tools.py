@@ -1,11 +1,14 @@
 import json
+import shutil
 
 import numpy as np
+import astropy.units as units
+
 from prettytable import PrettyTable
 from textwrap import fill
 from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord
 from astropy.time import Time
-import astropy.units as units
+from casacore import tables
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._conversion import _convert_unit
@@ -16,22 +19,21 @@ class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
-        
+
         elif isinstance(obj, np.floating):
             return float(obj)
-        
+
         elif isinstance(obj, np.integer):
             return int(obj)
 
-        elif isinstance(obj, NoneType):
+        elif isinstance(obj, type(None)):
             return "None"
-
 
         return json.JSONEncoder.default(self, obj)
 
 
 def _casa_time_to_mjd(times):
-    corrected = times/3600/24.0
+    corrected = times / 3600 / 24.0
     return corrected
 
 
@@ -44,12 +46,12 @@ def _altaz_to_hadec(az, el, lat):
     """
     sinlat = np.sin(lat)
     coslat = np.cos(lat)
-    sinel  = np.sin(el)
-    cosel  = np.cos(el)
-    cosaz  = np.cos(az)
-    sindec = sinlat*sinel+coslat*cosel*cosaz
+    sinel = np.sin(el)
+    cosel = np.cos(el)
+    cosaz = np.cos(az)
+    sindec = sinlat * sinel + coslat * cosel * cosaz
     dec = np.arcsin(sindec)
-    argarccos = (sinel-sinlat*sindec)/(coslat*np.cos(dec))
+    argarccos = (sinel - sinlat * sindec) / (coslat * np.cos(dec))
     lt1 = argarccos < -1
     argarccos[lt1] = -1.0
     ha = np.arccos(argarccos)
@@ -73,8 +75,8 @@ def _hadec_to_altaz(ha, dec, lat):
     az = np.arctan2(sinha, bottom)
     el = np.arcsin(sin_el)
     az += np.pi  # formula is starting from *South* instead of North
-    if az > 2*np.pi:
-        az -= 2*np.pi
+    if az > 2 * np.pi:
+        az -= 2 * np.pi
     return az, el
 
 
@@ -112,9 +114,9 @@ def _altaz_to_hadec_astropy(az, el, time, x_ant, y_ant, z_ant):
     mjd_time = Time(_casa_time_to_mjd(time), format='mjd', scale='utc')
     az_el_frame = AltAz(location=ant_pos, obstime=mjd_time)
     ha_dec_frame = HADec(location=ant_pos, obstime=mjd_time)
-    azel_coor = SkyCoord(az*units.rad, el*units.rad, frame=az_el_frame)
+    azel_coor = SkyCoord(az * units.rad, el * units.rad, frame=az_el_frame)
     ha_dec_coor = azel_coor.transform_to(ha_dec_frame)
-    
+
     return ha_dec_coor.ha, ha_dec_coor.dec
 
 
@@ -130,7 +132,7 @@ def _remove_suffix(input_string, suffix):
     """
     if suffix and input_string.endswith(suffix):
         return input_string[:-len(suffix)]
-        
+
     return input_string
 
 
@@ -151,7 +153,7 @@ def _jsonify(holog_obj):
             for attr_key, attr_value in holog_obj[ddi_key][map_key].items():
                 if "scans" in attr_key:
                     holog_obj[ddi_key][map_key][attr_key] = list(map(str, attr_value))
-                
+
                 elif "ant" in attr_key:
                     for ant_key, ant_value in holog_obj[ddi_key][map_key][attr_key].items():
                         holog_obj[ddi_key][map_key][attr_key][ant_key] = list(map(str, ant_value))
@@ -172,23 +174,23 @@ def _add_prefix(input_string, prefix):
 
     """
     wrds = input_string.split('/')
-    wrds[-1] = prefix+'_'+wrds[-1]
+    wrds[-1] = prefix + '_' + wrds[-1]
     return '/'.join(wrds)
 
 
 def _print_holog_obs_dict(holog_obj):
     logger = _get_astrohack_logger()
-    
-    OPEN_DICT  = ":{"
+
+    OPEN_DICT = ":{"
     CLOSE_DICT = "}"
-    
-    OPEN_LIST  = ":["
+
+    OPEN_LIST = ":["
     CLOSE_LIST = "]"
 
     logger.info("| ********************************************************** |")
     logger.info("|                 HOLOG OBSERVATION DICTIONARY               |")
     logger.info("| ********************************************************** |\n\n")
-    
+
     for ddi_key, ddi_value in holog_obj.items():
         logger.info("{ddi_key} {open_bracket}".format(ddi_key=ddi_key, open_bracket=OPEN_DICT))
         for map_key, map_value in holog_obj[ddi_key].items():
@@ -196,24 +198,27 @@ def _print_holog_obs_dict(holog_obj):
             for attr_key, attr_value in holog_obj[ddi_key][map_key].items():
                 if "scans" in attr_key:
                     logger.info("{attr_key: >12} {open_list}".format(attr_key=attr_key, open_list=OPEN_LIST))
-    
+
                     scan_list = ", ".join(list(map(str, holog_obj[ddi_key][map_key][attr_key])))
-                    logger.info("{scan: >18}".format(scan=scan_list))                                   # The print just ification in notebook is weird on this and seems to move according to list length ...
+
+                    # The print justification in notebook is weird on this and seems to move according to list length
+
+                    logger.info("{scan: >18}".format(scan=scan_list))
                     logger.info("{close_bracket: >10}".format(close_bracket=CLOSE_LIST))
-                
+
                 elif "ant" in attr_key:
                     logger.info("{attr_key: >12} {open_bracket}".format(attr_key=attr_key, open_bracket=OPEN_DICT))
                     for ant_key, ant_value in holog_obj[ddi_key][map_key][attr_key].items():
                         logger.info("{ant_key: >18} {open_list}".format(ant_key=ant_key, open_list=OPEN_LIST))
-                        logger.info("{antenna: >25}".format( antenna=", ".join(ant_value) ))
+                        logger.info("{antenna: >25}".format(antenna=", ".join(ant_value)))
                         logger.info("{close_list: >15}".format(close_list=CLOSE_LIST))
-                    
+
                     logger.info("{close_bracket: >10}".format(close_bracket=CLOSE_DICT))
 
                 else:
                     pass
         logger.info("{close_bracket: >5}".format(close_bracket=CLOSE_DICT))
-        
+
     logger.info("{close_bracket}".format(close_bracket=CLOSE_DICT))
 
 
@@ -229,7 +234,7 @@ def _parm_to_list(caller, parm, data_dict, prefix):
 
     """
     logger = _get_astrohack_logger()
-    
+
     if parm == 'all':
         oulist = list(data_dict.keys())
     elif isinstance(parm, str):
@@ -251,7 +256,7 @@ def _parm_to_list(caller, parm, data_dict, prefix):
         msg = f'[{caller}] cannot interpret parameter {parm} of type {type(parm)}'
         logger.error(msg)
         raise Exception(msg)
-        
+
     return oulist
 
 
@@ -264,38 +269,38 @@ def _split_pointing_table(ms_name, antennas):
     :type antennas: list (str)
     """
 
-    # Need to get thea antenna-id values for teh input antenna names. This is not available in the POINTING table
+    # Need to get thea antenna-id values for the input antenna names. This is not available in the POINTING table,
     # so we build the values from the ANTENNA table.
-    
+
     table = "/".join((ms_name, 'ANTENNA'))
     query = 'select NAME from {table}'.format(table=table)
-    
+
     ant_names = np.array(tables.taql(query).getcol('NAME'))
     ant_id = np.arange(len(ant_names))
-    
+
     query_ant = np.searchsorted(ant_names, antennas)
-    
+
     ant_list = " or ".join(["ANTENNA_ID=={ant}".format(ant=ant) for ant in query_ant])
-    
+
     # Build new POINTING table from the sub-selection of antenna values.
-    table = "/".join((ms_name, "POINTING"))    
-    
+    table = "/".join((ms_name, "POINTING"))
+
     selection = "select * from {table} where {antennas}".format(table=table, antennas=ant_list)
-    
+
     reduced = tables.taql(selection)
-    
+
     # Copy the new table to the source measurement set.
     table = "/".join((ms_name, 'REDUCED'))
-    
+
     reduced.copy(newtablename='{table}'.format(table=table), deep=True)
     reduced.done()
-    
+
     # Remove old POINTING table.
     shutil.rmtree("/".join((ms_name, 'POINTING')))
-    
+
     # Rename REDUCED table to POINTING
     tables.tablerename(
-        tablename="/".join((ms_name, 'REDUCED')), 
+        tablename="/".join((ms_name, 'REDUCED')),
         newtablename="/".join((ms_name, 'POINTING'))
     )
 
@@ -342,12 +347,12 @@ def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
         if inc == 0:
             logger.error('[_axis_to_fits_header]: Axis increment is zero valued')
             raise Exception
-        absdiff = abs((axis[-1]-axis[-2])-inc)/inc
+        absdiff = abs((axis[-1] - axis[-2]) - inc) / inc
         if absdiff > 1e-7:
             logger.error('[_axis_to_fits_header]: Axis is not linear!')
             raise Exception
 
-    ref = naxis//2
+    ref = naxis // 2
     val = axis[ref]
 
     header[f'NAXIS{iaxis}'] = naxis
@@ -374,11 +379,11 @@ def _resolution_to_fits_header(header, resolution):
     if resolution[0] >= resolution[1]:
         header['BMAJ'] = resolution[0]
         header['BMIN'] = resolution[1]
-        header['BPA']  = 0.0
+        header['BPA'] = 0.0
     else:
         header['BMAJ'] = resolution[1]
         header['BMIN'] = resolution[0]
-        header['BPA']  = 90.0
+        header['BPA'] = 90.0
     return header
 
 
@@ -431,7 +436,7 @@ def _print_data_contents(data_dict, field_names, alignment='l'):
 
 def _print_dict_table(input_parameters, split_key=None, alignment='l', heading="Input Parameters"):
     """
-    Print a summary of the atributes
+    Print a summary of the attributes
     Args:
         input_parameters: Dictionary containing metadata attributes
         split_key: key to be sqrt and displayed as nx X ny
@@ -473,9 +478,9 @@ def _rad_to_hour_str(rad):
     """
     h_float = rad * _convert_unit('rad', 'hour', 'trigonometric')
     h_int = np.floor(h_float)
-    m_float = (h_float-h_int)*60
+    m_float = (h_float - h_int) * 60
     m_int = np.floor(m_float)
-    s_float = (m_float-m_int)*60
+    s_float = (m_float - m_int) * 60
     return f'{int(h_int):02d}h{int(m_int):02d}m{s_float:06.3f}s'
 
 
@@ -495,9 +500,9 @@ def _rad_to_deg_str(rad):
     else:
         sign = '+'
     d_int = np.floor(d_float)
-    m_float = (d_float-d_int)*60
+    m_float = (d_float - d_int) * 60
     m_int = np.floor(m_float)
-    s_float = (m_float-m_int)*60
+    s_float = (m_float - m_int) * 60
     return f'{sign}{int(d_int):02d}\u00B0{int(m_int):02d}m{s_float:06.3f}s'
 
 
@@ -526,17 +531,17 @@ def _print_summary_header(filename, print_len=100, frame_char='#', frame_width=3
 def _compute_spacing(string, print_len=100, frame_width=3):
     spc = ' '
     nchar = len(string)
-    if 2*(nchar//2) != nchar:
+    if 2 * (nchar // 2) != nchar:
         nchar += 1
         string += spc
-    cont_len = nchar+2*frame_width+2
-    if 2*(print_len//2) != print_len:
+    cont_len = nchar + 2 * frame_width + 2
+    if 2 * (print_len // 2) != print_len:
         print_len += 1
     if cont_len > print_len:
         print_len += cont_len - print_len
 
     nlead = int(print_len // 2 - nchar // 2 - frame_width)
-    ntrail = print_len - nlead - 2*frame_width - nchar
+    ntrail = print_len - nlead - 2 * frame_width - nchar
     return string, nlead, ntrail, print_len
 
 
@@ -591,11 +596,11 @@ def _format_value_error(value, error, scaling, tolerance):
                 error = _significant_digits(error, places)
                 return f'{value} \u00b1 {error}'
         else:
-            digits = round(abs(np.log10(abs(value))))-1
+            digits = round(abs(np.log10(abs(value)))) - 1
             if digits in [-1, 0, 1]:
                 digits = 2
             value = _significant_digits(value, digits)
-            error = _significant_digits(error, digits-1)
+            error = _significant_digits(error, digits - 1)
             return f'{value} \u00b1 {error}'
     else:
         return f'{value} \u00b1 {error}'

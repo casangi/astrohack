@@ -18,7 +18,8 @@ from astrohack._utils._dio import _print_array
 
 
 def open_holog(file):
-    """ Open holog file and return instance of the holog data object. Object includes summary function to list available dictionary keys.
+    """ Open holog file and return instance of the holog data object. Object includes summary function to list\
+     available dictionary keys.
 
     :param file: Path to holog file.
     :type file: str
@@ -28,7 +29,9 @@ def open_holog(file):
 
     .. _Description:
     **AstrohackHologFile**
-    Holog object allows the user to access holog data via compound dictionary keys with values, in order of depth, `ddi` -> `map` -> `ant`. The holog object also provides a `summary()` helper function to list available keys for each file. An outline of the holog object structure is show below:
+    Holog object allows the user to access holog data via compound dictionary keys with values, in order of depth, \
+    `ddi` -> `map` -> `ant`. The holog object also provides a `summary()` helper function to list available keys for \
+    each file. An outline of the holog object structure is show below:
 
     .. parsed-literal::
         holog_mds =
@@ -59,7 +62,8 @@ def open_holog(file):
 
 
 def open_image(file):
-    """ Open image file and return instance of the image data object. Object includes summary function to list available dictionary keys.
+    """ Open image file and return instance of the image data object. Object includes summary function to list \
+    available dictionary keys.
 
     :param file: Path to image file.
     :type file: str
@@ -69,7 +73,9 @@ def open_image(file):
 
     .. _Description:
     **AstrohackImageFile**
-    Image object allows the user to access image data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The image object also provides a `summary()` helper function to list available keys for each file. An outline of the image object structure is show below:
+    Image object allows the user to access image data via compound dictionary keys with values, in order of depth, \
+    `ant` -> `ddi`. The image object also provides a `summary()` helper function to list available keys for each file. \
+    An outline of the image object structure is show below:
 
     .. parsed-literal::
        image_mds =
@@ -97,7 +103,8 @@ def open_image(file):
 
 
 def open_panel(file):
-    """ Open panel file and return instance of the panel data object. Object includes summary function to list available dictionary keys.
+    """ Open panel file and return instance of the panel data object. Object includes summary function to list \
+    available dictionary keys.
 
     :param file: Path ot panel file.
     :type file: str
@@ -107,7 +114,9 @@ def open_panel(file):
 
     .. _Description:
     **AstrohackPanelFile**
-    Panel object allows the user to access panel data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The panel object also provides a `summary()` helper function to list available keys for each file. An outline of the panel object structure is show below:
+    Panel object allows the user to access panel data via compound dictionary keys with values, in order of depth, \
+    `ant` -> `ddi`. The panel object also provides a `summary()` helper function to list available keys for each file.\
+     An outline of the panel object structure is show below:
 
     .. parsed-literal::
         panel_mds =
@@ -135,7 +144,8 @@ def open_panel(file):
 
 
 def open_locit(file):
-    """ Open locit file and return instance of the locit data object. Object includes summary function to list available dictionary keys.
+    """ Open locit file and return instance of the locit data object. Object includes summary function to list \
+    available dictionary keys.
 
     :param file: Path of locit file.
     :type file: str
@@ -145,7 +155,9 @@ def open_locit(file):
 
     .. _Description:
     **AstrohackLocitFile**
-    Locit object allows the user to access locit data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The locit object also provides a `summary()` helper function to list available keys for each file. An outline of the locit object structure is show below:
+    Locit object allows the user to access locit data via compound dictionary keys with values, in order of depth,\
+     `ant` -> `ddi`. The locit object also provides a `summary()` helper function to list available keys for each file.\
+      An outline of the locit object structure is show below:
 
     .. parsed-literal::
         locit_mds =
@@ -173,7 +185,8 @@ def open_locit(file):
 
 
 def open_position(file):
-    """ Open position file and return instance of the position data object. Object includes summary function to list available dictionary keys.
+    """ Open position file and return instance of the position data object. Object includes summary function to list \
+    available dictionary keys.
 
     :param file: Path of position file.
     :type file: str
@@ -183,7 +196,9 @@ def open_position(file):
 
     .. _Description:
     **AstrohackPositionFile**
-    position object allows the user to access position data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The position object also provides a `summary()` helper function to list available keys for each file. An outline of the position object structure is show below:
+    position object allows the user to access position data via compound dictionary keys with values, in order of \
+    depth, `ant` -> `ddi`. The position object also provides a `summary()` helper function to list available keys for\
+     each file. An outline of the position object structure is show below:
 
     .. parsed-literal::
         position_mds =
@@ -211,7 +226,8 @@ def open_position(file):
 
 
 def open_pointing(file):
-    """ Open pointing file and return instance of the pointing data object. Object includes summary function to list available dictionary keys.
+    """ Open pointing file and return instance of the pointing data object. Object includes summary function to list\
+     available dictionary keys.
 
     :param file: Path to pointing file.
     :type file: str
@@ -222,7 +238,9 @@ def open_pointing(file):
     .. _Description:
 
     **AstrohackPointFile**
-    Pointing object allows the user to access pointing data via dictionary key with value based on `ant`. The pointing object also provides a `summary()` helper function to list available keys for each file. An outline of the pointing object structure is show below:
+    Pointing object allows the user to access pointing data via dictionary key with value based on `ant`. The pointing \
+    object also provides a `summary()` helper function to list available keys for each file. An outline of the pointing\
+     object structure is show below:
 
     .. parsed-literal::
         point_mds =
@@ -242,7 +260,7 @@ def open_pointing(file):
         return _data_file
 
     else:
-        logger.error(f"Error opening holgraphy pointing file: {file}")
+        logger.error(f"Error opening holography pointing file: {file}")
 
 
 def fix_pointing_table(ms_name, reference_antenna):    

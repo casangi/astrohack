@@ -85,14 +85,14 @@ def process():
 
 if __name__ == '__main__':
     # Setup the client to run
-    log_parms = {
+    log_params = {
         'log_level': 'DEBUG'
     }
     
     client = astrohack_local_client(
             cores=2,
             memory_limit='24GB',
-            log_parms=log_parms
+            log_params=log_params
     )
 
     logger = _get_astrohack_logger()

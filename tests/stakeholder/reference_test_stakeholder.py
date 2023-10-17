@@ -20,7 +20,7 @@ from astrohack.client import astrohack_local_client
 
 base_name = 'ea25_cal_small_'
 
-client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms={'log_level':'DEBUG'})
+client = astrohack_local_client(cores=2, memory_limit='8GB', log_params={'log_level':'DEBUG'})
 
 @pytest.fixture(scope='session')
 def set_data(tmp_path_factory):
