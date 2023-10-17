@@ -527,18 +527,18 @@ def generate_holog_obs_dict(
     :param ms_name: Name of input measurement file name.
     :type ms_name: str
 
-    :param baseline_average_distance: To increase the signal to noise for a mapping antenna mutiple reference
+    :param baseline_average_distance: To increase the signal-to-noise for a mapping antenna multiple reference
     antennas can be used. The baseline_average_distance is the acceptable distance between a mapping antenna and a
     reference antenna. The baseline_average_distance is only used if the holog_obs_dict is not specified. If no
     distance is specified all reference antennas will be used. baseline_average_distance and baseline_average_nearest
     can not be used together.
-    :type holog_obs_dict: float, optional
+    :type baseline_average_distance: float, optional
 
-    :param baseline_average_nearest: To increase the signal to noise for a mapping antenna mutiple reference antennas
+    :param baseline_average_nearest: To increase the signal-to-noise for a mapping antenna multiple reference antennas
     can be used. The baseline_average_nearest is the number of nearest reference antennas to use. The
     baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and
     baseline_average_nearest can not be used together.
-    :type holog_obs_dict: int, optional
+    :type baseline_average_nearest: int, optional
 
     :param point_name: Name of *<point_name>.point.zarr* file to use. 
     :type point_name: str, optional
@@ -754,6 +754,7 @@ class HologObsDict(dict):
             if "reference" in kwargs.keys():
                 return self._select_baseline(
                     value,
+                    n_baselines=None,
                     reference=kwargs["reference"],
                     obs_dict=obs_dict
                 )
@@ -765,7 +766,6 @@ class HologObsDict(dict):
                     reference=None,
                     obs_dict=obs_dict
                 )
-
 
             else:
                 self.logger.error("Must specify a list of reference antennas for this option.")
@@ -874,7 +874,7 @@ class HologObsDict(dict):
                         obs_dict[ddi][mp]["ant"].pop(ant)
                         continue
 
-                    if reference is None:
+                    if reference is None and n_baselines is not None:
                         reference_antennas = obs_dict[ddi][mp]["ant"][ant]
 
                         if n_baselines > len(reference_antennas):
