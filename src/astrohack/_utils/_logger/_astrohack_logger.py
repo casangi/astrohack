@@ -108,11 +108,11 @@ def _get_astrohack_worker_logger_name(name=hack_logger_name):
 
 '''
 class _astrohack_worker_logger_plugin(WorkerPlugin):
-    def __init__(self,log_parms):
-        self.log_to_term=log_parms['log_to_term']
-        self.log_to_file=log_parms['log_to_file']
-        self.log_file=log_parms['log_file']
-        self.level=log_parms['log_level']
+    def __init__(self,log_params):
+        self.log_to_term=log_params['log_to_term']
+        self.log_to_file=log_params['log_to_file']
+        self.log_file=log_params['log_file']
+        self.level=log_params['log_level']
         self.logger = None
         print(self.log_to_term,self.log_to_file,self.log_file,self.log_level)
         

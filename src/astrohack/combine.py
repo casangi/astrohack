@@ -14,7 +14,8 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
 
     :param image_name: Input holography data file name. Accepted data format is the output from ``astrohack.holog.holog``
     :type image_name: str
-    :param combine_name: Name of output file; File name will be appended with suffix *.combine.zarr*. Defaults to *basename* of input file plus holography panel file suffix.
+    :param combine_name: Name of output file; File name will be appended with suffix *.combine.zarr*. Defaults to \
+    *basename* of input file plus holography panel file suffix.
     :type combine_name: str, optional
     :param ant_id: List of antennas to be processed. None will use all antennas. Defaults to None, ex. ea25.
     :type ant_id: list or str, optional
@@ -33,7 +34,9 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
     .. _Description:
     **AstrohackImageFile**
 
-    Image object allows the user to access image data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The image object also provides a `summary()` helper function to list available keys for each file. An outline of the image object structure is show below:
+    Image object allows the user to access image data via compound dictionary keys with values, in order of depth, \
+    `ant` -> `ddi`. The image object also provides a `summary()` helper function to list available keys for each file.\
+     An outline of the image object structure is show below:
 
     .. parsed-literal::
         image_mds =
@@ -77,12 +80,11 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
 
 
 def _check_combine_parms(fname, combine_params):
-
     #### Parameter Checking ####
     parms_passed = _check_parms(fname, combine_params, 'image_name', [str], default=None)
     base_name = _remove_suffix(combine_params['image_name'], '.image.zarr')
     parms_passed = parms_passed and _check_parms(fname, combine_params, 'combine_name', [str],
-                                                 default=base_name+'.combine.zarr')
+                                                 default=base_name + '.combine.zarr')
     parms_passed = parms_passed and _check_parms(fname, combine_params, 'ant', [str, list],
                                                  list_acceptable_data_types=[str], default='all')
     parms_passed = parms_passed and _check_parms(fname, combine_params, 'ddi', [int, list],

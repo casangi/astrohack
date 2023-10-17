@@ -81,7 +81,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
                       this engine is fast, about one order of magnitude faster than scipy,  but may fail to
                       converge, also its uncertainties may be underestimated.
 
-    * scipy: This fitting engine uses the well estabilished scipy.optimize.curve_fit routine. This engine is
+    * scipy: This fitting engine uses the well established scipy.optimize.curve_fit routine. This engine is
              slower than the linear algebra engine, but it is more robust with better estimated uncertainties.
 
     .. rubric:: Choosing a polarization
@@ -92,7 +92,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
 
     .. rubric:: Combining DDIs
 
-    By default (combine_ddis='simple') locit combines different DDIs so that there is a single position solution per
+    By default, (combine_ddis='simple') locit combines different DDIs so that there is a single position solution per
     antenna. The other options are, a solution for each of the DDIs for each antenna (combine_ddis='no') or combining
     two DDIs by computing the delays from the difference in phases between the two DDIs of different frequencies
     (combine_ddis='difference').
@@ -100,7 +100,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     combine_ddis='simple'     : Generates higher antenna position correction solutions of higher SNR as more data is used
                                 each delay fit.
     combine_ddis='no'         : Useful for detecting systematic differences between different DDIs.
-    combine_ddis='difference' : This method is useful for cases where phase wrapping may have occured due to large
+    combine_ddis='difference' : This method is useful for cases where phase wrapping may have occurred due to large
                                 delays.
     """
     locit_parms = locals()
@@ -115,8 +115,10 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
 
     _check_if_file_exists(locit_parms['locit_name'])
     _check_if_file_will_be_overwritten(locit_parms['position_name'], locit_parms['overwrite'])
+
     locit_mds = AstrohackLocitFile(locit_parms['locit_name'])
     locit_mds._open()
+
     locit_parms['ant_info'] = locit_mds['ant_info']
     locit_parms['obs_info'] = locit_mds['obs_info']
     attributes['telescope_name'] = locit_mds._meta_data['telescope_name']
@@ -138,9 +140,12 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
         _write_meta_data(output_attr_file, attributes)
         output_attr_file = "{name}/{ext}".format(name=locit_parms['position_name'], ext=".position_input")
         _write_meta_data(output_attr_file, input_parms)
+
         position_mds = AstrohackPositionFile(locit_parms['position_name'])
         position_mds._open()
+
         return position_mds
+
     else:
         logger.warning(f"[{fname}]: No data to process")
         return None
@@ -150,6 +155,7 @@ def _check_locit_parms(fname, locit_parms):
 
     #### Parameter Checking ####
     logger = _get_astrohack_logger()
+
     parms_passed = True
 
     parms_passed = parms_passed and _check_parms(fname, locit_parms, 'locit_name', [str], default=None)

@@ -1,7 +1,10 @@
 import os
-import numpy as np
 import numbers
+import inspect
 import distributed
+
+import numpy as np
+
 from prettytable import PrettyTable
 from matplotlib import colormaps as cmaps
 
@@ -31,12 +34,15 @@ from astrohack._utils._locit import _plot_delays_chunk, _plot_position_correctio
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
 
+CURRENT_FUNCTION = 0
+
 
 class AstrohackDataFile:
     """ Base class for the Astrohack data files
     """
+
     def __init__(self, file_stem, path='./'):
-                        
+
         self._image_path = None
         self._holog_path = None
         self._panel_path = None
@@ -46,7 +52,7 @@ class AstrohackDataFile:
         self.image = None
         self.panel = None
         self.point = None
-            
+
         self._verify_holog_files(file_stem, path)
 
     def _verify_holog_files(self, file_stem, path):
@@ -54,10 +60,10 @@ class AstrohackDataFile:
         logger.info("Verifying {stem}.* files in path={path} ...".format(stem=file_stem, path=path))
 
         file_path = "{path}/{stem}.holog.zarr".format(path=path, stem=file_stem)
-            
+
         if os.path.isdir(file_path):
             logger.info("Found {stem}.holog.zarr directory ...".format(stem=file_stem))
-            
+
             self._holog_path = file_path
             self.holog = AstrohackHologFile(file_path)
 
@@ -65,7 +71,7 @@ class AstrohackDataFile:
 
         if os.path.isdir(file_path):
             logger.info("Found {stem}.image.zarr directory ...".format(stem=file_stem))
-            
+
             self._image_path = file_path
             self.image = AstrohackImageFile(file_path)
 
@@ -73,7 +79,7 @@ class AstrohackDataFile:
 
         if os.path.isdir(file_path):
             logger.info("Found {stem}.panel.zarr directory ...".format(stem=file_stem))
-            
+
             self._image_path = file_path
             self.panel = AstrohackPanelFile(file_path)
 
@@ -81,7 +87,7 @@ class AstrohackDataFile:
 
         if os.path.isdir(file_path):
             logger.info("Found {stem}.point.zarr directory ...".format(stem=file_stem))
-            
+
             self._point_path = file_path
             self.point = AstrohackPointFile(file_path)
 
@@ -91,6 +97,7 @@ class AstrohackImageFile(dict):
 
     Data within an object of this class can be selected for further inspection, plotted or outputed to FITS files.
     """
+
     def __init__(self, file):
         """ Initialize an AstrohackImageFile object.
         :param file: File to be linked to this object
@@ -107,10 +114,10 @@ class AstrohackImageFile(dict):
 
     def __getitem__(self, key):
         return super().__getitem__(key)
-    
+
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
-        
+
     def _is_open(self):
         """ Check wether the object has opened the corresponding hack file.
 
@@ -168,7 +175,7 @@ class AstrohackImageFile(dict):
         """
         logger = _get_astrohack_logger()
 
-        ant_id = 'ant_'+ant_id
+        ant_id = 'ant_' + ant_id
         ddi = f'ddi_{ddi}'
 
         if ant_id is None or ddi is None:
@@ -212,24 +219,33 @@ class AstrohackImageFile(dict):
 
         parm_dict = locals()
         parm_dict['ant'] = ant_id
-        fname = 'export_to_fits'
-        parms_passed = _check_parms(fname, parm_dict, 'complex_split', [str], acceptable_data=possible_splits,
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        
+        parms_passed = _check_parms(function_name, parm_dict, 'complex_split', [str], acceptable_data=possible_splits,
                                     default="cartesian")
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ant', [str, list],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ant', [str, list],
                                                      list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
 
-        _parm_check_passed(fname, parms_passed)
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         parm_dict['metadata'] = self._meta_data
-        _dask_general_compute(fname, self, _export_to_fits_holog_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(
+            function_name,
+            self,
+            _export_to_fits_holog_chunk,
+            parm_dict,
+            ['ant', 'ddi'],
+            parallel=parallel
+        )
 
     def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, phase_unit='deg', phase_limits=None,
-                       deviation_unit='mm', deviation_limits=None, panel_labels=False, display=False, colormap='viridis', figure_size=None,
-                       dpi=300, parallel=False):
+                       deviation_unit='mm', deviation_limits=None, panel_labels=False, display=False,
+                       colormap='viridis',
+                       figure_size=None, dpi=300, parallel=False):
         """ Aperture amplitude and phase plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
@@ -267,36 +283,37 @@ class AstrohackImageFile(dict):
         """
         parm_dict = locals()
         parm_dict['ant'] = ant_id
-        fname = 'plot_apertures'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        
+        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
                                     default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'phase_limits', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_limits', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_unit', [str],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'deviation_unit', [str],
                                                      acceptable_data=length_units, default='mm')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_limits', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'deviation_limits', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'panel_labels', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps,
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'panel_labels', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_screws', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='viridis')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
-        _parm_check_passed(fname, parms_passed)
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
-        _dask_general_compute(fname, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(function_name, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_beams(self, destination, ant_id=None, ddi=None, complex_split='polar', display=False, colormap='viridis',
                    figure_size=None, dpi=300, parallel=False):
@@ -328,26 +345,26 @@ class AstrohackImageFile(dict):
         parm_dict = locals()
         parm_dict['ant'] = ant_id
 
-        fname = 'plot_apertures'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
                                     default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'complex_split', [str],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'complex_split', [str],
                                                      acceptable_data=possible_splits, default="polar")
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps,
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='viridis')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
-        _parm_check_passed(fname, parms_passed)
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
-        _dask_general_compute(fname, self, _plot_beam_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(function_name, self, _plot_beam_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackHologFile(dict):
@@ -355,6 +372,7 @@ class AstrohackHologFile(dict):
 
     Data within an object of this class can be selected for further inspection or plotted for calibration diagnostics.
     """
+
     def __init__(self, file):
         """ Initialize an AstrohackHologFile object.
         :param file: File to be linked to this object
@@ -364,7 +382,7 @@ class AstrohackHologFile(dict):
         :rtype: AstrohackHologFile
         """
         super().__init__()
-        
+
         self.file = file
         self._meta_data = None
         self._input_pars = None
@@ -372,7 +390,7 @@ class AstrohackHologFile(dict):
 
     def __getitem__(self, key):
         return super().__getitem__(key)
-    
+
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
 
@@ -434,7 +452,7 @@ class AstrohackHologFile(dict):
         :rtype: xarray.Dataset or AstrohackHologFile
         """
         logger = _get_astrohack_logger()
-        ant_id = 'ant_'+ant_id
+        ant_id = 'ant_' + ant_id
         ddi = f'ddi_{ddi}'
         map_id = f'map_{map_id}'
 
@@ -466,9 +484,11 @@ class AstrohackHologFile(dict):
         :type ant_id: list or str, optional
         :param ddi: data description ID to use in subselection, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
-        :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning configuration,  defaults to "all" when None, ex. 0
+        :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning \
+        configuration,  defaults to "all" when None, ex. 0
         :type map_id: list or int, optional
-        :param complex_split: How to split complex data, cartesian (real + imaginary) or polar (amplitude + phase), default is polar
+        :param complex_split: How to split complex data, cartesian (real + imaginary) or polar (amplitude + phase), \
+        default is polar
         :type complex_split: str, optional
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
@@ -494,7 +514,7 @@ class AstrohackHologFile(dict):
         # clients running a new client may still be spawned but only once. If run again in a notebook session the
         # local_client check will catch it. It will also be caught if the user spawns their own instance in the
         # notebook.
-        DEFAULT_DASK_ADDRESS="127.0.0.1:8786"
+        DEFAULT_DASK_ADDRESS = "127.0.0.1:8786"
 
         logger = _get_astrohack_logger()
 
@@ -510,32 +530,32 @@ class AstrohackHologFile(dict):
 
                     logger.info("local client not found, starting ...")
 
-                    log_parms = {'log_level': 'DEBUG'}
-                    client = astrohack_local_client(cores=2, memory_limit='8GB', log_parms=log_parms)
+                    log_params = {'log_level': 'DEBUG'}
+                    client = astrohack_local_client(cores=2, memory_limit='8GB', log_params=log_params)
                     logger.info(client.dashboard_link)
 
-        fname = 'plot_diagnostics'
-        parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delta', [float], default=0.01)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ant', [str, list],
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'delta', [float], default=0.01)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ant', [str, list],
                                                      list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'map', [int, list],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'map', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'complex_split', [str],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'complex_split', [str],
                                                      acceptable_data=possible_splits, default="polar")
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=False)
 
-        _parm_check_passed(fname, parms_passed)
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         key_order = ["ddi", "map", "ant"]
-        _dask_general_compute(fname, self, _calibration_plot_chunk, parm_dict, key_order, parallel)
+        _dask_general_compute(function_name, self, _calibration_plot_chunk, parm_dict, key_order, parallel)
 
 
 class AstrohackPanelFile(dict):
@@ -544,6 +564,7 @@ class AstrohackPanelFile(dict):
     Data within an object of this class can be selected for further inspection, plotted or exported to FITS for analysis
     or exported to csv for panel adjustments.
     """
+
     def __init__(self, file):
         """ Initialize an AstrohackPanelFile object.
         :param file: File to be linked to this object
@@ -560,12 +581,12 @@ class AstrohackPanelFile(dict):
 
     def __getitem__(self, key):
         return super().__getitem__(key)
-    
+
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
-        
+
     def _is_open(self):
-        """ Check wether the object has opened the corresponding hack file.
+        """ Check whether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
         :rtype: bool
@@ -592,7 +613,7 @@ class AstrohackPanelFile(dict):
             logger.error("[AstroHackPanelFile.open()]: {}".format(e))
             self._file_is_open = False
 
-        self._input_pars = _read_meta_data(file+'/.panel_input')
+        self._input_pars = _read_meta_data(file + '/.panel_input')
 
         return self._file_is_open
 
@@ -616,7 +637,7 @@ class AstrohackPanelFile(dict):
         :return: AntennaSurface object describing for further interaction
         :rtype: AntennaSurface
         """
-        ant_id = 'ant_'+ant_id
+        ant_id = 'ant_' + ant_id
         ddi = f'ddi_{ddi}'
         xds = self[ant_id][ddi]
         telescope = Telescope(xds.attrs['telescope_name'])
@@ -634,7 +655,8 @@ class AstrohackPanelFile(dict):
         :type ddi: list or int, optional
         :param unit: Unit for screws adjustments, most length units supported, defaults to "mm"
         :type unit: str, optional
-        :param threshold: Threshold below which data is considered negligable, value is assumed to be in the same unit as the plot, if not given defaults to 10% of the maximal deviation
+        :param threshold: Threshold below which data is considered negligible, value is assumed to be in the same unit\
+         as the plot, if not given defaults to 10% of the maximal deviation
         :type threshold: float, optional
         :param panel_labels: Add panel labels to antenna surface plots, default is True
         :type panel_labels: bool, optional
@@ -649,33 +671,34 @@ class AstrohackPanelFile(dict):
 
         .. _Description:
 
-        Produce the screw adjustments from ``astrohack.panel`` results to be used at the antenna site to improve the antenna surface
+        Produce the screw adjustments from ``astrohack.panel`` results to be used at the antenna site to improve \
+        the antenna surface
 
         """
         parm_dict = locals()
         parm_dict['ant'] = ant_id
 
-        fname = 'export_screws'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
                                     default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units, 
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'unit', [str], acceptable_data=length_units,
                                                      default='mm')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'threshold', [int, float], default='None')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'panel_labels', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps, 
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'threshold', [int, float], default='None')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'panel_labels', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='RdBu_r')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
-        
-        _parm_check_passed(fname, parms_passed)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
+
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
-        _dask_general_compute(fname, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
+        _dask_general_compute(function_name, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
     def plot_antennas(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False,
                       phase_unit='deg', phase_limits=None, deviation_unit='mm', deviation_limits=None,
@@ -734,38 +757,38 @@ class AstrohackPanelFile(dict):
         parm_dict = locals()
         parm_dict['ant'] = ant_id
 
-        fname = 'plot_antennas'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
                                     default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_type', [str], acceptable_data=plot_types,
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_type', [str], acceptable_data=plot_types,
                                                      default=plot_types[0])
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'phase_limits', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_limits', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_unit', [str],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'deviation_unit', [str],
                                                      acceptable_data=length_units, default='mm')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'deviation_limits', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'deviation_limits', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'panel_labels', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_screws', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'colormap', [str], acceptable_data=cmaps,
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'panel_labels', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_screws', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='viridis')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
-        _parm_check_passed(fname, parms_passed)
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
-        _dask_general_compute(fname, self, _plot_antenna_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(function_name, self, _plot_antenna_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def export_to_fits(self, destination, ant_id=None, ddi=None, parallel=False):
         """ Export contents of an Astrohack MDS file to several FITS files in the destination folder
@@ -791,18 +814,18 @@ class AstrohackPanelFile(dict):
                      'ddi': ddi,
                      'destination': destination,
                      'parallel': parallel}
-        
-        fname = 'export_to_fits'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
-                                    default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
-                                                     list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool], default=True)
 
-        _parm_check_passed(fname, parms_passed)
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
+                                    default='all')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
+
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
-        _dask_general_compute(fname, self, _export_to_fits_panel_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(function_name, self, _export_to_fits_panel_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackPointFile(dict):
@@ -860,7 +883,7 @@ class AstrohackPointFile(dict):
             logger.error("[AstrohackPointFile]: {}".format(e))
             self._file_is_open = False
 
-        self._input_pars = _read_meta_data(file+'/.point_input')
+        self._input_pars = _read_meta_data(file + '/.point_input')
 
         return self._file_is_open
 
@@ -961,10 +984,10 @@ class AstrohackLocitFile(dict):
         (longitude, latitude and radius)
 
         """
-        fname = 'print_array_configuration'
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
         parm_dict = {'relative': relative}
-        parms_passed = _check_parms(fname, parm_dict, 'relative', [bool], default=True)
-        _parm_check_passed(fname, parms_passed)
+        parms_passed = _check_parms(function_name, parm_dict, 'relative', [bool], default=True)
+        _parm_check_passed(function_name, parms_passed)
 
         _print_array_configuration(parm_dict, self['ant_info'], self['obs_info']['telescope_name'])
 
@@ -996,17 +1019,17 @@ class AstrohackLocitFile(dict):
         """
         parm_dict = locals()
 
-        fname = 'plot_source_positions'
-        parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'precessed', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'label', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'precessed', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'label', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
-        _parm_check_passed(fname, parms_passed)
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
 
         if precessed:
@@ -1047,20 +1070,20 @@ class AstrohackLocitFile(dict):
         """
         parm_dict = locals()
 
-        fname = 'plot_array_configuration'
-        parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'stations', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'stations', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'zoff', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'unit', [str], acceptable_data=length_units,
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'zoff', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'unit', [str], acceptable_data=length_units,
                                                      default='km')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'box_size', [int, float], default=5)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'box_size', [int, float], default=5)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
-        _parm_check_passed(fname, parms_passed)
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
 
         _plot_array_configuration(self['ant_info'], self['obs_info']['telescope_name'], parm_dict)
@@ -1160,23 +1183,23 @@ class AstrohackPositionFile(dict):
 
         Produce a text file with the fit results from astrohack.locit for better determination of antenna locations.
         """
-        
+
         parm_dict = locals()
         parm_dict['ant'] = ant_id
-        fname = 'export_fit_results'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list],
                                     list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str],
                                                      default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'position_unit', [str],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'position_unit', [str],
                                                      acceptable_data=length_units, default='m')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'time_unit', [str],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'time_unit', [str],
                                                      acceptable_data=time_units, default='hour')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delay_unit', [str],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'delay_unit', [str],
                                                      acceptable_data=time_units, default='nsec')
-        _parm_check_passed(fname, parms_passed)
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         parm_dict['combined'] = self.combined
         _export_fit_results(self, parm_dict)
@@ -1215,35 +1238,35 @@ class AstrohackPositionFile(dict):
         These plots are intended to display the coverage of the sky of the fitted data
 
         """
-        
+
         parm_dict = locals()
         parm_dict['ant'] = ant_id
-        fname = 'plot_sky_coverage'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list],
                                     list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str],
                                                      default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'time_unit', [str], acceptable_data=time_units,
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'time_unit', [str], acceptable_data=time_units,
                                                      default='hour')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'angle_unit', [str], acceptable_data=trigo_units,
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'angle_unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool],
                                                      default=False)
-        _parm_check_passed(fname, parms_passed)
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         parm_dict['combined'] = self.combined
         if self.combined:
-            _dask_general_compute(fname, self, _plot_sky_coverage_chunk, parm_dict, ['ant'], parallel=parallel)
+            _dask_general_compute(function_name, self, _plot_sky_coverage_chunk, parm_dict, ['ant'], parallel=parallel)
         else:
-            _dask_general_compute(fname, self, _plot_sky_coverage_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+            _dask_general_compute(function_name, self, _plot_sky_coverage_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_delays(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', delay_unit='nsec',
                     plot_model=True, display=False, figure_size=None, dpi=300, parallel=False):
@@ -1288,37 +1311,37 @@ class AstrohackPositionFile(dict):
         parm_dict = locals()
         parm_dict['ant'] = ant_id
 
-        fname = 'plot_delays'
-        parms_passed = _check_parms(fname, parm_dict, 'ant', [str, list],
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list],
                                     list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [int, list],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'destination', [str],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str],
                                                      default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'time_unit', [str], acceptable_data=time_units,
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'time_unit', [str], acceptable_data=time_units,
                                                      default='hour')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'angle_unit', [str], acceptable_data=trigo_units,
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'angle_unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'delay_unit', [str], acceptable_data=time_units,
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'delay_unit', [str], acceptable_data=time_units,
                                                      default='nsec')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'plot_fit', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_fit', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'parallel', [bool],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool],
                                                      default=False)
-        _parm_check_passed(fname, parms_passed)
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
 
         parm_dict['combined'] = self.combined
         parm_dict['comb_type'] = self._meta_data["combine_ddis"]
         if self.combined:
-            _dask_general_compute(fname, self, _plot_delays_chunk, parm_dict, ['ant'], parallel=parallel)
+            _dask_general_compute(function_name, self, _plot_delays_chunk, parm_dict, ['ant'], parallel=parallel)
         else:
-            _dask_general_compute(fname, self, _plot_delays_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+            _dask_general_compute(function_name, self, _plot_delays_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_position_corrections(self, destination, ant_id=None, ddi=None, unit='km', box_size=5, scaling=250,
                                   display=False, figure_size=None, dpi=300):
@@ -1356,22 +1379,22 @@ class AstrohackPositionFile(dict):
         parm_dict = locals()
         parm_dict['ant'] = ant_id
 
-        fname = 'plot_position_corrections'
-        parms_passed = _check_parms(fname, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'stations', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'figuresize', [list, np.ndarray],
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'stations', [bool], default=False)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ant', [list, str],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ant', [list, str],
                                                      list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'ddi', [list, int],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [list, int],
                                                      list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'box_size', [int, float], default=5)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'scaling', [int, float], default=250)
-        parms_passed = parms_passed and _check_parms(fname, parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'box_size', [int, float], default=5)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'scaling', [int, float], default=250)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
-        _parm_check_passed(fname, parms_passed)
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         parm_dict['combined'] = self.combined
         _plot_position_corrections(parm_dict, self)
