@@ -282,31 +282,39 @@ def test_holog(set_data):
   )
 
 def test_screw_adjustments(set_data):
-  before_image = str(set_data/"vla.before.split.image.zarr")
-  after_image = str(set_data/"vla.after.split.image.zarr")
-  alma_image = str(set_data/"alma.split.image.zarr")
+    before_image = str(set_data/"vla.before.split.image.zarr")
+    after_image = str(set_data/"vla.after.split.image.zarr")
+    alma_image = str(set_data/"alma.split.image.zarr")
 
-  before_panel = panel(
-    image_name=before_image, 
-    panel_model='rigid',
-    parallel=True,
-    overwrite=True
-  )
-  after_panel = panel(
-    image_name=after_image, 
-    panel_model='rigid',
-    parallel=True,
-    overwrite=True
-  )
+    before_panel = panel(
+        image_name=before_image,
+        panel_model='rigid',
+        clip_type='relative',
+        clip_level=0.2,
+        panel_margins=0.2,
+        parallel=True,
+        overwrite=True
+    )
+    after_panel = panel(
+        image_name=after_image,
+        panel_model='rigid',
+        clip_type='relative',
+        clip_level=0.2,
+        parallel=True,
+        overwrite=True
+    )
 
-  assert verify_panel_shifts(data_dir=str(set_data))
+    assert verify_panel_shifts(data_dir=str(set_data))
 
-  alma_panel = panel(
-    image_name=alma_image, 
-    panel_model='rigid',
-    parallel=True,
-    overwrite=True
-  )
+    alma_panel = panel(
+        image_name=alma_image,
+        panel_model='rigid',
+        clip_type='relative',
+        clip_level=0.2,
+        panel_margins=0.2,
+        parallel=True,
+        overwrite=True
+    )
 
 
   assert verify_panel_positions(data_dir=str(set_data))

@@ -174,10 +174,13 @@ def test_holography_pipeline(set_data):
     )
 
     alma_panel = panel(
-      image_name=alma_image, 
-      panel_model='rigid',
-      parallel=False,
-      overwrite=True
+        image_name=alma_image,
+        panel_model='rigid',
+        clip_type='relative',
+        clip_level=0.2,
+        panel_margins=0.2,
+        parallel=False,
+        overwrite=True
     )
 
     assert verify_panel_positions(data_dir=str(set_data))
