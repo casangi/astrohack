@@ -316,5 +316,4 @@ def test_screw_adjustments(set_data):
         overwrite=True
     )
 
-
-  assert verify_panel_positions(data_dir=str(set_data))
+    assert verify_panel_positions(data_dir=str(set_data))
