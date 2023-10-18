@@ -60,7 +60,8 @@ class TestPanel():
         panel(
             image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
             panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
-            cutoff=0.2,
+            clip_type='relative',
+            clip_level=0.2,
             panel_margins=0.2,
             panel_model='rigid',
             parallel=False,
@@ -99,7 +100,8 @@ class TestPanel():
         panel_mds = panel(
             image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
             panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
-            cutoff=0.2,
+            clip_type='relative',
+            clip_level=0.2,
             panel_margins=0.2,
             ant_id=['ea25'],
             ddi=None,
@@ -118,7 +120,8 @@ class TestPanel():
         panel_mds = panel(
             image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
             panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
-            cutoff=0.2,
+            clip_type='relative',
+            clip_level=0.2,
             panel_margins=0.2,
             ddi=[0],
             panel_model='rigid',
@@ -139,7 +142,8 @@ class TestPanel():
         panel_mds = panel(
             image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
             panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
-            cutoff=0.2,
+            clip_type='relative',
+            clip_level=0.2,
             panel_margins=0.2,
             panel_model='rigid',
             parallel=False,
@@ -160,7 +164,8 @@ class TestPanel():
             panel_mds = panel(
                 image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
                 panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
-                cutoff=0.2,
+                clip_type='relative',
+                clip_level=0.2,
                 panel_margins=0.2,
                 panel_model='rigid',
                 parallel=False,
@@ -200,7 +205,7 @@ class TestPanel():
 
         assert mean_rms < default_rms
 
-    def test_panel_cutoff(self):
+    def test_panel_absolute_clip(self):
         """
            Set cutoff=0 and compare results to known truth value array.
         """
@@ -211,9 +216,45 @@ class TestPanel():
 
         panel_mds = panel(
             image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            cutoff=0.0,
+            clip_type='absolute',
+            clip_level=0.0,
             parallel=False,
             overwrite=True
         )
 
         assert np.all(panel_mds["ant_ea25"]["ddi_0"].MASK.values == reference_array)
+
+    def test_panel_relative_clip(self):
+        panel_mds = panel(
+            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            clip_type='relative',
+            clip_level=1,
+            parallel=False,
+            overwrite=True
+        )
+
+        assert np.sum(panel_mds["ant_ea25"]["ddi_0"].MASK.values) == 1
+
+    def test_panel_sigma_clip(self):
+        panel_sig2_mds = panel(
+            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            panel_name='data/clip_sigma_2.split.panel.zarr',
+            clip_type='sigma',
+            clip_level=2,
+            parallel=False,
+            overwrite=True
+        )
+        n_mask_sig2 = np.sum(panel_sig2_mds["ant_ea25"]["ddi_0"].MASK.values)
+
+        panel_sig3_mds = panel(
+            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            panel_name='data/clip_sigma_3.split.panel.zarr',
+            clip_type='sigma',
+            clip_level=3,
+            parallel=False,
+            overwrite=True
+        )
+
+        n_mask_sig3 = np.sum(panel_sig3_mds["ant_ea25"]["ddi_0"].MASK.values)
+
+        assert n_mask_sig2 > n_mask_sig3
