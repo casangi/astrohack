@@ -1,6 +1,6 @@
 [project]
 name = "astrohack"
-version = "0.3.1"
+version = "0.3.2"
 description = "Holography Antenna Commissioning Kit"
 authors = [
     {name = "Jan-Willem Steeb", email="jsteeb@nrao.edu"},
