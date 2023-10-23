@@ -251,17 +251,23 @@ def test_holography_pipeline(set_data):
     after_image = str(set_data/"vla.after.split.image.zarr")
 
     before_panel = panel(
-      image_name=before_image, 
-      panel_model='rigid',
-      parallel=False,
-      overwrite=True
+        image_name=before_image,
+        panel_model='rigid',
+        clip_type='relative',
+        clip_level=0.2,
+        panel_margins=0.2,
+        parallel=False,
+        overwrite=True
     )
 
     after_panel = panel(
-      image_name=after_image, 
-      panel_model='rigid',
-      parallel=False,
-      overwrite=True
+        image_name=after_image,
+        panel_model='rigid',
+        clip_type='relative',
+        clip_level=0.2,
+        panel_margins=0.2,
+        parallel=False,
+        overwrite=True
     )
 
     assert verify_panel_shifts(data_dir=str(set_data))

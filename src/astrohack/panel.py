@@ -1,3 +1,4 @@
+import numbers
 import os
 import shutil
 
@@ -12,7 +13,7 @@ from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 
 
-def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margins=0.2, ant_id=None, ddi=None,
+def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_model=None, panel_margins=0.05, ant_id=None, ddi=None,
           parallel=False, overwrite=False):
     """Analyze holography images to derive panel adjustments
 
@@ -20,11 +21,13 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
     :type image_name: str
     :param panel_name: Name of output file; File name will be appended with suffix *.panel.zarr*. Defaults to *basename* of input file plus holography panel file suffix.
     :type panel_name: str, optional
-    :param cutoff: Relative amplitude cut-off which defines fitting mask. Defaults to 0.2.
-    :type cutoff: float, optional
+    :param clip_type: Choose the amplitude clipping algorithm: absolute, relative or sigma, default is sigma
+    :type clip_type: str, optional
+    :param clip_level: Choose level of clipping, default is 3 (appropriate for sigma clipping)
+    :type clip_level: float, optional
     :param panel_model: Model of surface fitting function used to fit panel surfaces, None will default to "rigid". Possible models are listed below.
     :type panel_model: str, optional
-    :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.2.
+    :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.05.
     :type panel_margins: float, optional
     :param ant_id: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant_id: list or str, optional
@@ -69,6 +72,24 @@ def panel(image_name, panel_name=None, cutoff=0.2, panel_model=None, panel_margi
             - *xy_paraboloid*: fitted using scipy.optimize, bending axes are parallel to the x and y axes.
             - *rotated_paraboloid*: fitted using scipy.optimize, bending axes can be rotated by any arbitrary angle.
             - *full_paraboloid_lst_sq*: Full 9 parameter paraboloid fitted using least_squares method, tends to heavily overfit surface irregularities.
+
+        .. rubric:: Amplitude clipping:
+
+        In order to produce results of good quality parts of the aperture with low signal (e.g. the shadow of the
+        secondary mirror support) a mask is defined based on the amplitude of the aperture. There are 3 methods
+        (clip_type parameter) available to define at which level (clip_level) the amplitude is clipped:
+
+        * absolute: In this method the clipping value is taken directly from the clip_level parameter, e.g.:
+                    if the user calls `panel(..., clip_type='absolute', clip_level=3.5)` everything below 3.5 in
+                    amplitude will be clipped
+        * relative: In this method the clipping value is derived from the amplitude maximum, e.g.: if the user calls
+                    `panel(..., clip_type='relative', clip_level=0.2) everything below 20% of the maximum amplitude will
+                    be clipped
+        * sigma;    In this method the clipping value is computed from the RMS noise in the amplitude outside the
+                    physical dish, e.g.: if the user calls `panel(clip_type='sigma', clip_level=3)` everything below 3
+                    times the RMS noise in amplitude will be clipped.
+
+        The default clipping is set to 3 sigma.
 
 
     .. _Description:
@@ -168,12 +189,14 @@ def _check_panel_parms(fname, panel_params):
                                                  list_acceptable_data_types=[str], default='all')
     parms_passed = parms_passed and _check_parms(fname, panel_params, 'ddi', [list, int],
                                                  list_acceptable_data_types=[int], default='all')
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'cutoff', [float], acceptable_range=[0, 1],
-                                                 default=0.2)
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_model', [str], acceptable_data=panel_models,
-                                                 default="rigid")
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'clip_type', [str],
+                                                 acceptable_data=['absolute', 'relative', 'sigma'], default='sigma')
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'clip_level', [int, float],
+                                                 default=3)
+    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_model', [str],
+                                                 acceptable_data=panel_models, default="rigid")
     parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_margins', [float],
-                                                 acceptable_range=[0, 0.5], default=0.2)
+                                                 acceptable_range=[0, 0.5], default=0.05)
     parms_passed = parms_passed and _check_parms(fname, panel_params, 'parallel', [bool], default=False)
     parms_passed = parms_passed and _check_parms(fname, panel_params, 'overwrite', [bool], default=False)
 
