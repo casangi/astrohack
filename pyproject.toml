@@ -23,6 +23,7 @@ dependencies = [
 'prettytable',
 'pytest',
 'pytest-cov',
+'pytest-benchmark[histogram]',
 'pytest-html',
 'scikit_image',
 'scipy',
