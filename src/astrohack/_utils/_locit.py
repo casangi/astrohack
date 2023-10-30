@@ -1,4 +1,3 @@
-import numpy as np
 from prettytable import PrettyTable
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
