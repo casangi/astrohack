@@ -1,4 +1,3 @@
-import numpy as np
 from prettytable import PrettyTable
 from astropy.coordinates import EarthLocation
 from astropy.time import Time
@@ -306,29 +305,30 @@ def _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, mod
     fit_kterm = locit_parms['fit_kterm']
     fit_rate = locit_parms['fit_rate']
     antenna = locit_parms['ant_info'][locit_parms['this_ant']]
+    error = np.sqrt(variance)
 
     output_xds = xr.Dataset()
     output_xds.attrs['polarization'] = locit_parms['polarization']
     output_xds.attrs['frequency'] = frequency
     output_xds.attrs['position_fit'] = fit[1:4]
-    output_xds.attrs['position_error'] = variance[1:4]
+    output_xds.attrs['position_error'] = error[1:4]
     output_xds.attrs['fixed_delay_fit'] = fit[0]
-    output_xds.attrs['fixed_delay_error'] = variance[0]
+    output_xds.attrs['fixed_delay_error'] = error[0]
     output_xds.attrs['antenna_info'] = antenna
     output_xds.attrs['elevation_limit'] = elevation_limit
     output_xds.attrs['chi_squared'] = chi_squared
 
     if fit_kterm and fit_rate:
         output_xds.attrs['koff_fit'] = fit[4]
-        output_xds.attrs['koff_error'] = variance[4]
+        output_xds.attrs['koff_error'] = error[4]
         output_xds.attrs['rate_fit'] = fit[5]
-        output_xds.attrs['rate_error'] = variance[5]
+        output_xds.attrs['rate_error'] = error[5]
     elif fit_kterm and not fit_rate:
         output_xds.attrs['koff_fit'] = fit[4]
-        output_xds.attrs['koff_error'] = variance[4]
+        output_xds.attrs['koff_error'] = error[4]
     elif not fit_kterm and fit_rate:
         output_xds.attrs['rate_fit'] = fit[4]
-        output_xds.attrs['rate_error'] = variance[4]
+        output_xds.attrs['rate_error'] = error[4]
     else:
         pass  # Nothing to be added to the attributes
 

@@ -1,10 +1,8 @@
-import scipy
 import scipy.signal as scisig
-import numba
-
 import numpy as np
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+
 
 def _calculate_suggested_grid_paramater(parameter, quantile=0.01):
     import scipy
@@ -33,6 +31,7 @@ def _calculate_suggested_grid_paramater(parameter, quantile=0.01):
 
         return np.mean(parameter)
 
+
 def _apply_mask(data, scaling=0.5):
     """ Applies a cropping mask to the input data according to the scale factor
 
@@ -58,6 +57,7 @@ def _apply_mask(data, scaling=0.5):
 
     start = int(x // 2 - mask // 2)
     return data[start : (start + mask), start : (start + mask)]
+
 
 def _calc_coords(image_size, cell_size):
     """Calculate the center pixel of the image given a cell and image size
@@ -95,7 +95,7 @@ def _find_nearest(array, value):
     return idx, array[idx]
 
 
-#@njit(cache=False, nogil=True)
+# @njit(cache=False, nogil=True)
 def _chunked_average(data, weight, avg_map, avg_freq):
 
     avg_chan_index = np.arange(avg_freq.shape[0])
@@ -132,6 +132,7 @@ def _chunked_average(data, weight, avg_map, avg_freq):
                     data_avg[time_index, avg_index, pol_index] = (data_avg[time_index, avg_index, pol_index] / weight_sum[time_index, avg_index, pol_index])
 
     return data_avg, weight_sum
+
 
 def _calculate_euclidean_distance(x, y, center):
     """ Calculates the euclidean distance between a pair of pair of input points.
@@ -175,6 +176,7 @@ def _find_peak_beam_value(data, height=0.5, scaling=0.5):
 
     return masked_data[x[index], y[index]]
 
+
 def _gauss_elimination_numpy(system, vector):
     """
     Gauss elimination solving of a system using numpy
@@ -187,6 +189,7 @@ def _gauss_elimination_numpy(system, vector):
     """
     inverse = np.linalg.inv(system)
     return np.dot(inverse, vector)
+
 
 def _least_squares_fit(system, vector):
     """
@@ -204,14 +207,17 @@ def _least_squares_fit(system, vector):
     if system.shape[0] < system.shape[1]:
         raise Exception('System must have at least the same number of rows as it has of columns')
     
-    fit = np.linalg.lstsq(system, vector, rcond=None)
-    
-    result = fit[0]
-    residuals = fit[1]
+    result, residuals, _, _ = np.linalg.lstsq(system, vector, rcond=None)
+    dof = len(vector)-len(result)
+    if dof > 0:
+        errs = (vector - np.dot(system, result))/dof
+    else:
+        errs = (vector - np.dot(system, result))
+    sigma2 = np.sum(errs**2)
     covar = np.linalg.inv(np.dot(system.T, system))
-    variances = np.diagonal(covar)
-    
-    return result, variances, residuals
+    variance = np.diagonal(sigma2*covar)
+    return result, variance, residuals
+
 
 def _least_squares_fit_block(system, vector):
     """
@@ -269,6 +275,7 @@ def _get_grid_parms(vis_map_dict, pnt_map_dict, ant_names):
         }
 
     return grid_parms
+
 
 def _significant_digits(x, digits):
     if np.isscalar(x):
