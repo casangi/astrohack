@@ -495,10 +495,13 @@ class AntennaSurface:
             basename: basename for the plot, the prefix 'ancillary_amplitude' will be added to it
             parm_dict: dictionary with plotting parameters
         """
-        vmin, vmax = np.nanmin(self.amplitude), np.nanmax(self.amplitude)
-        title = "Amplitude, min={0:.5f}, max ={1:.5f} V".format(vmin, vmax)
+        if parm_dict['amplitude_limits'] is None or parm_dict['amplitude_limits'] == "None":
+            parm_dict['z_lim'] = np.nanmin(self.amplitude), np.nanmax(self.amplitude)
+        else:
+            parm_dict['z_lim'] = parm_dict['amplitude_limits']
+
+        title = "Amplitude, min={0:.5f}, max ={1:.5f} V".format(parm_dict['z_lim'][0], parm_dict['z_lim'][1])
         plotname = _add_prefix(basename, 'amplitude')
-        parm_dict['z_lim'] = [vmin, vmax]
         parm_dict['unit'] = self.amp_unit
         self._plot_map(plotname, self.amplitude, title, parm_dict)
 
