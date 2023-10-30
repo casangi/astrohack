@@ -6,7 +6,6 @@ import distributed
 import numpy as np
 
 from prettytable import PrettyTable
-from matplotlib import colormaps as cmaps
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._dio import _read_meta_data
@@ -33,6 +32,7 @@ from astrohack._utils._locit import _plot_delays_chunk, _plot_position_correctio
 
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
+from astrohack._utils._plot_commons import astrohack_cmaps as cmaps
 
 CURRENT_FUNCTION = 0
 

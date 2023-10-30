@@ -1,7 +1,12 @@
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib import colormaps as cmaps
+from matplotlib import colormaps as matplotlib_cmaps
+from matplotlib.colors import ListedColormap
 from astrohack._utils import figsize, fontsize
+
+
+astrohack_cmaps = list(matplotlib_cmaps.keys())
+astrohack_cmaps.append('AIPS')
 
 
 def _create_figure_and_axes(figure_size, boxes, default_figsize=figsize, sharex=False, sharey=False):
@@ -110,6 +115,9 @@ def _well_positioned_colorbar(ax, fig, image, label, location='right', size='5%'
 
 def _get_proper_color_map(user_cmap, default_cmap='viridis'):
     if user_cmap is None or user_cmap == 'None':
-        return cmaps[default_cmap]
+        return matplotlib_cmaps[default_cmap]
+    elif user_cmap == 'AIPS':
+        cmap = ListedColormap(["darkblue", "blue", "grey", "yellow", "orange", "red"])
+        return cmap
     else:
-        return cmaps[user_cmap]
+        return matplotlib_cmaps[user_cmap]
