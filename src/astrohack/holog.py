@@ -26,7 +26,7 @@ def holog(
         chan_average=True,
         chan_tolerance_factor=0.005,
         scan_average=True,
-        ant_id=None,
+        ant=None,
         ddi=None,
         to_stokes=True,
         apply_mask=True,
@@ -66,8 +66,8 @@ def holog(
     :type chan_tolerance_factor: float, optional
     :param scan_average: Boolean dicating whether averagin is done over scan., defaults to True
     :type scan_average: bool, optional
-    :param ant_id: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
-    :type ant_id: list or str, optional
+    :param ant: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
+    :type ant: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
     :param to_stokes: Dictates whether polarization is computed according to stokes values., defaults to True
@@ -135,9 +135,6 @@ def holog(
     logger = _get_astrohack_logger()
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-    # Shouldn't have to do this but the name changes ant_id->ant for some reason. Fix later.
-    holog_params['ant'] = ant_id
 
     ######### Parameter Checking #########
     holog_params = _check_holog_params(function_name=function_name, holog_params=holog_params)
