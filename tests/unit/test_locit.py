@@ -72,7 +72,7 @@ class TestLocit():
         position_mds = locit(
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
-            ant_id=["ea25"],
+            ant=["ea25"],
             parallel=False,
             overwrite=True
         )

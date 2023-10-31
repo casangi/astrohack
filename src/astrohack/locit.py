@@ -8,7 +8,7 @@ from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 
 def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='both', fit_engine='linear algebra',
-          fit_kterm=False, fit_delay_rate=True, ant_id=None, ddi=None, combine_ddis='simple', parallel=False,
+          fit_kterm=False, fit_delay_rate=True, ant=None, ddi=None, combine_ddis='simple', parallel=False,
           overwrite=False):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
@@ -27,8 +27,8 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     :type fit_delay_rate: bool, optional
     :param fit_engine: What engine to use on fitting, default is linear algebra
     :type fit_engine: str, optional
-    :param ant_id: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
-    :type ant_id: list or str, optional
+    :param ant: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
+    :type ant: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
     :param combine_ddis: Type of DDI combination, if desired, defaults to simple
@@ -104,7 +104,6 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
                                 delays.
     """
     locit_parms = locals()
-    locit_parms['ant'] = ant_id
     logger = _get_astrohack_logger()
 
     fname = 'locit'
