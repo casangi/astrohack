@@ -160,13 +160,13 @@ class AstrohackImageFile(dict):
         _print_data_contents(self, ["Antenna", "DDI"])
         _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
 
-    def select(self, ant_id, ddi, complex_split='cartesian'):
+    def select(self, ant, ddi, complex_split='cartesian'):
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
 
         :param ddi: Data description ID, ex. 0.
         :type ddi: int
-        :param ant_id: Antenna ID, ex. ea25.
-        :type ant_id: str
+        :param ant: Antenna ID, ex. ea25.
+        :type ant: str
         :param complex_split: Is the data to b left as is (Real + imag: cartesian, default) or split into Amplitude and Phase (polar)
         :type complex_split: str, optional
 
@@ -175,27 +175,27 @@ class AstrohackImageFile(dict):
         """
         logger = _get_astrohack_logger()
 
-        ant_id = 'ant_' + ant_id
+        ant = 'ant_' + ant
         ddi = f'ddi_{ddi}'
 
-        if ant_id is None or ddi is None:
+        if ant is None or ddi is None:
             logger.info("[select]: No selections made ...")
             return self
         else:
             if complex_split == 'polar':
-                return self[ant_id][ddi].apply(np.absolute), self[ant_id][ddi].apply(np.angle, deg=True)
+                return self[ant][ddi].apply(np.absolute), self[ant][ddi].apply(np.angle, deg=True)
             else:
-                return self[ant_id][ddi]
+                return self[ant][ddi]
 
-    def export_to_fits(self, destination, complex_split='cartesian', ant_id=None, ddi=None, parallel=False):
+    def export_to_fits(self, destination, complex_split='cartesian', ant=None, ddi=None, parallel=False):
         """ Export contents of an AstrohackImageFile object to several FITS files in the destination folder
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
         :param complex_split: How to split complex data, cartesian (real + imag, default) or polar (amplitude + phase)
         :type complex_split: str, optional
-        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
-        :type ant_id: list or str, optional
+        :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param parallel: If True will use an existing astrohack client to export FITS in parallel, default is False
@@ -218,7 +218,6 @@ class AstrohackImageFile(dict):
         """
 
         parm_dict = locals()
-        parm_dict['ant'] = ant_id
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         
         parms_passed = _check_parms(function_name, parm_dict, 'complex_split', [str], acceptable_data=possible_splits,
@@ -242,7 +241,7 @@ class AstrohackImageFile(dict):
             parallel=parallel
         )
 
-    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, amplitude_limits=None,
+    def plot_apertures(self, destination, ant=None, ddi=None, plot_screws=False, amplitude_limits=None,
                        phase_unit='deg', phase_limits=None, deviation_unit='mm', deviation_limits=None,
                        panel_labels=False, display=False, colormap='viridis', figure_size=None, dpi=300,
                        parallel=False):
@@ -250,8 +249,8 @@ class AstrohackImageFile(dict):
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
-        :type ant_id: list or str, optional
+        :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param plot_screws: Add screw positions to plot, default is False
@@ -284,7 +283,6 @@ class AstrohackImageFile(dict):
         Produce plots from ``astrohack.holog`` results for analysis
         """
         parm_dict = locals()
-        parm_dict['ant'] = ant_id
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         
         parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
@@ -320,14 +318,14 @@ class AstrohackImageFile(dict):
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(function_name, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_beams(self, destination, ant_id=None, ddi=None, complex_split='polar', display=False, colormap='viridis',
+    def plot_beams(self, destination, ant=None, ddi=None, complex_split='polar', display=False, colormap='viridis',
                    figure_size=None, dpi=300, parallel=False):
         """ Beam plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
-        :type ant_id: list or str, optional
+        :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param complex_split: How to split complex beam data, cartesian (real + imag) or polar (amplitude + phase, default)
@@ -348,7 +346,6 @@ class AstrohackImageFile(dict):
         Produce plots from ``astrohack.holog`` results for analysis
         """
         parm_dict = locals()
-        parm_dict['ant'] = ant_id
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
@@ -443,29 +440,29 @@ class AstrohackHologFile(dict):
         _print_data_contents(self, ["DDI", "Map", "Antenna"])
         _print_method_list([self.summary, self.select, self.plot_diagnostics])
 
-    def select(self, ddi=None, map_id=None, ant_id=None):
+    def select(self, ddi=None, map_id=None, ant=None):
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
 
         :param ddi: Data description ID, ex. 0.
         :type ddi: int
         :param map_id: Mapping ID, ex. 0.
         :type map_id: int
-        :param ant_id: Antenna ID, ex. ea25.
-        :type ant_id: str
+        :param ant: Antenna ID, ex. ea25.
+        :type ant: str
 
         :return: Corresponding xarray dataset, or self if selection is None
         :rtype: xarray.Dataset or AstrohackHologFile
         """
         logger = _get_astrohack_logger()
-        ant_id = 'ant_' + ant_id
+        ant = 'ant_' + ant
         ddi = f'ddi_{ddi}'
         map_id = f'map_{map_id}'
 
-        if ant_id is None or ddi is None or map_id is None:
+        if ant is None or ddi is None or map_id is None:
             logger.info("[select]: No selection made ...")
             return self
         else:
-            return self[ddi][map_id][ant_id]
+            return self[ddi][map_id][ant]
 
     @property
     def meta_data(self):
@@ -477,7 +474,7 @@ class AstrohackHologFile(dict):
 
         return self._meta_data
 
-    def plot_diagnostics(self, destination, delta=0.01, ant_id=None, ddi=None, map_id=None, complex_split='polar',
+    def plot_diagnostics(self, destination, delta=0.01, ant=None, ddi=None, map_id=None, complex_split='polar',
                          display=False, figure_size=None, dpi=300, parallel=False):
         """ Plot diagnostic calibration plots from the holography data file.
 
@@ -485,8 +482,8 @@ class AstrohackHologFile(dict):
         :type destination: str
         :param delta: Defines a fraction of cell_size around which to look for peaks., defaults to 0.01
         :type delta: float, optional
-        :param ant_id: antenna ID to use in subselection, defaults to "all" when None, ex. ea25
-        :type ant_id: list or str, optional
+        :param ant: antenna ID to use in subselection, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
         :param ddi: data description ID to use in subselection, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning \
@@ -524,7 +521,6 @@ class AstrohackHologFile(dict):
         logger = _get_astrohack_logger()
 
         parm_dict = locals()
-        parm_dict['ant'] = ant_id
         if parallel:
             if not distributed.client._get_global_client():
                 try:
