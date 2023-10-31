@@ -54,7 +54,7 @@ class TestExtractLocit():
         locit_mds = extract_locit(
             self.cal_table,
             locit_name=self.locit_name,
-            ant_id='ea17'
+            ant='ea17'
         )
 
         # There should only be 1 antenna in the dict named ea17
