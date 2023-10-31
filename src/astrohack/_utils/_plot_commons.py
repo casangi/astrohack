@@ -117,7 +117,17 @@ def _get_proper_color_map(user_cmap, default_cmap='viridis'):
     if user_cmap is None or user_cmap == 'None':
         return matplotlib_cmaps[default_cmap]
     elif user_cmap == 'AIPS':
-        cmap = ListedColormap(["darkblue", "blue", "grey", "yellow", "orange", "red"])
+        # 8 bit color values picked from AIPS plots using GIMP
+        cmap = ListedColormap([[ 71/255.,  71/255.,  71/255., 1],  # Grey
+                               [104/255.,   0/255., 142/255., 1],  # Purple/ dark blue?
+                               [  0/255.,   0/255., 186/255., 1],  # Blue
+                               [ 71/255., 147/255., 230/255., 1],  # Pink
+                               [  0/255., 130/255.,   0/255., 1],  # Green
+                               [  0/255., 243/255.,   0/255., 1],  # Light Green
+                               [255/255., 255/255.,   0/255., 1],  # Yellow
+                               [255/255., 158/255.,   0/255., 1],  # Orange
+                               [255/255.,   0/255.,   0/255., 1]   # Red
+                               ])
         return cmap
     else:
         return matplotlib_cmaps[user_cmap]
