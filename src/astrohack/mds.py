@@ -627,31 +627,31 @@ class AstrohackPanelFile(dict):
         _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
                             self.plot_antennas])
 
-    def get_antenna(self, ant_id, ddi):
+    def get_antenna(self, ant, ddi):
         """ Retrieve an AntennaSurface object for interaction
 
-        :param ant_id: Antenna to be retrieved, ex. ea25.
-        :type ant_id: str
+        :param ant: Antenna to be retrieved, ex. ea25.
+        :type ant: str
         :param ddi: DDI to be retrieved for ant_id, ex. 0
         :type ddi: int
 
         :return: AntennaSurface object describing for further interaction
         :rtype: AntennaSurface
         """
-        ant_id = 'ant_' + ant_id
+        ant = 'ant_' + ant
         ddi = f'ddi_{ddi}'
-        xds = self[ant_id][ddi]
+        xds = self[ant][ddi]
         telescope = Telescope(xds.attrs['telescope_name'])
         return AntennaSurface(xds, telescope, reread=True)
 
-    def export_screws(self, destination, ant_id=None, ddi=None, unit='mm', threshold=None, panel_labels=True,
+    def export_screws(self, destination, ant=None, ddi=None, unit='mm', threshold=None, panel_labels=True,
                       display=False, colormap='RdBu_r', figure_size=None, dpi=300):
         """ Export screw adjustments to text files and optionally plots.
 
         :param destination: Name of the destination folder to contain exported screw adjustments
         :type destination: str
-        :param ant_id: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
-        :type ant_id: list or str, optional
+        :param ant: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param unit: Unit for screws adjustments, most length units supported, defaults to "mm"
@@ -677,7 +677,6 @@ class AstrohackPanelFile(dict):
 
         """
         parm_dict = locals()
-        parm_dict['ant'] = ant_id
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
@@ -685,8 +684,8 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'unit', [str], acceptable_data=length_units,
-                                                     default='mm')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'unit', [str],
+                                                     acceptable_data=length_units, default='mm')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'threshold', [int, float], default='None')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'panel_labels', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
@@ -701,7 +700,7 @@ class AstrohackPanelFile(dict):
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(function_name, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
-    def plot_antennas(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False,
+    def plot_antennas(self, destination, ant=None, ddi=None, plot_type='deviation', plot_screws=False,
                       amplitude_limits=None, phase_unit='deg', phase_limits=None, deviation_unit='mm',
                       deviation_limits=None, panel_labels=False, display=False, colormap='viridis', figure_size=None,
                       dpi=300, parallel=False):
@@ -709,8 +708,8 @@ class AstrohackPanelFile(dict):
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
-        :type ant_id: list or str, optional
+        :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param plot_type: type of plot to be produced, deviation, phase, ancillary or all, default is deviation
@@ -759,7 +758,6 @@ class AstrohackPanelFile(dict):
         """
         logger = _get_astrohack_logger()
         parm_dict = locals()
-        parm_dict['ant'] = ant_id
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
@@ -797,13 +795,13 @@ class AstrohackPanelFile(dict):
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(function_name, self, _plot_antenna_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def export_to_fits(self, destination, ant_id=None, ddi=None, parallel=False):
+    def export_to_fits(self, destination, ant=None, ddi=None, parallel=False):
         """ Export contents of an Astrohack MDS file to several FITS files in the destination folder
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
-        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
-        :type ant_id: list or str, optional
+        :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param parallel: If True will use an existing astrohack client to export FITS in parallel, default is False
@@ -817,10 +815,7 @@ class AstrohackPanelFile(dict):
         The FITS fils produced by this method have been tested and are known to work with CARTA and DS9
         """
 
-        parm_dict = {'ant': ant_id,
-                     'ddi': ddi,
-                     'destination': destination,
-                     'parallel': parallel}
+        parm_dict = locals()
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
@@ -832,7 +827,8 @@ class AstrohackPanelFile(dict):
 
         _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
-        _dask_general_compute(function_name, self, _export_to_fits_panel_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(function_name, self, _export_to_fits_panel_chunk, parm_dict, ['ant', 'ddi'],
+                              parallel=parallel)
 
 
 class AstrohackPointFile(dict):
@@ -1169,14 +1165,14 @@ class AstrohackPositionFile(dict):
 
         return self._file_is_open
 
-    def export_fit_results(self, destination, ant_id=None, ddi=None, position_unit='m', time_unit='hour',
+    def export_fit_results(self, destination, ant=None, ddi=None, position_unit='m', time_unit='hour',
                            delay_unit='nsec'):
         """ Export antenna position fit results to a text file.
 
         :param destination: Name of the destination folder to contain exported fit results
         :type destination: str
-        :param ant_id: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
-        :type ant_id: list or str, optional
+        :param ant: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param position_unit: Unit to list position fit results, defaults to 'm'
@@ -1192,7 +1188,6 @@ class AstrohackPositionFile(dict):
         """
 
         parm_dict = locals()
-        parm_dict['ant'] = ant_id
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list],
                                     list_acceptable_data_types=[str], default='all')
@@ -1211,14 +1206,14 @@ class AstrohackPositionFile(dict):
         parm_dict['combined'] = self.combined
         _export_fit_results(self, parm_dict)
 
-    def plot_sky_coverage(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', display=False,
+    def plot_sky_coverage(self, destination, ant=None, ddi=None, time_unit='hour', angle_unit='deg', display=False,
                           figure_size=None, dpi=300, parallel=False):
         """ Plot the sky coverage of the data used for antenna position fitting
 
         :param destination: Name of the destination folder to contain the plots
         :type destination: str
-        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
-        :type ant_id: list or str, optional
+        :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param angle_unit: Unit for angle in plots, defaults to 'deg'
@@ -1247,7 +1242,7 @@ class AstrohackPositionFile(dict):
         """
 
         parm_dict = locals()
-        parm_dict['ant'] = ant_id
+
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list],
                                     list_acceptable_data_types=[str], default='all')
@@ -1275,14 +1270,14 @@ class AstrohackPositionFile(dict):
         else:
             _dask_general_compute(function_name, self, _plot_sky_coverage_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_delays(self, destination, ant_id=None, ddi=None, time_unit='hour', angle_unit='deg', delay_unit='nsec',
+    def plot_delays(self, destination, ant=None, ddi=None, time_unit='hour', angle_unit='deg', delay_unit='nsec',
                     plot_model=True, display=False, figure_size=None, dpi=300, parallel=False):
         """ Plot the delays used for antenna position fitting and optionally the resulting fit.
 
         :param destination: Name of the destination folder to contain the plots
         :type destination: str
-        :param ant_id: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
-        :type ant_id: list or str, optional
+        :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param angle_unit: Unit for angle in plots, defaults to 'deg'
@@ -1316,7 +1311,6 @@ class AstrohackPositionFile(dict):
         """
 
         parm_dict = locals()
-        parm_dict['ant'] = ant_id
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list],
@@ -1350,14 +1344,14 @@ class AstrohackPositionFile(dict):
         else:
             _dask_general_compute(function_name, self, _plot_delays_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_position_corrections(self, destination, ant_id=None, ddi=None, unit='km', box_size=5, scaling=250,
+    def plot_position_corrections(self, destination, ant=None, ddi=None, unit='km', box_size=5, scaling=250,
                                   display=False, figure_size=None, dpi=300):
         """ Plot Antenna position corrections on an array configuration plot
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
-        :param ant_id: Select which antennas are to be plotted, defaults to all when None, ex. ea25
-        :type ant_id: list or str, optional
+        :param ant: Select which antennas are to be plotted, defaults to all when None, ex. ea25
+        :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param unit: Unit for the plot, valid values are length units, default is km
@@ -1384,7 +1378,6 @@ class AstrohackPositionFile(dict):
         """
 
         parm_dict = locals()
-        parm_dict['ant'] = ant_id
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
