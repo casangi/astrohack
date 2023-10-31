@@ -9,7 +9,7 @@ from astrohack.mds import AstrohackImageFile
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 
-def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False, parallel=False, overwrite=False):
+def combine(image_name, combine_name=None, ant=None, ddi=None, weighted=False, parallel=False, overwrite=False):
     """Combine DDIs in a Holography image to increase SNR
 
     :param image_name: Input holography data file name. Accepted data format is the output from ``astrohack.holog.holog``
@@ -17,8 +17,8 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
     :param combine_name: Name of output file; File name will be appended with suffix *.combine.zarr*. Defaults to \
     *basename* of input file plus holography panel file suffix.
     :type combine_name: str, optional
-    :param ant_id: List of antennas to be processed. None will use all antennas. Defaults to None, ex. ea25.
-    :type ant_id: list or str, optional
+    :param ant: List of antennas to be processed. None will use all antennas. Defaults to None, ex. ea25.
+    :type ant: list or str, optional
     :param ddi: List of DDIs to be combined. None will use all DDIs. Defaults to None, ex. [0, ..., 8].
     :type ddi: list of int, optional
     :param weighted: Weight phases by the corresponding amplitudes.
@@ -52,7 +52,6 @@ def combine(image_name, combine_name=None, ant_id=None, ddi=None, weighted=False
     """
 
     combine_params = locals()
-    combine_params['ant'] = ant_id
     logger = _get_astrohack_logger()
     fname = 'combine'
     combine_params = _check_combine_parms(fname, combine_params)
