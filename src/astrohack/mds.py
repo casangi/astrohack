@@ -6,7 +6,6 @@ import distributed
 import numpy as np
 
 from prettytable import PrettyTable
-from matplotlib import colormaps as cmaps
 
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._dio import _read_meta_data
@@ -33,6 +32,7 @@ from astrohack._utils._locit import _plot_delays_chunk, _plot_position_correctio
 
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
+from astrohack._utils._plot_commons import astrohack_cmaps as cmaps
 
 CURRENT_FUNCTION = 0
 
@@ -242,10 +242,10 @@ class AstrohackImageFile(dict):
             parallel=parallel
         )
 
-    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, phase_unit='deg', phase_limits=None,
-                       deviation_unit='mm', deviation_limits=None, panel_labels=False, display=False,
-                       colormap='viridis',
-                       figure_size=None, dpi=300, parallel=False):
+    def plot_apertures(self, destination, ant_id=None, ddi=None, plot_screws=False, amplitude_limits=None,
+                       phase_unit='deg', phase_limits=None, deviation_unit='mm', deviation_limits=None,
+                       panel_labels=False, display=False, colormap='viridis', figure_size=None, dpi=300,
+                       parallel=False):
         """ Aperture amplitude and phase plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
@@ -256,6 +256,8 @@ class AstrohackImageFile(dict):
         :type ddi: list or int, optional
         :param plot_screws: Add screw positions to plot, default is False
         :type plot_screws: bool, optional
+        :param amplitude_limits: Lower then Upper limit for amplitude in volts default is None (Guess from data)
+        :type amplitude_limits: numpy.ndarray, list, tuple, optional
         :param phase_unit: Unit for phase plots, defaults is 'deg'
         :type phase_unit: str, optional
         :param phase_limits: Lower then Upper limit for phase, value in phase_unit, default is None (Guess from data)
@@ -290,6 +292,9 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'amplitude_limits', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_limits', [list, np.ndarray],
@@ -701,8 +706,9 @@ class AstrohackPanelFile(dict):
         _dask_general_compute(function_name, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
     def plot_antennas(self, destination, ant_id=None, ddi=None, plot_type='deviation', plot_screws=False,
-                      phase_unit='deg', phase_limits=None, deviation_unit='mm', deviation_limits=None,
-                      panel_labels=False, display=False, colormap='viridis', figure_size=None, dpi=300, parallel=False):
+                      amplitude_limits=None, phase_unit='deg', phase_limits=None, deviation_unit='mm',
+                      deviation_limits=None, panel_labels=False, display=False, colormap='viridis', figure_size=None,
+                      dpi=300, parallel=False):
         """ Create diagnostic plots of antenna surfaces from panel data file.
 
         :param destination: Name of the destination folder to contain plots
@@ -715,6 +721,8 @@ class AstrohackPanelFile(dict):
         :type plot_type: str, optional
         :param plot_screws: Add screw positions to plot
         :type plot_screws: bool, optional
+        :param amplitude_limits: Lower then Upper limit for amplitude in volts default is None (Guess from data)
+        :type amplitude_limits: numpy.ndarray, list, tuple, optional
         :param phase_unit: Unit for phase plots, defaults is 'deg'
         :type phase_unit: str, optional
         :param phase_limits: Lower then Upper limit for phase, value in phase_unit, default is None (Guess from data)
@@ -765,6 +773,9 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_type', [str], acceptable_data=plot_types,
                                                      default=plot_types[0])
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'amplitude_limits', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_limits', [list, np.ndarray],
