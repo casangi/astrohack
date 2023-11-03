@@ -8,7 +8,7 @@ from astrohack._utils._extract_locit import _extract_source_and_telescope, _extr
 from astrohack.mds import AstrohackLocitFile
 
 
-def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=False):
+def extract_locit(cal_table, locit_name=None, ant=None, ddi=None, overwrite=False):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
 
@@ -16,8 +16,8 @@ def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=F
     :type cal_table: str
     :param locit_name: Name of *<locit_name>.locit.zarr* file to create. Defaults to measurement set name with *locit.zarr* extension.
     :type locit_name: str, optional
-    :param ant_id: List of antennas/antenna to be extracted, defaults to "all" when None, ex. ea25
-    :type ant_id: list or str, optional
+    :param ant: List of antennas/antenna to be extracted, defaults to "all" when None, ex. ea25
+    :type ant: list or str, optional
     :param ddi: List of ddis/ddi to be extracted, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
     :param overwrite: Boolean for whether to overwrite current locit.zarr file, defaults to False.
@@ -35,7 +35,6 @@ def extract_locit(cal_table, locit_name=None, ant_id=None, ddi=None, overwrite=F
 
     """
     extract_locit_parms = locals()
-    extract_locit_parms['ant'] = ant_id
     logger = _get_astrohack_logger()
 
     fname = 'extract_locit'

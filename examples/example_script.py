@@ -76,7 +76,7 @@ def process():
     # Plot image
     image_mds.plot_apertures(
     destination="plots",
-    ant_id="ea15",
+    ant="ea15",
     display=True
     )
 

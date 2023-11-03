@@ -115,7 +115,7 @@ class TestHolog():
         image_mds = holog(
             holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
             image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            ant_id=['ea25'],
+            ant=['ea25'],
             overwrite=True,
             parallel=False
         )

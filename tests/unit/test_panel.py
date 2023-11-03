@@ -103,7 +103,7 @@ class TestPanel():
             clip_type='relative',
             clip_level=0.2,
             panel_margins=0.2,
-            ant_id=['ea25'],
+            ant=['ea25'],
             ddi=None,
             panel_model='rigid',
             parallel=False,

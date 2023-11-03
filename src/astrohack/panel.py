@@ -1,4 +1,3 @@
-import numbers
 import os
 import shutil
 
@@ -13,8 +12,8 @@ from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 
 
-def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_model=None, panel_margins=0.05, ant_id=None, ddi=None,
-          parallel=False, overwrite=False):
+def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_model=None, panel_margins=0.05, ant=None,
+          ddi=None, parallel=False, overwrite=False):
     """Analyze holography images to derive panel adjustments
 
     :param image_name: Input holography data file name. Accepted data formats are the output from ``astrohack.holog.holog`` and AIPS holography data prepackaged using ``astrohack.panel.aips_holog_to_astrohack``.
@@ -29,8 +28,8 @@ def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_mo
     :type panel_model: str, optional
     :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.05.
     :type panel_margins: float, optional
-    :param ant_id: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
-    :type ant_id: list or str, optional
+    :param ant: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
+    :type ant: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
     :param parallel: Run in parallel. Defaults to False.
@@ -111,7 +110,7 @@ def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_mo
     """
 
     panel_params = locals()
-    panel_params['ant'] = ant_id
+    panel_params['ant'] = ant
     logger = _get_astrohack_logger()
     fname = 'panel'
     panel_params = _check_panel_parms(fname, panel_params)
