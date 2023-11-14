@@ -12,12 +12,13 @@ from numba.core import types
 from casacore import tables as ctables
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._algorithms import _get_grid_parms, _significant_digits
+from astrohack._utils._plot_commons import _create_figure_and_axes, _scatter_plot, _close_figure
 
 from astrohack._utils._dio import _load_point_file
 
 CURRENT_FUNCTION=0
+
 
 def _extract_holog_chunk(extract_holog_params):
     """Perform data query on holography data chunk and get unique time and state_ids/
@@ -73,10 +74,12 @@ def _extract_holog_chunk(extract_holog_params):
         )
         
     vis_data = ctb.getcol(data_column)
+    print(vis_data.shape)
     weight = ctb.getcol("WEIGHT")
     ant1 = ctb.getcol("ANTENNA1")
     ant2 = ctb.getcol("ANTENNA2")
     time_vis_row = ctb.getcol("TIME")
+    print(time_vis_row.shape)
     time_vis_row_centroid = ctb.getcol("TIME_CENTROID")
     flag = ctb.getcol("FLAG")
     flag_row = ctb.getcol("FLAG_ROW")
@@ -100,7 +103,7 @@ def _extract_holog_chunk(extract_holog_params):
         ref_ant_per_map_ant_tuple,
         map_ant_tuple,
     )
-
+    print(vis_map_dict[1].shape)
     del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row
 
     map_ant_name_list = list(map(str, map_ant_name_tuple))
@@ -338,6 +341,7 @@ def _create_holog_file(
 
             xds = xr.Dataset()
             xds = xds.assign_coords(coords)
+            print(vis_map_dict[map_ant_index].shape)
             xds["VIS"] = xr.DataArray(
                 vis_map_dict[map_ant_index], dims=["time", "chan", "pol"]
             )
@@ -591,5 +595,27 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
     meta_data.update(input_params)
     
     return meta_data
+
+
+def _plot_lm_coverage(param_dict):
+    data = param_dict['xds_data']
+    fig, ax = _create_figure_and_axes(param_dict['figure_size'], [2, 1])
+    real_lm = data['DIRECTIONAL_COSINES']
+    ideal_lm = data['IDEAL_DIRECTIONAL_COSINES']
+
+    _scatter_plot(ax[0], real_lm[:, 0], 'L', real_lm[:, 1], 'M', 'Real LM')
+    _scatter_plot(ax[1], ideal_lm[:, 0], 'L', ideal_lm[:, 1], 'M', 'Ideal LM')
+    plotfile = f'{param_dict["destination"]}/holog_directional_cosines_{param_dict["this_map"]}_' \
+               f'{param_dict["this_ant"]}_{param_dict["this_ddi"]}.png'
+    _close_figure(fig, 'LMs', plotfile, 300, False)
+
+    fig, ax = _create_figure_and_axes(param_dict['figure_size'], [2, 2])
+
+
+
+
+
+
+
     
 

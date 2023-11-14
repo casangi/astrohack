@@ -95,6 +95,7 @@ def _holog_chunk(holog_chunk_params):
 
         # Grid the data
         vis = ant_xds.VIS.values
+        print('vis shape in holog:', vis.shape)
         vis[vis == np.nan] = 0.0
         lm = ant_xds.DIRECTIONAL_COSINES.values
         weight = ant_xds.WEIGHT.values

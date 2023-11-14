@@ -26,6 +26,7 @@ from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
+from astrohack._utils._extract_holog import _plot_lm_coverage
 from astrohack._utils._extract_locit import _plot_source_table, _plot_array_configuration, _print_array_configuration
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
 from astrohack._utils._locit import _plot_delays_chunk, _plot_position_corrections
@@ -557,6 +558,25 @@ class AstrohackHologFile(dict):
         _create_destination_folder(parm_dict['destination'])
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(function_name, self, _calibration_plot_chunk, parm_dict, key_order, parallel)
+
+    def plot_lm_sky_coverage(self, destination, ant=None, ddi=None, map_id=None, figure_size=None, parallel=False):
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parm_dict = locals()
+
+        parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ant', [str, list],
+                                                     list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'map', [int, list],
+                                                     list_acceptable_data_types=[int], default='all')
+
+        _create_destination_folder(parm_dict['destination'])
+        key_order = ["ddi", "map", "ant"]
+        _dask_general_compute(function_name, self, _plot_lm_coverage, parm_dict, key_order, parallel)
+        return
+
+
 
 
 class AstrohackPanelFile(dict):
