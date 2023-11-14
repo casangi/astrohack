@@ -1,51 +1,24 @@
 [project]
 name = "astrohack"
-version = "0.3.2"
+version = "0.3.3"
 description = "Holography Antenna Commissioning Kit"
-authors = [
-    {name = "Jan-Willem Steeb", email="jsteeb@nrao.edu"},
-    {name = "Joshua Hoskins", email="jhoskins@nrao.edu"}, 
-    {name = "Victor de Souza Magalhaes", email="vdesouza@nrao.edu"}
-]
-license = {file = "LICENSE.txt"}
 readme = "README.md"
 requires-python = ">= 3.8, < 3.12"
+dependencies = [ "astropy", "dask", "distributed", "gdown", "matplotlib", "memory_profiler", "numba>=0.57.0", "numpy", "prettytable", "pytest", "pytest-cov", "pytest-html", "scikit_image", "scipy", "xarray", "zarr", "bokeh", "jupyterlab", "python_casacore>=3.5.2; sys_platform != \"darwin\" ",]
+[[project.authors]]
+name = "Jan-Willem Steeb"
+email = "jsteeb@nrao.edu"
 
-dependencies = [
-'astropy',
-'dask',
-'distributed',
-'gdown',
-'matplotlib',
-'memory_profiler',
-'numba>=0.57.0',
-'numpy',
-'prettytable',
-'pytest',
-'pytest-cov',
-'pytest-html',
-'scikit_image',
-'scipy',
-'xarray',
-'zarr',
-'bokeh',
-'jupyterlab',
-'python_casacore>=3.5.2; sys_platform != "darwin" '
-]
+[[project.authors]]
+name = "Joshua Hoskins"
+email = "jhoskins@nrao.edu"
 
+[[project.authors]]
+name = "Victor de Souza Magalhaes"
+email = "vdesouza@nrao.edu"
+
+[project.license]
+file = "LICENSE.txt"
 
 [project.optional-dependencies]
-docs = [
-    'ipykernel',
-    'ipympl',
-    'ipython',
-    'jupyter-client',
-    'nbsphinx',
-    'recommonmark',
-    'scanpydoc',
-    'sphinx-autoapi',
-    'sphinx-autosummary-accessors',
-    'sphinx_rtd_theme',
-    'twine',
-    'pandoc'
-]
+docs = [ "ipykernel", "ipympl", "ipython", "jupyter-client", "nbsphinx", "recommonmark", "scanpydoc", "sphinx-autoapi", "sphinx-autosummary-accessors", "sphinx_rtd_theme", "twine", "pandoc",]
