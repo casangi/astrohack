@@ -4,9 +4,11 @@ import copy
 import os
 import logging
 import astrohack
+import skriba.logger
+
 from astrohack._utils._param_utils._check_logger_parms import _check_logger_parms, _check_worker_logger_parms
 from astrohack._utils._logger._astrohack_logger import _setup_astrohack_logger, _get_astrohack_logger
-from astrohack._utils._dask_plugins._astrohack_worker import _astrohack_worker
+from astrohack._utils._dask_plugins._astrohack_worker import AstrohackWorker
 
 
 def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, log_params=None, worker_log_params=None):
@@ -94,9 +96,9 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
     _log_params = copy.deepcopy(log_params)
     _worker_log_params = copy.deepcopy(worker_log_params)
 
-    assert (_check_logger_parms(_log_params)), "ERROR: initialize_processing log_params checking failed."
+    #assert (_check_logger_parms(_log_params)), "ERROR: initialize_processing log_params checking failed."
 
-    assert (_check_worker_logger_parms(_worker_log_params)), "ERROR: initialize_processing log_params checking failed."
+    #assert (_check_worker_logger_parms(_worker_log_params)), "ERROR: initialize_processing log_params checking failed."
 
     if astrohack_local_dir:
         os.environ['ASTROHACK_LOCAL_DIR'] = astrohack_local_dir
@@ -105,8 +107,8 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
     else:
         local_cache = False
 
-    _setup_astrohack_logger(**_log_params)
-    logger = _get_astrohack_logger()
+    skriba.logger.setup_logger(**_log_params)
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _set_up_dask(dask_local_dir)
 
@@ -152,7 +154,7 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
         client.wait_for_workers(n_workers=cores)
 
     if local_cache or _worker_log_params:
-        plugin = _astrohack_worker(local_cache, _worker_log_params)
+        plugin = AstrohackWorker(local_cache, _worker_log_params)
         client.register_worker_plugin(plugin, name='astrohack_worker')
 
     logger.info('Created client ' + str(client))

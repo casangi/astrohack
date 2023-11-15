@@ -24,13 +24,12 @@ SOFTWARE.
 
 
 from collections import defaultdict
-from distributed import SchedulerPlugin
 from dask.core import reverse_dict
 from dask.base import tokenize
 from dask.order import graph_metrics, ndependencies
 import click
 from distributed.diagnostics.plugin import SchedulerPlugin
-import numpy as np
+
 
 def unravel_deps(hlg_deps, name, unravelled_deps=None):
     """Recursively construct a set of all dependencies for a specific task."""

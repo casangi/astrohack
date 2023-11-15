@@ -6,12 +6,13 @@ import xarray as xr
 import astropy
 import astrohack
 
+import skriba.logger
+
 from numba import njit
 from numba.core import types
 
 from casacore import tables as ctables
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._algorithms import _get_grid_parms, _significant_digits
 
@@ -31,7 +32,7 @@ def _extract_holog_chunk(extract_holog_params):
         ref_ant_ids (numpy.narray): Arry of antenna_id values corresponding to reference data.
         sel_state_ids (list): List pf state_ids corresponding to holography data/
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
@@ -306,7 +307,7 @@ def _create_holog_file(
         ddi (numpy.ndarray): data description id; a combination of polarization and spectral window
     """
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
@@ -396,7 +397,7 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
     import pandas as pd
     from scipy.spatial import distance_matrix
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     mapping_scans_dict = {}
     holog_obs_dict = {}
     map_id = 0
@@ -523,7 +524,7 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         holog_name (str): holog file name.
         holog_dict (dict): Dictionary containing msdx data.
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
     
