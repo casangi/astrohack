@@ -18,7 +18,6 @@ CURRENT_FUNCTION = 0
 
 
 @auror.parameter.validate(
-    #config_dir="/export/home/ajax/jhoskins/Development/astrohack-auror-logger/src/astrohack/config",
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
 def extract_pointing(

@@ -219,7 +219,6 @@ class HologObsDict(dict):
 
 
 @auror.parameter.validate(
-    #config_dir="/export/home/ajax/jhoskins/Development/astrohack-auror-logger/src/astrohack/config",
     add_data_type=HologObsDict,
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
