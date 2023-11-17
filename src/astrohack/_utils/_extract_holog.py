@@ -74,12 +74,10 @@ def _extract_holog_chunk(extract_holog_params):
         )
         
     vis_data = ctb.getcol(data_column)
-    print(vis_data.shape)
     weight = ctb.getcol("WEIGHT")
     ant1 = ctb.getcol("ANTENNA1")
     ant2 = ctb.getcol("ANTENNA2")
     time_vis_row = ctb.getcol("TIME")
-    print(time_vis_row.shape)
     time_vis_row_centroid = ctb.getcol("TIME_CENTROID")
     flag = ctb.getcol("FLAG")
     flag_row = ctb.getcol("FLAG_ROW")
@@ -103,7 +101,6 @@ def _extract_holog_chunk(extract_holog_params):
         ref_ant_per_map_ant_tuple,
         map_ant_tuple,
     )
-    print(vis_map_dict[1].shape)
     del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row
 
     map_ant_name_list = list(map(str, map_ant_name_tuple))
@@ -341,7 +338,6 @@ def _create_holog_file(
 
             xds = xr.Dataset()
             xds = xds.assign_coords(coords)
-            print(vis_map_dict[map_ant_index].shape)
             xds["VIS"] = xr.DataArray(
                 vis_map_dict[map_ant_index], dims=["time", "chan", "pol"]
             )
@@ -511,10 +507,15 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     
     for antenna in map_ant_ids:
         pnt_map_dict[antenna] = np.zeros((n_time_vis, 2))
+
+        atime = time_vis[12000]
+        indices = np.abs(pnt_ant_dict[antenna].time.values - atime) < 0.3
+
         pnt_map_dict[antenna] = (
             pnt_ant_dict[antenna]
             .interp(time=time_vis, method="nearest")
         )
+        indices = pnt_map_dict[antenna].time.values == atime
 
     return pnt_map_dict
 

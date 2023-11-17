@@ -95,7 +95,6 @@ def _holog_chunk(holog_chunk_params):
 
         # Grid the data
         vis = ant_xds.VIS.values
-        print('vis shape in holog:', vis.shape)
         vis[vis == np.nan] = 0.0
         lm = ant_xds.DIRECTIONAL_COSINES.values
         weight = ant_xds.WEIGHT.values
@@ -108,7 +107,6 @@ def _holog_chunk(holog_chunk_params):
             
             # Unavoidable for loop because lm change over frequency.
             for chan_index in range(n_chan):
-
                 # Average scaled beams.
                 beam_grid[holog_map_index, 0, :, :, :] = (beam_grid[holog_map_index, 0, :, :, :] + np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index], vis_avg[:, chan_index, :], (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"],fill_value=0.0),(2),(0)))
 
