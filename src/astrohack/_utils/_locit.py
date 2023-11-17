@@ -3,6 +3,7 @@ from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from scipy import optimize as opt
 
+import skriba.logger
 import astropy.units as units
 import xarray as xr
 
@@ -15,7 +16,7 @@ from astrohack._utils._tools import _hadec_to_elevation, _format_value_error, _p
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit
 from astrohack._utils._constants import *
-from astrohack.client import _get_astrohack_logger
+#from astrohack.client import _get_astrohack_logger
 
 
 def _locit_separated_chunk(locit_parms):
@@ -32,7 +33,7 @@ def _locit_separated_chunk(locit_parms):
 
     coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     if len(delays) == 0:
         msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
         logger.warning(msg)
@@ -73,7 +74,7 @@ def _locit_combined_chunk(locit_parms):
 
     coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     if len(delays) == 0:
         msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
         logger.warning(msg)
@@ -100,7 +101,7 @@ def _locit_difference_chunk(locit_parms):
     data = locit_parms['data_dict']
     ddi_list = list(data.keys())
     nddis = len(ddi_list)
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     if nddis != 2:
         msg = f'The difference method support only 2 DDIs, {nddis} DDIs provided.'
         logger.error(msg)
@@ -113,7 +114,7 @@ def _locit_difference_chunk(locit_parms):
                                                                   multi_pol=locit_parms['polarization'] == 'both')
 
     coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     if len(delays) == 0:
         msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
         logger.warning(msg)
@@ -137,7 +138,7 @@ def _delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
     Returns:
     Matched times, matched field ids, matched phase difference delays, difference in frequency
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     freq = ddi_0[3] - ddi_1[3]
     fields = ddi_0[0]
     if freq > 0:
@@ -255,7 +256,7 @@ def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False, split_po
         Xds frequency
 
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     pol = xds_data.attrs['polarization_scheme']
     freq = xds_data.attrs['frequency']
     if len(pol) != 2:
@@ -360,7 +361,7 @@ def _fit_data(coordinates, delays, locit_parms):
     fit: the fit results
     variance: the diagonal of the covariance matrix
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     fit_kterm = locit_parms['fit_kterm']
     fit_rate = locit_parms['fit_rate']
 
@@ -569,7 +570,7 @@ def _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_rate, ve
     Returns:
     The fit results and the diagonal of the covariance matrix
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     fit_function, npar = _define_fit_function(fit_kterm, fit_rate)
 
@@ -794,7 +795,7 @@ def _plot_sky_coverage_chunk(parm_dict):
     Returns:
     PNG file with the sky coverage
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     combined = parm_dict['combined']
     antenna = parm_dict['this_ant']
     destination = parm_dict['destination']

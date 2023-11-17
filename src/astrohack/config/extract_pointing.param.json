@@ -1,0 +1,17 @@
+{
+    "extract_pointing":{
+        "ms_name":{
+            "type":["str"]
+        },
+        "point_name":{
+            "type":["str"],
+            "nullable": true
+        },
+        "parallel":{
+            "type":["boolean"]
+        },
+        "overwrite":{
+            "type":["boolean"]
+        }
+    }
+}

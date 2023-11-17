@@ -17,7 +17,6 @@ from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._extract_holog import _create_holog_meta_data
 from astrohack._utils._extract_holog import _create_holog_obs_dict
 from astrohack._utils._extract_holog import _extract_holog_chunk
-#from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import NumpyEncoder
 from astrohack._utils._tools import _remove_suffix
@@ -41,7 +40,7 @@ class HologObsDict(dict):
 
     def __init__(self, obj):
         super().__init__(obj)
-        self.logger = _get_astrohack_logger()
+        self.logger = skriba.logger.get_logger(logger_name="astrohack")
 
     def __getitem__(self, key):
         return super().__getitem__(key)
@@ -101,7 +100,7 @@ class HologObsDict(dict):
 
     @staticmethod
     def get_nearest_baselines(antenna, n_baselines=None, path_to_matrix=None):
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
         import pandas as pd
 
         if path_to_matrix is None:
@@ -220,7 +219,7 @@ class HologObsDict(dict):
 
 
 @auror.parameter.validate(
-    config_dir="/export/home/ajax/jhoskins/Development/astrohack-auror-logger/config",
+    #config_dir="/export/home/ajax/jhoskins/Development/astrohack-auror-logger/src/astrohack/config",
     add_data_type=HologObsDict,
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
@@ -575,7 +574,9 @@ def extract_holog(
             if 'map' in holog_map_key:
                 scans = holog_obs_dict[ddi_name][holog_map_key]["scans"]
 
-                logger.info(f"[{function_name}]: Processing ddi: {ddi}, scans: {scans}")
+                logger.info("[{function_name}]: Processing ddi: {ddi}, scans: [{min} ... {max}]".format(
+                    function_name=function_name, ddi=ddi, min=scans[0], max=scans[-1]
+                ))
 
                 if len(list(holog_obs_dict[ddi_name][holog_map_key]['ant'].keys())) != 0:
                     map_ant_list = []
@@ -658,7 +659,7 @@ def extract_holog(
 
 def _check_extract_holog_params(function_name, extract_holog_params):
     #### Parameter Checking ####
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     parms_passed = True
 
     parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'ms_name', [str], default=None)
@@ -815,7 +816,7 @@ def generate_holog_obs_dict(
     """
     extract_holog_params = locals()
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 

@@ -3,18 +3,24 @@ import inspect
 from astrohack._utils._extract_point import _extract_pointing
 
 from astrohack._utils._dio import _load_point_file
-from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
 from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
 
 from astrohack.mds import AstrohackPointFile
 
+import skriba.logger
+import auror.parameter
+
 # Added for clarity when inspecting stacktrace
 CURRENT_FUNCTION = 0
 
 
+@auror.parameter.validate(
+    #config_dir="/export/home/ajax/jhoskins/Development/astrohack-auror-logger/src/astrohack/config",
+    logger=skriba.logger.get_logger(logger_name="astrohack")
+)
 def extract_pointing(
         ms_name,
         point_name=None,
@@ -60,7 +66,7 @@ def extract_pointing(
     # Returns the current local variables in dictionary form
     extract_pointing_params = locals()
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     # Pull latest function from the stack, this is dynamic and preferred to hardcoding.
     function_name = inspect.stack()[CURRENT_FUNCTION].function
@@ -74,8 +80,8 @@ def extract_pointing(
     input_params = extract_pointing_params.copy()
 
     try:
-        _check_if_file_exists(extract_pointing_params['ms_name'])
-        _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
+        # _check_if_file_exists(extract_pointing_params['ms_name'])
+        # _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
 
         # Until check params is changed, comment this out.
         '''
@@ -120,7 +126,8 @@ def extract_pointing(
 
 def _check_extract_pointing_params(function_name, extract_point_params):
     #### Parameter Checking ####
-    logger = _get_astrohack_logger()
+
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     params_passed = True
 
     params_passed = params_passed and _check_parms(function_name, extract_point_params, 'ms_name', [str], default=None)

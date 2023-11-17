@@ -7,11 +7,11 @@ import astrohack
 import skriba.logger
 
 from astrohack._utils._param_utils._check_logger_parms import _check_logger_parms, _check_worker_logger_parms
-from astrohack._utils._logger._astrohack_logger import _setup_astrohack_logger, _get_astrohack_logger
+
 from astrohack._utils._dask_plugins._astrohack_worker import AstrohackWorker
 
 
-def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, log_params=None, worker_log_params=None):
+def local_client(cores=None, memory_limit=None, dask_local_dir=None, log_params=None, worker_log_params=None):
     """ Setup dask cluster and astrohack logger.
 
     :param cores: Number of cores in Dask cluster, defaults to None
@@ -96,9 +96,9 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
     _log_params = copy.deepcopy(log_params)
     _worker_log_params = copy.deepcopy(worker_log_params)
 
-    #assert (_check_logger_parms(_log_params)), "ERROR: initialize_processing log_params checking failed."
+    # assert (_check_logger_parms(_log_params)), "ERROR: initialize_processing log_params checking failed."
 
-    #assert (_check_worker_logger_parms(_worker_log_params)), "ERROR: initialize_processing log_params checking failed."
+    # assert (_check_worker_logger_parms(_worker_log_params)), "ERROR: initialize_processing log_params checking failed."
 
     if astrohack_local_dir:
         os.environ['ASTROHACK_LOCAL_DIR'] = astrohack_local_dir
@@ -115,10 +115,16 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
     astrohack_path = astrohack.__path__[0]
 
     if local_cache or astrohack_autorestrictor:
-        dask.config.set(
-            {"distributed.scheduler.preload": os.path.join(astrohack_path, '_utils/_astrohack_scheduler.py')})
-        dask.config.set({"distributed.scheduler.preload-argv": ["--local_cache", local_cache, "--autorestrictor",
-                                                                astrohack_autorestrictor]})
+        dask.config.set({
+            "distributed.scheduler.preload": os.path.join(astrohack_path, '_utils/_astrohack_scheduler.py')
+        })
+
+        dask.config.set({
+            "distributed.scheduler.preload-argv": [
+                "--local_cache", local_cache,
+                "--autorestrictor", astrohack_autorestrictor
+            ]
+        })
 
     ''' This method of assigning a worker plugin does not seem to work when using dask_jobqueue. Consequently using \
     client.register_worker_plugin so that the method of assigning a worker plugin is the same for astrohack_local_client\
@@ -130,11 +136,11 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
         _worker_log_params['log_file'],"--log_level",_worker_log_params['log_level']]})
     '''
     # setup dask.distributed based multiprocessing environment
-    if cores is None: cores = multiprocessing.cpu_count()
-    if memory_limit is None: memory_limit = str(
-        round((psutil.virtual_memory().available / (1024 ** 2)) / cores)) + 'MB'
+    if cores is None:
+        cores = multiprocessing.cpu_count()
 
-    # print('cores',cores,memory_limit)
+    if memory_limit is None:
+        memory_limit = str(round((psutil.virtual_memory().available / (1024 ** 2)) / cores)) + 'MB'
 
     cluster = dask.distributed.LocalCluster(
         n_workers=cores,
@@ -163,7 +169,9 @@ def astrohack_local_client(cores=None, memory_limit=None, dask_local_dir=None, l
 
 
 def _set_up_dask(local_directory):
-    if local_directory: dask.config.set({"temporary_directory": local_directory})
+    if local_directory:
+        dask.config.set({"temporary_directory": local_directory})
+
     dask.config.set({"distributed.scheduler.allowed-failures": 10})
     dask.config.set({"distributed.scheduler.work-stealing": True})
     dask.config.set({"distributed.scheduler.unknown-task-duration": '99m'})

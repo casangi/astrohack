@@ -9,19 +9,20 @@ import inspect
 import numpy as np
 import xarray as xr
 
+import skriba.logger
+
 from astropy.io import fits
 from astrohack import __version__ as code_version
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 from astrohack._utils._tools import _add_prefix
 from astrohack._utils._tools import NumpyEncoder
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
-CALLING_FUNCTION=1
+CALLING_FUNCTION = 1
 
 
 def _check_if_file_exists(file):
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     caller = inspect.stack()[CALLING_FUNCTION].function
 
     if os.path.exists(file) is False:
@@ -30,15 +31,15 @@ def _check_if_file_exists(file):
 
 
 def _check_if_file_will_be_overwritten(file, overwrite):
-    logger = _get_astrohack_logger()
-    caller=inspect.stack()[CALLING_FUNCTION].function
-    
+    logger = skriba.logger.get_logger(logger_name="astrohack")
+    caller = inspect.stack()[CALLING_FUNCTION].function
+
     if (os.path.exists(file) is True) and (overwrite is False):
         logger.error(f'[{caller}]: {file} already exists. To overwite set overwrite to True, or remove current file.')
-        
+
         raise FileExistsError("{file} exists.".format(file=file))
-        
-    elif  (os.path.exists(file) is True) and (overwrite is True):
+
+    elif (os.path.exists(file) is True) and (overwrite is True):
         if file.endswith(".zarr"):
             logger.warning(f'[{caller}]: {file} will be overwritten.')
             shutil.rmtree(file)
@@ -56,30 +57,33 @@ def _load_panel_file(file=None, panel_dict=None, dask_load=True):
     Returns:
         bool: Nested dictionary containing panel data xds.
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     panel_data_dict = {}
 
     if panel_dict is not None:
-            panel_data_dict = panel_dict
-    
+        panel_data_dict = panel_dict
+
     ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
-    
+
     try:
         for ant in ant_list:
             if 'ant' in ant:
-                ddi_list =  [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))]
+                ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
+                            os.path.isdir(file + "/" + str(ant))]
                 panel_data_dict[ant] = {}
-                
+
                 for ddi in ddi_list:
                     if 'ddi' in ddi:
                         if dask_load:
-                            panel_data_dict[ant][ddi] = xr.open_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                            panel_data_dict[ant][ddi] = xr.open_zarr(
+                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
                         else:
-                            panel_data_dict[ant][ddi] = _open_no_dask_zarr("{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
-    
+                            panel_data_dict[ant][ddi] = _open_no_dask_zarr(
+                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+
     except Exception as e:
-            logger.error(str(e))
-            raise
+        logger.error(str(e))
+        raise
     return panel_data_dict
 
 
@@ -92,7 +96,7 @@ def _load_image_file(file=None, image_dict=None, dask_load=True):
     Returns:
         bool: bool describing whether the file was opened properly
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     ant_data_dict = {}
 
     if image_dict is not None:
@@ -133,7 +137,7 @@ def _load_locit_file(file=None, locit_dict=None, dask_load=True):
     Returns:
         bool: bool describing whether the file was opened properly
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     ant_data_dict = {}
 
     if locit_dict is not None:
@@ -174,7 +178,7 @@ def _load_position_file(file=None, position_dict=None, dask_load=True, combine=F
     Returns:
         bool: bool describing whether the file was opened properly
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     ant_data_dict = {}
 
     if position_dict is not None:
@@ -219,9 +223,9 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
     Returns:
 
     """
-    
-    logger = _get_astrohack_logger()
-    
+
+    logger = skriba.logger.get_logger(logger_name="astrohack")
+
     if holog_dict is None:
         holog_dict = {}
 
@@ -231,7 +235,7 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
 
     for ddi in os.listdir(holog_file):
         if "ddi_" in ddi:
-            
+
             if ddi_id is None:
                 if ddi not in holog_dict:
                     holog_dict[ddi] = {}
@@ -240,7 +244,7 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
                     holog_dict[ddi] = {}
                 else:
                     continue
-                
+
             for holog_map in os.listdir(os.path.join(holog_file, ddi)):
                 if "map_" in holog_map:
                     if holog_map not in holog_dict[ddi]:
@@ -257,12 +261,14 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
                                         mapping_ant_vis_holog_data_name
                                     )
                                 else:
-                                    holog_dict[ddi][holog_map][ant] = _open_no_dask_zarr(mapping_ant_vis_holog_data_name)
-    
+                                    holog_dict[ddi][holog_map][ant] = _open_no_dask_zarr(
+                                        mapping_ant_vis_holog_data_name)
+
     if ant_id is None:
         return holog_dict
-        
-    return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id, ddi_id=ddi_id)
+
+    return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id,
+                                                  ddi_id=ddi_id)
 
 
 def _read_fits(filename):
@@ -317,11 +323,10 @@ def _create_destination_folder(destination):
     """
     Try to create a folder if it already exists raise a warning
     Args:
-        caller: Calling function
         destination: the folder to be created
     """
-    logger = _get_astrohack_logger()
-    caller=inspect.stack()[CALLING_FUNCTION].function
+    logger = skriba.logger.get_logger(logger_name="astrohack")
+    caller = inspect.stack()[CALLING_FUNCTION].function
 
     try:
         os.mkdir(destination)
@@ -345,10 +350,10 @@ def _aips_holog_to_xds(ampname, devname):
     devdata = np.flipud(devdata)
 
     if amphead["NAXIS1"] != devhead["NAXIS1"]:
-        raise Exception(ampname+' and '+devname+' have different dimensions')
+        raise Exception(ampname + ' and ' + devname + ' have different dimensions')
     if amphead["CRPIX1"] != devhead["CRPIX1"] or amphead["CRVAL1"] != devhead["CRVAL1"] \
             or amphead["CDELT1"] != devhead["CDELT1"]:
-        raise Exception(ampname+' and '+devname+' have different axes descriptions')
+        raise Exception(ampname + ' and ' + devname + ' have different axes descriptions')
 
     npoint, wavelength = _get_aips_headpars(devhead)
     u = np.arange(-amphead["CRPIX1"], amphead["NAXIS1"] - amphead["CRPIX1"]) * amphead["CDELT1"]
@@ -426,15 +431,15 @@ def _read_meta_data(file_name):
     Returns:
         dict: dictionary containing dimension data.
     """
-    logger = _get_astrohack_logger()
-    
+    logger = skriba.logger.get_logger(logger_name="astrohack")
+
     try:
         with open(file_name) as json_file:
             json_dict = json.load(json_file)
 
     except Exception as error:
         logger.error(str(error))
-        raise Exception       
+        raise Exception
 
     return json_dict
 
@@ -448,7 +453,7 @@ def _write_meta_data(file_name, input_dict):
         input_dict: Dictionary to be included in the metadata
     """
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     meta_data = copy.deepcopy(input_dict)
 
@@ -476,9 +481,8 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
     Returns:
         nested dict: nested dictionary (ddi, holog_map, xds) with xds data embedded in it.
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     ant_id_str = str(ant_id)
-    
 
     holog_meta_data = "/".join((holog_file, ".holog_json"))
 
@@ -496,11 +500,10 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
         if "ddi_" in ddi:
             if (ddi_id is not None) and (ddi != ddi_id):
                 continue
-                
+
             for holog_map in holog_json[ant_id_str][ddi].keys():
                 if "map_" in holog_map:
                     ant_data_dict.setdefault(ddi, {})[holog_map] = holog_dict[ddi][holog_map][ant_id]
-
 
     return ant_data_dict
 
@@ -531,7 +534,7 @@ def _open_no_dask_zarr(zarr_name, slice_dict={}):
                 slice_dict_complete[dim] = slice(None)  # No slicing.
 
         if (var_attrs[DIMENSION_KEY][0] == var_name) and (
-            len(var_attrs[DIMENSION_KEY]) == 1
+                len(var_attrs[DIMENSION_KEY]) == 1
         ):
             coords[var_name] = var[
                 slice_dict_complete[var_attrs[DIMENSION_KEY][0]]
@@ -563,7 +566,7 @@ def _load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None):
     """
     if pnt_dict is None:
         pnt_dict = {}
-        
+
     pnt_dict['point_meta_ds'] = xr.open_zarr(file)
 
     for ant in os.listdir(file):
@@ -584,7 +587,7 @@ def _get_attrs(zarr_obj):
         zarr_obj (zarr): a zarr_group object
 
     Returns:
-        dict: a group of zarr attibutes
+        dict: a group of zarr attributes
     """
     return {
         k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")
@@ -592,67 +595,65 @@ def _get_attrs(zarr_obj):
 
 
 def _print_json(object, indent=6, columns=7):
-  if isinstance(object, list):
-    if indent > 3:
-      list_indent = indent-3
+    if isinstance(object, list):
+        if indent > 3:
+            list_indent = indent - 3
+        else:
+            list_indent = 0
+
+        print("{open}".format(open="[").rjust(list_indent, ' '))
+        _print_array(object, columns=columns, indent=indent + 1)
+        print("{close}".format(close="]").rjust(list_indent, ' '))
+
     else:
-      list_indent = 0
-
-    print("{open}".format(open="[").rjust(list_indent, ' '))
-    _print_array(object, columns=columns, indent=indent+1)
-    print("{close}".format(close="]").rjust(list_indent, ' '))
-
-  else:
-    for key, value in object.items():
-      key_str="{key}{open}".format(key=key, open=":{")
-      print("{key}".format(key=key_str).rjust(indent, ' '))
-      _print_json(value, indent+4, columns=columns)
-      print("{close}".format(close="}").rjust(indent-4, ' '))
+        for key, value in object.items():
+            key_str = "{key}{open}".format(key=key, open=":{")
+            print("{key}".format(key=key_str).rjust(indent, ' '))
+            _print_json(value, indent + 4, columns=columns)
+            print("{close}".format(close="}").rjust(indent - 4, ' '))
 
 
 def _reshape(array, columns):
-  size = len(array)
-  rows = int(size/columns)
-  if rows <= 0:
-    return 1, 0
-  else:  
-    remainder = size - (rows*columns)
+    size = len(array)
+    rows = int(size / columns)
+    if rows <= 0:
+        return 1, 0
+    else:
+        remainder = size - (rows * columns)
 
-    return rows, remainder
+        return rows, remainder
 
 
 def _print_array(array, columns, indent=4):
+    rows, remainder = _reshape(array, columns)
 
-  rows, remainder = _reshape(array, columns)
-  
-  if columns > len(array):
-    columns = len(array)
+    if columns > len(array):
+        columns = len(array)
 
-  str_line = ""
+    str_line = ""
 
-  for i in range(rows):
+    for i in range(rows):
+        temp = []
+        for j in range(columns):
+            k = columns * i + j
+            if j == 0:
+                temp.append("{:>3}".format(array[k]).rjust(indent, ' '))
+            else:
+                temp.append("{:>3}".format(array[k]))
+
+        str_line += ", ".join(temp)
+        str_line += "\n"
+
     temp = []
-    for j in range(columns):
-      k = columns*i + j
-      if j == 0:
-        temp.append("{:>3}".format(array[k]).rjust(indent, ' '))
-      else:
-        temp.append("{:>3}".format(array[k]))
-  
-    str_line += ", ".join(temp)
-    str_line += "\n"
+    if remainder > 0:
+        for i in range(remainder):
+            index = columns * rows + i
 
-  temp = []
-  if remainder > 0:
-    for i in range(remainder):
-      index = columns*rows + i
+            if i == 0:
+                temp.append("{:>3}".format(array[index]).rjust(indent, ' '))
+            else:
+                temp.append("{:>3}".format(array[index]))
 
-      if i == 0:
-        temp.append("{:>3}".format(array[index]).rjust(indent, ' '))
-      else:
-        temp.append("{:>3}".format(array[index]))
+        str_line += ", ".join(temp)
 
-    str_line += ", ".join(temp)
-    
-
-  print(str_line)
+    print(str_line)
