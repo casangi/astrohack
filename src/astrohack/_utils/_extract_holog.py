@@ -14,6 +14,7 @@ from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._algorithms import _get_grid_parms, _significant_digits
 from astrohack._utils._plot_commons import _create_figure_and_axes, _scatter_plot, _close_figure
+from astrohack._utils._conversion import _convert_unit
 
 from astrohack._utils._dio import _load_point_file
 
@@ -508,14 +509,10 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     for antenna in map_ant_ids:
         pnt_map_dict[antenna] = np.zeros((n_time_vis, 2))
 
-        atime = time_vis[12000]
-        indices = np.abs(pnt_ant_dict[antenna].time.values - atime) < 0.3
-
         pnt_map_dict[antenna] = (
             pnt_ant_dict[antenna]
             .interp(time=time_vis, method="nearest")
         )
-        indices = pnt_map_dict[antenna].time.values == atime
 
     return pnt_map_dict
 
@@ -600,17 +597,97 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
 
 def _plot_lm_coverage(param_dict):
     data = param_dict['xds_data']
-    fig, ax = _create_figure_and_axes(param_dict['figure_size'], [2, 1])
-    real_lm = data['DIRECTIONAL_COSINES']
-    ideal_lm = data['IDEAL_DIRECTIONAL_COSINES']
+    angle_fact = _convert_unit('rad', param_dict['angle_unit'], 'trigonometric')
+    real_lm = data['DIRECTIONAL_COSINES']*angle_fact
+    ideal_lm = data['IDEAL_DIRECTIONAL_COSINES']*angle_fact
+    time = data.time.values
+    time -= time[0]
+    time *= _convert_unit('sec', param_dict['time_unit'], 'time')
+    param_dict['l_label'] = f'L [{param_dict["angle_unit"]}]'
+    param_dict['m_label'] = f'M [{param_dict["angle_unit"]}]'
+    param_dict['time_label'] = f'Time from observation start [{param_dict["time_unit"]}]'
 
-    _scatter_plot(ax[0], real_lm[:, 0], 'L', real_lm[:, 1], 'M', 'Real LM')
-    _scatter_plot(ax[1], ideal_lm[:, 0], 'L', ideal_lm[:, 1], 'M', 'Ideal LM')
+    param_dict['marker'] = '.'
+    param_dict['linestyle'] = '-'
+    param_dict['color'] = 'blue'
+
+    _plot_lm_coverage_sub(time, real_lm, ideal_lm, param_dict)
+
+    if param_dict['plot_correlation'] is None:
+        pass
+    else:
+        param_dict['linestyle'] = ''
+        visi = np.average(data["VIS"].values, axis=1)
+        pol_axis = data.pol.values
+        if isinstance(param_dict['plot_correlation'], (list, tuple)):
+            for correlation in param_dict['plot_correlation']:
+                _plot_correlation(visi, correlation, pol_axis, time, real_lm, param_dict)
+        else:
+            _plot_correlation(visi, param_dict['plot_correlation'], pol_axis, time, real_lm, param_dict)
+
+
+def _plot_correlation(visi, correlation, pol_axis, time, lm, param_dict):
+    if correlation in pol_axis:
+        ipol = pol_axis == correlation
+        loc_vis = visi[:, ipol]
+        if param_dict['complex_split'] == 'polar':
+            y_data = [np.absolute(loc_vis)]
+            y_label = [f'{correlation} Amplitude [arb. units]']
+            title = ['Amplitude']
+            y_data.append(np.angle(loc_vis)*_convert_unit('rad', param_dict["phase_unit"], 'trigonometric'))
+            y_label.append(f'{correlation} Phase [{param_dict["phase_unit"]}]')
+            title.append('Phase')
+        else:
+            y_data = [loc_vis.real]
+            y_label = [f'Real {correlation} [arb. units]']
+            title = ['real part']
+            y_data.append(loc_vis.imag)
+            y_label.append(f'Imaginary {correlation} [arb. units]')
+            title.append('imaginary part')
+
+        fig, ax = _create_figure_and_axes(param_dict['figure_size'], [2, 3])
+        for isplit in range(2):
+            _scatter_plot(ax[isplit, 0], time, param_dict['time_label'], y_data[isplit], y_label[isplit],
+                          f'Time vs {correlation} {title[isplit]}', data_marker=param_dict['marker'],
+                          data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
+            _scatter_plot(ax[isplit, 1], lm[:, 0], param_dict['l_label'], y_data[isplit], y_label[isplit],
+                          f'L vs {correlation} {title[isplit]}', data_marker=param_dict['marker'],
+                          data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
+            _scatter_plot(ax[isplit, 2], lm[:, 1], param_dict['m_label'], y_data[isplit], y_label[isplit],
+                          f'M vs {correlation} {title[isplit]}', data_marker=param_dict['marker'],
+                          data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
+
+        plotfile = (f'{param_dict["destination"]}/holog_directional_cosines_{correlation}_{param_dict["this_map"]}_'
+                    f'{param_dict["this_ant"]}_{param_dict["this_ddi"]}.png')
+        _close_figure(fig, f'Channel averaged {correlation} vs Directional Cosines', plotfile, param_dict['dpi'],
+                      param_dict['display'])
+    else:
+        logger = _get_astrohack_logger()
+        logger.warning(f'Correlation {correlation} is not present for {param_dict["this_ant"]} {param_dict["this_ddi"]} '
+                       f'{param_dict["this_map"]}, skipping...')
+    return
+
+
+def _plot_lm_coverage_sub(time, real_lm, ideal_lm, param_dict):
+    fig, ax = _create_figure_and_axes(param_dict['figure_size'], [2, 2])
+    _scatter_plot(ax[0, 0], time, param_dict['time_label'], real_lm[:, 0], param_dict['l_label'], 'Time vs Real L',
+                  data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'], data_color=
+                  param_dict['color'])
+    _scatter_plot(ax[0, 1], time, param_dict['time_label'], real_lm[:, 1], param_dict['m_label'], 'Time vs Real M',
+                  data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'], data_color=
+                  param_dict['color'])
+    _scatter_plot(ax[1, 0], real_lm[:, 0], param_dict['l_label'], real_lm[:, 1], param_dict['m_label'], 'Real L and M',
+                  data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'], data_color=
+                  param_dict['color'])
+    _scatter_plot(ax[1, 1], ideal_lm[:, 0], param_dict['l_label'], ideal_lm[:, 1], param_dict['m_label'],
+                  'Ideal L and M', data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'],
+                  data_color=param_dict['color'])
     plotfile = f'{param_dict["destination"]}/holog_directional_cosines_{param_dict["this_map"]}_' \
                f'{param_dict["this_ant"]}_{param_dict["this_ddi"]}.png'
-    _close_figure(fig, 'LMs', plotfile, 300, False)
+    _close_figure(fig, 'Directional Cosines', plotfile, param_dict['dpi'], param_dict['display'])
 
-    fig, ax = _create_figure_and_axes(param_dict['figure_size'], [2, 2])
+
+
 
 
 

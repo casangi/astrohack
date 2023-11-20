@@ -559,7 +559,9 @@ class AstrohackHologFile(dict):
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(function_name, self, _calibration_plot_chunk, parm_dict, key_order, parallel)
 
-    def plot_lm_sky_coverage(self, destination, ant=None, ddi=None, map_id=None, figure_size=None, parallel=False):
+    def plot_lm_sky_coverage(self, destination, ant=None, ddi=None, map_id=None, angle_unit='deg', time_unit='hour',
+                             plot_correlation=None, complex_split='polar', phase_unit='deg', display=False,
+                             figure_size=None, dpi=300, parallel=False):
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         parm_dict = locals()
 
@@ -570,13 +572,16 @@ class AstrohackHologFile(dict):
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'map', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
         _create_destination_folder(parm_dict['destination'])
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(function_name, self, _plot_lm_coverage, parm_dict, key_order, parallel)
         return
-
-
 
 
 class AstrohackPanelFile(dict):
