@@ -3,11 +3,12 @@ import numbers
 import inspect
 import distributed
 
+import skriba.logger
+
 import numpy as np
 
 from prettytable import PrettyTable
 
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._dio import _read_meta_data
 from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _load_image_file
@@ -56,7 +57,7 @@ class AstrohackDataFile:
         self._verify_holog_files(file_stem, path)
 
     def _verify_holog_files(self, file_stem, path):
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
         logger.info("Verifying {stem}.* files in path={path} ...".format(stem=file_stem, path=path))
 
         file_path = "{path}/{stem}.holog.zarr".format(path=path, stem=file_stem)
@@ -134,7 +135,7 @@ class AstrohackImageFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
         if file is None:
             file = self.file
 
@@ -173,7 +174,7 @@ class AstrohackImageFile(dict):
         :return: Corresponding xarray dataset, or self if selection is None
         :rtype: xarray.Dataset or AstrohackImageFile
         """
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
 
         ant = 'ant_' + ant
         ddi = f'ddi_{ddi}'
@@ -414,7 +415,7 @@ class AstrohackHologFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
 
         if file is None:
             file = self.file
@@ -453,7 +454,7 @@ class AstrohackHologFile(dict):
         :return: Corresponding xarray dataset, or self if selection is None
         :rtype: xarray.Dataset or AstrohackHologFile
         """
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
         ant = 'ant_' + ant
         ddi = f'ddi_{ddi}'
         map_id = f'map_{map_id}'
@@ -518,7 +519,7 @@ class AstrohackHologFile(dict):
         # notebook.
         DEFAULT_DASK_ADDRESS = "127.0.0.1:8786"
 
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
 
         parm_dict = locals()
         if parallel:
@@ -602,7 +603,7 @@ class AstrohackPanelFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
 
         if file is None:
             file = self.file
@@ -756,7 +757,7 @@ class AstrohackPanelFile(dict):
         - *all*: All the plots listed above. In this case the unit parameter is taken to mean the deviation unit, the
                  phase unit is set to degrees
         """
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
         parm_dict = locals()
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
@@ -873,7 +874,7 @@ class AstrohackPointFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
 
         if file is None:
             file = self.file
@@ -942,7 +943,7 @@ class AstrohackLocitFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
 
         if file is None:
             file = self.file
@@ -1145,7 +1146,7 @@ class AstrohackPositionFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
 
         if file is None:
             file = self.file

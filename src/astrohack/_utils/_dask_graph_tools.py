@@ -1,13 +1,22 @@
 import dask
 import xarray
+import skriba.logger
 
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._tools import _parm_to_list
 
 
-def _construct_general_graph_recursively(caller, looping_dict, chunk_function, param_dict, delayed_list, key_order,
-                                         parallel=False, oneup=None):
-    logger = _get_astrohack_logger()
+def _construct_general_graph_recursively(
+        caller,
+        looping_dict,
+        chunk_function,
+        param_dict,
+        delayed_list,
+        key_order,
+        parallel=False,
+        oneup=None
+):
+
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     if len(key_order) == 0:
         if isinstance(looping_dict, xarray.Dataset):
             param_dict['xds_data'] = looping_dict
@@ -50,7 +59,7 @@ def _dask_general_compute(caller, looping_dict, chunk_function, param_dict, key_
     Returns: True if processing has occured, False if no data was processed
 
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     delayed_list = []
     _construct_general_graph_recursively(caller, looping_dict, chunk_function, param_dict, delayed_list=delayed_list,
                                          key_order=key_order, parallel=parallel)

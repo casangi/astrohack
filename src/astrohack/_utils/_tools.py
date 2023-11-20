@@ -4,13 +4,14 @@ import shutil
 import numpy as np
 import astropy.units as units
 
+import skriba.logger
+
 from prettytable import PrettyTable
 from textwrap import fill
 from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord
 from astropy.time import Time
 from casacore import tables
 
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _significant_digits
 
@@ -179,7 +180,7 @@ def _add_prefix(input_string, prefix):
 
 
 def _print_holog_obs_dict(holog_obj):
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     OPEN_DICT = ":{"
     CLOSE_DICT = "}"
@@ -233,7 +234,7 @@ def _parm_to_list(caller, parm, data_dict, prefix):
     Returns: parameter converted to a list
 
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     if parm == 'all':
         oulist = list(data_dict.keys())
@@ -338,7 +339,7 @@ def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
     Returns: The augmented header
 
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     naxis = len(axis)
     if naxis == 1:
         inc = axis[0]

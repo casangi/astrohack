@@ -1,10 +1,9 @@
-import os
 import json
 import numpy as np
 
-from casacore import tables
+import skriba.logger
 
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+from casacore import tables
 
 from astrohack.mds import AstrohackImageFile
 from astrohack.mds import AstrohackHologFile
@@ -91,7 +90,7 @@ def open_image(file):
 
     """
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _data_file = AstrohackImageFile(file=file)
 
@@ -132,7 +131,7 @@ def open_panel(file):
 
     """
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _data_file = AstrohackPanelFile(file=file)
 
@@ -173,7 +172,7 @@ def open_locit(file):
 
     """
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _data_file = AstrohackLocitFile(file=file)
 
@@ -214,7 +213,7 @@ def open_position(file):
 
     """
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _data_file = AstrohackPositionFile(file=file)
 
@@ -252,7 +251,7 @@ def open_pointing(file):
 
     """
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _data_file = AstrohackPointFile(file=file)
 
@@ -393,7 +392,7 @@ def inspect_holog_obs_dict(file='.holog_obs_dict.json', style='static', indent=6
             }
         } 
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     if not isinstance(file, dict):
         try:

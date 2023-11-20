@@ -1,9 +1,8 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from astropy.time import Time
-
-from astrohack._utils._constants import figsize, fontsize, markersize
+import numpy as np
+from astrohack._utils._constants import fontsize, markersize
 from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure
+from astropy.time import Time
 
 
 def _calc_index(n, m):

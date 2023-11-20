@@ -1,16 +1,20 @@
-import warnings, time, os, psutil, multiprocessing, re
+import psutil, multiprocessing, re
 import dask
 import copy
 import os
+import yaml
 import logging
 import astrohack
-import skriba.logger
 
-from astrohack._utils._param_utils._check_logger_parms import _check_logger_parms, _check_worker_logger_parms
+import skriba.logger
+import auror.parameter
 
 from astrohack._utils._dask_plugins._astrohack_worker import AstrohackWorker
 
 
+@auror.parameter.validate(
+    logger=skriba.logger.get_logger(logger_name="astrohack")
+)
 def local_client(cores=None, memory_limit=None, dask_local_dir=None, log_params=None, worker_log_params=None):
     """ Setup dask cluster and astrohack logger.
 
@@ -87,21 +91,17 @@ def local_client(cores=None, memory_limit=None, dask_local_dir=None, log_params=
         worker_log_params = {}
 
     # Secret parameters user do not need to know about.
-    astrohack_autorestrictor = False
+    autorestrictor = False
     wait_for_workers = True
 
     # Not needed for a local cluster, but useful for testing.
-    astrohack_local_dir = None
+    client_local_dir = None
 
     _log_params = copy.deepcopy(log_params)
     _worker_log_params = copy.deepcopy(worker_log_params)
 
-    # assert (_check_logger_parms(_log_params)), "ERROR: initialize_processing log_params checking failed."
-
-    # assert (_check_worker_logger_parms(_worker_log_params)), "ERROR: initialize_processing log_params checking failed."
-
-    if astrohack_local_dir:
-        os.environ['ASTROHACK_LOCAL_DIR'] = astrohack_local_dir
+    if client_local_dir:
+        os.environ['CLIENT_LOCAL_DIR'] = client_local_dir
         local_cache = True
 
     else:
@@ -110,11 +110,16 @@ def local_client(cores=None, memory_limit=None, dask_local_dir=None, log_params=
     skriba.logger.setup_logger(**_log_params)
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
+    if dask_local_dir is None:
+        logger.warning("It is recommended that the local cache directory be set using the `local_dir` parameter.")
+
     _set_up_dask(dask_local_dir)
 
+    # Need to generalize
     astrohack_path = astrohack.__path__[0]
 
-    if local_cache or astrohack_autorestrictor:
+    if local_cache or autorestrictor:
+        # Also need to generalize
         dask.config.set({
             "distributed.scheduler.preload": os.path.join(astrohack_path, '_utils/_astrohack_scheduler.py')
         })
@@ -122,7 +127,7 @@ def local_client(cores=None, memory_limit=None, dask_local_dir=None, log_params=
         dask.config.set({
             "distributed.scheduler.preload-argv": [
                 "--local_cache", local_cache,
-                "--autorestrictor", astrohack_autorestrictor
+                "--autorestrictor", autorestrictor
             ]
         })
 
@@ -172,6 +177,13 @@ def _set_up_dask(local_directory):
     if local_directory:
         dask.config.set({"temporary_directory": local_directory})
 
+    config_path = os.path.dirname(__file__) + "/config/"
+    if os.path.exists(config_path):
+        config_file = config_path + "dask.config.yaml"
+        with open(config_file) as config:
+            dask_settings = yaml.safe_load(config)
+            dask.config.update_defaults(dask_settings)
+    '''
     dask.config.set({"distributed.scheduler.allowed-failures": 10})
     dask.config.set({"distributed.scheduler.work-stealing": True})
     dask.config.set({"distributed.scheduler.unknown-task-duration": '99m'})
@@ -184,3 +196,4 @@ def _set_up_dask(local_directory):
     dask.config.set({"distributed.nanny.environ.MKL_NUM_THREADS": 1})
 
     # https://docs.dask.org/en/stable/how-to/customize-initialization.html
+    '''

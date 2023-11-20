@@ -2,7 +2,6 @@ from matplotlib.patches import Rectangle
 
 from astrohack._utils._panel_classes.telescope import Telescope
 from astrohack._utils._constants import *
-#from astrohack.client import _get_astrohack_logger
 
 import skriba.logger
 

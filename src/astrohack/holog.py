@@ -13,9 +13,14 @@ from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_
 from astrohack.mds import AstrohackImageFile
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
+import skriba.logger
+import auror.parameter
+
 CURRENT_FUNCTION = 0
 
-
+@auror.parameter.validate(
+    logger=skriba.logger.get_logger(logger_name="astrohack")
+)
 def holog(
         holog_name,
         grid_size=None,

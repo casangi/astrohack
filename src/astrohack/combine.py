@@ -8,6 +8,8 @@ from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_
 from astrohack.mds import AstrohackImageFile
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
+import skriba.logger
+
 
 def combine(image_name, combine_name=None, ant=None, ddi=None, weighted=False, parallel=False, overwrite=False):
     """Combine DDIs in a Holography image to increase SNR
@@ -52,15 +54,17 @@ def combine(image_name, combine_name=None, ant=None, ddi=None, weighted=False, p
     """
 
     combine_params = locals()
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     fname = 'combine'
     combine_params = _check_combine_parms(fname, combine_params)
     input_params = combine_params.copy()
 
     _check_if_file_exists(combine_params['image_name'])
     _check_if_file_will_be_overwritten(combine_params['combine_name'], combine_params['overwrite'])
+
     image_mds = AstrohackImageFile(combine_params['image_name'])
     image_mds._open()
+
     combine_params['image_mds'] = image_mds
     image_attr = image_mds._meta_data
     if _dask_general_compute(fname, image_mds, _combine_chunk, combine_params, ['ant'], parallel=parallel):

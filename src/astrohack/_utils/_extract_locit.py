@@ -1,13 +1,15 @@
+import skriba.logger
+
 import numpy as np
+import astropy.units as units
+import xarray as xr
 
 from casacore import tables as ctables
 from astropy.coordinates import SkyCoord, CIRS
 from astropy.time import Time
-import astropy.units as units
-import xarray as xr
+
 from prettytable import PrettyTable
 
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._tools import _casa_time_to_mjd, _rad_to_deg_str
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._constants import figsize, twopi, notavail
@@ -27,7 +29,7 @@ def _extract_antenna_data(fname, extract_locit_parms):
     Returns:
     Antenna dictionary
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     cal_table = extract_locit_parms['cal_table']
     ant_table = ctables.table(cal_table + '::ANTENNA', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     ant_off = ant_table.getcol('OFFSET')
@@ -87,7 +89,7 @@ def _extract_spectral_info(fname, extract_locit_parms):
     Returns:
     DDI dictionary
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     cal_table = extract_locit_parms['cal_table']
     spw_table = ctables.table(cal_table+'::SPECTRAL_WINDOW', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     ref_freq = spw_table.getcol('REF_FREQUENCY')
@@ -179,7 +181,7 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
     Returns:
     Reference antenna
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     cal_table = extract_locit_parms['cal_table']
     basename = extract_locit_parms['locit_name']
@@ -299,7 +301,7 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
         figure_size: plot dimensions in inches
         dpi: Dots per inch (plot resolution)
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     n_src = len(src_dict)
     radec = np.ndarray((n_src, 2))
     name = []

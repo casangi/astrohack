@@ -1,7 +1,5 @@
 import skriba.logger
 
-import numpy as np
-
 from astrohack._utils._constants import *
 
 

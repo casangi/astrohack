@@ -1,7 +1,8 @@
+import skriba.logger
+
 from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 from astrohack._utils._locit import _locit_separated_chunk, _locit_combined_chunk, _locit_difference_chunk
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._dask_graph_tools import _dask_general_compute
@@ -104,7 +105,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
                                 delays.
     """
     locit_parms = locals()
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     fname = 'locit'
     ######### Parameter Checking #########
@@ -153,7 +154,7 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
 def _check_locit_parms(fname, locit_parms):
 
     #### Parameter Checking ####
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     parms_passed = True
 

@@ -16,7 +16,6 @@ from astrohack._utils._tools import _hadec_to_elevation, _format_value_error, _p
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._algorithms import _least_squares_fit
 from astrohack._utils._constants import *
-#from astrohack.client import _get_astrohack_logger
 
 
 def _locit_separated_chunk(locit_parms):

@@ -1,10 +1,11 @@
 import os
 import shutil
 
+import skriba.logger
+
 from astrohack._utils._panel_classes.base_panel import panel_models
 from astrohack._utils._dio import _aips_holog_to_xds, _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
 from astrohack._utils._panel import _panel_chunk
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._dask_graph_tools import _dask_general_compute
@@ -111,7 +112,7 @@ def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_mo
 
     panel_params = locals()
     panel_params['ant'] = ant
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     fname = 'panel'
     panel_params = _check_panel_parms(fname, panel_params)
     input_params = panel_params.copy()
