@@ -319,8 +319,8 @@ class AstrohackImageFile(dict):
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(function_name, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_beams(self, destination, ant=None, ddi=None, complex_split='polar', display=False, colormap='viridis',
-                   figure_size=None, dpi=300, parallel=False):
+    def plot_beams(self, destination, ant=None, ddi=None, angle_unit='deg', complex_split='polar', phase_unit='deg',
+                   display=False, colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Beam plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
@@ -329,8 +329,12 @@ class AstrohackImageFile(dict):
         :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
+        :param angle_unit: Unit for L and M axes in plots, default is 'deg'.
+        :type angle_unit: str, optional
         :param complex_split: How to split complex beam data, cartesian (real + imag) or polar (amplitude + phase, default)
         :type complex_split: str, optional
+        :param phase_unit: Unit for phase in 'polar' plots, default is 'deg'.
+        :type phase_unit: str
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param colormap: Colormap for plots, default is viridis
@@ -354,8 +358,12 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'angle_unit', [str],
+                                                     acceptable_data=trigo_units, default='deg')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'complex_split', [str],
                                                      acceptable_data=possible_splits, default="polar")
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_unit', [str],
+                                                     acceptable_data=trigo_units, default='deg')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
