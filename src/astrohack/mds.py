@@ -447,7 +447,7 @@ class AstrohackHologFile(dict):
         _print_summary_header(self.file)
         _print_dict_table(self._input_pars)
         _print_data_contents(self, ["DDI", "Map", "Antenna"])
-        _print_method_list([self.summary, self.select, self.plot_diagnostics])
+        _print_method_list([self.summary, self.select, self.plot_diagnostics, self.plot_lm_sky_coverage])
 
     def select(self, ddi=None, map_id=None, ant=None):
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
