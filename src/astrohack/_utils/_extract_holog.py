@@ -623,7 +623,11 @@ def _plot_lm_coverage(param_dict):
             for correlation in param_dict['plot_correlation']:
                 _plot_correlation(visi, correlation, pol_axis, time, real_lm, param_dict)
         else:
-            _plot_correlation(visi, param_dict['plot_correlation'], pol_axis, time, real_lm, param_dict)
+            if param_dict['plot_correlation'] == 'all':
+                for correlation in pol_axis:
+                    _plot_correlation(visi, correlation, pol_axis, time, real_lm, param_dict)
+            else:
+                _plot_correlation(visi, param_dict['plot_correlation'], pol_axis, time, real_lm, param_dict)
 
 
 def _plot_correlation(visi, correlation, pol_axis, time, lm, param_dict):
