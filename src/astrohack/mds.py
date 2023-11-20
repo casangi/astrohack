@@ -562,6 +562,53 @@ class AstrohackHologFile(dict):
     def plot_lm_sky_coverage(self, destination, ant=None, ddi=None, map_id=None, angle_unit='deg', time_unit='hour',
                              plot_correlation=None, complex_split='polar', phase_unit='deg', display=False,
                              figure_size=None, dpi=300, parallel=False):
+        """ Plot directional cosine coverage.
+
+        :param destination: Name of the destination folder to contain plots
+        :type destination: str
+        :param ant: antenna ID to use in subselection, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+        :param ddi: data description ID to use in subselection, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning \
+        configuration,  defaults to "all" when None, ex. 0
+        :type map_id: list or int, optional
+        :param angle_unit: Unit for L and M axes in plots, default is 'deg'.
+        :type angle_unit: str, optional
+        :param time_unit: Unit for time axis in plots, default is 'hour'.
+        :type time_unit: str, optional
+        :param plot_correlation: Which correlation to plot against L and M, default is None (no correlation plots).
+        :type plot_correlation: str, list, optional
+        :param complex_split: How to split complex data, cartesian (real + imaginary) or polar (amplitude + phase), \
+        default is polar
+        :type complex_split: str, optional
+        :param phase_unit: Unit for phase in 'polar' plots, default is 'deg'.
+        :type phase_unit: str
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+        :param figure_size: 2 element array/list/tuple with the plot sizes in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: dots per inch to be used in plots, default is 300
+        :type dpi: int, optional
+        :param parallel: Run in parallel, defaults to False
+        :type parallel: bool, optional
+
+        **Additional Information**
+        The visibilities extracted by extract_holog are complex due to the nature of interferometric measurements. To
+        ease the visualization of the complex data it can be split into real and imaginary parts (cartesian) or in
+        amplitude and phase (polar).
+
+        .. rubric:: Available complex splitting possibilities:
+        - *cartesian*: Split is done to a real part and an imaginary part in the plots
+        - *polar*:     Split is done to an amplitude and a phase in the plots
+
+        .. rubric:: Plotting correlations:
+        - *RR, RL, LR, LL*: Are available for circular systems
+        - *XX, XY, YX, YY*: Are available for linear systems
+        - *all*: Plot all correlations in dataset
+
+        """
+
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         parm_dict = locals()
 
