@@ -67,7 +67,7 @@ class HologObsDict(dict):
             return self._select_ddi(value, obs_dict=obs_dict)
 
         elif key == "map":
-            return self._select_ddi(value, obs_dict=obs_dict)
+            return self._select_map(value, obs_dict=obs_dict)
 
         elif key == "antenna":
             return self._select_antenna(value, obs_dict=obs_dict)
@@ -551,14 +551,10 @@ def extract_holog(
         extract_holog_params["ddi"] = ddi
         extract_holog_params["chan_setup"] = {}
         extract_holog_params["pol_setup"] = {}
-        extract_holog_params["chan_setup"]["chan_freq"] = spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0,
-                                                          :]
-        extract_holog_params["chan_setup"]["chan_width"] = spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[
-                                                           0, :]
-        extract_holog_params["chan_setup"]["eff_bw"] = spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0,
-                                                       :]
-        extract_holog_params["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[
-            0]
+        extract_holog_params["chan_setup"]["chan_freq"] = spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0, :]
+        extract_holog_params["chan_setup"]["chan_width"] = spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[0, :]
+        extract_holog_params["chan_setup"]["eff_bw"] = spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0, :]
+        extract_holog_params["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[0]
         extract_holog_params["chan_setup"]["total_bw"] = \
             spw_ctb.getcol("TOTAL_BANDWIDTH", startrow=spw_setup_id, nrow=1)[0]
         extract_holog_params["pol_setup"]["pol"] = pol_str[
@@ -654,56 +650,6 @@ def extract_holog(
     else:
         logger.warning(f"[{function_name}]: No data to process")
         return None
-
-
-def _check_extract_holog_params(function_name, extract_holog_params):
-    #### Parameter Checking ####
-    logger = skriba.logger.get_logger(logger_name="astrohack")
-    parms_passed = True
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'ms_name', [str], default=None)
-
-    base_name = _remove_suffix(extract_holog_params['ms_name'], '.ms')
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'holog_name', [str],
-                                                 default=base_name + '.holog.zarr')
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'point_name', [str], default=None)
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'ddi', [list, int, str],
-                                                 list_acceptable_data_types=[int], default='all')
-
-    # To Do: special function needed to check holog_obs_dict.
-    parm_check = isinstance(extract_holog_params['holog_obs_dict'], dict) or (
-            extract_holog_params['holog_obs_dict'] is None)
-    parms_passed = parms_passed and parm_check
-
-    if not parm_check:
-        logger.error(f'[{function_name}]: Parameter holog_obs_dict must be of type {str(dict)}.')
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'baseline_average_distance',
-                                                 [int, float, str], default='all')
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'baseline_average_nearest',
-                                                 [int, str], default='all')
-
-    if (extract_holog_params['baseline_average_distance'] != 'all') and (
-            extract_holog_params['baseline_average_nearest'] != 'all'):
-        logger.error(
-            f'[{function_name}]: baseline_average_distance and 'f'baseline_average_nearest can not both be specified.')
-
-        parms_passed = False
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'data_column', [str],
-                                                 default='CORRECTED_DATA')
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'parallel', [bool], default=False)
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'overwrite', [bool],
-                                                 default=False)
-
-    _parm_check_passed(function_name, parms_passed)
-
-    return extract_holog_params
 
 
 def generate_holog_obs_dict(

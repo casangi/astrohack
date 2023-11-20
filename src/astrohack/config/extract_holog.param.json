@@ -1,0 +1,38 @@
+{
+    "extract_holog":{
+        "ms_name":{
+            "type":["str"]
+        },
+        "holog_obs_dict":{
+            "type":["dict", "HologObsDict"],
+            "nullable": true
+        },
+        "ddi":{
+            "type":["ndarray", "int", "list", "str"],
+            "struct type": ["int", "str"]
+        },
+        "baseline_average_distance":{
+            "type":["float", "str"]
+        },
+        "baseline_average_nearest":{
+            "type":["int", "str"]
+        },
+        "holog_name":{
+            "type":["str"],
+            "nullable": true
+        },
+        "point_name":{
+            "type":["str"]
+        },
+        "data_column":{
+            "type":["str"],
+            "allowed":["DATA", "CORRECTED_DATA"]
+        },
+        "parallel":{
+            "type":["boolean"]
+        },
+        "overwrite":{
+            "type":["boolean"]
+        }
+    }
+}

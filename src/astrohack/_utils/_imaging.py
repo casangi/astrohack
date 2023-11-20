@@ -8,13 +8,13 @@ from astrohack._utils._algorithms import _calc_coords
 
 
 def _parallactic_derotation(data, parallactic_angle_dict):
-    """ Uses samples of parallactic angle (PA) values to correct differences in PA between maps. The reference PA is selected
-        to be the first maps median parallactic angle. All values are rotated to this PA value using scypi.ndimage.rotate(...)
+    """ Uses samples of parallactic angle (PA) values to correct differences in PA between maps. The reference PA is
+    selected to be the first maps median parallactic angle. All values are rotated to this PA value using
+    scypi.ndimage.rotate(...)
 
-    Args:
-        data (numpy.ndarray): beam data grid (map, chan, pol, l, m)
-        parallactic_angle_dict (dict): dictionary containing antenna selected xds from which the aprallactic angle samples 
-                                       are retrieved ==> [map](xds), here the map referres to the map values not the map index.
+    Args: data (numpy.ndarray): beam data grid (map, chan, pol, l, m) parallactic_angle_dict (dict): dictionary
+    containing antenna selected xds from which the aprallactic angle samples are retrieved ==> [map](xds),
+    here the map referres to the map values not the map index.
 
     Returns:
         numpy.ndarray: rotation adjusted beam data grid
@@ -32,8 +32,8 @@ def _parallactic_derotation(data, parallactic_angle_dict):
     median_angular_reference = parallactic_angle_dict[maps[0]].parallactic_samples[median_index]
 
     for map, map_value in enumerate(maps):
-        # median_angular_offset = median_angular_reference - parallactic_angle_dict[map_value].parallactic_samples[median_index]
-        # median_angular_offset *= 180/np.pi
+        # median_angular_offset = median_angular_reference - parallactic_angle_dict[map_value].parallactic_samples[
+        # median_index] median_angular_offset *= 180/np.pi
 
         # parallactic_angle = 360 - parallactic_angle_dict[map_value].parallactic_samples[median_index]*180/np.pi
 
@@ -83,7 +83,7 @@ def _calculate_aperture_pattern(grid, delta, padding_factor=50):
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
     logger = skriba.logger.get_logger(logger_name="astrohack")
-    logger.info("[holog]: Calculating aperture illumination pattern ...")
+    logger.info("Calculating aperture illumination pattern ...")
 
     assert grid.shape[-1] == grid.shape[-2]  ###To do: why is this expected that l.shape == m.shape
     initial_dimension = grid.shape[-1]

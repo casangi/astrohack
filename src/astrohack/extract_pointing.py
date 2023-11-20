@@ -5,9 +5,6 @@ from astrohack._utils._extract_point import _extract_pointing
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _write_meta_data
 
-from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
-from astrohack._utils._tools import _remove_suffix
-
 from astrohack.mds import AstrohackPointFile
 
 import skriba.logger
@@ -67,20 +64,12 @@ def extract_pointing(
 
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    # Pull latest function from the stack, this is dynamic and preferred to hardcoding.
+    # Pull latest function from the stack, this is dynamic and preferred to hard coding.
     function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-    ######### Parameter Checking #########
-    extract_pointing_params = _check_extract_pointing_params(
-        function_name=function_name,
-        extract_point_params=extract_pointing_params
-    )
 
     input_params = extract_pointing_params.copy()
 
     try:
-        # _check_if_file_exists(extract_pointing_params['ms_name'])
-        # _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
 
         # Until check params is changed, comment this out.
         '''
@@ -121,30 +110,3 @@ def extract_pointing(
             function_name=function_name, error=error))
 
         return None
-
-
-def _check_extract_pointing_params(function_name, extract_point_params):
-    #### Parameter Checking ####
-
-    logger = skriba.logger.get_logger(logger_name="astrohack")
-    params_passed = True
-
-    params_passed = params_passed and _check_parms(function_name, extract_point_params, 'ms_name', [str], default=None)
-
-    base_name = _remove_suffix(extract_point_params['ms_name'], '.ms')
-    params_passed = params_passed and _check_parms(function_name, extract_point_params, 'point_name', [str],
-                                                   default=base_name + '.point.zarr')
-
-    point_base_name = _remove_suffix(extract_point_params['point_name'], '.point.zarr')
-    params_passed = params_passed and _check_parms(function_name, extract_point_params, 'point_name', [str],
-                                                   default=point_base_name + '.point.zarr')
-
-    params_passed = params_passed and _check_parms(function_name, extract_point_params, 'parallel', [bool],
-                                                   default=False)
-
-    params_passed = params_passed and _check_parms(function_name, extract_point_params, 'overwrite', [bool],
-                                                   default=False)
-
-    _parm_check_passed(function_name, params_passed)
-
-    return extract_point_params

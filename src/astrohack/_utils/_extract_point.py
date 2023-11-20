@@ -81,7 +81,7 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
     point_meta_ds.to_zarr(pnt_name, mode="w", compute=True, consolidated=True)
 
     ###########################################################################################
-    pnt_parms = {
+    pnt_params = {
         'pnt_name': pnt_name,
         'scan_time_dict': scan_time_dict
     }
@@ -89,13 +89,13 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
     if parallel:
         delayed_pnt_list = []
         for id in antenna_id:
-            pnt_parms['ant_id'] = id
-            pnt_parms['ant_name'] = antenna_name[id]
+            pnt_params['ant_id'] = id
+            pnt_params['ant_name'] = antenna_name[id]
 
             delayed_pnt_list.append(
                 dask.delayed(_make_ant_pnt_chunk)(
                     ms_name,
-                    pnt_parms
+                    pnt_params
                 )
             )
 
@@ -103,38 +103,44 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
 
     else:
         for id in antenna_id:
-            pnt_parms['ant_id'] = id
-            pnt_parms['ant_name'] = antenna_name[id]
+            pnt_params['ant_id'] = id
+            pnt_params['ant_name'] = antenna_name[id]
 
-            _make_ant_pnt_chunk(ms_name, pnt_parms)
+            _make_ant_pnt_chunk(ms_name, pnt_params)
 
     return _load_point_file(pnt_name)
 
 
-def _make_ant_pnt_chunk(ms_name, pnt_parms):
-    """Extract subset of pointing table data into a dictionary of xarray data arrays. This is written to disk as a zarr file.
-            This function processes a chunk the overalll data and is managed by Dask.
+def _make_ant_pnt_chunk(ms_name, pnt_params):
+    """Extract subset of pointing table data into a dictionary of xarray data arrays. This is written to disk as a
+    zarr file. This function processes a chunk the overall data and is managed by Dask.
 
     Args:
         ms_name (str): Measurement file name.
         ant_id (int): Antenna id
-        pnt_name (str): Name of output poitning dictinary file name.
+        pnt_name (str): Name of output pointing dictinary file name.
     """
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    ant_id = pnt_parms['ant_id']
-    ant_name = pnt_parms['ant_name']
-    pnt_name = pnt_parms['pnt_name']
-    scan_time_dict = pnt_parms['scan_time_dict']
+    ant_id = pnt_params['ant_id']
+    ant_name = pnt_params['ant_name']
+    pnt_name = pnt_params['pnt_name']
+    scan_time_dict = pnt_params['scan_time_dict']
 
-    table_obj = ctables.table(os.path.join(ms_name, "POINTING"), readonly=True, lockoptions={'option': 'usernoread'},
-                              ack=False)
+    table_obj = ctables.table(
+        os.path.join(ms_name, "POINTING"), 
+        readonly=True, 
+        lockoptions={
+            'option': 'usernoread'
+        }, ack=False
+    )
+    
     tb = ctables.taql(
         "select DIRECTION, TIME, TARGET, ENCODER, ANTENNA_ID, POINTING_OFFSET from $table_obj WHERE ANTENNA_ID == %s"
         % (ant_id)
     )
 
-    ### NB: Add check if directions refrence frame is Azemuth Elevation (AZELGEO)
+    ### NB: Add check if directions reference frame is Azemuth Elevation (AZELGEO)
     try:
         direction = tb.getcol("DIRECTION")[:, 0, :]
         target = tb.getcol("TARGET")[:, 0, :]
@@ -159,8 +165,8 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     # DIRECTION: Antenna pointing direction
     pnt_xds["DIRECTION"] = xr.DataArray(direction, dims=("time", "az_el"))
 
-    # ENCODER: The current encoder values on the primary axes of the mount type for the antenna, expressed as a Direction
-    # Measure.
+    # ENCODER: The current encoder values on the primary axes of the mount type for the antenna, expressed as a 
+    # Direction Measure.
     pnt_xds["ENCODER"] = xr.DataArray(encoder, dims=("time", "az_el"))
 
     # TARGET: This is the true expected position of the source, including all coordinate corrections such as precession,
@@ -176,8 +182,8 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     # TARGET: A_s, E_s (target source position)
     # DIRECTION: A_a, E_a (Antenna's pointing direction)
 
-    ### NB: Is VLA's definition of Azimuth the same for ALMA, MeerKAT, etc.? (positive for a clockwise rotation from north, viewed from above)
-    ### NB: Compare with calulation using WCS in astropy.
+    # ## NB: Is VLA's definition of Azimuth the same for ALMA, MeerKAT, etc.? (positive for a clockwise rotation from
+    # north, viewed from above) ## NB: Compare with calculation using WCS in astropy.
     l = np.cos(target[:, 1]) * np.sin(target[:, 0] - direction[:, 0])
     m = np.sin(target[:, 1]) * np.cos(direction[:, 1]) - np.cos(target[:, 1]) * np.sin(direction[:, 1]) * np.cos(
         target[:, 0] - direction[:, 0])
@@ -192,21 +198,21 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         
     A - ASDM, MS - MS
     
-    A_encoder = The values measured from the antenna. They may be however affected by metrology, if applied. Note
-                that for ALMA this column will contain positions obtained using the AZ POSN RSP and EL POSN RSP
-                monitor points of the ACU and not the GET AZ ENC and GET EL ENC monitor points (as these do not
-                include the metrology corrections). It is agreed that the the vendor pointing model will never be applied.
-                AZELNOWAntenna.position
-    A_pointing_direction : This is the commanded direction of the antenna. It is obtained by adding the target
-                and offset columns, and then applying the pointing model referenced by PointingModelId. The pointing
-                model can be the composition of the absolute pointing model and of a local pointing model. In that case
-                their coefficients will both be in the PointingModel table.
-    A_target : This is the field center direction (as given in the Field Table), possibly affected by the optional
-                antenna-based sourceOffset. This column is in horizontal coordinates. AZELNOWAntenna.position
-    A_offset : Additional offsets in horizontal coordinates (usually meant for measuring the pointing corrections,
-                mapping the antenna beam, ...). AZELNOWAntenna.positiontarget
-    A_sourceOffset : Optionally, the antenna-based mapping offsets in the field. These are in the equatorial system,
-                    and used, for instance, in on-the-fly mapping when the antennas are driven independently across the field.
+    A_encoder = The values measured from the antenna. They may be however affected by metrology, if applied. Note 
+    that for ALMA this column will contain positions obtained using the AZ POSN RSP and EL POSN RSP monitor points of 
+    the ACU and not the GET AZ ENC and GET EL ENC monitor points (as these do not include the metrology corrections). 
+    It is agreed that the the vendor pointing model will never be applied. AZELNOWAntenna.position 
+    
+    A_pointing_direction : This is the commanded direction of the antenna. It is obtained by adding the target and 
+    offset columns, and then applying the pointing model referenced by PointingModelId. The pointing model can be the 
+    composition of the absolute pointing model and of a local pointing model. In that case their coefficients will 
+    both be in the PointingModel table. A_target : This is the field center direction (as given in the Field Table), 
+    possibly affected by the optional antenna-based sourceOffset. This column is in horizontal coordinates. 
+    
+    AZELNOWAntenna.position A_offset : Additional offsets in horizontal coordinates (usually meant for measuring the 
+    pointing corrections, mapping the antenna beam, ...). AZELNOWAntenna.positiontarget A_sourceOffset : Optionally, 
+    the antenna-based mapping offsets in the field. These are in the equatorial system, and used, for instance, 
+    in on-the-fly mapping when the antennas are driven independently across the field.
                     
                     
     M_direction = rotate(A_target,A_offset) #A_target is rotated to by A_offset
@@ -214,14 +220,13 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
         M_target = rotate(A_target,A_offset) + (A_encoder - A_pointing_direction)
         
     M_target = A_target
-    M_poiting_offset = A_offset
+    M_pointing_offset = A_offset
     M_encoder = A_encoder
     
-    From the above description I suspect encoder should be used instead of direction, however for the VLA mapping antenna data no grid pattern appears (ALMA data does not have this problem).
-    '''
+    From the above description I suspect encoder should be used instead of direction, however for the VLA mapping 
+    antenna data no grid pattern appears (ALMA data does not have this problem).'''
 
     ############### Detect during which scans an antenna is mapping by averaging the POINTING_OFFSET radius.
-    mapping_scans_obs_dict = {}
     time_tree = spatial.KDTree(direction_time[:, None])  # Use for nearest interpolation
 
     mapping_scans_obs_dict = {}
@@ -253,7 +258,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_parms):
     pnt_xds.attrs['mapping_scans_obs_dict'] = [mapping_scans_obs_dict]
     ###############
 
-    pnt_xds.attrs['ant_name'] = pnt_parms['ant_name']
+    pnt_xds.attrs['ant_name'] = pnt_params['ant_name']
 
     logger.info(
         "Writing pointing xds to {file}".format(
@@ -295,7 +300,8 @@ def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_id
 @convert_dict_from_numba
 @njit(cache=False, nogil=True)
 def _extract_scan_time_dict_jit(time, scan_ids, state_ids, ddi_ids, mapping_state_ids):
-    """For each ddi get holography scan start and end times. A holography scan is detected when a scan_ids appears in mapping_state_ids.
+    """For each ddi get holography scan start and end times. A holography scan is detected when a scan_ids appears in 
+    mapping_state_ids.
 
     """
     d1 = Dict.empty(

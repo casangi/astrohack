@@ -112,7 +112,9 @@ def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_mo
 
     panel_params = locals()
     panel_params['ant'] = ant
+
     logger = skriba.logger.get_logger(logger_name="astrohack")
+
     fname = 'panel'
     panel_params = _check_panel_parms(fname, panel_params)
     input_params = panel_params.copy()
