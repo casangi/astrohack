@@ -310,7 +310,7 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_screws', [bool], default=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='viridis')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -360,7 +360,7 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='viridis')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -548,7 +548,7 @@ class AstrohackHologFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'complex_split', [str],
                                                      acceptable_data=possible_splits, default="polar")
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -763,7 +763,7 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='RdBu_r')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -858,7 +858,7 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_screws', [bool], default=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='viridis')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -1099,7 +1099,7 @@ class AstrohackLocitFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'precessed', [bool], default=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'label', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -1149,7 +1149,7 @@ class AstrohackLocitFile(dict):
         parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'stations', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'zoff', [bool], default=False)
@@ -1327,7 +1327,7 @@ class AstrohackPositionFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'angle_unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -1399,7 +1399,7 @@ class AstrohackPositionFile(dict):
                                                      default='nsec')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_fit', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -1455,7 +1455,7 @@ class AstrohackPositionFile(dict):
         parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'stations', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ant', [list, str],

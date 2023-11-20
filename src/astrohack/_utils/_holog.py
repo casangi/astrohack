@@ -494,23 +494,23 @@ def _plot_beam_chunk(parm_dict):
         realpart = full_beam.real
         imagpart = full_beam.imag
         _plot_beam(laxis, maxis, pol_axis, realpart, basename, 'real', antenna, ddi, 'normalized',
-                   figuresize=parm_dict['figuresize'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
+                   figure_size=parm_dict['figure_size'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
                    display=parm_dict['display'])
         _plot_beam(laxis, maxis, pol_axis, imagpart, basename, 'real', antenna, ddi, 'normalized',
-                   figuresize=parm_dict['figuresize'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
+                   figure_size=parm_dict['figure_size'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
                    display=parm_dict['display'])
     else:
         ampli = np.absolute(full_beam)
         phase = np.angle(full_beam)
         _plot_beam(laxis, maxis, pol_axis, ampli, basename, 'amplitude', antenna, ddi, 'normalized',
-                   figuresize=parm_dict['figuresize'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
+                   figure_size=parm_dict['figure_size'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
                    display=parm_dict['display'])
         _plot_beam(laxis, maxis, pol_axis, phase, basename, 'phase', antenna, ddi, 'rad',
-                   figuresize=parm_dict['figuresize'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
+                   figure_size=parm_dict['figure_size'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
                    display=parm_dict['display'])
 
 
-def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit, figuresize, dpi, colormap, display):
+def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit, figure_size, dpi, colormap, display):
     """
     Plot a beam
     Args:
@@ -523,7 +523,7 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit
         antenna: which antenna
         ddi: which DDI
         unit: data unit
-        figuresize: Figure size
+        figure_size: Figure size
         dpi: DPI
         colormap: Colormap for plot
         display: Display plots?
@@ -538,12 +538,12 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit
     n_pol = len(pol_axis)
     
     if n_pol == 4:
-        fig, axes = _create_figure_and_axes(figuresize, [2, 2])
+        fig, axes = _create_figure_and_axes(figure_size, [2, 2])
         axes = axes.flat
     elif n_pol == 2:
-        fig, axes = _create_figure_and_axes(figuresize, [2, 1])
+        fig, axes = _create_figure_and_axes(figure_size, [2, 1])
     elif n_pol == 1:
-        fig, ax = _create_figure_and_axes(figuresize, [1, 1])
+        fig, ax = _create_figure_and_axes(figure_size, [1, 1])
         axes = [ax]
     else:
         raise Exception(f'[{function_name}]: Do not know how to handle polarization axis with {n_pol} elements')

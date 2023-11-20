@@ -578,7 +578,7 @@ class AntennaSurface:
 
     def _plot_map(self, filename, data, title, parm_dict, colorbar=True):
         cmap = _get_proper_color_map(parm_dict['colormap'])
-        fig, ax = _create_figure_and_axes(parm_dict['figuresize'], [1, 1])
+        fig, ax = _create_figure_and_axes(parm_dict['figure_size'], [1, 1])
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
         extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
@@ -620,7 +620,7 @@ class AntennaSurface:
         unit = parm_dict['unit']
         threshold = parm_dict['threshold']
         cmap = _get_proper_color_map(parm_dict['colormap'], default_cmap='RdBu_r')
-        fig, ax = _create_figure_and_axes(parm_dict['figuresize'], [1, 1])
+        fig, ax = _create_figure_and_axes(parm_dict['figure_size'], [1, 1])
 
         fac = _convert_unit('m', unit, 'length')
         vmax = np.nanmax(np.abs(fac * self.screw_adjustments))
