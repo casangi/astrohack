@@ -4,7 +4,8 @@ import requests
 import zipfile
 
 from tqdm import tqdm
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+
+import skriba.logger
 
 FILE_ID = {
     'ea25_cal_small_before_fixed.split.ms':
@@ -54,7 +55,7 @@ FILE_ID = {
 
 
 def download(file, folder='.'):
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     if os.path.exists('/'.join((folder, file))):
         logger.info("File exists.")

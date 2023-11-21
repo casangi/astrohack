@@ -223,11 +223,11 @@ def _print_holog_obs_dict(holog_obj):
     logger.info("{close_bracket}".format(close_bracket=CLOSE_DICT))
 
 
-def _parm_to_list(caller, parm, data_dict, prefix):
+def _param_to_list(caller, param, data_dict, prefix):
     """
     Transforms a string parameter to a list if parameter is all or a single string
     Args:
-        parm: string or list parameter
+        param: string or list parameter
         data_dict: Dictionary in which to search for data to be listed
         prefix: prefix to be added to parameter
 
@@ -236,29 +236,29 @@ def _parm_to_list(caller, parm, data_dict, prefix):
     """
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    if parm == 'all':
-        oulist = list(data_dict.keys())
-    elif isinstance(parm, str):
-        oulist = [_add_prefix(parm, prefix)]
-    elif isinstance(parm, int):
-        oulist = [f'{prefix}_{parm}']
-    elif isinstance(parm, (list, tuple)):
-        oulist = []
-        for item in parm:
+    if param == 'all':
+        outlist = list(data_dict.keys())
+    elif isinstance(param, str):
+        outlist = [_add_prefix(param, prefix)]
+    elif isinstance(param, int):
+        outlist = [f'{prefix}_{param}']
+    elif isinstance(param, (list, tuple)):
+        outlist = []
+        for item in param:
             if isinstance(item, str):
-                oulist.append(_add_prefix(item, prefix))
+                outlist.append(_add_prefix(item, prefix))
             elif isinstance(item, int):
-                oulist.append(f'{prefix}_{item}')
+                outlist.append(f'{prefix}_{item}')
             else:
                 msg = f'[{caller}]: cannot interpret parameter {item} of type {type(item)}'
                 logger.error(msg)
                 raise Exception(msg)
     else:
-        msg = f'[{caller}] cannot interpret parameter {parm} of type {type(parm)}'
+        msg = f'[{caller}] cannot interpret parameter {param} of type {type(param)}'
         logger.error(msg)
         raise Exception(msg)
 
-    return oulist
+    return outlist
 
 
 def _split_pointing_table(ms_name, antennas):

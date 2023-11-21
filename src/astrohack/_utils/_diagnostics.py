@@ -12,17 +12,17 @@ def _calc_index(n, m):
         return n
 
 
-def _extract_indicies(l, m, squared_radius):
-    indicies = []
+def _extract_indices(l, m, squared_radius):
+    indices = []
 
     assert l.shape[0] == m.shape[0], "l, m must be same size."
 
     for i in range(l.shape[0]):
         squared_sum = np.power(l[i], 2) + np.power(m[i], 2)
         if squared_sum <= squared_radius:
-            indicies.append(i)
+            indices.append(i)
 
-    return np.array(indicies)
+    return np.array(indices)
 
 
 def _matplotlib_calibration_inspection_function(data, delta=0.01, pol='RR', width=1000, height=450):
@@ -37,13 +37,13 @@ def _matplotlib_calibration_inspection_function(data, delta=0.01, pol='RR', widt
 
     assert l.shape[0] == m.shape[0], "l, m dimensions don't match!"
 
-    indicies = _extract_indicies(
+    indices = _extract_indices(
         l=l,
         m=m,
         squared_radius=radius
     )
 
-    vis = data.isel(time=indicies).VIS
+    vis = data.isel(time=indices).VIS
     times = Time(vis.time.data - UNIX_CONVERSION, format='unix').iso
 
     fig, axis = _create_figure_and_axes([width * pixels, height * pixels], [2, 1])
@@ -81,13 +81,13 @@ def _plotly_calibration_inspection_function(data, delta=0.01, pol='RR', width=10
 
     assert l.shape[0] == m.shape[0], "l, m dimensions don't match!"
 
-    indicies = _extract_indicies(
+    indices = _extract_indices(
         l=l,
         m=m,
         squared_radius=radius
     )
 
-    vis = data.isel(time=indicies).VIS
+    vis = data.isel(time=indices).VIS
     times = Time(vis.time.data - UNIX_CONVERSION, format='unix').iso
 
     chan = np.arange(0, data.chan.data.shape[0])
@@ -219,13 +219,13 @@ def _calibration_plot_chunk(param_dict):
 
     assert l_axis.shape[0] == m_axis.shape[0], "l, m dimensions don't match!"
 
-    indicies = _extract_indicies(l=l_axis, m=m_axis, squared_radius=radius)
+    indices = _extract_indices(l=l_axis, m=m_axis, squared_radius=radius)
 
     if complex_split == "cartesian":
         vis_dict = {
             "data": [
-                data.isel(time=indicies).VIS.real,
-                data.isel(time=indicies).VIS.imag
+                data.isel(time=indices).VIS.real,
+                data.isel(time=indices).VIS.imag
             ],
             "polarization": [0, 3],
             "label": ["REAL", "IMAG"]
@@ -233,8 +233,8 @@ def _calibration_plot_chunk(param_dict):
     else:
         vis_dict = {
             "data": [
-                data.isel(time=indicies).apply(np.abs).VIS,
-                data.isel(time=indicies).apply(np.angle).VIS
+                data.isel(time=indices).apply(np.abs).VIS,
+                data.isel(time=indices).apply(np.angle).VIS
             ],
             "polarization": [0, 3],
             "label": ["AMP", "PHASE"]

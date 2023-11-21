@@ -17,7 +17,6 @@ from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._extract_holog import _create_holog_meta_data
 from astrohack._utils._extract_holog import _create_holog_obs_dict
 from astrohack._utils._extract_holog import _extract_holog_chunk
-from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import NumpyEncoder
 from astrohack._utils._tools import _remove_suffix
 from astrohack.mds import AstrohackHologFile
@@ -568,10 +567,14 @@ def extract_holog(
 
             if 'map' in holog_map_key:
                 scans = holog_obs_dict[ddi_name][holog_map_key]["scans"]
-
-                logger.info("[{function_name}]: Processing ddi: {ddi}, scans: [{min} ... {max}]".format(
-                    function_name=function_name, ddi=ddi, min=scans[0], max=scans[-1]
-                ))
+                if len(scans) > 1:
+                    logger.info("[{function_name}]: Processing ddi: {ddi}, scans: [{min} ... {max}]".format(
+                        function_name=function_name, ddi=ddi, min=scans[0], max=scans[-1]
+                    ))
+                else:
+                    logger.info("[{function_name}]: Processing ddi: {ddi}, scan: {scan}".format(
+                        function_name=function_name, ddi=ddi, scan=scans
+                    ))
 
                 if len(list(holog_obs_dict[ddi_name][holog_map_key]['ant'].keys())) != 0:
                     map_ant_list = []

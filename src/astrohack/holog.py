@@ -5,11 +5,10 @@ import numbers
 import numpy as np
 
 from astrohack._utils._holog import _holog_chunk
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
-from astrohack._utils._tools import _remove_suffix
-from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _read_meta_data, \
-    _write_meta_data
+from astrohack._utils._dio import _check_if_file_will_be_overwritten
+from astrohack._utils._dio import _check_if_file_exists
+from astrohack._utils._dio import _read_meta_data
+from astrohack._utils._dio import _write_meta_data
 from astrohack.mds import AstrohackImageFile
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
@@ -31,8 +30,8 @@ def holog(
         chan_average=True,
         chan_tolerance_factor=0.005,
         scan_average=True,
-        ant=None,
-        ddi=None,
+        ant="all",
+        ddi="all",
         to_stokes=True,
         apply_mask=True,
         phase_fit=True,
@@ -43,19 +42,24 @@ def holog(
 
     :param holog_name: Name of holography .holog.zarr file to process.
     :type holog_name: str
+
     :param grid_size: Numpy array specifying the dimensions of the grid used in data gridding. If not specified \
     grid_size is calculated using POINTING_OFFSET in pointing table.
     :type grid_size: numpy.ndarray, dtype int, optional
+
     :param cell_size: Numpy array defining the cell size of each grid bin. If not specified cell_size is calculated \
     using POINTING_OFFSET in pointing table.
     :type cell_size: numpy.ndarray, dtype float, optional
+
     :param image_name: Defines the name of the output image name. If value is None, the name will be set to \
     <base_name>.image.zarr, defaults to None
     :type image_name: str, optional
+
     :param padding_factor: Padding factor applied to beam grid before computing the fast-fourier transform. The default\
      has been set for operation on most systems. The user should be aware of memory constraints before increasing this\
       parameter significantly., defaults to 50
     :type padding_factor: int, optional
+
     :param parallel: Run in parallel with Dask or in serial., defaults to False
     :type parallel: bool, optional
     :param grid_interpolation_mode: Method of interpolation used when gridding data. This is done using the \
@@ -137,13 +141,11 @@ def holog(
 
     holog_params = locals()
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-    ######### Parameter Checking #########
-    holog_params = _check_holog_params(function_name=function_name, holog_params=holog_params)
-    input_parms = holog_params.copy()
+    input_params = holog_params.copy()
 
     _check_if_file_exists(holog_params['holog_name'])
     _check_if_file_will_be_overwritten(holog_params['image_name'], holog_params['overwrite'])
@@ -195,82 +197,32 @@ def holog(
         json.dump(json_data, out_file)
 
     try:
-        if _dask_general_compute(function_name, holog_json, _holog_chunk, holog_params, ['ant', 'ddi'],
-                                 parallel=parallel):
+        if _dask_general_compute(
+                function_name,
+                holog_json,
+                _holog_chunk,
+                holog_params,
+                ['ant', 'ddi'],
+                parallel=parallel
+        ):
 
             output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_attr")
             _write_meta_data(output_attr_file, holog_params)
+
             output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_input")
-            _write_meta_data(output_attr_file, input_parms)
+            _write_meta_data(output_attr_file, input_params)
 
             image_mds = AstrohackImageFile(holog_params['image_name'])
             image_mds._open()
 
-            logger.info(f'[{function_name}]: Finished processing')
+            logger.info('Finished processing')
 
             return image_mds
 
         else:
-            logger.warning(f"[{function_name}]: No data to process")
+            logger.warning("No data to process")
             return None
 
     except Exception as error:
         logger.error("{function_name}: There was an error, see log above for more info :: {error}".format(
             function_name=function_name, error=error))
-
-
-def _check_holog_params(function_name, holog_params):
-    #### Parameter Checking ####
-    parms_passed = True
-
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'holog_name', [str], default=None)
-
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'grid_size', [list, np.ndarray],
-                                                 list_acceptable_data_types=[np.int64, int], list_len=2, default='None',
-                                                 log_default_setting=False)
-
-    if (isinstance(holog_params['grid_size'], str)) and (holog_params['grid_size'] == 'None'):
-        holog_params['grid_size'] = None
-
-    else:
-        holog_params['grid_size'] = np.array(holog_params['grid_size'])
-
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'cell_size', [list, np.ndarray],
-                                                 list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                 default='None', log_default_setting=False)
-
-    if (isinstance(holog_params['cell_size'], str)) and (holog_params['cell_size'] == 'None'):
-        holog_params['cell_size'] = None
-
-    else:
-        holog_params['cell_size'] = np.array(holog_params['cell_size'])
-
-    base_name = _remove_suffix(holog_params['holog_name'], '.holog.zarr')
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'image_name', [str],
-                                                 default=base_name + '.image.zarr')
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'padding_factor', [int], default=50)
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'parallel', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'grid_interpolation_mode', [str],
-                                                 acceptable_data=["nearest", "linear", "cubic"], default="nearest")
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'chan_average', [bool], default=True)
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'chan_tolerance_factor', [float],
-                                                 acceptable_range=[0, 1], default=0.005)
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'scan_average', [bool], default=True)
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'ant', [list, str],
-                                                 list_acceptable_data_types=[str], default='all')
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'ddi', [list, int],
-                                                 list_acceptable_data_types=[int], default='all')
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'to_stokes', [bool], default=True)
-
-    if isinstance(holog_params['phase_fit'], list) or isinstance(holog_params['phase_fit'], type(np.ndarray)):
-        parms_passed = parms_passed and _check_parms(function_name, holog_params, 'phase_fit', [list, type(np.ndarray)],
-                                                     list_acceptable_data_types=[bool], list_len=5)
-    else:
-        parms_passed = parms_passed and _check_parms(function_name, holog_params, 'phase_fit', [bool], default=True)
-
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'apply_mask', [bool], default=True)
-    parms_passed = parms_passed and _check_parms(function_name, holog_params, 'overwrite', [bool], default=False)
-
-    _parm_check_passed(function_name, parms_passed)
-
-    return holog_params

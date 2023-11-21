@@ -6,7 +6,7 @@ import skriba.logger
 from astrohack._utils._dio import _load_image_xds
 from scipy.interpolate import griddata
 from astrohack._utils._constants import clight
-from astrohack._utils._tools import _parm_to_list
+from astrohack._utils._tools import _param_to_list
 
 
 def _combine_chunk(combine_chunk_params):
@@ -20,7 +20,7 @@ def _combine_chunk(combine_chunk_params):
     antenna = combine_chunk_params['this_ant']
     ddi_dict = combine_chunk_params['image_mds'][antenna]
     fname = 'combine'
-    ddi_list = _parm_to_list(fname, combine_chunk_params['ddi'], ddi_dict, 'ddi')
+    ddi_list = _param_to_list(fname, combine_chunk_params['ddi'], ddi_dict, 'ddi')
 
     nddi = len(ddi_list)
     out_xds_name = '/'.join([combine_chunk_params['combine_name'], antenna, ddi_list[0]])
