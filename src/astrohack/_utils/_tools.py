@@ -32,7 +32,6 @@ class NumpyEncoder(json.JSONEncoder):
 
         return json.JSONEncoder.default(self, obj)
 
-
 def _casa_time_to_mjd(times):
     corrected = times / 3600 / 24.0
     return corrected

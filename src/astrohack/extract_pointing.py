@@ -67,24 +67,22 @@ def extract_pointing(
     # Pull latest function from the stack, this is dynamic and preferred to hard coding.
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-    input_params = extract_pointing_params.copy()
-
     try:
 
         # Until check params is changed, comment this out.
-        '''
-        if point_name==None:
+
+        if point_name is None:
         
             logger.debug('[{caller}]: File {file} does not exists. Extracting ...'.format(caller=function_name, file=point_name))
             
             from astrohack._utils._tools import _remove_suffix
 
             point_name = _remove_suffix(ms_name, '.ms') + '.point.zarr'
-            extract_holog_params['point_name'] = point_name
+            extract_pointing_params['point_name'] = point_name
             
             logger.debug('[{caller}]: Extracting pointing to {output}'.format(caller=function_name, output=point_name))
-        '''
 
+        input_params = extract_pointing_params.copy()
         pnt_dict = _extract_pointing(
             ms_name=extract_pointing_params['ms_name'],
             pnt_name=extract_pointing_params['point_name'],

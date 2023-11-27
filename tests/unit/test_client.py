@@ -29,13 +29,13 @@ class TestAstrohack():
         """
         import distributed
 
-        from astrohack.client import astrohack_local_client
+        from astrohack.client import local_client
 
         DEFAULT_DASK_ADDRESS = "127.0.0.1:8786"
 
         log_params = {'log_level': 'DEBUG'}
 
-        client = astrohack_local_client(cores=2, memory_limit='8GB', log_params=log_params)
+        client = local_client(cores=2, memory_limit='8GB', log_params=log_params)
 
         if not distributed.client._get_global_client():
             try:
@@ -55,11 +55,11 @@ class TestAstrohack():
             astrohack Dask client. Check that temporary files are written to dask_local_dir.
         """
 
-        from astrohack.client import astrohack_local_client
+        from astrohack.client import local_client
 
         log_params = {'log_level': 'DEBUG'}
 
-        client = astrohack_local_client(
+        client = local_client(
             cores=2,
             memory_limit='8GB',
             log_params=log_params,
@@ -84,7 +84,7 @@ class TestAstrohack():
         import os
         import re
 
-        from astrohack.client import astrohack_local_client
+        from astrohack.client import local_client
 
         log_params = {
             'log_level': 'DEBUG',
@@ -92,7 +92,7 @@ class TestAstrohack():
             'log_file': 'astrohack_log_file'
         }
 
-        client = astrohack_local_client(cores=2, memory_limit='8GB', log_params=log_params)
+        client = local_client(cores=2, memory_limit='8GB', log_params=log_params)
 
         files = os.listdir(".")
 

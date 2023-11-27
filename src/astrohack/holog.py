@@ -15,6 +15,8 @@ from astrohack._utils._dask_graph_tools import _dask_general_compute
 import skriba.logger
 import auror.parameter
 
+from astrohack._utils._tools import _remove_suffix
+
 CURRENT_FUNCTION = 0
 
 @auror.parameter.validate(
@@ -148,6 +150,15 @@ def holog(
     input_params = holog_params.copy()
 
     _check_if_file_exists(holog_params['holog_name'])
+
+    if image_name is None:
+        logger.info('File not specified or doesn\'t exist. Creating ...')
+
+        image_name = _remove_suffix(holog_name, '.holog.zarr') + '.image.zarr'
+        holog_params['image_name'] = image_name
+
+        logger.info('Extracting panel name to {output}'.format(output=image_name))
+
     _check_if_file_will_be_overwritten(holog_params['image_name'], holog_params['overwrite'])
 
     json_data = "/".join((holog_params['holog_name'], ".holog_json"))

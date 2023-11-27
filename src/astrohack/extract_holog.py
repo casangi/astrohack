@@ -373,16 +373,17 @@ def extract_holog(
     input_pars = extract_holog_params.copy()
 
     _check_if_file_exists(extract_holog_params['ms_name'])
-    _check_if_file_will_be_overwritten(extract_holog_params['holog_name'], extract_holog_params['overwrite'])
 
     if holog_name is None:
         logger.debug(
-            '[{caller}]: File {file} does not exists. Extracting ...'.format(caller=function_name, file=holog_name))
+            'File not specified or doesn\'t exist. Creating ...')
 
         holog_name = _remove_suffix(ms_name, '.ms') + '.holog.zarr'
         extract_holog_params['holog_name'] = holog_name
 
-        logger.debug('[{caller}]: Extracting holog to {output}'.format(caller=function_name, output=holog_name))
+        logger.debug('Extracting holog name to {output}'.format(output=holog_name))
+
+    _check_if_file_will_be_overwritten(extract_holog_params['holog_name'], extract_holog_params['overwrite'])
 
     try:
         pnt_dict = _load_point_file(extract_holog_params['point_name'])

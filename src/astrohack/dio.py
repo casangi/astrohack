@@ -49,7 +49,7 @@ def open_holog(file):
             }
     """
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _data_file = AstrohackHologFile(file=file)
 
