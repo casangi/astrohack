@@ -4,7 +4,6 @@ import gdown
 import shutil
 import json
 
-from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 from prettytable import PrettyTable

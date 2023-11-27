@@ -13,8 +13,19 @@ from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 
 
-def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_model=None, panel_margins=0.05, ant=None,
-          ddi=None, parallel=False, overwrite=False):
+def panel(
+        image_name,
+        panel_name=None,
+        clip_type='sigma',
+        clip_level=3,
+        panel_model=None,
+        panel_margins=0.05,
+        ant="all",
+        ddi="all",
+        parallel=False,
+        overwrite=False
+):
+
     """Analyze holography images to derive panel adjustments
 
     :param image_name: Input holography data file name. Accepted data formats are the output from ``astrohack.holog.holog`` and AIPS holography data prepackaged using ``astrohack.panel.aips_holog_to_astrohack``.
@@ -116,13 +127,16 @@ def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_mo
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
     fname = 'panel'
-    panel_params = _check_panel_parms(fname, panel_params)
+    #panel_params = _check_panel_parms(fname, panel_params)
     input_params = panel_params.copy()
     # Doubled this entry for compatibility with the factorized antenna ddi loop
     panel_params['filename'] = panel_params['image_name']
+
     _check_if_file_exists(panel_params['image_name'])
+
     image_mds = AstrohackImageFile(panel_params['image_name'])
     image_mds._open()
+
     _check_if_file_will_be_overwritten(panel_params['panel_name'], panel_params['overwrite'])
 
     if os.path.exists(panel_params['image_name']+'/.aips'):

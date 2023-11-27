@@ -1,4 +1,5 @@
 import xarray as xr
+import skriba.logger
 
 from astrohack._utils._constants import plot_types
 
