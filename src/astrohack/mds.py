@@ -627,12 +627,24 @@ class AstrohackHologFile(dict):
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'map', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'complex_split', [str],
+                                                     acceptable_data=possible_splits, default="polar")
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'angle_unit', [str],
+                                                     acceptable_data=trigo_units, default='deg')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_unit', [str],
+                                                     acceptable_data=trigo_units, default='deg')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'time_unit', [str],
+                                                     acceptable_data=time_units, default='hour')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_correlation', [str, list],
+                                                     list_acceptable_data_types=[str], default='None')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=False)
 
+        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(function_name, self, _plot_lm_coverage, parm_dict, key_order, parallel)

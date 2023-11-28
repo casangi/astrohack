@@ -613,7 +613,7 @@ def _plot_lm_coverage(param_dict):
 
     _plot_lm_coverage_sub(time, real_lm, ideal_lm, param_dict)
 
-    if param_dict['plot_correlation'] is None:
+    if param_dict['plot_correlation'] is None or param_dict['plot_correlation'] == 'None':
         pass
     else:
         param_dict['linestyle'] = ''
