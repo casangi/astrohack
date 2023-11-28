@@ -26,6 +26,7 @@ from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._diagnostics import _calibration_plot_chunk
+from astrohack._utils._extract_holog import _plot_lm_coverage
 from astrohack._utils._extract_locit import _plot_source_table, _plot_array_configuration, _print_array_configuration
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
 from astrohack._utils._locit import _plot_delays_chunk, _plot_position_corrections
@@ -309,7 +310,7 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_screws', [bool], default=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='viridis')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -318,8 +319,8 @@ class AstrohackImageFile(dict):
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(function_name, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_beams(self, destination, ant=None, ddi=None, complex_split='polar', display=False, colormap='viridis',
-                   figure_size=None, dpi=300, parallel=False):
+    def plot_beams(self, destination, ant=None, ddi=None, angle_unit='deg', complex_split='polar', phase_unit='deg',
+                   display=False, colormap='viridis', figure_size=None, dpi=300, parallel=False):
         """ Beam plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
@@ -328,8 +329,12 @@ class AstrohackImageFile(dict):
         :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
+        :param angle_unit: Unit for L and M axes in plots, default is 'deg'.
+        :type angle_unit: str, optional
         :param complex_split: How to split complex beam data, cartesian (real + imag) or polar (amplitude + phase, default)
         :type complex_split: str, optional
+        :param phase_unit: Unit for phase in 'polar' plots, default is 'deg'.
+        :type phase_unit: str
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
         :param colormap: Colormap for plots, default is viridis
@@ -353,13 +358,17 @@ class AstrohackImageFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
                                                      list_acceptable_data_types=[int], default='all')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'angle_unit', [str],
+                                                     acceptable_data=trigo_units, default='deg')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'complex_split', [str],
                                                      acceptable_data=possible_splits, default="polar")
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_unit', [str],
+                                                     acceptable_data=trigo_units, default='deg')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='viridis')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -438,7 +447,7 @@ class AstrohackHologFile(dict):
         _print_summary_header(self.file)
         _print_dict_table(self._input_pars)
         _print_data_contents(self, ["DDI", "Map", "Antenna"])
-        _print_method_list([self.summary, self.select, self.plot_diagnostics])
+        _print_method_list([self.summary, self.select, self.plot_diagnostics, self.plot_lm_sky_coverage])
 
     def select(self, ddi=None, map_id=None, ant=None):
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
@@ -547,7 +556,7 @@ class AstrohackHologFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'complex_split', [str],
                                                      acceptable_data=possible_splits, default="polar")
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -557,6 +566,89 @@ class AstrohackHologFile(dict):
         _create_destination_folder(parm_dict['destination'])
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(function_name, self, _calibration_plot_chunk, parm_dict, key_order, parallel)
+
+    def plot_lm_sky_coverage(self, destination, ant=None, ddi=None, map_id=None, angle_unit='deg', time_unit='hour',
+                             plot_correlation=None, complex_split='polar', phase_unit='deg', display=False,
+                             figure_size=None, dpi=300, parallel=False):
+        """ Plot directional cosine coverage.
+
+        :param destination: Name of the destination folder to contain plots
+        :type destination: str
+        :param ant: antenna ID to use in subselection, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+        :param ddi: data description ID to use in subselection, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning \
+        configuration,  defaults to "all" when None, ex. 0
+        :type map_id: list or int, optional
+        :param angle_unit: Unit for L and M axes in plots, default is 'deg'.
+        :type angle_unit: str, optional
+        :param time_unit: Unit for time axis in plots, default is 'hour'.
+        :type time_unit: str, optional
+        :param plot_correlation: Which correlation to plot against L and M, default is None (no correlation plots).
+        :type plot_correlation: str, list, optional
+        :param complex_split: How to split complex data, cartesian (real + imaginary) or polar (amplitude + phase), \
+        default is polar
+        :type complex_split: str, optional
+        :param phase_unit: Unit for phase in 'polar' plots, default is 'deg'.
+        :type phase_unit: str
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+        :param figure_size: 2 element array/list/tuple with the plot sizes in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: dots per inch to be used in plots, default is 300
+        :type dpi: int, optional
+        :param parallel: Run in parallel, defaults to False
+        :type parallel: bool, optional
+
+        **Additional Information**
+        The visibilities extracted by extract_holog are complex due to the nature of interferometric measurements. To
+        ease the visualization of the complex data it can be split into real and imaginary parts (cartesian) or in
+        amplitude and phase (polar).
+
+        .. rubric:: Available complex splitting possibilities:
+        - *cartesian*: Split is done to a real part and an imaginary part in the plots
+        - *polar*:     Split is done to an amplitude and a phase in the plots
+
+        .. rubric:: Plotting correlations:
+        - *RR, RL, LR, LL*: Are available for circular systems
+        - *XX, XY, YX, YY*: Are available for linear systems
+        - *all*: Plot all correlations in dataset
+
+        """
+
+        function_name = inspect.stack()[CURRENT_FUNCTION].function
+        parm_dict = locals()
+
+        parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ant', [str, list],
+                                                     list_acceptable_data_types=[str], default='all')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'map', [int, list],
+                                                     list_acceptable_data_types=[int], default='all')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'complex_split', [str],
+                                                     acceptable_data=possible_splits, default="polar")
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'angle_unit', [str],
+                                                     acceptable_data=trigo_units, default='deg')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_unit', [str],
+                                                     acceptable_data=trigo_units, default='deg')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'time_unit', [str],
+                                                     acceptable_data=time_units, default='hour')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_correlation', [str, list],
+                                                     list_acceptable_data_types=[str], default='None')
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
+                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
+                                                     default='None', log_default_setting=False)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=False)
+
+        _parm_check_passed(function_name, parms_passed)
+        _create_destination_folder(parm_dict['destination'])
+        key_order = ["ddi", "map", "ant"]
+        _dask_general_compute(function_name, self, _plot_lm_coverage, parm_dict, key_order, parallel)
+        return
 
 
 class AstrohackPanelFile(dict):
@@ -691,7 +783,7 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='RdBu_r')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -786,7 +878,7 @@ class AstrohackPanelFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_screws', [bool], default=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
                                                      default='viridis')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -1027,7 +1119,7 @@ class AstrohackLocitFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'precessed', [bool], default=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'label', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -1077,7 +1169,7 @@ class AstrohackLocitFile(dict):
         parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'stations', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'zoff', [bool], default=False)
@@ -1255,7 +1347,7 @@ class AstrohackPositionFile(dict):
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'angle_unit', [str], acceptable_data=trigo_units,
                                                      default='deg')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -1327,7 +1419,7 @@ class AstrohackPositionFile(dict):
                                                      default='nsec')
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_fit', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
@@ -1383,7 +1475,7 @@ class AstrohackPositionFile(dict):
         parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'stations', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ant', [list, str],
