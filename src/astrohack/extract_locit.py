@@ -7,8 +7,21 @@ from astrohack._utils._extract_locit import _extract_antenna_data, _extract_spec
 from astrohack._utils._extract_locit import _extract_source_and_telescope, _extract_antenna_phase_gains
 from astrohack.mds import AstrohackLocitFile
 
+import inspect
+import auror.parameter
 
-def extract_locit(cal_table, locit_name=None, ant=None, ddi=None, overwrite=False):
+CURRENT_FUNCTION=0
+
+@auror.parameter.validate(
+    logger=skriba.logger.get_logger(logger_name="astrohack")
+)
+def extract_locit(
+        cal_table,
+        locit_name=None,
+        ant="all",
+        ddi="all",
+        overwrite=False
+):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
 
@@ -34,55 +47,43 @@ def extract_locit(cal_table, locit_name=None, ant=None, ddi=None, overwrite=Fals
     **Additional Information**
 
     """
-    extract_locit_parms = locals()
+    extract_locit_params = locals()
     logger = _get_astrohack_logger()
 
-    fname = 'extract_locit'
-    ######### Parameter Checking #########
-    extract_locit_parms = _check_extract_locit_parms(fname, extract_locit_parms)
-    input_parms = extract_locit_parms.copy()
-    attributes = extract_locit_parms.copy()
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-    _check_if_file_exists(extract_locit_parms['cal_table'])
-    _check_if_file_will_be_overwritten(extract_locit_parms['locit_name'], extract_locit_parms['overwrite'])
+    if locit_name is None:
+        logger.info('File not specified or doesn\'t exist. Creating ...')
 
-    _extract_antenna_data(fname, extract_locit_parms)
-    _extract_spectral_info(fname, extract_locit_parms)
-    _extract_antenna_phase_gains(fname, extract_locit_parms)
-    telescope_name, n_sources = _extract_source_and_telescope(fname, extract_locit_parms)
+        locit_name = cal_table + '.locit.zarr'
+        extract_locit_params['locit_name'] = locit_name
+
+        logger.info('Extracting locit name to {output}'.format(output=locit_name))
+
+    input_params = extract_locit_params.copy()
+    attributes = extract_locit_params.copy()
+
+    _check_if_file_exists(extract_locit_params['cal_table'])
+    _check_if_file_will_be_overwritten(extract_locit_params['locit_name'], extract_locit_params['overwrite'])
+
+    _extract_antenna_data(function_name, extract_locit_params)
+    _extract_spectral_info(function_name, extract_locit_params)
+    _extract_antenna_phase_gains(function_name, extract_locit_params)
+    telescope_name, n_sources = _extract_source_and_telescope(function_name, extract_locit_params)
 
     attributes['telescope_name'] = telescope_name
     attributes['n_sources'] = n_sources
-    attributes['reference_antenna'] = extract_locit_parms['reference_antenna']
-    attributes['n_antennas'] = len(extract_locit_parms['ant_dict'])
-    output_attr_file = "{name}/{ext}".format(name=extract_locit_parms['locit_name'], ext=".locit_input")
-    _write_meta_data(output_attr_file, input_parms)
-    output_attr_file = "{name}/{ext}".format(name=extract_locit_parms['locit_name'], ext=".locit_attr")
+    attributes['reference_antenna'] = extract_locit_params['reference_antenna']
+    attributes['n_antennas'] = len(extract_locit_params['ant_dict'])
+
+    output_attr_file = "{name}/{ext}".format(name=extract_locit_params['locit_name'], ext=".locit_input")
+    _write_meta_data(output_attr_file, input_params)
+
+    output_attr_file = "{name}/{ext}".format(name=extract_locit_params['locit_name'], ext=".locit_attr")
     _write_meta_data(output_attr_file, attributes)
 
-    logger.info(f"[{fname}]: Finished processing")
-    locit_mds = AstrohackLocitFile(extract_locit_parms['locit_name'])
+    logger.info(f"[{function_name}]: Finished processing")
+    locit_mds = AstrohackLocitFile(extract_locit_params['locit_name'])
     locit_mds._open()
+
     return locit_mds
-
-
-def _check_extract_locit_parms(fname, extract_locit_parms):
-
-    #### Parameter Checking ####
-    logger = _get_astrohack_logger()
-    parms_passed = True
-
-    parms_passed = parms_passed and _check_parms(fname, extract_locit_parms, 'cal_table', [str], default=None)
-
-    base_name = _remove_suffix(extract_locit_parms['cal_table'], '.cal')
-    parms_passed = parms_passed and _check_parms(fname, extract_locit_parms, 'locit_name', [str],
-                                                 default=base_name+'.locit.zarr')
-    parms_passed = parms_passed and _check_parms(fname, extract_locit_parms, 'ant', [list, str],
-                                                 list_acceptable_data_types=[str], default='all')
-    parms_passed = parms_passed and _check_parms(fname, extract_locit_parms, 'ddi', [list, int],
-                                                 list_acceptable_data_types=[int], default='all')
-    parms_passed = parms_passed and _check_parms(fname, extract_locit_parms, 'overwrite', [bool], default=False)
-
-    _parm_check_passed(fname, parms_passed)
-
-    return extract_locit_parms

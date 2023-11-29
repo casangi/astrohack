@@ -1,13 +1,12 @@
 import inspect
-import skriba.logger
-import auror.parameter
 
-from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
-from astrohack._utils._locit import _locit_separated_chunk, _locit_combined_chunk, _locit_difference_chunk
-from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
-from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
-from astrohack._utils._tools import _remove_suffix
+import auror.parameter
+import skriba.logger
 from astrohack._utils._dask_graph_tools import _dask_general_compute
+from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
+from astrohack._utils._locit import _locit_separated_chunk, _locit_combined_chunk, _locit_difference_chunk
+from astrohack._utils._tools import _remove_suffix
+from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 
 CURRENT_FUNCTION=0
 
@@ -125,7 +124,6 @@ def locit(
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
-    ######### Parameter Checking #########
 
     if position_name is None:
         logger.info('File not specified or doesn\'t exist. Creating ...')
@@ -134,6 +132,8 @@ def locit(
         locit_params['position_name'] = position_name
 
         logger.info('Extracting position name to {output}'.format(output=position_name))
+
+    locit_params["fit_rate"] = fit_delay_rate
 
     input_params = locit_params.copy()
     attributes = locit_params.copy()
@@ -146,6 +146,7 @@ def locit(
 
     locit_params['ant_info'] = locit_mds['ant_info']
     locit_params['obs_info'] = locit_mds['obs_info']
+
     attributes['telescope_name'] = locit_mds._meta_data['telescope_name']
     attributes['reference_antenna'] = locit_mds._meta_data['reference_antenna']
 
@@ -161,8 +162,10 @@ def locit(
 
     if _dask_general_compute(function_name, locit_mds, function, locit_params, key_order, parallel=parallel):
         logger.info(f"[{function_name}]: Finished processing")
+
         output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_attr")
         _write_meta_data(output_attr_file, attributes)
+
         output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_input")
         _write_meta_data(output_attr_file, input_params)
 
