@@ -1,9 +1,10 @@
 import xarray as xr
-import pkg_resources
+from importlib_resources import files as pkgfiles
+import astrohack
 import os
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
-tel_data_path = pkg_resources.resource_filename("astrohack", "data/telescopes")
+tel_data_path = pkgfiles(astrohack)/'data/telescopes/'
 
 
 def _find_cfg_file(name, path):
