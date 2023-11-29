@@ -67,44 +67,34 @@ def extract_pointing(
     # Pull latest function from the stack, this is dynamic and preferred to hard coding.
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-    try:
-
-        # Until check params is changed, comment this out.
-
-        if point_name is None:
+    if point_name is None:
         
-            logger.debug('[{caller}]: File {file} does not exists. Extracting ...'.format(caller=function_name, file=point_name))
+        logger.debug('File {file} does not exists. Extracting ...'.format(file=point_name))
+
+        from astrohack._utils._tools import _remove_suffix
+
+        point_name = _remove_suffix(ms_name, '.ms') + '.point.zarr'
+        extract_pointing_params['point_name'] = point_name
             
-            from astrohack._utils._tools import _remove_suffix
+        logger.debug('Extracting pointing to {output}'.format(output=point_name))
 
-            point_name = _remove_suffix(ms_name, '.ms') + '.point.zarr'
-            extract_pointing_params['point_name'] = point_name
-            
-            logger.debug('[{caller}]: Extracting pointing to {output}'.format(caller=function_name, output=point_name))
+    input_params = extract_pointing_params.copy()
+    pnt_dict = _extract_pointing(
+        ms_name=extract_pointing_params['ms_name'],
+        pnt_name=extract_pointing_params['point_name'],
+        parallel=extract_pointing_params['parallel']
+    )
 
-        input_params = extract_pointing_params.copy()
-        pnt_dict = _extract_pointing(
-            ms_name=extract_pointing_params['ms_name'],
-            pnt_name=extract_pointing_params['point_name'],
-            parallel=extract_pointing_params['parallel']
-        )
+    # Calling this directly since it is so simple it doesn't need a "_create_{}" function.
+    _write_meta_data(
+        file_name="{name}/{ext}".format(name=extract_pointing_params['point_name'], ext=".point_input"),
+        input_dict=input_params
+    )
 
-        # Calling this directly since it is so simple it doesn't need a "_create_{}" function.
-        _write_meta_data(
-            file_name="{name}/{ext}".format(name=extract_pointing_params['point_name'], ext=".point_input"),
-            input_dict=input_params
-        )
+    logger.info(f"[{function_name}]: Finished processing")
+    point_dict = _load_point_file(file=extract_pointing_params["point_name"], dask_load=True)
 
-        logger.info(f"[{function_name}]: Finished processing")
-        point_dict = _load_point_file(file=extract_pointing_params["point_name"], dask_load=True)
+    pointing_mds = AstrohackPointFile(extract_pointing_params['point_name'])
+    pointing_mds._open()
 
-        pointing_mds = AstrohackPointFile(extract_pointing_params['point_name'])
-        pointing_mds._open()
-
-        return pointing_mds
-
-    except Exception as error:
-        logger.error("{function_name}: There was an error, see log above for more info :: {error}".format(
-            function_name=function_name, error=error))
-
-        return None
+    return pointing_mds
