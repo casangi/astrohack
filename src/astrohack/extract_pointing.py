@@ -1,3 +1,4 @@
+import os
 import inspect
 
 from astrohack._utils._extract_point import _extract_pointing
@@ -15,6 +16,7 @@ CURRENT_FUNCTION = 0
 
 
 @auror.parameter.validate(
+    config_dir=os.path.abspath(__file__) + "/config/",
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
 def extract_pointing(
