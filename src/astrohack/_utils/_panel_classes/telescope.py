@@ -1,8 +1,15 @@
+import sys
 import xarray as xr
-from importlib_resources import files as pkgfiles
 import astrohack
 import os
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+
+py310 = sys.version_info >= (3, 10)
+
+if py310:
+    from importlib.resources import files as pkgfiles
+else:
+    from importlib_resources import files as pkgfiles
 
 tel_data_path = pkgfiles(astrohack)/'data/telescopes/'
 
