@@ -121,32 +121,31 @@ def locit(
     combine_ddis='difference' : This method is useful for cases where phase wrapping may have occurred due to large
                                 delays.
     """
-    locit_parms = locals()
+    locit_params = locals()
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
     ######### Parameter Checking #########
-    #locit_parms = _check_locit_parms(function_name, locit_parms)
 
     if position_name is None:
         logger.info('File not specified or doesn\'t exist. Creating ...')
 
         position_name = _remove_suffix(locit_name, '.locit.zarr') + '.position.zarr'
-        locit_parms['position_name'] = position_name
+        locit_params['position_name'] = position_name
 
         logger.info('Extracting position name to {output}'.format(output=position_name))
 
-    input_parms = locit_parms.copy()
-    attributes = locit_parms.copy()
+    input_params = locit_params.copy()
+    attributes = locit_params.copy()
 
-    _check_if_file_exists(locit_parms['locit_name'])
-    _check_if_file_will_be_overwritten(locit_parms['position_name'], locit_parms['overwrite'])
+    _check_if_file_exists(locit_params['locit_name'])
+    _check_if_file_will_be_overwritten(locit_params['position_name'], locit_params['overwrite'])
 
-    locit_mds = AstrohackLocitFile(locit_parms['locit_name'])
+    locit_mds = AstrohackLocitFile(locit_params['locit_name'])
     locit_mds._open()
 
-    locit_parms['ant_info'] = locit_mds['ant_info']
-    locit_parms['obs_info'] = locit_mds['obs_info']
+    locit_params['ant_info'] = locit_mds['ant_info']
+    locit_params['obs_info'] = locit_mds['obs_info']
     attributes['telescope_name'] = locit_mds._meta_data['telescope_name']
     attributes['reference_antenna'] = locit_mds._meta_data['reference_antenna']
 
@@ -160,14 +159,14 @@ def locit(
         function = _locit_separated_chunk
         key_order = ['ant', 'ddi']
 
-    if _dask_general_compute(function_name, locit_mds, function, locit_parms, key_order, parallel=parallel):
+    if _dask_general_compute(function_name, locit_mds, function, locit_params, key_order, parallel=parallel):
         logger.info(f"[{function_name}]: Finished processing")
-        output_attr_file = "{name}/{ext}".format(name=locit_parms['position_name'], ext=".position_attr")
+        output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_attr")
         _write_meta_data(output_attr_file, attributes)
-        output_attr_file = "{name}/{ext}".format(name=locit_parms['position_name'], ext=".position_input")
-        _write_meta_data(output_attr_file, input_parms)
+        output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_input")
+        _write_meta_data(output_attr_file, input_params)
 
-        position_mds = AstrohackPositionFile(locit_parms['position_name'])
+        position_mds = AstrohackPositionFile(locit_params['position_name'])
         position_mds._open()
 
         return position_mds
