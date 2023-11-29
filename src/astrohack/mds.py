@@ -188,7 +188,14 @@ class AstrohackImageFile(dict):
             else:
                 return self[ant][ddi]
 
-    def export_to_fits(self, destination, complex_split='cartesian', ant=None, ddi=None, parallel=False):
+    def export_to_fits(
+            self,
+            destination,
+            complex_split='cartesian',
+            ant="all",
+            ddi="all",
+            parallel=False
+    ):
         """ Export contents of an AstrohackImageFile object to several FITS files in the destination folder
 
         :param destination: Name of the destination folder to contain plots
@@ -221,16 +228,16 @@ class AstrohackImageFile(dict):
         parm_dict = locals()
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         
-        parms_passed = _check_parms(function_name, parm_dict, 'complex_split', [str], acceptable_data=possible_splits,
-                                    default="cartesian")
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ant', [str, list],
-                                                     list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
-                                                     list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
+        #parms_passed = _check_parms(function_name, parm_dict, 'complex_split', [str], acceptable_data=possible_splits,
+        #                            default="cartesian")
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ant', [str, list],
+        #                                             list_acceptable_data_types=[str], default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
+        #                                             list_acceptable_data_types=[int], default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
 
-        _parm_check_passed(function_name, parms_passed)
+        #_parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         parm_dict['metadata'] = self._meta_data
         _dask_general_compute(
@@ -242,10 +249,24 @@ class AstrohackImageFile(dict):
             parallel=parallel
         )
 
-    def plot_apertures(self, destination, ant=None, ddi=None, plot_screws=False, amplitude_limits=None,
-                       phase_unit='deg', phase_limits=None, deviation_unit='mm', deviation_limits=None,
-                       panel_labels=False, display=False, colormap='viridis', figure_size=None, dpi=300,
-                       parallel=False):
+    def plot_apertures(
+            self,
+            destination,
+            ant="all",
+            ddi="all",
+            plot_screws=False,
+            amplitude_limits=None,
+            phase_unit='deg',
+            phase_limits=None,
+            deviation_unit='mm',
+            deviation_limits=None,
+            panel_labels=False,
+            display=False,
+            colormap='viridis',
+            figure_size=None,
+            dpi=300,
+            parallel=False
+    ):
         """ Aperture amplitude and phase plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
@@ -286,41 +307,53 @@ class AstrohackImageFile(dict):
         parm_dict = locals()
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         
-        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
-                                    default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
-                                                     list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'amplitude_limits', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
-                                                     default='deg')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_limits', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'deviation_unit', [str],
-                                                     acceptable_data=length_units, default='mm')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'deviation_limits', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'panel_labels', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_screws', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
-                                                     default='viridis')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
+        #parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
+        #                            default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
+        #                                             list_acceptable_data_types=[int], default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'amplitude_limits', [list, np.ndarray],
+        #                                             list_acceptable_data_types=[numbers.Number], list_len=2,
+        #                                             default='None', log_default_setting=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
+        #                                             default='deg')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_limits', [list, np.ndarray],
+        #                                             list_acceptable_data_types=[numbers.Number], list_len=2,
+        #                                             default='None', log_default_setting=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'deviation_unit', [str],
+        #                                             acceptable_data=length_units, default='mm')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'deviation_limits', [list, np.ndarray],
+        #                                             list_acceptable_data_types=[numbers.Number], list_len=2,
+        #                                             default='None', log_default_setting=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'panel_labels', [bool], default=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_screws', [bool], default=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
+        #                                             default='viridis')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        #                                             list_acceptable_data_types=[numbers.Number], list_len=2,
+        #                                             default='None', log_default_setting=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
-        _parm_check_passed(function_name, parms_passed)
+        #_parm_check_passed(function_name, parms_passed)
+        parm_dict["figuresize"] = figure_size
+
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(function_name, self, _plot_aperture_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def plot_beams(self, destination, ant=None, ddi=None, complex_split='polar', display=False, colormap='viridis',
-                   figure_size=None, dpi=300, parallel=False):
+    def plot_beams(
+            self,
+            destination,
+            ant="all",
+            ddi="all",
+            complex_split='polar',
+            display=False,
+            colormap='viridis',
+            figure_size=None,
+            dpi=300,
+            parallel=False
+    ):
         """ Beam plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
@@ -349,23 +382,27 @@ class AstrohackImageFile(dict):
         parm_dict = locals()
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
-        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
-                                    default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
-                                                     list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'complex_split', [str],
-                                                     acceptable_data=possible_splits, default="polar")
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
-                                                     default='viridis')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
+        #parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
+        #                            default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
+        #                                             list_acceptable_data_types=[int], default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'complex_split', [str],
+        #                                             acceptable_data=possible_splits, default="polar")
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
+        #                                             default='viridis')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        #                                             list_acceptable_data_types=[numbers.Number], list_len=2,
+        #                                             default='None', log_default_setting=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
-        _parm_check_passed(function_name, parms_passed)
+        #_parm_check_passed(function_name, parms_passed)
+
+        # For the love of all that is .... can we stop having to do this. PICK A VARIABLE NAME AND STICK WITH IT!
+        parm_dict["figuresize"] = figure_size
+
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(function_name, self, _plot_beam_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
@@ -475,8 +512,19 @@ class AstrohackHologFile(dict):
 
         return self._meta_data
 
-    def plot_diagnostics(self, destination, delta=0.01, ant=None, ddi=None, map_id=None, complex_split='polar',
-                         display=False, figure_size=None, dpi=300, parallel=False):
+    def plot_diagnostics(
+            self,
+            destination,
+            delta=0.01,
+            ant="all",
+            ddi="all",
+            map_id="all",
+            complex_split='polar',
+            display=False,
+            figure_size=None,
+            dpi=300,
+            parallel=False
+    ):
         """ Plot diagnostic calibration plots from the holography data file.
 
         :param destination: Name of the destination folder to contain diagnostic plots
@@ -528,33 +576,35 @@ class AstrohackHologFile(dict):
                     distributed.Client(DEFAULT_DASK_ADDRESS, timeout=2)
 
                 except Exception:
-                    from astrohack.client import astrohack_local_client
+                    from astrohack.client import local_client
 
                     logger.info("local client not found, starting ...")
 
                     log_params = {'log_level': 'DEBUG'}
-                    client = astrohack_local_client(cores=2, memory_limit='8GB', log_params=log_params)
+                    client = local_client(cores=2, memory_limit='8GB', log_params=log_params)
                     logger.info(client.dashboard_link)
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
-        parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'delta', [float], default=0.01)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ant', [str, list],
-                                                     list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
-                                                     list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'map', [int, list],
-                                                     list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'complex_split', [str],
-                                                     acceptable_data=possible_splits, default="polar")
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=False)
+        #parms_passed = _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'delta', [float], default=0.01)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ant', [str, list],
+        #                                             list_acceptable_data_types=[str], default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
+        #                                             list_acceptable_data_types=[int], default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'map', [int, list],
+        #                                             list_acceptable_data_types=[int], default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'complex_split', [str],
+        #                                             acceptable_data=possible_splits, default="polar")
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        #                                             list_acceptable_data_types=[numbers.Number], list_len=2,
+        #                                             default='None', log_default_setting=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=False)
+        parm_dict["map"] = map_id
+        parm_dict["figuresize"] = figure_size
 
-        _parm_check_passed(function_name, parms_passed)
+        #_parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(function_name, self, _calibration_plot_chunk, parm_dict, key_order, parallel)
@@ -645,8 +695,19 @@ class AstrohackPanelFile(dict):
         telescope = Telescope(xds.attrs['telescope_name'])
         return AntennaSurface(xds, telescope, reread=True)
 
-    def export_screws(self, destination, ant=None, ddi=None, unit='mm', threshold=None, panel_labels=True,
-                      display=False, colormap='RdBu_r', figure_size=None, dpi=300):
+    def export_screws(
+            self,
+            destination,
+            ant="all",
+            ddi="all",
+            unit='mm',
+            threshold=None,
+            panel_labels=True,
+            display=False,
+            colormap='RdBu_r',
+            figure_size=None,
+            dpi=300
+    ):
         """ Export screw adjustments to text files and optionally plots.
 
         :param destination: Name of the destination folder to contain exported screw adjustments
@@ -680,31 +741,48 @@ class AstrohackPanelFile(dict):
         parm_dict = locals()
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
-        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
-                                    default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
-                                                     list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'unit', [str],
-                                                     acceptable_data=length_units, default='mm')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'threshold', [int, float], default='None')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'panel_labels', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
-                                                     default='RdBu_r')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
+        #parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
+        #                            default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
+        #                                             list_acceptable_data_types=[int], default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'unit', [str],
+        #                                             acceptable_data=length_units, default='mm')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'threshold', [int, float], default='None')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'panel_labels', [bool], default=True)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
+        #                                             default='RdBu_r')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        #                                             list_acceptable_data_types=[numbers.Number], list_len=2,
+        #                                             default='None', log_default_setting=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
-        _parm_check_passed(function_name, parms_passed)
+        #_parm_check_passed(function_name, parms_passed)
+        parm_dict["figuresize"] = figure_size
+
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(function_name, self, _export_screws_chunk, parm_dict, ['ant', 'ddi'], parallel=False)
 
-    def plot_antennas(self, destination, ant=None, ddi=None, plot_type='deviation', plot_screws=False,
-                      amplitude_limits=None, phase_unit='deg', phase_limits=None, deviation_unit='mm',
-                      deviation_limits=None, panel_labels=False, display=False, colormap='viridis', figure_size=None,
-                      dpi=300, parallel=False):
+    def plot_antennas(
+            self,
+            destination,
+            ant="all",
+            ddi="all",
+            plot_type='deviation',
+            plot_screws=False,
+            amplitude_limits=None,
+            phase_unit='deg',
+            phase_limits=None,
+            deviation_unit='mm',
+            deviation_limits=None,
+            panel_labels=False,
+            display=False,
+            colormap='viridis',
+            figure_size=None,
+            dpi=300,
+            parallel=False
+    ):
         """ Create diagnostic plots of antenna surfaces from panel data file.
 
         :param destination: Name of the destination folder to contain plots
@@ -761,42 +839,50 @@ class AstrohackPanelFile(dict):
         parm_dict = locals()
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
-        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
-                                    default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
-                                                     list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_type', [str], acceptable_data=plot_types,
-                                                     default=plot_types[0])
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'amplitude_limits', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
-                                                     default='deg')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_limits', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'deviation_unit', [str],
-                                                     acceptable_data=length_units, default='mm')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'deviation_limits', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'panel_labels', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_screws', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
-                                                     default='viridis')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
+        #parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
+        #                            default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
+        #                                             list_acceptable_data_types=[int], default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_type', [str], acceptable_data=plot_types,
+        #                                             default=plot_types[0])
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'amplitude_limits', [list, np.ndarray],
+        #                                             list_acceptable_data_types=[numbers.Number], list_len=2,
+        #                                             default='None', log_default_setting=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_unit', [str], acceptable_data=trigo_units,
+        #                                             default='deg')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'phase_limits', [list, np.ndarray],
+        #                                             list_acceptable_data_types=[numbers.Number], list_len=2,
+        #                                             default='None', log_default_setting=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'deviation_unit', [str],
+        #                                             acceptable_data=length_units, default='mm')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'deviation_limits', [list, np.ndarray],
+        #                                             list_acceptable_data_types=[numbers.Number], list_len=2,
+        #                                             default='None', log_default_setting=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'panel_labels', [bool], default=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'display', [bool], default=True)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'plot_screws', [bool], default=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'colormap', [str], acceptable_data=cmaps,
+        #                                             default='viridis')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'figuresize', [list, np.ndarray],
+        #                                             list_acceptable_data_types=[numbers.Number], list_len=2,
+        #                                             default='None', log_default_setting=False)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'dpi', [int], default=300)
 
-        _parm_check_passed(function_name, parms_passed)
+        #_parm_check_passed(function_name, parms_passed)
+        parm_dict["figuresize"] = figure_size
+
         _create_destination_folder(parm_dict['destination'])
         _dask_general_compute(function_name, self, _plot_antenna_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
-    def export_to_fits(self, destination, ant=None, ddi=None, parallel=False):
+    def export_to_fits(
+            self,
+            destination,
+            ant="all",
+            ddi="all",
+            parallel=False
+    ):
         """ Export contents of an Astrohack MDS file to several FITS files in the destination folder
 
         :param destination: Name of the destination folder to contain plots
@@ -819,17 +905,16 @@ class AstrohackPanelFile(dict):
         parm_dict = locals()
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
-        parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
-                                    default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
-                                                     list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
+        #parms_passed = _check_parms(function_name, parm_dict, 'ant', [str, list], list_acceptable_data_types=[str],
+        #                            default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'ddi', [int, list],
+        #                                             list_acceptable_data_types=[int], default='all')
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'destination', [str], default=None)
+        #parms_passed = parms_passed and _check_parms(function_name, parm_dict, 'parallel', [bool], default=True)
 
-        _parm_check_passed(function_name, parms_passed)
+        #_parm_check_passed(function_name, parms_passed)
         _create_destination_folder(parm_dict['destination'])
-        _dask_general_compute(function_name, self, _export_to_fits_panel_chunk, parm_dict, ['ant', 'ddi'],
-                              parallel=parallel)
+        _dask_general_compute(function_name, self, _export_to_fits_panel_chunk, parm_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackPointFile(dict):
