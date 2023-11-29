@@ -1,5 +1,8 @@
 name: MacOS
 
+env:
+    ROOT_DIR: /home/runner/work/astrohack/astrohack/src/astrohack
+
 on:
   push:
     branches:
