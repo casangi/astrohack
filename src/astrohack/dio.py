@@ -1,5 +1,6 @@
 import json
 import numpy as np
+from rich.console import Console
 
 import skriba.logger
 
@@ -11,7 +12,6 @@ from astrohack.mds import AstrohackPanelFile
 from astrohack.mds import AstrohackPointFile
 from astrohack.mds import AstrohackLocitFile
 from astrohack.mds import AstrohackPositionFile
-
 
 from astrohack._utils._dio import _print_array
 
@@ -262,7 +262,7 @@ def open_pointing(file):
         logger.error(f"Error opening holography pointing file: {file}")
 
 
-def fix_pointing_table(ms_name, reference_antenna):    
+def fix_pointing_table(ms_name, reference_antenna):
     """ Fix pointing table for a user defined subset of reference antennas.
 
     :param ms_name: Measurement set name.
@@ -292,7 +292,7 @@ def fix_pointing_table(ms_name, reference_antenna):
     query = 'select NAME from {table}'.format(table=ms_table)
 
     ant_names = np.array(tables.taql(query).getcol('NAME'))
-    
+
     ant_id = np.arange(len(ant_names))
 
     query_ant = np.searchsorted(ant_names, reference_antenna)
@@ -318,7 +318,7 @@ def fix_pointing_table(ms_name, reference_antenna):
 
 
 def print_json(obj, indent=6, columns=7):
-    """ Print formatted JSON dictionary
+    """ Print formatted JSON dictionary (** Deprecated by Console **)
 
     :param obj: JSON object
     :type obj: JSON
@@ -327,13 +327,13 @@ def print_json(obj, indent=6, columns=7):
     :param columns: Columns used to reshape the antenna list., defaults to 7
     :type columns: int, optional
     """
-  
+
     if isinstance(obj, np.ndarray):
         obj = list(obj)
 
     if isinstance(obj, list):
         if indent > 3:
-            list_indent = indent-3
+            list_indent = indent - 3
         else:
             list_indent = 0
 
@@ -343,10 +343,10 @@ def print_json(obj, indent=6, columns=7):
 
     else:
         for key, value in obj.items():
-            key_str="{key}{open}".format(key=key, open=":{")
+            key_str = "{key}{open}".format(key=key, open=":{")
             print("{key}".format(key=key_str).rjust(indent, ' '))
-            print_json(value, indent+4, columns=columns)
-            print("{close}".format(close="}").rjust(indent-4, ' '))
+            print_json(value, indent + 4, columns=columns)
+            print("{close}".format(close="}").rjust(indent - 4, ' '))
 
 
 def inspect_holog_obs_dict(file='.holog_obs_dict.json', style='static', indent=6, columns=7):
@@ -398,18 +398,18 @@ def inspect_holog_obs_dict(file='.holog_obs_dict.json', style='static', indent=6
         try:
             with open(file) as json_file:
                 json_object = json.load(json_file)
-            
+
         except FileNotFoundError:
             logger.error("holog observations dictionary not found: {file}".format(file=file))
-    
+
     else:
         json_object = file
 
-    if style == 'dynamic': 
+    if style == 'dynamic':
         from IPython.display import JSON
 
         return JSON(json_object)
-        
-    
+
     else:
-        print_json(obj=json_object, indent=indent, columns=columns)
+        console = Console()
+        console.log(json_object, log_locals=False)
