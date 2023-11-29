@@ -22,4 +22,4 @@ if os.path.exists(os.path.dirname(__file__) + "/config/"):
 import skriba.logger
 
 logger = skriba.logger.get_logger(logger_name="__init__")
-logger.info("PATH: {}".format(os.path.dirname(__file__)))
+logger.info("path: {}".format(os.path.dirname(__file__)))
