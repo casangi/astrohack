@@ -11,7 +11,7 @@ from astrohack.mds import AstrohackPointFile
 import skriba.logger
 import auror.parameter
 
-# Added for clarity when inspecting stacktrace
+# Added for clarity when inspecting stacktrace.
 CURRENT_FUNCTION = 0
 
 
