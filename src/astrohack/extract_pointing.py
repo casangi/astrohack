@@ -25,7 +25,7 @@ def extract_pointing(
         parallel=False,
         overwrite=False,
 ):
-    """ Extract pointing data, from measurement set. Creates holography output file.
+    """ Extract pointing data, from measurement  set. Creates holography output file.
 
     :param ms_name: Name of input measurement file name.
     :type ms_name: str
