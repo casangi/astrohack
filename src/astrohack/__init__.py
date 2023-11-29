@@ -18,8 +18,3 @@ from .extract_locit import *
 # Set parameter checking system directory
 if os.path.exists(os.path.dirname(__file__) + "/config/"):
     os.environ["AUROR_CONFIG_PATH"] = os.path.dirname(__file__) + "/config/"
-
-import skriba.logger
-
-logger = skriba.logger.get_logger(logger_name="__init__")
-logger.info("path: {}".format(os.path.dirname(__file__)))

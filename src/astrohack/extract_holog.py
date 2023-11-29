@@ -218,7 +218,7 @@ class HologObsDict(dict):
 
 
 @auror.parameter.validate(
-    config_dir=os.path.abspath(__file__) + "/config/",
+    config_dir=os.path.dirname(__file__) + "/config/",
     add_data_type=HologObsDict,
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
