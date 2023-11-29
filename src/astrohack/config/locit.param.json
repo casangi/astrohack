@@ -15,7 +15,7 @@
         "polarization": {
             "type": ["str"],
             "nullable": false,
-            "allowed": ["X", "Y", "both"]
+            "allowed": ["R", "L", "X", "Y", "both"]
         },
         "fit_engine": {
             "type": ["str"],
