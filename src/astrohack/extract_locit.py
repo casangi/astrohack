@@ -8,7 +8,8 @@ from astrohack._utils._extract_locit import _extract_antenna_data, _extract_spec
 from astrohack._utils._extract_locit import _extract_source_and_telescope, _extract_antenna_phase_gains
 from astrohack.mds import AstrohackLocitFile
 
-CURRENT_FUNCTION=0
+CURRENT_FUNCTION = 0
+
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")

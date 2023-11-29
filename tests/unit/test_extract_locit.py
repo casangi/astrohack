@@ -1,8 +1,7 @@
 import os
-import pytest
 import shutil
-import astrohack
 
+import astrohack
 from astrohack.extract_locit import extract_locit
 
 

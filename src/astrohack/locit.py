@@ -9,7 +9,8 @@ from astrohack._utils._locit import _locit_separated_chunk, _locit_combined_chun
 from astrohack._utils._tools import _remove_suffix
 from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 
-CURRENT_FUNCTION=0
+CURRENT_FUNCTION = 0
+
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
