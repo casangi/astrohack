@@ -1,14 +1,12 @@
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+import inspect
+
+import auror.parameter
+import skriba.logger
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
-from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
-from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._extract_locit import _extract_antenna_data, _extract_spectral_info
 from astrohack._utils._extract_locit import _extract_source_and_telescope, _extract_antenna_phase_gains
 from astrohack.mds import AstrohackLocitFile
-
-import inspect
-import auror.parameter
 
 CURRENT_FUNCTION=0
 
@@ -48,7 +46,7 @@ def extract_locit(
 
     """
     extract_locit_params = locals()
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
