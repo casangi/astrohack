@@ -531,7 +531,7 @@ def _print_summary_header(filename, print_len=100, frame_char='#', frame_width=3
     stack = inspect.stack()
     class_name = stack[1][0].f_locals["self"].__class__.__name__
     doc_string = f"\nFull documentation for {class_name} objects' API at: \n" \
-                 f'https://astrohack.readthedocs.io/en/latest/_api/autoapi/astrohack/mds/index.html#' \
+                 f'https://astrohack.readthedocs.io/en/stable/_api/autoapi/astrohack/mds/index.html#' \
                  f'astrohack.mds.{class_name}'
     print(doc_string)
 
