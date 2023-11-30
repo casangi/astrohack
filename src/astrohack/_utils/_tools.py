@@ -1,5 +1,6 @@
 import json
 import shutil
+import inspect
 
 import numpy as np
 import astropy.units as units
@@ -526,6 +527,13 @@ def _print_summary_header(filename, print_len=100, frame_char='#', frame_width=3
     _print_centralized(title, title_nlead, title_ntrail, frame_width, frame_char)
     _print_centralized(filename, file_nlead, file_ntrail, frame_width, frame_char)
     print(print_len * frame_char)
+
+    stack = inspect.stack()
+    class_name = stack[1][0].f_locals["self"].__class__.__name__
+    doc_string = f"\nFull documentation for {class_name} objects' API at: \n" \
+                 f'https://astrohack.readthedocs.io/en/latest/_api/autoapi/astrohack/mds/index.html#' \
+                 f'astrohack.mds.{class_name}'
+    print(doc_string)
 
 
 def _compute_spacing(string, print_len=100, frame_width=3):
