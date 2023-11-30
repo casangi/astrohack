@@ -351,7 +351,7 @@ def _plot_array_configuration(ant_dict, telescope_name, parm_dict):
     telescope = _open_telescope(telescope_name)
     stations = parm_dict['stations']
     display = parm_dict['display']
-    figure_size = parm_dict['figuresize']
+    figure_size = parm_dict['figure_size']
     dpi = parm_dict['dpi']
     filename = parm_dict['destination'] + '/locit_antenna_positions.png'
     length_unit = parm_dict['unit']

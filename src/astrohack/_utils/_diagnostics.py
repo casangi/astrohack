@@ -205,7 +205,7 @@ def _calibration_plot_chunk(param_dict):
     delta = param_dict['delta']
     complex_split = param_dict['complex_split']
     display = param_dict['display']
-    figuresize = param_dict['figuresize']
+    figuresize = param_dict['figure_size']
     destination = param_dict['destination']
     dpi = param_dict['dpi']
     thisfont = 1.2 * fontsize

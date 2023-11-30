@@ -30,6 +30,7 @@ from astrohack._utils._imaging import _calculate_aperture_pattern
 from astrohack._utils._panel import _get_correct_telescope_from_name
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _get_proper_color_map
+from astrohack._utils._conversion import _convert_unit
 
 import skriba.logger
 
@@ -107,7 +108,6 @@ def _holog_chunk(holog_chunk_params):
             
             # Unavoidable for loop because lm change over frequency.
             for chan_index in range(n_chan):
-
                 # Average scaled beams.
                 beam_grid[holog_map_index, 0, :, :, :] = (beam_grid[holog_map_index, 0, :, :, :] + np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index], vis_avg[:, chan_index, :], (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"],fill_value=0.0),(2),(0)))
 
@@ -481,8 +481,8 @@ def _plot_beam_chunk(parm_dict):
     destination = parm_dict['destination']
     basename = f'{destination}/{antenna}_{ddi}'
     inputxds = parm_dict['xds_data']
-    laxis = inputxds.l.values
-    maxis = inputxds.m.values
+    laxis = inputxds.l.values*_convert_unit('rad', parm_dict['angle_unit'], 'trigonometric')
+    maxis = inputxds.m.values*_convert_unit('rad', parm_dict['angle_unit'], 'trigonometric')
     if inputxds.dims['chan'] != 1:
         raise Exception("Only single channel holographies supported")
 
@@ -494,24 +494,16 @@ def _plot_beam_chunk(parm_dict):
     if parm_dict['complex_split'] == 'cartesian':
         realpart = full_beam.real
         imagpart = full_beam.imag
-        _plot_beam(laxis, maxis, pol_axis, realpart, basename, 'real', antenna, ddi, 'normalized',
-                   figuresize=parm_dict['figuresize'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
-                   display=parm_dict['display'])
-        _plot_beam(laxis, maxis, pol_axis, imagpart, basename, 'real', antenna, ddi, 'normalized',
-                   figuresize=parm_dict['figuresize'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
-                   display=parm_dict['display'])
+        _plot_beam(laxis, maxis, pol_axis, realpart, basename, 'real', 'normalized', parm_dict)
+        _plot_beam(laxis, maxis, pol_axis, imagpart, basename, 'imag', 'normalized', parm_dict)
     else:
         ampli = np.absolute(full_beam)
-        phase = np.angle(full_beam)
-        _plot_beam(laxis, maxis, pol_axis, ampli, basename, 'amplitude', antenna, ddi, 'normalized',
-                   figuresize=parm_dict['figuresize'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
-                   display=parm_dict['display'])
-        _plot_beam(laxis, maxis, pol_axis, phase, basename, 'phase', antenna, ddi, 'rad',
-                   figuresize=parm_dict['figuresize'], dpi=parm_dict['dpi'], colormap=parm_dict['colormap'],
-                   display=parm_dict['display'])
+        phase = np.angle(full_beam)*_convert_unit('rad', parm_dict['phase_unit'], 'trigonometric')
+        _plot_beam(laxis, maxis, pol_axis, ampli, basename, 'amplitude', 'normalized', parm_dict)
+        _plot_beam(laxis, maxis, pol_axis, phase, basename, 'phase', parm_dict['phase_unit'], parm_dict)
 
 
-def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit, figuresize, dpi, colormap, display):
+def _plot_beam(laxis, maxis, pol_axis, data, basename, label, zunit, parm_dict):
     """
     Plot a beam
     Args:
@@ -521,30 +513,25 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit
         data: Beam data
         basename: Basename for output file
         label: data label
-        antenna: which antenna
-        ddi: which DDI
-        unit: data unit
-        figuresize: Figure size
-        dpi: DPI
-        colormap: Colormap for plot
-        display: Display plots?
+        zunit: data unit
+        parm_dict: dictionary with general and plotting parameters
     """
     
     function_name = inspect.stack()[CURRENT_FUNCTION].function
     
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    colormap = _get_proper_color_map(colormap)
+    colormap = _get_proper_color_map(parm_dict['colormap'])
 
     n_pol = len(pol_axis)
     
     if n_pol == 4:
-        fig, axes = _create_figure_and_axes(figuresize, [2, 2])
+        fig, axes = _create_figure_and_axes(parm_dict['figure_size'], [2, 2])
         axes = axes.flat
     elif n_pol == 2:
-        fig, axes = _create_figure_and_axes(figuresize, [2, 1])
+        fig, axes = _create_figure_and_axes(parm_dict['figure_size'], [2, 1])
     elif n_pol == 1:
-        fig, ax = _create_figure_and_axes(figuresize, [1, 1])
+        fig, ax = _create_figure_and_axes(parm_dict['figure_size'], [1, 1])
         axes = [ax]
     else:
         raise Exception(f'[{function_name}]: Do not know how to handle polarization axis with {n_pol} elements')
@@ -554,11 +541,11 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, antenna, ddi, unit
         axis = axes[ipol]
         axis.set_title(f'Polarization: {pol}')
         im = axis.imshow(data[ipol, ...], cmap=colormap, interpolation="nearest", extent=extent)
-        _well_positioned_colorbar(axis, fig, im, f"Z Scale [{unit}]")
-        axis.set_xlabel('L axis ["]')
-        axis.set_ylabel('M axis ["]')
+        _well_positioned_colorbar(axis, fig, im, f"Z Scale [{zunit}]")
+        axis.set_xlabel(f'L axis [{parm_dict["angle_unit"]}]')
+        axis.set_ylabel(f'M axis [{parm_dict["angle_unit"]}]')
 
     plot_name = _add_prefix(_add_prefix(basename, label), 'image_beam')
-    suptitle = f'Beam {label}, Antenna: {antenna.split("_")[1]}, DDI: {ddi.split("_")[1]}'
-    _close_figure(fig, suptitle, plot_name, dpi, display)
+    suptitle = f'Beam {label}, Antenna: {parm_dict["this_ant"].split("_")[1]}, DDI: {parm_dict["this_ddi"].split("_")[1]}'
+    _close_figure(fig, suptitle, plot_name, parm_dict["dpi"], parm_dict["display"])
     return

@@ -1,9 +1,17 @@
+import sys
 import xarray as xr
-import pkg_resources
+import astrohack
 import os
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
-tel_data_path = pkg_resources.resource_filename("astrohack", "data/telescopes")
+py310 = sys.version_info >= (3, 10)
+
+if py310:
+    from importlib.resources import files as pkgfiles
+else:
+    from importlib_resources import files as pkgfiles
+
+tel_data_path = pkgfiles(astrohack)/'data/telescopes/'
 
 
 def _find_cfg_file(name, path):
