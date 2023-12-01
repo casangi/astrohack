@@ -1,4 +1,5 @@
-import psutil, multiprocessing, re
+import psutil
+import multiprocessing
 import dask
 import copy
 import os

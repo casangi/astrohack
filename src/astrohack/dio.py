@@ -1,10 +1,11 @@
 import json
-import numpy as np
-from rich.console import Console
-
+import pathlib
 import skriba.logger
 
+import numpy as np
+
 from casacore import tables
+from rich.console import Console
 
 from astrohack.mds import AstrohackImageFile
 from astrohack.mds import AstrohackHologFile
@@ -98,7 +99,7 @@ def open_image(file):
         return _data_file
 
     else:
-        logger.error(f"Error opening holgraphy image file: {file}")
+        logger.error(f"Error opening holography image file: {file}")
 
 
 def open_panel(file):
@@ -286,10 +287,17 @@ def fix_pointing_table(ms_name, reference_antenna):
 
 
   """
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    ms_table = "/".join((ms_name, 'ANTENNA'))
+    path = pathlib.Path(ms_name)
+    ms_name_fullpath = str(path.absolute().resolve())
 
-    query = 'select NAME from {table}'.format(table=ms_table)
+    if not path.exists():
+        logger.error("Error finding file: {file}".format(file=ms_name_fullpath))
+
+    ms_table = "/".join((ms_name_fullpath, 'ANTENNA'))
+
+    query = 'select NAME from "{table}"'.format(table=ms_table)
 
     ant_names = np.array(tables.taql(query).getcol('NAME'))
 
@@ -297,7 +305,7 @@ def fix_pointing_table(ms_name, reference_antenna):
 
     query_ant = np.searchsorted(ant_names, reference_antenna)
 
-    ms_table = "/".join((ms_name, 'POINTING'))
+    ms_table = "/".join((ms_name_fullpath, 'POINTING'))
 
     ant_list = " or ".join(["ANTENNA_ID=={ant}".format(ant=ant) for ant in query_ant])
 
@@ -306,7 +314,7 @@ def fix_pointing_table(ms_name, reference_antenna):
 
     tables.taql(update)
 
-    ms_table = "/".join((ms_name, "HISTORY"))
+    ms_table = "/".join((ms_name_fullpath, "HISTORY"))
     tb = tables.table(ms_table, readonly=False)
 
     message = tb.getcol("MESSAGE")
