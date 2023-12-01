@@ -1,41 +1,39 @@
-import os
-import numbers
 import inspect
+import numbers
+import os
 import distributed
 
+import auror.parameter
 import skriba.logger
 
 import numpy as np
 
-from prettytable import PrettyTable
+from astrohack._utils._constants import custom_unit_checker
 
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._dio import _read_meta_data
+from astrohack._utils._constants import length_units, trigo_units, possible_splits, time_units
+from astrohack._utils._dask_graph_tools import _dask_general_compute
+from astrohack._utils._diagnostics import _calibration_plot_chunk
+from astrohack._utils._dio import _create_destination_folder
 from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _load_image_file
+from astrohack._utils._dio import _load_locit_file
 from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
-from astrohack._utils._dio import _load_locit_file
 from astrohack._utils._dio import _load_position_file
-
-from astrohack._utils._dio import _create_destination_folder
-from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
-from astrohack._utils._constants import length_units, trigo_units, plot_types, possible_splits, time_units
-from astrohack._utils._dask_graph_tools import _dask_general_compute
-from astrohack._utils._tools import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
-from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
-
-from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
-from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
-from astrohack._utils._diagnostics import _calibration_plot_chunk
+from astrohack._utils._dio import _read_meta_data
 from astrohack._utils._extract_holog import _plot_lm_coverage
 from astrohack._utils._extract_locit import _plot_source_table, _plot_array_configuration, _print_array_configuration
+from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
 from astrohack._utils._locit import _plot_delays_chunk, _plot_position_corrections
-
+from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
-from astrohack._utils._plot_commons import astrohack_cmaps as cmaps
+from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
+from astrohack._utils._tools import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
+from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
+from prettytable import PrettyTable
 
 CURRENT_FUNCTION = 0
 
@@ -229,17 +227,17 @@ class AstrohackImageFile(dict):
 
         param_dict = locals()
         function_name = inspect.stack()[CURRENT_FUNCTION].function
-        
-        #parms_passed = _check_parms(function_name, param_dict, 'complex_split', [str], acceptable_data=possible_splits,
-        #                            default="cartesian")
-        #parms_passed = parms_passed and _check_parms(function_name, param_dict, 'ant', [str, list],
-        #                                             list_acceptable_data_types=[str], default='all')
-        #parms_passed = parms_passed and _check_parms(function_name, param_dict, 'ddi', [int, list],
-        #                                             list_acceptable_data_types=[int], default='all')
-        #parms_passed = parms_passed and _check_parms(function_name, param_dict, 'destination', [str], default=None)
-        #parms_passed = parms_passed and _check_parms(function_name, param_dict, 'parallel', [bool], default=True)
 
-        #_parm_check_passed(function_name, parms_passed)
+        # parms_passed = _check_parms(function_name, param_dict, 'complex_split', [str], acceptable_data=possible_splits,
+        #                            default="cartesian")
+        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'ant', [str, list],
+        #                                             list_acceptable_data_types=[str], default='all')
+        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'ddi', [int, list],
+        #                                             list_acceptable_data_types=[int], default='all')
+        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'destination', [str], default=None)
+        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'parallel', [bool], default=True)
+
+        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         param_dict['metadata'] = self._meta_data
         _dask_general_compute(
@@ -308,9 +306,8 @@ class AstrohackImageFile(dict):
         """
         param_dict = locals()
         function_name = inspect.stack()[CURRENT_FUNCTION].function
-        
 
-        #_parm_check_passed(function_name, parms_passed)
+        # _parm_check_passed(function_name, parms_passed)
         param_dict["figuresize"] = figure_size
 
         _create_destination_folder(param_dict['destination'])
@@ -541,7 +538,7 @@ class AstrohackHologFile(dict):
         param_dict["map"] = map_id
         param_dict["figuresize"] = figure_size
 
-        #_parm_check_passed(function_name, parms_passed)
+        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(function_name, self, _calibration_plot_chunk, param_dict, key_order, parallel)
@@ -753,13 +750,16 @@ class AstrohackPanelFile(dict):
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-
-        #_parm_check_passed(function_name, parms_passed)
+        # _parm_check_passed(function_name, parms_passed)
         param_dict["figuresize"] = figure_size
 
         _create_destination_folder(param_dict['destination'])
         _dask_general_compute(function_name, self, _export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_unit_checker
+    )
     def plot_antennas(
             self,
             destination,
@@ -775,7 +775,7 @@ class AstrohackPanelFile(dict):
             panel_labels=False,
             display=False,
             colormap='viridis',
-            figure_size=None,
+            figure_size=(8.0, 6.4),
             dpi=300,
             parallel=False
     ):
@@ -836,7 +836,6 @@ class AstrohackPanelFile(dict):
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-        #_parm_check_passed(function_name, parms_passed)
         param_dict["figuresize"] = figure_size
 
         _create_destination_folder(param_dict['destination'])
@@ -873,7 +872,8 @@ class AstrohackPanelFile(dict):
         function_name = inspect.stack()[CURRENT_FUNCTION].function
 
         _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(function_name, self, _export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(function_name, self, _export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
+                              parallel=parallel)
 
 
 class AstrohackPointFile(dict):
@@ -1126,7 +1126,8 @@ class AstrohackLocitFile(dict):
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)
         parms_passed = parms_passed and _check_parms(function_name, param_dict, 'zoff', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'unit', [str], acceptable_data=length_units,
+        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'unit', [str],
+                                                     acceptable_data=length_units,
                                                      default='km')
         parms_passed = parms_passed and _check_parms(function_name, param_dict, 'box_size', [int, float], default=5)
         parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
@@ -1243,7 +1244,7 @@ class AstrohackPositionFile(dict):
         function_name = inspect.stack()[CURRENT_FUNCTION].function
 
         parms_passed = _check_parms(function_name, param_dict, 'destination', [str],
-                                                     default=None)
+                                    default=None)
         parms_passed = parms_passed and _check_parms(function_name, param_dict, 'position_unit', [str],
                                                      acceptable_data=length_units, default='m')
         parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str],
@@ -1304,12 +1305,13 @@ class AstrohackPositionFile(dict):
 
         function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-
         parms_passed = _check_parms(function_name, param_dict, 'destination', [str],
-                                                     default=None)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str], acceptable_data=time_units,
+                                    default=None)
+        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str],
+                                                     acceptable_data=time_units,
                                                      default='hour')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'angle_unit', [str], acceptable_data=trigo_units,
+        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'angle_unit', [str],
+                                                     acceptable_data=trigo_units,
                                                      default='deg')
         parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
@@ -1325,7 +1327,8 @@ class AstrohackPositionFile(dict):
         if self.combined:
             _dask_general_compute(function_name, self, _plot_sky_coverage_chunk, param_dict, ['ant'], parallel=parallel)
         else:
-            _dask_general_compute(function_name, self, _plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+            _dask_general_compute(function_name, self, _plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
+                                  parallel=parallel)
 
     def plot_delays(
             self,
@@ -1384,12 +1387,15 @@ class AstrohackPositionFile(dict):
         function_name = inspect.stack()[CURRENT_FUNCTION].function
 
         parms_passed = _check_parms(function_name, param_dict, 'destination', [str],
-                                                     default=None)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str], acceptable_data=time_units,
+                                    default=None)
+        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str],
+                                                     acceptable_data=time_units,
                                                      default='hour')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'angle_unit', [str], acceptable_data=trigo_units,
+        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'angle_unit', [str],
+                                                     acceptable_data=trigo_units,
                                                      default='deg')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'delay_unit', [str], acceptable_data=time_units,
+        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'delay_unit', [str],
+                                                     acceptable_data=time_units,
                                                      default='nsec')
         parms_passed = parms_passed and _check_parms(function_name, param_dict, 'plot_model', [bool], default=True)
         parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
@@ -1408,7 +1414,8 @@ class AstrohackPositionFile(dict):
         if self.combined:
             _dask_general_compute(function_name, self, _plot_delays_chunk, param_dict, ['ant'], parallel=parallel)
         else:
-            _dask_general_compute(function_name, self, _plot_delays_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+            _dask_general_compute(function_name, self, _plot_delays_chunk, param_dict, ['ant', 'ddi'],
+                                  parallel=parallel)
 
     def plot_position_corrections(
             self,
@@ -1458,7 +1465,7 @@ class AstrohackPositionFile(dict):
         function_name = inspect.stack()[CURRENT_FUNCTION].function
         parms_passed = _check_parms(function_name, param_dict, 'destination', [str], default=None)
         parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        #parms_passed = parms_passed and _check_parms(function_name, param_dict, 'stations', [bool], default=False)
+        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'stations', [bool], default=False)
         parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
                                                      list_acceptable_data_types=[numbers.Number], list_len=2,
                                                      default='None', log_default_setting=False)

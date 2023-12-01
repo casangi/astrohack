@@ -1,0 +1,80 @@
+{
+    "plot_antennas":{
+        "destination":{
+            "type":["str"],
+            "nullable": false
+        },
+        "ant":{
+            "type":["ndarray", "int", "list", "str"],
+            "struct type": ["int", "str"],
+            "nullable": false
+        },
+        "ddi":{
+            "type":["ndarray", "int", "list", "str"],
+            "struct type": ["int", "str"],
+            "nullable": false
+        },
+        "plot_type":{
+            "type":["str"],
+            "allowed":["deviation", "phase", "ancillary", "all"],
+            "nullable": false
+        },
+        "plot_screws":{
+            "type":["boolean"],
+            "nullable": false
+        },
+        "amplitude_limits":{
+            "type":["ndarray", "list", "tuple"],
+            "struct type": ["int", "float"],
+            "nullable": true
+        },
+        "phase_unit":{
+            "type":["str"],
+            "check allowed with": ["units.trig"],
+            "nullable": false
+        },
+        "phase_limits":{
+            "type":["ndarray", "list", "tuple"],
+            "struct type": ["int", "float"],
+            "nullable": true
+        },
+        "deviation_unit":{
+            "type":["str"],
+            "check allowed with": ["units.length"],
+            "nullable": false
+        },
+        "deviation_limits":{
+            "type":["ndarray", "list", "tuple"],
+            "struct type": ["int", "float"],
+            "nullable": true
+        },
+        "panel_labels":{
+            "type":["boolean"],
+            "nullable": false
+        },
+        "display":{
+            "type":["boolean"],
+            "nullable": false
+        },
+        "colormap":{
+            "type":["str"],
+            "nullable": false
+        },
+        "figure_size":{
+            "type":["ndarray", "list", "tuple"],
+            "struct type": ["int", "float"],
+        },
+        "dpi":{
+            "type":["int"],
+            "nullable": false
+        },
+        "parallel":{
+            "type":["boolean"],
+            "nullable": false
+        },
+        "overwrite":{
+            "type":["boolean"],
+            "nullable": false
+        }
+    }
+}
