@@ -102,6 +102,14 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     combine_ddis='no'         : Useful for detecting systematic differences between different DDIs.
     combine_ddis='difference' : This method is useful for cases where phase wrapping may have occurred due to large
                                 delays.
+
+    **Examples**
+
+    - `position_mds = locit("myphase.locit.zarr", polarization='R', combine_ddis='simple')` -> Fit the phase delays in
+       "myphase.locit.zarr" for all antennas by combining the delays from all DDIs but using only the 'R' polarization.
+
+    - `position_mds = locit("myphase.locit.zarr", combine_ddis='difference', elevation_limit=30.0)` -> Fit the phase
+       difference delays in "myphase.locit.zarr" for all antennas but only using sources above 30 degrees elevation.
     """
     locit_parms = locals()
     logger = _get_astrohack_logger()
