@@ -42,8 +42,7 @@ def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_mo
 
     .. _Description:
 
-    **Additional Information**
-        Each holography in the input holog image file is processed in the following steps:
+        Each Stokes I aperture image in the input image file is processed in the following steps:
         
         .. rubric:: Code Outline
         - Phase image is converted to a physical surface deviation image.
@@ -107,6 +106,14 @@ def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_mo
             ant_n: …
         }
 
+    **Examples**
+
+    - `panel_mds = panel("myholo.image.zarr", panel_model='rigid', panel_margin=0.05)` -> fit the panels in the aperture
+      image by using a rigid panel model and excluding the border 5% of each panel from the fitting.
+
+    - `panel_mds = panel("myholo.image.zarr", clip_type='relative', clip_level=0.2)` -> fit the panels in the aperture
+      image by using a rigid panel model and excluding points in the aperture image which have an amplitude that is less
+      than 20% of the peak amplitude.
     """
 
     panel_params = locals()

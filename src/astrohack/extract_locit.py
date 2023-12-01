@@ -28,11 +28,34 @@ def extract_locit(cal_table, locit_name=None, ant=None, ddi=None, overwrite=Fals
 
     .. _Description:
 
+    extract_locit is a tool to extract the phase gains from a calibration table in an order that is suited for
+    parallelized processing by locit. Along with the calibration data antenna position and source position information
+    is extracted from the calibration table for use in the fitting process in locit.
+
     **AstrohackLocitFile**
+    The locit object allows the user to access calibration data via compound dictionary keys with values, in order of
+    depth, `ant` -> `ddi`. The locit object also provides a `summary()` helper function to list available keys for each
+    file. An outline of the locit object structure is show below:
 
+    .. parsed-literal::
+        locit_mds =
+        {
+            ant_0:{
+                ddi_0: locit_ds,
+                 ⋮
+                ddi_m: locit_ds
+            },
+            ⋮
+            ant_n: …
+        }
 
-    **Additional Information**
+    **Examples**
 
+    - `locit_mds = extract_locit("myphase.cal", locit_name="myphase.locit.zarr")` -> Extract phase calibration data for
+       all antennas and all DDIs in "myphase.cal" into a locit file called "myphase.locit.zarr"
+    - `locit_mds = extract_locit("myphase.cal", ant=["ea06", "ea03", "ea25"], DDI=0, overwrite=True) -> Extract phase
+       calibration data for DDI 0 of antennas ea06, ea03 and ea25 in "myphase.cal" into a locit file called
+       "myphase.locit.zarr" that will be overwritten if already present.
     """
     extract_locit_parms = locals()
     logger = _get_astrohack_logger()
