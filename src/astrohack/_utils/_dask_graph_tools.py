@@ -29,7 +29,7 @@ def _construct_general_graph_recursively(
             chunk_function(param_dict)
     else:
         key = key_order[0]
-        exec_list = _param_to_list(caller, param_dict[key], looping_dict, key)
+        exec_list = _param_to_list(param_dict[key], looping_dict, key)
         for item in exec_list:
             if 'info' in item:
                 pass

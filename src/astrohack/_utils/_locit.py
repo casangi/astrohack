@@ -726,7 +726,7 @@ def _export_fit_results(data_dict, parm_dict):
     table.field_names = field_names
     table.align = 'c'
     full_antenna_list = _open_telescope(data_dict._meta_data['telescope_name']).ant_list
-    selected_antenna_list = _param_to_list('export_fit_results', parm_dict['ant'], data_dict, 'ant')
+    selected_antenna_list = _param_to_list(parm_dict['ant'], data_dict, 'ant')
 
     for ant_name in full_antenna_list:
         ant_key = _add_prefix(ant_name, 'ant')
@@ -741,7 +741,7 @@ def _export_fit_results(data_dict, parm_dict):
                     table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
                                               rate_present))
                 else:
-                    ddi_list = _param_to_list('export_fit_results', parm_dict['ddi'], data_dict[ant_key], 'ddi')
+                    ddi_list = _param_to_list(parm_dict['ddi'], data_dict[ant_key], 'ddi')
                     for ddi_key in ddi_list:
                         row = [ant_name, ddi_key.split('_')[1]]
                         table.add_row(_export_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pos_fact, slo_fact,
@@ -968,7 +968,7 @@ def _plot_position_corrections(parm_dict, data_dict):
     ref_ant = data_dict._meta_data['reference_antenna']
     combined = parm_dict['combined']
 
-    ant_list = _param_to_list('plot_position_corractions', parm_dict['ant'], data_dict, 'ant')
+    ant_list = _param_to_list(parm_dict['ant'], data_dict, 'ant')
     if combined:
         filename = f'{destination}/position_corrections_combined_{data_dict._meta_data["combine_ddis"]}.png'
         attribute_list = []

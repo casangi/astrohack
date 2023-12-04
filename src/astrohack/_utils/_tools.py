@@ -201,7 +201,7 @@ def print_holog_obs_dict(holog_obj):
     logger.info("{close_bracket}".format(close_bracket=CLOSE_DICT))
 
 
-def _param_to_list(caller, param, data_dict, prefix):
+def _param_to_list(param, data_dict, prefix):
     """
     Transforms a string parameter to a list if parameter is all or a single string
     Args:
@@ -228,11 +228,11 @@ def _param_to_list(caller, param, data_dict, prefix):
             elif isinstance(item, int):
                 outlist.append(f'{prefix}_{item}')
             else:
-                msg = f'[{caller}]: cannot interpret parameter {item} of type {type(item)}'
+                msg = f'Cannot interpret parameter {item} of type {type(item)}'
                 logger.error(msg)
                 raise Exception(msg)
     else:
-        msg = f'[{caller}] cannot interpret parameter {param} of type {type(param)}'
+        msg = f'Cannot interpret parameter {param} of type {type(param)}'
         logger.error(msg)
         raise Exception(msg)
 
