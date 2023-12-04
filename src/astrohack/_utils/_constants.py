@@ -52,14 +52,14 @@ fontsize = 6.4
 markersize = 3.2
 
 
-def custom_unit_checker(type):
-    if type == "units.trig":
+def custom_unit_checker(unit_type):
+    if unit_type == "units.trig":
         return trigo_units
 
-    elif type == "units.length":
+    elif unit_type == "units.length":
         return length_units
 
-    elif type == "units.time":
+    elif unit_type == "units.time":
         return time_units
 
     else:

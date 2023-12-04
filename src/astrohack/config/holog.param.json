@@ -1,7 +1,7 @@
 {
     "holog":{
         "holog_name":{
-            "type":["str"],
+            "type":"string",
             "required": true
         },
         "grid_size": {

@@ -5,7 +5,8 @@
             "required": true
         },
         "panel_name":{
-            "type":["str"]
+            "type":["str"],
+            "nullable": true
         },
         "clip_type":{
             "type":["str"],

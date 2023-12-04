@@ -1,21 +1,21 @@
 {
     "plot_antennas":{
         "destination":{
-            "type":["str"],
+            "type":["string"],
             "nullable": false
         },
         "ant":{
-            "type":["ndarray", "int", "list", "str"],
-            "struct type": ["int", "str"],
+            "type":["ndarray", "int", "list", "string"],
+            "struct type": ["int", "string"],
             "nullable": false
         },
         "ddi":{
-            "type":["ndarray", "int", "list", "str"],
-            "struct type": ["int", "str"],
+            "type":["ndarray", "int", "list", "string"],
+            "struct type": ["int", "string"],
             "nullable": false
         },
         "plot_type":{
-            "type":["str"],
+            "type":["string"],
             "allowed":["deviation", "phase", "ancillary", "all"],
             "nullable": false
         },
@@ -29,8 +29,8 @@
             "nullable": true
         },
         "phase_unit":{
-            "type":["str"],
-            "check allowed with": ["units.trig"],
+            "type":["string"],
+            "check allowed with": "units.trig",
             "nullable": false
         },
         "phase_limits":{
@@ -39,8 +39,8 @@
             "nullable": true
         },
         "deviation_unit":{
-            "type":["str"],
-            "check allowed with": ["units.length"],
+            "type":["string"],
+            "check allowed with": "units.length",
             "nullable": false
         },
         "deviation_limits":{
@@ -57,12 +57,12 @@
             "nullable": false
         },
         "colormap":{
-            "type":["str"],
+            "type":["string"],
             "nullable": false
         },
         "figure_size":{
             "type":["ndarray", "list", "tuple"],
-            "struct type": ["int", "float"],
+            "struct type": ["int", "float"]
         },
         "dpi":{
             "type":["int"],
