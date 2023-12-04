@@ -1,17 +1,17 @@
-import astrohack
-
-import pytest
-import numpy as np
 import shutil
 
+import astrohack
+
+from astrohack import holog
 from astrohack.dio import open_holog
 from astrohack.dio import open_image
 from astrohack.dio import open_panel
 from astrohack.dio import open_pointing
+
 from astrohack.extract_holog import extract_holog
 from astrohack.extract_pointing import extract_pointing
+
 from astrohack.panel import panel
-from astrohack import holog
 
 
 class TestAstrohackDio():

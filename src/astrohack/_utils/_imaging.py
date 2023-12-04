@@ -3,19 +3,21 @@ import scipy
 import numpy as np
 import astropy.units as u
 import astropy.coordinates as coord
+
+import skriba.logger
+
 from skimage.draw import disk
 from astrohack._utils._algorithms import _calc_coords
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 
 def _parallactic_derotation(data, parallactic_angle_dict):
-    """ Uses samples of parallactic angle (PA) values to correct differences in PA between maps. The reference PA is selected
-        to be the first maps median parallactic angle. All values are rotated to this PA value using scypi.ndimage.rotate(...)
+    """ Uses samples of parallactic angle (PA) values to correct differences in PA between maps. The reference PA is
+    selected to be the first maps median parallactic angle. All values are rotated to this PA value using
+    scypi.ndimage.rotate(...)
 
-    Args:
-        data (numpy.ndarray): beam data grid (map, chan, pol, l, m)
-        parallactic_angle_dict (dict): dictionary containing antenna selected xds from which the aprallactic angle samples 
-                                       are retrieved ==> [map](xds), here the map referres to the map values not the map index.
+    Args: data (numpy.ndarray): beam data grid (map, chan, pol, l, m) parallactic_angle_dict (dict): dictionary
+    containing antenna selected xds from which the aprallactic angle samples are retrieved ==> [map](xds),
+    here the map referres to the map values not the map index.
 
     Returns:
         numpy.ndarray: rotation adjusted beam data grid
@@ -27,19 +29,19 @@ def _parallactic_derotation(data, parallactic_angle_dict):
     maps = list(parallactic_angle_dict.keys())
 
     # Get the median index for the first map (this should be the same for every map).
-    median_index = len(parallactic_angle_dict[maps[0]].parallactic_samples)//2
-    
+    median_index = len(parallactic_angle_dict[maps[0]].parallactic_samples) // 2
+
     # This is the angle we will rotated the maps to.
     median_angular_reference = parallactic_angle_dict[maps[0]].parallactic_samples[median_index]
-    
+
     for map, map_value in enumerate(maps):
-        #median_angular_offset = median_angular_reference - parallactic_angle_dict[map_value].parallactic_samples[median_index]
-        #median_angular_offset *= 180/np.pi
-        
-        #parallactic_angle = 360 - parallactic_angle_dict[map_value].parallactic_samples[median_index]*180/np.pi
-        
+        # median_angular_offset = median_angular_reference - parallactic_angle_dict[map_value].parallactic_samples[
+        # median_index] median_angular_offset *= 180/np.pi
+
+        # parallactic_angle = 360 - parallactic_angle_dict[map_value].parallactic_samples[median_index]*180/np.pi
+
         data[map] = scipy.ndimage.rotate(input=data[map, ...], angle=90, axes=(3, 2), reshape=False)
-        
+
     return data
 
 
@@ -58,16 +60,16 @@ def _mask_circular_disk(center, radius, array, mask_value=np.nan):
     shape = np.array(array.shape[-2:])
 
     if center is None:
-        center = shape//2
+        center = shape // 2
 
     r, c = disk(center, radius, shape=shape)
-    mask = np.zeros(shape, dtype=array.dtype)   
+    mask = np.zeros(shape, dtype=array.dtype)
     mask[r, c] = 1
-    
+
     mask = np.tile(mask, reps=(array.shape[:-2] + (1, 1)))
-    
+
     mask[mask == 0] = mask_value
-    
+
     return mask
 
 
@@ -83,10 +85,10 @@ def _calculate_aperture_pattern(grid, delta, padding_factor=50):
     Returns:
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
-    logger = _get_astrohack_logger()
-    logger.info("[holog]: Calculating aperture illumination pattern ...")
+    logger = skriba.logger.get_logger(logger_name="astrohack")
+    logger.info("Calculating aperture illumination pattern ...")
 
-    assert grid.shape[-1] == grid.shape[-2] ###To do: why is this expected that l.shape == m.shape
+    assert grid.shape[-1] == grid.shape[-2]  ###To do: why is this expected that l.shape == m.shape
     initial_dimension = grid.shape[-1]
 
     # Calculate padding as the nearest power of 2
@@ -124,11 +126,11 @@ def _calculate_aperture_pattern(grid, delta, padding_factor=50):
 
 
 def _calculate_parallactic_angle_chunk(
-    time_samples,
-    observing_location,
-    direction,
-    dir_frame="FK5",
-    zenith_frame="FK5",
+        time_samples,
+        observing_location,
+        direction,
+        dir_frame="FK5",
+        zenith_frame="FK5",
 ):
     """
     Converts a direction and zenith (frame FK5) to a topocentric Altitude-Azimuth (https://docs.astropy.org/en/stable/api/astropy.coordinates.AltAz.html)

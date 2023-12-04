@@ -1,0 +1,42 @@
+{
+    "panel":{
+        "image_name":{
+            "type":["str"],
+            "required": true
+        },
+        "panel_name":{
+            "type":["str"],
+            "nullable": true
+        },
+        "clip_type":{
+            "type":["str"],
+            "allowed": ["absolute", "sigma", "relative"]
+        },
+        "clip_level":{
+            "type":["float"]
+        },
+        "panel_model":{
+            "type":["str"],
+            "allowed": ["rigid", "mean"]
+        },
+        "panel_margins":{
+            "type":["float"]
+        },
+        "ant":{
+            "type":["list", "str"],
+            "struct type": ["str"],
+            "nullable": false
+        },
+        "ddi":{
+            "type":["ndarray", "int", "list", "str"],
+            "struct type": ["int", "str"],
+            "nullable": false
+        },
+        "parallel":{
+            "type":["boolean"]
+        },
+        "overwrite":{
+            "type":["boolean"]
+        }
+    }
+}

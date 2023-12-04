@@ -1,15 +1,29 @@
-import numpy as np
+import inspect
+
+import skriba.logger
+import auror.parameter
 
 from astrohack._utils._combine import _combine_chunk
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
-from astrohack._utils._tools import _remove_suffix
-from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
-from astrohack.mds import AstrohackImageFile
 from astrohack._utils._dask_graph_tools import _dask_general_compute
+from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
+from astrohack._utils._tools import _remove_suffix
+from astrohack.mds import AstrohackImageFile
+
+CURRENT_FUNCTION = 0
 
 
-def combine(image_name, combine_name=None, ant=None, ddi=None, weighted=False, parallel=False, overwrite=False):
+@auror.parameter.validate(
+    logger=skriba.logger.get_logger(logger_name="astrohack")
+)
+def combine(
+        image_name,
+        combine_name=None,
+        ant="all",
+        ddi="all",
+        weighted=False,
+        parallel=False,
+        overwrite=False
+):
     """Combine DDIs in a Holography image to increase SNR
 
     :param image_name: Input holography data file name. Accepted data format is the output from ``astrohack.holog.holog``
@@ -52,21 +66,35 @@ def combine(image_name, combine_name=None, ant=None, ddi=None, weighted=False, p
     """
 
     combine_params = locals()
-    logger = _get_astrohack_logger()
-    fname = 'combine'
-    combine_params = _check_combine_parms(fname, combine_params)
+    logger = skriba.logger.get_logger(logger_name="astrohack")
+
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
+
+    if combine_name is None:
+        logger.info('File not specified or doesn\'t exist. Creating ...')
+
+        combine_name = _remove_suffix(image_name, '.image.zarr') + '.combine.zarr'
+        combine_params['combine_name'] = combine_name
+
+        logger.info('Extracting combine name to {output}'.format(output=combine_name))
+
     input_params = combine_params.copy()
 
     _check_if_file_exists(combine_params['image_name'])
     _check_if_file_will_be_overwritten(combine_params['combine_name'], combine_params['overwrite'])
+
     image_mds = AstrohackImageFile(combine_params['image_name'])
     image_mds._open()
+
     combine_params['image_mds'] = image_mds
     image_attr = image_mds._meta_data
-    if _dask_general_compute(fname, image_mds, _combine_chunk, combine_params, ['ant'], parallel=parallel):
-        logger.info(f"[{fname}]: Finished processing")
+
+    if _dask_general_compute(function_name, image_mds, _combine_chunk, combine_params, ['ant'], parallel=parallel):
+        logger.info("Finished processing")
+
         output_attr_file = "{name}/{ext}".format(name=combine_params['combine_name'], ext=".image_attr")
         _write_meta_data(output_attr_file, image_attr)
+
         output_attr_file = "{name}/{ext}".format(name=combine_params['combine_name'], ext=".image_input")
         _write_meta_data(output_attr_file, input_params)
 
@@ -74,24 +102,5 @@ def combine(image_name, combine_name=None, ant=None, ddi=None, weighted=False, p
         combine_mds._open()
         return combine_mds
     else:
-        logger.warning(f"[{fname}]: No data to process")
+        logger.warning("No data to process")
         return None
-
-
-def _check_combine_parms(fname, combine_params):
-    #### Parameter Checking ####
-    parms_passed = _check_parms(fname, combine_params, 'image_name', [str], default=None)
-    base_name = _remove_suffix(combine_params['image_name'], '.image.zarr')
-    parms_passed = parms_passed and _check_parms(fname, combine_params, 'combine_name', [str],
-                                                 default=base_name + '.combine.zarr')
-    parms_passed = parms_passed and _check_parms(fname, combine_params, 'ant', [str, list],
-                                                 list_acceptable_data_types=[str], default='all')
-    parms_passed = parms_passed and _check_parms(fname, combine_params, 'ddi', [int, list],
-                                                 list_acceptable_data_types=[int], default='all')
-    parms_passed = parms_passed and _check_parms(fname, combine_params, 'parallel', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(fname, combine_params, 'weighted', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(fname, combine_params, 'overwrite', [bool], default=False)
-
-    _parm_check_passed(fname, parms_passed)
-    #### End Parameter Checking ####
-    return combine_params

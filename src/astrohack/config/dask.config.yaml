@@ -1,0 +1,21 @@
+distributed:
+  worker:
+    scheduler:
+      allowed-failures: 10
+      worker-stealing: True
+      unknown-task-duration: 99
+      worker-ttl: 99
+
+    memory:
+      pause: False
+      terminate: False
+
+    comm:
+      timeouts:
+        connect: 3600
+        tcp: 3600
+
+    nanny:
+      environ:
+        OMP_NUM_THREADS: 1
+        MKL_NUM_THREADS: 1

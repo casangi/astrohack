@@ -1,10 +1,10 @@
 import xarray as xr
+import skriba.logger
 
 from astrohack._utils._constants import plot_types
 
 from astrohack._utils._panel_classes.telescope import Telescope
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 # global constants
 
@@ -27,7 +27,7 @@ def _panel_chunk(panel_chunk_params):
     Args:
         panel_chunk_params: dictionary of inputs
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     if panel_chunk_params['origin'] == 'AIPS':
         inputxds = xr.open_zarr(panel_chunk_params['image_name'])
         telescope = Telescope(inputxds.attrs['telescope_name'])
@@ -91,7 +91,7 @@ def _export_to_fits_panel_chunk(parm_dict):
     Args:
         parm_dict: parameter dictionary
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']

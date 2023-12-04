@@ -1,8 +1,7 @@
 import os
-import pytest
 import shutil
-import astrohack
 
+import astrohack
 from astrohack.extract_locit import extract_locit
 
 
@@ -34,7 +33,7 @@ class TestExtractLocit():
         """
 
         # Create locit_mds and check the dictionary structure
-        locit_mds = extract_locit(self.cal_table, locit_name=self.locit_name)
+        locit_mds = extract_locit(cal_table=self.cal_table, locit_name=self.locit_name)
 
         expected_keys = ['obs_info', 'ant_info', 'ant_ea01', 'ant_ea02', 'ant_ea04', 'ant_ea05', 'ant_ea06', 'ant_ea07',
                          'ant_ea08', 'ant_ea09', 'ant_ea10', 'ant_ea11', 'ant_ea12', 'ant_ea13', 'ant_ea15', 'ant_ea16',
@@ -52,7 +51,7 @@ class TestExtractLocit():
         """
 
         locit_mds = extract_locit(
-            self.cal_table,
+            cal_table=self.cal_table,
             locit_name=self.locit_name,
             ant='ea17'
         )
@@ -68,7 +67,7 @@ class TestExtractLocit():
            Check that only specified ddi is processed.
         """
 
-        locit_mds = extract_locit(self.cal_table, locit_name=self.locit_name, ddi=0)
+        locit_mds = extract_locit(cal_table=self.cal_table, locit_name=self.locit_name, ddi=0)
 
         # Check that only the specific ddi is in the keys.
         assert len(locit_mds['ant_ea01'].keys()) == 1
@@ -80,7 +79,7 @@ class TestExtractLocit():
         """
 
         extract_locit(
-            self.cal_table,
+            cal_table=self.cal_table,
             locit_name=self.locit_name
         )
 
@@ -89,7 +88,7 @@ class TestExtractLocit():
         initial_time = os.path.getctime(self.locit_name)
 
         extract_locit(
-            self.cal_table,
+            cal_table=self.cal_table,
             locit_name=self.locit_name,
             overwrite=True
         )
@@ -103,7 +102,7 @@ class TestExtractLocit():
             Specify the output file should be NOT be overwritten; check that it WAS NOT.
         """
         extract_locit(
-            self.cal_table,
+            cal_table=self.cal_table,
             locit_name=self.locit_name
         )
 
@@ -111,7 +110,7 @@ class TestExtractLocit():
 
         try:
             extract_locit(
-                self.cal_table,
+                cal_table=self.cal_table,
                 locit_name=self.locit_name,
                 overwrite=False
             )

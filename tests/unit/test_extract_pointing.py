@@ -63,6 +63,11 @@ class TestExtractPointing:
     def test_extract_pointing_invalid_ms_name(self):
         """Test extract_pointing and check that invalid_ms does not create point file"""
         # Exceptions are not raised by the code, therefore doing a silly check here
-        extract_pointing(ms_name="invalid_name.ms")
-        
-        assert os.path.exists("invalid_name.point.zarr") is False
+        try:
+            # Changed this because it does fail if you give a non-existent ms. So we will check that.
+            extract_pointing(ms_name="invalid_name.ms")
+
+        except Exception:
+            return
+
+        assert False

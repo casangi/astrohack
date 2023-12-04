@@ -1,15 +1,34 @@
-from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
-from astrohack._utils._locit import _locit_separated_chunk, _locit_combined_chunk, _locit_difference_chunk
-from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
-from astrohack._utils._tools import _remove_suffix
+import inspect
+
+import auror.parameter
+import skriba.logger
+
 from astrohack._utils._dask_graph_tools import _dask_general_compute
+from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
+from astrohack._utils._locit import _locit_separated_chunk, _locit_combined_chunk, _locit_difference_chunk
+from astrohack._utils._tools import _remove_suffix
+from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
+
+CURRENT_FUNCTION = 0
 
 
-def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='both', fit_engine='linear algebra',
-          fit_kterm=False, fit_delay_rate=True, ant=None, ddi=None, combine_ddis='simple', parallel=False,
-          overwrite=False):
+@auror.parameter.validate(
+    logger=skriba.logger.get_logger(logger_name="astrohack")
+)
+def locit(
+        locit_name,
+        position_name=None,
+        elevation_limit=10.0,
+        polarization='both',
+        fit_engine='linear algebra',
+        fit_kterm=False,
+        fit_delay_rate=True,
+        ant="all",
+        ddi="all",
+        combine_ddis='simple',
+        parallel=False,
+        overwrite=False
+):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
 
@@ -111,23 +130,33 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
     - `position_mds = locit("myphase.locit.zarr", combine_ddis='difference', elevation_limit=30.0)` -> Fit the phase
        difference delays in "myphase.locit.zarr" for all antennas but only using sources above 30 degrees elevation.
     """
-    locit_parms = locals()
-    logger = _get_astrohack_logger()
+    locit_params = locals()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    fname = 'locit'
-    ######### Parameter Checking #########
-    locit_parms = _check_locit_parms(fname, locit_parms)
-    input_parms = locit_parms.copy()
-    attributes = locit_parms.copy()
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-    _check_if_file_exists(locit_parms['locit_name'])
-    _check_if_file_will_be_overwritten(locit_parms['position_name'], locit_parms['overwrite'])
+    if position_name is None:
+        logger.info('File not specified or doesn\'t exist. Creating ...')
 
-    locit_mds = AstrohackLocitFile(locit_parms['locit_name'])
+        position_name = _remove_suffix(locit_name, '.locit.zarr') + '.position.zarr'
+        locit_params['position_name'] = position_name
+
+        logger.info('Extracting position name to {output}'.format(output=position_name))
+
+    locit_params["fit_rate"] = fit_delay_rate
+
+    input_params = locit_params.copy()
+    attributes = locit_params.copy()
+
+    _check_if_file_exists(locit_params['locit_name'])
+    _check_if_file_will_be_overwritten(locit_params['position_name'], locit_params['overwrite'])
+
+    locit_mds = AstrohackLocitFile(locit_params['locit_name'])
     locit_mds._open()
 
-    locit_parms['ant_info'] = locit_mds['ant_info']
-    locit_parms['obs_info'] = locit_mds['obs_info']
+    locit_params['ant_info'] = locit_mds['ant_info']
+    locit_params['obs_info'] = locit_mds['obs_info']
+
     attributes['telescope_name'] = locit_mds._meta_data['telescope_name']
     attributes['reference_antenna'] = locit_mds._meta_data['reference_antenna']
 
@@ -141,52 +170,20 @@ def locit(locit_name, position_name=None, elevation_limit=10.0, polarization='bo
         function = _locit_separated_chunk
         key_order = ['ant', 'ddi']
 
-    if _dask_general_compute(fname, locit_mds, function, locit_parms, key_order, parallel=parallel):
-        logger.info(f"[{fname}]: Finished processing")
-        output_attr_file = "{name}/{ext}".format(name=locit_parms['position_name'], ext=".position_attr")
-        _write_meta_data(output_attr_file, attributes)
-        output_attr_file = "{name}/{ext}".format(name=locit_parms['position_name'], ext=".position_input")
-        _write_meta_data(output_attr_file, input_parms)
+    if _dask_general_compute(function_name, locit_mds, function, locit_params, key_order, parallel=parallel):
+        logger.info(f"[{function_name}]: Finished processing")
 
-        position_mds = AstrohackPositionFile(locit_parms['position_name'])
+        output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_attr")
+        _write_meta_data(output_attr_file, attributes)
+
+        output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_input")
+        _write_meta_data(output_attr_file, input_params)
+
+        position_mds = AstrohackPositionFile(locit_params['position_name'])
         position_mds._open()
 
         return position_mds
 
     else:
-        logger.warning(f"[{fname}]: No data to process")
+        logger.warning(f"[{function_name}]: No data to process")
         return None
-
-
-def _check_locit_parms(fname, locit_parms):
-
-    #### Parameter Checking ####
-    logger = _get_astrohack_logger()
-
-    parms_passed = True
-
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'locit_name', [str], default=None)
-
-    base_name = _remove_suffix(locit_parms['locit_name'], '.locit.zarr')
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'position_name', [str],
-                                                 default=base_name+'.position.zarr')
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'elevation_limit', [float],
-                                                 acceptable_range=[0, 90], default=10)
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'polarization', [str],
-                                                 acceptable_data=['X', 'Y', 'R', 'L', 'both'], default='both')
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'fit_engine', [str],
-                                                 acceptable_data=['linear algebra', 'scipy'], default='linear algebra')
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'fit_kterm', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'fit_rate', [bool], default=True)
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'ant', [list, str],
-                                                 list_acceptable_data_types=[str], default='all')
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'ddi', [list, int],
-                                                 list_acceptable_data_types=[int], default='all')
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'combine_ddis', [str],
-                                                 default='simple', acceptable_data=['no', 'simple', 'difference'])
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'parallel', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(fname, locit_parms, 'overwrite', [bool], default=False)
-
-    _parm_check_passed(fname, parms_passed)
-
-    return locit_parms

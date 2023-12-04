@@ -1,0 +1,24 @@
+{
+    "local_client":{
+        "cores":{
+            "type":["int"],
+            "nullable": true
+        },
+        "memory_limit":{
+            "type":["str"],
+            "nullable": true
+        },
+        "dask_local_dir":{
+            "type":["str"],
+            "nullable": true
+        },
+        "log_params":{
+            "type":["dict"],
+            "nullable": true
+        },
+        "worker_log_params":{
+            "type":["dict"],
+            "nullable": true
+        }
+    }
+}

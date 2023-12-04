@@ -1,27 +1,30 @@
+import os
 import inspect
 
 from astrohack._utils._extract_point import _extract_pointing
 
 from astrohack._utils._dio import _load_point_file
-from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
 from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
-from astrohack._utils._tools import _remove_suffix
 
 from astrohack.mds import AstrohackPointFile
 
-# Added for clarity when inspecting stacktrace
+import skriba.logger
+import auror.parameter
+
+# Added for clarity when inspecting stacktrace.
 CURRENT_FUNCTION = 0
 
 
+@auror.parameter.validate(
+    logger=skriba.logger.get_logger(logger_name="astrohack")
+)
 def extract_pointing(
         ms_name,
         point_name=None,
         parallel=False,
         overwrite=False,
 ):
-    """ Extract pointing data, from measurement set. Creates holography output file.
+    """ Extract pointing data from measurement set.  Creates holography output file.
 
     :param ms_name: Name of input measurement file name.
     :type ms_name: str
@@ -60,85 +63,39 @@ def extract_pointing(
     # Returns the current local variables in dictionary form
     extract_pointing_params = locals()
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    # Pull latest function from the stack, this is dynamic and preferred to hardcoding.
+    # Pull latest function from the stack, this is dynamic and preferred to hard coding.
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-    ######### Parameter Checking #########
-    extract_pointing_params = _check_extract_pointing_params(
-        function_name=function_name,
-        extract_point_params=extract_pointing_params
-    )
+    if point_name is None:
+        
+        logger.debug('File {file} does not exists. Extracting ...'.format(file=point_name))
+
+        from astrohack._utils._tools import _remove_suffix
+
+        point_name = _remove_suffix(ms_name, '.ms') + '.point.zarr'
+        extract_pointing_params['point_name'] = point_name
+            
+        logger.debug('Extracting pointing to {output}'.format(output=point_name))
 
     input_params = extract_pointing_params.copy()
+    pnt_dict = _extract_pointing(
+        ms_name=extract_pointing_params['ms_name'],
+        pnt_name=extract_pointing_params['point_name'],
+        parallel=extract_pointing_params['parallel']
+    )
 
-    try:
-        _check_if_file_exists(extract_pointing_params['ms_name'])
-        _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
+    # Calling this directly since it is so simple it doesn't need a "_create_{}" function.
+    _write_meta_data(
+        file_name="{name}/{ext}".format(name=extract_pointing_params['point_name'], ext=".point_input"),
+        input_dict=input_params
+    )
 
-        # Until check params is changed, comment this out.
-        '''
-        if point_name==None:
-        
-            logger.debug('[{caller}]: File {file} does not exists. Extracting ...'.format(caller=function_name, file=point_name))
-            
-            from astrohack._utils._tools import _remove_suffix
+    logger.info(f"[{function_name}]: Finished processing")
+    point_dict = _load_point_file(file=extract_pointing_params["point_name"], dask_load=True)
 
-            point_name = _remove_suffix(ms_name, '.ms') + '.point.zarr'
-            extract_holog_params['point_name'] = point_name
-            
-            logger.debug('[{caller}]: Extracting pointing to {output}'.format(caller=function_name, output=point_name))
-        '''
+    pointing_mds = AstrohackPointFile(extract_pointing_params['point_name'])
+    pointing_mds._open()
 
-        pnt_dict = _extract_pointing(
-            ms_name=extract_pointing_params['ms_name'],
-            pnt_name=extract_pointing_params['point_name'],
-            parallel=extract_pointing_params['parallel']
-        )
-
-        # Calling this directly since it is so simple it doesn't need a "_create_{}" function.
-        _write_meta_data(
-            file_name="{name}/{ext}".format(name=extract_pointing_params['point_name'], ext=".point_input"),
-            input_dict=input_params
-        )
-
-        logger.info(f"[{function_name}]: Finished processing")
-        point_dict = _load_point_file(file=extract_pointing_params["point_name"], dask_load=True)
-
-        pointing_mds = AstrohackPointFile(extract_pointing_params['point_name'])
-        pointing_mds._open()
-
-        return pointing_mds
-
-    except Exception as error:
-        logger.error("{function_name}: There was an error, see log above for more info :: {error}".format(
-            function_name=function_name, error=error))
-
-        return None
-
-
-def _check_extract_pointing_params(function_name, extract_point_params):
-    #### Parameter Checking ####
-    logger = _get_astrohack_logger()
-    params_passed = True
-
-    params_passed = params_passed and _check_parms(function_name, extract_point_params, 'ms_name', [str], default=None)
-
-    base_name = _remove_suffix(extract_point_params['ms_name'], '.ms')
-    params_passed = params_passed and _check_parms(function_name, extract_point_params, 'point_name', [str],
-                                                   default=base_name + '.point.zarr')
-
-    point_base_name = _remove_suffix(extract_point_params['point_name'], '.point.zarr')
-    params_passed = params_passed and _check_parms(function_name, extract_point_params, 'point_name', [str],
-                                                   default=point_base_name + '.point.zarr')
-
-    params_passed = params_passed and _check_parms(function_name, extract_point_params, 'parallel', [bool],
-                                                   default=False)
-
-    params_passed = params_passed and _check_parms(function_name, extract_point_params, 'overwrite', [bool],
-                                                   default=False)
-
-    _parm_check_passed(function_name, params_passed)
-
-    return extract_point_params
+    return pointing_mds

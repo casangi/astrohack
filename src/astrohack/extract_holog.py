@@ -17,8 +17,6 @@ from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._extract_holog import _create_holog_meta_data
 from astrohack._utils._extract_holog import _create_holog_obs_dict
 from astrohack._utils._extract_holog import _extract_holog_chunk
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import NumpyEncoder
 from astrohack._utils._tools import _remove_suffix
 from astrohack.mds import AstrohackHologFile
@@ -26,9 +24,203 @@ from astrohack.mds import AstrohackPointFile
 from astropy.time import Time
 from casacore import tables as ctables
 
+import auror.parameter
+import skriba.logger
+
 CURRENT_FUNCTION = 0
 
 
+class HologObsDict(dict):
+    """
+      ddi --> map --> ant, scan
+                      |
+                      o--> map: [reference, ...]
+    """
+
+    def __init__(self, obj):
+        super().__init__(obj)
+        self.logger = skriba.logger.get_logger(logger_name="astrohack")
+
+    def __getitem__(self, key):
+        return super().__getitem__(key)
+
+    def __setitem__(self, key, value):
+        return super().__setitem__(key, value)
+
+    def print(self, style="static"):
+        if style == "dynamic":
+            return astrohack.dio.inspect_holog_obs_dict(self, style="dynamic")
+
+        else:
+            return astrohack.dio.inspect_holog_obs_dict(self, style="static")
+
+    def select(self, key, value, inplace=False, **kwargs):
+
+        if inplace:
+            obs_dict = self
+
+        else:
+            obs_dict = HologObsDict(copy.deepcopy(self))
+
+        if key == "ddi":
+            return self._select_ddi(value, obs_dict=obs_dict)
+
+        elif key == "map":
+            return self._select_map(value, obs_dict=obs_dict)
+
+        elif key == "antenna":
+            return self._select_antenna(value, obs_dict=obs_dict)
+
+        elif key == "scan":
+            return self._select_scan(value, obs_dict=obs_dict)
+
+        elif key == "baseline":
+            if "reference" in kwargs.keys():
+                return self._select_baseline(
+                    value,
+                    n_baselines=None,
+                    reference=kwargs["reference"],
+                    obs_dict=obs_dict
+                )
+
+            elif "n_baselines" in kwargs.keys():
+                return self._select_baseline(
+                    value,
+                    n_baselines=kwargs["n_baselines"],
+                    reference=None,
+                    obs_dict=obs_dict
+                )
+
+            else:
+                self.logger.error("Must specify a list of reference antennas for this option.")
+        else:
+            self.logger.error("Valid key not found: {key}".format(key=key))
+            return {}
+
+    @staticmethod
+    def get_nearest_baselines(antenna, n_baselines=None, path_to_matrix=None):
+        logger = skriba.logger.get_logger(logger_name="astrohack")
+        import pandas as pd
+
+        if path_to_matrix is None:
+            path_to_matrix = os.getcwd() + "/.baseline_distance_matrix.csv"
+
+        if not os.path.exists(path_to_matrix):
+            logger.error("Unable to find baseline distance matrix in: {path}".format(path=path_to_matrix))
+
+        df_matrix = pd.read_csv(path_to_matrix, sep="\t", index_col=0)
+
+        # Skip the first index because it is a self distance
+        if n_baselines is None:
+            return df_matrix[antenna].sort_values(ascending=True).index[1:].values.tolist()
+
+        return df_matrix[antenna].sort_values(ascending=True).index[1:n_baselines].values.tolist()
+
+    @staticmethod
+    def _select_ddi(value, obs_dict):
+        convert = lambda x: "ddi_" + str(x)
+
+        if not isinstance(value, list):
+            value = [value]
+
+        value = list(map(convert, value))
+        ddi_list = list(obs_dict.keys())
+
+        for ddi in ddi_list:
+            if ddi not in value:
+                obs_dict.pop(ddi)
+
+        return obs_dict
+
+    @staticmethod
+    def _select_map(value, obs_dict):
+        convert = lambda x: "map_" + str(x)
+
+        if not isinstance(value, list):
+            value = [value]
+
+        value = list(map(convert, value))
+        ddi_list = list(obs_dict.keys())
+
+        for ddi in ddi_list:
+            map_list = list(obs_dict[ddi].keys())
+            for mp in map_list:
+                if mp not in value:
+                    obs_dict[ddi].pop(mp)
+
+        return obs_dict
+
+    @staticmethod
+    def _select_antenna(value, obs_dict):
+        if not isinstance(value, list):
+            value = [value]
+
+        ddi_list = list(obs_dict.keys())
+
+        for ddi in ddi_list:
+            map_list = list(obs_dict[ddi].keys())
+            for mp in map_list:
+                ant_list = list(obs_dict[ddi][mp]["ant"].keys())
+                for ant in ant_list:
+                    if ant not in value:
+                        obs_dict[ddi][mp]["ant"].pop(ant)
+
+        return obs_dict
+
+    @staticmethod
+    def _select_scan(value, obs_dict):
+        if not isinstance(value, list):
+            value = [value]
+
+        ddi_list = list(obs_dict.keys())
+
+        for ddi in ddi_list:
+            map_list = list(obs_dict[ddi].keys())
+            for mp in map_list:
+                obs_dict[ddi][mp]["scans"] = value
+
+        return obs_dict
+
+    @staticmethod
+    def _select_baseline(value, n_baselines, obs_dict, reference=None):
+        if reference is not None:
+            if not isinstance(reference, list):
+                reference = [reference]
+
+        ddi_list = list(obs_dict.keys())
+
+        for ddi in ddi_list:
+            map_list = list(obs_dict[ddi].keys())
+            for mp in map_list:
+                ant_list = list(obs_dict[ddi][mp]["ant"].keys())
+                for ant in ant_list:
+                    if ant not in value:
+                        obs_dict[ddi][mp]["ant"].pop(ant)
+                        continue
+
+                    if reference is None and n_baselines is not None:
+                        reference_antennas = obs_dict[ddi][mp]["ant"][ant]
+
+                        if n_baselines > len(reference_antennas):
+                            n_baselines = len(reference_antennas)
+
+                        sorted_antennas = np.array(obs_dict.get_nearest_baselines(antenna=ant))
+
+                        values, i, j = np.intersect1d(reference_antennas, sorted_antennas, return_indices=True)
+                        index = np.sort(j)
+
+                        obs_dict[ddi][mp]["ant"][ant] = sorted_antennas[index][:n_baselines]
+
+                    else:
+                        obs_dict[ddi][mp]["ant"][ant] = reference
+
+        return obs_dict
+
+
+@auror.parameter.validate(
+    add_data_type=HologObsDict,
+    logger=skriba.logger.get_logger(logger_name="astrohack")
+)
 def extract_holog(
         ms_name,
         point_name,
@@ -174,34 +366,30 @@ def extract_holog(
     """
     extract_holog_params = locals()
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-    ######### Parameter Checking #########
-    extract_holog_params = _check_extract_holog_params(function_name=function_name,
-                                                       extract_holog_params=extract_holog_params)
     input_pars = extract_holog_params.copy()
 
     _check_if_file_exists(extract_holog_params['ms_name'])
-    _check_if_file_will_be_overwritten(extract_holog_params['holog_name'], extract_holog_params['overwrite'])
 
     if holog_name is None:
         logger.debug(
-            '[{caller}]: File {file} does not exists. Extracting ...'.format(caller=function_name, file=holog_name))
+            'File not specified or doesn\'t exist. Creating ...')
 
         holog_name = _remove_suffix(ms_name, '.ms') + '.holog.zarr'
         extract_holog_params['holog_name'] = holog_name
 
-        logger.debug('[{caller}]: Extracting holog to {output}'.format(caller=function_name, output=holog_name))
+        logger.debug('Extracting holog name to {output}'.format(output=holog_name))
+
+    _check_if_file_will_be_overwritten(extract_holog_params['holog_name'], extract_holog_params['overwrite'])
 
     try:
         pnt_dict = _load_point_file(extract_holog_params['point_name'])
 
     except Exception as error:
-        logger.error('[{function_name}]: Error loading {name}. - {error}'.format(function_name=function_name,
-                                                                                 name=extract_holog_params[
-                                                                                     "point_name"], error=error))
+        logger.error('Error loading {name}. - {error}'.format(name=extract_holog_params["point_name"], error=error))
 
         return None
 
@@ -269,9 +457,6 @@ def extract_holog(
                     ddi_id = int(ddi_key.replace('ddi_', ''))
                     if ddi_id not in ddi:
                         del holog_obs_dict[ddi_key]
-
-    # logger.info(f"[{function_name}]: holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0], indent=2,
-    # width=2))
 
     encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
 
@@ -382,8 +567,14 @@ def extract_holog(
 
             if 'map' in holog_map_key:
                 scans = holog_obs_dict[ddi_name][holog_map_key]["scans"]
-
-                logger.info(f"[{function_name}]: Processing ddi: {ddi}, scans: {scans}")
+                if len(scans) > 1:
+                    logger.info("Processing ddi: {ddi}, scans: [{min} ... {max}]".format(
+                        ddi=ddi, min=scans[0], max=scans[-1]
+                    ))
+                else:
+                    logger.info("Processing ddi: {ddi}, scan: {scan}".format(
+                        ddi=ddi, scan=scans
+                    ))
 
                 if len(list(holog_obs_dict[ddi_name][holog_map_key]['ant'].keys())) != 0:
                     map_ant_list = []
@@ -427,7 +618,7 @@ def extract_holog(
                     count += 1
 
                 else:
-                    logger.warning(f'[{function_name}]: DDI ' + str(ddi) + ' has no holography data to extract.')
+                    logger.warning("DDI " + str(ddi) + " has no holography data to extract.")
 
     spw_ctb.close()
     pol_ctb.close()
@@ -437,7 +628,7 @@ def extract_holog(
         dask.compute(delayed_list)
 
     if count > 0:
-        logger.info(f"[{function_name}]: Finished processing")
+        logger.info("Finished processing")
 
         holog_dict = _load_holog_file(holog_file=extract_holog_params["holog_name"], dask_load=True,
                                       load_pnt_dict=False)
@@ -460,58 +651,8 @@ def extract_holog(
         return holog_mds
 
     else:
-        logger.warning(f"[{function_name}]: No data to process")
+        logger.warning("No data to process")
         return None
-
-
-def _check_extract_holog_params(function_name, extract_holog_params):
-    #### Parameter Checking ####
-    logger = _get_astrohack_logger()
-    parms_passed = True
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'ms_name', [str], default=None)
-
-    base_name = _remove_suffix(extract_holog_params['ms_name'], '.ms')
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'holog_name', [str],
-                                                 default=base_name + '.holog.zarr')
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'point_name', [str], default=None)
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'ddi', [list, int, str],
-                                                 list_acceptable_data_types=[int], default='all')
-
-    # To Do: special function needed to check holog_obs_dict.
-    parm_check = isinstance(extract_holog_params['holog_obs_dict'], dict) or (
-            extract_holog_params['holog_obs_dict'] is None)
-    parms_passed = parms_passed and parm_check
-
-    if not parm_check:
-        logger.error(f'[{function_name}]: Parameter holog_obs_dict must be of type {str(dict)}.')
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'baseline_average_distance',
-                                                 [int, float, str], default='all')
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'baseline_average_nearest',
-                                                 [int, str], default='all')
-
-    if (extract_holog_params['baseline_average_distance'] != 'all') and (
-            extract_holog_params['baseline_average_nearest'] != 'all'):
-        logger.error(
-            f'[{function_name}]: baseline_average_distance and 'f'baseline_average_nearest can not both be specified.')
-
-        parms_passed = False
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'data_column', [str],
-                                                 default='CORRECTED_DATA')
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'parallel', [bool], default=False)
-
-    parms_passed = parms_passed and _check_parms(function_name, extract_holog_params, 'overwrite', [bool],
-                                                 default=False)
-
-    _parm_check_passed(function_name, parms_passed)
-
-    return extract_holog_params
 
 
 def generate_holog_obs_dict(
@@ -623,7 +764,7 @@ def generate_holog_obs_dict(
     """
     extract_holog_params = locals()
 
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
@@ -704,190 +845,3 @@ def generate_holog_obs_dict(
         json.dump(encoded_obj, outfile)
 
     return HologObsDict(json.loads(encoded_obj))
-
-
-class HologObsDict(dict):
-    """
-      ddi --> map --> ant, scan
-                      |
-                      o--> map: [reference, ...]
-    """
-
-    def __init__(self, obj):
-        super().__init__(obj)
-        self.logger = _get_astrohack_logger()
-
-    def __getitem__(self, key):
-        return super().__getitem__(key)
-
-    def __setitem__(self, key, value):
-        return super().__setitem__(key, value)
-
-    def print(self, style="static"):
-        if style == "dynamic":
-            return astrohack.dio.inspect_holog_obs_dict(self, style="dynamic")
-
-        else:
-            return astrohack.dio.inspect_holog_obs_dict(self, style="static")
-
-    def select(self, key, value, inplace=False, **kwargs):
-
-        if inplace:
-            obs_dict = self
-
-        else:
-            obs_dict = HologObsDict(copy.deepcopy(self))
-
-        if key == "ddi":
-            return self._select_ddi(value, obs_dict=obs_dict)
-
-        elif key == "map":
-            return self._select_ddi(value, obs_dict=obs_dict)
-
-        elif key == "antenna":
-            return self._select_antenna(value, obs_dict=obs_dict)
-
-        elif key == "scan":
-            return self._select_scan(value, obs_dict=obs_dict)
-
-        elif key == "baseline":
-            if "reference" in kwargs.keys():
-                return self._select_baseline(
-                    value,
-                    n_baselines=None,
-                    reference=kwargs["reference"],
-                    obs_dict=obs_dict
-                )
-
-            elif "n_baselines" in kwargs.keys():
-                return self._select_baseline(
-                    value,
-                    n_baselines=kwargs["n_baselines"],
-                    reference=None,
-                    obs_dict=obs_dict
-                )
-
-            else:
-                self.logger.error("Must specify a list of reference antennas for this option.")
-        else:
-            self.logger.error("Valid key not found: {key}".format(key=key))
-            return {}
-
-    @staticmethod
-    def get_nearest_baselines(antenna, n_baselines=None, path_to_matrix=None):
-        logger = _get_astrohack_logger()
-        import pandas as pd
-
-        if path_to_matrix is None:
-            path_to_matrix = os.getcwd() + "/.baseline_distance_matrix.csv"
-
-        if not os.path.exists(path_to_matrix):
-            logger.error("Unable to find baseline distance matrix in: {path}".format(path=path_to_matrix))
-
-        df_matrix = pd.read_csv(path_to_matrix, sep="\t", index_col=0)
-
-        # Skip the first index because it is a self distance
-        if n_baselines is None:
-            return df_matrix[antenna].sort_values(ascending=True).index[1:].values.tolist()
-
-        return df_matrix[antenna].sort_values(ascending=True).index[1:n_baselines].values.tolist()
-
-    @staticmethod
-    def _select_ddi(value, obs_dict):
-        convert = lambda x: "ddi_" + str(x)
-
-        if not isinstance(value, list):
-            value = [value]
-
-        value = list(map(convert, value))
-        ddi_list = list(obs_dict.keys())
-
-        for ddi in ddi_list:
-            if ddi not in value:
-                obs_dict.pop(ddi)
-
-        return obs_dict
-
-    @staticmethod
-    def _select_map(value, obs_dict):
-        convert = lambda x: "map_" + str(x)
-
-        if not isinstance(value, list):
-            value = [value]
-
-        value = list(map(convert, value))
-        ddi_list = list(obs_dict.keys())
-
-        for ddi in ddi_list:
-            map_list = list(obs_dict[ddi].keys())
-            for mp in map_list:
-                if mp not in value:
-                    obs_dict[ddi].pop(mp)
-
-        return obs_dict
-
-    @staticmethod
-    def _select_antenna(value, obs_dict):
-        if not isinstance(value, list):
-            value = [value]
-
-        ddi_list = list(obs_dict.keys())
-
-        for ddi in ddi_list:
-            map_list = list(obs_dict[ddi].keys())
-            for mp in map_list:
-                ant_list = list(obs_dict[ddi][mp]["ant"].keys())
-                for ant in ant_list:
-                    if ant not in value:
-                        obs_dict[ddi][mp]["ant"].pop(ant)
-
-        return obs_dict
-
-    @staticmethod
-    def _select_scan(value, obs_dict):
-        if not isinstance(value, list):
-            value = [value]
-
-        ddi_list = list(obs_dict.keys())
-
-        for ddi in ddi_list:
-            map_list = list(obs_dict[ddi].keys())
-            for mp in map_list:
-                obs_dict[ddi][mp]["scans"] = value
-
-        return obs_dict
-
-    @staticmethod
-    def _select_baseline(value, n_baselines, obs_dict, reference=None):
-        if reference is not None:
-            if not isinstance(reference, list):
-                reference = [reference]
-
-        ddi_list = list(obs_dict.keys())
-
-        for ddi in ddi_list:
-            map_list = list(obs_dict[ddi].keys())
-            for mp in map_list:
-                ant_list = list(obs_dict[ddi][mp]["ant"].keys())
-                for ant in ant_list:
-                    if ant not in value:
-                        obs_dict[ddi][mp]["ant"].pop(ant)
-                        continue
-
-                    if reference is None and n_baselines is not None:
-                        reference_antennas = obs_dict[ddi][mp]["ant"][ant]
-
-                        if n_baselines > len(reference_antennas):
-                            n_baselines = len(reference_antennas)
-
-                        sorted_antennas = np.array(obs_dict.get_nearest_baselines(antenna=ant))
-
-                        values, i, j = np.intersect1d(reference_antennas, sorted_antennas, return_indices=True)
-                        index = np.sort(j)
-
-                        obs_dict[ddi][mp]["ant"][ant] = sorted_antennas[index][:n_baselines]
-
-                    else:
-                        obs_dict[ddi][mp]["ant"][ant] = reference
-
-        return obs_dict

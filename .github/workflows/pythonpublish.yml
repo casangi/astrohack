@@ -4,6 +4,9 @@
 
 name: Published
 
+env:
+    ROOT_DIR: /home/runner/work/astrohack/astrohack/src/astrohack
+
 on:
   release:
     types: [created]

@@ -104,7 +104,6 @@ class TestPanel():
             clip_level=0.2,
             panel_margins=0.2,
             ant=['ea25'],
-            ddi=None,
             panel_model='rigid',
             parallel=False,
             overwrite=True

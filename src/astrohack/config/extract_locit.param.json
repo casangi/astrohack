@@ -1,0 +1,25 @@
+{
+    "extract_locit":{
+        "locit_name":{
+            "type":["str"],
+            "required": true
+        },
+        "cal_table":{
+            "type":["str"],
+            "required": true
+        },
+        "ant":{
+            "type":["list", "str"],
+            "struct type": ["str"],
+            "nullable": false
+        },
+        "ddi":{
+            "type":["ndarray", "int", "list", "str"],
+            "struct type": ["int", "str"],
+            "nullable": false
+        },
+        "overwrite":{
+            "type":["boolean"]
+        }
+    }
+}

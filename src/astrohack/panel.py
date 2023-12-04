@@ -1,19 +1,37 @@
 import os
 import shutil
+import inspect
 
-from astrohack._utils._panel_classes.base_panel import panel_models
-from astrohack._utils._dio import _aips_holog_to_xds, _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
+import skriba.logger
+import auror.parameter
+
+from astrohack._utils._dio import _aips_holog_to_xds
+from astrohack._utils._dio import _check_if_file_will_be_overwritten
+from astrohack._utils._dio import _check_if_file_exists
+from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._panel import _panel_chunk
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
-from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _remove_suffix
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 
+CURRENT_FUNCTION = 0
 
-def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_model=None, panel_margins=0.05, ant=None,
-          ddi=None, parallel=False, overwrite=False):
+@auror.parameter.validate(
+    logger=skriba.logger.get_logger(logger_name="astrohack")
+)
+def panel(
+        image_name,
+        panel_name=None,
+        clip_type='sigma',
+        clip_level=3,
+        panel_model="rigid",
+        panel_margins=0.05,
+        ant="all",
+        ddi="all",
+        parallel=False,
+        overwrite=False
+):
     """Analyze holography images to derive panel adjustments
 
     :param image_name: Input holography data file name. Accepted data formats are the output from ``astrohack.holog.holog`` and AIPS holography data prepackaged using ``astrohack.panel.aips_holog_to_astrohack``.
@@ -117,33 +135,46 @@ def panel(image_name, panel_name=None, clip_type='sigma', clip_level=3, panel_mo
     """
 
     panel_params = locals()
-    panel_params['ant'] = ant
-    logger = _get_astrohack_logger()
-    fname = 'panel'
-    panel_params = _check_panel_parms(fname, panel_params)
+
+    logger = skriba.logger.get_logger(logger_name="astrohack")
+
+    function_name = inspect.stack()[CURRENT_FUNCTION].function
+
     input_params = panel_params.copy()
     # Doubled this entry for compatibility with the factorized antenna ddi loop
     panel_params['filename'] = panel_params['image_name']
+
     _check_if_file_exists(panel_params['image_name'])
+
+    if panel_name is None:
+        logger.info('File not specified or doesn\'t exist. Creating ...')
+
+        panel_name = _remove_suffix(image_name, '.image.zarr') + '.panel.zarr'
+        panel_params['panel_name'] = panel_name
+
+        logger.info('Extracting panel name to {output}'.format(output=panel_name))
+
     image_mds = AstrohackImageFile(panel_params['image_name'])
     image_mds._open()
+
     _check_if_file_will_be_overwritten(panel_params['panel_name'], panel_params['overwrite'])
 
-    if os.path.exists(panel_params['image_name']+'/.aips'):
+    if os.path.exists(panel_params['image_name'] + '/.aips'):
         panel_params['origin'] = 'AIPS'
         _panel_chunk(panel_params)
 
     else:
         panel_params['origin'] = 'astrohack'
-        if _dask_general_compute(fname, image_mds, _panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
-            logger.info(f"[{fname}]: Finished processing")
+        if _dask_general_compute(function_name, image_mds, _panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
+            logger.info(f"[{function_name}]: Finished processing")
             output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_input")
             _write_meta_data(output_attr_file, input_params)
             panel_mds = AstrohackPanelFile(panel_params['panel_name'])
             panel_mds._open()
+
             return panel_mds
         else:
-            logger.warning(f"[{fname}]: No data to process")
+            logger.warning(f"[{function_name}]: No data to process")
             return None
 
 
@@ -172,40 +203,5 @@ def _aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, o
     if os.path.exists(holog_name):
         shutil.rmtree(holog_name, ignore_errors=False, onerror=None)
     xds.to_zarr(holog_name, mode='w', compute=True, consolidated=True)
-    aips_mark = open(holog_name+'/.aips', 'w')
+    aips_mark = open(holog_name + '/.aips', 'w')
     aips_mark.close()
-
-
-def _check_panel_parms(fname, panel_params):
-    """
-    Tests inputs to panel function
-    Args:
-        fname: Caller's name
-        panel_params: panel parameters
-    """
-                          
-    #### Parameter Checking ####
-
-    parms_passed = _check_parms(fname, panel_params, 'image_name', [str], default=None)
-    base_name = _remove_suffix(panel_params['image_name'], '.image.zarr')
-    base_name = _remove_suffix(base_name, '.combine.zarr')
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_name', [str],
-                                                 default=base_name+'.panel.zarr')
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'ant', [list, str],
-                                                 list_acceptable_data_types=[str], default='all')
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'ddi', [list, int],
-                                                 list_acceptable_data_types=[int], default='all')
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'clip_type', [str],
-                                                 acceptable_data=['absolute', 'relative', 'sigma'], default='sigma')
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'clip_level', [int, float],
-                                                 default=3)
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_model', [str],
-                                                 acceptable_data=panel_models, default="rigid")
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'panel_margins', [float],
-                                                 acceptable_range=[0, 0.5], default=0.05)
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'parallel', [bool], default=False)
-    parms_passed = parms_passed and _check_parms(fname, panel_params, 'overwrite', [bool], default=False)
-
-    _parm_check_passed(fname, parms_passed)
-
-    return panel_params

@@ -1,4 +1,4 @@
- #   Copyright 2019 AUI, Inc. Washington DC, USA
+# Copyright 2019 AUI, Inc. Washington DC, USA
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -17,34 +17,32 @@ hack_logger_name = 'astrohack'
 import sys
 import logging
 from datetime import datetime
-#formatter = logging.Formatter("[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
-#formatter = logging.Formatter("[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
+# formatter = logging.Formatter("[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
+# formatter = logging.Formatter("[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
 from dask.distributed import WorkerPlugin
 import dask
 
 
 class astrohack_formatter(logging.Formatter):
-
     reset = "\x1b[0m"
-    DEBUG = "\x1b[32;20m"   #green
-    INFO = "\x1b[33;34m"    #blue
-    WARNING = "\x1b[33;33m" #yellow
-    ERROR = "\x1b[32;31m"   #red
-    CRITICAL = "\x1b[31;1m" #bold red
+    DEBUG = "\x1b[32;20m"  # green
+    INFO = "\x1b[33;34m"  # blue
+    WARNING = "\x1b[33;33m"  # yellow
+    ERROR = "\x1b[32;31m"  # red
+    CRITICAL = "\x1b[31;1m"  # bold red
 
     start_msg = "%(asctime)s - "
     middle_msg = "%(levelname)-8s"
     end_msg = " - %(name)s - (%(filename)s:%(lineno)d) - %(message)s"
-    
+
     import inspect
 
-
     FORMATS = {
-        logging.DEBUG: start_msg + DEBUG + middle_msg  + reset + end_msg ,
-        logging.INFO:  start_msg + INFO + middle_msg  + reset + end_msg,
-        logging.WARNING:  start_msg + WARNING + middle_msg  + reset + end_msg ,
-        logging.ERROR:  start_msg + ERROR + middle_msg  + reset + end_msg ,
-        logging.CRITICAL:  start_msg + CRITICAL + middle_msg  + reset + end_msg ,
+        logging.DEBUG: start_msg + DEBUG + middle_msg + reset + end_msg,
+        logging.INFO: start_msg + INFO + middle_msg + reset + end_msg,
+        logging.WARNING: start_msg + WARNING + middle_msg + reset + end_msg,
+        logging.ERROR: start_msg + ERROR + middle_msg + reset + end_msg,
+        logging.CRITICAL: start_msg + CRITICAL + middle_msg + reset + end_msg,
     }
 
     def format(self, record):
@@ -53,7 +51,7 @@ class astrohack_formatter(logging.Formatter):
         return formatter.format(record)
 
 
-def _get_astrohack_logger(name = hack_logger_name):
+def _get_astrohack_logger(name=hack_logger_name):
     '''
     Will first try to get worker logger. If this fails graph construction logger is returned.
     '''
@@ -61,50 +59,54 @@ def _get_astrohack_logger(name = hack_logger_name):
     try:
         worker = get_worker()
     except:
-        #Schedular processes
+        # Schedular processes
         logger_dict = logging.Logger.manager.loggerDict
         if name in logger_dict:
             logger = logging.getLogger(name)
         else:
-            #If main logger is not started using client function it defaults to printing to term.
+            # If main logger is not started using client function it defaults to printing to term.
             logger = logging.getLogger(name)
             handler = logging.StreamHandler(sys.stdout)
             handler.setFormatter(astrohack_formatter())
             logger.addHandler(handler)
             logger.setLevel(logging.getLevelName('INFO'))
-        
+
         return logger
-    
+
     try:
         logger = worker.plugins['astrohack_worker'].get_logger()
         return logger
     except:
         return logging.getLogger()
 
-def _setup_astrohack_logger(log_to_term=False, log_to_file=True, log_file='astrohack_', log_level='INFO', name=hack_logger_name):
+
+def _setup_astrohack_logger(log_to_term=False, log_to_file=True, log_file='astrohack_', log_level='INFO',
+                            name=hack_logger_name):
     """To setup as many loggers as you want"""
     logger = logging.getLogger(name)
     logger.setLevel(logging.getLevelName(log_level))
-    
+
     logger.handlers.clear()
-    
+
     if log_to_term:
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(astrohack_formatter())
         logger.addHandler(handler)
-    
+
     if log_to_file:
-        log_file = log_file+datetime.today().strftime('%Y%m%d_%H%M%S')+'.log'
+        log_file = log_file + datetime.today().strftime('%Y%m%d_%H%M%S') + '.log'
         handler = logging.FileHandler(log_file)
         handler.setFormatter(astrohack_formatter())
         logger.addHandler(handler)
-        
+
     return logger
-    
+
+
 def _get_astrohack_worker_logger_name(name=hack_logger_name):
     from dask.distributed import get_worker
     worker_log_name = name + '_' + str(get_worker().id)
     return worker_log_name
+
 
 '''
 class _astrohack_worker_logger_plugin(WorkerPlugin):
@@ -124,19 +126,20 @@ class _astrohack_worker_logger_plugin(WorkerPlugin):
         self.logger = _setup_astrohack_worker_logger(self.log_to_term,self.log_to_file,self.log_file,self.level)
 '''
 
+
 def _setup_astrohack_worker_logger(log_to_term, log_to_file, log_file, log_level, worker_id):
     from dask.distributed import get_worker
-    #parallel_logger_name = _get_astrohack_worker_logger_name()
+    # parallel_logger_name = _get_astrohack_worker_logger_name()
     parallel_logger_name = hack_logger_name + '_' + str(worker_id)
-    
+
     logger = logging.getLogger(parallel_logger_name)
     logger.setLevel(logging.getLevelName(log_level))
-    
+
     if log_to_term:
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(astrohack_formatter())
         logger.addHandler(handler)
-    
+
     if log_to_file:
         log_file = log_file + '_' + str(worker_id) + '_' + datetime.today().strftime('%Y%m%d_%H%M%S') + '.log'
         handler = logging.FileHandler(log_file)

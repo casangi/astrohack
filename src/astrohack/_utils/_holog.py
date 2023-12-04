@@ -32,7 +32,7 @@ from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _get_proper_color_map
 from astrohack._utils._conversion import _convert_unit
 
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+import skriba.logger
 
 CURRENT_FUNCTION=0
 
@@ -44,7 +44,7 @@ def _holog_chunk(holog_chunk_params):
     Args:
         holog_chunk_params (dict): Dictionary containing holography parameters.
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
     
     
     function_name = inspect.stack()[CURRENT_FUNCTION].function
@@ -344,7 +344,7 @@ def _export_to_fits_holog_chunk(parm_dict):
     Args:
         parm_dict: parameter dictionary
     """
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     inputxds = parm_dict['xds_data']
     metadata = parm_dict['metadata']
@@ -519,7 +519,7 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, zunit, parm_dict):
     
     function_name = inspect.stack()[CURRENT_FUNCTION].function
     
-    logger = _get_astrohack_logger()
+    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     colormap = _get_proper_color_map(parm_dict['colormap'])
 
