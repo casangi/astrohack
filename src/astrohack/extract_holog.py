@@ -5,10 +5,7 @@ import os
 
 import dask
 import astrohack
-
 import numpy as np
-
-from rich.console import Console
 
 from astrohack._utils._constants import pol_str
 from astrohack._utils._conversion import _convert_ant_name_to_id
@@ -461,12 +458,6 @@ def extract_holog(
                     if ddi_id not in ddi:
                         del holog_obs_dict[ddi_key]
 
-    logger.debug("Holog Observations Dictionary:")
-
-    # Nice printing of holog observations dictionary:
-    console = Console()
-    console.log(holog_obs_dict)
-
     encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
 
     with open(".holog_obs_dict.json", "w") as outfile:
@@ -555,10 +546,14 @@ def extract_holog(
         extract_holog_params["ddi"] = ddi
         extract_holog_params["chan_setup"] = {}
         extract_holog_params["pol_setup"] = {}
-        extract_holog_params["chan_setup"]["chan_freq"] = spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0, :]
-        extract_holog_params["chan_setup"]["chan_width"] = spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[0, :]
-        extract_holog_params["chan_setup"]["eff_bw"] = spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0, :]
-        extract_holog_params["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[0]
+        extract_holog_params["chan_setup"]["chan_freq"] = spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0,
+                                                          :]
+        extract_holog_params["chan_setup"]["chan_width"] = spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[
+                                                           0, :]
+        extract_holog_params["chan_setup"]["eff_bw"] = spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0,
+                                                       :]
+        extract_holog_params["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[
+            0]
         extract_holog_params["chan_setup"]["total_bw"] = \
             spw_ctb.getcol("TOTAL_BANDWIDTH", startrow=spw_setup_id, nrow=1)[0]
         extract_holog_params["pol_setup"]["pol"] = pol_str[
@@ -623,7 +618,7 @@ def extract_holog(
                     count += 1
 
                 else:
-                    logger.warning('DDI ' + str(ddi) + ' has no holography data to extract.')
+                    logger.warning("DDI " + str(ddi) + " has no holography data to extract.")
 
     spw_ctb.close()
     pol_ctb.close()
@@ -834,6 +829,15 @@ def generate_holog_obs_dict(
         ant_names_main,
         write_distance_matrix=True
     )
+
+    # From the generated holog_obs_dict subselect user supplied ddis.
+    # if ddi != 'all':
+    #    holog_obs_dict_keys = list(holog_obs_dict.keys())
+    #    for ddi_key in holog_obs_dict_keys:
+    #        if 'ddi' in ddi_key:
+    #            ddi_id = int(ddi_key.replace('ddi_', ''))
+    #            if ddi_id not in ddi:
+    #                del holog_obs_dict[ddi_key]
 
     encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
 

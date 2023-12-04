@@ -25,7 +25,7 @@ def panel(
         panel_name=None,
         clip_type='sigma',
         clip_level=3,
-        panel_model=None,
+        panel_model="rigid",
         panel_margins=0.05,
         ant="all",
         ddi="all",
