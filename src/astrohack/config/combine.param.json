@@ -1,0 +1,28 @@
+{
+    "combine":{
+        "image_name":{
+            "type":["str"]
+        },
+        "ddi":{
+            "type":["ndarray", "int", "list", "str"],
+            "struct type": ["int", "str"]
+        },
+        "ant":{
+            "type":["ndarray", "list", "str"],
+            "struct type": ["str"]
+        },
+        "combine_name":{
+            "type":["str"],
+            "nullable": true
+        },
+        "weighted":{
+            "type":["boolean"]
+        },
+        "parallel":{
+            "type":["boolean"]
+        },
+        "overwrite":{
+            "type":["boolean"]
+        }
+    }
+}

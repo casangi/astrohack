@@ -1,9 +1,11 @@
-import inspect
 import json
+import inspect
 
-import auror.parameter
 import numpy as np
+
 import skriba.logger
+import auror.parameter
+
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._dio import _check_if_file_exists
 from astrohack._utils._dio import _check_if_file_will_be_overwritten
@@ -14,6 +16,7 @@ from astrohack._utils._tools import _remove_suffix
 from astrohack.mds import AstrohackImageFile
 
 CURRENT_FUNCTION = 0
+
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
