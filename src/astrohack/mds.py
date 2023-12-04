@@ -236,7 +236,6 @@ class AstrohackImageFile(dict):
         _create_destination_folder(param_dict['destination'])
         param_dict['metadata'] = self._meta_data
         _dask_general_compute(
-            function_name,
             self,
             _export_to_fits_holog_chunk,
             param_dict,
@@ -305,7 +304,7 @@ class AstrohackImageFile(dict):
         param_dict["figuresize"] = figure_size
 
         _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(function_name, self, _plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(self, _plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_beams(
 
@@ -359,7 +358,7 @@ class AstrohackImageFile(dict):
         param_dict["figuresize"] = figure_size
 
         _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(function_name, self, _plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(self, _plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackHologFile(dict):
@@ -553,7 +552,7 @@ class AstrohackHologFile(dict):
         # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         key_order = ["ddi", "map", "ant"]
-        _dask_general_compute(function_name, self, _calibration_plot_chunk, param_dict, key_order, parallel)
+        _dask_general_compute(self, _calibration_plot_chunk, param_dict, key_order, parallel)
 
     def plot_lm_sky_coverage(
             self,
@@ -650,7 +649,7 @@ class AstrohackHologFile(dict):
         _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         key_order = ["ddi", "map", "ant"]
-        _dask_general_compute(function_name, self, _plot_lm_coverage, param_dict, key_order, parallel)
+        _dask_general_compute(self, _plot_lm_coverage, param_dict, key_order, parallel)
         return
 
 
@@ -791,7 +790,7 @@ class AstrohackPanelFile(dict):
         param_dict["figuresize"] = figure_size
 
         _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(function_name, self, _export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
+        _dask_general_compute(self, _export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
 
     @auror.parameter.validate(
         logger=skriba.logger.get_logger(logger_name="astrohack"),
@@ -876,7 +875,7 @@ class AstrohackPanelFile(dict):
         param_dict["figuresize"] = figure_size
 
         _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(function_name, self, _plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(self, _plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
     def export_to_fits(
             self,
@@ -909,7 +908,7 @@ class AstrohackPanelFile(dict):
         function_name = inspect.stack()[CURRENT_FUNCTION].function
 
         _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(function_name, self, _export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
+        _dask_general_compute(self, _export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
                               parallel=parallel)
 
 
@@ -1388,9 +1387,9 @@ class AstrohackPositionFile(dict):
         _create_destination_folder(param_dict['destination'])
         param_dict['combined'] = self.combined
         if self.combined:
-            _dask_general_compute(function_name, self, _plot_sky_coverage_chunk, param_dict, ['ant'], parallel=parallel)
+            _dask_general_compute(self, _plot_sky_coverage_chunk, param_dict, ['ant'], parallel=parallel)
         else:
-            _dask_general_compute(function_name, self, _plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
+            _dask_general_compute(self, _plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
                                   parallel=parallel)
 
     def plot_delays(
@@ -1475,9 +1474,9 @@ class AstrohackPositionFile(dict):
         param_dict['combined'] = self.combined
         param_dict['comb_type'] = self._meta_data["combine_ddis"]
         if self.combined:
-            _dask_general_compute(function_name, self, _plot_delays_chunk, param_dict, ['ant'], parallel=parallel)
+            _dask_general_compute(self, _plot_delays_chunk, param_dict, ['ant'], parallel=parallel)
         else:
-            _dask_general_compute(function_name, self, _plot_delays_chunk, param_dict, ['ant', 'ddi'],
+            _dask_general_compute(self, _plot_delays_chunk, param_dict, ['ant', 'ddi'],
                                   parallel=parallel)
 
     def plot_position_corrections(

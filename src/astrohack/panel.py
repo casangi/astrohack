@@ -164,8 +164,7 @@ def panel(
 
     else:
         panel_params['origin'] = 'astrohack'
-        if _dask_general_compute(function_name, image_mds, _panel_chunk, panel_params, ['ant', 'ddi'],
-                                 parallel=parallel):
+        if _dask_general_compute(image_mds, _panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
             logger.info(f"[{function_name}]: Finished processing")
             output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_input")
             _write_meta_data(output_attr_file, input_params)

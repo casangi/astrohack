@@ -171,7 +171,7 @@ def locit(
         function = _locit_separated_chunk
         key_order = ['ant', 'ddi']
 
-    if _dask_general_compute(function_name, locit_mds, function, locit_params, key_order, parallel=parallel):
+    if _dask_general_compute(locit_mds, function, locit_params, key_order, parallel=parallel):
         logger.info(f"[{function_name}]: Finished processing")
 
         output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_attr")

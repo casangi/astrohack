@@ -86,7 +86,7 @@ def combine(
     combine_params['image_mds'] = image_mds
     image_attr = image_mds._meta_data
 
-    if _dask_general_compute(function_name, image_mds, _combine_chunk, combine_params, ['ant'], parallel=parallel):
+    if _dask_general_compute(image_mds, _combine_chunk, combine_params, ['ant'], parallel=parallel):
         logger.info("Finished processing")
 
         output_attr_file = "{name}/{ext}".format(name=combine_params['combine_name'], ext=".image_attr")

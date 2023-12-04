@@ -6,7 +6,6 @@ from astrohack._utils._tools import _param_to_list
 
 
 def _construct_general_graph_recursively(
-        caller,
         looping_dict,
         chunk_function,
         param_dict,
@@ -37,7 +36,6 @@ def _construct_general_graph_recursively(
                 param_dict[f'this_{key}'] = item
                 if item in looping_dict:
                     _construct_general_graph_recursively(
-                        caller,
                         looping_dict[item],
                         chunk_function,
                         param_dict,
@@ -49,16 +47,15 @@ def _construct_general_graph_recursively(
                     
                 else:
                     if oneup is None:
-                        logger.warning(f'[{caller}]: {item} is not present in this mds')
+                        logger.warning(f'{item} is not present in looping dict')
                     else:
-                        logger.warning(f'[{caller}]: {item} is not present for {oneup}')
+                        logger.warning(f'{item} is not present for {oneup}')
 
 
-def _dask_general_compute(caller, looping_dict, chunk_function, param_dict, key_order, parallel=False):
+def _dask_general_compute(looping_dict, chunk_function, param_dict, key_order, parallel=False):
     """
     General tool for looping over the data and constructing graphs for dask parallel processing
     Args:
-        caller: Function calling, used for logger messages
         looping_dict: The dictionary containing the keys over which the loops are to be executed
         chunk_function: The chunk function to be executed
         param_dict: The parameter dictionary for the chunk function
@@ -71,7 +68,6 @@ def _dask_general_compute(caller, looping_dict, chunk_function, param_dict, key_
     logger = skriba.logger.get_logger(logger_name="astrohack")
     delayed_list = []
     _construct_general_graph_recursively(
-        caller,
         looping_dict,
         chunk_function,
         param_dict,
@@ -81,7 +77,7 @@ def _dask_general_compute(caller, looping_dict, chunk_function, param_dict, key_
     )
 
     if len(delayed_list) == 0:
-        logger.warning(f"[{caller}]: No data to process")
+        logger.warning(f"No data to process")
         return False
 
     else:

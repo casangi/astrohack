@@ -208,7 +208,6 @@ def holog(
 
     try:
         if _dask_general_compute(
-                function_name,
                 holog_json,
                 _holog_chunk,
                 holog_params,
