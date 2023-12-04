@@ -90,7 +90,7 @@ def combine(
     image_attr = image_mds._meta_data
 
     if _dask_general_compute(function_name, image_mds, _combine_chunk, combine_params, ['ant'], parallel=parallel):
-        logger.info(f"[{function_name}]: Finished processing")
+        logger.info("Finished processing")
 
         output_attr_file = "{name}/{ext}".format(name=combine_params['combine_name'], ext=".image_attr")
         _write_meta_data(output_attr_file, image_attr)
@@ -102,5 +102,5 @@ def combine(
         combine_mds._open()
         return combine_mds
     else:
-        logger.warning(f"[{function_name}]: No data to process")
+        logger.warning("No data to process")
         return None

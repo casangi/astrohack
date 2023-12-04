@@ -172,8 +172,7 @@ def holog(
             logger.error(
                 "Cell size meta data not found. There was likely an issue with the holography data extraction. Fix\
                  extract data or provide cell_size as argument.")
-            logger.error(
-                "{function_name}: There was an error, see log above for more info.".format(function_name=function_name))
+            logger.error("There was an error, see log above for more info.")
 
             return None
 
@@ -186,8 +185,7 @@ def holog(
             logger.error(
                 "Grid size meta data not found. There was likely an issue with the holography data extraction. Fix \
                 extract data or provide grid_size as argument.")
-            logger.error(
-                "{function_name}: There was an error, see log above for more info.".format(function_name=function_name))
+            logger.error("There was an error, see log above for more info.")
 
             return None
 
@@ -196,7 +194,7 @@ def holog(
             grid_size = np.array([n_pix, n_pix])
             holog_params["grid_size"] = grid_size
 
-    logger.info(f'[{function_name}]: Cell size: {str(cell_size)}, Grid size {str(grid_size)}')
+    logger.info('Cell size: {str(cell_size)}, Grid size {str(grid_size)}')
 
     json_data = {
         "cell_size": holog_params["cell_size"].tolist(),
@@ -234,5 +232,4 @@ def holog(
             return None
 
     except Exception as error:
-        logger.error("{function_name}: There was an error, see log above for more info :: {error}".format(
-            function_name=function_name, error=error))
+        logger.error("There was an error, see log above for more info :: {error}".format(error=error))

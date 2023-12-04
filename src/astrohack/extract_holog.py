@@ -5,7 +5,10 @@ import os
 
 import dask
 import astrohack
+
 import numpy as np
+
+from rich.console import Console
 
 from astrohack._utils._constants import pol_str
 from astrohack._utils._conversion import _convert_ant_name_to_id
@@ -389,9 +392,7 @@ def extract_holog(
         pnt_dict = _load_point_file(extract_holog_params['point_name'])
 
     except Exception as error:
-        logger.error('[{function_name}]: Error loading {name}. - {error}'.format(function_name=function_name,
-                                                                                 name=extract_holog_params[
-                                                                                     "point_name"], error=error))
+        logger.error('Error loading {name}. - {error}'.format(name=extract_holog_params["point_name"], error=error))
 
         return None
 
@@ -460,8 +461,11 @@ def extract_holog(
                     if ddi_id not in ddi:
                         del holog_obs_dict[ddi_key]
 
-    # logger.info(f"[{function_name}]: holog_obs_dict: \n%s", pformat(list(holog_obs_dict.values())[0], indent=2,
-    # width=2))
+    logger.debug("Holog Observations Dictionary:")
+
+    # Nice printing of holog observations dictionary:
+    console = Console()
+    console.log(holog_obs_dict)
 
     encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
 
@@ -569,12 +573,12 @@ def extract_holog(
             if 'map' in holog_map_key:
                 scans = holog_obs_dict[ddi_name][holog_map_key]["scans"]
                 if len(scans) > 1:
-                    logger.info("[{function_name}]: Processing ddi: {ddi}, scans: [{min} ... {max}]".format(
-                        function_name=function_name, ddi=ddi, min=scans[0], max=scans[-1]
+                    logger.info("Processing ddi: {ddi}, scans: [{min} ... {max}]".format(
+                        ddi=ddi, min=scans[0], max=scans[-1]
                     ))
                 else:
-                    logger.info("[{function_name}]: Processing ddi: {ddi}, scan: {scan}".format(
-                        function_name=function_name, ddi=ddi, scan=scans
+                    logger.info("Processing ddi: {ddi}, scan: {scan}".format(
+                        ddi=ddi, scan=scans
                     ))
 
                 if len(list(holog_obs_dict[ddi_name][holog_map_key]['ant'].keys())) != 0:
@@ -619,7 +623,7 @@ def extract_holog(
                     count += 1
 
                 else:
-                    logger.warning(f'[{function_name}]: DDI ' + str(ddi) + ' has no holography data to extract.')
+                    logger.warning('DDI ' + str(ddi) + ' has no holography data to extract.')
 
     spw_ctb.close()
     pol_ctb.close()
@@ -629,7 +633,7 @@ def extract_holog(
         dask.compute(delayed_list)
 
     if count > 0:
-        logger.info(f"[{function_name}]: Finished processing")
+        logger.info("Finished processing")
 
         holog_dict = _load_holog_file(holog_file=extract_holog_params["holog_name"], dask_load=True,
                                       load_pnt_dict=False)
@@ -652,7 +656,7 @@ def extract_holog(
         return holog_mds
 
     else:
-        logger.warning(f"[{function_name}]: No data to process")
+        logger.warning("No data to process")
         return None
 
 
@@ -830,15 +834,6 @@ def generate_holog_obs_dict(
         ant_names_main,
         write_distance_matrix=True
     )
-
-    # From the generated holog_obs_dict subselect user supplied ddis.
-    # if ddi != 'all':
-    #    holog_obs_dict_keys = list(holog_obs_dict.keys())
-    #    for ddi_key in holog_obs_dict_keys:
-    #        if 'ddi' in ddi_key:
-    #            ddi_id = int(ddi_key.replace('ddi_', ''))
-    #            if ddi_id not in ddi:
-    #                del holog_obs_dict[ddi_key]
 
     encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
 
