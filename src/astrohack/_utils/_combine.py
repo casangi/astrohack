@@ -19,16 +19,15 @@ def _combine_chunk(combine_chunk_params):
 
     antenna = combine_chunk_params['this_ant']
     ddi_dict = combine_chunk_params['image_mds'][antenna]
-    fname = 'combine'
     ddi_list = _param_to_list(combine_chunk_params['ddi'], ddi_dict, 'ddi')
 
     nddi = len(ddi_list)
     out_xds_name = '/'.join([combine_chunk_params['combine_name'], antenna, ddi_list[0]])
     if nddi == 0:
-        logger.warning(f'[{fname}]: Nothing to process for {antenna}')
+        logger.warning(f'Nothing to process for {antenna}')
         return
     elif nddi == 1:
-        logger.info(f'[{fname}]: {antenna} has a single ddi to be combined, data copied from input file')
+        logger.info(f'{antenna} has a single ddi to be combined, data copied from input file')
         out_xds = ddi_dict[ddi_list[0]]
         out_xds.to_zarr(out_xds_name, mode='w')
     else:
@@ -36,7 +35,7 @@ def _combine_chunk(combine_chunk_params):
         nddi = len(ddi_list)
         shape = list(out_xds['CORRECTED_PHASE'].values.shape)
         if out_xds.dims['chan'] != 1:
-            msg = f'[{fname}]: Only single channel holographies supported'
+            msg = f'Only single channel holographies supported'
             logger.error(msg)
             raise Exception(msg)
         npol = shape[2]
@@ -54,7 +53,7 @@ def _combine_chunk(combine_chunk_params):
         dest_u_axis = u.ravel()
         dest_v_axis = v.ravel()
         for iddi in range(1, nddi):
-            logger.info(f'[{fname}]: Regridding {antenna} {ddi_list[iddi]}')
+            logger.info(f'Regridding {antenna} {ddi_list[iddi]}')
             this_xds = _load_image_xds(combine_chunk_params['image_name'], antenna, ddi_list[iddi], dask_load=False)
             wavelength = clight / this_xds.chan.values[0]
             u, v = np.meshgrid(this_xds.u_prime.values * wavelength, this_xds.v_prime.values * wavelength)

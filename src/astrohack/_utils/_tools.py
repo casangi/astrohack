@@ -324,11 +324,11 @@ def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
     else:
         inc = axis[1] - axis[0]
         if inc == 0:
-            logger.error('[_axis_to_fits_header]: Axis increment is zero valued')
+            logger.error('Axis increment is zero valued')
             raise Exception
         absdiff = abs((axis[-1] - axis[-2]) - inc) / inc
         if absdiff > 1e-7:
-            logger.error('[_axis_to_fits_header]: Axis is not linear!')
+            logger.error('Axis is not linear!')
             raise Exception
 
     ref = naxis // 2

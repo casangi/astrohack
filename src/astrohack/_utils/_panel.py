@@ -37,7 +37,7 @@ def _panel_chunk(panel_chunk_params):
         antenna = panel_chunk_params['this_ant']
         inputxds = panel_chunk_params['xds_data']
 
-        logger.info(f'[panel]: processing {antenna} {ddi}')
+        logger.info(f'processing {antenna} {ddi}')
         inputxds.attrs['AIPS'] = False
 
         telescope = _get_correct_telescope_from_name(inputxds)

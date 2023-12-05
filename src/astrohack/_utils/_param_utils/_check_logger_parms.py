@@ -23,10 +23,10 @@ from ._check_parms import _check_parms
 def _check_logger_parms(logger_parms):
     parms_passed = True
     fname = '_check_logger_parms'
-    if not(_check_parms(fname, logger_parms, 'log_to_term', [bool],default=True)): parms_passed = False
-    if not(_check_parms(fname, logger_parms, 'log_to_file', [bool],default=False)): parms_passed = False
-    if not(_check_parms(fname, logger_parms, 'log_file', [str],default='hack_')): parms_passed = False
-    if not(_check_parms(fname, logger_parms, 'log_level', [str],default='INFO',acceptable_data=['DEBUG','INFO','WARNING','ERROR'])): parms_passed = False
+    if not(_check_parms(logger_parms, 'log_to_term', [bool],default=True)): parms_passed = False
+    if not(_check_parms(logger_parms, 'log_to_file', [bool],default=False)): parms_passed = False
+    if not(_check_parms(logger_parms, 'log_file', [str],default='hack_')): parms_passed = False
+    if not(_check_parms(logger_parms, 'log_level', [str],default='INFO',acceptable_data=['DEBUG','INFO','WARNING','ERROR'])): parms_passed = False
     
     return parms_passed
 
@@ -34,9 +34,9 @@ def _check_logger_parms(logger_parms):
 def _check_worker_logger_parms(logger_parms):
     parms_passed = True
     fname = '_check_worker_logger_parms'
-    if not(_check_parms(fname, logger_parms, 'log_to_term', [bool],default=False)): parms_passed = False
-    if not(_check_parms(fname, logger_parms, 'log_to_file', [bool],default=False)): parms_passed = False
-    if not(_check_parms(fname, logger_parms, 'log_file', [str],default='hack_')): parms_passed = False
-    if not(_check_parms(fname, logger_parms, 'log_level', [str],default='INFO',acceptable_data=['DEBUG','INFO','WARNING','ERROR'])): parms_passed = False
+    if not(_check_parms(logger_parms, 'log_to_term', [bool],default=False)): parms_passed = False
+    if not(_check_parms(logger_parms, 'log_to_file', [bool],default=False)): parms_passed = False
+    if not(_check_parms(logger_parms, 'log_file', [str],default='hack_')): parms_passed = False
+    if not(_check_parms(logger_parms, 'log_level', [str],default='INFO',acceptable_data=['DEBUG','INFO','WARNING','ERROR'])): parms_passed = False
     
     return parms_passed
