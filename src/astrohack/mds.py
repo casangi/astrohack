@@ -228,16 +228,6 @@ class AstrohackImageFile(dict):
         param_dict = locals()
         function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-        # parms_passed = _check_parms(function_name, param_dict, 'complex_split', [str], acceptable_data=possible_splits,
-        #                            default="cartesian")
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'ant', [str, list],
-        #                                             list_acceptable_data_types=[str], default='all')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'ddi', [int, list],
-        #                                             list_acceptable_data_types=[int], default='all')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'destination', [str], default=None)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'parallel', [bool], default=True)
-
-        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         param_dict['metadata'] = self._meta_data
         _dask_general_compute(
@@ -307,7 +297,6 @@ class AstrohackImageFile(dict):
         param_dict = locals()
         function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-        # _parm_check_passed(function_name, parms_passed)
         param_dict["figuresize"] = figure_size
 
         _create_destination_folder(param_dict['destination'])

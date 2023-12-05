@@ -16,14 +16,14 @@ CURRENT_FUNCTION = 0
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
 def combine(
-        image_name,
-        combine_name=None,
-        ant="all",
-        ddi="all",
-        weighted=False,
-        parallel=False,
-        overwrite=False
-):
+        image_name: str,
+        combine_name: str = None,
+        ant: str | list = "all",
+        ddi: int | list = "all",
+        weighted: bool = False,
+        parallel: bool = False,
+        overwrite: bool = False
+) -> AstrohackImageFile:
     """Combine DDIs in a Holography image to increase SNR
 
     :param image_name: Input holography data file name. Accepted data format is the output from ``astrohack.holog.holog``

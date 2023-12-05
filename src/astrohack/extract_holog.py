@@ -1,11 +1,22 @@
-import copy
-import inspect
-import json
 import os
+import json
+import copy
+import shutil
+import inspect
+import pathlib
+import pickle
+import sklearn
+import math
+import psutil
+import multiprocessing
 
 import dask
 import astrohack
+
 import numpy as np
+
+from rich.console import Console
+from rich.table import Table
 
 from astrohack._utils._constants import pol_str
 from astrohack._utils._conversion import _convert_ant_name_to_id
@@ -27,6 +38,8 @@ from casacore import tables as ctables
 import auror.parameter
 import skriba.logger
 
+from astrohack.extract_pointing import extract_pointing
+
 CURRENT_FUNCTION = 0
 
 
@@ -47,14 +60,14 @@ class HologObsDict(dict):
     def __setitem__(self, key, value):
         return super().__setitem__(key, value)
 
-    def print(self, style="static"):
+    def print(self, style: str = "static"):
         if style == "dynamic":
             return astrohack.dio.inspect_holog_obs_dict(self, style="dynamic")
 
         else:
             return astrohack.dio.inspect_holog_obs_dict(self, style="static")
 
-    def select(self, key, value, inplace=False, **kwargs):
+    def select(self, key: str, value: any, inplace: bool = False, **kwargs) -> object:
 
         if inplace:
             obs_dict = self
@@ -98,14 +111,14 @@ class HologObsDict(dict):
             return {}
 
     @staticmethod
-    def get_nearest_baselines(antenna, n_baselines=None, path_to_matrix=None):
+    def get_nearest_baselines(antenna: str, n_baselines: int = None, path_to_matrix: str = None) -> object:
         logger = skriba.logger.get_logger(logger_name="astrohack")
         import pandas as pd
 
         if path_to_matrix is None:
-            path_to_matrix = os.getcwd() + "/.baseline_distance_matrix.csv"
+            path_to_matrix = str(pathlib.Path.cwd().joinpath(".baseline_distance_matrix.csv"))
 
-        if not os.path.exists(path_to_matrix):
+        if not pathlib.Path(path_to_matrix).exists():
             logger.error("Unable to find baseline distance matrix in: {path}".format(path=path_to_matrix))
 
         df_matrix = pd.read_csv(path_to_matrix, sep="\t", index_col=0)
@@ -117,7 +130,7 @@ class HologObsDict(dict):
         return df_matrix[antenna].sort_values(ascending=True).index[1:n_baselines].values.tolist()
 
     @staticmethod
-    def _select_ddi(value, obs_dict):
+    def _select_ddi(value: int | list, obs_dict: object) -> object:
         convert = lambda x: "ddi_" + str(x)
 
         if not isinstance(value, list):
@@ -133,7 +146,7 @@ class HologObsDict(dict):
         return obs_dict
 
     @staticmethod
-    def _select_map(value, obs_dict):
+    def _select_map(value: int | list, obs_dict: object) -> object:
         convert = lambda x: "map_" + str(x)
 
         if not isinstance(value, list):
@@ -151,7 +164,7 @@ class HologObsDict(dict):
         return obs_dict
 
     @staticmethod
-    def _select_antenna(value, obs_dict):
+    def _select_antenna(value: str | list, obs_dict: object) -> object:
         if not isinstance(value, list):
             value = [value]
 
@@ -168,7 +181,7 @@ class HologObsDict(dict):
         return obs_dict
 
     @staticmethod
-    def _select_scan(value, obs_dict):
+    def _select_scan(value: int | list, obs_dict: object) -> object:
         if not isinstance(value, list):
             value = [value]
 
@@ -182,7 +195,7 @@ class HologObsDict(dict):
         return obs_dict
 
     @staticmethod
-    def _select_baseline(value, n_baselines, obs_dict, reference=None):
+    def _select_baseline(value: str, n_baselines: int, obs_dict: object, reference: str | list = None) -> object:
         if reference is not None:
             if not isinstance(reference, list):
                 reference = [reference]
@@ -222,17 +235,17 @@ class HologObsDict(dict):
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
 def extract_holog(
-        ms_name,
-        point_name,
-        holog_name=None,
-        holog_obs_dict=None,
-        ddi='all',
-        baseline_average_distance='all',
-        baseline_average_nearest='all',
-        data_column="CORRECTED_DATA",
-        parallel=False,
-        overwrite=False,
-):
+        ms_name: str,
+        point_name: str,
+        holog_name: str = None,
+        holog_obs_dict: HologObsDict = None,
+        ddi: int | list | str = 'all',
+        baseline_average_distance: float | str = 'all',
+        baseline_average_nearest: float | str = 'all',
+        data_column: str = "CORRECTED_DATA",
+        parallel: bool = False,
+        overwrite: bool = False,
+) -> AstrohackHologFile | None:
     """
     Extract holography and optionally pointing data, from measurement set. Creates holography output file.
 
@@ -656,12 +669,12 @@ def extract_holog(
 
 
 def generate_holog_obs_dict(
-        ms_name,
-        point_name,
-        baseline_average_distance='all',
-        baseline_average_nearest='all',
-        parallel=False
-):
+        ms_name: str,
+        point_name: str,
+        baseline_average_distance: str = 'all',
+        baseline_average_nearest: str = 'all',
+        parallel: bool = False
+) -> HologObsDict:
     """
     Generate holography observation dictionary, from measurement set..
 
@@ -771,20 +784,6 @@ def generate_holog_obs_dict(
     _check_if_file_exists(ms_name)
     _check_if_file_exists(point_name)
 
-    ######## Get Spectral Windows ########
-    ctb = ctables.table(
-        os.path.join(extract_holog_params['ms_name'], "DATA_DESCRIPTION"),
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-        ack=False,
-    )
-
-    ddi_spw = ctb.getcol("SPECTRAL_WINDOW_ID")
-    ddpol_indexol = ctb.getcol("POLARIZATION_ID")
-    ms_ddi = np.arange(len(ddi_spw))
-
-    ctb.close()
-
     ######## Get Antenna IDs and Names ########
     ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "ANTENNA"),
@@ -814,9 +813,6 @@ def generate_holog_obs_dict(
     ant_names_main = ant_names[ant_id_main]
     ctb.close()
 
-    # Create holog_obs_dict or modify user supplied holog_obs_dict.
-    # ddi = extract_holog_params['ddi']
-
     pnt_mds = AstrohackPointFile(extract_holog_params['point_name'])
     pnt_mds._open()
 
@@ -830,18 +826,100 @@ def generate_holog_obs_dict(
         write_distance_matrix=True
     )
 
-    # From the generated holog_obs_dict subselect user supplied ddis.
-    # if ddi != 'all':
-    #    holog_obs_dict_keys = list(holog_obs_dict.keys())
-    #    for ddi_key in holog_obs_dict_keys:
-    #        if 'ddi' in ddi_key:
-    #            ddi_id = int(ddi_key.replace('ddi_', ''))
-    #            if ddi_id not in ddi:
-    #                del holog_obs_dict[ddi_key]
-
     encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
 
     with open(".holog_obs_dict.json", "w") as outfile:
         json.dump(encoded_obj, outfile)
 
     return HologObsDict(json.loads(encoded_obj))
+
+
+def get_number_of_parameters(holog_obs_dict: HologObsDict) -> (int, int, int, int):
+    scan_list = []
+    ant_list = []
+    baseline_list = []
+
+    for ddi in holog_obs_dict.keys():
+        for mapping in holog_obs_dict[ddi].keys():
+            scan_list.append(len(holog_obs_dict[ddi][mapping]["scans"]))
+            ant_list.append(len(holog_obs_dict[ddi][mapping]["ant"].keys()))
+
+            for ant in holog_obs_dict[ddi][mapping]["ant"].keys():
+                baseline_list.append(len(holog_obs_dict[ddi][mapping]["ant"][ant]))
+
+    n_ddi = len(holog_obs_dict.keys())
+    n_scans = max(scan_list)
+    n_ant = max(ant_list)
+    n_baseline = max(baseline_list)
+
+    return n_ddi, n_scans, n_ant, n_baseline
+
+
+def model_memory_usage(
+        ms_name: str,
+        holog_obs_dict: HologObsDict = None
+) -> int:
+    """ Determine the approximate memory usage per core of a given measurement file.
+
+        :param ms_name: str
+        :type holog_obs_dict: HologObsDict, optional
+
+        :return: Memory per core
+        :rtype: int
+    """
+    logger = skriba.logger.get_logger()
+
+    # Get holog observations dictionary
+    if holog_obs_dict is None:
+        extract_pointing(
+            ms_name=ms_name,
+            point_name="temporary.pointing.zarr",
+            parallel=False,
+            overwrite=False,
+        )
+
+        holog_obs_dict = generate_holog_obs_dict(
+            ms_name=ms_name,
+            point_name="temporary.pointing.zarr",
+            baseline_average_distance='all',
+            baseline_average_nearest='all',
+            parallel=False
+        )
+
+        shutil.rmtree("temporary.pointing.zarr")
+
+    # Get number of each parameter
+    n_ddi, n_scans, n_ant, n_baseline = get_number_of_parameters(holog_obs_dict)
+
+    # Get model file
+    if not pathlib.Path("model").exists():
+        os.mkdir("model")
+
+    astrohack.data.datasets.download('elastic.model', folder="model", unpack=True)
+
+    with open("model/elastic.model", "rb") as model_file:
+        model = pickle.load(model_file)
+
+    memory_per_core = math.ceil(model.predict([[n_ddi, n_scans, n_ant, n_baseline]])[0])
+
+    cores = multiprocessing.cpu_count()
+    memory_available = round((psutil.virtual_memory().available / (1024 ** 2)))
+    memory_limit = round((psutil.virtual_memory().total / (1024 ** 2)))
+
+    table = Table(
+        title="System Info",
+        caption="Available memory: represents the system memory available without going into swap"
+    )
+
+    table.add_column("N-cores", justify="right", style="blue", no_wrap=True)
+    table.add_column("Available memory (MB)", style="magenta")
+    table.add_column("Total memory (MB)", style="cyan")
+    table.add_column("Suggested memory per core (MB)", justify="right", style="green")
+
+    table.add_row(str(cores), str(memory_available), str(memory_limit), str(memory_per_core))
+
+    console = Console()
+    console.print(table)
+
+    # Make prediction of memory per core in MB
+    return memory_per_core

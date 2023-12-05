@@ -1,5 +1,6 @@
 import psutil
 import multiprocessing
+import pathlib
 import dask
 import copy
 import os
@@ -16,7 +17,13 @@ from astrohack._utils._dask_plugins._astrohack_worker import AstrohackWorker
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
-def local_client(cores=None, memory_limit=None, dask_local_dir=None, log_params=None, worker_log_params=None):
+def local_client(
+        cores: int = None,
+        memory_limit: str = None,
+        dask_local_dir: str = None,
+        log_params: dict = None,
+        worker_log_params: dict = None
+) -> dask.distributed.Client:
     """ Setup dask cluster and astrohack logger.
 
     :param cores: Number of cores in Dask cluster, defaults to None
@@ -174,13 +181,13 @@ def local_client(cores=None, memory_limit=None, dask_local_dir=None, log_params=
     return client
 
 
-def _set_up_dask(local_directory):
+def _set_up_dask(local_directory: str) -> None:
     if local_directory:
         dask.config.set({"temporary_directory": local_directory})
 
-    config_path = os.path.dirname(__file__) + "/config/"
-    if os.path.exists(config_path):
-        config_file = config_path + "dask.config.yaml"
+    config_path = pathlib.Path(__file__).joinpath("config")
+    if config_path.exists():
+        config_file = str(config_path.joinpath("dask.config.yaml"))
         with open(config_file) as config:
             dask_settings = yaml.safe_load(config)
             dask.config.update_defaults(dask_settings)

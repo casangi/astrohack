@@ -1,20 +1,22 @@
 import os
+import pathlib
 import astrohack
 
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+import skriba.logger
 
-def download(file, folder='.', unpack=False, source='dropbox'):
-  logger = _get_astrohack_logger()
 
-  if os.path.exists(folder) == False:
-    os.mkdir(folder)
-  
-  if source == 'gdrive':
-    astrohack.data._google_drive.download(file=file, folder=folder, unpack=unpack)
+def download(file: str, folder: str = '.', unpack: bool = False, source: str = 'dropbox') -> None:
+    logger = skriba.logger.get_logger()
 
-  elif source == 'dropbox':
-    astrohack.data._dropbox.download(file=file, folder=folder)
+    if not pathlib.Path(folder).exists():
+        os.mkdir(folder)
 
-  else:
-    logger.error("unknown source or issue found")
-    pass
+    if source == 'gdrive':
+        astrohack.data.google_drive.download(file=file, folder=folder, unpack=unpack)
+
+    elif source == 'dropbox':
+        astrohack.data.dropbox.download(file=file, folder=folder)
+
+    else:
+        logger.error("unknown source or issue found")
+        pass

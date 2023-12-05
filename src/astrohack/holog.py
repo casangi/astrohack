@@ -22,23 +22,23 @@ CURRENT_FUNCTION = 0
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
 def holog(
-        holog_name,
-        grid_size=None,
-        cell_size=None,
-        image_name=None,
-        padding_factor=50,
-        grid_interpolation_mode="linear",
-        chan_average=True,
-        chan_tolerance_factor=0.005,
-        scan_average=True,
-        ant="all",
-        ddi="all",
-        to_stokes=True,
-        apply_mask=True,
-        phase_fit=True,
-        overwrite=False,
-        parallel=False
-):
+        holog_name: str,
+        grid_size: int | np.array = None,
+        cell_size: int | np.array = None,
+        image_name: str = None,
+        padding_factor: int = 50,
+        grid_interpolation_mode: str = "linear",
+        chan_average: bool = True,
+        chan_tolerance_factor: float = 0.005,
+        scan_average: bool = True,
+        ant: str | list = "all",
+        ddi: int | list = "all",
+        to_stokes: bool = True,
+        apply_mask: bool = True,
+        phase_fit: bool = True,
+        overwrite: bool = False,
+        parallel: bool = False
+) -> AstrohackImageFile:
     """ Process holography data and derive aperture illumination pattern.
 
     :param holog_name: Name of holography .holog.zarr file to process.

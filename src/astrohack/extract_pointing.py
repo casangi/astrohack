@@ -19,11 +19,11 @@ CURRENT_FUNCTION = 0
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
 def extract_pointing(
-        ms_name,
-        point_name=None,
-        parallel=False,
-        overwrite=False,
-):
+        ms_name: str,
+        point_name: str = None,
+        parallel: bool = False,
+        overwrite: bool = False,
+) -> AstrohackPointFile:
     """ Extract pointing data from measurement set.  Creates holography output file.
 
     :param ms_name: Name of input measurement file name.
