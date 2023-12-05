@@ -1,6 +1,4 @@
 import json
-import inspect
-
 import numpy as np
 
 import skriba.logger
@@ -17,10 +15,7 @@ from astrohack._utils._holog import _holog_chunk
 from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
-CURRENT_FUNCTION = 0
-
 Array = NewType("Array", Union[np.array, List[int], List[float]])
-
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
@@ -151,10 +146,7 @@ def holog(
 
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
-
     input_params = holog_params.copy()
-
     _check_if_file_exists(holog_params['holog_name'])
 
     _check_if_file_will_be_overwritten(holog_params['image_name'], holog_params['overwrite'])
