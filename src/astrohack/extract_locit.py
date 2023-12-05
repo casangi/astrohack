@@ -1,5 +1,3 @@
-import inspect
-
 import auror.parameter
 import skriba.logger
 
@@ -13,9 +11,6 @@ from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackLocitFile
 
 from typing import Union, List
-
-CURRENT_FUNCTION = 0
-
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
@@ -82,18 +77,16 @@ def extract_locit(
     extract_locit_params = locals()
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
-
     input_params = extract_locit_params.copy()
     attributes = extract_locit_params.copy()
 
     _check_if_file_exists(extract_locit_params['cal_table'])
     _check_if_file_will_be_overwritten(extract_locit_params['locit_name'], extract_locit_params['overwrite'])
 
-    _extract_antenna_data(function_name, extract_locit_params)
-    _extract_spectral_info(function_name, extract_locit_params)
-    _extract_antenna_phase_gains(function_name, extract_locit_params)
-    telescope_name, n_sources = _extract_source_and_telescope(function_name, extract_locit_params)
+    _extract_antenna_data(extract_locit_params)
+    _extract_spectral_info(extract_locit_params)
+    _extract_antenna_phase_gains(extract_locit_params)
+    telescope_name, n_sources = _extract_source_and_telescope(extract_locit_params)
 
     attributes['telescope_name'] = telescope_name
     attributes['n_sources'] = n_sources
@@ -106,7 +99,7 @@ def extract_locit(
     output_attr_file = "{name}/{ext}".format(name=extract_locit_params['locit_name'], ext=".locit_attr")
     _write_meta_data(output_attr_file, attributes)
 
-    logger.info(f"[{function_name}]: Finished processing")
+    logger.info(f"Finished processing")
     locit_mds = AstrohackLocitFile(extract_locit_params['locit_name'])
     locit_mds.open()
 
