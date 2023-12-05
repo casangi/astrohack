@@ -1,11 +1,9 @@
 import os
 import json
-import inspect
 import numpy as np
 import xarray as xr
 import astropy
 import astrohack
-
 import skriba.logger
 
 from numba import njit
@@ -18,8 +16,6 @@ from astrohack._utils._plot_commons import _create_figure_and_axes, _scatter_plo
 from astrohack._utils._conversion import _convert_unit
 
 from astrohack._utils._dio import _load_point_file
-
-CURRENT_FUNCTION = 0
 
 
 def _extract_holog_chunk(extract_holog_params):
@@ -36,8 +32,6 @@ def _extract_holog_chunk(extract_holog_params):
     """
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
-
     ms_name = extract_holog_params["ms_name"]
     pnt_name = extract_holog_params["point_name"]
     data_column = extract_holog_params["data_column"]
@@ -53,9 +47,7 @@ def _extract_holog_chunk(extract_holog_params):
     telescope_name = extract_holog_params["telescope_name"]
 
     if len(ref_ant_per_map_ant_tuple) != len(map_ant_tuple):
-        logger.error(
-            "[{function_name}]: Reference antanna per mapping antenna list and mapping antenna list should have same length.".format(
-                function_name=function_name))
+        logger.error("Reference antenna per mapping antenna list and mapping antenna list should have same length.")
         raise Exception("Inconsistancy between antenna list length, see error above for more info.")
 
     sel_state_ids = extract_holog_params["sel_state_ids"]
@@ -68,12 +60,14 @@ def _extract_holog_chunk(extract_holog_params):
 
     if sel_state_ids:
         ctb = ctables.taql(
-            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
+            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE "
+            "DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
             % (data_column, ddi, list(scans), list(sel_state_ids))
         )
     else:
         ctb = ctables.taql(
-            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
+            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE "
+            "DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
             % (data_column, ddi, list(scans))
         )
 
@@ -120,10 +114,11 @@ def _extract_holog_chunk(extract_holog_params):
     # over_flow_protector_constant = float("%.5g" % time_vis[0])  # For example 5076846059.4 -> 5076800000.0
     # time_vis = time_vis - over_flow_protector_constant
     # from astrohack._utils._algorithms import _average_repeated_pointings
-    # time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict,ant_names)
+    # time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,
+    # pnt_map_dict,ant_names)
     # time_vis = time_vis + over_flow_protector_constant
 
-    holog_dict = _create_holog_file(
+    _create_holog_file(
         holog_name,
         vis_map_dict,
         weight_map_dict,
@@ -139,9 +134,8 @@ def _extract_holog_chunk(extract_holog_params):
         grid_parms
     )
 
-    logger.info(
-        "[{function_name}]: Finished extracting holography chunk for ddi: {ddi} holog_map_key: {holog_map_key}".format(
-            ddi=ddi, holog_map_key=holog_map_key, function_name=function_name)
+    logger.info("Finished extracting holography chunk for ddi: {ddi} holog_map_key: {holog_map_key}".format(
+            ddi=ddi, holog_map_key=holog_map_key)
     )
 
 
@@ -311,8 +305,6 @@ def _create_holog_file(
 
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
-
     ctb = ctables.table("/".join((ms_name, "ANTENNA")))
     observing_location = ctb.getcol("POSITION")
 
@@ -373,7 +365,7 @@ def _create_holog_file(
             holog_file = holog_name
 
             logger.info(
-                "[{function_name}]: Writing holog file to {file}".format(function_name=function_name, file=holog_file)
+                "Writing holog file to {file}".format(file=holog_file)
             )
             xds.to_zarr(
                 os.path.join(
@@ -386,11 +378,7 @@ def _create_holog_file(
             )
 
         else:
-            logger.warning(
-                "[{function_name}]: [FLAGGED DATA] mapping antenna index {index}".format(index=ant_names[map_ant_index],
-                                                                                         function_name=function_name
-                                                                                         )
-            )
+            logger.warning("[FLAGGED DATA] mapping antenna index {index}".format(index=ant_names[map_ant_index]))
 
 
 def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average_nearest, ant_names, ant_pos,
@@ -408,7 +396,8 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
     map_id = 0
     ant_names_set = set()
 
-    # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antenas are added because we first need to populate all mapping antennas.
+    # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antennas are added because
+    # we first need to populate all mapping antennas.
     for ant_name, ant_ds in pnt_dict.items():
         if 'ant' in ant_name:
             ant_name = ant_name.replace('ant_', '')
@@ -418,7 +407,7 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
                     if ddi not in holog_obs_dict:
                         holog_obs_dict[ddi] = {}
                     for ant_map_id, scan_list in map_dict.items():
-                        # logger.debug('ant name ' + ant_name + ' scan list' + str(scan_list))
+                        logger.debug('ant name ' + ant_name + ' scan list' + str(scan_list))
                         if scan_list:
                             map_key = _check_if_array_in_dict(mapping_scans_dict, scan_list)
                             if not map_key:
@@ -446,8 +435,8 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
     for ddi, ddi_dict in holog_obs_dict.items():
         for map_id, map_dict in ddi_dict.items():
             map_ant_set = set(map_dict['ant'].keys())
-            map_ant_keys = list(map_dict[
-                                    'ant'].keys())  # Need a copy because of del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] below.
+            # Need a copy because of del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] below.
+            map_ant_keys = list(map_dict['ant'].keys())
 
             for map_ant_key in map_ant_keys:
                 ref_ant_set = ant_names_set - map_ant_set
@@ -506,7 +495,8 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     Args:
         map_ant_ids (dict): list of antenna ids
         time_vis (numpy.ndarray): sorted, unique list of visibility times
-        pnt_ant_dict (dict): map of pointing directional cosines with a map key based on the antenna id and indexed by the MAIN table visibility time.
+        pnt_ant_dict (dict): map of pointing directional cosines with a map key based on the antenna id and indexed by
+                             the MAIN table visibility time.
 
     Returns:
         dict:  Dictionary of directional cosine data mapped to nearest MAIN table sample times.
@@ -536,8 +526,6 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         holog_dict (dict): Dictionary containing msdx data.
     """
     logger = skriba.logger.get_logger(logger_name="astrohack")
-
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     ant_holog_dict = {}
     cell_sizes = []
@@ -573,7 +561,8 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         logger.warning('Cell size not consistent: ' + str(cell_sizes))
         logger.warning('Calculating suggested cell size ...')
 
-        meta_data["cell_size"] = astrohack._utils._algorithms._calculate_suggested_grid_paramater(parameter=np.array(cell_sizes))
+        meta_data["cell_size"] = astrohack._utils._algorithms._calculate_suggested_grid_paramater(parameter=
+                                                                                                  np.array(cell_sizes))
 
         logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))
 
@@ -597,13 +586,14 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
             json.dump(ant_holog_dict, json_file)
 
     except Exception as error:
-        logger.error("[{function_name}}] {error}".format(error=error, function_name=function_name))
+        logger.error(f"{error}")
 
         raise Exception(error)
 
     meta_data.update(input_params)
 
     return meta_data
+
 
 def _plot_lm_coverage(param_dict):
     data = param_dict['xds_data']
