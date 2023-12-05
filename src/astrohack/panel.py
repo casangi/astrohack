@@ -1,8 +1,6 @@
 import os
 import pathlib
 import shutil
-import inspect
-
 import skriba.logger
 import auror.parameter
 
@@ -17,8 +15,6 @@ from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 
 from typing import Union, List
-
-CURRENT_FUNCTION = 0
 
 
 @auror.parameter.validate(
@@ -145,8 +141,6 @@ def panel(
 
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
-
     input_params = panel_params.copy()
     # Doubled this entry for compatibility with the factorized antenna ddi loop
     panel_params['filename'] = panel_params['image_name']
@@ -165,7 +159,7 @@ def panel(
     else:
         panel_params['origin'] = 'astrohack'
         if _dask_general_compute(image_mds, _panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
-            logger.info(f"[{function_name}]: Finished processing")
+            logger.info("Finished processing")
             output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_input")
             _write_meta_data(output_attr_file, input_params)
             panel_mds = AstrohackPanelFile(panel_params['panel_name'])
@@ -173,7 +167,7 @@ def panel(
 
             return panel_mds
         else:
-            logger.warning(f"[{function_name}]: No data to process")
+            logger.warning("No data to process")
             return None
 
 
