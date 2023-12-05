@@ -346,8 +346,10 @@ def _build_design_matrix_block(pols, xymin, xymax, cellxy, phase_image, amplitud
                         x_delta_pix = ix - ix0
                         y_delta_pix = iy - iy0
 
-                        x_focus, y_focus, z_focus, x_tilt, y_tilt, x_cass, y_cass = _matrix_coeffs(x_delta_pix, y_delta_pix,
-                                                                                                   magnification, focal_length,
+                        x_focus, y_focus, z_focus, x_tilt, y_tilt, x_cass, y_cass = _matrix_coeffs(x_delta_pix,
+                                                                                                   y_delta_pix,
+                                                                                                   magnification,
+                                                                                                   focal_length,
                                                                                                    cellxy, phase_slope)
 
                         #  build the design matrix.
