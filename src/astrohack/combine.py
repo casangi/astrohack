@@ -11,8 +11,6 @@ from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_
 from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
-CURRENT_FUNCTION = 0
-
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
@@ -72,8 +70,6 @@ def combine(
 
     combine_params = locals()
     logger = skriba.logger.get_logger(logger_name="astrohack")
-
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     input_params = combine_params.copy()
 
