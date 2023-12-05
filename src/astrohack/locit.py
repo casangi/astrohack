@@ -1,5 +1,3 @@
-import inspect
-
 import auror.parameter
 import skriba.logger
 
@@ -10,9 +8,6 @@ from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 
 from typing import Union, List
-
-CURRENT_FUNCTION = 0
-
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
@@ -140,10 +135,7 @@ def locit(
     locit_params = locals()
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
-
     locit_params["fit_rate"] = fit_delay_rate
-
     input_params = locit_params.copy()
     attributes = locit_params.copy()
 
@@ -172,7 +164,7 @@ def locit(
         key_order = ['ant', 'ddi']
 
     if _dask_general_compute(locit_mds, function, locit_params, key_order, parallel=parallel):
-        logger.info(f"[{function_name}]: Finished processing")
+        logger.info("Finished processing")
 
         output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_attr")
         _write_meta_data(output_attr_file, attributes)
