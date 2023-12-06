@@ -311,18 +311,21 @@ class AstrohackImageFile(dict):
         _create_destination_folder(param_dict['destination'])
         _dask_general_compute(self, _plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_plots_checker
+    )
     def plot_beams(
-
             self,
             destination: str,
             ant: Union[str, List[str]] = "all",
             ddi: Union[int, List[int]] = "all",
             complex_split: str = 'polar',
+            angle_unit: str = 'deg',
+            phase_unit: str = 'deg',
             display: bool = False,
             colormap: str = 'viridis',
             figure_size: Union[Tuple, List[float], np.array] = None,
-            angle_unit: str = 'deg',
-            phase_unit: str = 'deg',
             dpi: int = 300,
             parallel: bool = False
     ) -> None:
