@@ -2,11 +2,16 @@ import inspect
 
 import auror.parameter
 import skriba.logger
+
+import numpy as np
+
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
 from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._extract_locit import _extract_antenna_data, _extract_spectral_info
 from astrohack._utils._extract_locit import _extract_source_and_telescope, _extract_antenna_phase_gains
 from astrohack.mds import AstrohackLocitFile
+
+from typing import Union, List
 
 CURRENT_FUNCTION = 0
 
@@ -15,11 +20,11 @@ CURRENT_FUNCTION = 0
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
 def extract_locit(
-        cal_table,
-        locit_name=None,
-        ant="all",
-        ddi="all",
-        overwrite=False
+        cal_table: str,
+        locit_name: str = None,
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[int]] = "all",
+        overwrite: bool = False
 ):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.

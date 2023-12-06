@@ -18,7 +18,7 @@ import numpy as np
 from rich.console import Console
 from rich.table import Table
 
-from typing import Union, List, Tuple
+from typing import Union, List, NewType, Dict, Any, Tuple
 
 from astrohack._utils._constants import pol_str
 from astrohack._utils._conversion import _convert_ant_name_to_id
@@ -44,6 +44,9 @@ from astrohack.extract_pointing import extract_pointing
 
 CURRENT_FUNCTION = 0
 
+JSON = NewType("JSON", Dict[str, Any])
+KWARGS = NewType("KWARGS", Union[Dict[str, str], Dict[str, int]])
+
 
 class HologObsDict(dict):
     """
@@ -52,14 +55,14 @@ class HologObsDict(dict):
                       o--> map: [reference, ...]
     """
 
-    def __init__(self, obj):
+    def __init__(self, obj: JSON):
         super().__init__(obj)
         self.logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         return super().__getitem__(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
     def print(self, style: str = "static"):
@@ -69,7 +72,7 @@ class HologObsDict(dict):
         else:
             return astrohack.dio.inspect_holog_obs_dict(self, style="static")
 
-    def select(self, key: str, value: any, inplace: bool = False, **kwargs) -> object:
+    def select(self, key: str, value: any, inplace: bool = False, **kwargs: KWARGS) -> object:
 
         if inplace:
             obs_dict = self
@@ -197,7 +200,12 @@ class HologObsDict(dict):
         return obs_dict
 
     @staticmethod
-    def _select_baseline(value: str, n_baselines: int, obs_dict: object, reference: Union[str, List[int]] = None) -> object:
+    def _select_baseline(
+            value: str,
+            n_baselines: int,
+            obs_dict: object,
+            reference: Union[str, List[int]] = None
+    ) -> object:
         if reference is not None:
             if not isinstance(reference, list):
                 reference = [reference]
@@ -408,7 +416,7 @@ def extract_holog(
 
         return None
 
-    ######## Get Spectral Windows ########
+    # Get spectral windows
     ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "DATA_DESCRIPTION"),
         readonly=True,
@@ -421,7 +429,7 @@ def extract_holog(
     ms_ddi = np.arange(len(ddi_spw))
     ctb.close()
 
-    ######## Get Antenna IDs and Names ########
+    # Get antenna IDs and names
     ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "ANTENNA"),
         readonly=True,
@@ -435,7 +443,7 @@ def extract_holog(
 
     ctb.close()
 
-    ######## Get Antenna IDs that are in the main table########
+    # Get antenna IDs in the main table
     ctb = ctables.table(
         extract_holog_params['ms_name'],
         readonly=True,
@@ -478,7 +486,7 @@ def extract_holog(
     with open(".holog_obs_dict.json", "w") as outfile:
         json.dump(encoded_obj, outfile)
 
-    ######## Get Scan and Subscan IDs ########
+    # Get scan and subscan IDs
     # SDM Tables Short Description (https://drive.google.com/file/d/16a3g0GQxgcO7N_ZabfdtexQ8r2jRbYIS/view)
     # 2.54 ScanIntent (p. 150)
     # MAP ANTENNA SURFACE : Holography calibration scan
@@ -495,7 +503,7 @@ def extract_holog(
         ack=False,
     )
 
-    # scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE subtable.
+    # Scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE sub-table.
     obs_modes = ctb.getcol("OBS_MODE")
     ctb.close()
 
@@ -561,23 +569,28 @@ def extract_holog(
         extract_holog_params["ddi"] = ddi
         extract_holog_params["chan_setup"] = {}
         extract_holog_params["pol_setup"] = {}
-        extract_holog_params["chan_setup"]["chan_freq"] = spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0,
-                                                          :]
-        extract_holog_params["chan_setup"]["chan_width"] = spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[
-                                                           0, :]
-        extract_holog_params["chan_setup"]["eff_bw"] = spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0,
-                                                       :]
-        extract_holog_params["chan_setup"]["ref_freq"] = spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[
-            0]
+        extract_holog_params["chan_setup"]["chan_freq"] = \
+            spw_ctb.getcol("CHAN_FREQ", startrow=spw_setup_id, nrow=1)[0, :]
+
+        extract_holog_params["chan_setup"]["chan_width"] = \
+            spw_ctb.getcol("CHAN_WIDTH", startrow=spw_setup_id, nrow=1)[0, :]
+
+        extract_holog_params["chan_setup"]["eff_bw"] = \
+            spw_ctb.getcol("EFFECTIVE_BW", startrow=spw_setup_id, nrow=1)[0, :]
+
+        extract_holog_params["chan_setup"]["ref_freq"] = \
+            spw_ctb.getcol("REF_FREQUENCY", startrow=spw_setup_id, nrow=1)[0]
+
         extract_holog_params["chan_setup"]["total_bw"] = \
             spw_ctb.getcol("TOTAL_BANDWIDTH", startrow=spw_setup_id, nrow=1)[0]
+
         extract_holog_params["pol_setup"]["pol"] = pol_str[
             pol_ctb.getcol("CORR_TYPE", startrow=pol_setup_id, nrow=1)[0, :]]
 
         extract_holog_params["telescope_name"] = obs_ctb.getcol("TELESCOPE_NAME")[0]
 
-        # Loop over all beam_scan_ids, a beam_scan_id can conist out of more than one scan in an ms (this is the case
-        # for the VLA pointed mosiacs).
+        # Loop over all beam_scan_ids, a beam_scan_id can consist of more than one scan in a measurement set (this is
+        # the case for the VLA pointed mosaics).
         for holog_map_key in holog_obs_dict[ddi_name].keys():
 
             if 'map' in holog_map_key:
@@ -645,8 +658,12 @@ def extract_holog(
     if count > 0:
         logger.info("Finished processing")
 
-        holog_dict = _load_holog_file(holog_file=extract_holog_params["holog_name"], dask_load=True,
-                                      load_pnt_dict=False)
+        holog_dict = _load_holog_file(
+            holog_file=extract_holog_params["holog_name"],
+            dask_load=True,
+            load_pnt_dict=False
+        )
+
         extract_holog_params['telescope_name'] = telescope_name
 
         meta_data = _create_holog_meta_data(
@@ -657,6 +674,7 @@ def extract_holog(
 
         holog_attr_file = "{name}/{ext}".format(name=extract_holog_params['holog_name'], ext=".holog_attr")
         _write_meta_data(holog_attr_file, meta_data)
+
         holog_attr_file = "{name}/{ext}".format(name=extract_holog_params['holog_name'], ext=".holog_input")
         _write_meta_data(holog_attr_file, input_pars)
 
@@ -786,7 +804,7 @@ def generate_holog_obs_dict(
     _check_if_file_exists(ms_name)
     _check_if_file_exists(point_name)
 
-    ######## Get Antenna IDs and Names ########
+    # Get antenna IDs and names
     ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "ANTENNA"),
         readonly=True,
@@ -800,7 +818,7 @@ def generate_holog_obs_dict(
 
     ctb.close()
 
-    ######## Get Antenna IDs that are in the main table########
+    # Get antenna IDs that are in the main table
     ctb = ctables.table(
         extract_holog_params['ms_name'],
         readonly=True,
@@ -869,7 +887,6 @@ def model_memory_usage(
         :return: Memory per core
         :rtype: int
     """
-    logger = skriba.logger.get_logger()
 
     # Get holog observations dictionary
     if holog_obs_dict is None:
@@ -897,7 +914,7 @@ def model_memory_usage(
     if not pathlib.Path("model").exists():
         os.mkdir("model")
 
-    astrohack.data.datasets.download('elastic.model', folder="model", unpack=True)
+    astrohack.data.datasets.download('heuristic_model', folder="model", unpack=True)
 
     with open("model/elastic.model", "rb") as model_file:
         model = pickle.load(model_file)

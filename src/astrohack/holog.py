@@ -21,6 +21,7 @@ CURRENT_FUNCTION = 0
 
 Array = NewType("Array", Union[np.array, List[int], List[float]])
 
+
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )

@@ -20,6 +20,7 @@ from typing import Union, List, NewType, Dict, Any
 
 JSON = NewType("JSON", Dict[str, Any])
 
+
 def open_holog(file: str) -> AstrohackHologFile:
     """ Open holog file and return instance of the holog data object. Object includes summary function to list\
      available dictionary keys.
@@ -329,7 +330,7 @@ def fix_pointing_table(ms_name: str, reference_antenna: List[str]) -> None:
 
 
 def print_json(
-        obj: json,
+        obj: JSON,
         indent: int = 6,
         columns: int = 7
 ) -> None:

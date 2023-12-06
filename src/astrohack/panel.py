@@ -1,4 +1,5 @@
 import os
+import pathlib
 import shutil
 import inspect
 
@@ -15,22 +16,25 @@ from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 
+from typing import Union, List
+
 CURRENT_FUNCTION = 0
+
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
 def panel(
-        image_name,
-        panel_name=None,
-        clip_type='sigma',
-        clip_level=3,
-        panel_model="rigid",
-        panel_margins=0.05,
-        ant="all",
-        ddi="all",
-        parallel=False,
-        overwrite=False
+        image_name: str,
+        panel_name: str = None,
+        clip_type: str = 'sigma',
+        clip_level: float = 3.0,
+        panel_model: str = "rigid",
+        panel_margins: float = 0.05,
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[str]] = "all",
+        parallel: bool = False,
+        overwrite: bool = False
 ):
     """Analyze holography images to derive panel adjustments
 
@@ -165,7 +169,8 @@ def panel(
 
     else:
         panel_params['origin'] = 'astrohack'
-        if _dask_general_compute(function_name, image_mds, _panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
+        if _dask_general_compute(function_name, image_mds, _panel_chunk, panel_params, ['ant', 'ddi'],
+                                 parallel=parallel):
             logger.info(f"[{function_name}]: Finished processing")
             output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_input")
             _write_meta_data(output_attr_file, input_params)
@@ -178,7 +183,13 @@ def panel(
             return None
 
 
-def _aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, overwrite=False):
+def _aips_holog_to_astrohack(
+        amp_image: str,
+        dev_image: str,
+        telescope_name: str,
+        holog_name: str,
+        overwrite: bool = False
+):
     """
     Package AIPS HOLOG products in a .image.zarr file compatible with astrohack.panel.panel
 
@@ -200,8 +211,10 @@ def _aips_holog_to_astrohack(amp_image, dev_image, telescope_name, holog_name, o
 
     xds = _aips_holog_to_xds(amp_image, dev_image)
     xds.attrs['telescope_name'] = telescope_name
-    if os.path.exists(holog_name):
+
+    if pathlib.Path(holog_name).exists():
         shutil.rmtree(holog_name, ignore_errors=False, onerror=None)
+
     xds.to_zarr(holog_name, mode='w', compute=True, consolidated=True)
     aips_mark = open(holog_name + '/.aips', 'w')
     aips_mark.close()

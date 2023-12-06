@@ -1,10 +1,10 @@
-import os
 import inspect
 
 from astrohack._utils._extract_point import _extract_pointing
 
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _write_meta_data
+from astrohack._utils._tools import _remove_suffix
 
 from astrohack.mds import AstrohackPointFile
 
@@ -71,8 +71,6 @@ def extract_pointing(
     if point_name is None:
         
         logger.debug('File {file} does not exists. Extracting ...'.format(file=point_name))
-
-        from astrohack._utils._tools import _remove_suffix
 
         point_name = _remove_suffix(ms_name, '.ms') + '.point.zarr'
         extract_pointing_params['point_name'] = point_name

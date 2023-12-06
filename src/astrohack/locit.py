@@ -9,6 +9,8 @@ from astrohack._utils._locit import _locit_separated_chunk, _locit_combined_chun
 from astrohack._utils._tools import _remove_suffix
 from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 
+from typing import Union, List
+
 CURRENT_FUNCTION = 0
 
 
@@ -16,18 +18,18 @@ CURRENT_FUNCTION = 0
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
 def locit(
-        locit_name,
-        position_name=None,
-        elevation_limit=10.0,
-        polarization='both',
-        fit_engine='linear algebra',
-        fit_kterm=False,
-        fit_delay_rate=True,
-        ant="all",
-        ddi="all",
-        combine_ddis='simple',
-        parallel=False,
-        overwrite=False
+        locit_name: str,
+        position_name: str = None,
+        elevation_limit: float = 10.0,
+        polarization: str = 'both',
+        fit_engine: str = 'linear algebra',
+        fit_kterm: bool = False,
+        fit_delay_rate: bool = True,
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[int]] = "all",
+        combine_ddis: str = 'simple',
+        parallel: bool = False,
+        overwrite: bool = False
 ):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
@@ -163,9 +165,11 @@ def locit(
     if combine_ddis == 'simple':
         function = _locit_combined_chunk
         key_order = ['ant']
+
     elif combine_ddis == 'difference':
         function = _locit_difference_chunk
         key_order = ['ant']
+
     else:
         function = _locit_separated_chunk
         key_order = ['ant', 'ddi']
@@ -185,5 +189,5 @@ def locit(
         return position_mds
 
     else:
-        logger.warning(f"[{function_name}]: No data to process")
+        logger.warning("No data to process")
         return None
