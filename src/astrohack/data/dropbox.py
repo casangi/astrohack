@@ -85,7 +85,7 @@ def download(file: str, folder: str = '.') -> None:
     r = requests.get(url, stream=True, headers=headers)
     total = int(r.headers.get('content-length', 0))
 
-    fullname = str(folder.joinpath(fullname))
+    fullname = str(pathlib.Path(folder).joinpath(fullname))
 
     with open(fullname, 'wb') as fd, tqdm(
             desc=fullname,

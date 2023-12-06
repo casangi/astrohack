@@ -18,6 +18,8 @@ import numpy as np
 from rich.console import Console
 from rich.table import Table
 
+from typing import Union, List, Tuple
+
 from astrohack._utils._constants import pol_str
 from astrohack._utils._conversion import _convert_ant_name_to_id
 from astrohack._utils._dio import _check_if_file_exists
@@ -130,7 +132,7 @@ class HologObsDict(dict):
         return df_matrix[antenna].sort_values(ascending=True).index[1:n_baselines].values.tolist()
 
     @staticmethod
-    def _select_ddi(value: int | list, obs_dict: object) -> object:
+    def _select_ddi(value: Union[int, List[int]], obs_dict: object) -> object:
         convert = lambda x: "ddi_" + str(x)
 
         if not isinstance(value, list):
@@ -146,7 +148,7 @@ class HologObsDict(dict):
         return obs_dict
 
     @staticmethod
-    def _select_map(value: int | list, obs_dict: object) -> object:
+    def _select_map(value: Union[int, List[int]], obs_dict: object) -> object:
         convert = lambda x: "map_" + str(x)
 
         if not isinstance(value, list):
@@ -164,7 +166,7 @@ class HologObsDict(dict):
         return obs_dict
 
     @staticmethod
-    def _select_antenna(value: str | list, obs_dict: object) -> object:
+    def _select_antenna(value: Union[str, List[str]], obs_dict: object) -> object:
         if not isinstance(value, list):
             value = [value]
 
@@ -181,7 +183,7 @@ class HologObsDict(dict):
         return obs_dict
 
     @staticmethod
-    def _select_scan(value: int | list, obs_dict: object) -> object:
+    def _select_scan(value: Union[int, List[int]], obs_dict: object) -> object:
         if not isinstance(value, list):
             value = [value]
 
@@ -195,7 +197,7 @@ class HologObsDict(dict):
         return obs_dict
 
     @staticmethod
-    def _select_baseline(value: str, n_baselines: int, obs_dict: object, reference: str | list = None) -> object:
+    def _select_baseline(value: str, n_baselines: int, obs_dict: object, reference: Union[str, List[int]] = None) -> object:
         if reference is not None:
             if not isinstance(reference, list):
                 reference = [reference]
@@ -239,13 +241,13 @@ def extract_holog(
         point_name: str,
         holog_name: str = None,
         holog_obs_dict: HologObsDict = None,
-        ddi: int | list | str = 'all',
-        baseline_average_distance: float | str = 'all',
-        baseline_average_nearest: float | str = 'all',
+        ddi: Union[int, List[int], str] = 'all',
+        baseline_average_distance: Union[float, str] = 'all',
+        baseline_average_nearest: Union[float, str] = 'all',
         data_column: str = "CORRECTED_DATA",
         parallel: bool = False,
         overwrite: bool = False,
-) -> AstrohackHologFile | None:
+) -> Union[AstrohackHologFile, None]:
     """
     Extract holography and optionally pointing data, from measurement set. Creates holography output file.
 
@@ -834,7 +836,7 @@ def generate_holog_obs_dict(
     return HologObsDict(json.loads(encoded_obj))
 
 
-def get_number_of_parameters(holog_obs_dict: HologObsDict) -> (int, int, int, int):
+def get_number_of_parameters(holog_obs_dict: HologObsDict) -> Tuple[int, int, int, int]:
     scan_list = []
     ant_list = []
     baseline_list = []

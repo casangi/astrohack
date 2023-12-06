@@ -11,6 +11,7 @@ from astrohack.mds import AstrohackImageFile
 
 CURRENT_FUNCTION = 0
 
+from typing import Union, List
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
@@ -18,8 +19,8 @@ CURRENT_FUNCTION = 0
 def combine(
         image_name: str,
         combine_name: str = None,
-        ant: str | list = "all",
-        ddi: int | list = "all",
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[int]] = "all",
         weighted: bool = False,
         parallel: bool = False,
         overwrite: bool = False

@@ -6,6 +6,8 @@ import numpy as np
 import skriba.logger
 import auror.parameter
 
+from typing import List, Union, NewType
+
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._dio import _check_if_file_exists
 from astrohack._utils._dio import _check_if_file_will_be_overwritten
@@ -17,22 +19,23 @@ from astrohack.mds import AstrohackImageFile
 
 CURRENT_FUNCTION = 0
 
+Array = NewType("Array", Union[np.array, List[int], List[float]])
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
 def holog(
         holog_name: str,
-        grid_size: int | np.array = None,
-        cell_size: int | np.array = None,
+        grid_size: Union[int, Array] = None,
+        cell_size: Union[int, Array] = None,
         image_name: str = None,
         padding_factor: int = 50,
         grid_interpolation_mode: str = "linear",
         chan_average: bool = True,
         chan_tolerance_factor: float = 0.005,
         scan_average: bool = True,
-        ant: str | list = "all",
-        ddi: int | list = "all",
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[int]] = "all",
         to_stokes: bool = True,
         apply_mask: bool = True,
         phase_fit: bool = True,

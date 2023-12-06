@@ -16,8 +16,11 @@ from astrohack.mds import AstrohackPositionFile
 
 from astrohack._utils._dio import _print_array
 
+from typing import Union, List, NewType, Dict, Any
 
-def open_holog(file: str)-> AstrohackHologFile:
+JSON = NewType("JSON", Dict[str, Any])
+
+def open_holog(file: str) -> AstrohackHologFile:
     """ Open holog file and return instance of the holog data object. Object includes summary function to list\
      available dictionary keys.
 
@@ -143,7 +146,7 @@ def open_panel(file: str) -> AstrohackPanelFile:
         logger.error(f"Error opening holgraphy panel file: {file}")
 
 
-def open_locit(file: str)-> AstrohackLocitFile:
+def open_locit(file: str) -> AstrohackLocitFile:
     """ Open locit file and return instance of the locit data object. Object includes summary function to list \
     available dictionary keys.
 
@@ -263,7 +266,7 @@ def open_pointing(file: str) -> AstrohackPointFile:
         logger.error(f"Error opening holography pointing file: {file}")
 
 
-def fix_pointing_table(ms_name: str, reference_antenna: list) -> None:
+def fix_pointing_table(ms_name: str, reference_antenna: List[str]) -> None:
     """ Fix pointing table for a user defined subset of reference antennas.
 
     :param ms_name: Measurement set name.
@@ -362,7 +365,7 @@ def print_json(
 
 
 def inspect_holog_obs_dict(
-        file: str | json = '.holog_obs_dict.json',
+        file: Union[str, JSON] = '.holog_obs_dict.json',
         style: str = 'static'
 ) -> None:
     """ Print formatted holography observation dictionary
