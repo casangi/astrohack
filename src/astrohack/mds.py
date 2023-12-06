@@ -475,6 +475,10 @@ class AstrohackHologFile(dict):
 
         return self._meta_data
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_plots_checker
+    )
     def plot_diagnostics(
             self,
             destination: str,
@@ -523,34 +527,32 @@ class AstrohackHologFile(dict):
         - *polar*:     Split is done to an amplitude and a phase in the plots
 
         """
+        logger = skriba.logger.get_logger(logger_name="astrohack")
 
-        # This is the default address used by Dask. Note that in the client check below, if the user has multiple
-        # clients running a new client may still be spawned but only once. If run again in a notebook session the
-        # local_client check will catch it. It will also be caught if the user spawns their own instance in the
-        # notebook.
-        DEFAULT_DASK_ADDRESS = "127.0.0.1:8786"
-
-        logger = _get_astrohack_logger()
+        # The following code and commentary may no longer be valid
+        # # This is the default address used by Dask. Note that in the client check below, if the user has multiple
+        # # clients running a new client may still be spawned but only once. If run again in a notebook session the
+        # # local_client check will catch it. It will also be caught if the user spawns their own instance in the
+        # # notebook.
+        # DEFAULT_DASK_ADDRESS = "127.0.0.1:8786"
+        #
+        # if parallel:
+        #     if not distributed.client._get_global_client():
+        #         try:
+        #             distributed.Client(DEFAULT_DASK_ADDRESS, timeout=2)
+        #
+        #         except Exception:
+        #             from astrohack.client import astrohack_local_client
+        #
+        #             logger.info("local client not found, starting ...")
+        #
+        #             log_params = {'log_level': 'DEBUG'}
+        #             client = astrohack_local_client(cores=2, memory_limit='8GB', log_params=log_params)
+        #             logger.info(client.dashboard_link)
 
         param_dict = locals()
-        if parallel:
-            if not distributed.client._get_global_client():
-                try:
-                    distributed.Client(DEFAULT_DASK_ADDRESS, timeout=2)
-
-                except Exception:
-                    from astrohack.client import astrohack_local_client
-
-                    logger.info("local client not found, starting ...")
-
-                    log_params = {'log_level': 'DEBUG'}
-                    client = astrohack_local_client(cores=2, memory_limit='8GB', log_params=log_params)
-                    logger.info(client.dashboard_link)
-
         param_dict["map"] = map_id
-        param_dict["figuresize"] = figure_size
 
-        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(self, _calibration_plot_chunk, param_dict, key_order, parallel)

@@ -217,6 +217,71 @@
             "type": ["boolean"]
         }
     },
+    "plot_diagnostics":{
+        "destination":{
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "delta":{
+            "nullable": false,
+            "required": false,
+            "type": ["float"],
+            "min": 0
+        },
+        "ant":{
+            "nullable": false,
+            "required": false,
+            "struct_type": ["str"],
+            "minlength": 1,
+            "type": ["string", "list"]
+        },
+        "ddi":{
+            "nullable": false,
+            "required": false,
+            "struct_type": ["int"],
+            "minlength": 1,
+            "type": ["int", "list", "string"]
+        },
+        "map_id":{
+            "nullable": false,
+            "required": false,
+            "struct_type": ["int"],
+            "minlength": 1,
+            "type": ["int", "list", "string"]
+        },
+        "complex_split":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "split.complex"
+        },
+        "display":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "figure_size":{
+            "nullable": true,
+            "required": false,
+            "struct_type": ["float"],
+            "minlength": 2,
+            "maxlength": 2,
+            "type": ["list", "tuple", "ndarray"]
+        },
+        "dpi":{
+            "nullable": false,
+            "required": false,
+            "type": ["int"],
+            "min": 1,
+            "max": 1200
+        },
+        "parallel":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        }
+    },
     "plot_antennas":{
         "destination":{
             "type":["string"],
