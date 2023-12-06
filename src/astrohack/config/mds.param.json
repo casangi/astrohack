@@ -17,6 +17,38 @@
             "check allowed with": "split.complex"
         }
     },
+    "export_to_fits":{
+        "destination":{
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "complex_split":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "split.complex"
+        },
+        "ant":{
+            "nullable": false,
+            "required": false,
+            "struct_type": ["str"],
+            "minlength": 1,
+            "type": ["string", "list"]
+        },
+        "ddi":{
+            "nullable": false,
+            "required": false,
+            "struct_type": ["int"],
+            "minlength": 1,
+            "type": ["int", "list", "string"]
+        },
+        "parallel":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        }
+    },
     "plot_antennas":{
         "destination":{
             "type":["string"],

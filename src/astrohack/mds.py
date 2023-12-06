@@ -192,6 +192,10 @@ class AstrohackImageFile(dict):
             else:
                 return self[ant][ddi]
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_split_checker
+    )
     def export_to_fits(
             self,
             destination: str,
