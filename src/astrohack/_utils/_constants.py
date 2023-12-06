@@ -64,3 +64,10 @@ def custom_unit_checker(unit_type):
 
     else:
         return "Not found"
+
+
+def custom_split_checker(split_type):
+    if split_type == 'split.complex':
+        return possible_splits
+    else:
+        return "Not found"
