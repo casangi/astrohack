@@ -726,6 +726,10 @@ class AstrohackPanelFile(dict):
         telescope = Telescope(xds.attrs['telescope_name'])
         return AntennaSurface(xds, telescope, reread=True)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_plots_checker
+    )
     def export_screws(
             self,
             destination: str,
