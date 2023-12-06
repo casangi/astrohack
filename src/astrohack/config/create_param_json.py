@@ -83,6 +83,7 @@ class Param:
                 types[list_in] = 'list'
             if 'Array' in types:
                 self.dicio['struct_type'] = ['int', 'float']
+                edit_list_entry('Array', types, 'ndarray, list')
 
         if len(types) == 0:
             self.dicio['type'] = self.missing
