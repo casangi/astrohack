@@ -16,8 +16,12 @@ from astrohack.mds import AstrohackPositionFile
 
 from astrohack._utils._dio import _print_array
 
+from typing import Union, List, NewType, Dict, Any
 
-def open_holog(file):
+JSON = NewType("JSON", Dict[str, Any])
+
+
+def open_holog(file: str) -> AstrohackHologFile:
     """ Open holog file and return instance of the holog data object. Object includes summary function to list\
      available dictionary keys.
 
@@ -61,7 +65,7 @@ def open_holog(file):
         logger.error(f"Error opening holgraphy file: {file}")
 
 
-def open_image(file):
+def open_image(file: str) -> AstrohackImageFile:
     """ Open image file and return instance of the image data object. Object includes summary function to list \
     available dictionary keys.
 
@@ -102,7 +106,7 @@ def open_image(file):
         logger.error(f"Error opening holography image file: {file}")
 
 
-def open_panel(file):
+def open_panel(file: str) -> AstrohackPanelFile:
     """ Open panel file and return instance of the panel data object. Object includes summary function to list \
     available dictionary keys.
 
@@ -143,7 +147,7 @@ def open_panel(file):
         logger.error(f"Error opening holgraphy panel file: {file}")
 
 
-def open_locit(file):
+def open_locit(file: str) -> AstrohackLocitFile:
     """ Open locit file and return instance of the locit data object. Object includes summary function to list \
     available dictionary keys.
 
@@ -184,7 +188,7 @@ def open_locit(file):
         logger.error(f"Error opening holgraphy locit file: {file}")
 
 
-def open_position(file):
+def open_position(file: str) -> AstrohackPositionFile:
     """ Open position file and return instance of the position data object. Object includes summary function to list \
     available dictionary keys.
 
@@ -225,7 +229,7 @@ def open_position(file):
         logger.error(f"Error opening holgraphy position file: {file}")
 
 
-def open_pointing(file):
+def open_pointing(file: str) -> AstrohackPointFile:
     """ Open pointing file and return instance of the pointing data object. Object includes summary function to list\
      available dictionary keys.
 
@@ -263,7 +267,7 @@ def open_pointing(file):
         logger.error(f"Error opening holography pointing file: {file}")
 
 
-def fix_pointing_table(ms_name, reference_antenna):
+def fix_pointing_table(ms_name: str, reference_antenna: List[str]) -> None:
     """ Fix pointing table for a user defined subset of reference antennas.
 
     :param ms_name: Measurement set name.
@@ -325,7 +329,11 @@ def fix_pointing_table(ms_name, reference_antenna):
         tb.putcol(columnname="MESSAGE", value='pnt_tbl:fixed', startrow=length)
 
 
-def print_json(obj, indent=6, columns=7):
+def print_json(
+        obj: JSON,
+        indent: int = 6,
+        columns: int = 7
+) -> None:
     """ Print formatted JSON dictionary (** Deprecated by Console **)
 
     :param obj: JSON object
@@ -357,17 +365,16 @@ def print_json(obj, indent=6, columns=7):
             print("{close}".format(close="}").rjust(indent - 4, ' '))
 
 
-def inspect_holog_obs_dict(file='.holog_obs_dict.json', style='static'):
+def inspect_holog_obs_dict(
+        file: Union[str, JSON] = '.holog_obs_dict.json',
+        style: str = 'static'
+) -> None:
     """ Print formatted holography observation dictionary
 
     :param file: Input file, can be either JSON file or string., defaults to '.holog_obs_dict.json'
     :type file: str | JSON, optional
     :param style: Print style of JSON dictionary. This can be static, formatted generalized print out or dynamic, prints a collapsible formatted dictionary, defaults to static
     :type style: str, optional
-    :param indent: Indent to be used in JSON dictionary., defaults to 6
-    :type indent: int, optional
-    :param columns: Columns used to reshape the antenna list., defaults to 7
-    :type columns: int, optional
 
     .. _Description:
 

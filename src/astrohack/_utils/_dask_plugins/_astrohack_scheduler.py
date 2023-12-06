@@ -22,7 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
 
-
 from collections import defaultdict
 from dask.core import reverse_dict
 from dask.base import tokenize
@@ -45,7 +44,6 @@ def unravel_deps(hlg_deps, name, unravelled_deps=None):
 
 
 def get_node_depths(dependencies, root_nodes, metrics):
-
     node_depths = {}
 
     for k in dependencies.keys():
@@ -62,34 +60,34 @@ def get_node_depths(dependencies, root_nodes, metrics):
 
 class astrohack_schedular(SchedulerPlugin):
 
-    def __init__(self,autorestrictor,local_cache):
-        self.autorestrictor =  autorestrictor
+    def __init__(self, autorestrictor, local_cache):
+        self.autorestrictor = autorestrictor
         self.local_cache = local_cache
         super().__init__()
 
     def add_worker(self, scheduler, worker):
-        
+
         if self.local_cache:
             # Set the resource label to the ip of the node that the worker is on, so that tasks that require a specific node can be assigned to the correct worker.
-            ip = worker[worker.rfind('/')+1:worker.rfind(':')]
-            scheduler.add_resources(worker=worker,resources={ip:1})
+            ip = worker[worker.rfind('/') + 1:worker.rfind(':')]
+            scheduler.add_resources(worker=worker, resources={ip: 1})
 
     def update_graph(self, scheduler, dsk=None, keys=None, restrictions=None,
                      **kw):
         if self.autorestrictor:
-            #print('Using autorestrictor')
+            # print('Using autorestrictor')
             """Processes dependencies to assign tasks to specific workers."""
             workers = list(scheduler.workers.keys())
             n_worker = len(workers)
 
             tasks = scheduler.tasks
             dependencies = kw["dependencies"]
-            
-            #print('In update_graph :', scheduler, ',*,', dsk, ',*,', keys , ',*,', restrictions , ',*,', kw)
+
+            # print('In update_graph :', scheduler, ',*,', dsk, ',*,', keys , ',*,', restrictions , ',*,', kw)
             if dependencies:
                 dependents = reverse_dict(dependencies)
-                
-                #print('reversed dict:', dependents)
+
+                # print('reversed dict:', dependents)
 
                 _, total_dependencies = ndependencies(dependencies, dependents)
                 # TODO: Avoid calling graph metrics.
@@ -102,12 +100,11 @@ class astrohack_schedular(SchedulerPlugin):
 
                 # Figure out the depth of every task. Depth is defined as maximum
                 # distance from a root node. TODO: Optimize get_node_depths.
-                
-                
+
                 node_depths = get_node_depths(dependencies, root_nodes, metrics)
-                #try:
+                # try:
                 max_depth = max(node_depths.values())
-                #except:
+                # except:
                 #        print('&&&&& dependencies, root_nodes, metrics',node_depths,',*,',dependencies, root_nodes, metrics)
 
                 # If we have fewer partition nodes than workers, we cannot utilise all
@@ -193,21 +190,22 @@ class astrohack_schedular(SchedulerPlugin):
                             task = tasks[task_name]
                         except KeyError:  # Keys may not have an assosciated task.
                             continue
-                        
-                        #print('^^^^^^',dir(task))
-                        #if task._worker_restrictions is None:
+
+                        # print('^^^^^^',dir(task))
+                        # if task._worker_restrictions is None:
                         #    task._worker_restrictions = set()
-                        #task._worker_restrictions |= {assignee}
-                        #task._loose_restrictions = False
-                        
+                        # task._worker_restrictions |= {assignee}
+                        # task._loose_restrictions = False
+
                         if task.worker_restrictions is None:
                             task.worker_restrictions = set()
                         task.worker_restrictions |= {assignee}
                         task.loose_restrictions = False
 
+
 @click.command()
 @click.option("--autorestrictor", default=False)
 @click.option("--local_cache", default=False)
-def dask_setup(scheduler,autorestrictor,local_cache):
-    plugin = astrohack_schedular(autorestrictor,local_cache)
+def dask_setup(scheduler, autorestrictor, local_cache):
+    plugin = astrohack_schedular(autorestrictor, local_cache)
     scheduler.add_plugin(plugin)

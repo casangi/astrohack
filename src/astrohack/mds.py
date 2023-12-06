@@ -1,6 +1,7 @@
 import inspect
 import numbers
-import os
+import pathlib
+
 import distributed
 
 import auror.parameter
@@ -33,7 +34,10 @@ from astrohack._utils._panel_classes.telescope import Telescope
 from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
 from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
+
 from prettytable import PrettyTable
+
+from typing import Any, List, Union, Tuple
 
 CURRENT_FUNCTION = 0
 
@@ -42,7 +46,7 @@ class AstrohackDataFile:
     """ Base class for the Astrohack data files
     """
 
-    def __init__(self, file_stem, path='./'):
+    def __init__(self, file_stem: str, path: str = './'):
 
         self._image_path = None
         self._holog_path = None
@@ -56,13 +60,13 @@ class AstrohackDataFile:
 
         self._verify_holog_files(file_stem, path)
 
-    def _verify_holog_files(self, file_stem, path):
+    def _verify_holog_files(self, file_stem: str, path: str):
         logger = skriba.logger.get_logger(logger_name="astrohack")
         logger.info("Verifying {stem}.* files in path={path} ...".format(stem=file_stem, path=path))
 
         file_path = "{path}/{stem}.holog.zarr".format(path=path, stem=file_stem)
 
-        if os.path.isdir(file_path):
+        if pathlib.Path(file_path).isdir():
             logger.info("Found {stem}.holog.zarr directory ...".format(stem=file_stem))
 
             self._holog_path = file_path
@@ -70,7 +74,7 @@ class AstrohackDataFile:
 
         file_path = "{path}/{stem}.image.zarr".format(path=path, stem=file_stem)
 
-        if os.path.isdir(file_path):
+        if pathlib.Path(file_path).isdir():
             logger.info("Found {stem}.image.zarr directory ...".format(stem=file_stem))
 
             self._image_path = file_path
@@ -78,7 +82,7 @@ class AstrohackDataFile:
 
         file_path = "{path}/{stem}.panel.zarr".format(path=path, stem=file_stem)
 
-        if os.path.isdir(file_path):
+        if pathlib.Path(file_path).isdir():
             logger.info("Found {stem}.panel.zarr directory ...".format(stem=file_stem))
 
             self._image_path = file_path
@@ -86,7 +90,7 @@ class AstrohackDataFile:
 
         file_path = "{path}/{stem}.point.zarr".format(path=path, stem=file_stem)
 
-        if os.path.isdir(file_path):
+        if pathlib.Path(file_path).isdir():
             logger.info("Found {stem}.point.zarr directory ...".format(stem=file_stem))
 
             self._point_path = file_path
@@ -99,7 +103,7 @@ class AstrohackImageFile(dict):
     Data within an object of this class can be selected for further inspection, plotted or outputed to FITS files.
     """
 
-    def __init__(self, file):
+    def __init__(self, file: str):
         """ Initialize an AstrohackImageFile object.
         :param file: File to be linked to this object
         :type file: str
@@ -113,13 +117,13 @@ class AstrohackImageFile(dict):
         self.file = file
         self._file_is_open = False
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         return super().__getitem__(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
-    def _is_open(self):
+    def _is_open(self) -> bool:
         """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
@@ -127,7 +131,7 @@ class AstrohackImageFile(dict):
         """
         return self._file_is_open
 
-    def _open(self, file=None):
+    def _open(self, file: str = None) -> bool:
         """ Open holography image file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -161,7 +165,7 @@ class AstrohackImageFile(dict):
         _print_data_contents(self, ["Antenna", "DDI"])
         _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
 
-    def select(self, ant, ddi, complex_split='cartesian'):
+    def select(self, ant: str, ddi: int, complex_split: str = 'cartesian') -> object:
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
 
         :param ddi: Data description ID, ex. 0.
@@ -190,12 +194,12 @@ class AstrohackImageFile(dict):
 
     def export_to_fits(
             self,
-            destination,
-            complex_split='cartesian',
-            ant="all",
-            ddi="all",
-            parallel=False
-    ):
+            destination: str,
+            complex_split: str = 'cartesian',
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            parallel: bool = False
+    ) -> None:
         """ Export contents of an AstrohackImageFile object to several FITS files in the destination folder
 
         :param destination: Name of the destination folder to contain plots
@@ -228,16 +232,6 @@ class AstrohackImageFile(dict):
         param_dict = locals()
         function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-        # parms_passed = _check_parms(function_name, param_dict, 'complex_split', [str], acceptable_data=possible_splits,
-        #                            default="cartesian")
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'ant', [str, list],
-        #                                             list_acceptable_data_types=[str], default='all')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'ddi', [int, list],
-        #                                             list_acceptable_data_types=[int], default='all')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'destination', [str], default=None)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'parallel', [bool], default=True)
-
-        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         param_dict['metadata'] = self._meta_data
         _dask_general_compute(
@@ -251,22 +245,22 @@ class AstrohackImageFile(dict):
 
     def plot_apertures(
             self,
-            destination,
-            ant="all",
-            ddi="all",
-            plot_screws=False,
-            amplitude_limits=None,
-            phase_unit='deg',
-            phase_limits=None,
-            deviation_unit='mm',
-            deviation_limits=None,
-            panel_labels=False,
-            display=False,
-            colormap='viridis',
-            figure_size=None,
-            dpi=300,
-            parallel=False
-    ):
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            plot_screws: bool = False,
+            amplitude_limits: Union[List[float], Tuple, np.array] = None,
+            phase_unit: str = 'deg',
+            phase_limits: Union[List[float], Tuple, np.array] = None,
+            deviation_unit: str = 'mm',
+            deviation_limits: Union[List[float], Tuple, np.array] = None,
+            panel_labels: bool = False,
+            display: bool = False,
+            colormap: str = 'viridis',
+            figure_size: Union[Tuple, List[float], np.array] = None,
+            dpi: int = 300,
+            parallel: bool = False
+    ) -> None:
         """ Aperture amplitude and phase plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
@@ -307,26 +301,26 @@ class AstrohackImageFile(dict):
         param_dict = locals()
         function_name = inspect.stack()[CURRENT_FUNCTION].function
 
-        # _parm_check_passed(function_name, parms_passed)
         param_dict["figuresize"] = figure_size
 
         _create_destination_folder(param_dict['destination'])
         _dask_general_compute(function_name, self, _plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
     def plot_beams(
+
             self,
-            destination,
-            ant="all",
-            ddi="all",
-            complex_split='polar',
-            display=False,
-            colormap='viridis',
-            figure_size=None,
-            angle_unit='deg',
-            phase_unit='deg',
-            dpi=300,
-            parallel=False
-    ):
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            complex_split: str = 'polar',
+            display: bool = False,
+            colormap: str = 'viridis',
+            figure_size: Union[Tuple, List[float], np.array] = None,
+            angle_unit: str = 'deg',
+            phase_unit: str = 'deg',
+            dpi: int = 300,
+            parallel: bool = False
+    ) -> None:
         """ Beam plots from the data in an AstrohackImageFIle object.
 
         :param destination: Name of the destination folder to contain plots
@@ -373,7 +367,7 @@ class AstrohackHologFile(dict):
     Data within an object of this class can be selected for further inspection or plotted for calibration diagnostics.
     """
 
-    def __init__(self, file):
+    def __init__(self, file: str):
         """ Initialize an AstrohackHologFile object.
         :param file: File to be linked to this object
         :type file: str
@@ -388,13 +382,13 @@ class AstrohackHologFile(dict):
         self._input_pars = None
         self._file_is_open = False
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         return super().__getitem__(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
-    def _is_open(self):
+    def _is_open(self) -> bool:
         """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
@@ -402,7 +396,7 @@ class AstrohackHologFile(dict):
         """
         return self._file_is_open
 
-    def _open(self, file=None, dask_load=True):
+    def _open(self, file: str = None, dask_load: bool = True) -> bool:
         """ Open extracted holography file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -412,7 +406,7 @@ class AstrohackHologFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger()
 
         if file is None:
             file = self.file
@@ -430,7 +424,7 @@ class AstrohackHologFile(dict):
 
         return self._file_is_open
 
-    def summary(self):
+    def summary(self) -> None:
         """ Prints summary of the AstrohackHologFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
@@ -438,7 +432,12 @@ class AstrohackHologFile(dict):
         _print_data_contents(self, ["DDI", "Map", "Antenna"])
         _print_method_list([self.summary, self.select, self.plot_diagnostics, self.plot_lm_sky_coverage])
 
-    def select(self, ddi=None, map_id=None, ant=None):
+    def select(
+            self,
+            ddi: int,
+            map_id: int,
+            ant: str
+    ) -> object:
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
 
         :param ddi: Data description ID, ex. 0.
@@ -472,8 +471,19 @@ class AstrohackHologFile(dict):
 
         return self._meta_data
 
-    def plot_diagnostics(self, destination, delta=0.01, ant=None, ddi=None, map_id=None, complex_split='polar',
-                         display=False, figure_size=None, dpi=300, parallel=False):
+    def plot_diagnostics(
+            self,
+            destination: str,
+            delta: float = 0.01,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[str, List[str]] = "all",
+            map_id: Union[int, List[int]] = "all",
+            complex_split: str = 'polar',
+            display: bool = False,
+            figure_size: Union[Tuple, List[float], np.array] = None,
+            dpi: int = 300,
+            parallel: bool = False
+    ) -> None:
         """ Plot diagnostic calibration plots from the holography data file.
 
         :param destination: Name of the destination folder to contain diagnostic plots
@@ -543,9 +553,22 @@ class AstrohackHologFile(dict):
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(function_name, self, _calibration_plot_chunk, param_dict, key_order, parallel)
 
-    def plot_lm_sky_coverage(self, destination, ant="all", ddi="all", map_id="all", angle_unit='deg', time_unit='hour',
-                             plot_correlation=None, complex_split='polar', phase_unit='deg', display=False,
-                             figure_size=None, dpi=300, parallel=False):
+    def plot_lm_sky_coverage(
+            self,
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            map_id: Union[int, List[int]] = "all",
+            angle_unit: str = 'deg',
+            time_unit: str = 'hour',
+            plot_correlation: Union[str, List[str]] = None,
+            complex_split: str = 'polar',
+            phase_unit: str = 'deg',
+            display: bool = False,
+            figure_size: Union[Tuple, List[float], np.array] = None,
+            dpi: int = 300,
+            parallel: bool = False
+    ) -> None:
         """ Plot directional cosine coverage.
 
         :param destination: Name of the destination folder to contain plots
@@ -636,7 +659,7 @@ class AstrohackPanelFile(dict):
     or exported to csv for panel adjustments.
     """
 
-    def __init__(self, file):
+    def __init__(self, file: str):
         """ Initialize an AstrohackPanelFile object.
         :param file: File to be linked to this object
         :type file: str
@@ -650,13 +673,13 @@ class AstrohackPanelFile(dict):
         self._file_is_open = False
         self._input_pars = None
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         return super().__getitem__(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
-    def _is_open(self):
+    def _is_open(self) -> bool:
         """ Check whether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
@@ -664,7 +687,7 @@ class AstrohackPanelFile(dict):
         """
         return self._file_is_open
 
-    def _open(self, file=None):
+    def _open(self, file: str = None) -> bool:
         """ Open panel holography file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -688,7 +711,7 @@ class AstrohackPanelFile(dict):
 
         return self._file_is_open
 
-    def summary(self):
+    def summary(self) -> None:
         """ Prints summary of the AstrohackPanelFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
@@ -697,7 +720,7 @@ class AstrohackPanelFile(dict):
         _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
                             self.plot_antennas])
 
-    def get_antenna(self, ant, ddi):
+    def get_antenna(self, ant: str, ddi: int) -> AntennaSurface:
         """ Retrieve an AntennaSurface object for interaction
 
         :param ant: Antenna to be retrieved, ex. ea25.
@@ -714,8 +737,19 @@ class AstrohackPanelFile(dict):
         telescope = Telescope(xds.attrs['telescope_name'])
         return AntennaSurface(xds, telescope, reread=True)
 
-    def export_screws(self, destination, ant=None, ddi=None, unit='mm', threshold=None, panel_labels=True,
-                      display=False, colormap='RdBu_r', figure_size=None, dpi=300):
+    def export_screws(
+            self,
+            destination: str,
+            ant: Union[str, List[str]] = None,
+            ddi: Union[int, List[int]] = None,
+            unit: str = 'mm',
+            threshold: float = None,
+            panel_labels: bool = True,
+            display: bool = False,
+            colormap: str = 'RdBu_r',
+            figure_size: Union[Tuple, List[float], np.array] = None,
+            dpi: int = 300
+    ) -> None:
         """ Export screw adjustments to text files and optionally plots.
 
         :param destination: Name of the destination folder to contain exported screw adjustments
@@ -762,23 +796,23 @@ class AstrohackPanelFile(dict):
     )
     def plot_antennas(
             self,
-            destination,
-            ant="all",
-            ddi="all",
-            plot_type='deviation',
-            plot_screws=False,
-            amplitude_limits=None,
-            phase_unit='deg',
-            phase_limits=None,
-            deviation_unit='mm',
-            deviation_limits=None,
-            panel_labels=False,
-            display=False,
-            colormap='viridis',
-            figure_size=(8.0, 6.4),
-            dpi=300,
-            parallel=False
-    ):
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            plot_type: str = 'deviation',
+            plot_screws: bool = False,
+            amplitude_limits: Union[Tuple, List[float], np.array] = None,
+            phase_unit: str = 'deg',
+            phase_limits: Union[Tuple, List[float], np.array] = None,
+            deviation_unit: str = 'mm',
+            deviation_limits: Union[Tuple, List[float], np.array] = None,
+            panel_labels: bool = False,
+            display: bool = False,
+            colormap: str = 'viridis',
+            figure_size: Union[Tuple, List[float], np.array] = (8.0, 6.4),
+            dpi: int = 300,
+            parallel: bool = False
+    ) -> None:
         """ Create diagnostic plots of antenna surfaces from panel data file.
 
         :param destination: Name of the destination folder to contain plots
@@ -843,11 +877,11 @@ class AstrohackPanelFile(dict):
 
     def export_to_fits(
             self,
-            destination,
-            ant="all",
-            ddi="all",
-            parallel=False
-    ):
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            parallel: bool = False
+    ) -> None:
         """ Export contents of an Astrohack MDS file to several FITS files in the destination folder
 
         :param destination: Name of the destination folder to contain plots
@@ -880,7 +914,7 @@ class AstrohackPointFile(dict):
     """ Data Class for holography pointing data.
     """
 
-    def __init__(self, file):
+    def __init__(self, file: str):
         """ Initialize an AstrohackPointFile object.
         :param file: File to be linked to this object
         :type file: str
@@ -894,13 +928,13 @@ class AstrohackPointFile(dict):
         self._input_pars = None
         self._file_is_open = False
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         return super().__getitem__(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
-    def _is_open(self):
+    def _is_open(self) -> None:
         """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
@@ -908,7 +942,7 @@ class AstrohackPointFile(dict):
         """
         return self._file_is_open
 
-    def _open(self, file=None, dask_load=True):
+    def _open(self, file: str = None, dask_load: bool = True) -> None:
         """ Open holography pointing file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -935,7 +969,7 @@ class AstrohackPointFile(dict):
 
         return self._file_is_open
 
-    def summary(self):
+    def summary(self) -> None:
         """ Prints summary of the AstrohackPointFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
@@ -948,7 +982,7 @@ class AstrohackLocitFile(dict):
     """ Data Class for extracted gains for antenna location determination
     """
 
-    def __init__(self, file):
+    def __init__(self, file: str):
         """ Initialize an AstrohackLocitFile object.
         :param file: File to be linked to this object
         :type file: str
@@ -963,13 +997,13 @@ class AstrohackLocitFile(dict):
         self._meta_data = None
         self._file_is_open = False
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         return super().__getitem__(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
-    def _is_open(self):
+    def _is_open(self) -> bool:
         """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
@@ -977,7 +1011,7 @@ class AstrohackLocitFile(dict):
         """
         return self._file_is_open
 
-    def _open(self, file=None, dask_load=True):
+    def _open(self, file: str = None, dask_load: bool = True) -> bool:
         """ Open antenna location file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -1005,7 +1039,7 @@ class AstrohackLocitFile(dict):
 
         return self._file_is_open
 
-    def print_source_table(self):
+    def print_source_table(self) -> None:
         """ Prints a table with the sources observed for antenna location determination
         """
         alignment = 'l'
@@ -1019,7 +1053,7 @@ class AstrohackLocitFile(dict):
         table.align = alignment
         print(table)
 
-    def print_array_configuration(self, relative=True):
+    def print_array_configuration(self, relative: bool = True) -> None:
         """ Prints a table containing the array configuration
 
         :param relative: Print relative antenna coordinates or geocentric coordinates, default is True
@@ -1039,8 +1073,15 @@ class AstrohackLocitFile(dict):
 
         _print_array_configuration(param_dict, self['ant_info'], self['obs_info']['telescope_name'])
 
-    def plot_source_positions(self, destination, labels=False, precessed=False, display=False, figure_size=None,
-                              dpi=300):
+    def plot_source_positions(
+            self,
+            destination: str,
+            labels: bool = False,
+            precessed: str = False,
+            display: bool = False,
+            figure_size: Union[Tuple, List[float], np.array] = None,
+            dpi: int = 300
+    ) -> None:
         """ Plot source positions in either FK5 or precessed right ascension and declination.
 
         :param destination: Name of the destination folder to contain plot
@@ -1081,18 +1122,29 @@ class AstrohackLocitFile(dict):
         _create_destination_folder(param_dict['destination'])
 
         if precessed:
-            filename = destination + '/locit_source_table_precessed.png'
+            filename = str(pathlib.Path(destination).joinpath('locit_source_table_precessed.png'))
             time_range = self['obs_info']['time_range']
             obs_midpoint = (time_range[1] + time_range[0]) / 2.
+
         else:
-            filename = destination + '/locit_source_table_fk5.png'
+            filename = str(pathlib.Path(destination).joinpath('locit_source_table_fk5.png'))
             obs_midpoint = None
+
         _plot_source_table(filename, self['obs_info']['src_dict'], precessed=precessed, obs_midpoint=obs_midpoint,
                            display=display, figure_size=figure_size, dpi=dpi, label=labels)
         return
 
-    def plot_array_configuration(self, destination, stations=True, zoff=False, unit='m', box_size=5000,
-                                 display=False, figure_size=None, dpi=300):
+    def plot_array_configuration(
+            self,
+            destination: str,
+            stations: bool = True,
+            zoff: bool = False,
+            unit: str = 'm',
+            box_size: Union[int, float] = 5000,
+            display: bool = False,
+            figure_size: Union[Tuple, List[float], np.array] = None,
+            dpi: int = 300
+    ) -> None:
         """ Plot antenna positions.
 
         :param destination: Name of the destination folder to contain plot
@@ -1138,7 +1190,7 @@ class AstrohackLocitFile(dict):
         _plot_array_configuration(self['ant_info'], self['obs_info']['telescope_name'], param_dict)
         return
 
-    def summary(self):
+    def summary(self) -> None:
         """ Prints summary of the AstrohackLocitFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)
@@ -1152,7 +1204,7 @@ class AstrohackPositionFile(dict):
     """ Data Class for extracted antenna location determination
     """
 
-    def __init__(self, file):
+    def __init__(self, file: str):
         """ Initialize an AstrohackPositionFile object.
         :param file: File to be linked to this object
         :type file: str
@@ -1167,13 +1219,13 @@ class AstrohackPositionFile(dict):
         self._input_pars = None
         self._file_is_open = False
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         return super().__getitem__(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
-    def _is_open(self):
+    def _is_open(self) -> bool:
         """ Check wether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
@@ -1181,7 +1233,7 @@ class AstrohackPositionFile(dict):
         """
         return self._file_is_open
 
-    def _open(self, file=None, dask_load=True):
+    def _open(self, file: str = None, dask_load: bool = True) -> bool:
         """ Open antenna location file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -1201,8 +1253,13 @@ class AstrohackPositionFile(dict):
         self._input_pars = _read_meta_data(file + '/.position_input')
 
         try:
-            _load_position_file(file=file, dask_load=dask_load, position_dict=self,
-                                combine=self.combined)
+            _load_position_file(
+                file=file,
+                dask_load=dask_load,
+                position_dict=self,
+                combine=self.combined
+            )
+
             self._file_is_open = True
 
         except Exception as e:
@@ -1213,13 +1270,13 @@ class AstrohackPositionFile(dict):
 
     def export_fit_results(
             self,
-            destination,
-            ant="all",
-            ddi="all",
-            position_unit='m',
-            time_unit='hour',
-            delay_unit='nsec'
-    ):
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            position_unit: str = 'm',
+            time_unit: str = 'hour',
+            delay_unit: str = 'nsec'
+    ) -> None:
         """ Export antenna position fit results to a text file.
 
         :param destination: Name of the destination folder to contain exported fit results
@@ -1258,16 +1315,16 @@ class AstrohackPositionFile(dict):
 
     def plot_sky_coverage(
             self,
-            destination,
-            ant="all",
-            ddi="all",
-            time_unit='hour',
-            angle_unit='deg',
-            display=False,
-            figure_size=None,
-            dpi=300,
-            parallel=False
-    ):
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            time_unit: str = 'hour',
+            angle_unit: str = 'deg',
+            display: bool = False,
+            figure_size: Union[Tuple, List[float], np.array] = None,
+            dpi: int = 300,
+            parallel: bool = False
+    ) -> None:
         """ Plot the sky coverage of the data used for antenna position fitting
 
         :param destination: Name of the destination folder to contain the plots
@@ -1332,18 +1389,18 @@ class AstrohackPositionFile(dict):
 
     def plot_delays(
             self,
-            destination,
-            ant="all",
-            ddi="all",
-            time_unit='hour',
-            angle_unit='deg',
-            delay_unit='nsec',
-            plot_model=True,
-            display=False,
-            figure_size=None,
-            dpi=300,
-            parallel=False
-    ):
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            time_unit: str = 'hour',
+            angle_unit: str = 'deg',
+            delay_unit: str = 'nsec',
+            plot_model: bool = True,
+            display: bool = False,
+            figure_size: Union[Tuple, List[float], np.array] = None,
+            dpi: int = 300,
+            parallel: bool = False
+    ) -> None:
         """ Plot the delays used for antenna position fitting and optionally the resulting fit.
 
         :param destination: Name of the destination folder to contain the plots
@@ -1419,16 +1476,16 @@ class AstrohackPositionFile(dict):
 
     def plot_position_corrections(
             self,
-            destination,
-            ant="all",
-            ddi="all",
-            unit='km',
-            box_size=5,
-            scaling=250,
-            figure_size=None,
-            display=True,
-            dpi=300
-    ):
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            unit: str = 'km',
+            box_size: Union[int, float] = 5,
+            scaling: Union[int, float] = 250,
+            figure_size: Union[Tuple, List[float], np.array] = None,
+            display: bool = True,
+            dpi: int = 300
+    ) -> None:
         """ Plot Antenna position corrections on an array configuration plot
 
         :param destination: Name of the destination folder to contain plot
@@ -1479,7 +1536,7 @@ class AstrohackPositionFile(dict):
         param_dict['combined'] = self.combined
         _plot_position_corrections(param_dict, self)
 
-    def summary(self):
+    def summary(self) -> None:
         """ Prints summary of the AstrohackpositionFile object, with available data, attributes and available methods
         """
         _print_summary_header(self.file)

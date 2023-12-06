@@ -3,6 +3,8 @@ import inspect
 import skriba.logger
 import auror.parameter
 
+from typing import Union, List
+
 from astrohack._utils._combine import _combine_chunk
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
@@ -16,14 +18,14 @@ CURRENT_FUNCTION = 0
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
 def combine(
-        image_name,
-        combine_name=None,
-        ant="all",
-        ddi="all",
-        weighted=False,
-        parallel=False,
-        overwrite=False
-):
+        image_name: str,
+        combine_name: str = None,
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[int]] = "all",
+        weighted: bool = False,
+        parallel: bool = False,
+        overwrite: bool = False
+) -> AstrohackImageFile:
     """Combine DDIs in a Holography image to increase SNR
 
     :param image_name: Input holography data file name. Accepted data format is the output from ``astrohack.holog.holog``

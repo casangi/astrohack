@@ -1,4 +1,5 @@
 import os
+import pathlib
 import shutil
 import requests
 import zipfile
@@ -49,16 +50,22 @@ FILE_ID = {
             'file': 'panel_cutoff_mask.npy',
             'id': '8ta02t72vwcv4ketv8rfw',
             'rlkey': 'qsmos4hx2duz8upb83hghi6q8'
+        },
+    'heuristic_model':
+        {
+            'file': 'elastic.model',
+            'id': 'mihy28n7ei72sk2982v0y',
+            'rlkey': 'xdzwfbfsrg6ehhvhaj6iyp58y'
         }
-
 }
 
 
-def download(file, folder='.'):
+def download(file: str, folder: str = '.') -> None:
     logger = skriba.logger.get_logger(logger_name="astrohack")
+    full_file_path = pathlib.Path(folder).joinpath(file)
 
-    if os.path.exists('/'.join((folder, file))):
-        logger.info("File exists.")
+    if full_file_path.exists():
+        logger.info("File exists: {file}".format(file=str(full_file_path)))
         return
 
     if file not in FILE_ID.keys():
@@ -78,7 +85,7 @@ def download(file, folder='.'):
     r = requests.get(url, stream=True, headers=headers)
     total = int(r.headers.get('content-length', 0))
 
-    fullname = '/'.join((folder, fullname))
+    fullname = str(pathlib.Path(folder).joinpath(fullname))
 
     with open(fullname, 'wb') as fd, tqdm(
             desc=fullname,

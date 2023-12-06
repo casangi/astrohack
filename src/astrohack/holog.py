@@ -6,6 +6,8 @@ import numpy as np
 import skriba.logger
 import auror.parameter
 
+from typing import List, Union, NewType
+
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._dio import _check_if_file_exists
 from astrohack._utils._dio import _check_if_file_will_be_overwritten
@@ -17,28 +19,30 @@ from astrohack.mds import AstrohackImageFile
 
 CURRENT_FUNCTION = 0
 
+Array = NewType("Array", Union[np.array, List[int], List[float]])
+
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
 def holog(
-        holog_name,
-        grid_size=None,
-        cell_size=None,
-        image_name=None,
-        padding_factor=50,
-        grid_interpolation_mode="linear",
-        chan_average=True,
-        chan_tolerance_factor=0.005,
-        scan_average=True,
-        ant="all",
-        ddi="all",
-        to_stokes=True,
-        apply_mask=True,
-        phase_fit=True,
-        overwrite=False,
-        parallel=False
-):
+        holog_name: str,
+        grid_size: Union[int, Array] = None,
+        cell_size: Union[int, Array] = None,
+        image_name: str = None,
+        padding_factor: int = 50,
+        grid_interpolation_mode: str = "linear",
+        chan_average: bool = True,
+        chan_tolerance_factor: float = 0.005,
+        scan_average: bool = True,
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[int]] = "all",
+        to_stokes: bool = True,
+        apply_mask: bool = True,
+        phase_fit: bool = True,
+        overwrite: bool = False,
+        parallel: bool = False
+) -> AstrohackImageFile:
     """ Process holography data and derive aperture illumination pattern.
 
     :param holog_name: Name of holography .holog.zarr file to process.
