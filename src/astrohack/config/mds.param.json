@@ -366,6 +366,18 @@
             "type": ["boolean"]
         }
     },
+    "get_antenna": {
+        "ant":{
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "ddi":{
+            "nullable": false,
+            "required": true,
+            "type": ["int"]
+        }
+    },
     "plot_antennas":{
         "destination":{
             "type":["string"],

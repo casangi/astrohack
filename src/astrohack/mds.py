@@ -702,7 +702,14 @@ class AstrohackPanelFile(dict):
         _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
                             self.plot_antennas])
 
-    def get_antenna(self, ant: str, ddi: int) -> AntennaSurface:
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack")
+    )
+    def get_antenna(
+            self,
+            ant: str,
+            ddi: int
+    ) -> AntennaSurface:
         """ Retrieve an AntennaSurface object for interaction
 
         :param ant: Antenna to be retrieved, ex. ea25.
