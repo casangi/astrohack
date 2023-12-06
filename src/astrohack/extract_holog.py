@@ -2,10 +2,8 @@ import os
 import json
 import copy
 import shutil
-import inspect
 import pathlib
 import pickle
-import sklearn
 import math
 import psutil
 import multiprocessing
@@ -44,6 +42,7 @@ from astrohack.extract_pointing import extract_pointing
 
 JSON = NewType("JSON", Dict[str, Any])
 KWARGS = NewType("KWARGS", Union[Dict[str, str], Dict[str, int]])
+
 
 class HologObsDict(dict):
     """
