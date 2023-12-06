@@ -24,7 +24,7 @@ def is_list_in(lista):
             return count
         count += 1
     else:
-        return 0
+        return -1
 
 
 class Param:
@@ -68,16 +68,17 @@ class Param:
                 types = types.split()
 
         edit_list_entry('bool', types, 'boolean')
+        edit_list_entry('str', types, 'string')
         edit_list_entry('numpy.ndarray', types, 'ndarray')
         if 'dtype' in types:
             types.remove('dtype')
 
         list_in = is_list_in(types)
-        if list_in or 'Array' in types:
+        if list_in > -1 or 'Array' in types:
             self.dicio['struct_type'] = []
             self.dicio['minlength'] = self.missing
             self.dicio['maxlength'] = self.missing
-            if list_in:
+            if list_in > -1:
                 liststr = types[list_in]
                 self.dicio['struct_type'] = liststr.split('[')[1].strip(']').split(',')
                 types[list_in] = 'list'
@@ -98,6 +99,7 @@ class Param:
         outstr = f'{lvl*spc}"{self.name}":{op}'
         for key in self.dicio.keys():
             outstr += self._write_key(key, lvl + 1, spc)
+        outstr = outstr[:-2]+'\n'
         outstr += f'{lvl*spc}{clc}'
         return outstr
 
@@ -111,11 +113,11 @@ class Param:
                 if ival != len(value)-1:
                     extra += ', '
             extra += ']'
-            return base+f' {extra}\n'
+            return base+f' {extra},\n'
         if isinstance(value, bool):
-            return base+f' {str(value).lower()}\n'
+            return base+f' {str(value).lower()},\n'
         else:
-            return base+f' "{value}"\n'
+            return base+f' "{value}",\n'
 
 
 class Function:
@@ -184,8 +186,10 @@ class PythonFile:
                     wrds = line.split()
                     if len(wrds) > 0:
                         if wrds[0] == 'def':
-                            in_function = True
                             func_name = wrds[1].replace('(', '')
+                            if func_name[0] == '_':
+                                continue
+                            in_function = True
                             function_head.append(line)
 
     def export_to_json(self, json_file, spc, op, cl, clc):
