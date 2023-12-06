@@ -5,6 +5,7 @@ import skriba.logger
 
 import numpy as np
 from astrohack._utils._constants import custom_unit_checker, custom_split_checker
+from astrohack._utils._plot_commons import custom_plots_checker
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 from astrohack._utils._dio import _create_destination_folder
@@ -244,6 +245,10 @@ class AstrohackImageFile(dict):
             parallel=parallel
         )
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_plots_checker
+    )
     def plot_apertures(
             self,
             destination: str,
