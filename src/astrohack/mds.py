@@ -1,10 +1,10 @@
 import pathlib
-import distributed
+# import distributed
 import auror.parameter
 import skriba.logger
 
 import numpy as np
-from astrohack._utils._constants import custom_unit_checker, custom_split_checker
+from astrohack._utils._constants import custom_split_checker
 from astrohack._utils._plot_commons import custom_plots_checker
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._diagnostics import _calibration_plot_chunk
@@ -21,7 +21,7 @@ from astrohack._utils._extract_locit import _plot_source_table, _plot_array_conf
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
 from astrohack._utils._locit import _plot_delays_chunk, _plot_position_corrections
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+# from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
@@ -780,7 +780,7 @@ class AstrohackPanelFile(dict):
 
     @auror.parameter.validate(
         logger=skriba.logger.get_logger(logger_name="astrohack"),
-        custom_checker=custom_unit_checker
+        custom_checker=custom_plots_checker
     )
     def plot_antennas(
             self,

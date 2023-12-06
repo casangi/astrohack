@@ -444,18 +444,23 @@
     },
     "plot_antennas":{
         "destination":{
-            "type":["string"],
-            "nullable": false
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
         },
         "ant":{
-            "type":["ndarray", "int", "list", "string"],
-            "struct type": ["int", "string"],
-            "nullable": false
+            "nullable": false,
+            "required": false,
+            "struct_type": ["str"],
+            "minlength": 1,
+            "type": ["string", "list"]
         },
         "ddi":{
-            "type":["ndarray", "int", "list", "string"],
-            "struct type": ["int", "string"],
-            "nullable": false
+            "nullable": false,
+            "required": false,
+            "struct_type": ["int"],
+            "minlength": 1,
+            "type": ["int", "list", "string"]
         },
         "plot_type":{
             "type":["string"],
@@ -463,61 +468,81 @@
             "nullable": false
         },
         "plot_screws":{
-            "type":["boolean"],
-            "nullable": false
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
         },
         "amplitude_limits":{
-            "type":["ndarray", "list", "tuple"],
-            "struct type": ["int", "float"],
-            "nullable": true
+            "nullable": true,
+            "required": false,
+            "struct_type": ["float", "int"],
+            "minlength": 2,
+            "maxlength": 2,
+            "type": ["list", "tuple", "ndarray"]
         },
         "phase_unit":{
-            "type":["string"],
-            "check allowed with": "units.trig",
-            "nullable": false
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.trig"
         },
         "phase_limits":{
-            "type":["ndarray", "list", "tuple"],
-            "struct type": ["int", "float"],
-            "nullable": true
+            "nullable": true,
+            "required": false,
+            "struct_type": ["float", "int"],
+            "minlength": 2,
+            "maxlength": 2,
+            "type": ["list", "tuple", "ndarray"]
         },
         "deviation_unit":{
-            "type":["string"],
-            "check allowed with": "units.length",
-            "nullable": false
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.length"
         },
         "deviation_limits":{
-            "type":["ndarray", "list", "tuple"],
-            "struct type": ["int", "float"],
-            "nullable": true
+            "nullable": true,
+            "required": false,
+            "struct_type": ["float", "int"],
+            "minlength": 2,
+            "maxlength": 2,
+            "type": ["list", "tuple", "ndarray"]
         },
         "panel_labels":{
-            "type":["boolean"],
-            "nullable": false
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
         },
         "display":{
-            "type":["boolean"],
-            "nullable": false
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
         },
         "colormap":{
-            "type":["string"],
-            "nullable": false
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "colormaps"
         },
         "figure_size":{
-            "type":["ndarray", "list", "tuple"],
-            "struct type": ["int", "float"]
+            "nullable": true,
+            "required": false,
+            "struct_type": ["float"],
+            "minlength": 2,
+            "maxlength": 2,
+            "type": ["list", "tuple", "ndarray"]
         },
         "dpi":{
-            "type":["int"],
-            "nullable": false
+            "nullable": false,
+            "required": false,
+            "type": ["int"],
+            "min": 1,
+            "max": 1200
         },
         "parallel":{
-            "type":["boolean"],
-            "nullable": false
-        },
-        "overwrite":{
-            "type":["boolean"],
-            "nullable": false
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
         }
     }
 }
