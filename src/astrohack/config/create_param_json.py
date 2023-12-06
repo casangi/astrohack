@@ -8,6 +8,7 @@ parser = argparse.ArgumentParser(description="Parse a python file to produce a s
 parser.add_argument('python_file', type=str, help='Python file to be parsed')
 parser.add_argument('json_file', type=str, help='Name of the output json file')
 parser.add_argument('-l', '--tab_length', type=int, default=4, required=False, help='Name of the output json file')
+parser.add_argument('-s', '--strong_typed', type=bool, default=True, required=False, help='Functions are strongly typed')
 args = parser.parse_args()
 
 
@@ -16,52 +17,77 @@ def edit_list_entry(key, lista, replacement):
         lista[lista.index(key)] = replacement
 
 
+def is_list_in(lista):
+    count = 0
+    for item in lista:
+        if 'List' in item:
+            return count
+        count += 1
+    else:
+        return 0
+
+
 class Param:
     missing = '_###MISSING###_'
 
-    def __init__(self, paramstr):
+    def __init__(self, paramstr, header=None):
         param_wrds = paramstr.split('=')
         self.required = len(param_wrds) == 1
-        self.name = param_wrds[0].strip()
-        self.dicio = {}
+        if header is None:
+            self.name, self.types = param_wrds[0].split(':')
+        else:
+            self.name = param_wrds[0].strip()
+            self.types = None
+        self._build_dict(header)
         return
 
-    def build_dict(self, header):
+    def _build_dict(self, header):
         self.dicio = {'allowed': self.missing,
                       'nullable': self.missing,
                       'required': self.required}
-    
-        typstr = ''
-        for line in header:
-            if f':type {self.name}:' in line:
-                typstr = line.replace('\n', '').strip()
-                break
 
-        types = []
-        if typstr != '':
-            delimiters = [" ", "or", ",", "optional"]
-            types = typstr.split(':')[2]
-            for delimiter in delimiters:
-                types = " ".join(types.split(delimiter))
-            types = types.split()
+        if header is None:
+            if 'Union' in self.types:
+                typestr = self.types.replace('Union[', '')[:-2].replace(' ','')
+                types = typestr.split(',')
+            else:
+                types = [self.types.strip()]
+        else:
+            typstr = ''
+            for line in header:
+                if f':type {self.name}:' in line:
+                    typstr = line.replace('\n', '').strip()
+                    break
+
+            types = []
+            if typstr != '':
+                delimiters = [" ", "or", ",", "optional"]
+                types = typstr.split(':')[2]
+                for delimiter in delimiters:
+                    types = " ".join(types.split(delimiter))
+                types = types.split()
 
         edit_list_entry('bool', types, 'boolean')
         edit_list_entry('numpy.ndarray', types, 'ndarray')
         if 'dtype' in types:
             types.remove('dtype')
-        
+
+        list_in = is_list_in(types)
+        if list_in or 'Array' in types:
+            self.dicio['struct_type'] = []
+            self.dicio['minlength'] = self.missing
+            self.dicio['maxlength'] = self.missing
+            if list_in:
+                liststr = types[list_in]
+                self.dicio['struct_type'] = liststr.split('[')[1].strip(']').split(',')
+                types[list_in] = 'list'
+            if 'Array' in types:
+                self.dicio['struct_type'] = ['int', 'float']
+
         if len(types) == 0:
             self.dicio['type'] = self.missing
         else:
             self.dicio['type'] = types
-
-        if 'list' in types or 'ndarray' in types or 'tuple' in types:
-            self.dicio['struct_type'] = []
-            self.dicio['minlength'] = self.missing
-            self.dicio['maxlength'] = self.missing
-            for typ in types:
-                if typ not in ['list', 'ndarray', 'tuple']:
-                    self.dicio['struct_type'].append(typ)
 
         if 'int' in types or 'float' in types:
             self.dicio['min'] = self.missing
@@ -70,11 +96,11 @@ class Param:
     def export_to_json(self, lvl, spc, op, clc):
         outstr = f'{lvl*spc}"{self.name}":{op}'
         for key in self.dicio.keys():
-            outstr += self.write_key(key, lvl+1, spc)
-        outstr += f'{lvl*spc}{clc}'        
+            outstr += self._write_key(key, lvl + 1, spc)
+        outstr += f'{lvl*spc}{clc}'
         return outstr
 
-    def write_key(self, key, lvl, spc):
+    def _write_key(self, key, lvl, spc):
         value = self.dicio[key]
         base = f'{lvl*spc}"{key}":'
         if isinstance(value, list):
@@ -89,34 +115,39 @@ class Param:
             return base+f' {str(value).lower()}\n'
         else:
             return base+f' "{value}"\n'
-    
+
 
 class Function:
-    def __init__(self, name, header):
+    def __init__(self, name, header, strong=True):
         self.param_list = []
         self.name = name
         self.header = header
+        self.strong = strong
         self._build_param_list()
         return
 
     def _build_param_list(self):
-        self._get_param_list()
-        for param in self.param_list:
-            param.build_dict(self.header)
-
-    def _get_param_list(self):
         lestr = ''
         for line in self.header:
-            lestr += line.replace('\n', '')
-            if ':' in line:
+            lestr += '|'+line.strip().strip(',')
+            if ')' in line:
                 break
-        param_str_list = lestr.split('(')[1].split(')')[0].split(',')
+
+        param_str = lestr.split('(')[1].split(')')[0]
+
+        if self.strong:
+            param_str_list = param_str.split('|')
+        else:
+            param_str_list = param_str.replace('\n', '').split(',')
 
         for parstr in param_str_list:
-            if 'self' in parstr:
+            if 'self' in parstr or parstr == '':
                 continue
             else:
-                self.param_list.append(Param(parstr))
+                if self.strong:
+                    self.param_list.append(Param(parstr))
+                else:
+                    self.param_list.append(Param(parstr, header=self.header))
 
     def export_to_json(self, lvl, spc, op, clc):
         outstr = f'{lvl*spc}"{self.name}":{op}'
