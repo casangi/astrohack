@@ -4,8 +4,7 @@ import auror.parameter
 import skriba.logger
 
 import numpy as np
-from astrohack._utils._constants import custom_unit_checker
-from astrohack._utils._constants import length_units, trigo_units, possible_splits, time_units
+from astrohack._utils._constants import custom_unit_checker, custom_split_checker
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 from astrohack._utils._dio import _create_destination_folder
@@ -31,6 +30,7 @@ from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 from prettytable import PrettyTable
 
 from typing import Any, List, Union, Tuple
+
 
 class AstrohackDataFile:
     """ Base class for the Astrohack data files
@@ -156,7 +156,16 @@ class AstrohackImageFile(dict):
         _print_data_contents(self, ["Antenna", "DDI"])
         _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
 
-    def select(self, ant: str, ddi: int, complex_split: str = 'cartesian') -> object:
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_split_checker
+    )
+    def select(
+            self,
+            ant: str,
+            ddi: int,
+            complex_split: str = 'cartesian'
+    ) -> object:
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
 
         :param ddi: Data description ID, ex. 0.

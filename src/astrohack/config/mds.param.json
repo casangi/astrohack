@@ -1,4 +1,22 @@
 {
+    "select":{
+        "ant":{
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "ddi":{
+            "nullable": false,
+            "required": true,
+            "type": ["int"]
+        },
+        "complex_split": {
+            "nullable": false,
+            "required": true,
+            "type": ["string"],
+            "check allowed with": "split.complex"
+        }
+    },
     "plot_antennas":{
         "destination":{
             "type":["string"],
