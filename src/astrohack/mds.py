@@ -557,6 +557,10 @@ class AstrohackHologFile(dict):
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(self, _calibration_plot_chunk, param_dict, key_order, parallel)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_plots_checker
+    )
     def plot_lm_sky_coverage(
             self,
             destination: str,
@@ -621,34 +625,8 @@ class AstrohackHologFile(dict):
         """
 
         param_dict = locals()
-
         param_dict["map"] = map_id
 
-        # parms_passed = _check_parms(function_name, param_dict, 'destination', [str], default=None)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'ant', [str, list],
-        #                                              list_acceptable_data_types=[str], default='all')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'ddi', [int, list, str],
-        #                                              list_acceptable_data_types=[int], default='all')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'map', [int, list, str],
-        #                                              list_acceptable_data_types=[int], default='all')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'complex_split', [str],
-        #                                              acceptable_data=possible_splits, default="polar")
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'angle_unit', [str],
-        #                                              acceptable_data=trigo_units, default='deg')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'phase_unit', [str],
-        #                                              acceptable_data=trigo_units, default='deg')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str],
-        #                                              acceptable_data=time_units, default='hour')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'plot_correlation', [str, list],
-        #                                              list_acceptable_data_types=[str], default='None')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
-        #                                              list_acceptable_data_types=[numbers.Number], list_len=2,
-        #                                              default='None', log_default_setting=False)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'parallel', [bool], default=False)
-        #
-        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(self, _plot_lm_coverage, param_dict, key_order, parallel)
