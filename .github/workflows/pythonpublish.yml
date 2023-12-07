@@ -23,7 +23,7 @@ jobs:
         build
         --user
     - name: Build a source distribution
-      run: python3 setup.py sdist
+      run: python3 -m build
     - name: Store the distribution packages
       uses: actions/upload-artifact@v3
       with:
