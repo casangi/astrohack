@@ -544,5 +544,98 @@
             "required": false,
             "type": ["boolean"]
         }
+    },
+    "print_array_configuration":{
+        "relative":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        }
+    },
+    "plot_source_positions":{
+        "destination":{
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "labels":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "precessed":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "display":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "figure_size":{
+            "nullable": true,
+            "required": false,
+            "struct_type": ["float"],
+            "minlength": 2,
+            "maxlength": 2,
+            "type": ["list", "tuple", "ndarray"]
+        },
+        "dpi":{
+            "nullable": false,
+            "required": false,
+            "type": ["int"],
+            "min": 1,
+            "max": 1200
+        }
+        },
+    "plot_array_configuration":{
+        "destination":{
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "stations":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "zoff":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "unit":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.length"
+        },
+        "box_size":{
+            "nullable": false,
+            "required": false,
+            "type": ["int", "float"],
+            "min": 0
+        },
+        "display":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "figure_size":{
+            "nullable": true,
+            "required": false,
+            "struct_type": ["float"],
+            "minlength": 2,
+            "maxlength": 2,
+            "type": ["list", "tuple", "ndarray"]
+        },
+        "dpi": {
+            "nullable": false,
+            "required": false,
+            "type": ["int"],
+            "min": 1,
+            "max": 1200
+        }
     }
 }

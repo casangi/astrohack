@@ -4,7 +4,7 @@ import auror.parameter
 import skriba.logger
 
 import numpy as np
-from astrohack._utils._constants import custom_split_checker
+from astrohack._utils._constants import custom_split_checker, custom_unit_checker
 from astrohack._utils._plot_commons import custom_plots_checker
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._diagnostics import _calibration_plot_chunk
@@ -1039,7 +1039,13 @@ class AstrohackLocitFile(dict):
         table.align = alignment
         print(table)
 
-    def print_array_configuration(self, relative: bool = True) -> None:
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+    )
+    def print_array_configuration(
+            self,
+            relative: bool = True
+    ) -> None:
         """ Prints a table containing the array configuration
 
         :param relative: Print relative antenna coordinates or geocentric coordinates, default is True
@@ -1053,16 +1059,16 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-        # parms_passed = _check_parms(function_name, param_dict, 'relative', [bool], default=True)
-        # _parm_check_passed(function_name, parms_passed)
-
         _print_array_configuration(param_dict, self['ant_info'], self['obs_info']['telescope_name'])
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+    )
     def plot_source_positions(
             self,
             destination: str,
             labels: bool = False,
-            precessed: str = False,
+            precessed: bool = False,
             display: bool = False,
             figure_size: Union[Tuple, List[float], np.array] = None,
             dpi: int = 300
@@ -1092,17 +1098,6 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-
-        # parms_passed = _check_parms(function_name, param_dict, 'destination', [str], default=None)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'precessed', [bool], default=False)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'labels', [bool], default=False)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
-        #                                              list_acceptable_data_types=[numbers.Number], list_len=2,
-        #                                              default='None', log_default_setting=False)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
-        #
-        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
 
         if precessed:
@@ -1118,6 +1113,10 @@ class AstrohackLocitFile(dict):
                            display=display, figure_size=figure_size, dpi=dpi, label=labels)
         return
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_unit_checker
+    )
     def plot_array_configuration(
             self,
             destination: str,
@@ -1153,23 +1152,7 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-
-        # parms_passed = _check_parms(function_name, param_dict, 'destination', [str], default=None)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'stations', [bool], default=False)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
-        #                                              list_acceptable_data_types=[numbers.Number], list_len=2,
-        #                                              default='None', log_default_setting=False)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'zoff', [bool], default=False)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'unit', [str],
-        #                                              acceptable_data=length_units,
-        #                                              default='km')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'box_size', [int, float], default=5)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
-        #
-        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
-
         _plot_array_configuration(self['ant_info'], self['obs_info']['telescope_name'], param_dict)
         return
 
