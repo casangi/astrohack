@@ -1,7 +1,7 @@
 from astrohack._utils._extract_point import _extract_pointing
 
 from astrohack._utils._dio import _load_point_file
-from astrohack._utils._dio import _write_meta_data
+from astrohack._utils._dio import _write_meta_data, _check_if_file_exists, _check_if_file_will_be_overwritten
 from astrohack._utils._tools import get_default_file_name
 
 from astrohack.mds import AstrohackPointFile
@@ -65,6 +65,9 @@ def extract_pointing(
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
     input_params = extract_pointing_params.copy()
+    _check_if_file_exists(extract_pointing_params['ms_name'])
+    _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
+    
     pnt_dict = _extract_pointing(
         ms_name=extract_pointing_params['ms_name'],
         pnt_name=extract_pointing_params['point_name'],
