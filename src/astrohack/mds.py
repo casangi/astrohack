@@ -1235,6 +1235,10 @@ class AstrohackPositionFile(dict):
 
         return self._file_is_open
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_unit_checker
+    )
     def export_fit_results(
             self,
             destination: str,
@@ -1265,19 +1269,14 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        # parms_passed = _check_parms(function_name, param_dict, 'destination', [str],
-        #                             default=None)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'position_unit', [str],
-        #                                              acceptable_data=length_units, default='m')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str],
-        #                                              acceptable_data=time_units, default='hour')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'delay_unit', [str],
-        #                                              acceptable_data=time_units, default='nsec')
-        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         param_dict['combined'] = self.combined
         _export_fit_results(self, param_dict)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_unit_checker
+    )
     def plot_sky_coverage(
             self,
             destination: str,
@@ -1324,25 +1323,6 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-
-
-        # parms_passed = _check_parms(function_name, param_dict, 'destination', [str],
-        #                             default=None)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str],
-        #                                              acceptable_data=time_units,
-        #                                              default='hour')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'angle_unit', [str],
-        #                                              acceptable_data=trigo_units,
-        #                                              default='deg')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
-        #                                              list_acceptable_data_types=[numbers.Number], list_len=2,
-        #                                              default='None', log_default_setting=False)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
-        #
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'parallel', [bool],
-        #                                              default=False)
-        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         param_dict['combined'] = self.combined
         if self.combined:
@@ -1351,6 +1331,10 @@ class AstrohackPositionFile(dict):
             _dask_general_compute(self, _plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
                                   parallel=parallel)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_unit_checker
+    )
     def plot_delays(
             self,
             destination: str,
@@ -1404,29 +1388,6 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-
-
-        # parms_passed = _check_parms(function_name, param_dict, 'destination', [str],
-        #                             default=None)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str],
-        #                                              acceptable_data=time_units,
-        #                                              default='hour')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'angle_unit', [str],
-        #                                              acceptable_data=trigo_units,
-        #                                              default='deg')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'delay_unit', [str],
-        #                                              acceptable_data=time_units,
-        #                                              default='nsec')
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'plot_model', [bool], default=True)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
-        #                                              list_acceptable_data_types=[numbers.Number], list_len=2,
-        #                                              default='None', log_default_setting=False)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
-        #
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'parallel', [bool],
-        #                                              default=False)
-        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
 
         param_dict['combined'] = self.combined
@@ -1437,6 +1398,10 @@ class AstrohackPositionFile(dict):
             _dask_general_compute(self, _plot_delays_chunk, param_dict, ['ant', 'ddi'],
                                   parallel=parallel)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_unit_checker
+    )
     def plot_position_corrections(
             self,
             destination: str,
@@ -1481,19 +1446,6 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-
-        # parms_passed = _check_parms(function_name, param_dict, 'destination', [str], default=None)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        # # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'stations', [bool], default=False)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
-        #                                              list_acceptable_data_types=[numbers.Number], list_len=2,
-        #                                              default='None', log_default_setting=False)
-        #
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'box_size', [int, float], default=5)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'scaling', [int, float], default=250)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
-        #
-        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         param_dict['combined'] = self.combined
         _plot_position_corrections(param_dict, self)
