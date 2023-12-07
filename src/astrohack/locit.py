@@ -9,6 +9,7 @@ from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 
 from typing import Union, List
 
+
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
 )
@@ -17,7 +18,7 @@ def locit(
         position_name: str = None,
         elevation_limit: float = 10.0,
         polarization: str = 'both',
-        fit_engine: str = 'linear algebra',
+        fit_engine: str = 'scipy',
         fit_kterm: bool = False,
         fit_delay_rate: bool = True,
         ant: Union[str, List[str]] = "all",
