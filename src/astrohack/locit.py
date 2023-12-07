@@ -136,7 +136,6 @@ def locit(
     locit_params = locals()
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    locit_params["fit_rate"] = fit_delay_rate
     input_params = locit_params.copy()
     attributes = locit_params.copy()
 

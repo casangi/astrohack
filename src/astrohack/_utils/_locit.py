@@ -40,7 +40,7 @@ def _locit_separated_chunk(locit_parms):
 
     fit, variance = _fit_data(coordinates, delays, locit_parms)
     model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_rate'])
+                                              locit_parms['fit_delay_rate'])
     _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq, elevation_limit)
     return
 
@@ -81,7 +81,7 @@ def _locit_combined_chunk(locit_parms):
 
     fit, variance = _fit_data(coordinates, delays, locit_parms)
     model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_rate'])
+                                              locit_parms['fit_delay_rate'])
     _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq_list,
                        elevation_limit)
     return
@@ -120,7 +120,7 @@ def _locit_difference_chunk(locit_parms):
         return
     fit, variance = _fit_data(coordinates, delays, locit_parms)
     model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_rate'])
+                                              locit_parms['fit_delay_rate'])
     _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
                        elevation_limit)
     return
@@ -303,7 +303,7 @@ def _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, mod
     The xds on zarr format on disk
     """
     fit_kterm = locit_parms['fit_kterm']
-    fit_rate = locit_parms['fit_rate']
+    fit_rate = locit_parms['fit_delay_rate']
     antenna = locit_parms['ant_info'][locit_parms['this_ant']]
     error = np.sqrt(variance)
 
@@ -362,7 +362,7 @@ def _fit_data(coordinates, delays, locit_parms):
     """
     logger = skriba.logger.get_logger(logger_name="astrohack")
     fit_kterm = locit_parms['fit_kterm']
-    fit_rate = locit_parms['fit_rate']
+    fit_rate = locit_parms['fit_delay_rate']
 
     linalg = locit_parms['fit_engine'] == 'linear algebra'
     if linalg:
@@ -710,7 +710,7 @@ def _export_fit_results(data_dict, parm_dict):
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
         specifier = 'separated_ddis'
     kterm_present = data_dict._meta_data["fit_kterm"]
-    rate_present = data_dict._meta_data["fit_rate"]
+    rate_present = data_dict._meta_data['fit_delay_rate']
     if kterm_present:
         field_names.extend([f'K offset [{pos_unit}]'])
     if rate_present:
