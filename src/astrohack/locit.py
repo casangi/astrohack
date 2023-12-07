@@ -6,7 +6,7 @@ import skriba.logger
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
 from astrohack._utils._locit import _locit_separated_chunk, _locit_combined_chunk, _locit_difference_chunk
-from astrohack._utils._tools import _remove_suffix
+from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 
 from typing import Union, List
@@ -132,18 +132,15 @@ def locit(
     - `position_mds = locit("myphase.locit.zarr", combine_ddis='difference', elevation_limit=30.0)` -> Fit the phase
        difference delays in "myphase.locit.zarr" for all antennas but only using sources above 30 degrees elevation.
     """
+
+    # Doing this here allows it to get captured by locals()
+    if position_name is None:
+        position_name = get_default_file_name(input_file=locit_name, output_type=".position.zarr")
+
     locit_params = locals()
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-    if position_name is None:
-        logger.info('File not specified or doesn\'t exist. Creating ...')
-
-        position_name = _remove_suffix(locit_name, '.locit.zarr') + '.position.zarr'
-        locit_params['position_name'] = position_name
-
-        logger.info('Extracting position name to {output}'.format(output=position_name))
 
     locit_params["fit_rate"] = fit_delay_rate
 
@@ -154,7 +151,7 @@ def locit(
     _check_if_file_will_be_overwritten(locit_params['position_name'], locit_params['overwrite'])
 
     locit_mds = AstrohackLocitFile(locit_params['locit_name'])
-    locit_mds._open()
+    locit_mds.open()
 
     locit_params['ant_info'] = locit_mds['ant_info']
     locit_params['obs_info'] = locit_mds['obs_info']
@@ -184,7 +181,7 @@ def locit(
         _write_meta_data(output_attr_file, input_params)
 
         position_mds = AstrohackPositionFile(locit_params['position_name'])
-        position_mds._open()
+        position_mds.open()
 
         return position_mds
 

@@ -8,7 +8,7 @@ from typing import Union, List
 from astrohack._utils._combine import _combine_chunk
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
-from astrohack._utils._tools import _remove_suffix
+from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
 CURRENT_FUNCTION = 0
@@ -67,18 +67,13 @@ def combine(
         }
     """
 
+    if combine_name is None:
+        combine_name = get_default_file_name(input_file=image_name, output_type=".image.zarr")
+
     combine_params = locals()
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-    if combine_name is None:
-        logger.info('File not specified or doesn\'t exist. Creating ...')
-
-        combine_name = _remove_suffix(image_name, '.image.zarr') + '.combine.zarr'
-        combine_params['combine_name'] = combine_name
-
-        logger.info('Extracting combine name to {output}'.format(output=combine_name))
 
     input_params = combine_params.copy()
 
@@ -86,7 +81,7 @@ def combine(
     _check_if_file_will_be_overwritten(combine_params['combine_name'], combine_params['overwrite'])
 
     image_mds = AstrohackImageFile(combine_params['image_name'])
-    image_mds._open()
+    image_mds.open()
 
     combine_params['image_mds'] = image_mds
     image_attr = image_mds._meta_data
@@ -101,7 +96,7 @@ def combine(
         _write_meta_data(output_attr_file, input_params)
 
         combine_mds = AstrohackImageFile(combine_params['combine_name'])
-        combine_mds._open()
+        combine_mds.open()
         return combine_mds
     else:
         logger.warning("No data to process")

@@ -5,6 +5,7 @@ import copy
 import datetime
 import shutil
 import inspect
+import pathlib
 
 import numpy as np
 import xarray as xr
@@ -23,28 +24,27 @@ CALLING_FUNCTION = 1
 
 def _check_if_file_exists(file):
     logger = skriba.logger.get_logger(logger_name="astrohack")
-    caller = inspect.stack()[CALLING_FUNCTION].function
 
-    if os.path.exists(file) is False:
-        logger.error(f'[{caller}]: File {file} does not exists.')
+    if pathlib.Path(file).exists() is False:
+        logger.error('File {file} does not exists.')
         raise FileNotFoundError
 
 
 def _check_if_file_will_be_overwritten(file, overwrite):
     logger = skriba.logger.get_logger(logger_name="astrohack")
-    caller = inspect.stack()[CALLING_FUNCTION].function
+    path = pathlib.Path(file)
 
-    if (os.path.exists(file) is True) and (overwrite is False):
-        logger.error(f'[{caller}]: {file} already exists. To overwite set overwrite to True, or remove current file.')
+    if (path.exists() is True) and (overwrite is False):
+        logger.error(f'{file} already exists. To overwrite set overwrite to True, or remove current file.')
 
         raise FileExistsError("{file} exists.".format(file=file))
 
-    elif (os.path.exists(file) is True) and (overwrite is True):
+    elif (path.exists() is True) and (overwrite is True):
         if file.endswith(".zarr"):
-            logger.warning(f'[{caller}]: {file} will be overwritten.')
+            logger.warning(f'{file} will be overwritten.')
             shutil.rmtree(file)
         else:
-            logger.warning(f'[{caller}]: {file} may not be valid hack file. Check the file name again.')
+            logger.warning(f'{file} may not be valid hack file. Check the file name again.')
             raise Exception(f"IncorrectFileType: {file}")
 
 
@@ -484,7 +484,7 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
     logger = skriba.logger.get_logger(logger_name="astrohack")
     ant_id_str = str(ant_id)
 
-    holog_meta_data = "/".join((holog_file, ".holog_json"))
+    holog_meta_data = str(pathlib.Path(holog_file).joinpath(".holog_json"))
 
     try:
         with open(holog_meta_data, "r") as json_file:
@@ -592,25 +592,6 @@ def _get_attrs(zarr_obj):
     return {
         k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")
     }
-
-
-def _print_json(object, indent=6, columns=7):
-    if isinstance(object, list):
-        if indent > 3:
-            list_indent = indent - 3
-        else:
-            list_indent = 0
-
-        print("{open}".format(open="[").rjust(list_indent, ' '))
-        _print_array(object, columns=columns, indent=indent + 1)
-        print("{close}".format(close="]").rjust(list_indent, ' '))
-
-    else:
-        for key, value in object.items():
-            key_str = "{key}{open}".format(key=key, open=":{")
-            print("{key}".format(key=key_str).rjust(indent, ' '))
-            _print_json(value, indent + 4, columns=columns)
-            print("{close}".format(close="}").rjust(indent - 4, ' '))
 
 
 def _reshape(array, columns):

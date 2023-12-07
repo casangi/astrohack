@@ -33,6 +33,7 @@ class NumpyEncoder(json.JSONEncoder):
 
         return json.JSONEncoder.default(self, obj)
 
+
 def _casa_time_to_mjd(times):
     corrected = times / 3600 / 24.0
     return corrected
@@ -121,46 +122,23 @@ def _altaz_to_hadec_astropy(az, el, time, x_ant, y_ant, z_ant):
     return ha_dec_coor.ha, ha_dec_coor.dec
 
 
-def _remove_suffix(input_string, suffix):
-    """
-    Removes extension suffixes from file names
-    Args:
-        input_string: filename string
-        suffix: The suffix to be removed
+def get_default_file_name(input_file: str, output_type: str) -> str:
+    logger = skriba.logger.get_logger(logger_name="astrohack")
+    known_data_types = [".ms", ".holog.zarr", ".image.zarr", ".locit.zarr", ".combine.zarr", ".position.zarr"]
 
-    Returns: the input string minus suffix
+    output_file = None
 
-    """
-    if suffix and input_string.endswith(suffix):
-        return input_string[:-len(suffix)]
+    for suffix in known_data_types:
+        if input_file.endswith(suffix):
+            base_name = input_file.strip(suffix)
+            output_file = "".join((base_name, output_type))
 
-    return input_string
+    if not output_file:
+        output_file = "".join((input_file, output_type))
 
+    logger.info("Creating output file name: {}".format(output_file))
 
-# DEPRECATED
-def _jsonify(holog_obj):
-    """ Convert holog_obs_description dictionay to json format. This just means converting numpy.ndarry
-        entries to string lists.
-
-    # DEPRECATED
-
-    :param holog_obj: holog_obs_description dictionary.
-    :type holog_obj: dict
-    :param holog_obj: holog_obs_description dictionary.
-    :type holog_obj: dict
-    """
-    for ddi_key, ddi_value in holog_obj.items():
-        for map_key, map_value in holog_obj[ddi_key].items():
-            for attr_key, attr_value in holog_obj[ddi_key][map_key].items():
-                if "scans" in attr_key:
-                    holog_obj[ddi_key][map_key][attr_key] = list(map(str, attr_value))
-
-                elif "ant" in attr_key:
-                    for ant_key, ant_value in holog_obj[ddi_key][map_key][attr_key].items():
-                        holog_obj[ddi_key][map_key][attr_key][ant_key] = list(map(str, ant_value))
-
-                else:
-                    pass
+    return output_file
 
 
 def _add_prefix(input_string, prefix):
@@ -179,7 +157,7 @@ def _add_prefix(input_string, prefix):
     return '/'.join(wrds)
 
 
-def _print_holog_obs_dict(holog_obj):
+def print_holog_obs_dict(holog_obj):
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
     OPEN_DICT = ":{"
@@ -261,7 +239,7 @@ def _param_to_list(caller, param, data_dict, prefix):
     return outlist
 
 
-def _split_pointing_table(ms_name, antennas):
+def split_pointing_table(ms_name, antennas):
     """ Split pointing table to contain only specified antennas
 
     :param ms_name: Measurement file
