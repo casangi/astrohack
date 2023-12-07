@@ -9,4 +9,5 @@ rm -r locit_mds_plots
 rm -r position_mds_exports
 rm -r exports
 rm LOGGER*.log
+rm -r model
 
