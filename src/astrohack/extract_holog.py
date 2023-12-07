@@ -31,7 +31,7 @@ from astrohack._utils._extract_holog import _create_holog_meta_data
 from astrohack._utils._extract_holog import _create_holog_obs_dict
 from astrohack._utils._extract_holog import _extract_holog_chunk
 from astrohack._utils._tools import NumpyEncoder
-from astrohack._utils._tools import _remove_suffix
+from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackHologFile
 from astrohack.mds import AstrohackPointFile
 from astropy.time import Time
@@ -387,6 +387,10 @@ def extract_holog(
             }
 
     """
+    # Doing this here allows it to get captured by locals()
+    if holog_name is None:
+        holog_name = get_default_file_name(input_file=ms_name, output_type=".holog.zarr")
+
     extract_holog_params = locals()
 
     logger = skriba.logger.get_logger(logger_name="astrohack")
@@ -396,15 +400,6 @@ def extract_holog(
     input_pars = extract_holog_params.copy()
 
     _check_if_file_exists(extract_holog_params['ms_name'])
-
-    if holog_name is None:
-        logger.debug(
-            'File not specified or doesn\'t exist. Creating ...')
-
-        holog_name = _remove_suffix(ms_name, '.ms') + '.holog.zarr'
-        extract_holog_params['holog_name'] = holog_name
-
-        logger.debug('Extracting holog name to {output}'.format(output=holog_name))
 
     _check_if_file_will_be_overwritten(extract_holog_params['holog_name'], extract_holog_params['overwrite'])
 
@@ -679,7 +674,7 @@ def extract_holog(
         _write_meta_data(holog_attr_file, input_pars)
 
         holog_mds = AstrohackHologFile(extract_holog_params['holog_name'])
-        holog_mds._open()
+        holog_mds.open()
 
         return holog_mds
 
@@ -834,7 +829,7 @@ def generate_holog_obs_dict(
     ctb.close()
 
     pnt_mds = AstrohackPointFile(extract_holog_params['point_name'])
-    pnt_mds._open()
+    pnt_mds.open()
 
     holog_obs_dict = _create_holog_obs_dict(
         pnt_mds,

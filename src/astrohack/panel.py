@@ -11,7 +11,7 @@ from astrohack._utils._dio import _check_if_file_will_be_overwritten
 from astrohack._utils._dio import _check_if_file_exists
 from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._panel import _panel_chunk
-from astrohack._utils._tools import _remove_suffix
+from astrohack._utils._tools import get_default_file_name
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
 from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
@@ -137,6 +137,9 @@ def panel(
       image by using a rigid panel model and excluding points in the aperture image which have an amplitude that is less
       than 20% of the peak amplitude.
     """
+    # Doing this here allows it to get captured by locals()
+    if panel_name is None:
+        panel_name = get_default_file_name(input_file=image_name, output_type='.panel.zarr')
 
     panel_params = locals()
 
@@ -150,16 +153,8 @@ def panel(
 
     _check_if_file_exists(panel_params['image_name'])
 
-    if panel_name is None:
-        logger.info('File not specified or doesn\'t exist. Creating ...')
-
-        panel_name = _remove_suffix(image_name, '.image.zarr') + '.panel.zarr'
-        panel_params['panel_name'] = panel_name
-
-        logger.info('Extracting panel name to {output}'.format(output=panel_name))
-
     image_mds = AstrohackImageFile(panel_params['image_name'])
-    image_mds._open()
+    image_mds.open()
 
     _check_if_file_will_be_overwritten(panel_params['panel_name'], panel_params['overwrite'])
 
@@ -175,7 +170,7 @@ def panel(
             output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_input")
             _write_meta_data(output_attr_file, input_params)
             panel_mds = AstrohackPanelFile(panel_params['panel_name'])
-            panel_mds._open()
+            panel_mds.open()
 
             return panel_mds
         else:

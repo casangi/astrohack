@@ -14,7 +14,7 @@ from astrohack._utils._dio import _check_if_file_will_be_overwritten
 from astrohack._utils._dio import _read_meta_data
 from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._holog import _holog_chunk
-from astrohack._utils._tools import _remove_suffix
+from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
 CURRENT_FUNCTION = 0
@@ -143,6 +143,9 @@ def holog(
         )
 
     """
+    # Doing this here allows it to get captured by locals()
+    if image_name is None:
+        image_name = get_default_file_name(input_file=holog_name, output_type=".image.zarr")
 
     holog_params = locals()
 
@@ -153,14 +156,6 @@ def holog(
     input_params = holog_params.copy()
 
     _check_if_file_exists(holog_params['holog_name'])
-
-    if image_name is None:
-        logger.info('File not specified or doesn\'t exist. Creating ...')
-
-        image_name = _remove_suffix(holog_name, '.holog.zarr') + '.image.zarr'
-        holog_params['image_name'] = image_name
-
-        logger.info('Extracting panel name to {output}'.format(output=image_name))
 
     _check_if_file_will_be_overwritten(holog_params['image_name'], holog_params['overwrite'])
 
@@ -198,7 +193,10 @@ def holog(
             grid_size = np.array([n_pix, n_pix])
             holog_params["grid_size"] = grid_size
 
-    logger.info('Cell size: {str(cell_size)}, Grid size {str(grid_size)}')
+    logger.info('Cell size: {cell_size}, Grid size {grid_size}'.format(
+        cell_size=holog_params["cell_size"],
+        grid_size=holog_params["grid_size"]
+    ))
 
     json_data = {
         "cell_size": holog_params["cell_size"].tolist(),
@@ -225,7 +223,7 @@ def holog(
             _write_meta_data(output_attr_file, input_params)
 
             image_mds = AstrohackImageFile(holog_params['image_name'])
-            image_mds._open()
+            image_mds.open()
 
             logger.info('Finished processing')
 

@@ -24,7 +24,7 @@ class ApertureViewer(param.Parameterized):
         super().__init__(**kwargs)
         self.data_dict = data_file
         
-        if self.data_dict.image._is_open() == False:
+        if self.data_dict.image.is_open() == False:
             self.data_dict.image._open()
 
         self.param.antenna.objects = list(self.data_dict.image.keys())

@@ -4,7 +4,7 @@ from astrohack._utils._extract_point import _extract_pointing
 
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._tools import _remove_suffix
+from astrohack._utils._tools import get_default_file_name
 
 from astrohack.mds import AstrohackPointFile
 
@@ -59,6 +59,9 @@ def extract_pointing(
     Point object allows the user to access point data via dictionary keys with values `ant`. The point object also provides a `summary()` helper function to list available keys for each file. 
 
     """
+    # Doing this here allows it to get captured by locals()
+    if point_name is None:
+        point_name = get_default_file_name(input_file=ms_name, output_type=".point.zarr")
 
     # Returns the current local variables in dictionary form
     extract_pointing_params = locals()
@@ -67,15 +70,6 @@ def extract_pointing(
 
     # Pull latest function from the stack, this is dynamic and preferred to hard coding.
     function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-    if point_name is None:
-        
-        logger.debug('File {file} does not exists. Extracting ...'.format(file=point_name))
-
-        point_name = _remove_suffix(ms_name, '.ms') + '.point.zarr'
-        extract_pointing_params['point_name'] = point_name
-            
-        logger.debug('Extracting pointing to {output}'.format(output=point_name))
 
     input_params = extract_pointing_params.copy()
     pnt_dict = _extract_pointing(
@@ -94,6 +88,6 @@ def extract_pointing(
     point_dict = _load_point_file(file=extract_pointing_params["point_name"], dask_load=True)
 
     pointing_mds = AstrohackPointFile(extract_pointing_params['point_name'])
-    pointing_mds._open()
+    pointing_mds.open()
 
     return pointing_mds

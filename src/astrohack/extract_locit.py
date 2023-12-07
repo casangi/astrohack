@@ -9,6 +9,7 @@ from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_
 from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._extract_locit import _extract_antenna_data, _extract_spectral_info
 from astrohack._utils._extract_locit import _extract_source_and_telescope, _extract_antenna_phase_gains
+from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackLocitFile
 
 from typing import Union, List
@@ -74,18 +75,14 @@ def extract_locit(
        calibration data for DDI 0 of antennas ea06, ea03 and ea25 in "myphase.cal" into a locit file called
        "myphase.locit.zarr" that will be overwritten if already present.
     """
+    # Doing this here allows it to get captured by locals()
+    if locit_name is None:
+        locit_name = get_default_file_name(input_file=cal_table, output_type=".locit.zarr")
+
     extract_locit_params = locals()
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
     function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-    if locit_name is None:
-        logger.info('File not specified or doesn\'t exist. Creating ...')
-
-        locit_name = cal_table + '.locit.zarr'
-        extract_locit_params['locit_name'] = locit_name
-
-        logger.info('Extracting locit name to {output}'.format(output=locit_name))
 
     input_params = extract_locit_params.copy()
     attributes = extract_locit_params.copy()
@@ -111,6 +108,6 @@ def extract_locit(
 
     logger.info(f"[{function_name}]: Finished processing")
     locit_mds = AstrohackLocitFile(extract_locit_params['locit_name'])
-    locit_mds._open()
+    locit_mds.open()
 
     return locit_mds

@@ -123,15 +123,16 @@ class AstrohackImageFile(dict):
     def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
-    def _is_open(self) -> bool:
-        """ Check wether the object has opened the corresponding hack file.
+    @property
+    def is_open(self) -> bool:
+        """ Check whether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
         :rtype: bool
         """
         return self._file_is_open
 
-    def _open(self, file: str = None) -> bool:
+    def open(self, file: str = None) -> bool:
         """ Open holography image file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -388,15 +389,16 @@ class AstrohackHologFile(dict):
     def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
-    def _is_open(self) -> bool:
-        """ Check wether the object has opened the corresponding hack file.
+    @property
+    def is_open(self) -> bool:
+        """ Check whether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
         :rtype: bool
         """
         return self._file_is_open
 
-    def _open(self, file: str = None, dask_load: bool = True) -> bool:
+    def open(self, file: str = None, dask_load: bool = True) -> bool:
         """ Open extracted holography file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -679,7 +681,8 @@ class AstrohackPanelFile(dict):
     def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
-    def _is_open(self) -> bool:
+    @property
+    def is_open(self) -> bool:
         """ Check whether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
@@ -687,7 +690,7 @@ class AstrohackPanelFile(dict):
         """
         return self._file_is_open
 
-    def _open(self, file: str = None) -> bool:
+    def open(self, file: str = None) -> bool:
         """ Open panel holography file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -934,15 +937,16 @@ class AstrohackPointFile(dict):
     def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
-    def _is_open(self) -> None:
-        """ Check wether the object has opened the corresponding hack file.
+    @property
+    def is_open(self) -> bool:
+        """ Check whether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
         :rtype: bool
         """
         return self._file_is_open
 
-    def _open(self, file: str = None, dask_load: bool = True) -> None:
+    def open(self, file: str = None, dask_load: bool = True) -> None:
         """ Open holography pointing file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -1003,15 +1007,16 @@ class AstrohackLocitFile(dict):
     def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
-    def _is_open(self) -> bool:
-        """ Check wether the object has opened the corresponding hack file.
+    @property
+    def is_open(self) -> bool:
+        """ Check whether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
         :rtype: bool
         """
         return self._file_is_open
 
-    def _open(self, file: str = None, dask_load: bool = True) -> bool:
+    def open(self, file: str = None, dask_load: bool = True) -> bool:
         """ Open antenna location file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -1225,15 +1230,16 @@ class AstrohackPositionFile(dict):
     def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
 
-    def _is_open(self) -> bool:
-        """ Check wether the object has opened the corresponding hack file.
+    @property
+    def is_open(self) -> bool:
+        """ Check whether the object has opened the corresponding hack file.
 
         :return: True if open, else False.
         :rtype: bool
         """
         return self._file_is_open
 
-    def _open(self, file: str = None, dask_load: bool = True) -> bool:
+    def open(self, file: str = None, dask_load: bool = True) -> bool:
         """ Open antenna location file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
