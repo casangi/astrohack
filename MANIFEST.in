@@ -1,1 +1,2 @@
 recursive-include src/astrohack/data *
+recursive-include src/astrohack/config *
