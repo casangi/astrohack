@@ -58,7 +58,7 @@ def open_holog(file: str) -> AstrohackHologFile:
 
     _data_file = AstrohackHologFile(file=file)
 
-    if _data_file._open():
+    if _data_file.open():
         return _data_file
 
     else:
@@ -99,7 +99,7 @@ def open_image(file: str) -> AstrohackImageFile:
 
     _data_file = AstrohackImageFile(file=file)
 
-    if _data_file._open():
+    if _data_file.open():
         return _data_file
 
     else:
@@ -140,7 +140,7 @@ def open_panel(file: str) -> AstrohackPanelFile:
 
     _data_file = AstrohackPanelFile(file=file)
 
-    if _data_file._open():
+    if _data_file.open():
         return _data_file
 
     else:
@@ -181,7 +181,7 @@ def open_locit(file: str) -> AstrohackLocitFile:
 
     _data_file = AstrohackLocitFile(file=file)
 
-    if _data_file._open():
+    if _data_file.open():
         return _data_file
 
     else:
@@ -222,7 +222,7 @@ def open_position(file: str) -> AstrohackPositionFile:
 
     _data_file = AstrohackPositionFile(file=file)
 
-    if _data_file._open():
+    if _data_file.open():
         return _data_file
 
     else:
@@ -260,7 +260,7 @@ def open_pointing(file: str) -> AstrohackPointFile:
 
     _data_file = AstrohackPointFile(file=file)
 
-    if _data_file._open():
+    if _data_file.open():
         return _data_file
 
     else:

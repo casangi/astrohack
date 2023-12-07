@@ -22,4 +22,4 @@ if os.path.exists(os.path.dirname(__file__) + "/config/"):
 # This installs a slick, informational tracebacks
 from rich.traceback import install
 
-#install(show_locals=True)
+install(show_locals=True)
