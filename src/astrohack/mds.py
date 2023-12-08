@@ -1,5 +1,4 @@
 import pathlib
-# import distributed
 import auror.parameter
 import skriba.logger
 
@@ -21,7 +20,6 @@ from astrohack._utils._extract_locit import _plot_source_table, _plot_array_conf
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
 from astrohack._utils._locit import _plot_delays_chunk, _plot_position_corrections
-# from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
@@ -531,27 +529,6 @@ class AstrohackHologFile(dict):
 
         """
         logger = skriba.logger.get_logger(logger_name="astrohack")
-
-        # The following code and commentary may no longer be valid
-        # # This is the default address used by Dask. Note that in the client check below, if the user has multiple
-        # # clients running a new client may still be spawned but only once. If run again in a notebook session the
-        # # local_client check will catch it. It will also be caught if the user spawns their own instance in the
-        # # notebook.
-        # DEFAULT_DASK_ADDRESS = "127.0.0.1:8786"
-        #
-        # if parallel:
-        #     if not distributed.client._get_global_client():
-        #         try:
-        #             distributed.Client(DEFAULT_DASK_ADDRESS, timeout=2)
-        #
-        #         except Exception:
-        #             from astrohack.client import astrohack_local_client
-        #
-        #             logger.info("local client not found, starting ...")
-        #
-        #             log_params = {'log_level': 'DEBUG'}
-        #             client = astrohack_local_client(cores=2, memory_limit='8GB', log_params=log_params)
-        #             logger.info(client.dashboard_link)
 
         param_dict = locals()
         param_dict["map"] = map_id
