@@ -8,7 +8,7 @@ from astrohack._utils._dio import _aips_holog_to_xds
 from astrohack._utils._dio import _check_if_file_will_be_overwritten
 from astrohack._utils._dio import _check_if_file_exists
 from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._panel import _panel_chunk
+from astrohack._utils._panel import _panel_chunk, custom_panel_checker
 from astrohack._utils._tools import get_default_file_name
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
@@ -18,7 +18,8 @@ from typing import Union, List
 
 
 @auror.parameter.validate(
-    logger=skriba.logger.get_logger(logger_name="astrohack")
+    logger=skriba.logger.get_logger(logger_name="astrohack"),
+    custom_checker=custom_panel_checker
 )
 def panel(
         image_name: str,
