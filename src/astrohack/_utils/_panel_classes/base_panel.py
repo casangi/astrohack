@@ -1,11 +1,12 @@
 from scipy import optimize as opt
+import skriba.logger
+
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 
 from astrohack._utils._algorithms import _gauss_elimination_numpy, _least_squares_fit
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_unit
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
 PANEL_MODELS = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
                 "rotated_paraboloid", "full_paraboloid_lst_sq"]
@@ -85,7 +86,7 @@ class BasePanel:
         """
         Does the fitting method associations according to the model chosen by the user
         """
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
         try:
             imodel = PANEL_MODELS.index(self.model)
         except ValueError:
@@ -117,7 +118,7 @@ class BasePanel:
         if warned:
             return
         else:
-            logger = _get_astrohack_logger()
+            logger = skriba.logger.get_logger(logger_name="astrohack")
             logger.warning("Experimental model: "+self.model)
             set_warned(True)
 
@@ -303,7 +304,7 @@ class BasePanel:
         Args:
             verbose: Increase verbosity in the fitting process
         """
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
         devia = np.ndarray([len(self.samples)])
         coords = np.ndarray([2, len(self.samples)])
         for i in range(len(self.samples)):

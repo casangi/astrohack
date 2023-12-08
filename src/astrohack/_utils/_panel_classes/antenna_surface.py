@@ -1,12 +1,12 @@
 import xarray as xr
 from matplotlib import patches
+import skriba.logger
 
 from astrohack._utils._panel_classes.base_panel import PANEL_MODELS, irigid
 from astrohack._utils._panel_classes.ring_panel import RingPanel
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._tools import _add_prefix, _axis_to_fits_header, _resolution_to_fits_header
 from astrohack._utils._plot_commons import _well_positioned_colorbar, _create_figure_and_axes, _close_figure, _get_proper_color_map
 from astrohack._utils._dio import _write_fits
@@ -16,8 +16,8 @@ SUPPORTED_POL_STATES = ['I', 'RR', 'LL', 'XX', 'YY']
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, clip_type='sigma', clip_level=3,  pmodel=None, crop=False,
-                 nan_out_of_bounds=True, panel_margins=None, reread=False):
+    def __init__(self, inputxds, telescope, clip_type='sigma', clip_level=3,  pmodel=PANEL_MODELS[irigid], crop=False,
+                 nan_out_of_bounds=True, panel_margins=0.05, reread=False):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -37,14 +37,8 @@ class AntennaSurface:
         self.telescope = telescope
 
         if not self.reread:
-            if pmodel is None:
-                self.panelmodel = PANEL_MODELS[irigid]
-            else:
-                self.panelmodel = pmodel
-            if panel_margins is None:
-                self.panel_margins = 0.2
-            else:
-                self.panel_margins = panel_margins
+            self.panelmodel = pmodel
+            self.panel_margins = panel_margins
             self.reso = self.telescope.diam / self.npoint
             if crop:
                 self._crop_maps()
@@ -94,7 +88,7 @@ class AntennaSurface:
         try:
             self.resolution = inputxds.attrs['aperture_resolution']
         except KeyError:
-            logger = _get_astrohack_logger()
+            logger = skriba.logger.get_logger(logger_name="astrohack")
             logger.warning("[_read_holog_xds] holog image does not have resolution information")
             logger.warning("[_read_holog_xds] Rerun holog with astrohack v>0.1.5 for aperture resolution information")
             self.resolution = None
@@ -118,9 +112,9 @@ class AntennaSurface:
         try:
             self.resolution = inputxds.attrs['aperture_resolution']
         except KeyError:
-            logger = _get_astrohack_logger()
-            logger.warning("[_read_panel_xds] Input panel file does not have resolution information")
-            logger.warning("[_read_panel_xds] Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+            logger = skriba.logger.get_logger(logger_name="astrohack")
+            logger.warning("Input panel file does not have resolution information")
+            logger.warning("Rerun holog with astrohack v>0.1.5 for aperture resolution information")
             self.resolution = None
 
         if self.solved:
@@ -445,7 +439,7 @@ class AntennaSurface:
         if len(panels) > 0:
             msg = f'Fit failed with the {self.panelmodel} model and a simple mean has been used instead for the ' \
                   f'following panels: ' + str([self.antenna_name, self.ddi])
-            logger = _get_astrohack_logger()
+            logger = skriba.logger.get_logger(logger_name="astrohack")
             logger.warning(msg)
             msg = str(panels)
             logger.warning(msg)
