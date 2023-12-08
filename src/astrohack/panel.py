@@ -27,6 +27,7 @@ def panel(
         clip_level: float = 3.0,
         panel_model: str = "rigid",
         panel_margins: float = 0.05,
+        polarization_state: str = 'I',
         ant: Union[str, List[str]] = "all",
         ddi: Union[int, List[str]] = "all",
         parallel: bool = False,
@@ -46,6 +47,8 @@ def panel(
     :type panel_model: str, optional
     :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.05.
     :type panel_margins: float, optional
+    :param polarization_state: Select the polarization state over which to run panel, only parallel hands or stokes I should be used, default is I.
+    :type polarization_state: str, optional
     :param ant: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0

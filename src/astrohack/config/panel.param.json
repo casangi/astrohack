@@ -13,14 +13,21 @@
             "allowed": ["absolute", "sigma", "relative"]
         },
         "clip_level":{
-            "type":["float"]
+            "type":["float", "int"],
+            "min": 0
         },
         "panel_model":{
             "type":["str"],
-            "allowed": ["rigid", "mean"]
+            "check allowed with": "panel.models"
         },
         "panel_margins":{
-            "type":["float"]
+            "type":["float"],
+            "min": 0,
+            "max": 0.5
+        },
+        "polarization_state":{
+            "type": ["string"],
+            "check allowed with": "panel.pol_states"
         },
         "ant":{
             "type":["list", "str"],
