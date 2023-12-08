@@ -35,7 +35,7 @@ class TestClassAntennaSurface:
     tel = Telescope('vla')
     datashape = (256, 256)
     middlepix = 128
-    tant = AntennaSurface(inputxds, tel)
+    tant = AntennaSurface(inputxds, tel, panel_margins=0.2)
     tolerance = 1e-6
     sigma = 20
     rand = sigma * np.random.randn(*datashape)
