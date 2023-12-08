@@ -1,5 +1,5 @@
 {
-    "select":{
+    "AstrohackImageFile.select":{
         "ant":{
             "nullable": false,
             "required": true,
@@ -17,7 +17,7 @@
             "check allowed with": "split.complex"
         }
     },
-    "export_to_fits":{
+    "AstrohackImageFile.export_to_fits":{
         "destination":{
             "nullable": false,
             "required": true,
@@ -49,7 +49,7 @@
             "type": ["boolean"]
         }
     },
-    "plot_apertures":{
+    "AstrohackImageFile.plot_apertures":{
         "destination":{
             "nullable": false,
             "required": true,
@@ -147,7 +147,7 @@
             "type": ["boolean"]
         }
     },
-    "plot_beams":{
+    "AstrohackImageFile.plot_beams":{
         "destination":{
             "nullable": false,
             "required": true,
@@ -217,7 +217,8 @@
             "type": ["boolean"]
         }
     },
-    "plot_diagnostics":{
+
+    "AstrohackHologFile.plot_diagnostics":{
         "destination":{
             "nullable": false,
             "required": true,
@@ -282,7 +283,7 @@
             "type": ["boolean"]
         }
     },
-    "plot_lm_sky_coverage":{
+    "AstrohackHologFile.plot_lm_sky_coverage":{
         "destination":{
             "nullable": false,
             "required": true,
@@ -366,7 +367,8 @@
             "type": ["boolean"]
         }
     },
-    "get_antenna": {
+
+    "AstrohackPanelFile.get_antenna": {
         "ant":{
             "nullable": false,
             "required": true,
@@ -378,7 +380,7 @@
             "type": ["int"]
         }
     },
-    "export_screws":{
+    "AstrohackPanelFile.export_screws":{
         "destination":{
             "nullable": false,
             "required": true,
@@ -442,7 +444,7 @@
             "max": 1200
         }
     },
-    "plot_antennas":{
+    "AstrohackPanelFile.plot_antennas":{
         "destination":{
             "nullable": false,
             "required": true,
@@ -545,14 +547,15 @@
             "type": ["boolean"]
         }
     },
-    "print_array_configuration":{
+
+    "AstrohackLocitFile.print_array_configuration":{
         "relative":{
             "nullable": false,
             "required": false,
             "type": ["boolean"]
         }
     },
-    "plot_source_positions":{
+    "AstrohackLocitFile.plot_source_positions":{
         "destination":{
             "nullable": false,
             "required": true,
@@ -589,7 +592,7 @@
             "max": 1200
         }
         },
-    "plot_array_configuration":{
+    "AstrohackLocitFile.plot_array_configuration":{
         "destination":{
             "nullable": false,
             "required": true,
@@ -638,7 +641,8 @@
             "max": 1200
         }
     },
-    "export_fit_results":{
+
+    "AstrohackPositionFile.export_fit_results":{
         "destination":{
             "nullable": false,
             "required": true,
@@ -677,7 +681,7 @@
             "check allowed with": "units.time"
         }
     },
-    "plot_sky_coverage":{
+    "AstrohackPositionFile.plot_sky_coverage":{
         "destination":{
             "nullable": false,
             "required": true,
@@ -735,7 +739,7 @@
             "type": ["boolean"]
         }
     },
-    "plot_delays":{
+    "AstrohackPositionFile.plot_delays":{
         "destination":{
             "nullable": false,
             "required": true,
@@ -804,7 +808,7 @@
             "type": ["boolean"]
         }
     },
-    "plot_position_corrections":{
+    "AstrohackPositionFile.plot_position_corrections":{
         "destination":{
             "nullable": false,
             "required": true,
