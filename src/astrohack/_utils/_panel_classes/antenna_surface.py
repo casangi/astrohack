@@ -89,8 +89,8 @@ class AntennaSurface:
             self.resolution = inputxds.attrs['aperture_resolution']
         except KeyError:
             logger = skriba.logger.get_logger(logger_name="astrohack")
-            logger.warning("[_read_holog_xds] holog image does not have resolution information")
-            logger.warning("[_read_holog_xds] Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+            logger.warning("holog image does not have resolution information")
+            logger.warning("Rerun holog with astrohack v>0.1.5 for aperture resolution information")
             self.resolution = None
 
     def _read_panel_xds(self, inputxds):
