@@ -33,6 +33,7 @@ class AntennaSurface:
         """
         self.reread = reread
         self._nullify()
+        self.pol_state = pol_state
         self._read_xds(inputxds)
         self.telescope = telescope
 
@@ -69,6 +70,7 @@ class AntennaSurface:
         self.resolution = None
 
     def _read_holog_xds(self, inputxds):
+        logger = skriba.logger.get_logger(logger_name="astrohack")
         if 'chan' in inputxds.dims:
             if inputxds.dims['chan'] != 1:
                 raise Exception("Only single channel holographies supported")
@@ -76,8 +78,16 @@ class AntennaSurface:
         else:
             self.wavelength = inputxds.attrs['wavelength']
 
-        self.amplitude = inputxds["AMPLITUDE"].values[0, 0, 0, :, :]
-        self.phase = inputxds["CORRECTED_PHASE"].values[0, 0, 0, :, :]
+        pol_axis = inputxds.coords['pol']
+        if self.pol_state in pol_axis:
+            i_pol = np.where(pol_axis == self.pol_state)[0][0]
+        else:
+            msg = f'Polarization state {self.pol_state} is not present in the data (available states: {pol_axis})'
+            logger.error(msg)
+            raise Exception(msg)
+
+        self.amplitude = inputxds["AMPLITUDE"].values[0, 0, i_pol, :, :]
+        self.phase = inputxds["CORRECTED_PHASE"].values[0, 0, i_pol, :, :]
 
         self.npoint = np.sqrt(inputxds.dims['l'] ** 2 + inputxds.dims['m'] ** 2)
         self.amp_unit = 'V'
@@ -88,7 +98,6 @@ class AntennaSurface:
         try:
             self.resolution = inputxds.attrs['aperture_resolution']
         except KeyError:
-            logger = skriba.logger.get_logger(logger_name="astrohack")
             logger.warning("holog image does not have resolution information")
             logger.warning("Rerun holog with astrohack v>0.1.5 for aperture resolution information")
             self.resolution = None
