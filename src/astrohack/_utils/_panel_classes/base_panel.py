@@ -7,7 +7,7 @@ from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 
-panel_models = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
+PANEL_MODELS = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
                 "rotated_paraboloid", "full_paraboloid_lst_sq"]
 imean = 0
 irigid = 1
@@ -87,7 +87,7 @@ class BasePanel:
         """
         logger = _get_astrohack_logger()
         try:
-            imodel = panel_models.index(self.model)
+            imodel = PANEL_MODELS.index(self.model)
         except ValueError:
             logger.error("Unknown panel model: "+self.model)
             raise ValueError('Panel model not in list')
@@ -316,7 +316,7 @@ class BasePanel:
             p0 = [1e2, 1e2, np.mean(devia)]
         else:
             p0 = x0
-        if self.model == panel_models[irotpara]:
+        if self.model == PANEL_MODELS[irotpara]:
             liminf.append(0.0)
             limsup.append(np.pi)
             p0.append(0)

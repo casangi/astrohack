@@ -4,7 +4,8 @@ import skriba.logger
 from astrohack._utils._constants import plot_types
 
 from astrohack._utils._panel_classes.telescope import Telescope
-from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
+from astrohack._utils._panel_classes.antenna_surface import AntennaSurface, SUPPORTED_POL_STATES
+from astrohack._utils._panel_classes.base_panel import PANEL_MODELS
 
 
 def _get_correct_telescope_from_name(xds):
@@ -116,3 +117,13 @@ def _export_screws_chunk(parm_dict):
     surface = AntennaSurface(xds, telescope, reread=True)
     surface.export_screws(export_name + 'txt', unit=parm_dict['unit'])
     surface.plot_screw_adjustments(export_name + 'png', parm_dict)
+
+
+def custom_panel_checker(check_type):
+    if check_type == "panel.models":
+        return PANEL_MODELS
+    elif check_type == "panel.pol_states":
+        return SUPPORTED_POL_STATES
+    else:
+        return "Not found"
+

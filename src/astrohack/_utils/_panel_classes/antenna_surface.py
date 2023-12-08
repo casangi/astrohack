@@ -1,7 +1,7 @@
 import xarray as xr
 from matplotlib import patches
 
-from astrohack._utils._panel_classes.base_panel import panel_models, irigid
+from astrohack._utils._panel_classes.base_panel import PANEL_MODELS, irigid
 from astrohack._utils._panel_classes.ring_panel import RingPanel
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
@@ -12,6 +12,7 @@ from astrohack._utils._plot_commons import _well_positioned_colorbar, _create_fi
 from astrohack._utils._dio import _write_fits
 
 lnbr = "\n"
+SUPPORTED_POL_STATES = ['I', 'RR', 'LL', 'XX', 'YY']
 
 
 class AntennaSurface:
@@ -37,7 +38,7 @@ class AntennaSurface:
 
         if not self.reread:
             if pmodel is None:
-                self.panelmodel = panel_models[irigid]
+                self.panelmodel = PANEL_MODELS[irigid]
             else:
                 self.panelmodel = pmodel
             if panel_margins is None:
