@@ -14,7 +14,7 @@ from numba.typed import Dict
 from scipy import spatial
 
 
-def _extract_pointing(ms_name, pnt_name, parallel=True):
+def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
     """Top level function to extract subset of pointing table data into a dictionary of xarray dataarrays.
 
     Args:
@@ -36,6 +36,14 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
     )
 
     antenna_name = ctb.getcol("NAME")
+    logger.info(antenna_name)
+
+    # Exclude antennas according to user direction
+    if exclude:
+        for antenna in exclude:
+            if antenna in antenna_name:
+                antenna_name.remove(antenna)
+
     antenna_id = np.arange(len(antenna_name))
 
     ctb.close()

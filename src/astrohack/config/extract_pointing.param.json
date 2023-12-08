@@ -7,6 +7,10 @@
             "type":["str"],
             "nullable": true
         },
+        "exclude":{
+            "type":["list"],
+            "nullable": true
+        },
         "parallel":{
             "type":["boolean"]
         },

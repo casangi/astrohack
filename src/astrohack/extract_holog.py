@@ -1,25 +1,20 @@
-import os
-import json
 import copy
-import shutil
 import inspect
+import json
+import math
+import multiprocessing
+import os
 import pathlib
 import pickle
-import sklearn
-import math
-import psutil
-import multiprocessing
-
-import dask
-import astrohack
-
-import numpy as np
-
-from rich.console import Console
-from rich.table import Table
-
+import shutil
 from typing import Union, List, NewType, Dict, Any, Tuple
 
+import astrohack
+import auror.parameter
+import dask
+import numpy as np
+import psutil
+import skriba.logger
 from astrohack._utils._constants import pol_str
 from astrohack._utils._conversion import _convert_ant_name_to_id
 from astrohack._utils._dio import _check_if_file_exists
@@ -27,20 +22,19 @@ from astrohack._utils._dio import _check_if_file_will_be_overwritten
 from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _write_meta_data
+from astrohack._utils._dio import _read_meta_data
 from astrohack._utils._extract_holog import _create_holog_meta_data
 from astrohack._utils._extract_holog import _create_holog_obs_dict
 from astrohack._utils._extract_holog import _extract_holog_chunk
 from astrohack._utils._tools import NumpyEncoder
 from astrohack._utils._tools import get_default_file_name
+from astrohack.extract_pointing import extract_pointing
 from astrohack.mds import AstrohackHologFile
 from astrohack.mds import AstrohackPointFile
 from astropy.time import Time
 from casacore import tables as ctables
-
-import auror.parameter
-import skriba.logger
-
-from astrohack.extract_pointing import extract_pointing
+from rich.console import Console
+from rich.table import Table
 
 CURRENT_FUNCTION = 0
 
@@ -432,8 +426,22 @@ def extract_holog(
         ack=False,
     )
 
+    excluded_ant = _read_meta_data(extract_holog_params["point_name"] + "/.point_input")["exclude"]
+    excluded_index = []
+
     ant_names = np.array(ctb.getcol("NAME"))
     ant_id = np.arange(len(ant_names))
+    for ant in excluded_ant:
+        excluded_index.append(ant_names.index(ant))
+        ant_names.remove(ant)
+        ant_id.drop(ant_names.index(ant))
+
+    logger.info("ant-names")
+    logger.info(ant_names)
+
+    logger.info("ant-id")
+    logger.info(ant_id)
+
     ant_pos = ctb.getcol("POSITION")
 
     ctb.close()
@@ -448,9 +456,19 @@ def extract_holog(
 
     ant1 = np.unique(ctb.getcol("ANTENNA1"))
     ant2 = np.unique(ctb.getcol("ANTENNA2"))
+    logger.info("ant-1")
+    logger.info(ant1)
+
+    logger.info("ant-2")
+    logger.info(ant2)
+
     ant_id_main = np.unique(np.append(ant1, ant2))
+    logger.info("ant-id-main")
+    logger.info(ant_id_main)
 
     ant_names_main = ant_names[ant_id_main]
+    logger.info("ant-names-main")
+    logger.info(ant_names_main)
     ctb.close()
 
     # Create holog_obs_dict or modify user supplied holog_obs_dict.

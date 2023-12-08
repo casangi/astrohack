@@ -11,6 +11,8 @@ from astrohack.mds import AstrohackPointFile
 import skriba.logger
 import auror.parameter
 
+from typing import List
+
 # Added for clarity when inspecting stacktrace.
 CURRENT_FUNCTION = 0
 
@@ -21,6 +23,7 @@ CURRENT_FUNCTION = 0
 def extract_pointing(
         ms_name: str,
         point_name: str = None,
+        exclude: List[str] = None,
         parallel: bool = False,
         overwrite: bool = False,
 ) -> AstrohackPointFile:
@@ -31,6 +34,9 @@ def extract_pointing(
 
     :param point_name: Name of *<point_name>.point.zarr* file to create. Defaults to measurement set name with *point.zarr* extension.
     :type point_name: str, optional
+
+    :param exclude: Name of antenna to exclude from extraction.
+    :type exclude: list, optional
 
     :param parallel: Boolean for whether to process in parallel. Defaults to False
     :type parallel: bool, optional
@@ -58,6 +64,9 @@ def extract_pointing(
 
     Point object allows the user to access point data via dictionary keys with values `ant`. The point object also provides a `summary()` helper function to list available keys for each file. 
 
+    Args:
+        exclude ():
+
     """
     # Doing this here allows it to get captured by locals()
     if point_name is None:
@@ -72,13 +81,14 @@ def extract_pointing(
     function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     input_params = extract_pointing_params.copy()
+
     pnt_dict = _extract_pointing(
         ms_name=extract_pointing_params['ms_name'],
         pnt_name=extract_pointing_params['point_name'],
+        exclude=extract_pointing_params['exclude'],
         parallel=extract_pointing_params['parallel']
     )
 
-    # Calling this directly since it is so simple it doesn't need a "_create_{}" function.
     _write_meta_data(
         file_name="{name}/{ext}".format(name=extract_pointing_params['point_name'], ext=".point_input"),
         input_dict=input_params
