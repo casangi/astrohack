@@ -436,6 +436,9 @@ class AstrohackHologFile(dict):
         _print_data_contents(self, ["DDI", "Map", "Antenna"])
         _print_method_list([self.summary, self.select, self.plot_diagnostics, self.plot_lm_sky_coverage])
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack")
+    )
     def select(
             self,
             ddi: int,
@@ -861,6 +864,9 @@ class AstrohackPanelFile(dict):
         _create_destination_folder(param_dict['destination'])
         _dask_general_compute(self, _plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack")
+    )
     def export_to_fits(
             self,
             destination: str,
