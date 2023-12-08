@@ -17,7 +17,7 @@ SUPPORTED_POL_STATES = ['I', 'RR', 'LL', 'XX', 'YY']
 
 class AntennaSurface:
     def __init__(self, inputxds, telescope, clip_type='sigma', clip_level=3,  pmodel=PANEL_MODELS[irigid], crop=False,
-                 nan_out_of_bounds=True, panel_margins=0.05, reread=False):
+                 nan_out_of_bounds=True, panel_margins=0.05, reread=False, pol_state='I'):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:

@@ -32,18 +32,16 @@ def _panel_chunk(panel_chunk_params):
         telescope = Telescope(inputxds.attrs['telescope_name'])
         antenna = inputxds.attrs['ant_name']
         ddi = 0
-
     else:
         ddi = panel_chunk_params['this_ddi']
         antenna = panel_chunk_params['this_ant']
         inputxds = panel_chunk_params['xds_data']
-
         logger.info(f'processing {antenna} {ddi}')
         inputxds.attrs['AIPS'] = False
-
         telescope = _get_correct_telescope_from_name(inputxds)
 
     surface = AntennaSurface(inputxds, telescope, clip_type=panel_chunk_params['clip_type'],
+                             pol_state=panel_chunk_params['polarization_state'],
                              clip_level=panel_chunk_params['clip_level'], pmodel=panel_chunk_params['panel_model'],
                              panel_margins=panel_chunk_params['panel_margins'])
 
