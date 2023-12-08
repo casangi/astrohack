@@ -2,10 +2,8 @@ import os
 import json
 import copy
 import shutil
-import inspect
 import pathlib
 import pickle
-import sklearn
 import math
 import psutil
 import multiprocessing
@@ -41,8 +39,6 @@ import auror.parameter
 import skriba.logger
 
 from astrohack.extract_pointing import extract_pointing
-
-CURRENT_FUNCTION = 0
 
 JSON = NewType("JSON", Dict[str, Any])
 KWARGS = NewType("KWARGS", Union[Dict[str, str], Dict[str, int]])
@@ -395,12 +391,9 @@ def extract_holog(
 
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
-
     input_pars = extract_holog_params.copy()
 
     _check_if_file_exists(extract_holog_params['ms_name'])
-
     _check_if_file_will_be_overwritten(extract_holog_params['holog_name'], extract_holog_params['overwrite'])
 
     try:
@@ -793,8 +786,6 @@ def generate_holog_obs_dict(
     extract_holog_params = locals()
 
     logger = skriba.logger.get_logger(logger_name="astrohack")
-
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     _check_if_file_exists(ms_name)
     _check_if_file_exists(point_name)

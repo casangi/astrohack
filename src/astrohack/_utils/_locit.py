@@ -40,7 +40,7 @@ def _locit_separated_chunk(locit_parms):
 
     fit, variance = _fit_data(coordinates, delays, locit_parms)
     model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_rate'])
+                                              locit_parms['fit_delay_rate'])
     _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq, elevation_limit)
     return
 
@@ -81,7 +81,7 @@ def _locit_combined_chunk(locit_parms):
 
     fit, variance = _fit_data(coordinates, delays, locit_parms)
     model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_rate'])
+                                              locit_parms['fit_delay_rate'])
     _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq_list,
                        elevation_limit)
     return
@@ -120,7 +120,7 @@ def _locit_difference_chunk(locit_parms):
         return
     fit, variance = _fit_data(coordinates, delays, locit_parms)
     model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_rate'])
+                                              locit_parms['fit_delay_rate'])
     _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
                        elevation_limit)
     return
@@ -303,7 +303,7 @@ def _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, mod
     The xds on zarr format on disk
     """
     fit_kterm = locit_parms['fit_kterm']
-    fit_rate = locit_parms['fit_rate']
+    fit_rate = locit_parms['fit_delay_rate']
     antenna = locit_parms['ant_info'][locit_parms['this_ant']]
     error = np.sqrt(variance)
 
@@ -362,7 +362,7 @@ def _fit_data(coordinates, delays, locit_parms):
     """
     logger = skriba.logger.get_logger(logger_name="astrohack")
     fit_kterm = locit_parms['fit_kterm']
-    fit_rate = locit_parms['fit_rate']
+    fit_rate = locit_parms['fit_delay_rate']
 
     linalg = locit_parms['fit_engine'] == 'linear algebra'
     if linalg:
@@ -710,7 +710,7 @@ def _export_fit_results(data_dict, parm_dict):
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
         specifier = 'separated_ddis'
     kterm_present = data_dict._meta_data["fit_kterm"]
-    rate_present = data_dict._meta_data["fit_rate"]
+    rate_present = data_dict._meta_data['fit_delay_rate']
     if kterm_present:
         field_names.extend([f'K offset [{pos_unit}]'])
     if rate_present:
@@ -726,7 +726,7 @@ def _export_fit_results(data_dict, parm_dict):
     table.field_names = field_names
     table.align = 'c'
     full_antenna_list = _open_telescope(data_dict._meta_data['telescope_name']).ant_list
-    selected_antenna_list = _param_to_list('export_fit_results', parm_dict['ant'], data_dict, 'ant')
+    selected_antenna_list = _param_to_list(parm_dict['ant'], data_dict, 'ant')
 
     for ant_name in full_antenna_list:
         ant_key = _add_prefix(ant_name, 'ant')
@@ -741,7 +741,7 @@ def _export_fit_results(data_dict, parm_dict):
                     table.add_row(_export_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
                                               rate_present))
                 else:
-                    ddi_list = _param_to_list('export_fit_results', parm_dict['ddi'], data_dict[ant_key], 'ddi')
+                    ddi_list = _param_to_list(parm_dict['ddi'], data_dict[ant_key], 'ddi')
                     for ddi_key in ddi_list:
                         row = [ant_name, ddi_key.split('_')[1]]
                         table.add_row(_export_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pos_fact, slo_fact,
@@ -968,7 +968,7 @@ def _plot_position_corrections(parm_dict, data_dict):
     ref_ant = data_dict._meta_data['reference_antenna']
     combined = parm_dict['combined']
 
-    ant_list = _param_to_list('plot_position_corractions', parm_dict['ant'], data_dict, 'ant')
+    ant_list = _param_to_list(parm_dict['ant'], data_dict, 'ant')
     if combined:
         filename = f'{destination}/position_corrections_combined_{data_dict._meta_data["combine_ddis"]}.png'
         attribute_list = []

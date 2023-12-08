@@ -6,8 +6,6 @@ from astrohack._utils._constants import plot_types
 from astrohack._utils._panel_classes.telescope import Telescope
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 
-# global constants
-
 
 def _get_correct_telescope_from_name(xds):
     if xds.attrs['telescope_name'] == "ALMA":
@@ -39,7 +37,7 @@ def _panel_chunk(panel_chunk_params):
         antenna = panel_chunk_params['this_ant']
         inputxds = panel_chunk_params['xds_data']
 
-        logger.info(f'[panel]: processing {antenna} {ddi}')
+        logger.info(f'processing {antenna} {ddi}')
         inputxds.attrs['AIPS'] = False
 
         telescope = _get_correct_telescope_from_name(inputxds)
@@ -95,7 +93,7 @@ def _export_to_fits_panel_chunk(parm_dict):
     antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
-    logger.info(f'[export_to_fits]: Exporting panel contents of {antenna} {ddi} to FITS files in {destination}')
+    logger.info(f'Exporting panel contents of {antenna} {ddi} to FITS files in {destination}')
     xds = parm_dict['xds_data']
     telescope = Telescope(xds.attrs['telescope_name'])
     surface = AntennaSurface(xds, telescope, reread=True)

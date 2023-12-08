@@ -11,8 +11,6 @@ from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_
 from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
-CURRENT_FUNCTION = 0
-
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
@@ -73,8 +71,6 @@ def combine(
     combine_params = locals()
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
-
     input_params = combine_params.copy()
 
     _check_if_file_exists(combine_params['image_name'])
@@ -86,7 +82,7 @@ def combine(
     combine_params['image_mds'] = image_mds
     image_attr = image_mds._meta_data
 
-    if _dask_general_compute(function_name, image_mds, _combine_chunk, combine_params, ['ant'], parallel=parallel):
+    if _dask_general_compute(image_mds, _combine_chunk, combine_params, ['ant'], parallel=parallel):
         logger.info("Finished processing")
 
         output_attr_file = "{name}/{ext}".format(name=combine_params['combine_name'], ext=".image_attr")
