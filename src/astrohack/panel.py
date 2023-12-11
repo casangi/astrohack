@@ -146,9 +146,6 @@ def panel(
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
     input_params = panel_params.copy()
-    # Doubled this entry for compatibility with the factorized antenna ddi loop
-    panel_params['filename'] = panel_params['image_name']
-
     _check_if_file_exists(panel_params['image_name'])
 
     image_mds = AstrohackImageFile(panel_params['image_name'])

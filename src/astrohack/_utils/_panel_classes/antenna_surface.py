@@ -70,7 +70,6 @@ class AntennaSurface:
         self.resolution = None
 
     def _read_holog_xds(self, inputxds):
-        logger = skriba.logger.get_logger(logger_name="astrohack")
         if 'chan' in inputxds.dims:
             if inputxds.dims['chan'] != 1:
                 raise Exception("Only single channel holographies supported")
@@ -78,16 +77,14 @@ class AntennaSurface:
         else:
             self.wavelength = inputxds.attrs['wavelength']
 
-        pol_axis = inputxds.coords['pol']
-        if self.pol_state in pol_axis:
-            i_pol = np.where(pol_axis == self.pol_state)[0][0]
-        else:
+        if self.pol_state not in inputxds.coords['pol']:
+            logger = skriba.logger.get_logger(logger_name="astrohack")
             msg = f'Polarization state {self.pol_state} is not present in the data (available states: {pol_axis})'
             logger.error(msg)
             raise Exception(msg)
 
-        self.amplitude = inputxds["AMPLITUDE"].values[0, 0, i_pol, :, :]
-        self.phase = inputxds["CORRECTED_PHASE"].values[0, 0, i_pol, :, :]
+        self.amplitude = inputxds["AMPLITUDE"].sel(pol=self.pol_state).isel(time=0, chan=0).values
+        self.phase = inputxds["CORRECTED_PHASE"].sel(pol=self.pol_state).isel(time=0, chan=0).values
 
         self.npoint = np.sqrt(inputxds.dims['l'] ** 2 + inputxds.dims['m'] ** 2)
         self.amp_unit = 'V'
@@ -98,6 +95,7 @@ class AntennaSurface:
         try:
             self.resolution = inputxds.attrs['aperture_resolution']
         except KeyError:
+            logger = skriba.logger.get_logger(logger_name="astrohack")
             logger.warning("holog image does not have resolution information")
             logger.warning("Rerun holog with astrohack v>0.1.5 for aperture resolution information")
             self.resolution = None
@@ -444,6 +442,7 @@ class AntennaSurface:
         for panel in self.panels:
             if not panel.solve():
                 panels.append(panel.label)
+
         self.fitted = True
         if len(panels) > 0:
             msg = f'Fit failed with the {self.panelmodel} model and a simple mean has been used instead for the ' \
