@@ -378,7 +378,7 @@ def _create_holog_file(
             )
 
         else:
-            logger.warning("[FLAGGED DATA] mapping antenna index {index}".format(index=ant_names[map_ant_index]))
+            logger.warning("Mapping antenna index {index}".format(index=ant_names[map_ant_index]))
 
 
 def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average_nearest, ant_names, ant_pos,

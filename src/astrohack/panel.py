@@ -8,7 +8,7 @@ from astrohack._utils._dio import _aips_holog_to_xds
 from astrohack._utils._dio import _check_if_file_will_be_overwritten
 from astrohack._utils._dio import _check_if_file_exists
 from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._panel import _panel_chunk
+from astrohack._utils._panel import _panel_chunk, custom_panel_checker
 from astrohack._utils._tools import get_default_file_name
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 
@@ -18,7 +18,8 @@ from typing import Union, List
 
 
 @auror.parameter.validate(
-    logger=skriba.logger.get_logger(logger_name="astrohack")
+    logger=skriba.logger.get_logger(logger_name="astrohack"),
+    custom_checker=custom_panel_checker
 )
 def panel(
         image_name: str,
@@ -27,6 +28,7 @@ def panel(
         clip_level: float = 3.0,
         panel_model: str = "rigid",
         panel_margins: float = 0.05,
+        polarization_state: str = 'I',
         ant: Union[str, List[str]] = "all",
         ddi: Union[int, List[str]] = "all",
         parallel: bool = False,
@@ -46,6 +48,8 @@ def panel(
     :type panel_model: str, optional
     :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.05.
     :type panel_margins: float, optional
+    :param polarization_state: Select the polarization state over which to run panel, only parallel hands or stokes I should be used, default is I.
+    :type polarization_state: str, optional
     :param ant: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant: list or str, optional
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
