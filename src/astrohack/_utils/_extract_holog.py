@@ -114,8 +114,7 @@ def _extract_holog_chunk(extract_holog_params):
     # over_flow_protector_constant = float("%.5g" % time_vis[0])  # For example 5076846059.4 -> 5076800000.0
     # time_vis = time_vis - over_flow_protector_constant
     # from astrohack._utils._algorithms import _average_repeated_pointings
-    # time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,
-    # pnt_map_dict,ant_names)
+    # time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict,ant_names)
     # time_vis = time_vis + over_flow_protector_constant
 
     _create_holog_file(
@@ -381,8 +380,15 @@ def _create_holog_file(
             logger.warning("Mapping antenna index {index}".format(index=ant_names[map_ant_index]))
 
 
-def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average_nearest, ant_names, ant_pos,
-                           ant_names_main, write_distance_matrix=False):
+def _create_holog_obs_dict(
+        pnt_dict,
+        baseline_average_distance,
+        baseline_average_nearest,
+        ant_names,
+        ant_pos,
+        ant_names_main,
+        write_distance_matrix=False
+):
     '''
     Generate holog_obs_dict.
     '''
@@ -396,8 +402,8 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
     map_id = 0
     ant_names_set = set()
 
-    # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antennas are added because
-    # we first need to populate all mapping antennas.
+    # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antenas are added
+    # because we first need to populate all mapping antennas.
     for ant_name, ant_ds in pnt_dict.items():
         if 'ant' in ant_name:
             ant_name = ant_name.replace('ant_', '')
@@ -407,7 +413,6 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
                     if ddi not in holog_obs_dict:
                         holog_obs_dict[ddi] = {}
                     for ant_map_id, scan_list in map_dict.items():
-                        logger.debug('ant name ' + ant_name + ' scan list' + str(scan_list))
                         if scan_list:
                             map_key = _check_if_array_in_dict(mapping_scans_dict, scan_list)
                             if not map_key:
@@ -435,6 +440,7 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
     for ddi, ddi_dict in holog_obs_dict.items():
         for map_id, map_dict in ddi_dict.items():
             map_ant_set = set(map_dict['ant'].keys())
+
             # Need a copy because of del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] below.
             map_ant_keys = list(map_dict['ant'].keys())
 
@@ -561,7 +567,8 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         logger.warning('Cell size not consistent: ' + str(cell_sizes))
         logger.warning('Calculating suggested cell size ...')
 
-        meta_data["cell_size"] = astrohack._utils._algorithms._calculate_suggested_grid_paramater(parameter=
+        meta_data["cell_size"] = \
+            astrohack._utils._algorithms._calculate_suggested_grid_paramater(parameter=
                                                                                                   np.array(cell_sizes))
 
         logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))

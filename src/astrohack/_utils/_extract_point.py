@@ -14,7 +14,7 @@ from numba.typed import Dict
 from scipy import spatial
 
 
-def _extract_pointing(ms_name, pnt_name, parallel=True):
+def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
     """Top level function to extract subset of pointing table data into a dictionary of xarray dataarrays.
 
     Args:
@@ -36,6 +36,16 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
     )
 
     antenna_name = ctb.getcol("NAME")
+
+    # Exclude antennas according to user direction
+    if exclude:
+        if not isinstance(exclude, list):
+            exclude = list(exclude)
+
+        for antenna in exclude:
+            if antenna in antenna_name:
+                antenna_name.remove(antenna)
+
     antenna_id = np.arange(len(antenna_name))
 
     ctb.close()
@@ -61,7 +71,7 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
         lockoptions={"option": "usernoread"},
         ack=False,
     )
-    # scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE subtable.
+    # scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE sub-table.
     obs_modes = ctb.getcol("OBS_MODE")
     ctb.close()
     scan_intent = "MAP_ANTENNA_SURFACE"
@@ -108,7 +118,7 @@ def _extract_pointing(ms_name, pnt_name, parallel=True):
 
             _make_ant_pnt_chunk(ms_name, pnt_params)
 
-    return _load_point_file(pnt_name)
+    return _load_point_file(pnt_name, diagnostic=True)
 
 
 def _make_ant_pnt_chunk(ms_name, pnt_params):
@@ -128,13 +138,13 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
     scan_time_dict = pnt_params['scan_time_dict']
 
     table_obj = ctables.table(
-        os.path.join(ms_name, "POINTING"), 
-        readonly=True, 
+        os.path.join(ms_name, "POINTING"),
+        readonly=True,
         lockoptions={
             'option': 'usernoread'
         }, ack=False
     )
-    
+
     tb = ctables.taql(
         "select DIRECTION, TIME, TARGET, ENCODER, ANTENNA_ID, POINTING_OFFSET from $table_obj WHERE ANTENNA_ID == %s"
         % (ant_id)

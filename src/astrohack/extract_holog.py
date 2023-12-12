@@ -1,23 +1,22 @@
-import os
-import json
 import copy
-import shutil
+import json
+import os
 import pathlib
 import pickle
-import math
-import psutil
-import multiprocessing
+import shutil
+from typing import Union, List, NewType, Dict, Any, Tuple
 
+import auror.parameter
 import dask
-import astrohack
-
 import numpy as np
-
+import psutil
+import skriba.logger
+from astropy.time import Time
+from casacore import tables as ctables
 from rich.console import Console
 from rich.table import Table
 
-from typing import Union, List, NewType, Dict, Any, Tuple
-
+import astrohack
 from astrohack._utils._constants import pol_str
 from astrohack._utils._conversion import _convert_ant_name_to_id
 from astrohack._utils._dio import _check_if_file_exists
@@ -32,13 +31,6 @@ from astrohack._utils._tools import NumpyEncoder
 from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackHologFile
 from astrohack.mds import AstrohackPointFile
-from astropy.time import Time
-from casacore import tables as ctables
-
-import auror.parameter
-import skriba.logger
-
-from astrohack.extract_pointing import extract_pointing
 
 JSON = NewType("JSON", Dict[str, Any])
 KWARGS = NewType("KWARGS", Union[Dict[str, str], Dict[str, int]])

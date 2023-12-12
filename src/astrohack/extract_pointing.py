@@ -1,14 +1,13 @@
+import auror.parameter
+import skriba.logger
+
+from astrohack._utils._dio import _load_point_file, _check_if_file_will_be_overwritten, _check_if_file_exists
+from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._extract_point import _extract_pointing
-
-from astrohack._utils._dio import _load_point_file
-from astrohack._utils._dio import _write_meta_data, _check_if_file_exists, _check_if_file_will_be_overwritten
 from astrohack._utils._tools import get_default_file_name
-
 from astrohack.mds import AstrohackPointFile
 
-import skriba.logger
-import auror.parameter
-
+from typing import List, Union
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
@@ -16,6 +15,7 @@ import auror.parameter
 def extract_pointing(
         ms_name: str,
         point_name: str = None,
+        exclude: Union[str, List[str]] = None,
         parallel: bool = False,
         overwrite: bool = False,
 ) -> AstrohackPointFile:
@@ -26,6 +26,9 @@ def extract_pointing(
 
     :param point_name: Name of *<point_name>.point.zarr* file to create. Defaults to measurement set name with *point.zarr* extension.
     :type point_name: str, optional
+
+    :param exclude: Name of antenna to exclude from extraction.
+    :type exclude: list, optional
 
     :param parallel: Boolean for whether to process in parallel. Defaults to False
     :type parallel: bool, optional
@@ -54,6 +57,7 @@ def extract_pointing(
     Point object allows the user to access point data via dictionary keys with values `ant`. The point object also
     provides a `summary()` helper function to list available keys for each file.
 
+
     """
     # Doing this here allows it to get captured by locals()
     if point_name is None:
@@ -67,10 +71,12 @@ def extract_pointing(
     input_params = extract_pointing_params.copy()
     _check_if_file_exists(extract_pointing_params['ms_name'])
     _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
-    
+
+
     pnt_dict = _extract_pointing(
         ms_name=extract_pointing_params['ms_name'],
         pnt_name=extract_pointing_params['point_name'],
+        exclude=extract_pointing_params['exclude'],
         parallel=extract_pointing_params['parallel']
     )
 
