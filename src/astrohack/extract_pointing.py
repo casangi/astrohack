@@ -57,6 +57,7 @@ def extract_pointing(
     Point object allows the user to access point data via dictionary keys with values `ant`. The point object also
     provides a `summary()` helper function to list available keys for each file.
 
+
     """
     # Doing this here allows it to get captured by locals()
     if point_name is None:

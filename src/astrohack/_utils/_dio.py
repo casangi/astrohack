@@ -210,6 +210,7 @@ def _load_position_file(file=None, position_dict=None, dask_load=True, combine=F
     except Exception as e:
         logger.error(str(e))
         raise
+
     return ant_data_dict
 
 
@@ -553,7 +554,7 @@ def _open_no_dask_zarr(zarr_name, slice_dict={}):
     return xds
 
 
-def _load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None):
+def _load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None, diagnostic=False):
     """Load pointing dictionary from disk.
 
     Args:
@@ -575,7 +576,32 @@ def _load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None):
                 else:
                     pnt_dict[ant] = _open_no_dask_zarr(os.path.join(file, ant))
 
+    if diagnostic:
+        _check_time_axis_consistency(pnt_dict)
+
     return pnt_dict
+
+
+def _check_time_axis_consistency(pnt_dict):
+    logger = skriba.logger.get_logger(logger_name="astrohack")
+    variable_length = {}
+
+    for ant in pnt_dict.keys():
+        if ant != "point_meta_ds":
+            variable_length[ant] = pnt_dict[ant].POINTING_OFFSET.values.shape[0]
+
+    # Calculate a fractional error
+    std = np.std(list(variable_length.values()))
+    mean = np.mean(list(variable_length.values()))
+    fractional_error = std / mean
+
+    if fractional_error >= 0.01:
+        logger.warning(
+            "There is an inconsistency in data length along the time axis in one or more of the antennas "
+            "POINTING_OFFSET; for more info run the logger in debug mode.")
+
+        logger.debug("Pointing offset time axis length per antenna")
+        logger.debug(variable_length)
 
 
 def _get_attrs(zarr_obj):

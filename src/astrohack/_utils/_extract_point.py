@@ -36,7 +36,6 @@ def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
     )
 
     antenna_name = ctb.getcol("NAME")
-    logger.info(antenna_name)
 
     # Exclude antennas according to user direction
     if exclude:
@@ -69,7 +68,7 @@ def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
         lockoptions={"option": "usernoread"},
         ack=False,
     )
-    # scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE subtable.
+    # scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE sub-table.
     obs_modes = ctb.getcol("OBS_MODE")
     ctb.close()
     scan_intent = "MAP_ANTENNA_SURFACE"
@@ -116,7 +115,7 @@ def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
 
             _make_ant_pnt_chunk(ms_name, pnt_params)
 
-    return _load_point_file(pnt_name)
+    return _load_point_file(pnt_name, diagnostic=True)
 
 
 def _make_ant_pnt_chunk(ms_name, pnt_params):
