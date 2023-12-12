@@ -597,7 +597,7 @@ def _check_time_axis_consistency(pnt_dict):
 
     if fractional_error >= 0.01:
         logger.warning(
-            "There is an inconsistency in data length along the time axis in one or more of the antennas "
+            "There is an inconsistency in the data length along the time axis in one or more of the antennas "
             "POINTING_OFFSET; for more info run the logger in debug mode.")
 
         logger.debug("Pointing offset time axis length per antenna")

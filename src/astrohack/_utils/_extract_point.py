@@ -39,6 +39,9 @@ def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
 
     # Exclude antennas according to user direction
     if exclude:
+        if not isinstance(exclude, list):
+            exclude = list(exclude)
+
         for antenna in exclude:
             if antenna in antenna_name:
                 antenna_name.remove(antenna)
@@ -135,13 +138,13 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
     scan_time_dict = pnt_params['scan_time_dict']
 
     table_obj = ctables.table(
-        os.path.join(ms_name, "POINTING"), 
-        readonly=True, 
+        os.path.join(ms_name, "POINTING"),
+        readonly=True,
         lockoptions={
             'option': 'usernoread'
         }, ack=False
     )
-    
+
     tb = ctables.taql(
         "select DIRECTION, TIME, TARGET, ENCODER, ANTENNA_ID, POINTING_OFFSET from $table_obj WHERE ANTENNA_ID == %s"
         % (ant_id)

@@ -7,7 +7,7 @@ from astrohack._utils._extract_point import _extract_pointing
 from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackPointFile
 
-from typing import List
+from typing import List, Union
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
@@ -15,7 +15,7 @@ from typing import List
 def extract_pointing(
         ms_name: str,
         point_name: str = None,
-        exclude: List[str] = None,
+        exclude: Union[str, List[str]] = None,
         parallel: bool = False,
         overwrite: bool = False,
 ) -> AstrohackPointFile:
