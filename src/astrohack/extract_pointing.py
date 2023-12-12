@@ -1,21 +1,13 @@
-import inspect
+import auror.parameter
+import skriba.logger
 
-from astrohack._utils._extract_point import _extract_pointing
-
-from astrohack._utils._dio import _load_point_file
+from astrohack._utils._dio import _load_point_file, _check_if_file_will_be_overwritten, _check_if_file_exists
 from astrohack._utils._dio import _write_meta_data
+from astrohack._utils._extract_point import _extract_pointing
 from astrohack._utils._tools import get_default_file_name
-
 from astrohack.mds import AstrohackPointFile
 
-import skriba.logger
-import auror.parameter
-
 from typing import List
-
-# Added for clarity when inspecting stacktrace.
-CURRENT_FUNCTION = 0
-
 
 @auror.parameter.validate(
     logger=skriba.logger.get_logger(logger_name="astrohack")
@@ -62,7 +54,8 @@ def extract_pointing(
 
     **AstrohackPointFile**
 
-    Point object allows the user to access point data via dictionary keys with values `ant`. The point object also provides a `summary()` helper function to list available keys for each file. 
+    Point object allows the user to access point data via dictionary keys with values `ant`. The point object also
+    provides a `summary()` helper function to list available keys for each file.
 
     Args:
         exclude ():
@@ -77,10 +70,10 @@ def extract_pointing(
 
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    # Pull latest function from the stack, this is dynamic and preferred to hard coding.
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
-
     input_params = extract_pointing_params.copy()
+    _check_if_file_exists(extract_pointing_params['ms_name'])
+    _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
+
 
     pnt_dict = _extract_pointing(
         ms_name=extract_pointing_params['ms_name'],
@@ -89,12 +82,13 @@ def extract_pointing(
         parallel=extract_pointing_params['parallel']
     )
 
+    # Calling this directly since it is so simple it doesn't need a "_create_{}" function.
     _write_meta_data(
         file_name="{name}/{ext}".format(name=extract_pointing_params['point_name'], ext=".point_input"),
         input_dict=input_params
     )
 
-    logger.info(f"[{function_name}]: Finished processing")
+    logger.info(f"Finished processing")
     point_dict = _load_point_file(file=extract_pointing_params["point_name"], dask_load=True)
 
     pointing_mds = AstrohackPointFile(extract_pointing_params['point_name'])

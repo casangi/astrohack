@@ -16,10 +16,12 @@ notebooks = ['tutorial_vla.ipynb',
              'visualization_tutorial.ipynb',
              'locit_tutorial.ipynb']
 
+
 def print_section_header(header):
     print('\n'+80*'*')
     print(header)
     print()
+
 
 def bump_version(bump):
     with open(toml_file_name, 'r') as project_file:
@@ -29,23 +31,25 @@ def bump_version(bump):
     revision, major, minor = current_version.split('.')
 
     if bump == 'revision':
-        new_version = f'{int(revision)+1}.0.0'
+        bumped_version = f'{int(revision)+1}.0.0'
     elif bump == 'major':
-        new_version = f'{revision}.{int(major)+1}.0'
+        bumped_version = f'{revision}.{int(major)+1}.0'
     elif bump == 'minor':
-        new_version = f'{revision}.{major}.{int(minor)+1}'
+        bumped_version = f'{revision}.{major}.{int(minor)+1}'
     else:
         raise Exception(f'Do not know what to do with a {bump} bump')
 
-    project_toml['project']['version'] = new_version
-    print(f"Bumping version to {new_version}")
+    project_toml['project']['version'] = bumped_version
+    print(f"Bumping version to {bumped_version}")
     with open(toml_file_name, 'w') as project_file:
         toml.dump(project_toml, project_file)
-    return new_version
+    return bumped_version
+
 
 def pip_reinstall():
     print_section_header('Running pip install...')
     os.system('pip install -e . 1>>/dev/null')
+
 
 def run_notebooks():
     print_section_header('Running notebooks...')
@@ -58,16 +62,18 @@ def run_notebooks():
     os.system("bash < cleanup-notebooks.sh")
     os.chdir('../')
 
-def run_git(new_version, push):
+
+def run_git(bumped_version, push):
     print_section_header('Running git...')
     os.system('git add '+toml_file_name)
     for notebook in notebooks:
         os.system('git add ./docs/'+notebook)
-    os.system(f'git commit -m "Bumped version to v{new_version}"')
-    os.system(f'git tag -a v{new_version} -m "v{new_version}"')
+    os.system(f'git commit -m "Bumped version to v{bumped_version}"')
+    os.system(f'git tag -a v{bumped_version} -m "v{bumped_version}"')
     if push:
         print('Pushing...')
         os.system('git push')
+        os.system(f'git push v{bumped_version}')
     else:
         print('Push skipped')
 

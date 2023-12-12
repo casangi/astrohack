@@ -34,20 +34,15 @@ from astrohack._utils._conversion import _convert_unit
 
 import skriba.logger
 
-CURRENT_FUNCTION=0
-
 
 def _holog_chunk(holog_chunk_params):
-    """ Process chunk holography data along the antenna axis. Works with holography file to properly grid , normalize, average and correct data
-        and returns the aperture pattern.
+    """ Process chunk holography data along the antenna axis. Works with holography file to properly grid , normalize,
+        average and correct data and returns the aperture pattern.
 
     Args:
         holog_chunk_params (dict): Dictionary containing holography parameters.
     """
     logger = skriba.logger.get_logger(logger_name="astrohack")
-    
-    
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     holog_file, ant_data_dict = _load_holog_file(
         holog_chunk_params["holog_name"],
@@ -69,7 +64,8 @@ def _holog_chunk(holog_chunk_params):
     ddi = holog_chunk_params["this_ddi"]
     n_holog_map = len(ant_data_dict[ddi].keys())
     
-    # For a fixed ddi the frequency axis should not change over holog_maps, consequently we only have to consider the first holog_map.
+    # For a fixed ddi the frequency axis should not change over holog_maps, consequently we only have to consider the
+    # first holog_map.
     map0 = list(ant_data_dict[ddi].keys())[0]
     
     freq_chan = ant_data_dict[ddi][map0].chan.values
@@ -91,8 +87,8 @@ def _holog_chunk(holog_chunk_params):
 
     for holog_map_index, holog_map in enumerate(ant_data_dict[ddi].keys()):
         ant_xds = ant_data_dict[ddi][holog_map]
-        
-        ###To Do: Add flagging code
+
+        # Todo: Add flagging code
 
         # Grid the data
         vis = ant_xds.VIS.values
@@ -109,19 +105,26 @@ def _holog_chunk(holog_chunk_params):
             # Unavoidable for loop because lm change over frequency.
             for chan_index in range(n_chan):
                 # Average scaled beams.
-                beam_grid[holog_map_index, 0, :, :, :] = (beam_grid[holog_map_index, 0, :, :, :] + np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index], vis_avg[:, chan_index, :], (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"],fill_value=0.0),(2),(0)))
+                beam_grid[holog_map_index, 0, :, :, :] = (beam_grid[holog_map_index, 0, :, :, :] +
+                                                          np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index],
+                                                                               vis_avg[:, chan_index, :],
+                                                                               (grid_l, grid_m), method=
+                                                                               holog_chunk_params["grid_interpolation_mode"],
+                                                                               fill_value=0.0), (2), (0)))
 
-            # Avergaing now complete
-            n_chan =  1
+            # Averaging now complete
+            n_chan = 1
             
             freq_chan = [np.mean(avg_freq)]
         else:
-            beam_grid[holog_map_index, ...] = np.moveaxis(griddata(lm, vis, (grid_l, grid_m), method=holog_chunk_params["grid_interpolation_mode"], fill_value=0.0), (0,1), (2,3))
+            beam_grid[holog_map_index, ...] = np.moveaxis(griddata(lm, vis, (grid_l, grid_m),
+                                                                   method=holog_chunk_params["grid_interpolation_mode"],
+                                                                   fill_value=0.0), (0, 1), (2, 3))
 
         time_centroid_index = ant_data_dict[ddi][holog_map].dims["time"] // 2
         time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
 
-        for chan in range(n_chan): ### Todo: Vectorize holog_map and channel axis
+        for chan in range(n_chan): # Todo: Vectorize holog_map and channel axis
             try:
                 xx_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
                 yy_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
@@ -140,9 +143,9 @@ def _holog_chunk(holog_chunk_params):
             beam_grid[holog_map_index, chan, ...] /= normalization
 
     beam_grid = _parallactic_derotation(data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi])
-    
 
     ###############
+
     pol = ant_data_dict[ddi][holog_map].pol.values
     if to_stokes:
         beam_grid = _to_stokes(beam_grid, ant_data_dict[ddi][holog_map].pol.values)
@@ -153,7 +156,6 @@ def _holog_chunk(holog_chunk_params):
     if holog_chunk_params["scan_average"]:
         beam_grid = np.mean(beam_grid,axis=0)[None,...]
         time_centroid = np.mean(np.array(time_centroid))
-    
 
     logger.info("Calculating aperture pattern ...")
     # Current bottleneck
@@ -166,17 +168,17 @@ def _holog_chunk(holog_chunk_params):
     # Get telescope info
     ant_name = ant_data_dict[ddi][holog_map].attrs["antenna_name"]
     
-    if  ant_name.upper().__contains__('DV'):
+    if ant_name.upper().__contains__('DV'):
         telescope_name = "_".join((meta_data['telescope_name'], 'DV'))
 
-    elif  ant_name.upper().__contains__('DA'):
+    elif ant_name.upper().__contains__('DA'):
         telescope_name = "_".join((meta_data['telescope_name'], 'DA'))
         
-    elif  ant_name.upper().__contains__('EA'):
+    elif ant_name.upper().__contains__('EA'):
         telescope_name = 'VLA'
 
     else:
-        raise Exception("{function_name}: Antenna type not found: {name}".format(function_name=function_name, name=meta_data['ant_name']))
+        raise Exception("Antenna type not found: {name}".format(name=meta_data['ant_name']))
     
     telescope = Telescope(telescope_name)
 
@@ -185,8 +187,10 @@ def _holog_chunk(holog_chunk_params):
     
     image_slice = aperture_grid[0, 0, 0, ...]
     center_pixel = np.array(image_slice.shape[0:2])//2
-    radius_u = int(np.where(np.abs(u) < max_aperture_radius*1.1)[0].max() - center_pixel[0]) # Factor of 1.1: Let's not be too aggresive
-    radius_v = int(np.where(np.abs(v) < max_aperture_radius*1.1)[0].max() - center_pixel[1]) # Factor of 1.1: Let's not be too aggresive
+
+    # Factor of 1.1: Let's not be too aggressive
+    radius_u = int(np.where(np.abs(u) < max_aperture_radius*1.1)[0].max() - center_pixel[0])
+    radius_v = int(np.where(np.abs(v) < max_aperture_radius*1.1)[0].max() - center_pixel[1])
         
     if radius_v > radius_u:
         radius = radius_v
@@ -194,7 +198,7 @@ def _holog_chunk(holog_chunk_params):
         radius = radius_u
 
     if holog_chunk_params['apply_mask']:
-    # Masking Aperture image
+        # Masking Aperture image
         mask = _mask_circular_disk(
             center=None,
             radius=radius,
@@ -226,7 +230,7 @@ def _holog_chunk(holog_chunk_params):
 
     elif isinstance(phase_fit_par, (np.ndarray, list, tuple)):
         if len(phase_fit_par) != 5:
-            raise Exception("[{function_name}]: Phase fit parameter must have 5 elements".format(function_name=function_name))
+            raise Exception("Phase fit parameter must have 5 elements")
 
         else:
             if np.sum(phase_fit_par) == 0:
@@ -236,24 +240,23 @@ def _holog_chunk(holog_chunk_params):
                 do_pnt_off, do_xy_foc_off, do_z_foc_off, do_sub_til, do_cass_off = phase_fit_par
     
     else:
-        raise Exception('[{function_name}]: Phase fit parameter is neither a boolean nor an array of booleans.'.format(function_name=function_name))
+        raise Exception('Phase fit parameter is neither a boolean nor an array of booleans.')
 
     if do_phase_fit:
-        logger.info(f'[{function_name}]: Applying phase correction')
+        logger.info('Applying phase correction')
         
         if to_stokes:
             pols = (0,)
         else:
             pols = (0, 3)
-        
-        #? Wavelength
+
         max_wavelength = clight/freq_chan[-1]
         
         results, errors, phase_corrected_angle, _, in_rms, out_rms = _phase_fitting_block(
                     pols=pols,
                     wavelength=max_wavelength,
                     telescope=telescope,
-                    cellxy=uv_cell_size[0]*max_wavelength, # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
+                    cellxy=uv_cell_size[0]*max_wavelength,  # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
                     amplitude_image=amplitude,
                     phase_image=phase,
                     pointing_offset=do_pnt_off,
@@ -263,7 +266,7 @@ def _holog_chunk(holog_chunk_params):
                     cassegrain_offset=do_cass_off)
 
     else:
-        logger.info('[{function_name}]: Skipping phase correction')
+        logger.info('Skipping phase correction')
 
     # Here we compute the aperture resolution from Equation 7 In EVLA memo 212
     # https://library.nrao.edu/public/memos/evla/EVLAM_212.pdf
@@ -272,7 +275,7 @@ def _holog_chunk(holog_chunk_params):
     aperture_resolution = np.array([1/deltal, 1/deltam])
     aperture_resolution *= 1.27*min_wavelength
     
-    ###To Do: Add Paralactic angle as a non-dimension coordinate dependant on time.
+    # Todo: Add Paralactic angle as a non-dimension coordinate dependant on time.
     xds = xr.Dataset()
 
     xds["BEAM"] = xr.DataArray(beam_grid, dims=["time", "chan", "pol", "l", "m"])
@@ -354,16 +357,14 @@ def _export_to_fits_holog_chunk(parm_dict):
     destination = parm_dict['destination']
     basename = f'{destination}/{antenna}_{ddi}'
     
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-    logger.info(f'[{function_name}]: Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
+    logger.info(f'Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
 
     try:
         aperture_resolution = inputxds.attrs["aperture_resolution"]
 
     except KeyError:
-        logger.warning(f"[{function_name}]: holog image does not have resolution information")
-        logger.warning(f"[{function_name}]: Rerun holog with astrohack v>0.1.5 for aperture resolution information")
+        logger.warning("Holog image does not have resolution information")
+        logger.warning("Rerun holog with astrohack v>0.1.5 for aperture resolution information")
         
         aperture_resolution = None
 
@@ -402,7 +403,7 @@ def _export_to_fits_holog_chunk(parm_dict):
 
     ntime = len(inputxds.time)
     if ntime != 1:
-        raise Exception("[{function_name}]: Data with multiple times not supported for FITS export")
+        raise Exception("Data with multiple times not supported for FITS export")
 
     carta_dim_order = (1, 0, 2, 3, )
 
@@ -517,8 +518,6 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, zunit, parm_dict):
         parm_dict: dictionary with general and plotting parameters
     """
     
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
-    
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
     colormap = _get_proper_color_map(parm_dict['colormap'])
@@ -534,7 +533,9 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, zunit, parm_dict):
         fig, ax = _create_figure_and_axes(parm_dict['figure_size'], [1, 1])
         axes = [ax]
     else:
-        raise Exception(f'[{function_name}]: Do not know how to handle polarization axis with {n_pol} elements')
+        msg = f'Do not know how to handle polarization axis with {n_pol} elements'
+        logger.error(msg)
+        raise Exception(msg)
 
     extent = [laxis[0], laxis[-1], maxis[0], maxis[-1]]
     for ipol, pol, in enumerate(pol_axis):

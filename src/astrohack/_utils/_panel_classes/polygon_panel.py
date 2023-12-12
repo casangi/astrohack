@@ -1,6 +1,6 @@
 from shapely import Polygon, Point
 from shapely.plotting import plot_polygon
-from astrohack._utils._panel_classes.base_panel import BasePanel, panel_models, icorpara
+from astrohack._utils._panel_classes.base_panel import BasePanel, PANEL_MODELS, icorpara
 
 
 class PolygonPanel(BasePanel):
@@ -14,7 +14,7 @@ class PolygonPanel(BasePanel):
             polygon: Polygon describing the panel shape
             screws: Positions of the screw over the panel
         """
-        if model == panel_models[icorpara]:
+        if model == PANEL_MODELS[icorpara]:
             raise Exception('corotatedparaboloid not supported for Polygon based panels')
         super().__init__(model, ipanel, screws)
         self.polygon = Polygon(polygon)

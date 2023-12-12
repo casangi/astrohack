@@ -3,6 +3,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import colormaps as matplotlib_cmaps
 from matplotlib.colors import ListedColormap
 from astrohack._utils import figsize, fontsize
+from astrohack._utils._constants import custom_split_checker, custom_unit_checker
 
 
 astrohack_cmaps = list(matplotlib_cmaps.keys())
@@ -144,3 +145,14 @@ def _get_proper_color_map(user_cmap, default_cmap='viridis'):
         return cmap
     else:
         return matplotlib_cmaps[user_cmap]
+
+
+def custom_plots_checker(allowed_type):
+    if allowed_type == 'colormaps':
+        return astrohack_cmaps
+    elif 'split' in allowed_type:
+        return custom_split_checker(allowed_type)
+    elif 'units' in allowed_type:
+        return custom_unit_checker(allowed_type)
+    else:
+        return "Not found"

@@ -20,11 +20,10 @@ from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figur
 from astrohack._utils._locit_commons import _plot_antenna_position
 
 
-def _extract_antenna_data(fname, extract_locit_parms):
+def _extract_antenna_data(extract_locit_parms):
     """
     Extract antenna information from the ANTENNA sub table of the cal table
     Args:
-        fname: Caller
         extract_locit_parms: input_parameters to extract_locit
     Returns:
     Antenna dictionary
@@ -57,11 +56,11 @@ def _extract_antenna_data(fname, extract_locit_parms):
         this_name = ant_nam[i_ant]
         if this_name in ant_list:
             if ant_mnt[i_ant] != 'ALT-AZ':
-                logger.error(f'[{fname}]: Antenna {this_name} has a non supported mount type: {ant_mnt[i_ant]}')
+                logger.error(f'Antenna {this_name} has a non supported mount type: {ant_mnt[i_ant]}')
                 error = True
             if ant_typ[i_ant] != 'GROUND-BASED':
                 error = True
-                logger.error(f'[{fname}]: Antenna {this_name} is not ground based which is currently not supported')
+                logger.error(f'Antenna {this_name} is not ground based which is currently not supported')
             if error:
                 pass
             else:
@@ -71,7 +70,7 @@ def _extract_antenna_data(fname, extract_locit_parms):
                 ant_dict[i_ant] = antenna
 
     if error:
-        msg = f'[{fname}]: Unsupported antenna characteristics'
+        msg = f'Unsupported antenna characteristics'
         logger.error(msg)
         raise Exception(msg)
 
@@ -79,11 +78,10 @@ def _extract_antenna_data(fname, extract_locit_parms):
     extract_locit_parms['full_antenna_list'] = ant_nam
 
 
-def _extract_spectral_info(fname, extract_locit_parms):
+def _extract_spectral_info(extract_locit_parms):
     """
     Extract spectral information from the SPECTRAL_WINDOW sub table of the cal table
     Args:
-        fname: Caller
         extract_locit_parms: input_parameters to extract_locit
 
     Returns:
@@ -91,7 +89,8 @@ def _extract_spectral_info(fname, extract_locit_parms):
     """
     logger = skriba.logger.get_logger(logger_name="astrohack")
     cal_table = extract_locit_parms['cal_table']
-    spw_table = ctables.table(cal_table+'::SPECTRAL_WINDOW', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    spw_table = ctables.table(cal_table+'::SPECTRAL_WINDOW', readonly=True, lockoptions={'option': 'usernoread'},
+                              ack=False)
     ref_freq = spw_table.getcol('REF_FREQUENCY')
     n_chan = spw_table.getcol('NUM_CHAN')
     bandwidth = spw_table.getcol('CHAN_WIDTH')
@@ -110,23 +109,22 @@ def _extract_spectral_info(fname, extract_locit_parms):
     for i_ddi in ddi_list:
         if n_chan[i_ddi] != 1:
             error = True
-            msg = f'[{fname}]: DDI {i_ddi} has {n_chan[i_ddi]}, which is not supported'
+            msg = f'DDI {i_ddi} has {n_chan[i_ddi]}, which is not supported'
             logger.error(msg)
         else:
             ddi_dict[i_ddi] = {'id': i_ddi, 'frequency': ref_freq[i_ddi], 'bandwidth': bandwidth[i_ddi]}
 
     if error:
-        msg = f'[{fname}]: Unsupported DDI characteristics'
+        msg = f'Unsupported DDI characteristics'
         logger.error(msg)
         raise Exception(msg)
     extract_locit_parms['ddi_dict'] = ddi_dict
 
 
-def _extract_source_and_telescope(fname, extract_locit_parms):
+def _extract_source_and_telescope(extract_locit_parms):
     """
     Extract source and telescope  information from the FIELD and OBSERVATION sub tables of the cal table
     Args:
-        fname: Caller
         extract_locit_parms: input_parameters to extract_locit
 
     Returns:
@@ -141,8 +139,7 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
     src_table.close()
     n_src = len(src_ids)
 
-    phase_center_fk5[:, 0] = np.where(phase_center_fk5[:, 0] < 0, phase_center_fk5[:, 0]+twopi,
-                                        phase_center_fk5[:, 0])
+    phase_center_fk5[:, 0] = np.where(phase_center_fk5[:, 0] < 0, phase_center_fk5[:, 0]+twopi, phase_center_fk5[:, 0])
 
     obs_table = ctables.table(cal_table+'::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     time_range = _casa_time_to_mjd(obs_table.getcol('TIME_RANGE')[0])
@@ -171,11 +168,10 @@ def _extract_source_and_telescope(fname, extract_locit_parms):
     return telescope_name, n_src
 
 
-def _extract_antenna_phase_gains(fname, extract_locit_parms):
+def _extract_antenna_phase_gains(extract_locit_parms):
     """
     Extract antenna based phase gains from the cal table
     Args:
-        fname: Caller
         extract_locit_parms: input_parameters to extract_locit
 
     Returns:
@@ -186,7 +182,8 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
     cal_table = extract_locit_parms['cal_table']
     basename = extract_locit_parms['locit_name']
 
-    obs_table = ctables.table(cal_table + '::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    obs_table = ctables.table(cal_table + '::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'},
+                              ack=False)
     telescope_name = obs_table.getcol('TELESCOPE_NAME')[0]
     obs_table.close()
 
@@ -209,10 +206,10 @@ def _extract_antenna_phase_gains(fname, extract_locit_parms):
         i_best_ant = np.argmax(counts)
         fraction_best = counts[i_best_ant]/n_gains
         if fraction_best < 0.5:
-            logger.warning(f'[{fname}]: The best reference Antenna only covers {100*fraction_best:.1f}% of the data')
+            logger.warning(f'The best reference Antenna only covers {100*fraction_best:.1f}% of the data')
         for i_refant in range(n_refant):
             if i_refant != i_best_ant:
-                logger.info(f'[{fname}]: Discarding gains derived with antenna '
+                logger.info(f'Discarding gains derived with antenna '
                             f'{extract_locit_parms["full_antenna_list"][ref_antennas[i_refant]]}'
                             f' as reference ({100*counts[i_refant]/n_gains:.2f}% of the data)')
                 sel_refant = antenna2 != ref_antennas[i_refant]

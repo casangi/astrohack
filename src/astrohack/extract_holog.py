@@ -1,20 +1,22 @@
 import copy
-import inspect
 import json
-import math
-import multiprocessing
 import os
 import pathlib
 import pickle
 import shutil
 from typing import Union, List, NewType, Dict, Any, Tuple
 
-import astrohack
 import auror.parameter
 import dask
 import numpy as np
 import psutil
 import skriba.logger
+from astropy.time import Time
+from casacore import tables as ctables
+from rich.console import Console
+from rich.table import Table
+
+import astrohack
 from astrohack._utils._constants import pol_str
 from astrohack._utils._conversion import _convert_ant_name_to_id
 from astrohack._utils._dio import _check_if_file_exists
@@ -22,21 +24,13 @@ from astrohack._utils._dio import _check_if_file_will_be_overwritten
 from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._dio import _read_meta_data
 from astrohack._utils._extract_holog import _create_holog_meta_data
 from astrohack._utils._extract_holog import _create_holog_obs_dict
 from astrohack._utils._extract_holog import _extract_holog_chunk
 from astrohack._utils._tools import NumpyEncoder
 from astrohack._utils._tools import get_default_file_name
-from astrohack.extract_pointing import extract_pointing
 from astrohack.mds import AstrohackHologFile
 from astrohack.mds import AstrohackPointFile
-from astropy.time import Time
-from casacore import tables as ctables
-from rich.console import Console
-from rich.table import Table
-
-CURRENT_FUNCTION = 0
 
 JSON = NewType("JSON", Dict[str, Any])
 KWARGS = NewType("KWARGS", Union[Dict[str, str], Dict[str, int]])
@@ -389,12 +383,9 @@ def extract_holog(
 
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
-
     input_pars = extract_holog_params.copy()
 
     _check_if_file_exists(extract_holog_params['ms_name'])
-
     _check_if_file_will_be_overwritten(extract_holog_params['holog_name'], extract_holog_params['overwrite'])
 
     try:
@@ -442,33 +433,10 @@ def extract_holog(
 
     ant1 = np.unique(ctb.getcol("ANTENNA1"))
     ant2 = np.unique(ctb.getcol("ANTENNA2"))
-
     ant_id_main = np.unique(np.append(ant1, ant2))
 
     ant_names_main = ant_names[ant_id_main]
-
     ctb.close()
-
-    # Get the excluded antennae if they exist
-    excluded_ant = _read_meta_data(extract_holog_params["point_name"] + "/.point_input")["exclude"]
-
-    # Make two lists of excluded indices, I don't think these are necessarily the same at all times so two are required
-    # for safety sake.
-    antenna_table_excluded_index = []
-    main_table_excluded_index = []
-
-    # If excluded antennae were returned, the indices needed to filter them from further analysis
-    if excluded_ant is not None:
-        for ant in excluded_ant:
-            antenna_table_excluded_index.append(ant_names.tolist().index(ant))
-            main_table_excluded_index.append(ant_names_main.tolist().index(ant))
-
-    # Delete the excluded entries from further analysis
-    ant_names = np.delete(ant_names, antenna_table_excluded_index, axis=0)
-    ant_id = np.delete(ant_id, antenna_table_excluded_index, axis=0)
-    ant_names_main = np.delete(ant_names_main, main_table_excluded_index, axis=0)
-    ant_id_main = np.delete(ant_id_main, main_table_excluded_index, axis=0)
-    ant_pos = np.delete(ant_pos, antenna_table_excluded_index, axis=0)
 
     # Create holog_obs_dict or modify user supplied holog_obs_dict.
     ddi = extract_holog_params['ddi']
@@ -810,8 +778,6 @@ def generate_holog_obs_dict(
     extract_holog_params = locals()
 
     logger = skriba.logger.get_logger(logger_name="astrohack")
-
-    function_name = inspect.stack()[CURRENT_FUNCTION].function
 
     _check_if_file_exists(ms_name)
     _check_if_file_exists(point_name)

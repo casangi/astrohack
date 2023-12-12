@@ -19,7 +19,6 @@ from astrohack._utils._tools import _add_prefix
 from astrohack._utils._tools import NumpyEncoder
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
-CALLING_FUNCTION = 1
 
 
 def _check_if_file_exists(file):
@@ -326,12 +325,11 @@ def _create_destination_folder(destination):
         destination: the folder to be created
     """
     logger = skriba.logger.get_logger(logger_name="astrohack")
-    caller = inspect.stack()[CALLING_FUNCTION].function
 
     try:
         os.mkdir(destination)
     except FileExistsError:
-        logger.warning(f'[{caller}]: Destination folder already exists, results may be overwritten')
+        logger.warning(f'Destination folder already exists, results may be overwritten')
 
 
 def _aips_holog_to_xds(ampname, devname):
@@ -448,18 +446,18 @@ def _write_meta_data(file_name, input_dict):
     """
     Creates a metadata dictionary that is compatible with JSON and writes it to a file
     Args:
-        origin: Which function created the mds
         file_name: Output json file name
         input_dict: Dictionary to be included in the metadata
     """
 
+    calling_function = 1
     logger = skriba.logger.get_logger(logger_name="astrohack")
 
     meta_data = copy.deepcopy(input_dict)
 
     meta_data.update({
         'version': code_version,
-        'origin': inspect.stack()[CALLING_FUNCTION].function
+        'origin': inspect.stack()[calling_function].function
     })
 
     try:
@@ -467,7 +465,7 @@ def _write_meta_data(file_name, input_dict):
             json.dump(meta_data, json_file, cls=NumpyEncoder)
 
     except Exception as error:
-        logger.error("[_write_meta_data] {error}".format(error=error))
+        logger.error(f'{error}')
 
 
 def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):

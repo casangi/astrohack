@@ -1,17 +1,10 @@
-import inspect
-import numbers
 import pathlib
-
-import distributed
-
 import auror.parameter
 import skriba.logger
 
 import numpy as np
-
-from astrohack._utils._constants import custom_unit_checker
-
-from astrohack._utils._constants import length_units, trigo_units, possible_splits, time_units
+from astrohack._utils._constants import custom_split_checker, custom_unit_checker
+from astrohack._utils._plot_commons import custom_plots_checker
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 from astrohack._utils._dio import _create_destination_folder
@@ -27,19 +20,15 @@ from astrohack._utils._extract_locit import _plot_source_table, _plot_array_conf
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
 from astrohack._utils._locit import _plot_delays_chunk, _plot_position_corrections
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
 from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._panel_classes.telescope import Telescope
-from astrohack._utils._param_utils._check_parms import _check_parms, _parm_check_passed
 from astrohack._utils._tools import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
 from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 
 from prettytable import PrettyTable
 
 from typing import Any, List, Union, Tuple
-
-CURRENT_FUNCTION = 0
 
 
 class AstrohackDataFile:
@@ -149,8 +138,8 @@ class AstrohackImageFile(dict):
 
             self._file_is_open = True
 
-        except Exception as e:
-            logger.error("[AstroHackImageFile.open()]: {}".format(e))
+        except Exception as error:
+            logger.error(f"{error}")
             self._file_is_open = False
 
         self._meta_data = _read_meta_data(file + '/.image_attr')
@@ -166,7 +155,16 @@ class AstrohackImageFile(dict):
         _print_data_contents(self, ["Antenna", "DDI"])
         _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
 
-    def select(self, ant: str, ddi: int, complex_split: str = 'cartesian') -> object:
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_split_checker
+    )
+    def select(
+            self,
+            ant: str,
+            ddi: int,
+            complex_split: str = 'cartesian'
+    ) -> object:
         """ Select data on the basis of ddi, scan, ant. This is a convenience function.
 
         :param ddi: Data description ID, ex. 0.
@@ -185,7 +183,7 @@ class AstrohackImageFile(dict):
         ddi = f'ddi_{ddi}'
 
         if ant is None or ddi is None:
-            logger.info("[select]: No selections made ...")
+            logger.info("No selections made ...")
             return self
         else:
             if complex_split == 'polar':
@@ -193,6 +191,10 @@ class AstrohackImageFile(dict):
             else:
                 return self[ant][ddi]
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_split_checker
+    )
     def export_to_fits(
             self,
             destination: str,
@@ -231,12 +233,9 @@ class AstrohackImageFile(dict):
         """
 
         param_dict = locals()
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-
         _create_destination_folder(param_dict['destination'])
         param_dict['metadata'] = self._meta_data
         _dask_general_compute(
-            function_name,
             self,
             _export_to_fits_holog_chunk,
             param_dict,
@@ -244,6 +243,10 @@ class AstrohackImageFile(dict):
             parallel=parallel
         )
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_plots_checker
+    )
     def plot_apertures(
             self,
             destination: str,
@@ -300,25 +303,27 @@ class AstrohackImageFile(dict):
         Produce plots from ``astrohack.holog`` results for analysis
         """
         param_dict = locals()
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
 
         param_dict["figuresize"] = figure_size
 
         _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(function_name, self, _plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(self, _plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_plots_checker
+    )
     def plot_beams(
-
             self,
             destination: str,
             ant: Union[str, List[str]] = "all",
             ddi: Union[int, List[int]] = "all",
             complex_split: str = 'polar',
+            angle_unit: str = 'deg',
+            phase_unit: str = 'deg',
             display: bool = False,
             colormap: str = 'viridis',
             figure_size: Union[Tuple, List[float], np.array] = None,
-            angle_unit: str = 'deg',
-            phase_unit: str = 'deg',
             dpi: int = 300,
             parallel: bool = False
     ) -> None:
@@ -353,13 +358,8 @@ class AstrohackImageFile(dict):
         """
         param_dict = locals()
 
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-        # For the love of all that is .... can we stop having to do this. PICK A VARIABLE NAME AND STICK WITH IT!
-        param_dict["figuresize"] = figure_size
-
         _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(function_name, self, _plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(self, _plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackHologFile(dict):
@@ -417,8 +417,8 @@ class AstrohackHologFile(dict):
             _load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
             self._file_is_open = True
 
-        except Exception as e:
-            logger.error("[AstrohackHologFile]: {}".format(e))
+        except Exception as error:
+            logger.error(f"{error}")
             self._file_is_open = False
 
         self._meta_data = _read_meta_data(file + '/.holog_attr')
@@ -434,6 +434,9 @@ class AstrohackHologFile(dict):
         _print_data_contents(self, ["DDI", "Map", "Antenna"])
         _print_method_list([self.summary, self.select, self.plot_diagnostics, self.plot_lm_sky_coverage])
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack")
+    )
     def select(
             self,
             ddi: int,
@@ -458,7 +461,7 @@ class AstrohackHologFile(dict):
         map_id = f'map_{map_id}'
 
         if ant is None or ddi is None or map_id is None:
-            logger.info("[select]: No selection made ...")
+            logger.info("No selection made ...")
             return self
         else:
             return self[ddi][map_id][ant]
@@ -473,6 +476,10 @@ class AstrohackHologFile(dict):
 
         return self._meta_data
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_plots_checker
+    )
     def plot_diagnostics(
             self,
             destination: str,
@@ -521,40 +528,19 @@ class AstrohackHologFile(dict):
         - *polar*:     Split is done to an amplitude and a phase in the plots
 
         """
-
-        # This is the default address used by Dask. Note that in the client check below, if the user has multiple
-        # clients running a new client may still be spawned but only once. If run again in a notebook session the
-        # local_client check will catch it. It will also be caught if the user spawns their own instance in the
-        # notebook.
-        DEFAULT_DASK_ADDRESS = "127.0.0.1:8786"
-
-        logger = _get_astrohack_logger()
+        logger = skriba.logger.get_logger(logger_name="astrohack")
 
         param_dict = locals()
-        if parallel:
-            if not distributed.client._get_global_client():
-                try:
-                    distributed.Client(DEFAULT_DASK_ADDRESS, timeout=2)
-
-                except Exception:
-                    from astrohack.client import astrohack_local_client
-
-                    logger.info("local client not found, starting ...")
-
-                    log_params = {'log_level': 'DEBUG'}
-                    client = astrohack_local_client(cores=2, memory_limit='8GB', log_params=log_params)
-                    logger.info(client.dashboard_link)
-
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-
         param_dict["map"] = map_id
-        param_dict["figuresize"] = figure_size
 
-        # _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         key_order = ["ddi", "map", "ant"]
-        _dask_general_compute(function_name, self, _calibration_plot_chunk, param_dict, key_order, parallel)
+        _dask_general_compute(self, _calibration_plot_chunk, param_dict, key_order, parallel)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_plots_checker
+    )
     def plot_lm_sky_coverage(
             self,
             destination: str,
@@ -618,39 +604,12 @@ class AstrohackHologFile(dict):
 
         """
 
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
         param_dict = locals()
-
         param_dict["map"] = map_id
 
-        parms_passed = _check_parms(function_name, param_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'ant', [str, list],
-                                                     list_acceptable_data_types=[str], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'ddi', [int, list, str],
-                                                     list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'map', [int, list, str],
-                                                     list_acceptable_data_types=[int], default='all')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'complex_split', [str],
-                                                     acceptable_data=possible_splits, default="polar")
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'angle_unit', [str],
-                                                     acceptable_data=trigo_units, default='deg')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'phase_unit', [str],
-                                                     acceptable_data=trigo_units, default='deg')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str],
-                                                     acceptable_data=time_units, default='hour')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'plot_correlation', [str, list],
-                                                     list_acceptable_data_types=[str], default='None')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'parallel', [bool], default=False)
-
-        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         key_order = ["ddi", "map", "ant"]
-        _dask_general_compute(function_name, self, _plot_lm_coverage, param_dict, key_order, parallel)
+        _dask_general_compute(self, _plot_lm_coverage, param_dict, key_order, parallel)
         return
 
 
@@ -706,8 +665,8 @@ class AstrohackPanelFile(dict):
         try:
             _load_panel_file(file, panel_dict=self)
             self._file_is_open = True
-        except Exception as e:
-            logger.error("[AstroHackPanelFile.open()]: {}".format(e))
+        except Exception as error:
+            logger.error(f"{error}")
             self._file_is_open = False
 
         self._input_pars = _read_meta_data(file + '/.panel_input')
@@ -723,7 +682,14 @@ class AstrohackPanelFile(dict):
         _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
                             self.plot_antennas])
 
-    def get_antenna(self, ant: str, ddi: int) -> AntennaSurface:
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack")
+    )
+    def get_antenna(
+            self,
+            ant: str,
+            ddi: int
+    ) -> AntennaSurface:
         """ Retrieve an AntennaSurface object for interaction
 
         :param ant: Antenna to be retrieved, ex. ea25.
@@ -740,6 +706,10 @@ class AstrohackPanelFile(dict):
         telescope = Telescope(xds.attrs['telescope_name'])
         return AntennaSurface(xds, telescope, reread=True)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_plots_checker
+    )
     def export_screws(
             self,
             destination: str,
@@ -785,17 +755,12 @@ class AstrohackPanelFile(dict):
         """
         param_dict = locals()
 
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-        # _parm_check_passed(function_name, parms_passed)
-        param_dict["figuresize"] = figure_size
-
         _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(function_name, self, _export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
+        _dask_general_compute(self, _export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
 
     @auror.parameter.validate(
         logger=skriba.logger.get_logger(logger_name="astrohack"),
-        custom_checker=custom_unit_checker
+        custom_checker=custom_plots_checker
     )
     def plot_antennas(
             self,
@@ -871,13 +836,14 @@ class AstrohackPanelFile(dict):
         logger = skriba.logger.get_logger(logger_name="astrohack")
         param_dict = locals()
 
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-
         param_dict["figuresize"] = figure_size
 
         _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(function_name, self, _plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        _dask_general_compute(self, _plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack")
+    )
     def export_to_fits(
             self,
             destination: str,
@@ -906,10 +872,8 @@ class AstrohackPanelFile(dict):
 
         param_dict = locals()
 
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-
         _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(function_name, self, _export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
+        _dask_general_compute(self, _export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
                               parallel=parallel)
 
 
@@ -965,8 +929,8 @@ class AstrohackPointFile(dict):
             _load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
             self._file_is_open = True
 
-        except Exception as e:
-            logger.error("[AstrohackPointFile]: {}".format(e))
+        except Exception as error:
+            logger.error(f"{error}")
             self._file_is_open = False
 
         self._input_pars = _read_meta_data(file + '/.point_input')
@@ -1035,8 +999,8 @@ class AstrohackLocitFile(dict):
             _load_locit_file(file=file, dask_load=dask_load, locit_dict=self)
             self._file_is_open = True
 
-        except Exception as e:
-            logger.error("[AstrohackLocitFile]: {}".format(e))
+        except Exception as error:
+            logger.error(f"{error}")
             self._file_is_open = False
 
         self._input_pars = _read_meta_data(file + '/.locit_input')
@@ -1058,7 +1022,13 @@ class AstrohackLocitFile(dict):
         table.align = alignment
         print(table)
 
-    def print_array_configuration(self, relative: bool = True) -> None:
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+    )
+    def print_array_configuration(
+            self,
+            relative: bool = True
+    ) -> None:
         """ Prints a table containing the array configuration
 
         :param relative: Print relative antenna coordinates or geocentric coordinates, default is True
@@ -1071,18 +1041,17 @@ class AstrohackLocitFile(dict):
         (longitude, latitude and radius)
 
         """
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-        param_dict = {'relative': relative}
-        parms_passed = _check_parms(function_name, param_dict, 'relative', [bool], default=True)
-        _parm_check_passed(function_name, parms_passed)
-
+        param_dict = locals()
         _print_array_configuration(param_dict, self['ant_info'], self['obs_info']['telescope_name'])
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+    )
     def plot_source_positions(
             self,
             destination: str,
             labels: bool = False,
-            precessed: str = False,
+            precessed: bool = False,
             display: bool = False,
             figure_size: Union[Tuple, List[float], np.array] = None,
             dpi: int = 300
@@ -1112,18 +1081,6 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-        parms_passed = _check_parms(function_name, param_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'precessed', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'labels', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
-
-        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
 
         if precessed:
@@ -1139,6 +1096,10 @@ class AstrohackLocitFile(dict):
                            display=display, figure_size=figure_size, dpi=dpi, label=labels)
         return
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_unit_checker
+    )
     def plot_array_configuration(
             self,
             destination: str,
@@ -1174,24 +1135,7 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-        parms_passed = _check_parms(function_name, param_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'stations', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'zoff', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'unit', [str],
-                                                     acceptable_data=length_units,
-                                                     default='km')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'box_size', [int, float], default=5)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
-
-        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
-
         _plot_array_configuration(self['ant_info'], self['obs_info']['telescope_name'], param_dict)
         return
 
@@ -1268,12 +1212,16 @@ class AstrohackPositionFile(dict):
 
             self._file_is_open = True
 
-        except Exception as e:
-            logger.error("[AstrohackpositionFile]: {}".format(e))
+        except Exception as error:
+            logger.error(f'{error}')
             self._file_is_open = False
 
         return self._file_is_open
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_unit_checker
+    )
     def export_fit_results(
             self,
             destination: str,
@@ -1304,21 +1252,14 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-        parms_passed = _check_parms(function_name, param_dict, 'destination', [str],
-                                    default=None)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'position_unit', [str],
-                                                     acceptable_data=length_units, default='m')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str],
-                                                     acceptable_data=time_units, default='hour')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'delay_unit', [str],
-                                                     acceptable_data=time_units, default='nsec')
-        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         param_dict['combined'] = self.combined
         _export_fit_results(self, param_dict)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_unit_checker
+    )
     def plot_sky_coverage(
             self,
             destination: str,
@@ -1365,34 +1306,18 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-        parms_passed = _check_parms(function_name, param_dict, 'destination', [str],
-                                    default=None)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str],
-                                                     acceptable_data=time_units,
-                                                     default='hour')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'angle_unit', [str],
-                                                     acceptable_data=trigo_units,
-                                                     default='deg')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
-
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'parallel', [bool],
-                                                     default=False)
-        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         param_dict['combined'] = self.combined
         if self.combined:
-            _dask_general_compute(function_name, self, _plot_sky_coverage_chunk, param_dict, ['ant'], parallel=parallel)
+            _dask_general_compute(self, _plot_sky_coverage_chunk, param_dict, ['ant'], parallel=parallel)
         else:
-            _dask_general_compute(function_name, self, _plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
+            _dask_general_compute(self, _plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
                                   parallel=parallel)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_unit_checker
+    )
     def plot_delays(
             self,
             destination: str,
@@ -1446,40 +1371,20 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-
-        parms_passed = _check_parms(function_name, param_dict, 'destination', [str],
-                                    default=None)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'time_unit', [str],
-                                                     acceptable_data=time_units,
-                                                     default='hour')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'angle_unit', [str],
-                                                     acceptable_data=trigo_units,
-                                                     default='deg')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'delay_unit', [str],
-                                                     acceptable_data=time_units,
-                                                     default='nsec')
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'plot_model', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
-
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'parallel', [bool],
-                                                     default=False)
-        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
 
         param_dict['combined'] = self.combined
         param_dict['comb_type'] = self._meta_data["combine_ddis"]
         if self.combined:
-            _dask_general_compute(function_name, self, _plot_delays_chunk, param_dict, ['ant'], parallel=parallel)
+            _dask_general_compute(self, _plot_delays_chunk, param_dict, ['ant'], parallel=parallel)
         else:
-            _dask_general_compute(function_name, self, _plot_delays_chunk, param_dict, ['ant', 'ddi'],
+            _dask_general_compute(self, _plot_delays_chunk, param_dict, ['ant', 'ddi'],
                                   parallel=parallel)
 
+    @auror.parameter.validate(
+        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_unit_checker
+    )
     def plot_position_corrections(
             self,
             destination: str,
@@ -1524,20 +1429,6 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-
-        function_name = inspect.stack()[CURRENT_FUNCTION].function
-        parms_passed = _check_parms(function_name, param_dict, 'destination', [str], default=None)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'display', [bool], default=True)
-        # parms_passed = parms_passed and _check_parms(function_name, param_dict, 'stations', [bool], default=False)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'figure_size', [list, np.ndarray],
-                                                     list_acceptable_data_types=[numbers.Number], list_len=2,
-                                                     default='None', log_default_setting=False)
-
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'box_size', [int, float], default=5)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'scaling', [int, float], default=250)
-        parms_passed = parms_passed and _check_parms(function_name, param_dict, 'dpi', [int], default=300)
-
-        _parm_check_passed(function_name, parms_passed)
         _create_destination_folder(param_dict['destination'])
         param_dict['combined'] = self.combined
         _plot_position_corrections(param_dict, self)
