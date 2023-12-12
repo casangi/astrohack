@@ -393,8 +393,15 @@ def _create_holog_file(
             )
 
 
-def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average_nearest, ant_names, ant_pos,
-                           ant_names_main, write_distance_matrix=False):
+def _create_holog_obs_dict(
+        pnt_dict,
+        baseline_average_distance,
+        baseline_average_nearest,
+        ant_names,
+        ant_pos,
+        ant_names_main,
+        write_distance_matrix=False
+):
     '''
     Generate holog_obs_dict.
     '''
@@ -408,7 +415,8 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
     map_id = 0
     ant_names_set = set()
 
-    # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antenas are added because we first need to populate all mapping antennas.
+    # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antenas are added
+    # because we first need to populate all mapping antennas.
     for ant_name, ant_ds in pnt_dict.items():
         if 'ant' in ant_name:
             ant_name = ant_name.replace('ant_', '')
@@ -418,7 +426,6 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
                     if ddi not in holog_obs_dict:
                         holog_obs_dict[ddi] = {}
                     for ant_map_id, scan_list in map_dict.items():
-                        # logger.debug('ant name ' + ant_name + ' scan list' + str(scan_list))
                         if scan_list:
                             map_key = _check_if_array_in_dict(mapping_scans_dict, scan_list)
                             if not map_key:
@@ -446,8 +453,9 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
     for ddi, ddi_dict in holog_obs_dict.items():
         for map_id, map_dict in ddi_dict.items():
             map_ant_set = set(map_dict['ant'].keys())
-            map_ant_keys = list(map_dict[
-                                    'ant'].keys())  # Need a copy because of del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] below.
+
+            # Need a copy because of del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] below.
+            map_ant_keys = list(map_dict['ant'].keys())
 
             for map_ant_key in map_ant_keys:
                 ref_ant_set = ant_names_set - map_ant_set
@@ -467,11 +475,11 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
 
                     ref_ant_set = sub_ref_ant_set
 
-                # Select reference antennas by n closest antennas
+                # Select reference antennas by n-closest antennas
                 if baseline_average_nearest != 'all':
                     sub_ref_ant_set = []
-                    nearest_ant_list = df_mat.loc[map_ant_key, :].loc[list(ref_ant_set)].sort_values().index.tolist()[
-                                       0:baseline_average_nearest]
+                    nearest_ant_list = \
+                        df_mat.loc[map_ant_key, :].loc[list(ref_ant_set)].sort_values().index.tolist()[0: baseline_average_nearest]
 
                     logger.debug(nearest_ant_list)
                     for ref_ant in ref_ant_set:
@@ -479,13 +487,13 @@ def _create_holog_obs_dict(pnt_dict, baseline_average_distance, baseline_average
                             sub_ref_ant_set.append(ref_ant)
                             
                     ref_ant_set = sub_ref_ant_set
-                ##################################################
 
                 if ref_ant_set:
                     holog_obs_dict[ddi][map_id]['ant'][map_ant_key] = np.array(list(ref_ant_set))
+
                 else:
-                    del holog_obs_dict[ddi][map_id]['ant'][
-                        map_ant_key]  # Don't want mapping antennas with no reference antennas.
+                    # Don't want mapping antennas with no reference antennas.
+                    del holog_obs_dict[ddi][map_id]['ant'][map_ant_key]
                     logger.warning(
                         'DDI ' + str(ddi) + ' and mapping antenna ' + str(map_ant_key) + ' has no reference antennas.')
 

@@ -426,22 +426,8 @@ def extract_holog(
         ack=False,
     )
 
-    excluded_ant = _read_meta_data(extract_holog_params["point_name"] + "/.point_input")["exclude"]
-    excluded_index = []
-
     ant_names = np.array(ctb.getcol("NAME"))
     ant_id = np.arange(len(ant_names))
-    for ant in excluded_ant:
-        excluded_index.append(ant_names.index(ant))
-        ant_names.remove(ant)
-        ant_id.drop(ant_names.index(ant))
-
-    logger.info("ant-names")
-    logger.info(ant_names)
-
-    logger.info("ant-id")
-    logger.info(ant_id)
-
     ant_pos = ctb.getcol("POSITION")
 
     ctb.close()
@@ -456,20 +442,33 @@ def extract_holog(
 
     ant1 = np.unique(ctb.getcol("ANTENNA1"))
     ant2 = np.unique(ctb.getcol("ANTENNA2"))
-    logger.info("ant-1")
-    logger.info(ant1)
-
-    logger.info("ant-2")
-    logger.info(ant2)
 
     ant_id_main = np.unique(np.append(ant1, ant2))
-    logger.info("ant-id-main")
-    logger.info(ant_id_main)
 
     ant_names_main = ant_names[ant_id_main]
-    logger.info("ant-names-main")
-    logger.info(ant_names_main)
+
     ctb.close()
+
+    # Get the excluded antennae if they exist
+    excluded_ant = _read_meta_data(extract_holog_params["point_name"] + "/.point_input")["exclude"]
+
+    # Make two lists of excluded indices, I don't think these are necessarily the same at all times so two are required
+    # for safety sake.
+    antenna_table_excluded_index = []
+    main_table_excluded_index = []
+
+    # If excluded antennae were returned, the indices needed to filter them from further analysis
+    if excluded_ant is not None:
+        for ant in excluded_ant:
+            antenna_table_excluded_index.append(ant_names.tolist().index(ant))
+            main_table_excluded_index.append(ant_names_main.tolist().index(ant))
+
+    # Delete the excluded entries from further analysis
+    ant_names = np.delete(ant_names, antenna_table_excluded_index, axis=0)
+    ant_id = np.delete(ant_id, antenna_table_excluded_index, axis=0)
+    ant_names_main = np.delete(ant_names_main, main_table_excluded_index, axis=0)
+    ant_id_main = np.delete(ant_id_main, main_table_excluded_index, axis=0)
+    ant_pos = np.delete(ant_pos, antenna_table_excluded_index, axis=0)
 
     # Create holog_obs_dict or modify user supplied holog_obs_dict.
     ddi = extract_holog_params['ddi']
