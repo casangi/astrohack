@@ -1,7 +1,8 @@
 import click
+import skriba.logger
 
 
-class AstrohackWorker():
+class AstrohackWorker:
     def __init__(self, local_cache, log_params):
         self.logger = None
         self.worker = None
@@ -22,7 +23,7 @@ class AstrohackWorker():
         registered.
         """
 
-        self.logger = skriba.logger.setup_logger(
+        self.logger = skriba.logger.setup_worker_logger(
             logger_name="astrohack",
             log_to_term=self.log_to_term,
             log_to_file=self.log_to_file,
@@ -54,4 +55,4 @@ async def dask_setup(worker, local_cache, log_to_term, log_to_file, log_file, lo
     log_params = {'log_to_term': log_to_term, 'log_to_file': log_to_file, 'log_file': log_file, 'log_level': log_level}
     plugin = AstrohackWorker(local_cache, log_params)
 
-    await worker.client.register_worker_plugin(plugin, name='astrohack_worker')
+    await worker.client.register_worker_plugin(plugin, name='worker_logger')
