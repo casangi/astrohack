@@ -5,6 +5,8 @@ import pathlib
 import pickle
 import shutil
 from typing import Union, List, NewType, Dict, Any, Tuple
+import math
+import multiprocessing
 
 import auror.parameter
 import dask
@@ -31,6 +33,7 @@ from astrohack._utils._tools import NumpyEncoder
 from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackHologFile
 from astrohack.mds import AstrohackPointFile
+from astrohack.extract_pointing import extract_pointing
 
 JSON = NewType("JSON", Dict[str, Any])
 KWARGS = NewType("KWARGS", Union[Dict[str, str], Dict[str, int]])
