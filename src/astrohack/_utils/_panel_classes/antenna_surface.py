@@ -1,5 +1,8 @@
+import numpy as np
 import xarray as xr
+
 from matplotlib import patches
+
 import skriba.logger
 
 from astrohack._utils._panel_classes.base_panel import PANEL_MODELS, irigid

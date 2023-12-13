@@ -14,13 +14,13 @@
 
 
 hack_logger_name = 'astrohack'
-import sys
 import logging
+import sys
 from datetime import datetime
+
+
 # formatter = logging.Formatter("[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
 # formatter = logging.Formatter("[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s")
-from dask.distributed import WorkerPlugin
-import dask
 
 
 class astrohack_formatter(logging.Formatter):
@@ -34,8 +34,6 @@ class astrohack_formatter(logging.Formatter):
     start_msg = "%(asctime)s - "
     middle_msg = "%(levelname)-8s"
     end_msg = " - %(name)s - (%(filename)s:%(lineno)d) - %(message)s"
-
-    import inspect
 
     FORMATS = {
         logging.DEBUG: start_msg + DEBUG + middle_msg + reset + end_msg,
@@ -128,7 +126,6 @@ class _astrohack_worker_logger_plugin(WorkerPlugin):
 
 
 def _setup_astrohack_worker_logger(log_to_term, log_to_file, log_file, log_level, worker_id):
-    from dask.distributed import get_worker
     # parallel_logger_name = _get_astrohack_worker_logger_name()
     parallel_logger_name = hack_logger_name + '_' + str(worker_id)
 

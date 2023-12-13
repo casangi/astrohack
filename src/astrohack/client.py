@@ -174,7 +174,7 @@ def local_client(
 
     if local_cache or _worker_log_params:
         plugin = AstrohackWorker(local_cache, _worker_log_params)
-        client.register_worker_plugin(plugin, name='astrohack_worker')
+        client.register_worker_plugin(plugin, name='worker_logger')
 
     logger.info('Created client ' + str(client))
 
