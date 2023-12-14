@@ -93,10 +93,20 @@ def local_client(
     """
 
     if log_params is None:
-        log_params = {}
+        log_params = {
+            'log_to_term': True,
+            'log_level': 'INFO',
+            'log_to_file': False,
+            'log_file': None
+        }
 
     if worker_log_params is None:
-        worker_log_params = {}
+        worker_log_params = {
+            'log_to_term': True,
+            'log_level': 'INFO',
+            'log_to_file': False,
+            'log_file': None
+        }
 
     # Secret parameters user do not need to know about.
     autorestrictor = False
