@@ -8,14 +8,14 @@ import yaml
 import logging
 import astrohack
 
-import skriba.logger
+import skriba.prototype.logger as logger
 import auror.parameter
 
 from astrohack._utils._dask_plugins._astrohack_worker import AstrohackWorker
 
 
 @auror.parameter.validate(
-    logger=skriba.logger.get_logger(logger_name="astrohack")
+    logger=logger.get_logger(logger_name="astrohack")
 )
 def local_client(
         cores: int = None,
@@ -80,9 +80,9 @@ def local_client(
     **Example Usage**
     
     .. parsed-literal::
-        from astrohack.client import astrohack_local_client
+        from astrohack.client import local_client
 
-        client = astrohack_local_client(
+        client = local_client(
             cores=2, 
             memory_limit='8GB', 
             log_params={
@@ -94,6 +94,7 @@ def local_client(
 
     if log_params is None:
         log_params = {
+            'logger_name': "astrohack",
             'log_to_term': True,
             'log_level': 'INFO',
             'log_to_file': False,
@@ -102,6 +103,7 @@ def local_client(
 
     if worker_log_params is None:
         worker_log_params = {
+            'logger_name': "astrohack",
             'log_to_term': True,
             'log_level': 'INFO',
             'log_to_file': False,
@@ -125,8 +127,9 @@ def local_client(
     else:
         local_cache = False
 
-    skriba.logger.setup_logger(**_log_params)
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    if not os.getenv("SKRIBA_LOGGER_NAME"):
+        logger.setup_logger(**_log_params)
+        #logger = skriba.prototype.logger.get_logger(logger_name=log_params["logger_name"])
 
     if dask_local_dir is None:
         logger.warning("It is recommended that the local cache directory be set using the `local_dir` parameter.")

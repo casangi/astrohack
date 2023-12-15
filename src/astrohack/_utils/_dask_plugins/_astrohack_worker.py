@@ -1,5 +1,5 @@
 import click
-import skriba.logger
+import skriba.prototype.logger as logger
 
 
 class AstrohackWorker:
@@ -23,7 +23,7 @@ class AstrohackWorker:
         registered.
         """
 
-        self.logger = skriba.logger.setup_worker_logger(
+        self.logger = logger.setup_worker_logger(
             logger_name="astrohack",
             log_to_term=self.log_to_term,
             log_to_file=self.log_to_file,

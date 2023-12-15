@@ -1,13 +1,13 @@
 import numpy as np
 import scipy.signal as scisig
 
-import skriba.logger
+import skriba.prototype.logger as logger
 
 
 def _calculate_suggested_grid_paramater(parameter, quantile=0.01):
     import scipy
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     # Determine skew properties and return median
     if np.abs(scipy.stats.skew(parameter)) > 0.5:
@@ -43,7 +43,7 @@ def _apply_mask(data, scaling=0.5):
     Returns:
         numpy.ndarray: cropped aperture grid data
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     x, y = data.shape
 

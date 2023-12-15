@@ -5,7 +5,7 @@ import inspect
 import numpy as np
 import astropy.units as units
 
-import skriba.logger
+import skriba.prototype.logger as logger
 
 from prettytable import PrettyTable
 from textwrap import fill
@@ -123,7 +123,7 @@ def _altaz_to_hadec_astropy(az, el, time, x_ant, y_ant, z_ant):
 
 
 def get_default_file_name(input_file: str, output_type: str) -> str:
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
     known_data_types = [".ms", ".holog.zarr", ".image.zarr", ".locit.zarr", ".combine.zarr", ".position.zarr"]
 
     output_file = None
@@ -158,7 +158,7 @@ def _add_prefix(input_string, prefix):
 
 
 def print_holog_obs_dict(holog_obj):
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     OPEN_DICT = ":{"
     CLOSE_DICT = "}"
@@ -212,7 +212,7 @@ def _param_to_list(param, data_dict, prefix):
     Returns: parameter converted to a list
 
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     if param == 'all':
         outlist = list(data_dict.keys())
@@ -317,7 +317,7 @@ def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
     Returns: The augmented header
 
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
     naxis = len(axis)
     if naxis == 1:
         inc = axis[0]

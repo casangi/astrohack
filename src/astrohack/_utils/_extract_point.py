@@ -2,7 +2,7 @@ import os
 
 import dask
 import numpy as np
-import skriba.logger
+import skriba.prototype.logger as logger
 import xarray as xr
 
 from astrohack._utils._conversion import convert_dict_from_numba
@@ -26,7 +26,7 @@ def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
         dict: pointing dictionary of xarray dataarrays
     """
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     # Get antenna names and ids
     ctb = ctables.table(
@@ -128,9 +128,9 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
     Args:
         ms_name (str): Measurement file name.
         ant_id (int): Antenna id
-        pnt_name (str): Name of output pointing dictinary file name.
+        pnt_name (str): Name of output pointing dictionary file name.
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     ant_id = pnt_params['ant_id']
     ant_name = pnt_params['ant_name']

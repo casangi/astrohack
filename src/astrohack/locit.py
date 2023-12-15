@@ -1,5 +1,5 @@
 import auror.parameter
-import skriba.logger
+import skriba.prototype.logger as logger
 
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
@@ -11,7 +11,7 @@ from typing import Union, List
 
 
 @auror.parameter.validate(
-    logger=skriba.logger.get_logger(logger_name="astrohack")
+    logger=logger.get_logger(logger_name="astrohack")
 )
 def locit(
         locit_name: str,
@@ -134,7 +134,7 @@ def locit(
         position_name = get_default_file_name(input_file=locit_name, output_type=".position.zarr")
 
     locit_params = locals()
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     input_params = locit_params.copy()
     attributes = locit_params.copy()

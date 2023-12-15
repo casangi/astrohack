@@ -1,6 +1,6 @@
 import pathlib
 import auror.parameter
-import skriba.logger
+import skriba.prototype.logger as logger
 
 import numpy as np
 from astrohack._utils._constants import custom_split_checker, custom_unit_checker
@@ -50,7 +50,7 @@ class AstrohackDataFile:
         self._verify_holog_files(file_stem, path)
 
     def _verify_holog_files(self, file_stem: str, path: str):
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+        #logger = skriba.logger.get_logger(logger_name="astrohack")
         logger.info("Verifying {stem}.* files in path={path} ...".format(stem=file_stem, path=path))
 
         file_path = "{path}/{stem}.holog.zarr".format(path=path, stem=file_stem)
@@ -129,7 +129,7 @@ class AstrohackImageFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+        #logger = skriba.logger.get_logger(logger_name="astrohack")
         if file is None:
             file = self.file
 
@@ -156,7 +156,7 @@ class AstrohackImageFile(dict):
         _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_split_checker
     )
     def select(
@@ -177,7 +177,7 @@ class AstrohackImageFile(dict):
         :return: Corresponding xarray dataset, or self if selection is None
         :rtype: xarray.Dataset or AstrohackImageFile
         """
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+        #logger = skriba.logger.get_logger(logger_name="astrohack")
 
         ant = 'ant_' + ant
         ddi = f'ddi_{ddi}'
@@ -192,7 +192,7 @@ class AstrohackImageFile(dict):
                 return self[ant][ddi]
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_split_checker
     )
     def export_to_fits(
@@ -244,7 +244,7 @@ class AstrohackImageFile(dict):
         )
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_apertures(
@@ -310,7 +310,7 @@ class AstrohackImageFile(dict):
         _dask_general_compute(self, _plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_beams(
@@ -408,7 +408,7 @@ class AstrohackHologFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = skriba.logger.get_logger()
+        #logger = skriba.logger.get_logger()
 
         if file is None:
             file = self.file
@@ -435,7 +435,7 @@ class AstrohackHologFile(dict):
         _print_method_list([self.summary, self.select, self.plot_diagnostics, self.plot_lm_sky_coverage])
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack")
+        logger=logger.get_logger(logger_name="astrohack")
     )
     def select(
             self,
@@ -455,7 +455,7 @@ class AstrohackHologFile(dict):
         :return: Corresponding xarray dataset, or self if selection is None
         :rtype: xarray.Dataset or AstrohackHologFile
         """
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+        #logger = skriba.logger.get_logger(logger_name="astrohack")
         ant = 'ant_' + ant
         ddi = f'ddi_{ddi}'
         map_id = f'map_{map_id}'
@@ -477,7 +477,7 @@ class AstrohackHologFile(dict):
         return self._meta_data
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_diagnostics(
@@ -528,7 +528,7 @@ class AstrohackHologFile(dict):
         - *polar*:     Split is done to an amplitude and a phase in the plots
 
         """
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+        #logger = skriba.logger.get_logger(logger_name="astrohack")
 
         param_dict = locals()
         param_dict["map"] = map_id
@@ -538,7 +538,7 @@ class AstrohackHologFile(dict):
         _dask_general_compute(self, _calibration_plot_chunk, param_dict, key_order, parallel)
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_lm_sky_coverage(
@@ -657,7 +657,7 @@ class AstrohackPanelFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+        #logger = skriba.logger.get_logger(logger_name="astrohack")
 
         if file is None:
             file = self.file
@@ -683,7 +683,7 @@ class AstrohackPanelFile(dict):
                             self.plot_antennas])
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack")
+        logger=logger.get_logger(logger_name="astrohack")
     )
     def get_antenna(
             self,
@@ -707,7 +707,7 @@ class AstrohackPanelFile(dict):
         return AntennaSurface(xds, telescope, reread=True)
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def export_screws(
@@ -759,7 +759,7 @@ class AstrohackPanelFile(dict):
         _dask_general_compute(self, _export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_antennas(
@@ -833,7 +833,7 @@ class AstrohackPanelFile(dict):
         - *all*: All the plots listed above. In this case the unit parameter is taken to mean the deviation unit, the
                  phase unit is set to degrees
         """
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+        #logger = skriba.logger.get_logger(logger_name="astrohack")
         param_dict = locals()
 
         param_dict["figuresize"] = figure_size
@@ -842,7 +842,7 @@ class AstrohackPanelFile(dict):
         _dask_general_compute(self, _plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack")
+        logger=logger.get_logger(logger_name="astrohack")
     )
     def export_to_fits(
             self,
@@ -920,7 +920,7 @@ class AstrohackPointFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+        #logger = skriba.logger.get_logger(logger_name="astrohack")
 
         if file is None:
             file = self.file
@@ -990,7 +990,7 @@ class AstrohackLocitFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+        #logger= skriba.logger.get_logger(logger_name="astrohack")
 
         if file is None:
             file = self.file
@@ -1023,7 +1023,7 @@ class AstrohackLocitFile(dict):
         print(table)
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
     )
     def print_array_configuration(
             self,
@@ -1045,7 +1045,7 @@ class AstrohackLocitFile(dict):
         _print_array_configuration(param_dict, self['ant_info'], self['obs_info']['telescope_name'])
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
     )
     def plot_source_positions(
             self,
@@ -1097,7 +1097,7 @@ class AstrohackLocitFile(dict):
         return
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def plot_array_configuration(
@@ -1193,7 +1193,7 @@ class AstrohackPositionFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+        #logger = logger.get_logger(logger_name="astrohack")
 
         if file is None:
             file = self.file
@@ -1219,7 +1219,7 @@ class AstrohackPositionFile(dict):
         return self._file_is_open
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def export_fit_results(
@@ -1257,7 +1257,7 @@ class AstrohackPositionFile(dict):
         _export_fit_results(self, param_dict)
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def plot_sky_coverage(
@@ -1315,7 +1315,7 @@ class AstrohackPositionFile(dict):
                                   parallel=parallel)
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def plot_delays(
@@ -1382,7 +1382,7 @@ class AstrohackPositionFile(dict):
                                   parallel=parallel)
 
     @auror.parameter.validate(
-        logger=skriba.logger.get_logger(logger_name="astrohack"),
+        logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def plot_position_corrections(

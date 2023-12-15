@@ -1,7 +1,7 @@
 import json
 import numpy as np
 
-import skriba.logger
+import skriba.prototype.logger as logger
 import auror.parameter
 
 from typing import List, Union, NewType
@@ -17,8 +17,9 @@ from astrohack.mds import AstrohackImageFile
 
 Array = NewType("Array", Union[np.array, List[int], List[float]])
 
+
 @auror.parameter.validate(
-    logger=skriba.logger.get_logger(logger_name="astrohack")
+    logger=logger.get_logger(logger_name="astrohack")
 )
 def holog(
         holog_name: str,
@@ -144,7 +145,7 @@ def holog(
 
     holog_params = locals()
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    # logger = skriba.logger.get_logger(logger_name="astrohack")
 
     input_params = holog_params.copy()
     _check_if_file_exists(holog_params['holog_name'])
@@ -198,31 +199,27 @@ def holog(
     with open(".holog_diagnostic.json", "w") as out_file:
         json.dump(json_data, out_file)
 
-    try:
-        if _dask_general_compute(
-                holog_json,
-                _holog_chunk,
-                holog_params,
-                ['ant', 'ddi'],
-                parallel=parallel
-        ):
+    if _dask_general_compute(
+            holog_json,
+            _holog_chunk,
+            holog_params,
+            ['ant', 'ddi'],
+            parallel=parallel
+    ):
 
-            output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_attr")
-            _write_meta_data(output_attr_file, holog_params)
+        output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_attr")
+        _write_meta_data(output_attr_file, holog_params)
 
-            output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_input")
-            _write_meta_data(output_attr_file, input_params)
+        output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_input")
+        _write_meta_data(output_attr_file, input_params)
 
-            image_mds = AstrohackImageFile(holog_params['image_name'])
-            image_mds.open()
+        image_mds = AstrohackImageFile(holog_params['image_name'])
+        image_mds.open()
 
-            logger.info('Finished processing')
+        logger.info('Finished processing')
 
-            return image_mds
+        return image_mds
 
-        else:
-            logger.warning("No data to process")
-            return None
-
-    except Exception as error:
-        logger.error("There was an error, see log above for more info :: {error}".format(error=error))
+    else:
+        logger.warning("No data to process")
+        return None

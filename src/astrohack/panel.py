@@ -1,6 +1,7 @@
 import os
 import pathlib
 import shutil
+import skriba.prototype.logger as logger
 import skriba.logger
 import auror.parameter
 
@@ -18,7 +19,7 @@ from typing import Union, List
 
 
 @auror.parameter.validate(
-    logger=skriba.logger.get_logger(logger_name="astrohack"),
+    logger=skriba.prototype.logger.get_logger(logger_name="astrohack"),
     custom_checker=custom_panel_checker
 )
 def panel(
@@ -143,7 +144,7 @@ def panel(
 
     panel_params = locals()
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.prototype.logger.get_logger(logger_name="astrohack")
 
     input_params = panel_params.copy()
     _check_if_file_exists(panel_params['image_name'])

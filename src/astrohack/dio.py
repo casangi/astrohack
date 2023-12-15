@@ -1,6 +1,6 @@
 import json
 import pathlib
-import skriba.logger
+import skriba.prototype.logger as logger
 
 import numpy as np
 
@@ -54,7 +54,7 @@ def open_holog(file: str) -> AstrohackHologFile:
             }
     """
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _data_file = AstrohackHologFile(file=file)
 
@@ -95,7 +95,7 @@ def open_image(file: str) -> AstrohackImageFile:
 
     """
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _data_file = AstrohackImageFile(file=file)
 
@@ -136,7 +136,7 @@ def open_panel(file: str) -> AstrohackPanelFile:
 
     """
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _data_file = AstrohackPanelFile(file=file)
 
@@ -177,7 +177,7 @@ def open_locit(file: str) -> AstrohackLocitFile:
 
     """
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _data_file = AstrohackLocitFile(file=file)
 
@@ -218,7 +218,7 @@ def open_position(file: str) -> AstrohackPositionFile:
 
     """
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _data_file = AstrohackPositionFile(file=file)
 
@@ -256,7 +256,7 @@ def open_pointing(file: str) -> AstrohackPointFile:
 
     """
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     _data_file = AstrohackPointFile(file=file)
 
@@ -291,7 +291,7 @@ def fix_pointing_table(ms_name: str, reference_antenna: List[str]) -> None:
 
 
   """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     path = pathlib.Path(ms_name)
     ms_name_fullpath = str(path.absolute().resolve())
@@ -407,7 +407,7 @@ def inspect_holog_obs_dict(
             }
         } 
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    #logger = skriba.logger.get_logger(logger_name="astrohack")
 
     if not isinstance(file, dict):
         try:
