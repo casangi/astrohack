@@ -1,7 +1,6 @@
 # ! python
 # coding: utf-8
 
-import os
 import argparse
 import glob
 
@@ -15,11 +14,9 @@ parser = argparse.ArgumentParser(description="Runs a set of Jupyter \
 file_text = """ Notebook file(s) to be run, e.g. '*.ipynb' (default),
 'my_nb1.ipynb', 'my_nb1.ipynb my_nb2.ipynb', 'my_dir/*.ipynb'
 """
-parser.add_argument('file_list', metavar='F', type=str, nargs='*', 
-    help=file_text)
+parser.add_argument('file_list', metavar='F', type=str, nargs='*', help=file_text)
 parser.add_argument('-t', '--timeout', help='Length of time (in secs) a cell \
-    can run before raising TimeoutError (default 600).', default=600, 
-    required=False)
+    can run before raising TimeoutError (default 600).', default=600, required=False)
 parser.add_argument('-p', '--run-path', help='The path the notebook will be \
     run from (default pwd).', default='.', required=False)
 parser.add_argument('-o', '--overwrite', help='Overwrite notebooks', action='store_true')
