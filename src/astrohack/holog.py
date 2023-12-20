@@ -132,7 +132,7 @@ def holog(
             grid_interpolation_mode='linear',
             chan_average = True,
             scan_average = True,
-            ant_id=['ea25'],
+            ant='ea25',
             overwrite=True,
             parallel=True
         )
