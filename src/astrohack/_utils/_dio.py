@@ -312,11 +312,24 @@ def _write_fits(header, imagetype, data, filename, unit, origin):
     header['TYPE'] = imagetype
     header['ORIGIN'] = f'Astrohack v{code_version}: {origin}'
     header['DATE'] = datetime.datetime.now().strftime('%b %d %Y, %H:%M:%S')
-    hdu = fits.PrimaryHDU(data)
+    hdu = fits.PrimaryHDU(_reorder_axes_for_fits(data))
     for key in header.keys():
         hdu.header.set(key, header[key])
     hdu.writeto(_add_prefix(filename, origin), overwrite=True)
     return
+
+
+def _reorder_axes_for_fits(data: np.ndarray):
+    carta_dim_order = (1, 0, 2, 3, )
+    shape = data.shape
+    n_dim = len(shape)
+    if n_dim == 5:
+        # Ignore the time dimension and flip polarization and frequency axes
+        transpo = np.transpose(data[0, ...], carta_dim_order)
+        # Flip vertical axis
+        return np.flip(transpo, 2)
+    elif n_dim == 2:
+        return np.flipud(data)
 
 
 def _create_destination_folder(destination):
