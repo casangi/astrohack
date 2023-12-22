@@ -407,9 +407,10 @@ def _export_to_fits_holog_chunk(parm_dict):
 
     baseheader = _axis_to_fits_header(baseheader, inputxds.chan.values, 3, 'Frequency', 'Hz')
     baseheader = _stokes_axis_to_fits_header(baseheader, 4)
-
-    beamheader = _axis_to_fits_header(baseheader, inputxds.l.values, 1, 'L', 'rad')
-    beamheader = _axis_to_fits_header(beamheader, inputxds.m.values, 2, 'M', 'rad')
+    rad_to_deg = _convert_unit('rad', 'deg', 'trigonometric')
+    beamheader = _axis_to_fits_header(baseheader, inputxds.l.values*rad_to_deg, 1, 'RA---TAN', 'deg')
+    beamheader = _axis_to_fits_header(beamheader, inputxds.m.values*rad_to_deg, 2, 'DEC--TAN', 'deg')
+    beamheader['RADESYSA'] = 'FK5'
     beam = inputxds['BEAM'].values
     if parm_dict['complex_split'] == 'cartesian':
         _write_fits(beamheader, 'Complex beam real part', beam.real, _add_prefix(basename, 'beam_real')+'.fits',

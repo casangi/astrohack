@@ -312,6 +312,7 @@ def _write_fits(header, imagetype, data, filename, unit, origin):
     header['TYPE'] = imagetype
     header['ORIGIN'] = f'Astrohack v{code_version}: {origin}'
     header['DATE'] = datetime.datetime.now().strftime('%b %d %Y, %H:%M:%S')
+
     hdu = fits.PrimaryHDU(_reorder_axes_for_fits(data))
     for key in header.keys():
         hdu.header.set(key, header[key])

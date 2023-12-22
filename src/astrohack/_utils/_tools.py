@@ -294,6 +294,12 @@ def _stokes_axis_to_fits_header(header, iaxis):
     Returns: The augmented header
 
     """
+    try:
+        wcsaxes = header['WCSAXES']
+    except KeyError:
+        wcsaxes = 0
+    wcsaxes += 1
+    header[f'WCSAXES'] = wcsaxes
     header[f'NAXIS{iaxis}'] = 4
     header[f'CRVAL{iaxis}'] = 1.0
     header[f'CDELT{iaxis}'] = 1.0
@@ -305,7 +311,7 @@ def _stokes_axis_to_fits_header(header, iaxis):
     return header
 
 
-def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
+def _axis_to_fits_header(header: dict, axis, iaxis, axistype, unit, iswcs=True):
     """
     Process an axis to create a FITS compatible linear axis description
     Args:
@@ -318,6 +324,11 @@ def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
 
     """
     logger = skriba.logger.get_logger(logger_name="astrohack")
+    try:
+        wcsaxes = header['WCSAXES']
+    except KeyError:
+        wcsaxes = 0
+
     naxis = len(axis)
     if naxis == 1:
         inc = axis[0]
@@ -334,6 +345,9 @@ def _axis_to_fits_header(header, axis, iaxis, axistype, unit):
     ref = naxis // 2
     val = axis[ref]
 
+    if iswcs:
+        wcsaxes += 1
+    header[f'WCSAXES'] = wcsaxes
     header[f'NAXIS{iaxis}'] = naxis
     header[f'CRVAL{iaxis}'] = val
     header[f'CDELT{iaxis}'] = inc
