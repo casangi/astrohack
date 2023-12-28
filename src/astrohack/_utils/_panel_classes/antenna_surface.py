@@ -770,8 +770,8 @@ class AntennaSurface:
             'WAVELENG': self.wavelength,
             'FREQUENC': clight/self.wavelength,
         }
-        head = _axis_to_fits_header(head, self.u_axis, 1, 'X', 'm')
-        head = _axis_to_fits_header(head, self.v_axis, 2, 'Y', 'm')
+        head = _axis_to_fits_header(head, self.u_axis, 1, 'X----LIN', 'm')
+        head = _axis_to_fits_header(head, self.v_axis, 2, 'Y----LIN', 'm')
         head = _resolution_to_fits_header(head, self.resolution)
 
         _write_fits(head, 'Amplitude', self.amplitude, _add_prefix(basename, 'amplitude')+'.fits', self.amp_unit,
