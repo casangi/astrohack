@@ -49,20 +49,30 @@ def combine(
     **AstrohackImageFile**
 
     Image object allows the user to access image data via compound dictionary keys with values, in order of depth, \
-    `ant` -> `ddi`. The image object also provides a `summary()` helper function to list available keys for each file.\
-     An outline of the image object structure is show below:
+    `ant` -> `ddi`. The image object produced by combine is special because it will always contain a single DDI.\
+    The image object also provides a `summary()` helper function to list available keys for each file.\
+     An outline of the image object structure when produced by combine is show below:
 
     .. parsed-literal::
         image_mds =
             {
             ant_0:{
-                ddi_0: image_ds,
-                 ⋮
-                ddi_m: image_ds
+                ddi_n: image_ds,
             },
             ⋮
             ant_n: …
         }
+
+    **Example Usage**
+
+    .. parsed-literal::
+        from astrohack.combine import combine
+
+        combine(
+            "astrohack_obs.image.zarr",
+            ant = "ea25"
+            weight = False
+        )
     """
 
     if combine_name is None:

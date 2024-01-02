@@ -1,6 +1,7 @@
 import toml
 import argparse
 import os
+import fileinput
 
 parser = argparse.ArgumentParser(description="Bumps the current version, reintalls with pip, "
                                  "updates notebooks, then does git")
@@ -51,10 +52,10 @@ def pip_reinstall():
     os.system('pip install -e . 1>>/dev/null')
 
 
-def run_notebooks():
+def run_notebooks(notebook_list):
     print_section_header('Running notebooks...')
     exestr = "python run-notebooks.py"
-    for notebook in notebooks:
+    for notebook in notebook_list:
         exestr += ' '+notebook
     exestr += ' -o'
     os.chdir('./docs')
@@ -78,9 +79,24 @@ def run_git(bumped_version, push):
         print('Push skipped')
 
 
+def updated_colab_link(notebook_list, version):
+    print_section_header('Updating Colab links...')
+    for notebook in notebook_list:
+        for line in fileinput.input('docs/'+notebook, inplace=1):
+            if "![Open In Colab]" in line:
+                wrds = line.split('/')
+                iblob = wrds.index('blob')
+                wrds[iblob+1] = 'v'+version
+                print('/'.join(wrds)[:-1])
+            else:
+                print(line[:-1])
+                pass
+
+
 new_version = bump_version(args.bump)
 pip_reinstall()
-run_notebooks()
+updated_colab_link(notebooks, new_version)
+run_notebooks(notebooks)
 run_git(new_version, args.push)
 
 print_section_header('All Done!')
