@@ -2,7 +2,7 @@ import os
 import pathlib
 import astrohack
 
-import skriba.prototype.logger as logger
+import skriba.logger as logger
 
 
 def download(file: str, folder: str = '.', unpack: bool = False, source: str = 'dropbox') -> None:

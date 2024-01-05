@@ -1,7 +1,7 @@
 from typing import Union, List
 
 import auror.parameter
-import skriba.prototype.logger as logger
+import skriba.logger as logger
 from astrohack._utils._combine import _combine_chunk
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
@@ -66,7 +66,7 @@ def combine(
         combine_name = get_default_file_name(input_file=image_name, output_type=".image.zarr")
 
     combine_params = locals()
-    #logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     input_params = combine_params.copy()
 

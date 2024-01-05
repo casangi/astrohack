@@ -1,5 +1,5 @@
 import click
-import skriba.prototype.logger as logger
+import skriba.logger as logger
 
 
 class AstrohackWorker:

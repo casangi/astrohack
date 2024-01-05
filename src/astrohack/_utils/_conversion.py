@@ -1,5 +1,5 @@
 import numpy as np
-import skriba.prototype.logger as logger
+import skriba.logger as logger
 
 from astrohack._utils._constants import *
 

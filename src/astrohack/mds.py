@@ -1,6 +1,6 @@
 import pathlib
 import auror.parameter
-import skriba.prototype.logger as logger
+import skriba.logger as logger
 
 import numpy as np
 from astrohack._utils._constants import custom_split_checker, custom_unit_checker
@@ -50,7 +50,7 @@ class AstrohackDataFile:
         self._verify_holog_files(file_stem, path)
 
     def _verify_holog_files(self, file_stem: str, path: str):
-        #logger = skriba.logger.get_logger(logger_name="astrohack")
+        
         logger.info("Verifying {stem}.* files in path={path} ...".format(stem=file_stem, path=path))
 
         file_path = "{path}/{stem}.holog.zarr".format(path=path, stem=file_stem)
@@ -129,7 +129,7 @@ class AstrohackImageFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        #logger = skriba.logger.get_logger(logger_name="astrohack")
+        
         if file is None:
             file = self.file
 
@@ -177,7 +177,7 @@ class AstrohackImageFile(dict):
         :return: Corresponding xarray dataset, or self if selection is None
         :rtype: xarray.Dataset or AstrohackImageFile
         """
-        #logger = skriba.logger.get_logger(logger_name="astrohack")
+        
 
         ant = 'ant_' + ant
         ddi = f'ddi_{ddi}'
@@ -455,7 +455,7 @@ class AstrohackHologFile(dict):
         :return: Corresponding xarray dataset, or self if selection is None
         :rtype: xarray.Dataset or AstrohackHologFile
         """
-        #logger = skriba.logger.get_logger(logger_name="astrohack")
+        
         ant = 'ant_' + ant
         ddi = f'ddi_{ddi}'
         map_id = f'map_{map_id}'
@@ -528,7 +528,7 @@ class AstrohackHologFile(dict):
         - *polar*:     Split is done to an amplitude and a phase in the plots
 
         """
-        #logger = skriba.logger.get_logger(logger_name="astrohack")
+        
 
         param_dict = locals()
         param_dict["map"] = map_id
@@ -657,7 +657,7 @@ class AstrohackPanelFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        #logger = skriba.logger.get_logger(logger_name="astrohack")
+        
 
         if file is None:
             file = self.file
@@ -833,7 +833,7 @@ class AstrohackPanelFile(dict):
         - *all*: All the plots listed above. In this case the unit parameter is taken to mean the deviation unit, the
                  phase unit is set to degrees
         """
-        #logger = skriba.logger.get_logger(logger_name="astrohack")
+        
         param_dict = locals()
 
         param_dict["figuresize"] = figure_size
@@ -920,7 +920,7 @@ class AstrohackPointFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        #logger = skriba.logger.get_logger(logger_name="astrohack")
+        
 
         if file is None:
             file = self.file

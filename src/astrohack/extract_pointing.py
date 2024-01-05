@@ -1,5 +1,5 @@
 import auror.parameter
-import skriba.prototype.logger as logger
+import skriba.logger as logger
 
 from astrohack._utils._dio import _load_point_file, _check_if_file_will_be_overwritten, _check_if_file_exists
 from astrohack._utils._dio import _write_meta_data
@@ -66,7 +66,7 @@ def extract_pointing(
     # Returns the current local variables in dictionary form
     extract_pointing_params = locals()
 
-    #logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     input_params = extract_pointing_params.copy()
     _check_if_file_exists(extract_pointing_params['ms_name'])

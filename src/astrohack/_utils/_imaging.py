@@ -4,7 +4,7 @@ import numpy as np
 import astropy.units as u
 import astropy.coordinates as coord
 
-import skriba.prototype.logger as logger
+import skriba.logger as logger
 
 from skimage.draw import disk
 from astrohack._utils._algorithms import _calc_coords
@@ -85,7 +85,7 @@ def _calculate_aperture_pattern(grid, delta, padding_factor=50):
     Returns:
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
-    #logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     logger.info("Calculating aperture illumination pattern ...")
 
     assert grid.shape[-1] == grid.shape[-2]  ###To do: why is this expected that l.shape == m.shape

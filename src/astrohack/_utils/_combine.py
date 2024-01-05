@@ -1,7 +1,7 @@
 import numpy as np
 import xarray as xr
 
-import skriba.prototype.logger as logger
+import skriba.logger as logger
 
 from astrohack._utils._dio import _load_image_xds
 from scipy.interpolate import griddata
@@ -15,7 +15,7 @@ def _combine_chunk(combine_chunk_params):
     Args:
         combine_chunk_params: Param dictionary for combine chunk
     """
-    #logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     antenna = combine_chunk_params['this_ant']
     ddi_dict = combine_chunk_params['image_mds'][antenna]

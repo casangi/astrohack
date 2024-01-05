@@ -1,7 +1,7 @@
 import json
 import numpy as np
 
-import skriba.prototype.logger as logger
+import skriba.logger as logger
 import auror.parameter
 
 from typing import List, Union, NewType

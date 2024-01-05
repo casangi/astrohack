@@ -3,7 +3,7 @@ from matplotlib.patches import Rectangle
 from astrohack._utils._panel_classes.telescope import Telescope
 from astrohack._utils._constants import *
 
-import skriba.prototype.logger as logger
+import skriba.logger as logger
 
 def _open_telescope(telname):
     """
@@ -56,7 +56,7 @@ def _get_telescope_lat_lon_rad(telescope):
         lat = telescope.array_center['m1']['value']
         rad = telescope.array_center['m2']['value']
     else:
-        #logger = skriba.logger.get_logger(logger_name="astrohack")
+        
         msg = f'Unsupported telescope position reference :{telescope.array_center["refer"]}'
         logger.error(msg)
         raise Exception(msg)

@@ -19,13 +19,14 @@ from .extract_locit import *
 if os.path.exists(os.path.dirname(__file__) + "/config/"):
     os.environ["AUROR_CONFIG_PATH"] = os.path.dirname(__file__) + "/config/"
 
-# This installs a slick, informational tracebacks and prototype logger
+# This installs a slick, informational tracebacks logger
 from rich.traceback import install
-from skriba.prototype.console import setup_logger
+from skriba.logger import setup_logger
 
 install(show_locals=False)
 
 if not os.getenv("SKRIBA_LOGGER_NAME"):
+    os.environ["SKRIBA_LOGGER_NAME"] = "astrohack"
     setup_logger(
         logger_name="astrohack",
         log_to_term=True,

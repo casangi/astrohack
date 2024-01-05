@@ -8,7 +8,7 @@ import yaml
 import logging
 import astrohack
 
-import skriba.prototype.logger as logger
+import skriba.logger as logger
 import auror.parameter
 
 from astrohack._utils._dask_plugins._astrohack_worker import AstrohackWorker
@@ -129,7 +129,7 @@ def local_client(
 
     if not os.getenv("SKRIBA_LOGGER_NAME"):
         logger.setup_logger(**_log_params)
-        #logger = skriba.prototype.logger.get_logger(logger_name=log_params["logger_name"])
+        #logger = skriba.logger.get_logger(logger_name=log_params["logger_name"])
 
     if dask_local_dir is None:
         logger.warning("It is recommended that the local cache directory be set using the `local_dir` parameter.")
