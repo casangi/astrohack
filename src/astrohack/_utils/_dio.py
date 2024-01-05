@@ -10,7 +10,7 @@ import pathlib
 import numpy as np
 import xarray as xr
 
-import skriba.logger
+import skriba.logger as logger
 
 from astropy.io import fits
 from astrohack import __version__ as code_version
@@ -22,7 +22,7 @@ DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 
 def _check_if_file_exists(file):
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     if pathlib.Path(file).exists() is False:
         logger.error('File {file} does not exists.')
@@ -30,7 +30,7 @@ def _check_if_file_exists(file):
 
 
 def _check_if_file_will_be_overwritten(file, overwrite):
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     path = pathlib.Path(file)
 
     if (path.exists() is True) and (overwrite is False):
@@ -56,7 +56,7 @@ def _load_panel_file(file=None, panel_dict=None, dask_load=True):
     Returns:
         bool: Nested dictionary containing panel data xds.
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     panel_data_dict = {}
 
     if panel_dict is not None:
@@ -95,7 +95,7 @@ def _load_image_file(file=None, image_dict=None, dask_load=True):
     Returns:
         bool: bool describing whether the file was opened properly
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     ant_data_dict = {}
 
     if image_dict is not None:
@@ -136,7 +136,7 @@ def _load_locit_file(file=None, locit_dict=None, dask_load=True):
     Returns:
         bool: bool describing whether the file was opened properly
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     ant_data_dict = {}
 
     if locit_dict is not None:
@@ -177,7 +177,7 @@ def _load_position_file(file=None, position_dict=None, dask_load=True, combine=F
     Returns:
         bool: bool describing whether the file was opened properly
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     ant_data_dict = {}
 
     if position_dict is not None:
@@ -224,7 +224,7 @@ def _load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None
 
     """
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     if holog_dict is None:
         holog_dict = {}
@@ -339,7 +339,7 @@ def _create_destination_folder(destination):
     Args:
         destination: the folder to be created
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     try:
         os.mkdir(destination)
@@ -444,7 +444,7 @@ def _read_meta_data(file_name):
     Returns:
         dict: dictionary containing dimension data.
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     try:
         with open(file_name) as json_file:
@@ -466,7 +466,7 @@ def _write_meta_data(file_name, input_dict):
     """
 
     calling_function = 1
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     meta_data = copy.deepcopy(input_dict)
 
@@ -494,7 +494,7 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
     Returns:
         nested dict: nested dictionary (ddi, holog_map, xds) with xds data embedded in it.
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     ant_id_str = str(ant_id)
 
     holog_meta_data = str(pathlib.Path(holog_file).joinpath(".holog_json"))
@@ -597,7 +597,7 @@ def _load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None, diagnos
 
 
 def _check_time_axis_consistency(pnt_dict):
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     variable_length = {}
 
     for ant in pnt_dict.keys():

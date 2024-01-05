@@ -12,7 +12,7 @@ import auror.parameter
 import dask
 import numpy as np
 import psutil
-import skriba.logger
+import skriba.logger as logger
 from astropy.time import Time
 from casacore import tables as ctables
 from rich.console import Console
@@ -48,7 +48,6 @@ class HologObsDict(dict):
 
     def __init__(self, obj: JSON):
         super().__init__(obj)
-        self.logger = skriba.logger.get_logger(logger_name="astrohack")
 
     def __getitem__(self, key: str):
         return super().__getitem__(key)
@@ -101,14 +100,13 @@ class HologObsDict(dict):
                 )
 
             else:
-                self.logger.error("Must specify a list of reference antennas for this option.")
+                logger.error("Must specify a list of reference antennas for this option.")
         else:
-            self.logger.error("Valid key not found: {key}".format(key=key))
+            logger.error("Valid key not found: {key}".format(key=key))
             return {}
 
     @staticmethod
     def get_nearest_baselines(antenna: str, n_baselines: int = None, path_to_matrix: str = None) -> object:
-        logger = skriba.logger.get_logger(logger_name="astrohack")
         import pandas as pd
 
         if path_to_matrix is None:
@@ -233,7 +231,7 @@ class HologObsDict(dict):
 
 @auror.parameter.validate(
     add_data_type=HologObsDict,
-    logger=skriba.logger.get_logger(logger_name="astrohack")
+    logger=logger.get_logger(logger_name="astrohack")
 )
 def extract_holog(
         ms_name: str,
@@ -384,7 +382,6 @@ def extract_holog(
 
     extract_holog_params = locals()
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
 
     input_pars = extract_holog_params.copy()
 
@@ -780,7 +777,7 @@ def generate_holog_obs_dict(
     """
     extract_holog_params = locals()
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     _check_if_file_exists(ms_name)
     _check_if_file_exists(point_name)

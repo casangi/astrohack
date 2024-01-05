@@ -22,11 +22,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
 
+import click
+
 from collections import defaultdict
 from dask.core import reverse_dict
 from dask.base import tokenize
-from dask.order import graph_metrics, ndependencies
-import click
+from dask.order import ndependencies
 from distributed.diagnostics.plugin import SchedulerPlugin
 
 
@@ -58,7 +59,7 @@ def get_node_depths(dependencies, root_nodes, metrics):
     return node_depths
 
 
-class astrohack_schedular(SchedulerPlugin):
+class AstrohackScheduler(SchedulerPlugin):
 
     def __init__(self, autorestrictor, local_cache):
         self.autorestrictor = autorestrictor
@@ -72,8 +73,7 @@ class astrohack_schedular(SchedulerPlugin):
             ip = worker[worker.rfind('/') + 1:worker.rfind(':')]
             scheduler.add_resources(worker=worker, resources={ip: 1})
 
-    def update_graph(self, scheduler, dsk=None, keys=None, restrictions=None,
-                     **kw):
+    def update_graph(self, scheduler, dsk=None, keys=None, restrictions=None, **kw):
         if self.autorestrictor:
             # print('Using autorestrictor')
             """Processes dependencies to assign tasks to specific workers."""
@@ -104,8 +104,8 @@ class astrohack_schedular(SchedulerPlugin):
                 node_depths = get_node_depths(dependencies, root_nodes, metrics)
                 # try:
                 max_depth = max(node_depths.values())
-                # except:
-                #        print('&&&&& dependencies, root_nodes, metrics',node_depths,',*,',dependencies, root_nodes, metrics)
+                # except: print('&&&&& dependencies, root_nodes, metrics',node_depths,',*,',dependencies, root_nodes,
+                # metrics)
 
                 # If we have fewer partition nodes than workers, we cannot utilise all
                 # the workers and are likely dealing with a reduction. We work our way
@@ -207,5 +207,135 @@ class astrohack_schedular(SchedulerPlugin):
 @click.option("--autorestrictor", default=False)
 @click.option("--local_cache", default=False)
 def dask_setup(scheduler, autorestrictor, local_cache):
-    plugin = astrohack_schedular(autorestrictor, local_cache)
+    plugin =  (autorestrictor, local_cache)
     scheduler.add_plugin(plugin)
+
+
+def graph_metrics(dependencies, dependents, total_dependencies):
+    r"""Useful measures of a graph used by ``dask.order.order``
+
+    Example DAG (a1 has no dependencies; b2 and c1 are root nodes):
+
+    c1
+    |
+    b1  b2
+     \  /
+      a1
+
+    For each key we return:
+
+    1.  **total_dependents**: The number of keys that can only be run
+        after this key is run.  The root nodes have value 1 while deep child
+        nodes will have larger values.
+
+        1
+        |
+        2   1
+         \ /
+          4
+
+    2.  **min_dependencies**: The minimum value of the total number of
+        dependencies of all final dependents (see module-level comment for more).
+        In other words, the minimum of ``ndependencies`` of root
+        nodes connected to the current node.
+
+        3
+        |
+        3   2
+         \ /
+          2
+
+    3.  **max_dependencies**: The maximum value of the total number of
+        dependencies of all final dependents (see module-level comment for more).
+        In other words, the maximum of ``ndependencies`` of root
+        nodes connected to the current node.
+
+        3
+        |
+        3   2
+         \ /
+          3
+
+    4.  **min_height**: The minimum height from a root node
+
+        0
+        |
+        1   0
+         \ /
+          1
+
+    5.  **max_height**: The maximum height from a root node
+
+        0
+        |
+        1   0
+         \ /
+          2
+
+    Examples
+    --------
+    #>>> inc = lambda x: x + 1
+    #>>> dsk = {'a1': 1, 'b1': (inc, 'a1'), 'b2': (inc, 'a1'), 'c1': (inc, 'b1')}
+    #>>> dependencies, dependents = get_deps(dsk)
+    #>>> _, total_dependencies = ndependencies(dependencies, dependents)
+    #>>> metrics = _graph_metrics(dependencies, dependents, total_dependencies)
+    #>>> sorted(metrics.items())
+    [('a1', (4, 2, 3, 1, 2)), ('b1', (2, 3, 3, 1, 1)), ('b2', (1, 2, 2, 0, 0)), ('c1', (1, 3, 3, 0, 0))]
+
+    Returns
+    -------
+    metrics: Dict[key, Tuple[int, int, int, int, int]]
+    """
+    result = {}
+    num_needed = {k: len(v) for k, v in dependents.items() if v}
+    current = []
+    current_pop = current.pop
+    current_append = current.append
+    for key, deps in dependents.items():
+        if not deps:
+            val = total_dependencies[key]
+            result[key] = (1, val, val, 0, 0)
+            for child in dependencies[key]:
+                num_needed[child] -= 1
+                if not num_needed[child]:
+                    current_append(child)
+
+    while current:
+        key = current_pop()
+        parents = dependents[key]
+        if len(parents) == 1:
+            (parent,) = parents
+            (
+                total_dependents,
+                min_dependencies,
+                max_dependencies,
+                min_heights,
+                max_heights,
+            ) = result[parent]
+            result[key] = (
+                1 + total_dependents,
+                min_dependencies,
+                max_dependencies,
+                1 + min_heights,
+                1 + max_heights,
+            )
+        else:
+            (
+                total_dependents,
+                min_dependencies,
+                max_dependencies,
+                min_heights,
+                max_heights,
+            ) = zip(*(result[parent] for parent in dependents[key]))
+            result[key] = (
+                1 + sum(total_dependents),
+                min(min_dependencies),
+                max(max_dependencies),
+                1 + min(min_heights),
+                1 + max(max_heights),
+            )
+        for child in dependencies[key]:
+            num_needed[child] -= 1
+            if not num_needed[child]:
+                current_append(child)
+    return result

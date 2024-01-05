@@ -1,6 +1,7 @@
 import os
 import pathlib
 import shutil
+import skriba.logger as logger
 import skriba.logger
 import auror.parameter
 
@@ -156,7 +157,7 @@ def panel(
 
     panel_params = locals()
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     input_params = panel_params.copy()
     _check_if_file_exists(panel_params['image_name'])

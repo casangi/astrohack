@@ -1,4 +1,4 @@
-import skriba.logger
+import skriba.logger as logger
 
 import numpy as np
 import astropy.units as units
@@ -28,7 +28,7 @@ def _extract_antenna_data(extract_locit_parms):
     Returns:
     Antenna dictionary
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     cal_table = extract_locit_parms['cal_table']
     ant_table = ctables.table(cal_table + '::ANTENNA', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     ant_off = ant_table.getcol('OFFSET')
@@ -87,7 +87,7 @@ def _extract_spectral_info(extract_locit_parms):
     Returns:
     DDI dictionary
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     cal_table = extract_locit_parms['cal_table']
     spw_table = ctables.table(cal_table+'::SPECTRAL_WINDOW', readonly=True, lockoptions={'option': 'usernoread'},
                               ack=False)
@@ -177,7 +177,7 @@ def _extract_antenna_phase_gains(extract_locit_parms):
     Returns:
     Reference antenna
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     cal_table = extract_locit_parms['cal_table']
     basename = extract_locit_parms['locit_name']
@@ -298,7 +298,7 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
         figure_size: plot dimensions in inches
         dpi: Dots per inch (plot resolution)
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     n_src = len(src_dict)
     radec = np.ndarray((n_src, 2))
     name = []

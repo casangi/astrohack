@@ -4,7 +4,7 @@ import numpy as np
 import astropy.units as u
 import astropy.coordinates as coord
 
-import skriba.logger
+import skriba.logger as logger
 
 from skimage.draw import disk
 from astrohack._utils._algorithms import _calc_coords
@@ -34,13 +34,13 @@ def _parallactic_derotation(data, parallactic_angle_dict):
     # This is the angle we will rotated the maps to.
     median_angular_reference = parallactic_angle_dict[maps[0]].parallactic_samples[median_index]
 
-    for map, map_value in enumerate(maps):
+    for mapping, map_value in enumerate(maps):
         # median_angular_offset = median_angular_reference - parallactic_angle_dict[map_value].parallactic_samples[
         # median_index] median_angular_offset *= 180/np.pi
 
         # parallactic_angle = 360 - parallactic_angle_dict[map_value].parallactic_samples[median_index]*180/np.pi
 
-        data[map] = scipy.ndimage.rotate(input=data[map, ...], angle=90, axes=(3, 2), reshape=False)
+        data[mapping] = scipy.ndimage.rotate(input=data[mapping, ...], angle=90, axes=(3, 2), reshape=False)
 
     return data
 
@@ -85,7 +85,7 @@ def _calculate_aperture_pattern(grid, delta, padding_factor=50):
     Returns:
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     logger.info("Calculating aperture illumination pattern ...")
 
     assert grid.shape[-1] == grid.shape[-2]  ###To do: why is this expected that l.shape == m.shape

@@ -6,7 +6,7 @@ import zipfile
 
 from tqdm import tqdm
 
-import skriba.logger
+import skriba.logger as logger
 
 FILE_ID = {
     'ea25_cal_small_before_fixed.split.ms':
@@ -61,7 +61,7 @@ FILE_ID = {
 
 
 def download(file: str, folder: str = '.') -> None:
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     full_file_path = pathlib.Path(folder).joinpath(file)
 
     if full_file_path.exists():

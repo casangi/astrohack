@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 import astropy
 import astrohack
-import skriba.logger
+import skriba.logger as logger
 
 from numba import njit
 from numba.core import types
@@ -30,7 +30,7 @@ def _extract_holog_chunk(extract_holog_params):
         ref_ant_ids (numpy.narray): Arry of antenna_id values corresponding to reference data.
         sel_state_ids (list): List pf state_ids corresponding to holography data/
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     ms_name = extract_holog_params["ms_name"]
     pnt_name = extract_holog_params["point_name"]
@@ -302,7 +302,7 @@ def _create_holog_file(
         ddi (numpy.ndarray): data description id; a combination of polarization and spectral window
     """
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     ctb = ctables.table("/".join((ms_name, "ANTENNA")))
     observing_location = ctb.getcol("POSITION")
@@ -396,7 +396,7 @@ def _create_holog_obs_dict(
     import pandas as pd
     from scipy.spatial import distance_matrix
 
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
     mapping_scans_dict = {}
     holog_obs_dict = {}
     map_id = 0
@@ -531,7 +531,7 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         holog_name (str): holog file name.
         holog_dict (dict): Dictionary containing msdx data.
     """
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     ant_holog_dict = {}
     cell_sizes = []

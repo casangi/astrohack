@@ -1,3 +1,5 @@
+import sys
+
 import psutil
 import multiprocessing
 import pathlib
@@ -8,14 +10,14 @@ import yaml
 import logging
 import astrohack
 
-import skriba.logger
+import skriba.logger as logger
 import auror.parameter
 
-from astrohack._utils._dask_plugins._astrohack_worker import AstrohackWorker
+from astrohack._utils.plugins.worker import DaskWorker
 
 
 @auror.parameter.validate(
-    logger=skriba.logger.get_logger(logger_name="astrohack")
+    logger=logger.get_logger(logger_name="astrohack")
 )
 def local_client(
         cores: int = None,
@@ -24,7 +26,7 @@ def local_client(
         log_params: dict = None,
         worker_log_params: dict = None
 ) -> dask.distributed.Client:
-    """ Setup dask cluster and astrohack logger.
+    """ Setup dask cluster and logger.
 
     :param cores: Number of cores in Dask cluster, defaults to None
     :type cores: int, optional
@@ -80,9 +82,9 @@ def local_client(
     **Example Usage**
     
     .. parsed-literal::
-        from astrohack.client import astrohack_local_client
+        from astrohack.client import local_client
 
-        client = astrohack_local_client(
+        client = local_client(
             cores=2, 
             memory_limit='8GB', 
             log_params={
@@ -94,6 +96,7 @@ def local_client(
 
     if log_params is None:
         log_params = {
+            'logger_name': "client",
             'log_to_term': True,
             'log_level': 'INFO',
             'log_to_file': False,
@@ -102,6 +105,7 @@ def local_client(
 
     if worker_log_params is None:
         worker_log_params = {
+            'logger_name': "client-worker",
             'log_to_term': True,
             'log_level': 'INFO',
             'log_to_file': False,
@@ -125,11 +129,10 @@ def local_client(
     else:
         local_cache = False
 
-    skriba.logger.setup_logger(**_log_params)
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    logger.setup_logger(**_log_params)
 
     if dask_local_dir is None:
-        logger.warning("It is recommended that the local cache directory be set using the `local_dir` parameter.")
+        logger.warning("It is recommended that the local cache directory be set using the `dask_local_dir` parameter.")
 
     _set_up_dask(dask_local_dir)
 
@@ -139,7 +142,7 @@ def local_client(
     if local_cache or autorestrictor:
         # Also need to generalize
         dask.config.set({
-            "distributed.scheduler.preload": os.path.join(astrohack_path, '_utils/_astrohack_scheduler.py')
+            "distributed.scheduler.preload": os.path.join(astrohack_path, '_utils/plugins/scheduler.py')
         })
 
         dask.config.set({
@@ -153,7 +156,7 @@ def local_client(
     client.register_worker_plugin so that the method of assigning a worker plugin is the same for astrohack_local_client\
      and astrohack_slurm_cluster_client.
     if local_cache or _worker_log_params:
-        dask.config.set({"distributed.worker.preload": os.path.join(astrohack_path,'_utils/_astrohack_worker.py')})
+        dask.config.set({"distributed.worker.preload": os.path.join(astrohack_path,'_utils/worker.py')})
         dask.config.set({"distributed.worker.preload-argv": ["--local_cache",local_cache,"--log_to_term",\
         _worker_log_params['log_to_term'],"--log_to_file",_worker_log_params['log_to_file'],"--log_file",\
         _worker_log_params['log_file'],"--log_level",_worker_log_params['log_level']]})
@@ -183,8 +186,16 @@ def local_client(
         client.wait_for_workers(n_workers=cores)
 
     if local_cache or _worker_log_params:
-        plugin = AstrohackWorker(local_cache, _worker_log_params)
-        client.register_worker_plugin(plugin, name='worker_logger')
+        plugin = DaskWorker(local_cache, _worker_log_params)
+
+        if sys.version_info.major == 3:
+            if sys.version_info.minor > 8:
+                client.register_plugin(plugin, name='worker_logger')
+
+            else:
+                client.register_worker_plugin(plugin, name='worker_logger')
+        else:
+            logger.warning("Python version may not be supported.")
 
     logger.info('Created client ' + str(client))
 

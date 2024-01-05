@@ -1,7 +1,7 @@
-import auror.parameter
-import skriba.logger
+from typing import Union, List
 
-import numpy as np
+import auror.parameter
+import skriba.logger as logger
 
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
 from astrohack._utils._dio import _write_meta_data
@@ -10,10 +10,9 @@ from astrohack._utils._extract_locit import _extract_source_and_telescope, _extr
 from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackLocitFile
 
-from typing import Union, List
 
 @auror.parameter.validate(
-    logger=skriba.logger.get_logger(logger_name="astrohack")
+    logger=logger.get_logger(logger_name="astrohack")
 )
 def extract_locit(
         cal_table: str,
@@ -75,7 +74,7 @@ def extract_locit(
         locit_name = get_default_file_name(input_file=cal_table, output_type=".locit.zarr")
 
     extract_locit_params = locals()
-    logger = skriba.logger.get_logger(logger_name="astrohack")
+    
 
     input_params = extract_locit_params.copy()
     attributes = extract_locit_params.copy()

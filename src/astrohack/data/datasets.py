@@ -2,11 +2,11 @@ import os
 import pathlib
 import astrohack
 
-import skriba.logger
+import skriba.logger as logger
 
 
 def download(file: str, folder: str = '.', unpack: bool = False, source: str = 'dropbox') -> None:
-    logger = skriba.logger.get_logger()
+    #logger = skriba.logger.get_logger()
 
     if not pathlib.Path(folder).exists():
         os.mkdir(folder)

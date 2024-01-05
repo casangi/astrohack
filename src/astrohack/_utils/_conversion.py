@@ -1,4 +1,5 @@
-import skriba.logger
+import numpy as np
+import skriba.logger as logger
 
 from astrohack._utils._constants import *
 
@@ -69,7 +70,7 @@ def _test_unit(unit, unitlist):
     try:
         idx = unitlist.index(unit)
     except ValueError:
-        skriba.logger.get_logger(logger_name="astrohack")
+        #skriba.logger.get_logger(logger_name="astrohack")
         logger.error("Unrecognized unit: " + unit)
         raise ValueError('Unit not in list')
 
