@@ -1,3 +1,5 @@
+import sys
+
 import click
 import skriba.logger as logger
 
@@ -47,7 +49,6 @@ class DaskWorker(WorkerPlugin):
             worker.state.available_resources = {**worker.state.available_resources, **{ip: 1}}
 
 
-
 # https://github.com/dask/distributed/issues/4169
 @click.command()
 @click.option("--local_cache", default=False)
@@ -65,4 +66,12 @@ async def dask_setup(worker, local_cache, log_to_term, log_to_file, log_file, lo
 
     plugin = DaskWorker(local_cache, log_params)
 
-    await worker.client.register_plugin(plugin, name='worker_logger')
+    if sys.version_info.major == 3:
+        if sys.version_info.minor > 8:
+            await worker.client.register_plugin(plugin, name='worker_logger')
+
+        else:
+            await worker.client.register_worker_plugin(plugin, name='worker_logger')
+
+    else:
+        logger.warning("Python version may not be supported.")

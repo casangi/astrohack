@@ -1,3 +1,5 @@
+import sys
+
 import psutil
 import multiprocessing
 import pathlib
@@ -185,7 +187,15 @@ def local_client(
 
     if local_cache or _worker_log_params:
         plugin = DaskWorker(local_cache, _worker_log_params)
-        client.register_plugin(plugin, name='worker_logger')
+
+        if sys.version_info.major == 3:
+            if sys.version_info.minor > 8:
+                client.register_plugin(plugin, name='worker_logger')
+
+            else:
+                client.register_worker_plugin(plugin, name='worker_logger')
+        else:
+            logger.warning("Python version may not be supported.")
 
     logger.info('Created client ' + str(client))
 
