@@ -4,9 +4,9 @@
 ![Linux Tests](https://github.com/casangi/astrohack/actions/workflows/python-testing-linux.yml/badge.svg)
 ![macOS Tests](https://github.com/casangi/astrohack/actions/workflows/python-testing-macos.yml/badge.svg)
 ![Published](https://github.com/casangi/astrohack/actions/workflows/pythonpublish.yml/badge.svg)
-[![Documentation Status](https://readthedocs.org/projects/astrohack/badge/?version=latest)](https://astrohack.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/astrohack/badge/?version=stable)](https://astrohack.readthedocs.io/en/stable/?badge=stable)
 
-astroHack (Holography Antenna Commissioning Kit) is a Python package that produces antenna aperture images and panel adjustment corrections from calibrated holography measurement sets. Initially, it will support holography data from the VLA and ALMA, with the future goal of supporting the ngVLA. Much of the core functionality from the following AIPS tasks has been ported: UVHOL, HOLOG, and PANEL. astroHack enables parallel execution by using Dask and efficient single-threaded performance by making use of Numba.
+astroHack (Holography Antenna Commissioning Kit) is a Python package under development by NRAO's [CASA](https://casa.nrao.edu) team to support holography and antenna position correction measurements. It currently supports pointed and on-the-fly holographies for both ALMA and the VLA as well as antenna position corrections for the VLA. The future goal of astrohack is to support the commissioning of the Next Generation Very Large Array (ngVLA). Much of the core functionality of astroHACK is inspired by the code of the following AIPS tasks: UVHOL, HOLOG and PANEL for holography and LOCIT for the antenna position corrections. AstroHACK enables parallel execution by using Dask and efficient single-threaded performance by making use of Numba.
 
 > 📝 astroHACK is under active development! Breaking API changes are still happening on a regular basis, so proceed with caution.
 
@@ -23,3 +23,10 @@ Making astroHACK available for download from conda-forge directly is pending, so
 ```sh
 pip install astrohack
 ```
+
+# Tutorials
+
+Besides the API for the user facing functions there are three tutorials that can be followed that demonstrate the capabilities of astrohack:
+- [VLA Holography tutorial](https://astrohack.readthedocs.io/en/stable/tutorial_vla.html)
+- [Holography visualization tutorial](https://astrohack.readthedocs.io/en/stable/visualization_tutorial.html)
+- [Antenna position correction tutorial](https://astrohack.readthedocs.io/en/stable/locit_tutorial.html)

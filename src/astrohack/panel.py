@@ -129,14 +129,27 @@ def panel(
             ant_n: …
         }
 
-    **Examples**
+    **Example Usage**
 
-    - `panel_mds = panel("myholo.image.zarr", panel_model='rigid', panel_margin=0.05)` -> fit the panels in the aperture
-      image by using a rigid panel model and excluding the border 5% of each panel from the fitting.
+    .. parsed-literal::
+        from astrohack.panel import panel
 
-    - `panel_mds = panel("myholo.image.zarr", clip_type='relative', clip_level=0.2)` -> fit the panels in the aperture
-      image by using a rigid panel model and excluding points in the aperture image which have an amplitude that is less
-      than 20% of the peak amplitude.
+        # Fit the panels in the aperture image by using a rigid panel model and
+        # excluding the border 5% of each panel from the fitting.
+        panel_mds = panel(
+            "myholo.image.zarr",
+            panel_model='rigid',
+            panel_margin=0.05
+        )
+
+        # fit the panels in the aperture image by using a rigid panel model and
+        # excluding points in the aperture image which have an amplitude that is less than 20% of the peak amplitude.
+        panel_mds = panel(
+            "myholo.image.zarr",
+            clip_type='relative',
+            clip_level=0.2
+        )
+
     """
     # Doing this here allows it to get captured by locals()
     if panel_name is None:
