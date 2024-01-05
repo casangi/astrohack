@@ -22,11 +22,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
 
+import click
+
 from collections import defaultdict
 from dask.core import reverse_dict
 from dask.base import tokenize
 from dask.order import ndependencies
-import click
 from distributed.diagnostics.plugin import SchedulerPlugin
 
 
@@ -58,7 +59,7 @@ def get_node_depths(dependencies, root_nodes, metrics):
     return node_depths
 
 
-class astrohack_schedular(SchedulerPlugin):
+class AstrohackScheduler(SchedulerPlugin):
 
     def __init__(self, autorestrictor, local_cache):
         self.autorestrictor = autorestrictor
@@ -72,8 +73,7 @@ class astrohack_schedular(SchedulerPlugin):
             ip = worker[worker.rfind('/') + 1:worker.rfind(':')]
             scheduler.add_resources(worker=worker, resources={ip: 1})
 
-    def update_graph(self, scheduler, dsk=None, keys=None, restrictions=None,
-                     **kw):
+    def update_graph(self, scheduler, dsk=None, keys=None, restrictions=None, **kw):
         if self.autorestrictor:
             # print('Using autorestrictor')
             """Processes dependencies to assign tasks to specific workers."""
@@ -104,8 +104,8 @@ class astrohack_schedular(SchedulerPlugin):
                 node_depths = get_node_depths(dependencies, root_nodes, metrics)
                 # try:
                 max_depth = max(node_depths.values())
-                # except:
-                #        print('&&&&& dependencies, root_nodes, metrics',node_depths,',*,',dependencies, root_nodes, metrics)
+                # except: print('&&&&& dependencies, root_nodes, metrics',node_depths,',*,',dependencies, root_nodes,
+                # metrics)
 
                 # If we have fewer partition nodes than workers, we cannot utilise all
                 # the workers and are likely dealing with a reduction. We work our way
@@ -207,10 +207,11 @@ class astrohack_schedular(SchedulerPlugin):
 @click.option("--autorestrictor", default=False)
 @click.option("--local_cache", default=False)
 def dask_setup(scheduler, autorestrictor, local_cache):
-    plugin = astrohack_schedular(autorestrictor, local_cache)
+    plugin =  (autorestrictor, local_cache)
     scheduler.add_plugin(plugin)
 
-def _graph_metrics(dependencies, dependents, total_dependencies):
+
+def graph_metrics(dependencies, dependents, total_dependencies):
     r"""Useful measures of a graph used by ``dask.order.order``
 
     Example DAG (a1 has no dependencies; b2 and c1 are root nodes):

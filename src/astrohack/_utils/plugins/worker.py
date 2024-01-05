@@ -1,8 +1,10 @@
 import click
 import skriba.logger as logger
 
+from distributed.diagnostics.plugin import WorkerPlugin
 
-class AstrohackWorker:
+
+class DaskWorker(WorkerPlugin):
     def __init__(self, local_cache, log_params):
         self.logger = None
         self.worker = None
@@ -24,7 +26,7 @@ class AstrohackWorker:
         """
 
         self.logger = logger.setup_worker_logger(
-            logger_name="astrohack",
+            logger_name="dask-worker",
             log_to_term=self.log_to_term,
             log_to_file=self.log_to_file,
             log_file=self.log_file,
@@ -39,9 +41,11 @@ class AstrohackWorker:
 
         if self.local_cache:
             ip = worker.address[worker.address.rfind('/') + 1:worker.address.rfind(':')]
+
             self.logger.debug(str(worker.id) + ',*,' + ip)
+
             worker.state.available_resources = {**worker.state.available_resources, **{ip: 1}}
-            # print(worker.state.available_resources)
+
 
 
 # https://github.com/dask/distributed/issues/4169
@@ -49,10 +53,16 @@ class AstrohackWorker:
 @click.option("--local_cache", default=False)
 @click.option("--log_to_term", default=True)
 @click.option("--log_to_file", default=False)
-@click.option("--log_file", default='astrohack_')
+@click.option("--log_file", default='dask-worker-')
 @click.option("--log_level", default='INFO')
 async def dask_setup(worker, local_cache, log_to_term, log_to_file, log_file, log_level):
-    log_params = {'log_to_term': log_to_term, 'log_to_file': log_to_file, 'log_file': log_file, 'log_level': log_level}
-    plugin = AstrohackWorker(local_cache, log_params)
+    log_params = {
+        'log_to_term': log_to_term,
+        'log_to_file': log_to_file,
+        'log_file': log_file,
+        'log_level': log_level
+    }
 
-    await worker.client.register_worker_plugin(plugin, name='worker_logger')
+    plugin = DaskWorker(local_cache, log_params)
+
+    await worker.client.register_plugin(plugin, name='worker_logger')
