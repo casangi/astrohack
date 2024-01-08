@@ -382,7 +382,6 @@ def extract_holog(
 
     extract_holog_params = locals()
 
-
     input_pars = extract_holog_params.copy()
 
     _check_if_file_exists(extract_holog_params['ms_name'])
@@ -776,8 +775,6 @@ def generate_holog_obs_dict(
 
     """
     extract_holog_params = locals()
-
-    
 
     _check_if_file_exists(ms_name)
     _check_if_file_exists(point_name)

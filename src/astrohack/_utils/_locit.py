@@ -6,6 +6,7 @@ from scipy import optimize as opt
 import skriba.logger as logger
 import astropy.units as units
 import xarray as xr
+import numpy as np
 
 from astrohack._utils._locit_commons import _open_telescope, _get_telescope_lat_lon_rad, _compute_antenna_relative_off
 from astrohack._utils._locit_commons import _time_label, _elevation_label, _declination_label

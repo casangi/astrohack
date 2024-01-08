@@ -26,8 +26,6 @@ def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
         dict: pointing dictionary of xarray dataarrays
     """
 
-    
-
     # Get antenna names and ids
     ctb = ctables.table(
         os.path.join(ms_name, "ANTENNA"),
@@ -50,7 +48,6 @@ def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
 
     ctb.close()
 
-    ###########################################################################################
     # Get Holography scans with start and end times.
     ctb = ctables.table(
         ms_name,
@@ -130,7 +127,6 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
         ant_id (int): Antenna id
         pnt_name (str): Name of output pointing dictionary file name.
     """
-    
 
     ant_id = pnt_params['ant_id']
     ant_name = pnt_params['ant_name']
@@ -150,7 +146,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
         % (ant_id)
     )
 
-    ### NB: Add check if directions reference frame is Azemuth Elevation (AZELGEO)
+    # NB: Add check if directions reference frame is Azemuth Elevation (AZELGEO)
     try:
         direction = tb.getcol("DIRECTION")[:, 0, :]
         target = tb.getcol("TARGET")[:, 0, :]
@@ -158,7 +154,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
         direction_time = tb.getcol("TIME")
         pointing_offset = tb.getcol("POINTING_OFFSET")[:, 0, :]
 
-    except Exception as e:
+    except Exception:
         tb.close()
         logger.warning("Skipping antenna " + str(ant_id) + " no pointing info")
 
@@ -236,7 +232,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
     From the above description I suspect encoder should be used instead of direction, however for the VLA mapping 
     antenna data no grid pattern appears (ALMA data does not have this problem).'''
 
-    ############### Detect during which scans an antenna is mapping by averaging the POINTING_OFFSET radius.
+    # Detect during which scans an antenna is mapping by averaging the POINTING_OFFSET radius.
     time_tree = spatial.KDTree(direction_time[:, None])  # Use for nearest interpolation
 
     mapping_scans_obs_dict = {}
@@ -287,7 +283,7 @@ def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_id
 
     # This section cleans up the case of when there was an issue with the scan time data. If the scan start and end 
     # times are the same the mapping(reference) state identification does not work. For this reason, scans containing 
-    # instance of this are removed and any empty ddi(s) are dorpped as well.
+    # instance of this are removed and any empty ddi(s) are dropped as well.
     drops = {}
 
     for ddi in scan_time_dict.keys():

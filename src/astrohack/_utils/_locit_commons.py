@@ -5,6 +5,7 @@ from astrohack._utils._constants import *
 
 import skriba.logger as logger
 
+
 def _open_telescope(telname):
     """
     Open correct telescope based on the telescope name string
@@ -56,7 +57,7 @@ def _get_telescope_lat_lon_rad(telescope):
         lat = telescope.array_center['m1']['value']
         rad = telescope.array_center['m2']['value']
     else:
-        
+
         msg = f'Unsupported telescope position reference :{telescope.array_center["refer"]}'
         logger.error(msg)
         raise Exception(msg)
@@ -77,7 +78,7 @@ def _plot_antenna_position(outerax, innerax, xpos, ypos, text, box_size, marker=
         marker: Antenna position marker
         color: Color for the antenna position marker
     """
-    half_box = box_size/2
+    half_box = box_size / 2
     if abs(xpos) > half_box or abs(ypos) > half_box:
         outerax.plot(xpos, ypos, marker=marker, color=color)
         outerax.text(xpos, ypos, text, fontsize=fontsize, ha='left', va='center')
@@ -101,8 +102,8 @@ def _plot_corrections(outerax, innerax, xpos, ypos, xcorr, ycorr, box_size, colo
         color: vector color
         linewidth: vector line width
     """
-    half_box = box_size/2
-    head_size = np.sqrt(xcorr**2 + ycorr**2)/4
+    half_box = box_size / 2
+    head_size = np.sqrt(xcorr ** 2 + ycorr ** 2) / 4
     if abs(xpos) > half_box or abs(ypos) > half_box:
         outerax.arrow(xpos, ypos, xcorr, ycorr, color=color, linewidth=linewidth, head_width=head_size)
     else:
@@ -126,14 +127,14 @@ def _plot_boxes_limits_and_labels(outerax, innerax, xlabel, ylabel, box_size, ou
         marker_color: Color for the array center marker
         rectangle_color: Color of the rectangle representing the inner array box in the outer array plot
     """
-    half_box = box_size/2.
+    half_box = box_size / 2.
     x_lim, y_lim = outerax.get_xlim(), outerax.get_ylim()
-    x_half, x_mid = (x_lim[1] - x_lim[0])/2, (x_lim[1] + x_lim[0]) / 2
-    y_half, y_mid = (y_lim[1] - y_lim[0])/2, (y_lim[1] + y_lim[0]) / 2
+    x_half, x_mid = (x_lim[1] - x_lim[0]) / 2, (x_lim[1] + x_lim[0]) / 2
+    y_half, y_mid = (y_lim[1] - y_lim[0]) / 2, (y_lim[1] + y_lim[0]) / 2
     if x_half > y_half:
-        y_lim = [y_mid-x_half, y_mid+x_half]
+        y_lim = [y_mid - x_half, y_mid + x_half]
     else:
-        x_lim = [x_mid-y_half, x_mid+y_half]
+        x_lim = [x_mid - y_half, x_mid + y_half]
     outerax.set_xlim(x_lim)
     outerax.set_ylim(y_lim)
     outerax.set_xlabel(xlabel)

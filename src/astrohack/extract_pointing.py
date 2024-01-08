@@ -9,6 +9,7 @@ from astrohack.mds import AstrohackPointFile
 
 from typing import List, Union
 
+
 @auror.parameter.validate(
     logger=logger.get_logger(logger_name="astrohack")
 )
@@ -66,12 +67,9 @@ def extract_pointing(
     # Returns the current local variables in dictionary form
     extract_pointing_params = locals()
 
-    
-
     input_params = extract_pointing_params.copy()
     _check_if_file_exists(extract_pointing_params['ms_name'])
     _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
-
 
     pnt_dict = _extract_pointing(
         ms_name=extract_pointing_params['ms_name'],
