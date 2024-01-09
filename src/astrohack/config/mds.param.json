@@ -1,389 +1,632 @@
 {
-    "AstrohackImageFile.select":{
-        "ant":{
+    "AstrohackImageFile.select": {
+        "ant": {
             "nullable": false,
             "required": true,
-            "type": ["string"]
+            "type": [
+                "string"
+            ]
         },
-        "ddi":{
+        "ddi": {
             "nullable": false,
             "required": true,
-            "type": ["int"]
+            "type": [
+                "int"
+            ]
         },
         "complex_split": {
             "nullable": false,
             "required": true,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "split.complex"
         }
     },
-    "AstrohackImageFile.export_to_fits":{
-        "destination":{
+    "AstrohackImageFile.export_to_fits": {
+        "destination": {
             "nullable": false,
             "required": true,
-            "type": ["string"]
+            "type": [
+                "string"
+            ]
         },
-        "complex_split":{
+        "complex_split": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "split.complex"
         },
-        "ant":{
+        "ant": {
             "nullable": false,
             "required": false,
-            "struct_type": ["str"],
+            "struct_type": [
+                "str"
+            ],
             "minlength": 1,
-            "type": ["string", "list"]
+            "type": [
+                "string",
+                "list"
+            ]
         },
-        "ddi":{
+        "ddi": {
             "nullable": false,
             "required": false,
-            "struct_type": ["int"],
+            "struct_type": [
+                "int"
+            ],
             "minlength": 1,
-            "type": ["int", "list", "string"]
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
         },
-        "parallel":{
+        "parallel": {
             "nullable": false,
             "required": false,
-            "type": ["boolean"]
+            "type": [
+                "boolean"
+            ]
         }
     },
-    "AstrohackImageFile.plot_apertures":{
-        "destination":{
+    "AstrohackImageFile.plot_apertures": {
+        "destination": {
             "nullable": false,
             "required": true,
-            "type": ["string"]
+            "type": [
+                "string"
+            ]
         },
-        "ant":{
+        "ant": {
             "nullable": false,
             "required": false,
-            "struct_type": ["str"],
+            "struct_type": [
+                "str"
+            ],
             "minlength": 1,
-            "type": ["string", "list"]
+            "type": [
+                "string",
+                "list"
+            ]
         },
-        "ddi":{
+        "ddi": {
             "nullable": false,
             "required": false,
-            "struct_type": ["int"],
+            "struct_type": [
+                "int"
+            ],
             "minlength": 1,
-            "type": ["int", "list", "string"]
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
         },
-        "plot_screws":{
+        "plot_screws": {
             "nullable": false,
             "required": false,
-            "type": ["boolean"]
+            "type": [
+                "boolean"
+            ]
         },
-        "amplitude_limits":{
+        "amplitude_limits": {
             "nullable": true,
             "required": false,
-            "struct_type": ["float", "int"],
+            "struct_type": [
+                "float",
+                "int"
+            ],
             "minlength": 2,
             "maxlength": 2,
-            "type": ["list", "tuple", "ndarray"]
+            "type": [
+                "list",
+                "tuple",
+                "ndarray"
+            ]
         },
-        "phase_unit":{
+        "phase_unit": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "units.trig"
         },
-        "phase_limits":{
+        "phase_limits": {
             "nullable": true,
             "required": false,
-            "struct_type": ["float", "int"],
+            "struct_type": [
+                "float",
+                "int"
+            ],
             "minlength": 2,
             "maxlength": 2,
-            "type": ["list", "tuple", "ndarray"]
+            "type": [
+                "list",
+                "tuple",
+                "ndarray"
+            ]
         },
-        "deviation_unit":{
+        "deviation_unit": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "units.length"
         },
-        "deviation_limits":{
+        "deviation_limits": {
             "nullable": true,
             "required": false,
-            "struct_type": ["float", "int"],
+            "struct_type": [
+                "float",
+                "int"
+            ],
             "minlength": 2,
             "maxlength": 2,
-            "type": ["list", "tuple", "ndarray"]
+            "type": [
+                "list",
+                "tuple",
+                "ndarray"
+            ]
         },
-        "panel_labels":{
+        "panel_labels": {
             "nullable": false,
             "required": false,
-            "type": ["boolean"]
+            "type": [
+                "boolean"
+            ]
         },
-        "display":{
+        "display": {
             "nullable": false,
             "required": false,
-            "type": ["boolean"]
+            "type": [
+                "boolean"
+            ]
         },
-        "colormap":{
+        "colormap": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "colormaps"
         },
-        "figure_size":{
+        "figure_size": {
             "nullable": true,
             "required": false,
-            "struct_type": ["float"],
+            "struct_type": [
+                "float"
+            ],
             "minlength": 2,
             "maxlength": 2,
-            "type": ["list", "tuple", "ndarray"]
+            "type": [
+                "list",
+                "tuple",
+                "ndarray"
+            ]
         },
-        "dpi":{
+        "dpi": {
             "nullable": false,
             "required": false,
-            "type": ["int"],
+            "type": [
+                "int"
+            ],
             "min": 1,
             "max": 1200
         },
-        "parallel":{
+        "parallel": {
             "nullable": false,
             "required": false,
-            "type": ["boolean"]
+            "type": [
+                "boolean"
+            ]
         }
     },
-    "AstrohackImageFile.plot_beams":{
-        "destination":{
+    "AstrohackImageFile.plot_beams": {
+        "destination": {
             "nullable": false,
             "required": true,
-            "type": ["string"]
+            "type": [
+                "string"
+            ]
         },
-        "ant":{
+        "ant": {
             "nullable": false,
             "required": false,
-            "struct_type": ["str"],
+            "struct_type": [
+                "str"
+            ],
             "minlength": 1,
-            "type": ["string", "list"]
+            "type": [
+                "string",
+                "list"
+            ]
         },
-        "ddi":{
+        "ddi": {
             "nullable": false,
             "required": false,
-            "struct_type": ["int"],
+            "struct_type": [
+                "int"
+            ],
             "minlength": 1,
-            "type": ["int", "list", "string"]
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
         },
-        "complex_split":{
+        "complex_split": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "split.complex"
         },
-        "angle_unit":{
+        "angle_unit": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "units.trig"
         },
-        "phase_unit":{
+        "phase_unit": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "units.trig"
         },
-        "display":{
+        "display": {
             "nullable": false,
             "required": false,
-            "type": ["boolean"]
+            "type": [
+                "boolean"
+            ]
         },
-        "colormap":{
+        "colormap": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "colormaps"
         },
-        "figure_size":{
+        "figure_size": {
             "nullable": true,
             "required": false,
-            "struct_type": ["float"],
+            "struct_type": [
+                "float"
+            ],
             "minlength": 2,
             "maxlength": 2,
-            "type": ["list", "tuple", "ndarray"]
+            "type": [
+                "list",
+                "tuple",
+                "ndarray"
+            ]
         },
-        "dpi":{
+        "dpi": {
             "nullable": false,
             "required": false,
-            "type": ["int"],
+            "type": [
+                "int"
+            ],
             "min": 1,
             "max": 1200
         },
-        "parallel":{
+        "parallel": {
             "nullable": false,
             "required": false,
-            "type": ["boolean"]
+            "type": [
+                "boolean"
+            ]
         }
     },
-
-    "AstrohackHologFile.select":{
-        "ddi":{
+    "AstrohackHologFile.select": {
+        "ddi": {
             "nullable": false,
             "required": true,
-            "type": ["int"]
+            "type": [
+                "int"
+            ]
         },
-        "map_id":{
+        "map_id": {
             "nullable": false,
             "required": true,
-            "type": ["int"]
+            "type": [
+                "int"
+            ]
         },
-        "ant":{
+        "ant": {
             "nullable": false,
             "required": true,
-            "type": ["string"]
+            "type": [
+                "string"
+            ]
         }
     },
-    "AstrohackHologFile.plot_diagnostics":{
-        "destination":{
+    "AstrohackHologFile.plot_diagnostics": {
+        "destination": {
             "nullable": false,
             "required": true,
-            "type": ["string"]
+            "type": [
+                "string"
+            ]
         },
-        "delta":{
+        "delta": {
             "nullable": false,
             "required": false,
-            "type": ["float"],
+            "type": [
+                "float"
+            ],
             "min": 0
         },
-        "ant":{
+        "ant": {
             "nullable": false,
             "required": false,
-            "struct_type": ["str"],
+            "struct_type": [
+                "str"
+            ],
             "minlength": 1,
-            "type": ["string", "list"]
+            "type": [
+                "string",
+                "list"
+            ]
         },
-        "ddi":{
+        "ddi": {
             "nullable": false,
             "required": false,
-            "struct_type": ["int"],
+            "struct_type": [
+                "int"
+            ],
             "minlength": 1,
-            "type": ["int", "list", "string"]
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
         },
-        "map_id":{
+        "map_id": {
             "nullable": false,
             "required": false,
-            "struct_type": ["int"],
+            "struct_type": [
+                "int"
+            ],
             "minlength": 1,
-            "type": ["int", "list", "string"]
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
         },
-        "complex_split":{
+        "complex_split": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "split.complex"
         },
-        "display":{
+        "display": {
             "nullable": false,
             "required": false,
-            "type": ["boolean"]
+            "type": [
+                "boolean"
+            ]
         },
-        "figure_size":{
+        "figure_size": {
             "nullable": true,
             "required": false,
-            "struct_type": ["float"],
+            "struct_type": [
+                "float"
+            ],
             "minlength": 2,
             "maxlength": 2,
-            "type": ["list", "tuple", "ndarray"]
+            "type": [
+                "list",
+                "tuple",
+                "ndarray"
+            ]
         },
-        "dpi":{
+        "dpi": {
             "nullable": false,
             "required": false,
-            "type": ["int"],
+            "type": [
+                "int"
+            ],
             "min": 1,
             "max": 1200
         },
-        "parallel":{
+        "parallel": {
             "nullable": false,
             "required": false,
-            "type": ["boolean"]
+            "type": [
+                "boolean"
+            ]
         }
     },
-    "AstrohackHologFile.plot_lm_sky_coverage":{
-        "destination":{
+    "AstrohackHologFile.plot_lm_sky_coverage": {
+        "destination": {
             "nullable": false,
             "required": true,
-            "type": ["string"]
+            "type": [
+                "string"
+            ]
         },
-        "ant":{
+        "ant": {
             "nullable": false,
             "required": false,
-            "struct_type": ["str"],
+            "struct_type": [
+                "str"
+            ],
             "minlength": 1,
-            "type": ["string", "list"]
+            "type": [
+                "string",
+                "list"
+            ]
         },
-        "ddi":{
+        "ddi": {
             "nullable": false,
             "required": false,
-            "struct_type": ["int"],
+            "struct_type": [
+                "int"
+            ],
             "minlength": 1,
-            "type": ["int", "list", "string"]
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
         },
-        "map_id":{
+        "map_id": {
             "nullable": false,
             "required": false,
-            "struct_type": ["int"],
+            "struct_type": [
+                "int"
+            ],
             "minlength": 1,
-            "type": ["int", "list", "string"]
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
         },
-        "angle_unit":{
+        "angle_unit": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "units.trig"
         },
-        "time_unit":{
+        "time_unit": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "units.time"
         },
-        "plot_correlation":{
+        "plot_correlation": {
             "nullable": true,
             "required": false,
-            "struct_type": ["str"],
+            "struct_type": [
+                "str"
+            ],
             "minlength": 1,
-            "type": ["string", "list"]
+            "type": [
+                "string",
+                "list"
+            ]
         },
-        "complex_split":{
+        "complex_split": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "split.complex"
         },
-        "phase_unit":{
+        "phase_unit": {
             "nullable": false,
             "required": false,
-            "type": ["string"],
+            "type": [
+                "string"
+            ],
             "check allowed with": "units.trig"
         },
-        "display":{
+        "display": {
             "nullable": false,
             "required": false,
-            "type": ["boolean"]
+            "type": [
+                "boolean"
+            ]
         },
-        "figure_size":{
+        "figure_size": {
             "nullable": true,
             "required": false,
-            "struct_type": ["float"],
+            "struct_type": [
+                "float"
+            ],
             "minlength": 2,
             "maxlength": 2,
-            "type": ["list", "tuple", "ndarray"]
+            "type": [
+                "list",
+                "tuple",
+                "ndarray"
+            ]
         },
-        "dpi":{
+        "dpi": {
             "nullable": false,
             "required": false,
-            "type": ["int"],
+            "type": [
+                "int"
+            ],
             "min": 1,
             "max": 1200
         },
-        "parallel":{
+        "parallel": {
             "nullable": false,
             "required": false,
-            "type": ["boolean"]
+            "type": [
+                "boolean"
+            ]
         }
     },
+    "AstrohackHologFile.export_to_aips":{
+        "destination": {
+            "nullable": false,
+            "required": true,
+            "type": [
+                "string"
+            ]
+        },
+        "ant": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "str"
+            ],
+            "minlength": 1,
+            "type": [
+                "string",
+                "list"
+            ]
+        },
+        "ddi": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "int"
+            ],
+            "minlength": 1,
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
+        },
+        "map_id": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "int"
+            ],
+            "minlength": 1,
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
+        },
+    }
 
     "AstrohackPanelFile.get_antenna": {
         "ant":{
