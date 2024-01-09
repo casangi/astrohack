@@ -15,7 +15,7 @@ from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _load_position_file
 from astrohack._utils._dio import _read_meta_data
-from astrohack._utils._extract_holog import _plot_lm_coverage
+from astrohack._utils._extract_holog import _plot_lm_coverage, _export_to_aips
 from astrohack._utils._extract_locit import _plot_source_table, _plot_array_configuration, _print_array_configuration
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
@@ -611,6 +611,22 @@ class AstrohackHologFile(dict):
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(self, _plot_lm_coverage, param_dict, key_order, parallel)
         return
+
+    def export_to_aips(
+            self,
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            map_id: Union[int, List[int]] = "all",
+    ) -> None:
+        param_dict = locals()
+        param_dict["map"] = map_id
+
+        _create_destination_folder(param_dict['destination'])
+        key_order = ["ddi", "map", "ant"]
+        _dask_general_compute(self, _export_to_aips, param_dict, key_order, parallel)
+        return
+
 
 
 class AstrohackPanelFile(dict):

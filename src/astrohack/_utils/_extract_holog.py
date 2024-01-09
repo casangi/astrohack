@@ -698,6 +698,9 @@ def _plot_lm_coverage_sub(time, real_lm, ideal_lm, param_dict):
     _close_figure(fig, 'Directional Cosines', plotfile, param_dict['dpi'], param_dict['display'])
 
 
+def _export_to_aips(param_dict):
+    return
+
 
 
 
