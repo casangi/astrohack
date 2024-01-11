@@ -9,6 +9,7 @@ dependencies = [
     "auror",
     "dask",
     "distributed",
+    "gdown",
     "matplotlib",
     "menrva",
     "numba>=0.57.0",
