@@ -53,6 +53,9 @@
         "phase_fit":{
             "type":["boolean"]
         },
+        "use_ideal_pointing":{
+            "type":["boolean"]
+        },
         "parallel":{
             "type":["boolean"]
         },

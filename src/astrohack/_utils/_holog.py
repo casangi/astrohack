@@ -93,7 +93,10 @@ def _holog_chunk(holog_chunk_params):
         # Grid the data
         vis = ant_xds.VIS.values
         vis[vis == np.nan] = 0.0
-        lm = ant_xds.DIRECTIONAL_COSINES.values
+        if holog_chunk_params["use_ideal_pointing"]:
+            lm = ant_xds.IDEAL_DIRECTIONAL_COSINES.values
+        else:
+            lm = ant_xds.DIRECTIONAL_COSINES.values
         weight = ant_xds.WEIGHT.values
 
         if holog_chunk_params["chan_average"]:

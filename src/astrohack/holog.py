@@ -36,6 +36,7 @@ def holog(
         to_stokes: bool = True,
         apply_mask: bool = True,
         phase_fit: bool = True,
+        use_ideal_pointing: bool = False,
         overwrite: bool = False,
         parallel: bool = False
 ) -> AstrohackImageFile:
