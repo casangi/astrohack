@@ -9,12 +9,6 @@ from astrohack.extract_pointing import extract_pointing
 from astrohack.holog import holog
 from astrohack.panel import panel
 
-
-# from astrohack.client import local_client
-
-# Can use this for parallel testing; turning of for now.
-# client = local_client(cores=2, memory_limit='8GB', log_params={'log_level':'DEBUG'})
-
 @pytest.fixture(scope='session')
 def set_data(tmp_path_factory):
     data_dir = tmp_path_factory.mktemp("data")

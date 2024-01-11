@@ -4,7 +4,8 @@ import distributed
 import numpy as np
 import matplotlib.pyplot as plt
 
-from astrohack.client import astrohack_local_client
+from menrva.client import local_client
+
 from astrohack.extract_pointing import extract_pointing
 from astrohack.extract_holog import generate_holog_obs_dict
 from astrohack.extract_holog import extract_holog

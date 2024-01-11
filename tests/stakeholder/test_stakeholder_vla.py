@@ -12,9 +12,6 @@ from astrohack.panel import panel
 base_name = 'ea25_cal_small_'
 
 
-# Can use this for parallel testing; turning off for now.
-# client = local_client(cores=2, memory_limit='8GB', log_params={'log_level':'DEBUG'})
-
 @pytest.fixture(scope='session')
 def set_data(tmp_path_factory):
     data_dir = tmp_path_factory.mktemp("data")

@@ -4,8 +4,6 @@ import shutil
 import requests
 import zipfile
 
-from tqdm import tqdm
-
 import skriba.logger as logger
 
 FILE_ID = {
@@ -60,8 +58,21 @@ FILE_ID = {
 }
 
 
+def is_notebook() -> bool:
+    try:
+        from IPython import get_ipython
+
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True
+        else:
+            raise ImportError
+
+    except ImportError:
+        return False
+
+
 def download(file: str, folder: str = '.') -> None:
-    
     full_file_path = pathlib.Path(folder).joinpath(file)
 
     if full_file_path.exists():
@@ -86,6 +97,11 @@ def download(file: str, folder: str = '.') -> None:
     total = int(r.headers.get('content-length', 0))
 
     fullname = str(pathlib.Path(folder).joinpath(fullname))
+
+    if is_notebook():
+        from tqdm.notebook import tqdm
+    else:
+        from tqdm import tqdm
 
     with open(fullname, 'wb') as fd, tqdm(
             desc=fullname,
