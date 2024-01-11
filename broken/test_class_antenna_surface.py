@@ -18,6 +18,7 @@ def setup():
     if not os.path.exists(panelzip):
         url = "https://drive.google.com/u/1/uc?id=10fXyut_UHPUjIuaaEy6-m6wcycZHit2v&export=download"
         gdown.download(url, panelzip)
+
     shutil.unpack_archive(filename=panelzip, extract_dir=datafolder)
 
 

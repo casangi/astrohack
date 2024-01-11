@@ -24,7 +24,7 @@ class TestAstrohack():
     def test_import_client(self):
         """ Import client """
         try:
-            from astrohack.client import local_client
+            from menrva.client import local_client
         except ImportError:
             assert False
 
