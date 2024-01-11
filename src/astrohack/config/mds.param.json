@@ -625,8 +625,8 @@
                 "list",
                 "string"
             ]
-        },
-    }
+        }
+    },
 
     "AstrohackPanelFile.get_antenna": {
         "ant":{
