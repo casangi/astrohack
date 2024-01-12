@@ -26,12 +26,17 @@ def extract_locit(
 
     :param cal_table: Name of input measurement file name.
     :type cal_table: str
-    :param locit_name: Name of *<locit_name>.locit.zarr* file to create. Defaults to measurement set name with *locit.zarr* extension.
+
+    :param locit_name: Name of *<locit_name>.locit.zarr* file to create. Defaults to measurement set name \
+    with *locit.zarr* extension.
     :type locit_name: str, optional
+
     :param ant: List of antennas/antenna to be extracted, defaults to "all" when None, ex. ea25
     :type ant: list or str, optional
-    :param ddi: List of ddis/ddi to be extracted, defaults to "all" when None, ex. 0
+
+    :param ddi: List of ddi to be extracted, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
+
     :param overwrite: Boolean for whether to overwrite current locit.zarr file, defaults to False.
     :type overwrite: bool, optional
 
@@ -74,7 +79,6 @@ def extract_locit(
         locit_name = get_default_file_name(input_file=cal_table, output_type=".locit.zarr")
 
     extract_locit_params = locals()
-    
 
     input_params = extract_locit_params.copy()
     attributes = extract_locit_params.copy()

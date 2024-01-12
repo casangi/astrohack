@@ -2,6 +2,7 @@ from typing import Union, List
 
 import auror.parameter
 import skriba.logger as logger
+
 from astrohack._utils._combine import _combine_chunk
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
@@ -25,17 +26,23 @@ def combine(
 
     :param image_name: Input holography data file name. Accepted data format is the output from ``astrohack.holog.holog``
     :type image_name: str
+
     :param combine_name: Name of output file; File name will be appended with suffix *.combine.zarr*. Defaults to \
     *basename* of input file plus holography panel file suffix.
     :type combine_name: str, optional
+
     :param ant: List of antennas to be processed. None will use all antennas. Defaults to None, ex. ea25.
     :type ant: list or str, optional
+
     :param ddi: List of DDIs to be combined. None will use all DDIs. Defaults to None, ex. [0, ..., 8].
     :type ddi: list of int, optional
+
     :param weighted: Weight phases by the corresponding amplitudes.
     :type weighted: bool, optional
+
     :param parallel: Run in parallel. Defaults to False.
     :type parallel: bool, optional
+
     :param overwrite: Overwrite files on disk. Defaults to False.
     :type overwrite: bool, optional
 
@@ -76,7 +83,6 @@ def combine(
         combine_name = get_default_file_name(input_file=image_name, output_type=".image.zarr")
 
     combine_params = locals()
-    
 
     input_params = combine_params.copy()
 

@@ -37,26 +37,41 @@ def panel(
 ):
     """Analyze holography images to derive panel adjustments
 
-    :param image_name: Input holography data file name. Accepted data formats are the output from ``astrohack.holog.holog`` and AIPS holography data prepackaged using ``astrohack.panel.aips_holog_to_astrohack``.
+    :param image_name: Input holography data file name. Accepted data formats are the output from \
+    ``astrohack.holog.holog`` and AIPS holography data prepackaged using ``astrohack.panel.aips_holog_to_astrohack``.
     :type image_name: str
-    :param panel_name: Name of output file; File name will be appended with suffix *.panel.zarr*. Defaults to *basename* of input file plus holography panel file suffix.
+
+    :param panel_name: Name of output file; File name will be appended with suffix *.panel.zarr*. Defaults to \
+    *basename* of input file plus holography panel file suffix.
     :type panel_name: str, optional
+
     :param clip_type: Choose the amplitude clipping algorithm: absolute, relative or sigma, default is sigma
     :type clip_type: str, optional
+
     :param clip_level: Choose level of clipping, default is 3 (appropriate for sigma clipping)
     :type clip_level: float, optional
-    :param panel_model: Model of surface fitting function used to fit panel surfaces, None will default to "rigid". Possible models are listed below.
+
+    :param panel_model: Model of surface fitting function used to fit panel surfaces, None will default to "rigid". \
+    Possible models are listed below.
     :type panel_model: str, optional
-    :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or internal points of each panel. Defaults to 0.05.
+
+    :param panel_margins: Relative margin from the edge of the panel used to decide which points are margin points or \
+    internal points of each panel. Defaults to 0.05.
     :type panel_margins: float, optional
-    :param polarization_state: Select the polarization state over which to run panel, only parallel hands or stokes I should be used, default is I.
+
+    :param polarization_state: Select the polarization state over which to run panel, only parallel hands or stokes I \
+    should be used, default is I.
     :type polarization_state: str, optional
+
     :param ant: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant: list or str, optional
-    :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
+
+    :param ddi: List of ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
+
     :param parallel: Run in parallel. Defaults to False.
     :type parallel: bool, optional
+
     :param overwrite: Overwrite files on disk. Defaults to False.
     :type overwrite: bool, optional
 
@@ -70,7 +85,7 @@ def panel(
         .. rubric:: Code Outline
         - Phase image is converted to a physical surface deviation image.
         - A mask of valid signals is created by using the relative cutoff on the amplitude image.
-        - From the telescope panel and layout information, an image describing the panel assignment of each pixel is created.
+        - From telescope panel and layout information, an image describing the panel assignment of each pixel is created
         - Using panel image and mask, a list of pixels in each panel is created.
         - Pixels in each panel are divided into two groups: margin pixels and internal pixels.
         - For each panel:
@@ -85,14 +100,17 @@ def panel(
         * AIPS fitting models:
             - *mean*: The panel is corrected by the mean of its samples.
             - *rigid*: The panel samples are fitted to a rigid surface (DEFAULT model).
-        * Corotated Paraboloids: (the two bending axes of the paraboloid are parallel and perpendicular to a radius of the antenna crossing the middle point of the panel):
+        * Corotated Paraboloids: (the two bending axes of the paraboloid are parallel and perpendicular to a radius \
+        of the antenna crossing the middle point of the panel):
             - *corotated_scipy*: Paraboloid is fitted using scipy.optimize, robust but slow.
-            - *corotated_lst_sq*: Paraboloid is fitted using the linear algebra least squares method, fast but unreliable.
+            - *corotated_lst_sq*: Paraboloid is fitted using the linear algebra least squares method, fast but \
+            unreliable.
             - *corotated_robust*: Tries corotated_lst_sq, if it diverges falls back to corotated_scipy, fast and robust.
         * Experimental fitting models:
             - *xy_paraboloid*: fitted using scipy.optimize, bending axes are parallel to the x and y axes.
             - *rotated_paraboloid*: fitted using scipy.optimize, bending axes can be rotated by any arbitrary angle.
-            - *full_paraboloid_lst_sq*: Full 9 parameter paraboloid fitted using least_squares method, tends to heavily overfit surface irregularities.
+            - *full_paraboloid_lst_sq*: Full 9 parameter paraboloid fitted using least_squares method, tends to \
+            heavily overfit surface irregularities.
 
         .. rubric:: Amplitude clipping:
 
@@ -115,7 +133,9 @@ def panel(
 
     .. _Description:
     **AstrohackPanelFile**
-    Panel object allows the user to access panel data via compound dictionary keys with values, in order of depth, `ant` -> `ddi`. The panel object also provides a `summary()` helper function to list available keys for each file. An outline of the panel object structure is show below:
+    Panel object allows the user to access panel data via compound dictionary keys with values, in order of depth, \
+    `ant` -> `ddi`. The panel object also provides a `summary()` helper function to list available keys for each file.\
+     An outline of the panel object structure is show below:
 
     .. parsed-literal::
         panel_mds = 
@@ -156,8 +176,6 @@ def panel(
         panel_name = get_default_file_name(input_file=image_name, output_type='.panel.zarr')
 
     panel_params = locals()
-
-    
 
     input_params = panel_params.copy()
     _check_if_file_exists(panel_params['image_name'])

@@ -54,8 +54,6 @@ def open_holog(file: str) -> AstrohackHologFile:
             }
     """
 
-    
-
     _data_file = AstrohackHologFile(file=file)
 
     if _data_file.open():
@@ -94,8 +92,6 @@ def open_image(file: str) -> AstrohackImageFile:
            }
 
     """
-
-    
 
     _data_file = AstrohackImageFile(file=file)
 
@@ -136,8 +132,6 @@ def open_panel(file: str) -> AstrohackPanelFile:
 
     """
 
-    
-
     _data_file = AstrohackPanelFile(file=file)
 
     if _data_file.open():
@@ -176,8 +170,6 @@ def open_locit(file: str) -> AstrohackLocitFile:
             }
 
     """
-
-    
 
     _data_file = AstrohackLocitFile(file=file)
 
@@ -218,8 +210,6 @@ def open_position(file: str) -> AstrohackPositionFile:
 
     """
 
-    
-
     _data_file = AstrohackPositionFile(file=file)
 
     if _data_file.open():
@@ -256,8 +246,6 @@ def open_pointing(file: str) -> AstrohackPointFile:
 
     """
 
-    
-
     _data_file = AstrohackPointFile(file=file)
 
     if _data_file.open():
@@ -271,10 +259,10 @@ def fix_pointing_table(ms_name: str, reference_antenna: List[str]) -> None:
     """ Fix pointing table for a user defined subset of reference antennas.
 
     :param ms_name: Measurement set name.
-    :type file: str
+    :type ms_name: str
 
     :param reference_antenna: List of reference antennas.
-    :type file: list
+    :type reference_antenna: list
   
     .. _Description:
 
@@ -291,7 +279,6 @@ def fix_pointing_table(ms_name: str, reference_antenna: List[str]) -> None:
 
 
   """
-    
 
     path = pathlib.Path(ms_name)
     ms_name_fullpath = str(path.absolute().resolve())
@@ -338,8 +325,10 @@ def print_json(
 
     :param obj: JSON object
     :type obj: JSON
+
     :param indent: Indent to be used in JSON dictionary., defaults to 6
     :type indent: int, optional
+
     :param columns: Columns used to reshape the antenna list., defaults to 7
     :type columns: int, optional
     """
@@ -373,13 +362,16 @@ def inspect_holog_obs_dict(
 
     :param file: Input file, can be either JSON file or string., defaults to '.holog_obs_dict.json'
     :type file: str | JSON, optional
-    :param style: Print style of JSON dictionary. This can be static, formatted generalized print out or dynamic, prints a collapsible formatted dictionary, defaults to static
+
+    :param style: Print style of JSON dictionary. This can be static, formatted generalized print out or dynamic, \
+    prints a collapsible formatted dictionary, defaults to static
     :type style: str, optional
 
     .. _Description:
 
     **Example Usage**
-    The `inspect_holog_obs_dict` loads a holography observation dict either from disk or from memory (as an return value from `generate_holog_obs_dict`) and displays it in a more readable way like JSON.stringify() in javascript.
+    The `inspect_holog_obs_dict` loads a holography observation dict either from disk or from memory (as an return \
+    value from `generate_holog_obs_dict`) and displays it in a more readable way like JSON.stringify() in javascript.
 
     .. parsed-literal::
         import astrohack
@@ -407,7 +399,6 @@ def inspect_holog_obs_dict(
             }
         } 
     """
-    
 
     if not isinstance(file, dict):
         try:
