@@ -1,82 +1,49 @@
 import os
 import pathlib
 import shutil
+import json
 import requests
 import zipfile
 
-from tqdm import tqdm
-
 import skriba.logger as logger
 
-FILE_ID = {
-    'ea25_cal_small_before_fixed.split.ms':
-        {
-            'file': 'ea25_cal_small_before_fixed.split.ms.zip',
-            'id': 'm2qnd2w6g9fhdxyzi6h7f',
-            'rlkey': 'd4dgztykxpnnqrei7jhb1cu7m'
-        },
-    'ea25_cal_small_after_fixed.split.ms':
-        {
-            'file': 'ea25_cal_small_after_fixed.split.ms.zip',
-            'id': 'o3tl05e3qa440s4rk5owf',
-            'rlkey': 'hoxte3zzeqgkju2ywnif2t7ko'
-        },
-    'J1924-2914.ms.calibrated.split.SPW3':
-        {
-            'file': 'J1924-2914.ms.calibrated.split.SPW3.zip',
-            'id': 'kyrwc5y6u7lxbmqw7fveh',
-            'rlkey': 'r23qakcm24bid2x2cojsd96gs'
-        },
-    'extract_holog_verification.json':
-        {
-            'file': 'extract_holog_verification.json',
-            'id': '6pzucjd48a4n0eb74wys9',
-            'rlkey': 'azuynw358zxvse9i225sbl59s'
-        },
-    'holog_numerical_verification.json':
-        {
-            'file': 'holog_numerical_verification.json',
-            'id': 'x69700pznt7uktwprdqpk',
-            'rlkey': 'bxn9me7dgnxrtzvvay7xgicmi'
-        },
-    'locit-input-pha.cal':
-        {
-            'file': 'locit-input-pha.cal.zip',
-            'id': '8fftz5my9h8ca2xdlupym',
-            'rlkey': 'fxfid92953ycorh5wrhfgh78b'
-        },
-    'panel_cutoff_mask':
-        {
-            'file': 'panel_cutoff_mask.npy',
-            'id': '8ta02t72vwcv4ketv8rfw',
-            'rlkey': 'qsmos4hx2duz8upb83hghi6q8'
-        },
-    'heuristic_model':
-        {
-            'file': 'elastic.model',
-            'id': 'mihy28n7ei72sk2982v0y',
-            'rlkey': 'xdzwfbfsrg6ehhvhaj6iyp58y'
-        }
-}
+
+def is_notebook() -> bool:
+    try:
+        from IPython import get_ipython
+
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True
+        else:
+            raise ImportError
+
+    except ImportError:
+        return False
 
 
 def download(file: str, folder: str = '.') -> None:
-    
+    # Load the file dropbox file meta data.
+    meta_data_path = pathlib.Path(__file__).parent.joinpath(".dropbox/file.download.json")
+
+    with open(meta_data_path) as json_file:
+        file_meta_data = json.load(json_file)
+
     full_file_path = pathlib.Path(folder).joinpath(file)
 
     if full_file_path.exists():
         logger.info("File exists: {file}".format(file=str(full_file_path)))
         return
 
-    if file not in FILE_ID.keys():
+    if file not in file_meta_data.keys():
         logger.info("Requested file not found")
-        logger.info(FILE_ID.keys())
+        logger.info(file_meta_data.keys())
 
         return
 
-    fullname = FILE_ID[file]['file']
-    id = FILE_ID[file]['id']
-    rlkey = FILE_ID[file]['rlkey']
+    fullname = file_meta_data[file]['file']
+    id = file_meta_data[file]['id']
+    rlkey = file_meta_data[file]['rlkey']
 
     url = 'https://www.dropbox.com/scl/fi/{id}/{file}?rlkey={rlkey}'.format(id=id, file=fullname, rlkey=rlkey)
 
@@ -86,6 +53,11 @@ def download(file: str, folder: str = '.') -> None:
     total = int(r.headers.get('content-length', 0))
 
     fullname = str(pathlib.Path(folder).joinpath(fullname))
+
+    if is_notebook():
+        from tqdm.notebook import tqdm
+    else:
+        from tqdm import tqdm
 
     with open(fullname, 'wb') as fd, tqdm(
             desc=fullname,

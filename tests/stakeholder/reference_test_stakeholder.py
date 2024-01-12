@@ -1,7 +1,5 @@
 import pytest
 
-import shutil
-import os
 import json
 import copy
 import astrohack
@@ -17,9 +15,6 @@ from astrohack.dio import open_panel
 # from astrohack.client import local_client
 
 base_name = 'ea25_cal_small_'
-
-
-# client = local_client(cores=2, memory_limit='8GB', log_params={'log_level':'DEBUG'})
 
 @pytest.fixture(scope='session')
 def set_data(tmp_path_factory):

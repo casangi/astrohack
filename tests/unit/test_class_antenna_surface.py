@@ -4,21 +4,16 @@ from astrohack._utils._dio import _aips_holog_to_xds
 from astrohack._utils._conversion import _convert_unit
 
 import numpy as np
-import gdown
+import astrohack
 import shutil
-import os
 
 
 datafolder = "./paneldata/"
 
 
 def setup():
-    os.makedirs(name=datafolder, exist_ok=True)
-    panelzip = datafolder + "panel.zip"
-    if not os.path.exists(panelzip):
-        url = "https://drive.google.com/u/1/uc?id=10fXyut_UHPUjIuaaEy6-m6wcycZHit2v&export=download"
-        gdown.download(url, panelzip)
-    shutil.unpack_archive(filename=panelzip, extract_dir=datafolder)
+    # Download relevant panel test files
+    astrohack.data.datasets.download(file="panel_test_files", folder=datafolder)
 
 
 def cleanup():

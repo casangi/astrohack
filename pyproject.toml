@@ -4,7 +4,30 @@ version = "0.4.2"
 description = "Holography Antenna Commissioning Kit"
 readme = "README.md"
 requires-python = ">= 3.8, < 3.12"
-dependencies = [ "astropy", "auror", "dask<=2023.12.0", "distributed", "gdown", "matplotlib", "numba>=0.57.0", "numpy", "prettytable", "pytest", "pytest-cov", "pytest-html", "scikit_image", "scikit-learn", "scipy", "rich", "skriba", "xarray", "zarr", "bokeh", "jupyterlab", "python_casacore>=3.5.2; sys_platform != \"darwin\" ",]
+dependencies = [
+    "astropy",
+    "auror",
+    "dask",
+    "distributed",
+    "matplotlib",
+    "menrva",
+    "numba>=0.57.0",
+    "numpy",
+    "prettytable",
+    "pytest",
+    "pytest-cov",
+    "pytest-html",
+    "scikit_image",
+    "scikit-learn",
+    "scipy",
+    "rich",
+    "skriba",
+    "xarray",
+    "zarr",
+    "bokeh",
+    "jupyterlab",
+    "python_casacore>=3.5.2; sys_platform != \"darwin\" ",
+]
 [[project.authors]]
 name = "Jan-Willem Steeb"
 email = "jsteeb@nrao.edu"
@@ -21,4 +44,17 @@ email = "vdesouza@nrao.edu"
 file = "LICENSE.txt"
 
 [project.optional-dependencies]
-docs = [ "ipykernel", "ipympl", "ipython", "jupyter-client", "nbsphinx", "recommonmark", "scanpydoc", "sphinx-autoapi", "sphinx-autosummary-accessors", "sphinx_rtd_theme", "twine", "pandoc",]
+docs = [
+    "ipykernel",
+    "ipympl",
+    "ipython",
+    "jupyter-client",
+    "nbsphinx",
+    "recommonmark",
+    "scanpydoc",
+    "sphinx-autoapi",
+    "sphinx-autosummary-accessors",
+    "sphinx_rtd_theme",
+    "twine",
+    "pandoc",
+]

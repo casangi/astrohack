@@ -1,0 +1,55 @@
+{
+    "ea25_cal_small_before_fixed.split.ms":
+        {
+            "file": "ea25_cal_small_before_fixed.split.ms.zip",
+            "id": "m2qnd2w6g9fhdxyzi6h7f",
+            "rlkey": "d4dgztykxpnnqrei7jhb1cu7m"
+        },
+    "ea25_cal_small_after_fixed.split.ms":
+        {
+            "file": "ea25_cal_small_after_fixed.split.ms.zip",
+            "id": "o3tl05e3qa440s4rk5owf",
+            "rlkey": "hoxte3zzeqgkju2ywnif2t7ko"
+        },
+    "J1924-2914.ms.calibrated.split.SPW3":
+        {
+            "file": "J1924-2914.ms.calibrated.split.SPW3.zip",
+            "id": "kyrwc5y6u7lxbmqw7fveh",
+            "rlkey": "r23qakcm24bid2x2cojsd96gs"
+        },
+    "extract_holog_verification.json":
+        {
+            "file": "extract_holog_verification.json",
+            "id": "6pzucjd48a4n0eb74wys9",
+            "rlkey": "azuynw358zxvse9i225sbl59s"
+        },
+    "holog_numerical_verification.json":
+        {
+            "file": "holog_numerical_verification.json",
+            "id": "x69700pznt7uktwprdqpk",
+            "rlkey": "bxn9me7dgnxrtzvvay7xgicmi"
+        },
+    "locit-input-pha.cal":
+        {
+            "file": "locit-input-pha.cal.zip",
+            "id": "8fftz5my9h8ca2xdlupym",
+            "rlkey": "fxfid92953ycorh5wrhfgh78b"
+        },
+    "panel_cutoff_mask":
+        {
+            "file": "panel_cutoff_mask.npy",
+            "id": "8ta02t72vwcv4ketv8rfw",
+            "rlkey": "qsmos4hx2duz8upb83hghi6q8"
+        },
+    "heuristic_model":
+        {
+            "file": "elastic.model",
+            "id": "mihy28n7ei72sk2982v0y",
+            "rlkey": "xdzwfbfsrg6ehhvhaj6iyp58y"
+        },
+    "panel_test_files": {
+        "file": "panel-input-data.zip",
+        "id": "9xh0oyg936x6wifdhesjf",
+        "rlkey": "4alb24096gy0dvpzrq92q109e"
+    }
+}

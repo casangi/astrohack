@@ -1,6 +1,7 @@
 import os
-from astrohack.gdown_utils import download
-from astrohack import astrohack_local_client
+import astrohack
+
+from menrva.client import local_client
 from astrohack.extract_holog import extract_holog
 
 from astrohack.holog import holog
@@ -9,15 +10,15 @@ from astrohack.holog import holog
 class Stakeholder:
     def setup_cache(self):
         # initialize a local cluster for parallel processing
-        self.client = astrohack_local_client(cores=2, memory_limit="8GB")
+        self.client = local_client(cores=2, memory_limit="8GB")
 
         def setup(self):
         # download test datasets
-        download(
-            "J1924-2914.ms.calibrated.split.SPW3", folder=os.getcwd(), unpack=True
-        )
+        astrohack.data.datasets.download("J1924-2914.ms.calibrated.split.SPW3", folder=os.getcwd())
         self.alma_ms = os.path.join(os.getcwd(), "J1924-2914.ms.calibrated.split.SPW3")
+
         print(self.alma_ms)
+
         self.alma_zarr = "alma.split.holog.zarr"
         extract_holog(
             ms_name=self.alma_ms,

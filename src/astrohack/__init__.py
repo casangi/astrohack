@@ -1,8 +1,8 @@
+import os
 from importlib.metadata import version
 
 __version__ = version('astrohack')
 
-from .client import *
 from .extract_holog import *
 from .extract_holog import generate_holog_obs_dict
 from .extract_pointing import *
@@ -17,7 +17,12 @@ from .extract_locit import *
 
 # Set parameter checking system directory.
 if os.path.exists(os.path.dirname(__file__) + "/config/"):
-    os.environ["AUROR_CONFIG_PATH"] = os.path.dirname(__file__) + "/config/"
+    if not os.getenv("AUROR_CONFIG_PATH"):
+        os.environ["AUROR_CONFIG_PATH"] = os.path.dirname(__file__) + "/config/"
+
+    else:
+        if os.path.dirname(__file__) + "/config/" not in os.getenv("AUROR_CONFIG_PATH"):
+            os.environ["AUROR_CONFIG_PATH"] = "/config/"
 
 # This installs a slick, informational tracebacks logger
 from rich.traceback import install
