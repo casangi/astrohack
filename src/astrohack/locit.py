@@ -32,26 +32,38 @@ def locit(
 
     :param locit_name: Name of input *.locit.zarr file.
     :type locit_name: str
-    :param position_name: Name of *<position_name>.position.zarr* file to create. Defaults to measurement set name with *position.zarr* extension.
+
+    :param position_name: Name of *<position_name>.position.zarr* file to create. Defaults to measurement set name \
+    with *position.zarr* extension.
     :type position_name: str, optional
+
     :param elevation_limit: Lower elevation limit for excluding sources in degrees
     :type elevation_limit: float, optional
+
     :param polarization: Which polarization to use R, L or both for circular systems, X, Y, or both for linear systems.
     :type polarization: str, optional
+
     :param fit_kterm: Fit antenna elevation axis offset term, defaults to False
     :type fit_kterm: bool, optional
+
     :param fit_delay_rate: Fit delay rate with time, defaults to True
     :type fit_delay_rate: bool, optional
+
     :param fit_engine: What engine to use on fitting, default is linear algebra
     :type fit_engine: str, optional
+
     :param ant: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant: list or str, optional
+
     :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
+
     :param combine_ddis: Type of DDI combination, if desired, defaults to simple
     :type combine_ddis: str, optional
+
     :param parallel: Run in parallel. Defaults to False.
     :type parallel: bool, optional
+
     :param overwrite: Boolean for whether to overwrite current position.zarr file, defaults to False.
     :type overwrite: bool, optional
 
@@ -134,7 +146,6 @@ def locit(
         position_name = get_default_file_name(input_file=locit_name, output_type=".position.zarr")
 
     locit_params = locals()
-    
 
     input_params = locit_params.copy()
     attributes = locit_params.copy()

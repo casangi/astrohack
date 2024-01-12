@@ -21,13 +21,6 @@ class TestAstrohack():
         """ teardown any state that was previously setup for all methods of the given class """
         pass
 
-    def test_import_client(self):
-        """ Import client """
-        try:
-            from menrva.client import local_client
-        except ImportError:
-            assert False
-
     def test_import_extract_holog(self):
         try:
             from astrohack.extract_holog import extract_holog

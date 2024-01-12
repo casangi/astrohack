@@ -63,28 +63,37 @@ def holog(
 
     :param parallel: Run in parallel with Dask or in serial., defaults to False
     :type parallel: bool, optional
+
     :param grid_interpolation_mode: Method of interpolation used when gridding data. This is done using the \
     `scipy.interpolate.griddata` method. For more information on the interpolation see `scipy.interpolate \
     <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html#scipy.interpolate.griddata>`_,\
      defaults to "linear"
     :type grid_interpolation_mode: str, optional. Available options: {"linear", "nearest", "cubic"}
+
     :param chan_average: Boolean dictating whether the channel average is computed and written to the output holog \
     file., defaults to True
     :type chan_average: bool, optional
+
     :param chan_tolerance_factor: Tolerance used in channel averaging to determine the number of primary beam \
     channels., defaults to 0.005
     :type chan_tolerance_factor: float, optional
-    :param scan_average: Boolean dicating whether averagin is done over scan., defaults to True
+
+    :param scan_average: Boolean dictating whether averaging is done over scan., defaults to True
     :type scan_average: bool, optional
+
     :param ant: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant: list or str, optional
-    :param ddi: List of ddis/ddi to be processed, defaults to "all" when None, ex. 0
+
+    :param ddi: List of ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
+
     :param to_stokes: Dictates whether polarization is computed according to stokes values., defaults to True
     :type to_stokes: bool, optional
-    :param apply_mask: If True applies a mask to the aperture setting values outside of the aperture to zero., defaults\
+
+    :param apply_mask: If True applies a mask to the aperture setting values outside the aperture to zero., defaults\
      to True
     :type apply_mask: bool, optional
+
     :param phase_fit: If a boolean array is given each element controls one aspect of phase fitting. defaults to True.
         
         Phase fitting:

@@ -25,7 +25,8 @@ def extract_pointing(
     :param ms_name: Name of input measurement file name.
     :type ms_name: str
 
-    :param point_name: Name of *<point_name>.point.zarr* file to create. Defaults to measurement set name with *point.zarr* extension.
+    :param point_name: Name of *<point_name>.point.zarr* file to create. Defaults to measurement set name with \
+    *point.zarr* extension.
     :type point_name: str, optional
 
     :param exclude: Name of antenna to exclude from extraction.

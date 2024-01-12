@@ -50,12 +50,12 @@ class AstrohackDataFile:
         self._verify_holog_files(file_stem, path)
 
     def _verify_holog_files(self, file_stem: str, path: str):
-        
+
         logger.info("Verifying {stem}.* files in path={path} ...".format(stem=file_stem, path=path))
 
         file_path = "{path}/{stem}.holog.zarr".format(path=path, stem=file_stem)
 
-        if pathlib.Path(file_path).isdir():
+        if pathlib.Path(file_path).is_dir():
             logger.info("Found {stem}.holog.zarr directory ...".format(stem=file_stem))
 
             self._holog_path = file_path
@@ -63,7 +63,7 @@ class AstrohackDataFile:
 
         file_path = "{path}/{stem}.image.zarr".format(path=path, stem=file_stem)
 
-        if pathlib.Path(file_path).isdir():
+        if pathlib.Path(file_path).is_dir():
             logger.info("Found {stem}.image.zarr directory ...".format(stem=file_stem))
 
             self._image_path = file_path
@@ -71,7 +71,7 @@ class AstrohackDataFile:
 
         file_path = "{path}/{stem}.panel.zarr".format(path=path, stem=file_stem)
 
-        if pathlib.Path(file_path).isdir():
+        if pathlib.Path(file_path).is_dir():
             logger.info("Found {stem}.panel.zarr directory ...".format(stem=file_stem))
 
             self._image_path = file_path
@@ -79,7 +79,7 @@ class AstrohackDataFile:
 
         file_path = "{path}/{stem}.point.zarr".format(path=path, stem=file_stem)
 
-        if pathlib.Path(file_path).isdir():
+        if pathlib.Path(file_path).is_dir():
             logger.info("Found {stem}.point.zarr directory ...".format(stem=file_stem))
 
             self._point_path = file_path
@@ -123,13 +123,14 @@ class AstrohackImageFile(dict):
 
     def open(self, file: str = None) -> bool:
         """ Open holography image file.
+        
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
 
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        
+
         if file is None:
             file = self.file
 
@@ -171,13 +172,13 @@ class AstrohackImageFile(dict):
         :type ddi: int
         :param ant: Antenna ID, ex. ea25.
         :type ant: str
-        :param complex_split: Is the data to b left as is (Real + imag: cartesian, default) or split into Amplitude and Phase (polar)
+        :param complex_split: Is the data to b left as is (Real + imag: cartesian, default) or split into Amplitude \
+        and Phase (polar)
         :type complex_split: str, optional
 
         :return: Corresponding xarray dataset, or self if selection is None
         :rtype: xarray.Dataset or AstrohackImageFile
         """
-        
 
         ant = 'ant_' + ant
         ddi = f'ddi_{ddi}'
@@ -275,15 +276,16 @@ class AstrohackImageFile(dict):
         :type ddi: list or int, optional
         :param plot_screws: Add screw positions to plot, default is False
         :type plot_screws: bool, optional
-        :param amplitude_limits: Lower then Upper limit for amplitude in volts default is None (Guess from data)
+        :param amplitude_limits: Lower than Upper limit for amplitude in volts default is None (Guess from data)
         :type amplitude_limits: numpy.ndarray, list, tuple, optional
         :param phase_unit: Unit for phase plots, defaults is 'deg'
         :type phase_unit: str, optional
-        :param phase_limits: Lower then Upper limit for phase, value in phase_unit, default is None (Guess from data)
+        :param phase_limits: Lower than Upper limit for phase, value in phase_unit, default is None (Guess from data)
         :type phase_limits: numpy.ndarray, list, tuple, optional
         :param deviation_unit: Unit for deviation plots, defaults is 'mm'
         :type deviation_unit: str, optional
-        :param deviation_limits: Lower then Upper limit for deviation, value in deviation_unit, default is None (Guess from data)
+        :param deviation_limits: Lower than Upper limit for deviation, value in deviation_unit, default is None (Guess\
+         from data)
         :type deviation_limits: numpy.ndarray, list, tuple, optional
         :param panel_labels: Add panel labels to antenna surface plots, default is False
         :type panel_labels: bool, optional
@@ -337,7 +339,8 @@ class AstrohackImageFile(dict):
         :type ddi: list or int, optional
         :param angle_unit: Unit for L and M axes in plots, default is 'deg'.
         :type angle_unit: str, optional
-        :param complex_split: How to split complex beam data, cartesian (real + imag) or polar (amplitude + phase, default)
+        :param complex_split: How to split complex beam data, cartesian (real + imag) or polar (amplitude + phase, \
+        default)
         :type complex_split: str, optional
         :param phase_unit: Unit for phase in 'polar' plots, default is 'deg'.
         :type phase_unit: str
@@ -408,7 +411,7 @@ class AstrohackHologFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        #logger = skriba.logger.get_logger()
+        # logger = skriba.logger.get_logger()
 
         if file is None:
             file = self.file
@@ -455,7 +458,7 @@ class AstrohackHologFile(dict):
         :return: Corresponding xarray dataset, or self if selection is None
         :rtype: xarray.Dataset or AstrohackHologFile
         """
-        
+
         ant = 'ant_' + ant
         ddi = f'ddi_{ddi}'
         map_id = f'map_{map_id}'
@@ -528,7 +531,6 @@ class AstrohackHologFile(dict):
         - *polar*:     Split is done to an amplitude and a phase in the plots
 
         """
-        
 
         param_dict = locals()
         param_dict["map"] = map_id
@@ -657,7 +659,6 @@ class AstrohackPanelFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        
 
         if file is None:
             file = self.file
@@ -785,34 +786,50 @@ class AstrohackPanelFile(dict):
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
+        
         :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant: list or str, optional
+        
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
+        
         :param plot_type: type of plot to be produced, deviation, phase, ancillary or all, default is deviation
         :type plot_type: str, optional
+        
         :param plot_screws: Add screw positions to plot
         :type plot_screws: bool, optional
-        :param amplitude_limits: Lower then Upper limit for amplitude in volts default is None (Guess from data)
+        
+        :param amplitude_limits: Lower than Upper limit for amplitude in volts default is None (Guess from data)
         :type amplitude_limits: numpy.ndarray, list, tuple, optional
+        
         :param phase_unit: Unit for phase plots, defaults is 'deg'
         :type phase_unit: str, optional
-        :param phase_limits: Lower then Upper limit for phase, value in phase_unit, default is None (Guess from data)
+        
+        :param phase_limits: Lower than Upper limit for phase, value in phase_unit, default is None (Guess from data)
         :type phase_limits: numpy.ndarray, list, tuple, optional
+        
         :param deviation_unit: Unit for deviation plots, defaults is 'mm'
         :type deviation_unit: str, optional
-        :param deviation_limits: Lower then Upper limit for deviation, value in deviation_unit, default is None (Guess from data)
+        
+        :param deviation_limits: Lower than Upper limit for deviation, value in deviation_unit, default is None (Guess \
+        from data)
         :type deviation_limits: numpy.ndarray, list, tuple, optional
+        
         :param panel_labels: Add panel labels to antenna surface plots, default is False
         :type panel_labels: bool, optional
+
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
+
         :param colormap: Colormap for plots, default is viridis
         :type colormap: str, optional
+
         :param figure_size: 2 element array/list/tuple with the plot sizes in inches
         :type figure_size: numpy.ndarray, list, tuple, optional
+
         :param dpi: dots per inch to be used in plots, default is 300
         :type dpi: int, optional
+
         :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is False
         :type parallel: bool, optional
 
@@ -833,7 +850,7 @@ class AstrohackPanelFile(dict):
         - *all*: All the plots listed above. In this case the unit parameter is taken to mean the deviation unit, the
                  phase unit is set to degrees
         """
-        
+
         param_dict = locals()
 
         param_dict["figuresize"] = figure_size
@@ -855,10 +872,13 @@ class AstrohackPanelFile(dict):
 
         :param destination: Name of the destination folder to contain plots
         :type destination: str
+
         :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant: list or str, optional
+
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
+
         :param parallel: If True will use an existing astrohack client to export FITS in parallel, default is False
         :type parallel: bool, optional
 
@@ -910,7 +930,7 @@ class AstrohackPointFile(dict):
         """
         return self._file_is_open
 
-    def open(self, file: str = None, dask_load: bool = True) -> None:
+    def open(self, file: str = None, dask_load: bool = True) -> bool:
         """ Open holography pointing file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
@@ -920,7 +940,6 @@ class AstrohackPointFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        
 
         if file is None:
             file = self.file
@@ -952,6 +971,7 @@ class AstrohackLocitFile(dict):
 
     def __init__(self, file: str):
         """ Initialize an AstrohackLocitFile object.
+
         :param file: File to be linked to this object
         :type file: str
 
@@ -984,13 +1004,14 @@ class AstrohackLocitFile(dict):
         """ Open antenna location file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
+
         :param dask_load: Is file to be loaded with dask?, default is True
         :type dask_load: bool, optional
 
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        #logger= skriba.logger.get_logger(logger_name="astrohack")
+        # logger= skriba.logger.get_logger(logger_name="astrohack")
 
         if file is None:
             file = self.file
@@ -1060,14 +1081,19 @@ class AstrohackLocitFile(dict):
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
+
         :param labels: Add source labels to the plot, defaults to False
         :type labels: bool, optional
+
         :param precessed: Plot in precessed coordinates? defaults to False (FK5)
         :type precessed: bool, optional
+
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
+
         :param figure_size: 2 element array/list/tuple with the plot sizes in inches
         :type figure_size: numpy.ndarray, list, tuple, optional
+
         :param dpi: dots per inch to be used in plots, default is 300
         :type dpi: int, optional
 
@@ -1115,18 +1141,25 @@ class AstrohackLocitFile(dict):
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
+
         :param stations: Add station names to the plot, defaults to True
         :type stations: bool, optional
+
         :param zoff: Add Elevation offsets to the plots, defaults to False
         :type zoff: bool, optional
+
         :param unit: Unit for the plot, valid values are length units, default is km
         :type unit: str, optional
+
         :param box_size: Size of the box for plotting the inner part of the array in unit, default is 5 km
         :type box_size: int, float, optional
+
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
+
         :param figure_size: 2 element array/list/tuple with the plot sizes in inches
         :type figure_size: numpy.ndarray, list, tuple, optional
+
         :param dpi: dots per inch to be used in plots, default is 300
         :type dpi: int, optional
 
@@ -1163,6 +1196,7 @@ class AstrohackPositionFile(dict):
         """
         super().__init__()
 
+        self.combined = None
         self.file = file
         self._meta_data = None
         self._input_pars = None
@@ -1187,13 +1221,14 @@ class AstrohackPositionFile(dict):
         """ Open antenna location file.
         :param file: File to be opened, if None defaults to the previously defined file
         :type file: str, optional
+
         :param dask_load: Is file to be loaded with dask?, default is True
         :type dask_load: bool, optional
 
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        #logger = logger.get_logger(logger_name="astrohack")
+        # logger = logger.get_logger(logger_name="astrohack")
 
         if file is None:
             file = self.file
@@ -1235,14 +1270,19 @@ class AstrohackPositionFile(dict):
 
         :param destination: Name of the destination folder to contain exported fit results
         :type destination: str
+
         :param ant: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
         :type ant: list or str, optional
+
         :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
+
         :param position_unit: Unit to list position fit results, defaults to 'm'
         :type position_unit: str, optional
+
         :param time_unit: Unit for time in position fit results, defaults to 'hour'
         :type time_unit: str, optional
+
         :param delay_unit: Unit for delays, defaults to 'ns'
         :type delay_unit: str, optional
 
@@ -1276,20 +1316,28 @@ class AstrohackPositionFile(dict):
 
         :param destination: Name of the destination folder to contain the plots
         :type destination: str
+
         :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant: list or str, optional
+
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
+
         :param angle_unit: Unit for angle in plots, defaults to 'deg'
         :type angle_unit: str, optional
+
         :param time_unit: Unit for time in plots, defaults to 'hour'
         :type time_unit: str, optional
+
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
+
         :param figure_size: 2 element array/list/tuple with the plot size in inches
         :type figure_size: numpy.ndarray, list, tuple, optional
+
         :param dpi: plot resolution in pixels per inch, default is 300
         :type dpi: int, optional
+
         :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is False
         :type parallel: bool, optional
 
@@ -1336,24 +1384,34 @@ class AstrohackPositionFile(dict):
 
         :param destination: Name of the destination folder to contain the plots
         :type destination: str
+
         :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant: list or str, optional
+
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
+
         :param angle_unit: Unit for angle in plots, defaults to 'deg'
         :type angle_unit: str, optional
+
         :param time_unit: Unit for time in plots, defaults to 'hour'
         :type time_unit: str, optional
+
         :param delay_unit: Unit for delay in plots, defaults to 'nsec'
         :type delay_unit: str, optional
+
         :param plot_model: Plot the fitted model results alongside the data.
         :type plot_model: bool, optional
+
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
+
         :param figure_size: 2 element array/list/tuple with the plot size in inches
         :type figure_size: numpy.ndarray, list, tuple, optional
+
         :param dpi: plot resolution in pixels per inch, default is 300
         :type dpi: int, optional
+
         :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is False
         :type parallel: bool, optional
 
@@ -1401,20 +1459,28 @@ class AstrohackPositionFile(dict):
 
         :param destination: Name of the destination folder to contain plot
         :type destination: str
+
         :param ant: Select which antennas are to be plotted, defaults to all when None, ex. ea25
         :type ant: list or str, optional
+
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
+
         :param unit: Unit for the plot, valid values are length units, default is km
         :type unit: str, optional
+
         :param box_size: Size of the box for plotting the inner part of the array in unit, default is 5 km
         :type box_size: int, float, optional
+
         :param scaling: scaling factor to plotting the corrections, default is 250
         :type scaling: int, float, optional
+
         :param display: Display plots inline or suppress, defaults to True
         :type display: bool, optional
+
         :param figure_size: 2 element array/list/tuple with the plot sizes in inches
         :type figure_size: numpy.ndarray, list, tuple, optional
+
         :param dpi: dots per inch to be used in plots, default is 300
         :type dpi: int, optional
 
