@@ -9,7 +9,6 @@ dependencies = [
     "auror",
     "dask",
     "distributed",
-    "gdown==4.6.0",
     "matplotlib",
     "menrva",
     "numba>=0.57.0",
@@ -45,4 +44,17 @@ email = "vdesouza@nrao.edu"
 file = "LICENSE.txt"
 
 [project.optional-dependencies]
-docs = [ "ipykernel", "ipympl", "ipython", "jupyter-client", "nbsphinx", "recommonmark", "scanpydoc", "sphinx-autoapi", "sphinx-autosummary-accessors", "sphinx_rtd_theme", "twine", "pandoc",]
+docs = [
+    "ipykernel",
+    "ipympl",
+    "ipython",
+    "jupyter-client",
+    "nbsphinx",
+    "recommonmark",
+    "scanpydoc",
+    "sphinx-autoapi",
+    "sphinx-autosummary-accessors",
+    "sphinx_rtd_theme",
+    "twine",
+    "pandoc",
+]
