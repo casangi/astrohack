@@ -625,6 +625,13 @@
                 "list",
                 "string"
             ]
+        },
+        "parallel": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "boolean"
+            ]
         }
     },
 
