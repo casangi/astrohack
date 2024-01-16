@@ -516,7 +516,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
 
         pnt_map_dict[antenna] = (
             pnt_ant_dict[antenna]
-            .interp(time=time_vis, method="linear")
+            .interp(time=time_vis, method="nearest")
         )
 
     return pnt_map_dict
