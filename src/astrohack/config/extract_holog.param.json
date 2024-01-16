@@ -28,9 +28,6 @@
             "type":["str"],
             "allowed":["DATA", "CORRECTED_DATA"]
         },
-        "use_time_centroid":{
-            "type":["boolean"]
-        },
         "parallel":{
             "type":["boolean"]
         },

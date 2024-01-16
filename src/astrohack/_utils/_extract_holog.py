@@ -31,7 +31,6 @@ def _extract_holog_chunk(extract_holog_params):
         ref_ant_ids (numpy.narray): Arry of antenna_id values corresponding to reference data.
         sel_state_ids (list): List pf state_ids corresponding to holography data/
     """
-    
 
     ms_name = extract_holog_params["ms_name"]
     pnt_name = extract_holog_params["point_name"]
@@ -43,7 +42,6 @@ def _extract_holog_chunk(extract_holog_params):
     map_ant_tuple = extract_holog_params["map_ant_tuple"]
     ref_ant_per_map_ant_name_tuple = extract_holog_params["ref_ant_per_map_ant_name_tuple"]
     map_ant_name_tuple = extract_holog_params["map_ant_name_tuple"]
-    use_time_centroid = extract_holog_params["use_time_centroid"]
 
     holog_map_key = extract_holog_params["holog_map_key"]
     telescope_name = extract_holog_params["telescope_name"]
@@ -84,38 +82,21 @@ def _extract_holog_chunk(extract_holog_params):
     ctb.close()
     table_obj.close()
 
-    if use_time_centroid:
-        time_vis, unique_index = np.unique(
-            time_vis_row_centroid, return_index=True
-        )  # Note that
-        vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(
-            vis_data,
-            weight,
-            ant1,
-            ant2,
-            time_vis_row_centroid,
-            time_vis,
-            flag,
-            flag_row,
-            ref_ant_per_map_ant_tuple,
-            map_ant_tuple,
-        )
-    else:
-        time_vis, unique_index = np.unique(
-            time_vis_row, return_index=True
-        )  # Note that values are sorted.
-        vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(
-            vis_data,
-            weight,
-            ant1,
-            ant2,
-            time_vis_row,
-            time_vis,
-            flag,
-            flag_row,
-            ref_ant_per_map_ant_tuple,
-            map_ant_tuple,
-        )
+    time_vis, unique_index = np.unique(
+        time_vis_row, return_index=True
+    )  # Note that values are sorted.
+    vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(
+        vis_data,
+        weight,
+        ant1,
+        ant2,
+        time_vis_row,
+        time_vis,
+        flag,
+        flag_row,
+        ref_ant_per_map_ant_tuple,
+        map_ant_tuple,
+    )
 
     del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row
 
