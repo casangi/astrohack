@@ -212,7 +212,6 @@ def _param_to_list(param, data_dict, prefix):
     Returns: parameter converted to a list
 
     """
-    
 
     if param == 'all':
         outlist = list(data_dict.keys())
@@ -605,3 +604,31 @@ def _format_value_error(value, error, scaling, tolerance):
             return f'{value} \u00b1 {error}'
     else:
         return f'{value} \u00b1 {error}'
+
+
+def _get_valid_state_ids(obs_modes, desired_intent="MAP_ANTENNA_SURFACE",
+                         excluded_intents=('REFERENCE', 'SYSTEM_CONFIGURATION')):
+    """
+    Get scan and subscan IDs
+    SDM Tables Short Description (https://drive.google.com/file/d/16a3g0GQxgcO7N_ZabfdtexQ8r2jRbYIS/view)
+    2.54 ScanIntent (p. 150)
+    MAP ANTENNA SURFACE : Holography calibration scan
+
+    2.61 SubscanIntent (p. 152)
+    MIXED : Pointing measurement, some antennas are on-source, some off-source
+    REFERENCE : reference measurement (used for boresight in holography).
+    SYSTEM_CONFIGURATION: dummy scans at the begininng of each row at the VLA.
+    Undefined : ?
+    """
+
+    valid_state_ids = []
+    for i_mode, mode in enumerate(obs_modes):
+        if desired_intent in mode:
+            valid_id = True
+            for intent in excluded_intents:
+                valid_id = intent not in mode
+            if valid_id:
+                valid_state_ids.append(i_mode)
+    return valid_state_ids
+
+
