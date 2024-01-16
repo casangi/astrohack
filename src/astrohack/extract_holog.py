@@ -29,7 +29,7 @@ from astrohack._utils._dio import _write_meta_data
 from astrohack._utils._extract_holog import _create_holog_meta_data
 from astrohack._utils._extract_holog import _create_holog_obs_dict
 from astrohack._utils._extract_holog import _extract_holog_chunk
-from astrohack._utils._tools import NumpyEncoder
+from astrohack._utils._tools import NumpyEncoder, _get_valid_state_ids
 from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackHologFile
 from astrohack.mds import AstrohackPointFile
@@ -465,16 +465,6 @@ def extract_holog(
     with open(".holog_obs_dict.json", "w") as outfile:
         json.dump(encoded_obj, outfile)
 
-    # Get scan and subscan IDs
-    # SDM Tables Short Description (https://drive.google.com/file/d/16a3g0GQxgcO7N_ZabfdtexQ8r2jRbYIS/view)
-    # 2.54 ScanIntent (p. 150)
-    # MAP ANTENNA SURFACE : Holography calibration scan
-
-    # 2.61 SubscanIntent (p. 152)
-    # MIXED : Pointing measurement, some antennas are on-source, some off-source
-    # REFERENCE : reference measurement (used for boresight in holography).
-    # Undefined : ?
-
     ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "STATE"),
         readonly=True,
@@ -486,12 +476,7 @@ def extract_holog(
     obs_modes = ctb.getcol("OBS_MODE")
     ctb.close()
 
-    scan_intent = "MAP_ANTENNA_SURFACE"
-    state_ids = []
-
-    for i, mode in enumerate(obs_modes):
-        if (scan_intent in mode) and ('REFERENCE' not in mode):
-            state_ids.append(i)
+    state_ids = _get_valid_state_ids(obs_modes)
 
     spw_ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "SPECTRAL_WINDOW"),
