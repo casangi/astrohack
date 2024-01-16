@@ -857,7 +857,7 @@ def model_memory_usage(
             ms_name=ms_name,
             point_name="temporary.pointing.zarr",
             parallel=False,
-            overwrite=False,
+            overwrite=True,
         )
 
         holog_obs_dict = generate_holog_obs_dict(
