@@ -267,7 +267,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
 
     pnt_xds.attrs['ant_name'] = pnt_params['ant_name']
 
-    logger.info(
+    logger.debug(
         "Writing pointing xds to {file}".format(
             file=os.path.join(pnt_name, "ant_" + str(ant_name))
         )
