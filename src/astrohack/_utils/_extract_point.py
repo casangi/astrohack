@@ -34,19 +34,20 @@ def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
     )
 
     antenna_name = ctb.getcol("NAME")
+    ctb.close()
+
+    antenna_id = list(range(len(antenna_name)))
 
     # Exclude antennas according to user direction
     if exclude:
         if not isinstance(exclude, list):
             exclude = list(exclude)
-
-        for antenna in exclude:
+        for i_ant, antenna in enumerate(exclude):
             if antenna in antenna_name:
                 antenna_name.remove(antenna)
+                antenna_id.remove(i_ant)
 
-    antenna_id = np.arange(len(antenna_name))
-
-    ctb.close()
+    antenna_id = np.array(antenna_id)
 
     # Get Holography scans with start and end times.
     ctb = ctables.table(
@@ -95,9 +96,9 @@ def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
 
     if parallel:
         delayed_pnt_list = []
-        for id in antenna_id:
-            pnt_params['ant_id'] = id
-            pnt_params['ant_name'] = antenna_name[id]
+        for i_ant in range(len(antenna_id)):
+            pnt_params['ant_id'] = antenna_id[i_ant]
+            pnt_params['ant_name'] = antenna_name[i_ant]
 
             delayed_pnt_list.append(
                 dask.delayed(_make_ant_pnt_chunk)(
@@ -109,9 +110,9 @@ def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
         dask.compute(delayed_pnt_list)
 
     else:
-        for id in antenna_id:
-            pnt_params['ant_id'] = id
-            pnt_params['ant_name'] = antenna_name[id]
+        for i_ant in range(len(antenna_id)):
+            pnt_params['ant_id'] = antenna_id[i_ant]
+            pnt_params['ant_name'] = antenna_name[i_ant]
 
             _make_ant_pnt_chunk(ms_name, pnt_params)
 
@@ -266,7 +267,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
 
     pnt_xds.attrs['ant_name'] = pnt_params['ant_name']
 
-    logger.info(
+    logger.debug(
         "Writing pointing xds to {file}".format(
             file=os.path.join(pnt_name, "ant_" + str(ant_name))
         )
