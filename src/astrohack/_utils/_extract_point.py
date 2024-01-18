@@ -7,6 +7,7 @@ import xarray as xr
 
 from astrohack._utils._conversion import convert_dict_from_numba
 from astrohack._utils._dio import _load_point_file
+from astrohack._utils._tools import _get_valid_state_ids
 from casacore import tables as ctables
 from numba import njit
 from numba.core import types
@@ -72,12 +73,7 @@ def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
     # scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE sub-table.
     obs_modes = ctb.getcol("OBS_MODE")
     ctb.close()
-    scan_intent = "MAP_ANTENNA_SURFACE"
-    mapping_state_ids = []
-
-    for i, mode in enumerate(obs_modes):
-        if (scan_intent in mode) and ('REFERENCE' not in mode):
-            mapping_state_ids.append(i)
+    mapping_state_ids = _get_valid_state_ids(obs_modes)
 
     mapping_state_ids = np.array(mapping_state_ids)
 
