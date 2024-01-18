@@ -194,6 +194,18 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
     pnt_xds["DIRECTIONAL_COSINES"] = xr.DataArray(
         np.array([l, m]).T, dims=("time", "lm")
     )
+    n_samples = direction_time.shape[0]
+    mid_time = direction_time[n_samples//2]
+    shifted_time = direction_time-mid_time
+    l_poly = np.polyfit(shifted_time, l, 3)
+    m_poly = np.polyfit(shifted_time, m, 3)
+    l_fitted = np.polyval(l_poly, shifted_time)
+    m_fitted = np.polyval(m_poly, shifted_time)
+
+    pnt_xds["FITTED_LM"] = xr.DataArray(
+        np.array([l_fitted, m_fitted]).T, dims=("time", "lm")
+    )
+
 
     '''
     Notes from ASDM (https://drive.google.com/file/d/16a3g0GQxgcO7N_ZabfdtexQ8r2jRbYIS/view)

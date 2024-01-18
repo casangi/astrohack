@@ -329,7 +329,8 @@ def _create_holog_file(
         if map_ant_index not in flagged_mapping_antennas:
             map_ant_tag = 'ant_' + ant_names[map_ant_index]  # 'ant_' + str(map_ant_index)
 
-            direction = np.take(pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, indices, axis=0)
+            # direction = np.take(pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, indicies, axis=0)
+            direction = np.take(pnt_map_dict[map_ant_tag]["FITTED_LM"].values, indicies, axis=0)
 
             parallactic_samples = _calculate_parallactic_angle_chunk(
                 time_samples=time_samples,
