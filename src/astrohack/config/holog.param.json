@@ -5,11 +5,11 @@
             "required": true
         },
         "grid_size": {
-            "type": ["int", "ndarray"],
+            "type": ["int", "ndarray", "list"],
             "nullable": true
         },
         "cell_size": {
-            "type": ["int", "ndarray"],
+            "type": ["int", "float" ,"ndarray", "list"],
             "nullable": true
         },
         "image_name":{

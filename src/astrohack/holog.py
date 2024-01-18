@@ -4,6 +4,7 @@ import numpy as np
 import skriba.logger as logger
 import auror.parameter
 
+from numbers import Number
 from typing import List, Union, NewType
 
 from astrohack._utils._dask_graph_tools import _dask_general_compute
@@ -23,8 +24,8 @@ Array = NewType("Array", Union[np.array, List[int], List[float]])
 )
 def holog(
         holog_name: str,
-        grid_size: Union[int, Array] = None,
-        cell_size: Union[int, Array] = None,
+        grid_size: Union[int, Array, List] = None,
+        cell_size: Union[int, Array, List] = None,
         image_name: str = None,
         padding_factor: int = 50,
         grid_interpolation_mode: str = "linear",
@@ -46,11 +47,11 @@ def holog(
 
     :param grid_size: Numpy array specifying the dimensions of the grid used in data gridding. If not specified \
     grid_size is calculated using POINTING_OFFSET in pointing table.
-    :type grid_size: numpy.ndarray, dtype int, optional
+    :type grid_size: numpy.ndarray, dtype int, list optional
 
     :param cell_size: Numpy array defining the cell size of each grid bin. If not specified cell_size is calculated \
     using POINTING_OFFSET in pointing table.
-    :type cell_size: numpy.ndarray, dtype float, optional
+    :type cell_size: numpy.ndarray, dtype float, list optional
 
     :param image_name: Defines the name of the output image name. If value is None, the name will be set to \
     <base_name>.image.zarr, defaults to None
@@ -154,8 +155,6 @@ def holog(
 
     holog_params = locals()
 
-    # logger = skriba.logger.get_logger(logger_name="astrohack")
-
     input_params = holog_params.copy()
     _check_if_file_exists(holog_params['holog_name'])
 
@@ -168,6 +167,7 @@ def holog(
 
     meta_data = _read_meta_data(holog_params['holog_name'] + '/.holog_attr')
 
+    # If cell size is None, fill from metadata if it exists
     if holog_params["cell_size"] is None:
         if meta_data['cell_size'] is None:
             logger.error(
@@ -178,9 +178,15 @@ def holog(
             return None
 
         else:
-            cell_size = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
-            holog_params["cell_size"] = cell_size
+            holog_params["cell_size"] = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
 
+    else:
+        holog_params["cell_size"] = _convert_gridding_parameter(
+            gridding_parameter=holog_params["cell_size"],
+            reflect_on_axis=True
+        )
+
+    # If grid size is None, create it from n_pix.
     if holog_params["grid_size"] is None:
         if meta_data['n_pix'] is None:
             logger.error(
@@ -192,8 +198,13 @@ def holog(
 
         else:
             n_pix = int(np.sqrt(meta_data["n_pix"]))
-            grid_size = np.array([n_pix, n_pix])
-            holog_params["grid_size"] = grid_size
+            holog_params["grid_size"] = np.array([n_pix, n_pix])
+
+    else:
+        holog_params["grid_size"] = _convert_gridding_parameter(
+            gridding_parameter=holog_params["grid_size"],
+            reflect_on_axis=False
+        )
 
     logger.info('Cell size: {cell_size}, Grid size {grid_size}'.format(
         cell_size=holog_params["cell_size"],
@@ -232,3 +243,24 @@ def holog(
     else:
         logger.warning("No data to process")
         return None
+
+
+def _convert_gridding_parameter(
+        gridding_parameter: Union[List, Array],
+        reflect_on_axis=False
+) -> np.ndarray:
+    if isinstance(gridding_parameter, Number):
+        gridding_parameter = np.array([np.power(-1, reflect_on_axis)*gridding_parameter, gridding_parameter])
+
+    elif isinstance(gridding_parameter, list):
+        gridding_parameter = np.array(gridding_parameter)
+
+    elif isinstance(gridding_parameter, np.ndarray):
+        pass
+
+    else:
+        logger.error("Unknown dtype for gridding parameter: {}".format(gridding_parameter))
+
+    return gridding_parameter
+
+
