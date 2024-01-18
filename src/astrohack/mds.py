@@ -15,7 +15,7 @@ from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _load_position_file
 from astrohack._utils._dio import _read_meta_data
-from astrohack._utils._extract_holog import _plot_lm_coverage
+from astrohack._utils._extract_holog import _plot_lm_coverage, _export_to_aips
 from astrohack._utils._extract_locit import _plot_source_table, _plot_array_configuration, _print_array_configuration
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
@@ -612,6 +612,45 @@ class AstrohackHologFile(dict):
         _create_destination_folder(param_dict['destination'])
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(self, _plot_lm_coverage, param_dict, key_order, parallel)
+        return
+
+    @auror.parameter.validate(
+        logger=logger.get_logger(logger_name="astrohack"),
+        custom_checker=custom_plots_checker
+    )
+    def export_to_aips(
+            self,
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            map_id: Union[int, List[int]] = "all",
+            parallel: bool = False
+    ) -> None:
+        """ Export data compatible to AIPS's HOLOG task
+
+        :param destination: Name of the destination folder to contain SCII files
+        :type destination: str
+        :param ant: antenna ID to use in subselection, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+        :param ddi: data description ID to use in subselection, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning \
+        configuration,  defaults to "all" when None, ex. 0
+        :type map_id: list or int, optional
+        :param parallel: Run in parallel, defaults to False
+        :type parallel: bool, optional
+
+        **Additional Information**
+
+        This method converts the data for an Antenna mapping to the ASCII format used by AIPS's HOLOG task.
+        Currently only stokes I is supported.
+        """
+        param_dict = locals()
+        param_dict["map"] = map_id
+
+        _create_destination_folder(param_dict['destination'])
+        key_order = ["ddi", "map", "ant"]
+        _dask_general_compute(self, _export_to_aips, param_dict, key_order, parallel)
         return
 
 

@@ -8,6 +8,7 @@ import skriba.logger as logger
 
 from numba import njit
 from numba.core import types
+from datetime import date
 
 from casacore import tables as ctables
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
@@ -30,7 +31,6 @@ def _extract_holog_chunk(extract_holog_params):
         ref_ant_ids (numpy.narray): Arry of antenna_id values corresponding to reference data.
         sel_state_ids (list): List pf state_ids corresponding to holography data/
     """
-    
 
     ms_name = extract_holog_params["ms_name"]
     pnt_name = extract_holog_params["point_name"]
@@ -85,7 +85,6 @@ def _extract_holog_chunk(extract_holog_params):
     time_vis, unique_index = np.unique(
         time_vis_row, return_index=True
     )  # Note that values are sorted.
-
     vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(
         vis_data,
         weight,
@@ -698,6 +697,93 @@ def _plot_lm_coverage_sub(time, real_lm, ideal_lm, param_dict):
     _close_figure(fig, 'Directional Cosines', plotfile, param_dict['dpi'], param_dict['display'])
 
 
+def _export_to_aips(param_dict):
+    xds_data = param_dict['xds_data']
+    stokes = 'I'
+    stokes_vis = _compute_average_stokes_visibilities(xds_data, stokes)
+    filename = f'{param_dict["destination"]}/holog_visibilities_{param_dict["this_map"]}_{param_dict["this_ant"]}_' \
+               f'{param_dict["this_ddi"]}.txt'
+    ant_num = xds_data.attrs['antenna_name'].split('a')[1]
+    cmt = '#! '
+    spc = 6*' '
+    today = date.today().strftime("%y%m%d")
+    outstr = cmt + f"RefAnt = ** Antenna = {ant_num} Stokes = '{stokes}_' Freq =  {stokes_vis.attrs['frequency']:.9f}" \
+                   f" DATE-OBS = '{today}'\n"
+    outstr += cmt + "MINsamp =   0  Npoint =   1\n"
+    outstr += cmt + "IFnumber =   2   Channel =    32.0\n"
+    outstr += cmt + "TimeRange = -99,  0,  0,  0,  999,  0,  0,  0\n"
+    outstr += cmt + "Averaged Ref-Ants = 10, 15,\n"
+    outstr += cmt + "DOCAL = T  DOPOL =-1\n"
+    outstr += cmt + "BCHAN=     4 ECHAN=    60 CHINC=  1 averaged\n"
+    outstr += cmt + "   LL             MM             AMPLITUDE      PHASE         SIGMA(AMP)   SIGMA(PHASE)\n"
+    lm = xds_data['DIRECTIONAL_COSINES'].values
+    amp = stokes_vis['AMPLITUDE'].values
+    pha = stokes_vis['PHASE'].values
+    sigma_amp = stokes_vis['SIGMA_AMP']
+    sigma_pha = stokes_vis['SIGMA_PHA']
+    for i_time in range(len(xds_data.time)):
+        if np.isfinite(sigma_amp[i_time]):
+            outstr += f"{lm[i_time, 0]:15.7f}{lm[i_time, 1]:15.7f}{amp[i_time]:15.7f}{pha[i_time]:15.7f}" \
+                      f"{sigma_amp[i_time]:15.7f}{sigma_pha[i_time]:15.7f}\n"
+    outstr += f"{cmt}Average number samples per point =   1.000"
+    with open(filename, 'w') as outfile:
+        outfile.write(outstr)
+    return
+
+
+def _compute_average_stokes_visibilities(vis, stokes):
+    n_chan = len(vis.chan)
+    chan_ave_vis = vis.mean(dim='chan', skipna=True)
+    amp, pha, sigma_amp, sigma_pha = _compute_stokes(chan_ave_vis['VIS'].values, n_chan*chan_ave_vis['WEIGHT'].values,
+                                                     chan_ave_vis.pol)
+    coords = {'time': chan_ave_vis.time,
+              'pol': ['I', 'Q', 'U', 'V']}
+    xds = xr.Dataset()
+    xds = xds.assign_coords(coords)
+    xds["AMPLITUDE"] = xr.DataArray(amp, dims=["time", 'pol'], coords=coords)
+    xds["PHASE"] = xr.DataArray(pha, dims=["time", 'pol'], coords=coords)
+    xds['SIGMA_AMP'] = xr.DataArray(sigma_amp, dims=["time", 'pol'], coords=coords)
+    xds['SIGMA_PHA'] = xr.DataArray(sigma_amp, dims=["time", 'pol'], coords=coords)
+    xds.attrs['frequency'] = np.mean(vis.chan)/1e9  # in GHz
+    return xds.sel(pol=stokes)
+
+
+def _compute_stokes(data, weight, pol_axis):
+    stokes_data = np.zeros_like(data)
+    weight[weight == 0] = np.nan
+    sigma = np.sqrt(1/weight)
+    sigma_amp = np.zeros_like(weight)
+    if 'RR' in pol_axis:
+        stokes_data[:, 0] = (data[:, 0] + data[:, 3]) / 2
+        sigma_amp[:, 0] = (sigma[:, 0] + sigma[:, 3]) / 2
+        stokes_data[:, 1] = (data[:, 1] + data[:, 2]) / 2
+        sigma_amp[:, 1] = (sigma[:, 1] + sigma[:, 2]) / 2
+        stokes_data[:, 2] = 1j * (data[:, 1] - data[:, 2]) / 2
+        sigma_amp[:, 2] = sigma_amp[:, 1]
+        stokes_data[:, 3] = (data[:, 0] - data[:, 3]) / 2
+        sigma_amp[:, 0] = (sigma[:, 0] + sigma[:, 3]) / 2
+    elif 'XX' in pol_axis:
+        stokes_data[:, 0] = (data[:, 0] + data[:, 3]) / 2
+        sigma_amp[:, 0] = (sigma[:, 0] + sigma[:, 3]) / 2
+        stokes_data[:, 1] = (data[:, 0] - data[:, 3]) / 2
+        sigma_amp[:, 1] = sigma_amp[:, 0]
+        stokes_data[:, 2] = (data[:, 1] + data[:, 2]) / 2
+        sigma_amp[:, 2] = (sigma[:, 1] + sigma[:, 2]) / 2
+        stokes_data[:, 3] = 1j * (data[:, 1] - data[:, 2]) / 2
+        sigma_amp[:, 3] = sigma_amp[:, 2]
+    else:
+        raise Exception("Pol not supported " + str(pol_axis))
+    stokes_amp = np.absolute(stokes_data)
+    stokes_pha = np.angle(stokes_data, deg=True)
+    sigma_amp[~np.isfinite(sigma_amp)] = np.nan
+    sigma_amp[sigma_amp == 0] = np.nan
+    snr = stokes_amp / sigma_amp
+    cst = np.sqrt(9/(2*np.pi**3))
+    # Both sigmas here are probably wrong because of the uncertainty of how weights are stored.
+    sigma_pha = np.pi/np.sqrt(3) * (1 - cst * snr)
+    sigma_pha = np.where(snr > 2.5, 1/snr, sigma_pha)
+    sigma_pha *= _convert_unit('rad', 'deg', 'trigonometric')
+    return stokes_amp, stokes_pha, sigma_amp, sigma_pha
 
 
 
