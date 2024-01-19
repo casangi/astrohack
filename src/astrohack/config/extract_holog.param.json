@@ -28,6 +28,9 @@
             "type":["str"],
             "allowed":["DATA", "CORRECTED_DATA"]
         },
+        "time_interval":{
+            "type":["float"]
+        },
         "parallel":{
             "type":["boolean"]
         },

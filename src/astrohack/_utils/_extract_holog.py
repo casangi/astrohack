@@ -85,7 +85,7 @@ def _extract_holog_chunk(extract_holog_params):
     time_vis, unique_index = np.unique(
         time_vis_row, return_index=True
     )  # Note that values are sorted.
-    vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(
+    time_vis, vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(
         vis_data,
         weight,
         ant1,
@@ -96,6 +96,7 @@ def _extract_holog_chunk(extract_holog_params):
         flag_row,
         ref_ant_per_map_ant_tuple,
         map_ant_tuple,
+        extract_holog_params['time_interval']
     )
 
     del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row
@@ -159,6 +160,7 @@ def _extract_holog_chunk_jit(
         flag_row,
         ref_ant_per_map_ant_tuple,
         map_ant_tuple,
+        time_interval,
 ):
     """JIT copiled function to extract relevant visibilty data from chunk after flagging and applying weights.
 
@@ -177,7 +179,19 @@ def _extract_holog_chunk_jit(
     """
 
     n_row, n_chan, n_pol = vis_data.shape
-    n_time = len(time_vis)
+
+    half_int = time_interval/2
+    total_time = time_vis[-1]-time_vis[0]
+    n_time = int(np.ceil(total_time/time_interval))+1
+    start = time_vis[0]+half_int
+    stop = start + n_time*time_interval
+    time_samples = np.linspace(start, stop, n_time)
+    print('Time intervals:', time_interval, time_samples[1]-time_samples[0], n_time, time_samples.shape)
+    print('starts:', start, time_samples[0])
+    print('stops:', stop, time_samples[-1])
+
+    # n_time = len(time_vis)
+    print(n_time)
 
     vis_map_dict = {}
     sum_weight_map_dict = {}
@@ -190,6 +204,7 @@ def _extract_holog_chunk_jit(
             (n_time, n_chan, n_pol), dtype=types.float64
         )
 
+    time_index = 0
     for row in range(n_row):
 
         if flag_row is False:
@@ -220,7 +235,11 @@ def _extract_holog_chunk_jit(
             continue
 
         # Find index of time_vis_row[row] in time_vis that maintains the value ordering
-        time_index = np.searchsorted(time_vis, time_vis_row[row])
+        # time_index = np.searchsorted(time_vis, time_vis_row[row])
+
+        # Find index of time_vis_row[row] in time_samples, assumes time_vis_row is ordered in time
+        if time_vis_row[row] > time_samples[time_index] + half_int:
+            time_index += 1
 
         for chan in range(n_chan):
             for pol in range(n_pol):
@@ -260,7 +279,7 @@ def _extract_holog_chunk_jit(
         if sum_of_sum_weight == 0:
             flagged_mapping_antennas.append(map_ant_id)
 
-    return vis_map_dict, sum_weight_map_dict, flagged_mapping_antennas
+    return time_samples, vis_map_dict, sum_weight_map_dict, flagged_mapping_antennas
 
 
 def _get_time_samples(time_vis):
@@ -524,7 +543,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
 
         pnt_map_dict[antenna] = (
             pnt_ant_dict[antenna]
-            .interp(time=time_vis, method="nearest")
+            .interp(time=time_vis, method="cubic")
         )
 
     return pnt_map_dict
