@@ -541,12 +541,74 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     for antenna in map_ant_ids:
         pnt_map_dict[antenna] = np.zeros((n_time_vis, 2))
 
-        pnt_map_dict[antenna] = (
-            pnt_ant_dict[antenna]
-            .interp(time=time_vis, method="cubic")
-        )
+        pnt_map_dict[antenna] = _time_avg_pointing(pnt_ant_dict[antenna], time_vis)
+
+        # pnt_map_dict[antenna] = (
+        #     pnt_ant_dict[antenna]
+        #     .interp(time=time_vis, method="cubic")
+        # )
 
     return pnt_map_dict
+
+
+def _time_avg_pointing(pointing_dict, time_vis):
+    half_int = (time_vis[1] - time_vis[0]) / 2
+    n_samples = time_vis.shape[0]
+    the_shape = (n_samples, 2)
+    pnt_time = pointing_dict.time.values
+    n_row = pnt_time.shape[0]
+
+    avg_dir = np.zeros(the_shape)
+    avg_dir_cos = np.zeros(the_shape)
+    avg_enc = np.zeros(the_shape)
+    avg_fit_lm = np.zeros(the_shape)
+    avg_pnt_off = np.zeros(the_shape)
+    avg_tgt = np.zeros(the_shape)
+    avg_wgt = np.zeros(the_shape)
+
+    i_time = 0
+    for i_row in range(n_row):
+        if pnt_time[i_row] > time_vis[i_time] + half_int:
+            if i_time == n_samples-1:
+                break
+            else:
+                i_time += 1
+
+        #print(i_row, pnt_time[i_row], i_time, time_vis[i_time])
+        avg_dir[i_time] += pointing_dict['DIRECTION'].values[i_row]
+        avg_dir_cos[i_time] += pointing_dict['DIRECTIONAL_COSINES'].values[i_row]
+        avg_enc[i_time] += pointing_dict['ENCODER'].values[i_row]
+        avg_fit_lm[i_time] += pointing_dict['FITTED_LM'].values[i_row]
+        avg_pnt_off[i_time] += pointing_dict['POINTING_OFFSET'].values[i_row]
+        avg_tgt[i_time] += pointing_dict['TARGET'].values[i_row]
+        avg_wgt[i_time] += 1
+
+    print(np.min(avg_wgt), np.mean(avg_wgt), np.max(avg_wgt))
+    avg_dir /= avg_wgt
+    avg_dir_cos /= avg_wgt
+    avg_enc /= avg_wgt
+    avg_fit_lm /= avg_wgt
+    avg_pnt_off /= avg_wgt
+    avg_tgt /= avg_wgt
+
+    with open(f'lix_{pointing_dict.attrs["ant_name"]}.txt', 'w') as lix_file:
+        for i_time in range(n_samples):
+            lix_file.write(f'{time_vis[i_time]} {avg_wgt[i_time]}\n')
+
+    pnt_xds = xr.Dataset()
+    coords = {"time": time_vis}
+    pnt_xds = pnt_xds.assign_coords(coords)
+
+    pnt_xds["DIRECTION"] = xr.DataArray(avg_dir, dims=("time", "az_el"))
+    pnt_xds["DIRECTIONAL_COSINES"] = xr.DataArray(avg_dir_cos, dims=("time", "az_el"))
+    pnt_xds["ENCODER"] = xr.DataArray(avg_enc, dims=("time", "az_el"))
+    pnt_xds["FITTED_LM"] = xr.DataArray(avg_fit_lm, dims=("time", "az_el"))
+    pnt_xds["POINTING_OFFSET"] = xr.DataArray(avg_pnt_off, dims=("time", "az_el"))
+    pnt_xds["TARGET"] = xr.DataArray(avg_tgt, dims=("time", "az_el"))
+
+    pnt_xds.attrs = pointing_dict.attrs
+
+    return pnt_xds
 
 
 def _create_holog_meta_data(holog_file, holog_dict, input_params):
