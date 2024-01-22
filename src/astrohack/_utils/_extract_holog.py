@@ -85,7 +85,7 @@ def _extract_holog_chunk(extract_holog_params):
     time_vis, unique_index = np.unique(
         time_vis_row, return_index=True
     )  # Note that values are sorted.
-    time_vis, vis_map_dict, weight_map_dict, flagged_mapping_antennas = _extract_holog_chunk_jit(
+    time_vis, vis_map_dict, weight_map_dict, flagged_mapping_antennas, used_samples_dict = _extract_holog_chunk_jit(
         vis_data,
         weight,
         ant1,
@@ -133,6 +133,7 @@ def _extract_holog_chunk(extract_holog_params):
         weight_map_dict,
         pnt_map_dict,
         time_vis,
+        used_samples_dict,
         chan_freq,
         pol,
         flagged_mapping_antennas,
@@ -195,6 +196,7 @@ def _extract_holog_chunk_jit(
 
     vis_map_dict = {}
     sum_weight_map_dict = {}
+    used_samples_dict = {}
 
     for antenna_id in map_ant_tuple:
         vis_map_dict[antenna_id] = np.zeros(
@@ -203,6 +205,7 @@ def _extract_holog_chunk_jit(
         sum_weight_map_dict[antenna_id] = np.zeros(
             (n_time, n_chan, n_pol), dtype=types.float64
         )
+        used_samples_dict[antenna_id] = np.full(n_time, False, dtype=bool)
 
     time_index = 0
     for row in range(n_row):
@@ -245,6 +248,7 @@ def _extract_holog_chunk_jit(
             for pol in range(n_pol):
                 if ~(flag[row, chan, pol]):
                     # Calculate running weighted sum of visibilities
+                    used_samples_dict[map_ant_id][time_index] = True
                     vis_map_dict[map_ant_id][time_index, chan, pol] = (
                             vis_map_dict[map_ant_id][time_index, chan, pol]
                             + vis_baseline[chan, pol] * weight[row, pol]
@@ -256,10 +260,13 @@ def _extract_holog_chunk_jit(
                             + weight[row, pol]
                     )
 
+        #print(np.sum(sum_weight_map_dict[map_ant_id] == 0))
+
     flagged_mapping_antennas = []
 
     for map_ant_id in vis_map_dict.keys():
         sum_of_sum_weight = 0
+        print(used_samples_dict[map_ant_id])
 
         for time_index in range(n_time):
             for chan in range(n_chan):
@@ -279,7 +286,7 @@ def _extract_holog_chunk_jit(
         if sum_of_sum_weight == 0:
             flagged_mapping_antennas.append(map_ant_id)
 
-    return time_samples, vis_map_dict, sum_weight_map_dict, flagged_mapping_antennas
+    return time_samples, vis_map_dict, sum_weight_map_dict, flagged_mapping_antennas, used_samples_dict
 
 
 def _get_time_samples(time_vis):
@@ -306,6 +313,7 @@ def _create_holog_file(
         weight_map_dict,
         pnt_map_dict,
         time_vis,
+        used_samples_dict,
         chan,
         pol,
         flagged_mapping_antennas,
@@ -338,18 +346,21 @@ def _create_holog_file(
 
     ctb.close()
 
-    time_vis_days = time_vis / (3600 * 24)
-    astro_time_vis = astropy.time.Time(time_vis_days, format="mjd")
-    time_samples, indices = _get_time_samples(astro_time_vis)
-
-    coords = {"time": time_vis, "chan": chan, "pol": pol}
-
     for map_ant_index in vis_map_dict.keys():
         if map_ant_index not in flagged_mapping_antennas:
+            valid_data = used_samples_dict[map_ant_index] == 1.
+            print(map_ant_index, np.sum(valid_data))
+
+            ant_time_vis = time_vis[valid_data]
+
+            time_vis_days = ant_time_vis / (3600 * 24)
+            astro_time_vis = astropy.time.Time(time_vis_days, format="mjd")
+            time_samples, indicies = _get_time_samples(astro_time_vis)
+            coords = {"time": ant_time_vis, "chan": chan, "pol": pol}
             map_ant_tag = 'ant_' + ant_names[map_ant_index]  # 'ant_' + str(map_ant_index)
 
-            # direction = np.take(pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, indicies, axis=0)
-            direction = np.take(pnt_map_dict[map_ant_tag]["FITTED_LM"].values, indicies, axis=0)
+            direction = np.take(pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, indicies, axis=0)
+            # direction = np.take(pnt_map_dict[map_ant_tag]["FITTED_LM"].values[valid_data, ...], indicies, axis=0)
 
             parallactic_samples = _calculate_parallactic_angle_chunk(
                 time_samples=time_samples,
@@ -360,19 +371,22 @@ def _create_holog_file(
             xds = xr.Dataset()
             xds = xds.assign_coords(coords)
             xds["VIS"] = xr.DataArray(
-                vis_map_dict[map_ant_index], dims=["time", "chan", "pol"]
+                vis_map_dict[map_ant_index][valid_data, ...], dims=["time", "chan", "pol"]
             )
 
             xds["WEIGHT"] = xr.DataArray(
-                weight_map_dict[map_ant_index], dims=["time", "chan", "pol"]
+                weight_map_dict[map_ant_index][valid_data, ...], dims=["time", "chan", "pol"]
             )
 
             xds["DIRECTIONAL_COSINES"] = xr.DataArray(
-                pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, dims=["time", "lm"]
+                pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values[valid_data, ...], dims=["time", "lm"]
             )
+            # xds["DIRECTIONAL_COSINES"] = xr.DataArray(
+            #     pnt_map_dict[map_ant_tag]["FITTED_LM"].values[valid_data, ...], dims=["time", "lm"]
+            # )
 
             xds["IDEAL_DIRECTIONAL_COSINES"] = xr.DataArray(
-                pnt_map_dict[map_ant_tag]["POINTING_OFFSET"].values, dims=["time", "lm"]
+                pnt_map_dict[map_ant_tag]["POINTING_OFFSET"].values[valid_data, ...], dims=["time", "lm"]
             )
 
             xds.attrs["holog_map_key"] = holog_map_key
@@ -573,6 +587,8 @@ def _time_avg_pointing(pointing_dict, time_vis):
                 break
             else:
                 i_time += 1
+        elif pnt_time[i_row] < time_vis[i_time] - half_int:
+            continue
 
         #print(i_row, pnt_time[i_row], i_time, time_vis[i_time])
         avg_dir[i_time] += pointing_dict['DIRECTION'].values[i_row]
@@ -583,7 +599,7 @@ def _time_avg_pointing(pointing_dict, time_vis):
         avg_tgt[i_time] += pointing_dict['TARGET'].values[i_row]
         avg_wgt[i_time] += 1
 
-    print(np.min(avg_wgt), np.mean(avg_wgt), np.max(avg_wgt))
+    # print(np.min(avg_wgt), np.mean(avg_wgt), np.max(avg_wgt))
     avg_dir /= avg_wgt
     avg_dir_cos /= avg_wgt
     avg_enc /= avg_wgt
@@ -591,9 +607,9 @@ def _time_avg_pointing(pointing_dict, time_vis):
     avg_pnt_off /= avg_wgt
     avg_tgt /= avg_wgt
 
-    with open(f'lix_{pointing_dict.attrs["ant_name"]}.txt', 'w') as lix_file:
-        for i_time in range(n_samples):
-            lix_file.write(f'{time_vis[i_time]} {avg_wgt[i_time]}\n')
+    # with open(f'lix_{pointing_dict.attrs["ant_name"]}.txt', 'w') as lix_file:
+    #     for i_time in range(n_samples):
+    #         lix_file.write(f'{time_vis[i_time]} {avg_wgt[i_time]}\n')
 
     pnt_xds = xr.Dataset()
     coords = {"time": time_vis}
@@ -713,22 +729,24 @@ def _plot_lm_coverage(param_dict):
     else:
         param_dict['linestyle'] = ''
         visi = np.average(data["VIS"].values, axis=1)
+        weights = np.average(data["WEIGHT"].values, axis=1)
         pol_axis = data.pol.values
         if isinstance(param_dict['plot_correlation'], (list, tuple)):
             for correlation in param_dict['plot_correlation']:
-                _plot_correlation(visi, correlation, pol_axis, time, real_lm, param_dict)
+                _plot_correlation(visi, weights, correlation, pol_axis, time, real_lm, param_dict)
         else:
             if param_dict['plot_correlation'] == 'all':
                 for correlation in pol_axis:
-                    _plot_correlation(visi, correlation, pol_axis, time, real_lm, param_dict)
+                    _plot_correlation(visi, weights, correlation, pol_axis, time, real_lm, param_dict)
             else:
-                _plot_correlation(visi, param_dict['plot_correlation'], pol_axis, time, real_lm, param_dict)
+                _plot_correlation(visi, weights, param_dict['plot_correlation'], pol_axis, time, real_lm, param_dict)
 
 
-def _plot_correlation(visi, correlation, pol_axis, time, lm, param_dict):
+def _plot_correlation(visi, weights, correlation, pol_axis, time, lm, param_dict):
     if correlation in pol_axis:
         ipol = pol_axis == correlation
         loc_vis = visi[:, ipol]
+        loc_wei = weights[:, ipol]
         if param_dict['complex_split'] == 'polar':
             y_data = [np.absolute(loc_vis)]
             y_label = [f'{correlation} Amplitude [arb. units]']
@@ -744,8 +762,12 @@ def _plot_correlation(visi, correlation, pol_axis, time, lm, param_dict):
             y_label.append(f'Imaginary {correlation} [arb. units]')
             title.append('imaginary part')
 
-        fig, ax = _create_figure_and_axes(param_dict['figure_size'], [2, 3])
-        for isplit in range(2):
+        y_data.append(loc_wei)
+        y_label.append(f'{correlation} weights [arb. units]')
+        title.append('weights')
+
+        fig, ax = _create_figure_and_axes(param_dict['figure_size'], [3, 3])
+        for isplit in range(3):
             _scatter_plot(ax[isplit, 0], time, param_dict['time_label'], y_data[isplit], y_label[isplit],
                           f'Time vs {correlation} {title[isplit]}', data_marker=param_dict['marker'],
                           data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
