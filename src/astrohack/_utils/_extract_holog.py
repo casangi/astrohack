@@ -51,27 +51,27 @@ def _extract_holog_chunk(extract_holog_params):
         raise Exception("Inconsistancy between antenna list length, see error above for more info.")
 
     sel_state_ids = extract_holog_params["sel_state_ids"]
-    print(sel_state_ids)
+    # print(sel_state_ids)
     holog_name = extract_holog_params["holog_name"]
 
     chan_freq = extract_holog_params["chan_setup"]["chan_freq"]
     pol = extract_holog_params["pol_setup"]["pol"]
 
     table_obj = ctables.table(ms_name, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
-    print(table_obj.getkeywords())
-
-    print(list(scans))
+    # print(table_obj.getkeywords())
+    #
+    # print(list(scans))
 
     if sel_state_ids:
         ctb = ctables.taql(
-            "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE "
-            "DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
+            "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj "
+            "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
             % (data_column, ddi, list(scans), list(sel_state_ids))
         )
     else:
         ctb = ctables.taql(
-            "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE "
-            "DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
+            "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj "
+            "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
             % (data_column, ddi, list(scans))
         )
 
@@ -80,18 +80,18 @@ def _extract_holog_chunk(extract_holog_params):
     ant1 = ctb.getcol("ANTENNA1")
     ant2 = ctb.getcol("ANTENNA2")
     time_vis_row = ctb.getcol("TIME")
-    time_vis_row_centroid = ctb.getcol("TIME_CENTROID")
+    # time_vis_row_centroid = ctb.getcol("TIME_CENTROID")
     flag = ctb.getcol("FLAG")
     flag_row = ctb.getcol("FLAG_ROW")
     scan_list = ctb.getcol("SCAN_NUMBER")
     ctb.close()
     table_obj.close()
 
-    print("Unique scans:", np.unique(scan_list))
+    # print("Unique scans:", np.unique(scan_list))
 
-    time_vis, unique_index = np.unique(
-        time_vis_row, return_index=True
-    )  # Note that values are sorted.
+    # time_vis, unique_index = np.unique(
+    #     time_vis_row, return_index=True
+    # )  # Note that values are sorted.
     time_vis, vis_map_dict, weight_map_dict, flagged_mapping_antennas, used_samples_dict = _extract_holog_chunk_jit(
         vis_data,
         weight,
@@ -179,8 +179,8 @@ def _get_time_intervals(time_vis_row, scan_list, time_interval):
             if time_range[0] <= time_sample <= time_range[1]:
                 filtered_time_samples.append(time_sample)
                 break
-    print(filtered_time_samples)
-    print(len(raw_time_samples), len(filtered_time_samples))
+    # print(filtered_time_samples)
+    # print(len(raw_time_samples), len(filtered_time_samples))
     return np.array(filtered_time_samples)
 
 
@@ -251,7 +251,7 @@ def _extract_holog_chunk_jit(
 
         if flag_row is False:
             continue
-        print(time_vis_row[row], time_samples[time_index], time_index, half_int)
+        # print(time_vis_row[row], time_samples[time_index], time_index, half_int)
         if time_vis_row[row] < time_samples[time_index] - half_int:
             continue
         elif time_vis_row[row] > time_samples[time_index] + half_int:
@@ -287,7 +287,7 @@ def _extract_holog_chunk_jit(
         # time_index = np.searchsorted(time_vis, time_vis_row[row])
 
         # Find index of time_vis_row[row] in time_samples, assumes time_vis_row is ordered in time
-        print('dentro', time_index, n_time)
+        # print('dentro', time_index, n_time)
         for chan in range(n_chan):
             for pol in range(n_pol):
                 if ~(flag[row, chan, pol]):
@@ -304,9 +304,9 @@ def _extract_holog_chunk_jit(
                             + weight[row, pol]
                     )
 
-        #print(np.sum(sum_weight_map_dict[map_ant_id] == 0))
+        # print(np.sum(sum_weight_map_dict[map_ant_id] == 0))
 
-    print('p1')
+    # print('p1')
     flagged_mapping_antennas = []
 
     for map_ant_id in vis_map_dict.keys():
@@ -394,7 +394,7 @@ def _create_holog_file(
     for map_ant_index in vis_map_dict.keys():
         if map_ant_index not in flagged_mapping_antennas:
             valid_data = used_samples_dict[map_ant_index] == 1.
-            print(map_ant_index, np.sum(valid_data))
+            # print(map_ant_index, np.sum(valid_data))
 
             ant_time_vis = time_vis[valid_data]
 
@@ -576,7 +576,6 @@ def _check_if_array_in_dict(array_dict, array):
     for key, val in array_dict.items():
         if np.array_equiv(val, array):
             return key
-
     return False
 
 
@@ -635,7 +634,7 @@ def _time_avg_pointing(pointing_dict, time_vis):
         elif pnt_time[i_row] < time_vis[i_time] - half_int:
             continue
 
-        #print(i_row, pnt_time[i_row], i_time, time_vis[i_time])
+        # print(i_row, pnt_time[i_row], i_time, time_vis[i_time])
         avg_dir[i_time] += pointing_dict['DIRECTION'].values[i_row]
         avg_dir_cos[i_time] += pointing_dict['DIRECTIONAL_COSINES'].values[i_row]
         avg_enc[i_time] += pointing_dict['ENCODER'].values[i_row]
