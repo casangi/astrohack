@@ -51,22 +51,26 @@ def _extract_holog_chunk(extract_holog_params):
         raise Exception("Inconsistancy between antenna list length, see error above for more info.")
 
     sel_state_ids = extract_holog_params["sel_state_ids"]
+    print(sel_state_ids)
     holog_name = extract_holog_params["holog_name"]
 
     chan_freq = extract_holog_params["chan_setup"]["chan_freq"]
     pol = extract_holog_params["pol_setup"]["pol"]
 
     table_obj = ctables.table(ms_name, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    print(table_obj.getkeywords())
+
+    print(list(scans))
 
     if sel_state_ids:
         ctb = ctables.taql(
-            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE "
+            "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE "
             "DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
             % (data_column, ddi, list(scans), list(sel_state_ids))
         )
     else:
         ctb = ctables.taql(
-            "select %s, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE "
+            "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj WHERE "
             "DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
             % (data_column, ddi, list(scans))
         )
@@ -79,8 +83,11 @@ def _extract_holog_chunk(extract_holog_params):
     time_vis_row_centroid = ctb.getcol("TIME_CENTROID")
     flag = ctb.getcol("FLAG")
     flag_row = ctb.getcol("FLAG_ROW")
+    scan_list = ctb.getcol("SCAN_NUMBER")
     ctb.close()
     table_obj.close()
+
+    print("Unique scans:", np.unique(scan_list))
 
     time_vis, unique_index = np.unique(
         time_vis_row, return_index=True
@@ -96,7 +103,8 @@ def _extract_holog_chunk(extract_holog_params):
         flag_row,
         ref_ant_per_map_ant_tuple,
         map_ant_tuple,
-        extract_holog_params['time_interval']
+        extract_holog_params['time_interval'],
+        scan_list
     )
 
     del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row
@@ -150,6 +158,33 @@ def _extract_holog_chunk(extract_holog_params):
 
 
 @njit(cache=False, nogil=True)
+def _get_time_intervals(time_vis_row, scan_list, time_interval):
+    unq_scans = np.unique(scan_list)
+    scan_time_ranges = []
+    for scan in unq_scans:
+        selected_times = time_vis_row[scan_list == scan]
+        min_time, max_time = np.min(selected_times), np.max(selected_times)
+        scan_time_ranges.append([min_time, max_time])
+
+    half_int = time_interval/2
+    start = np.min(time_vis_row)+half_int
+    total_time = np.max(time_vis_row)-start
+    n_time = int(np.ceil(total_time/time_interval))+1
+    stop = start + n_time*time_interval
+    raw_time_samples = np.linspace(start, stop, n_time+1)
+
+    filtered_time_samples = []
+    for time_sample in raw_time_samples:
+        for time_range in scan_time_ranges:
+            if time_range[0] <= time_sample <= time_range[1]:
+                filtered_time_samples.append(time_sample)
+                break
+    print(filtered_time_samples)
+    print(len(raw_time_samples), len(filtered_time_samples))
+    return np.array(filtered_time_samples)
+
+
+@njit(cache=False, nogil=True)
 def _extract_holog_chunk_jit(
         vis_data,
         weight,
@@ -162,6 +197,7 @@ def _extract_holog_chunk_jit(
         ref_ant_per_map_ant_tuple,
         map_ant_tuple,
         time_interval,
+        scan_list
 ):
     """JIT copiled function to extract relevant visibilty data from chunk after flagging and applying weights.
 
@@ -179,17 +215,20 @@ def _extract_holog_chunk_jit(
         dict: Antenna_id referenced (key) dictionary containing the visibility data selected by (time, channel, polarization)
     """
 
+    time_samples = _get_time_intervals(time_vis_row, scan_list, time_interval)
+    n_time = len(time_samples)
+
     n_row, n_chan, n_pol = vis_data.shape
 
     half_int = time_interval/2
-    total_time = time_vis[-1]-time_vis[0]
-    n_time = int(np.ceil(total_time/time_interval))+1
-    start = time_vis[0]+half_int
-    stop = start + n_time*time_interval
-    time_samples = np.linspace(start, stop, n_time)
-    print('Time intervals:', time_interval, time_samples[1]-time_samples[0], n_time, time_samples.shape)
-    print('starts:', start, time_samples[0])
-    print('stops:', stop, time_samples[-1])
+    # total_time = time_vis[-1]-time_vis[0]
+    # n_time = int(np.ceil(total_time/time_interval))+1
+    # start = time_vis[0]+half_int
+    # stop = start + n_time*time_interval
+    # time_samples = np.linspace(start, stop, n_time)
+    # print('Time intervals:', time_interval, time_samples[1]-time_samples[0], n_time, time_samples.shape)
+    # print('starts:', start, time_samples[0])
+    # print('stops:', stop, time_samples[-1])
 
     # n_time = len(time_vis)
     print(n_time)
@@ -212,6 +251,13 @@ def _extract_holog_chunk_jit(
 
         if flag_row is False:
             continue
+        print(time_vis_row[row], time_samples[time_index], time_index, half_int)
+        if time_vis_row[row] < time_samples[time_index] - half_int:
+            continue
+        elif time_vis_row[row] > time_samples[time_index] + half_int:
+            time_index += 1
+        if time_index == n_time:
+            break
 
         ant1_id = ant1[row]
         ant2_id = ant2[row]
@@ -241,9 +287,7 @@ def _extract_holog_chunk_jit(
         # time_index = np.searchsorted(time_vis, time_vis_row[row])
 
         # Find index of time_vis_row[row] in time_samples, assumes time_vis_row is ordered in time
-        if time_vis_row[row] > time_samples[time_index] + half_int:
-            time_index += 1
-
+        print('dentro', time_index, n_time)
         for chan in range(n_chan):
             for pol in range(n_pol):
                 if ~(flag[row, chan, pol]):
@@ -262,6 +306,7 @@ def _extract_holog_chunk_jit(
 
         #print(np.sum(sum_weight_map_dict[map_ant_id] == 0))
 
+    print('p1')
     flagged_mapping_antennas = []
 
     for map_ant_id in vis_map_dict.keys():
