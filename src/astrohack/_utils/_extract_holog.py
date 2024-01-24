@@ -98,7 +98,7 @@ def _extract_holog_chunk(extract_holog_params):
         ant1,
         ant2,
         time_vis_row,
-        time_vis,
+        # time_vis,
         flag,
         flag_row,
         ref_ant_per_map_ant_tuple,
@@ -191,7 +191,7 @@ def _extract_holog_chunk_jit(
         ant1,
         ant2,
         time_vis_row,
-        time_vis,
+        # time_vis,
         flag,
         flag_row,
         ref_ant_per_map_ant_tuple,
@@ -231,7 +231,7 @@ def _extract_holog_chunk_jit(
     # print('stops:', stop, time_samples[-1])
 
     # n_time = len(time_vis)
-    print(n_time)
+    # print(n_time)
 
     vis_map_dict = {}
     sum_weight_map_dict = {}
@@ -311,7 +311,7 @@ def _extract_holog_chunk_jit(
 
     for map_ant_id in vis_map_dict.keys():
         sum_of_sum_weight = 0
-        print(used_samples_dict[map_ant_id])
+        # print(used_samples_dict[map_ant_id])
 
         for time_index in range(n_time):
             for chan in range(n_chan):
@@ -405,7 +405,6 @@ def _create_holog_file(
             map_ant_tag = 'ant_' + ant_names[map_ant_index]  # 'ant_' + str(map_ant_index)
 
             direction = np.take(pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, indicies, axis=0)
-            # direction = np.take(pnt_map_dict[map_ant_tag]["FITTED_LM"].values[valid_data, ...], indicies, axis=0)
 
             parallactic_samples = _calculate_parallactic_angle_chunk(
                 time_samples=time_samples,
@@ -426,9 +425,6 @@ def _create_holog_file(
             xds["DIRECTIONAL_COSINES"] = xr.DataArray(
                 pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values[valid_data, ...], dims=["time", "lm"]
             )
-            # xds["DIRECTIONAL_COSINES"] = xr.DataArray(
-            #     pnt_map_dict[map_ant_tag]["FITTED_LM"].values[valid_data, ...], dims=["time", "lm"]
-            # )
 
             xds["IDEAL_DIRECTIONAL_COSINES"] = xr.DataArray(
                 pnt_map_dict[map_ant_tag]["POINTING_OFFSET"].values[valid_data, ...], dims=["time", "lm"]
@@ -619,7 +615,6 @@ def _time_avg_pointing(pointing_dict, time_vis):
     avg_dir = np.zeros(the_shape)
     avg_dir_cos = np.zeros(the_shape)
     avg_enc = np.zeros(the_shape)
-    avg_fit_lm = np.zeros(the_shape)
     avg_pnt_off = np.zeros(the_shape)
     avg_tgt = np.zeros(the_shape)
     avg_wgt = np.zeros(the_shape)
@@ -633,12 +628,10 @@ def _time_avg_pointing(pointing_dict, time_vis):
                 i_time += 1
         elif pnt_time[i_row] < time_vis[i_time] - half_int:
             continue
-
         # print(i_row, pnt_time[i_row], i_time, time_vis[i_time])
         avg_dir[i_time] += pointing_dict['DIRECTION'].values[i_row]
         avg_dir_cos[i_time] += pointing_dict['DIRECTIONAL_COSINES'].values[i_row]
         avg_enc[i_time] += pointing_dict['ENCODER'].values[i_row]
-        avg_fit_lm[i_time] += pointing_dict['FITTED_LM'].values[i_row]
         avg_pnt_off[i_time] += pointing_dict['POINTING_OFFSET'].values[i_row]
         avg_tgt[i_time] += pointing_dict['TARGET'].values[i_row]
         avg_wgt[i_time] += 1
@@ -647,13 +640,8 @@ def _time_avg_pointing(pointing_dict, time_vis):
     avg_dir /= avg_wgt
     avg_dir_cos /= avg_wgt
     avg_enc /= avg_wgt
-    avg_fit_lm /= avg_wgt
     avg_pnt_off /= avg_wgt
     avg_tgt /= avg_wgt
-
-    # with open(f'lix_{pointing_dict.attrs["ant_name"]}.txt', 'w') as lix_file:
-    #     for i_time in range(n_samples):
-    #         lix_file.write(f'{time_vis[i_time]} {avg_wgt[i_time]}\n')
 
     pnt_xds = xr.Dataset()
     coords = {"time": time_vis}
@@ -662,7 +650,6 @@ def _time_avg_pointing(pointing_dict, time_vis):
     pnt_xds["DIRECTION"] = xr.DataArray(avg_dir, dims=("time", "az_el"))
     pnt_xds["DIRECTIONAL_COSINES"] = xr.DataArray(avg_dir_cos, dims=("time", "az_el"))
     pnt_xds["ENCODER"] = xr.DataArray(avg_enc, dims=("time", "az_el"))
-    pnt_xds["FITTED_LM"] = xr.DataArray(avg_fit_lm, dims=("time", "az_el"))
     pnt_xds["POINTING_OFFSET"] = xr.DataArray(avg_pnt_off, dims=("time", "az_el"))
     pnt_xds["TARGET"] = xr.DataArray(avg_tgt, dims=("time", "az_el"))
 
