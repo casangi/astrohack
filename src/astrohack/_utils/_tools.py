@@ -623,16 +623,13 @@ def _get_valid_state_ids(obs_modes, desired_intent="MAP_ANTENNA_SURFACE",
 
     valid_state_ids = []
     for i_mode, mode in enumerate(obs_modes):
-        # print(i_mode, mode)
         if desired_intent in mode:
             bad_words = 0
             for intent in excluded_intents:
                 if intent in mode:
                     bad_words += 1
-            #print(mode, bad_words, i_mode)
             if bad_words == 0:
                 valid_state_ids.append(i_mode)
-    # print(valid_state_ids)
     return valid_state_ids
 
 

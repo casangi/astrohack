@@ -40,27 +40,23 @@ def _extract_holog_chunk(extract_holog_params):
     ant_names = extract_holog_params["ant_names"]
     ref_ant_per_map_ant_tuple = extract_holog_params["ref_ant_per_map_ant_tuple"]
     map_ant_tuple = extract_holog_params["map_ant_tuple"]
-    ref_ant_per_map_ant_name_tuple = extract_holog_params["ref_ant_per_map_ant_name_tuple"]
     map_ant_name_tuple = extract_holog_params["map_ant_name_tuple"]
-
     holog_map_key = extract_holog_params["holog_map_key"]
-    telescope_name = extract_holog_params["telescope_name"]
+
+    # This 2 pieces of information are no longer used leaving them here commented out for completeness
+    # ref_ant_per_map_ant_name_tuple = extract_holog_params["ref_ant_per_map_ant_name_tuple"]
+    # telescope_name = extract_holog_params["telescope_name"]
 
     if len(ref_ant_per_map_ant_tuple) != len(map_ant_tuple):
         logger.error("Reference antenna per mapping antenna list and mapping antenna list should have same length.")
         raise Exception("Inconsistancy between antenna list length, see error above for more info.")
 
     sel_state_ids = extract_holog_params["sel_state_ids"]
-    # print(sel_state_ids)
     holog_name = extract_holog_params["holog_name"]
 
     chan_freq = extract_holog_params["chan_setup"]["chan_freq"]
     pol = extract_holog_params["pol_setup"]["pol"]
-
     table_obj = ctables.table(ms_name, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
-    # print(table_obj.getkeywords())
-    #
-    # print(list(scans))
 
     if sel_state_ids:
         ctb = ctables.taql(
@@ -80,6 +76,7 @@ def _extract_holog_chunk(extract_holog_params):
     ant1 = ctb.getcol("ANTENNA1")
     ant2 = ctb.getcol("ANTENNA2")
     time_vis_row = ctb.getcol("TIME")
+    # Centroid is never used, hence it is commented out to improve efficiency
     # time_vis_row_centroid = ctb.getcol("TIME_CENTROID")
     flag = ctb.getcol("FLAG")
     flag_row = ctb.getcol("FLAG_ROW")
@@ -87,18 +84,12 @@ def _extract_holog_chunk(extract_holog_params):
     ctb.close()
     table_obj.close()
 
-    # print("Unique scans:", np.unique(scan_list))
-
-    # time_vis, unique_index = np.unique(
-    #     time_vis_row, return_index=True
-    # )  # Note that values are sorted.
     time_vis, vis_map_dict, weight_map_dict, flagged_mapping_antennas, used_samples_dict = _extract_holog_chunk_jit(
         vis_data,
         weight,
         ant1,
         ant2,
         time_vis_row,
-        # time_vis,
         flag,
         flag_row,
         ref_ant_per_map_ant_tuple,
@@ -179,8 +170,6 @@ def _get_time_intervals(time_vis_row, scan_list, time_interval):
             if time_range[0] <= time_sample <= time_range[1]:
                 filtered_time_samples.append(time_sample)
                 break
-    # print(filtered_time_samples)
-    # print(len(raw_time_samples), len(filtered_time_samples))
     return np.array(filtered_time_samples)
 
 
@@ -191,7 +180,6 @@ def _extract_holog_chunk_jit(
         ant1,
         ant2,
         time_vis_row,
-        # time_vis,
         flag,
         flag_row,
         ref_ant_per_map_ant_tuple,
@@ -199,7 +187,7 @@ def _extract_holog_chunk_jit(
         time_interval,
         scan_list
 ):
-    """JIT copiled function to extract relevant visibilty data from chunk after flagging and applying weights.
+    """JIT compiled function to extract relevant visibilty data from chunk after flagging and applying weights.
 
     Args:
         vis_data (numpy.ndarray): Visibility data (row, channel, polarization)
@@ -207,12 +195,16 @@ def _extract_holog_chunk_jit(
         ant1 (numpy.ndarray): List of antenna_ids for antenna1
         ant2 (numpy.ndarray): List of antenna_ids for antenna2
         time_vis_row (numpy.ndarray): Array of full time talues by row
-        time_vis (numpy.ndarray): Array of unique time values from time_vis_row
         flag (numpy.ndarray): Array of data quality flags to apply to data
         flag_row (numpy.ndarray): Array indicating when a full row of data should be flagged
+        ref_ant_per_map_ant_tuple(tuple): reference antenna per mapping antenna
+        map_ant_tuple(tuple): mapping antennas?
+        time_interval(float): time smoothing interval
+        scan_list(list): list of valid holography scans
 
     Returns:
-        dict: Antenna_id referenced (key) dictionary containing the visibility data selected by (time, channel, polarization)
+        dict: Antenna_id referenced (key) dictionary containing the visibility data selected by (time, channel,
+        polarization)
     """
 
     time_samples = _get_time_intervals(time_vis_row, scan_list, time_interval)
@@ -221,17 +213,6 @@ def _extract_holog_chunk_jit(
     n_row, n_chan, n_pol = vis_data.shape
 
     half_int = time_interval/2
-    # total_time = time_vis[-1]-time_vis[0]
-    # n_time = int(np.ceil(total_time/time_interval))+1
-    # start = time_vis[0]+half_int
-    # stop = start + n_time*time_interval
-    # time_samples = np.linspace(start, stop, n_time)
-    # print('Time intervals:', time_interval, time_samples[1]-time_samples[0], n_time, time_samples.shape)
-    # print('starts:', start, time_samples[0])
-    # print('stops:', stop, time_samples[-1])
-
-    # n_time = len(time_vis)
-    # print(n_time)
 
     vis_map_dict = {}
     sum_weight_map_dict = {}
@@ -248,10 +229,9 @@ def _extract_holog_chunk_jit(
 
     time_index = 0
     for row in range(n_row):
-
         if flag_row is False:
             continue
-        # print(time_vis_row[row], time_samples[time_index], time_index, half_int)
+        # Find index of time_vis_row[row] in time_samples, assumes time_vis_row is ordered in time
         if time_vis_row[row] < time_samples[time_index] - half_int:
             continue
         elif time_vis_row[row] > time_samples[time_index] + half_int:
@@ -283,11 +263,6 @@ def _extract_holog_chunk_jit(
         else:
             continue
 
-        # Find index of time_vis_row[row] in time_vis that maintains the value ordering
-        # time_index = np.searchsorted(time_vis, time_vis_row[row])
-
-        # Find index of time_vis_row[row] in time_samples, assumes time_vis_row is ordered in time
-        # print('dentro', time_index, n_time)
         for chan in range(n_chan):
             for pol in range(n_pol):
                 if ~(flag[row, chan, pol]):
@@ -304,14 +279,10 @@ def _extract_holog_chunk_jit(
                             + weight[row, pol]
                     )
 
-        # print(np.sum(sum_weight_map_dict[map_ant_id] == 0))
-
-    # print('p1')
     flagged_mapping_antennas = []
 
     for map_ant_id in vis_map_dict.keys():
         sum_of_sum_weight = 0
-        # print(used_samples_dict[map_ant_id])
 
         for time_index in range(n_time):
             for chan in range(n_chan):
@@ -394,7 +365,6 @@ def _create_holog_file(
     for map_ant_index in vis_map_dict.keys():
         if map_ant_index not in flagged_mapping_antennas:
             valid_data = used_samples_dict[map_ant_index] == 1.
-            # print(map_ant_index, np.sum(valid_data))
 
             ant_time_vis = time_vis[valid_data]
 
@@ -576,7 +546,7 @@ def _check_if_array_in_dict(array_dict, array):
 
 
 def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
-    """Extract nearest MAIN table time indexed pointing map
+    """Averages pointing within the time sampling of the visibilities
 
     Args:
         map_ant_ids (list): list of antenna ids
@@ -596,12 +566,6 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
         pnt_map_dict[antenna] = np.zeros((n_time_vis, 2))
 
         pnt_map_dict[antenna] = _time_avg_pointing(pnt_ant_dict[antenna], time_vis)
-
-        # pnt_map_dict[antenna] = (
-        #     pnt_ant_dict[antenna]
-        #     .interp(time=time_vis, method="cubic")
-        # )
-
     return pnt_map_dict
 
 
@@ -628,7 +592,6 @@ def _time_avg_pointing(pointing_dict, time_vis):
                 i_time += 1
         elif pnt_time[i_row] < time_vis[i_time] - half_int:
             continue
-        # print(i_row, pnt_time[i_row], i_time, time_vis[i_time])
         avg_dir[i_time] += pointing_dict['DIRECTION'].values[i_row]
         avg_dir_cos[i_time] += pointing_dict['DIRECTIONAL_COSINES'].values[i_row]
         avg_enc[i_time] += pointing_dict['ENCODER'].values[i_row]
@@ -636,7 +599,6 @@ def _time_avg_pointing(pointing_dict, time_vis):
         avg_tgt[i_time] += pointing_dict['TARGET'].values[i_row]
         avg_wgt[i_time] += 1
 
-    # print(np.min(avg_wgt), np.mean(avg_wgt), np.max(avg_wgt))
     avg_dir /= avg_wgt
     avg_dir_cos /= avg_wgt
     avg_enc /= avg_wgt
