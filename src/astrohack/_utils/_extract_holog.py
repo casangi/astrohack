@@ -42,6 +42,7 @@ def _extract_holog_chunk(extract_holog_params):
     map_ant_tuple = extract_holog_params["map_ant_tuple"]
     map_ant_name_tuple = extract_holog_params["map_ant_name_tuple"]
     holog_map_key = extract_holog_params["holog_map_key"]
+    time_interval = extract_holog_params['time_smoothing_interval']
 
     # This 2 pieces of information are no longer used leaving them here commented out for completeness
     # ref_ant_per_map_ant_name_tuple = extract_holog_params["ref_ant_per_map_ant_name_tuple"]
@@ -81,6 +82,11 @@ def _extract_holog_chunk(extract_holog_params):
     flag = ctb.getcol("FLAG")
     flag_row = ctb.getcol("FLAG_ROW")
     scan_list = ctb.getcol("SCAN_NUMBER")
+
+    # Here we use the median of the differences between dumps as this is a good proxy for the integration time
+    if time_interval is None:
+        time_interval = np.median(np.diff(np.unique(time_vis_row)))
+
     ctb.close()
     table_obj.close()
 
@@ -94,7 +100,7 @@ def _extract_holog_chunk(extract_holog_params):
         flag_row,
         ref_ant_per_map_ant_tuple,
         map_ant_tuple,
-        extract_holog_params['time_interval'],
+        time_interval,
         scan_list
     )
 
@@ -140,7 +146,8 @@ def _extract_holog_chunk(extract_holog_params):
         ddi,
         ms_name,
         ant_names,
-        grid_params
+        grid_parms,
+        time_interval
     )
 
     logger.info("Finished extracting holography chunk for ddi: {ddi} holog_map_key: {holog_map_key}".format(
@@ -337,7 +344,8 @@ def _create_holog_file(
         ddi,
         ms_name,
         ant_names,
-        grid_params
+        grid_parms,
+        time_interval
 ):
     """Create holog-structured, formatted output file and save to zarr.
 
@@ -412,6 +420,7 @@ def _create_holog_file(
             xds.attrs["m_min"] = np.min(xds["DIRECTIONAL_COSINES"][:, 1].values)
 
             xds.attrs["grid_params"] = grid_params[map_ant_tag]
+            xds.attrs["time_smoothing_interval"] = time_interval
 
             holog_file = holog_name
 

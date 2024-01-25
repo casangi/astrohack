@@ -28,8 +28,10 @@
             "type":["str"],
             "allowed":["DATA", "CORRECTED_DATA"]
         },
-        "time_interval":{
-            "type":["float"]
+        "time_smoothing_interval":{
+            "type":["float"],
+            "nullable": true,
+            "min": 1e-15
         },
         "parallel":{
             "type":["boolean"]
