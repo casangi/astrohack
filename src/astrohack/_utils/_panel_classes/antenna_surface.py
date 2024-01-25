@@ -82,7 +82,8 @@ class AntennaSurface:
 
         if self.pol_state not in inputxds.coords['pol']:
             logger = skriba.logger.get_logger(logger_name="astrohack")
-            msg = f'Polarization state {self.pol_state} is not present in the data (available states: {pol_axis})'
+            msg = f'Polarization state {self.pol_state} is not present in the data (available states: ' \
+                  f'{inputxds.coords["pol"]})'
             logger.error(msg)
             raise Exception(msg)
 
@@ -481,24 +482,26 @@ class AntennaSurface:
         for panel in self.panels:
             panel.print_misc()
 
-    def plot_mask(self, basename, parm_dict):
+    def plot_mask(self, basename, caller, parm_dict):
         """
         Plot mask used in the selection of points to be fitted
         Args:
             basename: basename for the plot, the prefix 'ancillary_mask' will be added to it
+            caller: Which mds called this plotting function
             parm_dict: dictionary with plotting parameters
         """
         plotmask = np.where(self.mask, 1, np.nan)
-        plotname = _add_prefix(basename, 'mask')
+        plotname = _add_prefix(basename, f'{caller}_mask')
         parm_dict['z_lim'] = [0, 1]
         parm_dict['unit'] = ' '
         self._plot_map(plotname, plotmask, 'Mask', parm_dict, colorbar=False)
 
-    def plot_amplitude(self, basename, parm_dict):
+    def plot_amplitude(self, basename, caller, parm_dict):
         """
         Plot Amplitude map
         Args:
             basename: basename for the plot, the prefix 'ancillary_amplitude' will be added to it
+            caller: Which mds called this plotting function
             parm_dict: dictionary with plotting parameters
         """
         if parm_dict['amplitude_limits'] is None or parm_dict['amplitude_limits'] == "None":
@@ -507,7 +510,7 @@ class AntennaSurface:
             parm_dict['z_lim'] = parm_dict['amplitude_limits']
 
         title = "Amplitude, min={0:.5f}, max ={1:.5f} V".format(parm_dict['z_lim'][0], parm_dict['z_lim'][1])
-        plotname = _add_prefix(basename, 'amplitude')
+        plotname = _add_prefix(basename, f'{caller}_amplitude')
         parm_dict['unit'] = self.amp_unit
         self._plot_map(plotname, self.amplitude, title, parm_dict)
 
@@ -538,7 +541,7 @@ class AntennaSurface:
             else:
                 maps = [self.phase, self.phase_corrections, self.phase_residuals]
                 labels = ['original', 'correction', 'residual']
-        self._multi_plot(maps, labels, prefix, basename, fac, parm_dict)
+        self._multi_plot(maps, labels, prefix, basename, fac, parm_dict, caller)
 
     def plot_deviation(self, basename, caller, parm_dict):
         """
@@ -566,10 +569,11 @@ class AntennaSurface:
                 labels = [f'original RMS={rms:.2f} {parm_dict["unit"]}']
             else:
                 maps = [self.deviation, self.corrections, self.residuals]
-                labels = [f'original RMS={rms[0]:.2f} {parm_dict["unit"]}', 'correction', f'residual RMS={rms[1]:.2f} {parm_dict["unit"]}']
-        self._multi_plot(maps, labels, prefix, basename, fac, parm_dict)
+                labels = [f'original RMS={rms[0]:.2f} {parm_dict["unit"]}', 'correction', f'residual RMS={rms[1]:.2f} '
+                                                                                          f'{parm_dict["unit"]}']
+        self._multi_plot(maps, labels, prefix, basename, fac, parm_dict, caller)
 
-    def _multi_plot(self, maps, labels, prefix, basename, factor, parm_dict):
+    def _multi_plot(self, maps, labels, prefix, basename, factor, parm_dict, caller):
         if len(maps) != len(labels):
             raise Exception('Map list and label list must be of the same size')
         nplots = len(maps)
@@ -580,6 +584,7 @@ class AntennaSurface:
             title = f'{prefix.capitalize()} {labels[iplot]}'
             plotname = _add_prefix(basename, labels[iplot].split()[0])
             plotname = _add_prefix(plotname, prefix)
+            plotname = _add_prefix(plotname, caller)
             self._plot_map(plotname, factor * maps[iplot], title, parm_dict)
 
     def _plot_map(self, filename, data, title, parm_dict, colorbar=True):

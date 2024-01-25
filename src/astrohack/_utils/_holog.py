@@ -1,5 +1,3 @@
-import inspect
-
 import numpy as np
 import xarray as xr
 
@@ -42,8 +40,6 @@ def _holog_chunk(holog_chunk_params):
     Args:
         holog_chunk_params (dict): Dictionary containing holography parameters.
     """
-    
-
     holog_file, ant_data_dict = _load_holog_file(
         holog_chunk_params["holog_name"],
         dask_load=False,
@@ -71,6 +67,7 @@ def _holog_chunk(holog_chunk_params):
     freq_chan = ant_data_dict[ddi][map0].chan.values
     n_chan = ant_data_dict[ddi][map0].dims["chan"]
     n_pol = ant_data_dict[ddi][map0].dims["pol"]
+    grid_interpolation_mode = holog_chunk_params["grid_interpolation_mode"]
     
     if holog_chunk_params["chan_average"]:
         reference_scaling_frequency = np.mean(freq_chan)
@@ -109,26 +106,23 @@ def _holog_chunk(holog_chunk_params):
                                                           np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index],
                                                                                vis_avg[:, chan_index, :],
                                                                                (grid_l, grid_m), method=
-                                                                               holog_chunk_params["grid_interpolation_mode"],
+                                                                               grid_interpolation_mode,
                                                                                fill_value=0.0), (2), (0)))
-
             # Averaging now complete
             n_chan = 1
-            
             freq_chan = [np.mean(avg_freq)]
         else:
             beam_grid[holog_map_index, ...] = np.moveaxis(griddata(lm, vis, (grid_l, grid_m),
-                                                                   method=holog_chunk_params["grid_interpolation_mode"],
+                                                                   method=grid_interpolation_mode,
                                                                    fill_value=0.0), (0, 1), (2, 3))
 
         time_centroid_index = ant_data_dict[ddi][holog_map].dims["time"] // 2
         time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
 
-        for chan in range(n_chan): # Todo: Vectorize holog_map and channel axis
+        for chan in range(n_chan):  # Todo: Vectorize holog_map and channel axis
             try:
                 xx_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
                 yy_peak = _find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
-
             except:
                 center_pixel = np.array(beam_grid.shape[-2:])//2
                 xx_peak = beam_grid[holog_map_index, chan, 0, center_pixel[0], center_pixel[1]]
@@ -302,9 +296,7 @@ def _holog_chunk(holog_chunk_params):
         "v_prime": v_prime, 
         "chan": freq_chan
     }
-
     xds = xds.assign_coords(coords)
-    
     xds.to_zarr("{name}/{ant}/{ddi}".format(name=holog_chunk_params["image_name"], ant=holog_chunk_params["this_ant"],
                                             ddi=ddi), mode="w", compute=True, consolidated=True)
 
@@ -347,11 +339,8 @@ def _export_to_fits_holog_chunk(parm_dict):
     Args:
         parm_dict: parameter dictionary
     """
-    
-
     inputxds = parm_dict['xds_data']
     metadata = parm_dict['metadata']
-
     antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
@@ -463,7 +452,7 @@ def _plot_aperture_chunk(parm_dict):
 
     surface.plot_phase(basename, 'image', parm_dict)
     surface.plot_deviation(basename, 'image', parm_dict)
-    surface.plot_amplitude(basename, parm_dict)
+    surface.plot_amplitude(basename, 'image', parm_dict)
 
 
 def _plot_beam_chunk(parm_dict):
@@ -512,9 +501,6 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, zunit, parm_dict):
         zunit: data unit
         parm_dict: dictionary with general and plotting parameters
     """
-    
-    
-
     colormap = _get_proper_color_map(parm_dict['colormap'])
 
     n_pol = len(pol_axis)

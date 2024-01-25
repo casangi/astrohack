@@ -73,13 +73,13 @@ def _plot_antenna_chunk(parm_dict):
     elif plot_type == plot_types[1]:  # phase plot
         surface.plot_phase(basename, 'panel', parm_dict)
     elif plot_type == plot_types[2]:  # Ancillary plot
-        surface.plot_mask(basename, parm_dict)
-        surface.plot_amplitude(basename, parm_dict)
+        surface.plot_mask(basename,  'panel', parm_dict)
+        surface.plot_amplitude(basename,  'panel', parm_dict)
     else:  # all plots
         surface.plot_deviation(basename, 'panel', parm_dict)
         surface.plot_phase(basename, 'panel', parm_dict)
-        surface.plot_mask(basename, parm_dict)
-        surface.plot_amplitude(basename, parm_dict)
+        surface.plot_mask(basename,  'panel', parm_dict)
+        surface.plot_amplitude(basename,  'panel', parm_dict)
 
 
 def _export_to_fits_panel_chunk(parm_dict):
