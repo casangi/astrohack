@@ -567,22 +567,38 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
         dict:  Dictionary of directional cosine data mapped to nearest MAIN table sample times.
     """
 
-    n_time_vis = time_vis.shape[0]
-
     pnt_map_dict = {}
-
+    coords = {"time": time_vis}
     for antenna in map_ant_ids:
-        pnt_map_dict[antenna] = np.zeros((n_time_vis, 2))
+        pnt_xds = pnt_ant_dict[antenna]
+        avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt =\
+            _time_avg_pointing_jit(time_vis,
+                                   pnt_xds.time.values,
+                                   pnt_xds['DIRECTION'].values,
+                                   pnt_xds['DIRECTIONAL_COSINES'].values,
+                                   pnt_xds['ENCODER'].values,
+                                   pnt_xds['POINTING_OFFSET'].values,
+                                   pnt_xds['TARGET'].values,
+                                   )
 
-        pnt_map_dict[antenna] = _time_avg_pointing(pnt_ant_dict[antenna], time_vis)
+        new_pnt_xds = xr.Dataset()
+        new_pnt_xds.assign_coords(coords)
+
+        new_pnt_xds["DIRECTION"] = xr.DataArray(avg_dir, dims=("time", "az_el"))
+        new_pnt_xds["DIRECTIONAL_COSINES"] = xr.DataArray(avg_dir_cos, dims=("time", "az_el"))
+        new_pnt_xds["ENCODER"] = xr.DataArray(avg_enc, dims=("time", "az_el"))
+        new_pnt_xds["POINTING_OFFSET"] = xr.DataArray(avg_pnt_off, dims=("time", "az_el"))
+        new_pnt_xds["TARGET"] = xr.DataArray(avg_tgt, dims=("time", "az_el"))
+        new_pnt_xds.attrs = pnt_xds.attrs
+        pnt_map_dict[antenna] = new_pnt_xds
     return pnt_map_dict
 
 
-def _time_avg_pointing(pointing_dict, time_vis):
+@njit(cache=False, nogil=True)
+def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt):
     half_int = (time_vis[1] - time_vis[0]) / 2
     n_samples = time_vis.shape[0]
     the_shape = (n_samples, 2)
-    pnt_time = pointing_dict.time.values
     n_row = pnt_time.shape[0]
 
     avg_dir = np.zeros(the_shape)
@@ -601,11 +617,11 @@ def _time_avg_pointing(pointing_dict, time_vis):
                 i_time += 1
         elif pnt_time[i_row] < time_vis[i_time] - half_int:
             continue
-        avg_dir[i_time] += pointing_dict['DIRECTION'].values[i_row]
-        avg_dir_cos[i_time] += pointing_dict['DIRECTIONAL_COSINES'].values[i_row]
-        avg_enc[i_time] += pointing_dict['ENCODER'].values[i_row]
-        avg_pnt_off[i_time] += pointing_dict['POINTING_OFFSET'].values[i_row]
-        avg_tgt[i_time] += pointing_dict['TARGET'].values[i_row]
+        avg_dir[i_time] += dire[i_row]
+        avg_dir_cos[i_time] += dir_cos[i_row]
+        avg_enc[i_time] += enc[i_row]
+        avg_pnt_off[i_time] += pnt_off[i_row]
+        avg_tgt[i_time] += tgt[i_row]
         avg_wgt[i_time] += 1
 
     avg_dir /= avg_wgt
@@ -614,19 +630,7 @@ def _time_avg_pointing(pointing_dict, time_vis):
     avg_pnt_off /= avg_wgt
     avg_tgt /= avg_wgt
 
-    pnt_xds = xr.Dataset()
-    coords = {"time": time_vis}
-    pnt_xds = pnt_xds.assign_coords(coords)
-
-    pnt_xds["DIRECTION"] = xr.DataArray(avg_dir, dims=("time", "az_el"))
-    pnt_xds["DIRECTIONAL_COSINES"] = xr.DataArray(avg_dir_cos, dims=("time", "az_el"))
-    pnt_xds["ENCODER"] = xr.DataArray(avg_enc, dims=("time", "az_el"))
-    pnt_xds["POINTING_OFFSET"] = xr.DataArray(avg_pnt_off, dims=("time", "az_el"))
-    pnt_xds["TARGET"] = xr.DataArray(avg_tgt, dims=("time", "az_el"))
-
-    pnt_xds.attrs = pointing_dict.attrs
-
-    return pnt_xds
+    return avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt
 
 
 def _create_holog_meta_data(holog_file, holog_dict, input_params):
