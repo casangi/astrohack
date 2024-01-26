@@ -438,7 +438,7 @@ def _create_holog_file(
             )
 
         else:
-            logger.warning("Mapping antenna index {index}".format(index=ant_names[map_ant_index]))
+            logger.warning("Mapping antenna {index} has no data".format(index=ant_names[map_ant_index]))
 
 
 def _create_holog_obs_dict(
