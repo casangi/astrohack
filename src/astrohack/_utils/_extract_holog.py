@@ -254,7 +254,7 @@ def _extract_holog_chunk_jit(
 
 
 def _get_time_samples(time_vis):
-    """Sample three values for time vis and cooresponding indicies. Values are sammpled as (first, middle, last)
+    """Sample three values for time vis and cooresponding indices. Values are sammpled as (first, middle, last)
 
     Args:
         time_vis (numpy.ndarray): a list of visibility times
@@ -266,9 +266,9 @@ def _get_time_samples(time_vis):
     n_time_vis = time_vis.shape[0]
 
     middle = int(n_time_vis // 2)
-    indicies = [0, middle, n_time_vis - 1]
+    indices = [0, middle, n_time_vis - 1]
 
-    return np.take(time_vis, indicies), indicies
+    return np.take(time_vis, indices), indices
 
 
 def _create_holog_file(
@@ -284,7 +284,7 @@ def _create_holog_file(
         ddi,
         ms_name,
         ant_names,
-        grid_parms,
+        grid_parms
 ):
     """Create holog-structured, formatted output file and save to zarr.
 
@@ -313,7 +313,7 @@ def _create_holog_file(
 
     time_vis_days = time_vis / (3600 * 24)
     astro_time_vis = astropy.time.Time(time_vis_days, format="mjd")
-    time_samples, indicies = _get_time_samples(astro_time_vis)
+    time_samples, indices = _get_time_samples(astro_time_vis)
 
     coords = {"time": time_vis, "chan": chan, "pol": pol}
 
@@ -321,7 +321,7 @@ def _create_holog_file(
         if map_ant_index not in flagged_mapping_antennas:
             map_ant_tag = 'ant_' + ant_names[map_ant_index]  # 'ant_' + str(map_ant_index)
 
-            direction = np.take(pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, indicies, axis=0)
+            direction = np.take(pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, indices, axis=0)
 
             parallactic_samples = _calculate_parallactic_angle_chunk(
                 time_samples=time_samples,
@@ -567,8 +567,7 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         logger.warning('Calculating suggested cell size ...')
 
         meta_data["cell_size"] = \
-            astrohack._utils._algorithms._calculate_suggested_grid_paramater(parameter=
-                                                                                                  np.array(cell_sizes))
+            astrohack._utils._algorithms._calculate_suggested_grid_paramater(parameter=np.array(cell_sizes))
 
         logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))
 

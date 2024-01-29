@@ -630,11 +630,20 @@ def extract_holog(
 
         extract_holog_params['telescope_name'] = telescope_name
 
+        logger.warning(holog_dict.keys())
+        #from astrohack._utils._algorithms import calculate_optimal_grid_parameters
+        #n_pix, cell_size = calculate_optimal_grid_parameters(
+        #    data=holog_dict,
+        #    chan=extract_holog_params["chan_setup"]["chan_freq"],
+        #    telescope_name=telescope_name
+        #)
+
         meta_data = _create_holog_meta_data(
             holog_file=extract_holog_params['holog_name'],
             holog_dict=holog_dict,
             input_params=extract_holog_params.copy()
         )
+
 
         holog_attr_file = "{name}/{ext}".format(name=extract_holog_params['holog_name'], ext=".holog_attr")
         _write_meta_data(holog_attr_file, meta_data)
