@@ -43,10 +43,10 @@ def _extract_holog_chunk(extract_holog_params):
     map_ant_name_tuple = extract_holog_params["map_ant_name_tuple"]
     holog_map_key = extract_holog_params["holog_map_key"]
     time_interval = extract_holog_params['time_smoothing_interval']
+    telescope_name = extract_holog_params["telescope_name"]
 
-    # This 2 pieces of information are no longer used leaving them here commented out for completeness
+    # This piece of information is no longer used leaving them here commented out for completeness
     # ref_ant_per_map_ant_name_tuple = extract_holog_params["ref_ant_per_map_ant_name_tuple"]
-    # telescope_name = extract_holog_params["telescope_name"]
 
     if len(ref_ant_per_map_ant_tuple) != len(map_ant_tuple):
         logger.error("Reference antenna per mapping antenna list and mapping antenna list should have same length.")
@@ -146,7 +146,7 @@ def _extract_holog_chunk(extract_holog_params):
         ddi,
         ms_name,
         ant_names,
-        grid_parms,
+        grid_params,
         time_interval
     )
 
@@ -344,7 +344,7 @@ def _create_holog_file(
         ddi,
         ms_name,
         ant_names,
-        grid_parms,
+        grid_params,
         time_interval
 ):
     """Create holog-structured, formatted output file and save to zarr.
