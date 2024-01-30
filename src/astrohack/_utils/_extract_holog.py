@@ -12,7 +12,7 @@ from datetime import date
 
 from casacore import tables as ctables
 from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
-from astrohack._utils._algorithms import _get_grid_parms, _significant_digits
+from astrohack._utils._algorithms import calculate_optimal_grid_parameters, _significant_digits
 from astrohack._utils._plot_commons import _create_figure_and_axes, _scatter_plot, _close_figure
 from astrohack._utils._conversion import _convert_unit
 
@@ -102,19 +102,29 @@ def _extract_holog_chunk(extract_holog_params):
 
     map_ant_name_list = list(map(str, map_ant_name_tuple))
 
-    map_ant_name_list = ['ant_' + i for i in map_ant_name_list]
+    map_ant_name_list = ["_".join(("ant", i)) for i in map_ant_name_list]
 
     pnt_ant_dict = _load_point_file(pnt_name, map_ant_name_list, dask_load=False)
     pnt_map_dict = _extract_pointing_chunk(map_ant_name_list, time_vis, pnt_ant_dict)
-    grid_parms = _get_grid_parms(vis_map_dict, pnt_map_dict, ant_names)
 
-    ### To DO:
-    ################### Average multiple repeated samples
-    # over_flow_protector_constant = float("%.5g" % time_vis[0])  # For example 5076846059.4 -> 5076800000.0
-    # time_vis = time_vis - over_flow_protector_constant
-    # from astrohack._utils._algorithms import _average_repeated_pointings
-    # time_vis = _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict,ant_names)
-    # time_vis = time_vis + over_flow_protector_constant
+    grid_params = {}
+
+    # The loop has been moved out of the function here making the gridding parameter auto-calculation
+    # function more general use (hopefully). I honestly couldn't see a reason to keep it inside.
+    for ant_index in vis_map_dict.keys():
+        antenna_name = "_".join(("ant", ant_names[ant_index]))
+        n_pix, cell_size = calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_name, chan_freq)
+
+        grid_params[antenna_name] = {
+            "n_pix": n_pix,
+            "cell_size": cell_size
+        }
+
+    # ## To DO: ################## Average multiple repeated samples over_flow_protector_constant = float("%.5g" %
+    # time_vis[0])  # For example 5076846059.4 -> 5076800000.0 time_vis = time_vis - over_flow_protector_constant
+    # from astrohack._utils._algorithms import _average_repeated_pointings time_vis = _average_repeated_pointings(
+    # vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict,ant_names) time_vis = time_vis +
+    # over_flow_protector_constant
 
     _create_holog_file(
         holog_name,
@@ -129,11 +139,11 @@ def _extract_holog_chunk(extract_holog_params):
         ddi,
         ms_name,
         ant_names,
-        grid_parms
+        grid_params
     )
 
     logger.info("Finished extracting holography chunk for ddi: {ddi} holog_map_key: {holog_map_key}".format(
-            ddi=ddi, holog_map_key=holog_map_key)
+        ddi=ddi, holog_map_key=holog_map_key)
     )
 
 
@@ -284,7 +294,7 @@ def _create_holog_file(
         ddi,
         ms_name,
         ant_names,
-        grid_parms
+        grid_params
 ):
     """Create holog-structured, formatted output file and save to zarr.
 
@@ -300,8 +310,6 @@ def _create_holog_file(
         holog_map_key(string): holog map id string
         ddi (numpy.ndarray): data description id; a combination of polarization and spectral window
     """
-
-    
 
     ctb = ctables.table("/".join((ms_name, "ANTENNA")))
     observing_location = ctb.getcol("POSITION")
@@ -358,7 +366,7 @@ def _create_holog_file(
             xds.attrs["m_max"] = np.max(xds["DIRECTIONAL_COSINES"][:, 1].values)
             xds.attrs["m_min"] = np.min(xds["DIRECTIONAL_COSINES"][:, 1].values)
 
-            xds.attrs["grid_parms"] = grid_parms[map_ant_tag]
+            xds.attrs["grid_params"] = grid_params[map_ant_tag]
 
             holog_file = holog_name
 
@@ -395,7 +403,6 @@ def _create_holog_obs_dict(
     import pandas as pd
     from scipy.spatial import distance_matrix
 
-    
     mapping_scans_dict = {}
     holog_obs_dict = {}
     map_id = 0
@@ -471,7 +478,7 @@ def _create_holog_obs_dict(
                     for ref_ant in ref_ant_set:
                         if ref_ant in nearest_ant_list:
                             sub_ref_ant_set.append(ref_ant)
-                            
+
                     ref_ant_set = sub_ref_ant_set
                 ##################################################
 
@@ -498,7 +505,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     """Extract nearest MAIN table time indexed pointing map
 
     Args:
-        map_ant_ids (dict): list of antenna ids
+        map_ant_ids (list): list of antenna ids
         time_vis (numpy.ndarray): sorted, unique list of visibility times
         pnt_ant_dict (dict): map of pointing directional cosines with a map key based on the antenna id and indexed by
                              the MAIN table visibility time.
@@ -530,7 +537,6 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         holog_name (str): holog file name.
         holog_dict (dict): Dictionary containing msdx data.
     """
-    
 
     ant_holog_dict = {}
     cell_sizes = []
@@ -550,8 +556,8 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
 
                             ant_holog_dict[ant][ddi][mapping] = xds.to_dict(data=False)
 
-                            cell_sizes.append(xds.attrs["grid_parms"]["cell_size"])
-                            n_pixs.append(xds.attrs["grid_parms"]["n_pix"])
+                            cell_sizes.append(xds.attrs["grid_params"]["cell_size"])
+                            n_pixs.append(xds.attrs["grid_params"]["n_pix"])
                             telescope_names.append(xds.attrs['telescope_name'])
 
     cell_sizes_sigfigs = _significant_digits(cell_sizes, digits=3)
@@ -567,7 +573,7 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         logger.warning('Calculating suggested cell size ...')
 
         meta_data["cell_size"] = \
-            astrohack._utils._algorithms._calculate_suggested_grid_paramater(parameter=np.array(cell_sizes))
+            astrohack._utils._algorithms._calculate_suggested_grid_parameter(parameter=np.array(cell_sizes))
 
         logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))
 
@@ -576,9 +582,11 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         logger.warning('Calculating suggested number of pixels ...')
 
         meta_data['n_pix'] = int(
-            astrohack._utils._algorithms._calculate_suggested_grid_paramater(parameter=np.array(n_pixs)))
+            astrohack._utils._algorithms._calculate_suggested_grid_parameter(parameter=np.array(n_pixs)))
 
-        logger.info("The suggested number of pixels is calculated to be: {n_pix}".format(n_pix=meta_data["n_pix"]))
+        logger.info("The suggested number of pixels is calculated to be: {n_pix} (grid: {points} x {points})".format(
+            n_pix=meta_data["n_pix"], points=int(np.sqrt(meta_data["n_pix"]))
+        ))
 
     if not (len(set(telescope_names)) == 1):
         logger.error('Telescope name not consistent: ' + str(telescope_names))
@@ -603,8 +611,8 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
 def _plot_lm_coverage(param_dict):
     data = param_dict['xds_data']
     angle_fact = _convert_unit('rad', param_dict['angle_unit'], 'trigonometric')
-    real_lm = data['DIRECTIONAL_COSINES']*angle_fact
-    ideal_lm = data['IDEAL_DIRECTIONAL_COSINES']*angle_fact
+    real_lm = data['DIRECTIONAL_COSINES'] * angle_fact
+    ideal_lm = data['IDEAL_DIRECTIONAL_COSINES'] * angle_fact
     time = data.time.values
     time -= time[0]
     time *= _convert_unit('sec', param_dict['time_unit'], 'time')
@@ -643,7 +651,7 @@ def _plot_correlation(visi, correlation, pol_axis, time, lm, param_dict):
             y_data = [np.absolute(loc_vis)]
             y_label = [f'{correlation} Amplitude [arb. units]']
             title = ['Amplitude']
-            y_data.append(np.angle(loc_vis)*_convert_unit('rad', param_dict["phase_unit"], 'trigonometric'))
+            y_data.append(np.angle(loc_vis) * _convert_unit('rad', param_dict["phase_unit"], 'trigonometric'))
             y_label.append(f'{correlation} Phase [{param_dict["phase_unit"]}]')
             title.append('Phase')
         else:
@@ -671,9 +679,10 @@ def _plot_correlation(visi, correlation, pol_axis, time, lm, param_dict):
         _close_figure(fig, f'Channel averaged {correlation} vs Directional Cosines', plotfile, param_dict['dpi'],
                       param_dict['display'])
     else:
-        logger = _get_astrohack_logger()
-        logger.warning(f'Correlation {correlation} is not present for {param_dict["this_ant"]} {param_dict["this_ddi"]} '
-                       f'{param_dict["this_map"]}, skipping...')
+
+        logger.warning(
+            f'Correlation {correlation} is not present for {param_dict["this_ant"]} {param_dict["this_ddi"]} '
+            f'{param_dict["this_map"]}, skipping...')
     return
 
 
@@ -704,7 +713,7 @@ def _export_to_aips(param_dict):
                f'{param_dict["this_ddi"]}.txt'
     ant_num = xds_data.attrs['antenna_name'].split('a')[1]
     cmt = '#! '
-    spc = 6*' '
+    spc = 6 * ' '
     today = date.today().strftime("%y%m%d")
     outstr = cmt + f"RefAnt = ** Antenna = {ant_num} Stokes = '{stokes}_' Freq =  {stokes_vis.attrs['frequency']:.9f}" \
                    f" DATE-OBS = '{today}'\n"
@@ -733,7 +742,7 @@ def _export_to_aips(param_dict):
 def _compute_average_stokes_visibilities(vis, stokes):
     n_chan = len(vis.chan)
     chan_ave_vis = vis.mean(dim='chan', skipna=True)
-    amp, pha, sigma_amp, sigma_pha = _compute_stokes(chan_ave_vis['VIS'].values, n_chan*chan_ave_vis['WEIGHT'].values,
+    amp, pha, sigma_amp, sigma_pha = _compute_stokes(chan_ave_vis['VIS'].values, n_chan * chan_ave_vis['WEIGHT'].values,
                                                      chan_ave_vis.pol)
     coords = {'time': chan_ave_vis.time,
               'pol': ['I', 'Q', 'U', 'V']}
@@ -743,14 +752,14 @@ def _compute_average_stokes_visibilities(vis, stokes):
     xds["PHASE"] = xr.DataArray(pha, dims=["time", 'pol'], coords=coords)
     xds['SIGMA_AMP'] = xr.DataArray(sigma_amp, dims=["time", 'pol'], coords=coords)
     xds['SIGMA_PHA'] = xr.DataArray(sigma_amp, dims=["time", 'pol'], coords=coords)
-    xds.attrs['frequency'] = np.mean(vis.chan)/1e9  # in GHz
+    xds.attrs['frequency'] = np.mean(vis.chan) / 1e9  # in GHz
     return xds.sel(pol=stokes)
 
 
 def _compute_stokes(data, weight, pol_axis):
     stokes_data = np.zeros_like(data)
     weight[weight == 0] = np.nan
-    sigma = np.sqrt(1/weight)
+    sigma = np.sqrt(1 / weight)
     sigma_amp = np.zeros_like(weight)
     if 'RR' in pol_axis:
         stokes_data[:, 0] = (data[:, 0] + data[:, 3]) / 2
@@ -777,19 +786,9 @@ def _compute_stokes(data, weight, pol_axis):
     sigma_amp[~np.isfinite(sigma_amp)] = np.nan
     sigma_amp[sigma_amp == 0] = np.nan
     snr = stokes_amp / sigma_amp
-    cst = np.sqrt(9/(2*np.pi**3))
+    cst = np.sqrt(9 / (2 * np.pi ** 3))
     # Both sigmas here are probably wrong because of the uncertainty of how weights are stored.
-    sigma_pha = np.pi/np.sqrt(3) * (1 - cst * snr)
-    sigma_pha = np.where(snr > 2.5, 1/snr, sigma_pha)
+    sigma_pha = np.pi / np.sqrt(3) * (1 - cst * snr)
+    sigma_pha = np.where(snr > 2.5, 1 / snr, sigma_pha)
     sigma_pha *= _convert_unit('rad', 'deg', 'trigonometric')
     return stokes_amp, stokes_pha, sigma_amp, sigma_pha
-
-
-
-
-
-
-
-
-
-

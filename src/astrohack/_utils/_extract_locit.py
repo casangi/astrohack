@@ -10,11 +10,12 @@ from astropy.time import Time
 
 from prettytable import PrettyTable
 
+from astrohack._utils._panel_classes.telescope import Telescope
 from astrohack._utils._tools import _casa_time_to_mjd, _rad_to_deg_str
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._constants import figsize, twopi, notavail
 from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._locit_commons import _open_telescope, _compute_antenna_relative_off, _get_telescope_lat_lon_rad
+from astrohack._utils._locit_commons import _compute_antenna_relative_off, _get_telescope_lat_lon_rad
 from astrohack._utils._locit_commons import _plot_boxes_limits_and_labels
 from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _scatter_plot
 from astrohack._utils._locit_commons import _plot_antenna_position
@@ -345,7 +346,7 @@ def _plot_array_configuration(ant_dict, telescope_name, parm_dict):
         parm_dict: Parameter dictionary crafted by the calling function
     """
 
-    telescope = _open_telescope(telescope_name)
+    telescope = Telescope(telescope_name)
     stations = parm_dict['stations']
     display = parm_dict['display']
     figure_size = parm_dict['figure_size']
@@ -392,7 +393,7 @@ def _print_array_configuration(params, ant_dict, telescope_name):
         ant_dict: Parameter dictionary crafted by the calling function
         telescope_name: Name of the telescope used in observations
     """
-    telescope = _open_telescope(telescope_name)
+    telescope = Telescope(telescope_name)
     relative = params['relative']
 
     print(f"\n{telescope_name} antennas, # of antennas {len(ant_dict.keys())}:")

@@ -44,7 +44,9 @@ class Telescope:
             path: Path in which to look for telescope configuration files, defaults to the astrohack package
             data directory if None
         """
-        filename = name.lower().replace(" ", "_") + ".zarr"
+
+        filename = self._get_telescope_file_name(name).lower().replace(" ", "_") + ".zarr"
+
         try:
             if path is None:
                 filepath = _find_cfg_file(filename, tel_data_path)
@@ -62,6 +64,24 @@ class Telescope:
             self._general_consistency()
         
         return
+
+    @staticmethod
+    def _get_telescope_file_name(name):
+        """
+        Open correct telescope based on the telescope name string.
+        Args:
+            name: telescope name string
+
+        Returns:
+        appropriate telescope object
+        """
+        if 'VLA' in name:
+            name = 'VLA'
+        elif 'ALMA' in name:
+            # It does not matter which ALMA layout since the array center is the same
+            name = 'ALMA_DA'
+
+        return name
 
     def _ringed_consistency(self):
         """

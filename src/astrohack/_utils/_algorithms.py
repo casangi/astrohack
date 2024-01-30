@@ -7,7 +7,7 @@ from astrohack._utils._panel_classes.telescope import Telescope
 import skriba.logger as logger
 
 
-def _calculate_suggested_grid_paramater(parameter, quantile=0.01):
+def _calculate_suggested_grid_parameter(parameter, quantile=0.01):
     import scipy
 
     # Determine skew properties and return median
@@ -129,8 +129,8 @@ def _chunked_average(data, weight, avg_map, avg_freq):
 
                 else:
                     data_avg[time_index, avg_index, pol_index] = (
-                                data_avg[time_index, avg_index, pol_index] / weight_sum[
-                            time_index, avg_index, pol_index])
+                            data_avg[time_index, avg_index, pol_index] / weight_sum[
+                        time_index, avg_index, pol_index])
 
     return data_avg, weight_sum
 
@@ -246,53 +246,30 @@ def _least_squares_fit_block(system, vector):
     return results, variances
 
 
-def calculate_optimal_grid_parameters(chan, telescope_name):
-    telescope = Telescope("VLA")
-    diameter = telescope.diam
+def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_name, chan_freq):
+    reference_frequency = np.median(chan_freq)
+    reference_lambda = scipy.constants.speed_of_light / reference_frequency
 
-    reference_freq = np.median(chan)
-    logger.debug(f"REF F: {reference_freq}")
+    telescope = Telescope(telescope_name)
 
+    # reference_lambda / D is the maximum cell size we should use so reduce is by 85% to get a safer answer.
+    # Since this is just an estimate for the situation where the user doesn't specify a values, I am picking
+    # a values according to the developer heuristic, ie. it seems to be good.
+    cell_size = 0.85*reference_lambda / telescope.diam
 
-    reference_lambda = scipy.constants.speed_of_light / reference_freq
-    D = reference_lambda / diameter
+    # Get data range
+    data_range = \
+        (pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].max()
+         - pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].min())
 
-    logger.warning(f"lambda: {D}")
+    try:
+        n_pix = int(np.ceil(data_range / cell_size))**2
 
-
+    except ZeroDivisionError as e:
+        logger.error(f"Zero division error, there was likely a problem calculating the data range.", verbose=True)
+        raise ZeroDivisionError
 
     return n_pix, cell_size
-
-
-def _get_grid_parms(vis_map_dict, pnt_map_dict, ant_names):
-    grid_parms = {}
-
-    for ant_index in vis_map_dict.keys():
-        abs_diff = np.abs(np.diff(pnt_map_dict['ant_' + ant_names[ant_index]]['POINTING_OFFSET'], axis=0))
-
-        max_dis_x = np.max(abs_diff[:, 0]) / 100
-        max_dis_y = np.max(abs_diff[:, 1]) / 100
-
-        n_pix_x = np.sum([abs_diff[:, 0] > max_dis_x]) + 1
-        n_pix_y = np.sum([abs_diff[:, 1] > max_dis_y]) + 1
-
-        cell_size_x = np.mean(abs_diff[abs_diff[:, 0] > max_dis_x, 0])
-        cell_size_y = np.mean(abs_diff[abs_diff[:, 1] > max_dis_y, 1])
-
-        if n_pix_x < n_pix_y:
-            n_pix = n_pix_x ** 2
-            cell_size = cell_size_x
-
-        else:
-            n_pix = n_pix_y ** 2
-            cell_size = cell_size_y
-
-        grid_parms['ant_' + ant_names[ant_index]] = {
-            'n_pix': n_pix,
-            'cell_size': cell_size
-        }
-
-    return grid_parms
 
 
 def _significant_digits(x, digits):
@@ -310,71 +287,3 @@ def _significant_digits_scalar(x, digits):
     digits = int(digits - np.ceil(np.log10(abs(x))))
 
     return round(x, digits)
-
-# Does not work
-# def _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict, ant_names):
-#
-#    for ant_index in vis_map_dict.keys():
-#        diff_ideal = np.diff(pnt_map_dict['ant_'+ant_names[ant_index]]['POINTING_OFFSET'],axis=0)
-#        r_diff_ideal = np.sqrt(np.abs(diff_ideal[:,0]**2 + diff_ideal[:,1]**2))
-#
-#        max_dis = np.max(r_diff_ideal)/100
-#        n_avg = np.sum([r_diff_ideal > max_dis]) + 1
-#        cell = np.mean(r_diff[r_diff_ideal > max_dis])
-#
-#        diff = np.diff(pnt_map_dict['ant_'+ant_names[ant_index]]['DIRECTIONAL_COSINES'],axis=0)
-#        r_diff = np.sqrt(np.abs(diff[:,0]**2 + diff[:,1]**2))
-#
-#
-#        vis_map_avg, weight_map_avg, time_vis_avg, pnt_map_avg = _average_repeated_pointings_jit(vis_map_dict[ant_index], weight_map_dict[ant_index],time_vis,pnt_map_dict['ant_'+ant_names[ant_index]]['DIRECTIONAL_COSINES'],n_avg,max_dis,r_diff_ideal,r_diff)
-#
-#        vis_map_dict[ant_id] = vis_map_avg
-#        weight_map_dict[ant_id] = weight_map_avg
-#        pnt_map_dict[ant_names['ant_'+ant_index]] = pnt_map_avg
-#
-#
-#
-#    return time_vis_avg
-
-##@numba.njit(cache=False, nogil=True)
-# def _average_repeated_pointings_jit(vis_map, weight_map,time_vis,pnt_map,n_avg,max_dis,r_diff_ideal,r_diff):
-#
-#    vis_map_avg = np.zeros((n_avg,)+ vis_map.shape[1:], dtype=vis_map.dtype)
-#    weight_map_avg = np.zeros((n_avg,)+ weight_map.shape[1:], dtype=weight_map.dtype)
-#    time_vis_avg = np.zeros((n_avg,), dtype=time_vis.dtype)
-#    pnt_map_avg = np.zeros((n_avg,)+ pnt_map.shape[1:], dtype=pnt_map.dtype)
-#
-#
-#    k = 0
-#    n_samples = 1
-#
-#    vis_map_avg[0,:,:] = vis_map_avg[k,:,:] + weight_map[0,:,:]*vis_map[0,:,:]
-#    weight_map_avg[0,:,:] = weight_map_avg[k,:,:] + weight_map[0,:,:]
-#    time_vis_avg[0] = time_vis_avg[k] + time_vis[0]
-#    pnt_map_avg[0,:] = pnt_map_avg[k,:] + pnt_map[0,:]
-#
-#    for i in range(vis_map.shape[0]-1):
-#        if r_diff_ideal[i] < max_dis:
-#            n_samples = n_samples + 1
-#        else:
-#            #vis_map_avg[k,:,:] = vis_map_avg[k,:,:]/weight_map_avg[k,:,:]
-#            vis_map_avg[k,:,:] = np.divide(vis_map_avg[k,:,:],weight_map_avg[k,:,:],out=np.zeros_like(vis_map_avg[k,:,:]),where=weight_map_avg[k,:,:]!=0)
-#            weight_map_avg[k,:,:] = weight_map_avg[k,:,:]/n_samples
-#
-#            time_vis_avg[k] = time_vis_avg[k]/n_samples
-#            pnt_map_avg[k,:] = pnt_map_avg[k,:]/n_samples
-#
-#            k=k+1
-#            n_samples = 1
-#
-#        vis_map_avg[k,:,:] = vis_map_avg[k,:,:] + weight_map[i+1,:,:]*vis_map[i+1,:,:]
-#        weight_map_avg[k,:,:] = weight_map_avg[k,:,:] + weight_map[i+1,:,:]
-#        time_vis_avg[k] = time_vis_avg[k] + time_vis[i+1]
-#        pnt_map_avg[k,:] = pnt_map_avg[k,:] + pnt_map[i+1,:]
-#
-#    vis_map_avg[-1,:,:] = vis_map_avg[1,:,:]/weight_map_avg[-1,:,:]
-#    weight_map_avg[-1,:,:] = weight_map_avg[-1,:,:]/n_samples
-#    time_vis_avg[-1] = time_vis_avg[-1]/n_samples
-#    pnt_map_avg[-1,:] = pnt_map_avg[-1,:]/n_samples
-#
-#    return vis_map_avg, weight_map_avg, time_vis_avg, pnt_map_avg
