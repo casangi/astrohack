@@ -130,7 +130,7 @@ def get_default_file_name(input_file: str, output_type: str) -> str:
 
     for suffix in known_data_types:
         if input_file.endswith(suffix):
-            base_name = input_file.strip(suffix)
+            base_name = input_file.rstrip(suffix)
             output_file = "".join((base_name, output_type))
 
     if not output_file:
