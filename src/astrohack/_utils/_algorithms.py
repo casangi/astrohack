@@ -1,35 +1,52 @@
 import numpy as np
 import scipy.signal as scisig
+import scipy.constants
+
+from astrohack._utils._panel_classes.telescope import Telescope
 
 import skriba.logger as logger
 
 
-def _calculate_suggested_grid_paramater(parameter, quantile=0.01):
+def _calculate_suggested_grid_parameter(parameter, quantile=0.005):
     import scipy
 
-    
-
-    # Determine skew properties and return median
+    logger.warning(parameter)
+    # Determine skew properties and return median. Only do this if there are at least 5 values.
     if np.abs(scipy.stats.skew(parameter)) > 0.5:
+
         if scipy.stats.skew(parameter) > 0:
             cutoff = np.quantile(parameter, 1 - quantile)
-            parameter = parameter[parameter <= cutoff]
+            filtered_parameter = parameter[parameter <= cutoff]
 
         else:
-            cutoff = np.quantile(parameter, quantile)
-            parameter = parameter[parameter >= cutoff]
 
-        return np.median(parameter)
+            cutoff = np.quantile(parameter, quantile)
+            filtered_parameter = parameter[parameter >= cutoff]
+
+        # The culling of data that is extremely skewed can fail if the number of values is too small causing all the
+        # data to be filtered. In this case just return the median which should be better with skewed data.
+        if filtered_parameter.shape[0] == 0:
+            logger.warning(
+                "Filtering of outliers in skewed data has failed, returning median value for gridding parameter.")
+
+            return np.median(parameter)
+
+        return np.median(filtered_parameter)
 
     # Process as mean
     else:
+
         upper_cutoff = np.quantile(parameter, 1 - quantile)
         lower_cutoff = np.quantile(parameter, quantile)
 
-        parameter = parameter[parameter >= lower_cutoff]
-        parameter = parameter[parameter <= upper_cutoff]    
+        filtered_parameter = parameter[parameter >= lower_cutoff]
+        filtered_parameter = filtered_parameter[filtered_parameter <= upper_cutoff]
 
-        return np.mean(parameter)
+        if filtered_parameter.shape[0] == 0:
+            logger.warning("Filtering of outlier data has failed, returning mean value for gridding parameter.")
+            return np.mean(parameter)
+
+        return np.mean(filtered_parameter)
 
 
 def _apply_mask(data, scaling=0.5):
@@ -43,7 +60,6 @@ def _apply_mask(data, scaling=0.5):
     Returns:
         numpy.ndarray: cropped aperture grid data
     """
-    
 
     x, y = data.shape
 
@@ -52,11 +68,12 @@ def _apply_mask(data, scaling=0.5):
     mask = int(x // (1 // scaling))
 
     assert mask > 0, logger.error(
-        "Scaling values too small. Minimum values is:{}, though search may still fail due to lack of points.".format(1 / x)
+        "Scaling values too small. Minimum values is:{}, though search may still fail due to lack of points.".format(
+            1 / x)
     )
 
     start = int(x // 2 - mask // 2)
-    return data[start : (start + mask), start : (start + mask)]
+    return data[start: (start + mask), start: (start + mask)]
 
 
 def _calc_coords(image_size, cell_size):
@@ -69,12 +86,12 @@ def _calc_coords(image_size, cell_size):
     Returns:
         float, float: center pixel location in coordinates x, y
     """
-    
+
     image_center = image_size // 2
 
     x = np.arange(-image_center[0], image_size[0] - image_center[0]) * cell_size[0]
     y = np.arange(-image_center[1], image_size[1] - image_center[1]) * cell_size[1]
-    
+
     return x, y
 
 
@@ -88,7 +105,7 @@ def _find_nearest(array, value):
     Returns:
         int, float: index, array value
     """
-    
+
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
 
@@ -97,16 +114,15 @@ def _find_nearest(array, value):
 
 # @njit(cache=False, nogil=True)
 def _chunked_average(data, weight, avg_map, avg_freq):
-
     avg_chan_index = np.arange(avg_freq.shape[0])
 
     data_avg_shape = list(data.shape)
     n_time, n_chan, n_pol = data_avg_shape
 
     n_avg_chan = avg_freq.shape[0]
-    
+
     # Update new chan dim.
-    data_avg_shape[1] = n_avg_chan  
+    data_avg_shape[1] = n_avg_chan
 
     data_avg = np.zeros(data_avg_shape, dtype=np.complex128)
     weight_sum = np.zeros(data_avg_shape, dtype=np.float64)
@@ -116,11 +132,10 @@ def _chunked_average(data, weight, avg_map, avg_freq):
     for avg_index in avg_chan_index:
 
         while (index < n_chan) and (avg_map[index] == avg_index):
-
             # Most probably will have to unravel assigment
             data_avg[:, avg_index, :] = (data_avg[:, avg_index, :] + weight[:, index, :] * data[:, index, :])
             weight_sum[:, avg_index, :] = weight_sum[:, avg_index, :] + weight[:, index, :]
-            
+
             index = index + 1
 
         for time_index in range(n_time):
@@ -129,7 +144,9 @@ def _chunked_average(data, weight, avg_map, avg_freq):
                     data_avg[time_index, avg_index, pol_index] = 0.0
 
                 else:
-                    data_avg[time_index, avg_index, pol_index] = (data_avg[time_index, avg_index, pol_index] / weight_sum[time_index, avg_index, pol_index])
+                    data_avg[time_index, avg_index, pol_index] = (
+                            data_avg[time_index, avg_index, pol_index] / weight_sum[
+                        time_index, avg_index, pol_index])
 
     return data_avg, weight_sum
 
@@ -206,16 +223,16 @@ def _least_squares_fit(system, vector):
         raise Exception('System must have 2 dimensions')
     if system.shape[0] < system.shape[1]:
         raise Exception('System must have at least the same number of rows as it has of columns')
-    
+
     result, residuals, _, _ = np.linalg.lstsq(system, vector, rcond=None)
-    dof = len(vector)-len(result)
+    dof = len(vector) - len(result)
     if dof > 0:
-        errs = (vector - np.dot(system, result))/dof
+        errs = (vector - np.dot(system, result)) / dof
     else:
         errs = (vector - np.dot(system, result))
-    sigma2 = np.sum(errs**2)
+    sigma2 = np.sum(errs ** 2)
     covar = np.linalg.inv(np.dot(system.T, system))
-    variance = np.diagonal(sigma2*covar)
+    variance = np.diagonal(sigma2 * covar)
     return result, variance, residuals
 
 
@@ -243,121 +260,46 @@ def _least_squares_fit_block(system, vector):
     else:
         results, variances, _ = _least_squares_fit(system, vector)
     return results, variances
-    
-    
-def _get_grid_parms(vis_map_dict, pnt_map_dict, ant_names):
-    
-    grid_parms = {}
 
-    for ant_index in vis_map_dict.keys():
-        abs_diff = np.abs(np.diff(pnt_map_dict['ant_'+ant_names[ant_index]]['POINTING_OFFSET'], axis=0))
 
-        max_dis_x = np.max(abs_diff[:,0])/100
-        max_dis_y = np.max(abs_diff[:,1])/100
+def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_name, chan_freq):
+    reference_frequency = np.median(chan_freq)
+    reference_lambda = scipy.constants.speed_of_light / reference_frequency
 
-        n_pix_x = np.sum([abs_diff[:,0] > max_dis_x]) + 1
-        n_pix_y = np.sum([abs_diff[:,1] > max_dis_y]) + 1
-        
-        cell_size_x = np.mean(abs_diff[abs_diff[:,0] > max_dis_x, 0])
-        cell_size_y = np.mean(abs_diff[abs_diff[:,1] > max_dis_y, 1])
-        
-        if n_pix_x < n_pix_y:
-            n_pix = n_pix_x**2
-            cell_size = cell_size_x
+    telescope = Telescope(telescope_name)
 
-        else:
-            n_pix = n_pix_y**2
-            cell_size = cell_size_y
-        
-        grid_parms['ant_'+ant_names[ant_index]] = {
-            'n_pix':n_pix, 
-            'cell_size':cell_size
-        }
+    # reference_lambda / D is the maximum cell size we should use so reduce is by 85% to get a safer answer.
+    # Since this is just an estimate for the situation where the user doesn't specify a values, I am picking
+    # a values according to the developer heuristic, ie. it seems to be good.
+    cell_size = 0.85 * reference_lambda / telescope.diam
 
-    return grid_parms
+    # Get data range
+    data_range = \
+        (pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].max()
+         - pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].min())
+
+    try:
+        n_pix = int(np.ceil(data_range / cell_size)) ** 2
+
+    except ZeroDivisionError as e:
+        logger.error(f"Zero division error, there was likely a problem calculating the data range.", verbose=True)
+        raise ZeroDivisionError
+
+    return n_pix, cell_size
 
 
 def _significant_digits(x, digits):
     if np.isscalar(x):
         return _significant_digits_scalar(x, digits)
-    
+
     else:
-        return list(map(_significant_digits, x, [digits]*len(x)))
+        return list(map(_significant_digits, x, [digits] * len(x)))
 
 
 def _significant_digits_scalar(x, digits):
     if x == 0 or not np.isfinite(x):
         return x
-    
-    digits = int(digits - np.ceil(np.log10(abs(x))))
-    
-    return round(x, digits)
-    
-    
-#Does not work
-#def _average_repeated_pointings(vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict, ant_names):
-#
-#    for ant_index in vis_map_dict.keys():
-#        diff_ideal = np.diff(pnt_map_dict['ant_'+ant_names[ant_index]]['POINTING_OFFSET'],axis=0)
-#        r_diff_ideal = np.sqrt(np.abs(diff_ideal[:,0]**2 + diff_ideal[:,1]**2))
-#
-#        max_dis = np.max(r_diff_ideal)/100
-#        n_avg = np.sum([r_diff_ideal > max_dis]) + 1
-#        cell = np.mean(r_diff[r_diff_ideal > max_dis])
-#
-#        diff = np.diff(pnt_map_dict['ant_'+ant_names[ant_index]]['DIRECTIONAL_COSINES'],axis=0)
-#        r_diff = np.sqrt(np.abs(diff[:,0]**2 + diff[:,1]**2))
-#
-#
-#        vis_map_avg, weight_map_avg, time_vis_avg, pnt_map_avg = _average_repeated_pointings_jit(vis_map_dict[ant_index], weight_map_dict[ant_index],time_vis,pnt_map_dict['ant_'+ant_names[ant_index]]['DIRECTIONAL_COSINES'],n_avg,max_dis,r_diff_ideal,r_diff)
-#
-#        vis_map_dict[ant_id] = vis_map_avg
-#        weight_map_dict[ant_id] = weight_map_avg
-#        pnt_map_dict[ant_names['ant_'+ant_index]] = pnt_map_avg
-#
-#
-#
-#    return time_vis_avg
 
-##@numba.njit(cache=False, nogil=True)
-#def _average_repeated_pointings_jit(vis_map, weight_map,time_vis,pnt_map,n_avg,max_dis,r_diff_ideal,r_diff):
-#
-#    vis_map_avg = np.zeros((n_avg,)+ vis_map.shape[1:], dtype=vis_map.dtype)
-#    weight_map_avg = np.zeros((n_avg,)+ weight_map.shape[1:], dtype=weight_map.dtype)
-#    time_vis_avg = np.zeros((n_avg,), dtype=time_vis.dtype)
-#    pnt_map_avg = np.zeros((n_avg,)+ pnt_map.shape[1:], dtype=pnt_map.dtype)
-#
-#
-#    k = 0
-#    n_samples = 1
-#
-#    vis_map_avg[0,:,:] = vis_map_avg[k,:,:] + weight_map[0,:,:]*vis_map[0,:,:]
-#    weight_map_avg[0,:,:] = weight_map_avg[k,:,:] + weight_map[0,:,:]
-#    time_vis_avg[0] = time_vis_avg[k] + time_vis[0]
-#    pnt_map_avg[0,:] = pnt_map_avg[k,:] + pnt_map[0,:]
-#
-#    for i in range(vis_map.shape[0]-1):
-#        if r_diff_ideal[i] < max_dis:
-#            n_samples = n_samples + 1
-#        else:
-#            #vis_map_avg[k,:,:] = vis_map_avg[k,:,:]/weight_map_avg[k,:,:]
-#            vis_map_avg[k,:,:] = np.divide(vis_map_avg[k,:,:],weight_map_avg[k,:,:],out=np.zeros_like(vis_map_avg[k,:,:]),where=weight_map_avg[k,:,:]!=0)
-#            weight_map_avg[k,:,:] = weight_map_avg[k,:,:]/n_samples
-#
-#            time_vis_avg[k] = time_vis_avg[k]/n_samples
-#            pnt_map_avg[k,:] = pnt_map_avg[k,:]/n_samples
-#
-#            k=k+1
-#            n_samples = 1
-#
-#        vis_map_avg[k,:,:] = vis_map_avg[k,:,:] + weight_map[i+1,:,:]*vis_map[i+1,:,:]
-#        weight_map_avg[k,:,:] = weight_map_avg[k,:,:] + weight_map[i+1,:,:]
-#        time_vis_avg[k] = time_vis_avg[k] + time_vis[i+1]
-#        pnt_map_avg[k,:] = pnt_map_avg[k,:] + pnt_map[i+1,:]
-#
-#    vis_map_avg[-1,:,:] = vis_map_avg[1,:,:]/weight_map_avg[-1,:,:]
-#    weight_map_avg[-1,:,:] = weight_map_avg[-1,:,:]/n_samples
-#    time_vis_avg[-1] = time_vis_avg[-1]/n_samples
-#    pnt_map_avg[-1,:] = pnt_map_avg[-1,:]/n_samples
-#
-#    return vis_map_avg, weight_map_avg, time_vis_avg, pnt_map_avg
+    digits = int(digits - np.ceil(np.log10(abs(x))))
+
+    return round(x, digits)

@@ -242,6 +242,7 @@ def extract_holog(
         baseline_average_distance: Union[float, str] = 'all',
         baseline_average_nearest: Union[float, str] = 'all',
         data_column: str = "CORRECTED_DATA",
+        time_smoothing_interval: float = None,
         parallel: bool = False,
         overwrite: bool = False,
 ) -> Union[AstrohackHologFile, None]:
@@ -285,6 +286,9 @@ def extract_holog(
     :param data_column: Determines the data column to pull from the measurement set. Defaults to "CORRECTED_DATA".
     :type data_column: str, optional, ex. DATA, CORRECTED_DATA
 
+    :param time_smoothing_interval: Determines the time smoothing interval, set to the integration time when None.
+    :type time_smoothing_interval: float, optional
+
     :param parallel: Boolean for whether to process in parallel, defaults to False.
     :type parallel: bool, optional
 
@@ -318,7 +322,7 @@ def extract_holog(
             ddi_m: …
         }
 
-    **Example Usage** In this case the pointing file has already been created. In addition the appropriate
+    **Example Usage** In this case the pointing file has already been created. In addition, the appropriate
     data_column value nees to be set for the type of measurement set data you are extracting.
 
     .. parsed-literal::

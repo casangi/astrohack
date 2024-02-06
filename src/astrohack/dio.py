@@ -16,7 +16,7 @@ from astrohack.mds import AstrohackPositionFile
 
 from astrohack._utils._dio import _print_array
 
-from typing import Union, List, NewType, Dict, Any
+from typing import Union, List, NewType, Dict, Any, NoReturn
 
 JSON = NewType("JSON", Dict[str, Any])
 
@@ -357,7 +357,7 @@ def print_json(
 def inspect_holog_obs_dict(
         file: Union[str, JSON] = '.holog_obs_dict.json',
         style: str = 'static'
-) -> None:
+) -> Union[NoReturn, JSON]:
     """ Print formatted holography observation dictionary
 
     :param file: Input file, can be either JSON file or string., defaults to '.holog_obs_dict.json'

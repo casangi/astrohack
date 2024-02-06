@@ -88,7 +88,7 @@ class TestExtractHolog():
             parallel=False
         )
 
-        # Generate a holog observations dictionary with a subset of data descirbed by ddi=1
+        # Generate a holog observations dictionary with a subset of data described by ddi=1
         holog_obs_dict = generate_holog_obs_dict(
             ms_name="data/ea25_cal_small_after_fixed.split.ms",
             point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
@@ -96,8 +96,6 @@ class TestExtractHolog():
             baseline_average_nearest='all',
             parallel=False
         )
-
-        holog_obs_dict.select(key="ddi", value=0, inplace=True)
 
         # Extract holography data using holog_obd_dict
         holog_mds = extract_holog(
@@ -177,7 +175,7 @@ class TestExtractHolog():
         holog_mds = extract_holog(
             ms_name="data/ea25_cal_small_after_fixed.split.ms",
             point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
-            baseline_average_distance=100.1,
+            baseline_average_distance=195.1,
             data_column="CORRECTED_DATA",
             parallel=False,
             overwrite=True
@@ -188,7 +186,7 @@ class TestExtractHolog():
 
     def test_extract_holog_baseline_average_nearest(self):
         """
-            Run extract_holog using the nearest baseline as a filter; check that only the nearest baselines are returned.
+            Run extract_holog using the nearest baseline as a filter; check that only the nearest baselines are returned
         """
 
         # extract pointing data

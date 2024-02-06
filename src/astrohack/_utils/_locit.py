@@ -8,7 +8,8 @@ import astropy.units as units
 import xarray as xr
 import numpy as np
 
-from astrohack._utils._locit_commons import _open_telescope, _get_telescope_lat_lon_rad, _compute_antenna_relative_off
+from astrohack._utils._panel_classes.telescope import Telescope
+from astrohack._utils._locit_commons import _get_telescope_lat_lon_rad, _compute_antenna_relative_off
 from astrohack._utils._locit_commons import _time_label, _elevation_label, _declination_label
 from astrohack._utils._locit_commons import _plot_antenna_position
 from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _scatter_plot
@@ -726,7 +727,7 @@ def _export_fit_results(data_dict, parm_dict):
     table = PrettyTable()
     table.field_names = field_names
     table.align = 'c'
-    full_antenna_list = _open_telescope(data_dict._meta_data['telescope_name']).ant_list
+    full_antenna_list = Telescope(data_dict._meta_data['telescope_name']).ant_list
     selected_antenna_list = _param_to_list(parm_dict['ant'], data_dict, 'ant')
 
     for ant_name in full_antenna_list:
@@ -964,7 +965,7 @@ def _plot_position_corrections(parm_dict, data_dict):
     Returns:
     PNG file(s) with the correction plots
     """
-    telescope = _open_telescope(data_dict._meta_data['telescope_name'])
+    telescope = Telescope(data_dict._meta_data['telescope_name'])
     destination = parm_dict['destination']
     ref_ant = data_dict._meta_data['reference_antenna']
     combined = parm_dict['combined']

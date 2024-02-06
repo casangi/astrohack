@@ -130,7 +130,7 @@ def get_default_file_name(input_file: str, output_type: str) -> str:
 
     for suffix in known_data_types:
         if input_file.endswith(suffix):
-            base_name = input_file.strip(suffix)
+            base_name = input_file.rstrip(suffix)
             output_file = "".join((base_name, output_type))
 
     if not output_file:
@@ -624,10 +624,11 @@ def _get_valid_state_ids(obs_modes, desired_intent="MAP_ANTENNA_SURFACE",
     valid_state_ids = []
     for i_mode, mode in enumerate(obs_modes):
         if desired_intent in mode:
-            valid_id = True
+            bad_words = 0
             for intent in excluded_intents:
-                valid_id = intent not in mode
-            if valid_id:
+                if intent in mode:
+                    bad_words += 1
+            if bad_words == 0:
                 valid_state_ids.append(i_mode)
     return valid_state_ids
 

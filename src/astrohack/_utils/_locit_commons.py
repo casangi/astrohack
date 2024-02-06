@@ -1,26 +1,8 @@
 from matplotlib.patches import Rectangle
 
-from astrohack._utils._panel_classes.telescope import Telescope
 from astrohack._utils._constants import *
 
 import skriba.logger as logger
-
-
-def _open_telescope(telname):
-    """
-    Open correct telescope based on the telescope name string
-    Args:
-        telname: telescope name string
-
-    Returns:
-    apropriate telescope object
-    """
-    if 'VLA' in telname:
-        telname = 'VLA'
-    elif 'ALMA' in telname:
-        telname = 'ALMA_DA'  # It does not matter which ALMA layout since the array center is the same
-    telescope = Telescope(telname)
-    return telescope
 
 
 def _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad, scaling=1.0):
