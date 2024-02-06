@@ -322,7 +322,7 @@ def extract_holog(
             ddi_m: …
         }
 
-    **Example Usage** In this case the pointing file has already been created. In addition the appropriate
+    **Example Usage** In this case the pointing file has already been created. In addition, the appropriate
     data_column value nees to be set for the type of measurement set data you are extracting.
 
     .. parsed-literal::

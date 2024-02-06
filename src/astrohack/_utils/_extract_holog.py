@@ -487,6 +487,8 @@ def _create_holog_obs_dict(
 
     df = pd.DataFrame(ant_pos, columns=['x', 'y', 'z'], index=ant_names)
     df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
+    logger.debug("".join(("\n", str(df_mat))))
+
     if write_distance_matrix:
         df_mat.to_csv(path_or_buf="{base}/.baseline_distance_matrix.csv".format(base=os.getcwd()), sep="\t")
         logger.info("Writing distance matrix to {base}/.baseline_distance_matrix.csv ...".format(base=os.getcwd()))
@@ -510,19 +512,20 @@ def _create_holog_obs_dict(
                 # Select reference antennas by distance from mapping antenna
                 if baseline_average_distance != 'all':
                     sub_ref_ant_set = []
+
                     for ref_ant in ref_ant_set:
                         if df_mat.loc[map_ant_key, ref_ant] < baseline_average_distance:
                             sub_ref_ant_set.append(ref_ant)
 
                     if (not sub_ref_ant_set) and ref_ant_set:
                         logger.warning('DDI ' + str(ddi) + ' and mapping antenna ' + str(
-                            map_ant_key) + 'has no reference antennas. If baseline_average_distance was specified '
+                            map_ant_key) + ' has no reference antennas. If baseline_average_distance was specified '
                                            'increase this distance. See antenna distance matrix in log by setting '
                                            'debug level to DEBUG in client function.')
 
                     ref_ant_set = sub_ref_ant_set
 
-                # Select reference antennas by n closest antennas
+                # Select reference antennas by the n-closest antennas
                 if baseline_average_nearest != 'all':
                     sub_ref_ant_set = []
                     nearest_ant_list = df_mat.loc[map_ant_key, :].loc[list(ref_ant_set)].sort_values().index.tolist()[

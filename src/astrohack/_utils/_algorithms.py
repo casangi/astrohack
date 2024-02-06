@@ -7,30 +7,46 @@ from astrohack._utils._panel_classes.telescope import Telescope
 import skriba.logger as logger
 
 
-def _calculate_suggested_grid_parameter(parameter, quantile=0.01):
+def _calculate_suggested_grid_parameter(parameter, quantile=0.005):
     import scipy
 
-    # Determine skew properties and return median
+    logger.warning(parameter)
+    # Determine skew properties and return median. Only do this if there are at least 5 values.
     if np.abs(scipy.stats.skew(parameter)) > 0.5:
+
         if scipy.stats.skew(parameter) > 0:
             cutoff = np.quantile(parameter, 1 - quantile)
-            parameter = parameter[parameter <= cutoff]
+            filtered_parameter = parameter[parameter <= cutoff]
 
         else:
-            cutoff = np.quantile(parameter, quantile)
-            parameter = parameter[parameter >= cutoff]
 
-        return np.median(parameter)
+            cutoff = np.quantile(parameter, quantile)
+            filtered_parameter = parameter[parameter >= cutoff]
+
+        # The culling of data that is extremely skewed can fail if the number of values is too small causing all the
+        # data to be filtered. In this case just return the median which should be better with skewed data.
+        if filtered_parameter.shape[0] == 0:
+            logger.warning(
+                "Filtering of outliers in skewed data has failed, returning median value for gridding parameter.")
+
+            return np.median(parameter)
+
+        return np.median(filtered_parameter)
 
     # Process as mean
     else:
+
         upper_cutoff = np.quantile(parameter, 1 - quantile)
         lower_cutoff = np.quantile(parameter, quantile)
 
-        parameter = parameter[parameter >= lower_cutoff]
-        parameter = parameter[parameter <= upper_cutoff]
+        filtered_parameter = parameter[parameter >= lower_cutoff]
+        filtered_parameter = filtered_parameter[filtered_parameter <= upper_cutoff]
 
-        return np.mean(parameter)
+        if filtered_parameter.shape[0] == 0:
+            logger.warning("Filtering of outlier data has failed, returning mean value for gridding parameter.")
+            return np.mean(parameter)
+
+        return np.mean(filtered_parameter)
 
 
 def _apply_mask(data, scaling=0.5):
@@ -255,7 +271,7 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_name
     # reference_lambda / D is the maximum cell size we should use so reduce is by 85% to get a safer answer.
     # Since this is just an estimate for the situation where the user doesn't specify a values, I am picking
     # a values according to the developer heuristic, ie. it seems to be good.
-    cell_size = 0.85*reference_lambda / telescope.diam
+    cell_size = 0.85 * reference_lambda / telescope.diam
 
     # Get data range
     data_range = \
@@ -263,7 +279,7 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_name
          - pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].min())
 
     try:
-        n_pix = int(np.ceil(data_range / cell_size))**2
+        n_pix = int(np.ceil(data_range / cell_size)) ** 2
 
     except ZeroDivisionError as e:
         logger.error(f"Zero division error, there was likely a problem calculating the data range.", verbose=True)
