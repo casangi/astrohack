@@ -1,6 +1,6 @@
 [project]
 name = "astrohack"
-version = "0.4.4"
+version = "0.4.3"
 description = "Holography Antenna Commissioning Kit"
 readme = "README.md"
 requires-python = ">= 3.8, < 3.12"
