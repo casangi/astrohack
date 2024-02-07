@@ -26,7 +26,7 @@ if os.path.exists(os.path.dirname(__file__) + "/config/"):
 
 # This installs a slick, informational tracebacks logger
 from rich.traceback import install
-from skriba.logger import setup_logger
+from graphviper.utils.logger import setup_logger
 
 install(show_locals=False)
 
