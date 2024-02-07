@@ -1,7 +1,7 @@
 import sys
 
 import click
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 from distributed.diagnostics.plugin import WorkerPlugin
 

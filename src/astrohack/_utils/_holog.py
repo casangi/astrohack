@@ -30,7 +30,7 @@ from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
 from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _get_proper_color_map
 from astrohack._utils._conversion import _convert_unit
 
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 
 def _holog_chunk(holog_chunk_params):

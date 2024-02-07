@@ -1,9 +1,9 @@
 import os
 import pathlib
 import shutil
-import skriba.logger as logger
-import skriba.logger
-import auror.parameter
+import graphviper.utils.logger as logger
+import graphviper.utils.logger
+import graphviper.utils.parameter
 
 from astrohack._utils._dio import _aips_holog_to_xds
 from astrohack._utils._dio import _check_if_file_will_be_overwritten
@@ -18,8 +18,8 @@ from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 from typing import Union, List
 
 
-@auror.parameter.validate(
-    logger=skriba.logger.get_logger(logger_name="astrohack"),
+@graphviper.utils.parameter.validate(
+    
     custom_checker=custom_panel_checker
 )
 def panel(

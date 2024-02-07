@@ -4,7 +4,7 @@ import numpy as np
 import astropy.units as u
 import astropy.coordinates as coord
 
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 from skimage.draw import disk
 from astrohack._utils._algorithms import _calc_coords

@@ -1,7 +1,7 @@
 from typing import Union, List
 
-import auror.parameter
-import skriba.logger as logger
+import graphviper.utils.parameter
+import graphviper.utils.logger as logger
 
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
 from astrohack._utils._dio import _write_meta_data
@@ -11,9 +11,7 @@ from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackLocitFile
 
 
-@auror.parameter.validate(
-    logger=logger.get_logger(logger_name="astrohack")
-)
+@graphviper.utils.parameter.validate()
 def extract_locit(
         cal_table: str,
         locit_name: str = None,

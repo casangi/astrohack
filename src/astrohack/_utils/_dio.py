@@ -10,7 +10,7 @@ import pathlib
 import numpy as np
 import xarray as xr
 
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 from astropy.io import fits
 from astrohack import __version__ as code_version

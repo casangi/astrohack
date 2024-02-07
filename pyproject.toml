@@ -6,11 +6,10 @@ readme = "README.md"
 requires-python = ">= 3.8, < 3.12"
 dependencies = [
     "astropy",
-    "auror",
     "dask",
     "distributed",
+    "graphviper",
     "matplotlib",
-    "menrva",
     "numba>=0.57.0",
     "numpy",
     "prettytable",
@@ -21,16 +20,12 @@ dependencies = [
     "scikit-learn",
     "scipy",
     "rich",
-    "skriba",
     "xarray",
     "zarr",
     "bokeh",
     "jupyterlab",
     "python_casacore>=3.5.2; sys_platform != \"darwin\" ",
 ]
-[[project.authors]]
-name = "Jan-Willem Steeb"
-email = "jsteeb@nrao.edu"
 
 [[project.authors]]
 name = "Joshua Hoskins"
@@ -39,6 +34,10 @@ email = "jhoskins@nrao.edu"
 [[project.authors]]
 name = "Victor de Souza Magalhaes"
 email = "vdesouza@nrao.edu"
+
+[[project.authors]]
+name = "Jan-Willem Steeb"
+email = "jsteeb@nrao.edu"
 
 [project.license]
 file = "LICENSE.txt"

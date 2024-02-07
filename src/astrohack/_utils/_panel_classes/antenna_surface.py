@@ -3,7 +3,7 @@ import xarray as xr
 
 from matplotlib import patches
 
-import skriba.logger
+import graphviper.utils.logger as logger
 
 from astrohack._utils._panel_classes.base_panel import PANEL_MODELS, irigid
 from astrohack._utils._panel_classes.ring_panel import RingPanel
@@ -81,7 +81,7 @@ class AntennaSurface:
             self.wavelength = inputxds.attrs['wavelength']
 
         if self.pol_state not in inputxds.coords['pol']:
-            logger = skriba.logger.get_logger(logger_name="astrohack")
+
             msg = f'Polarization state {self.pol_state} is not present in the data (available states: ' \
                   f'{inputxds.coords["pol"]})'
             logger.error(msg)
@@ -99,7 +99,7 @@ class AntennaSurface:
         try:
             self.resolution = inputxds.attrs['aperture_resolution']
         except KeyError:
-            logger = skriba.logger.get_logger(logger_name="astrohack")
+
             logger.warning("holog image does not have resolution information")
             logger.warning("Rerun holog with astrohack v>0.1.5 for aperture resolution information")
             self.resolution = None
@@ -123,7 +123,7 @@ class AntennaSurface:
         try:
             self.resolution = inputxds.attrs['aperture_resolution']
         except KeyError:
-            logger = skriba.logger.get_logger(logger_name="astrohack")
+
             logger.warning("Input panel file does not have resolution information")
             logger.warning("Rerun holog with astrohack v>0.1.5 for aperture resolution information")
             self.resolution = None
@@ -451,7 +451,7 @@ class AntennaSurface:
         if len(panels) > 0:
             msg = f'Fit failed with the {self.panelmodel} model and a simple mean has been used instead for the ' \
                   f'following panels: ' + str([self.antenna_name, self.ddi])
-            logger = skriba.logger.get_logger(logger_name="astrohack")
+
             logger.warning(msg)
             msg = str(panels)
             logger.warning(msg)

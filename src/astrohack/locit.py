@@ -1,5 +1,5 @@
-import auror.parameter
-import skriba.logger as logger
+import graphviper.utils.parameter
+import graphviper.utils.logger as logger
 
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
@@ -10,9 +10,7 @@ from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 from typing import Union, List
 
 
-@auror.parameter.validate(
-    logger=logger.get_logger(logger_name="astrohack")
-)
+@graphviper.utils.parameter.validate()
 def locit(
         locit_name: str,
         position_name: str = None,

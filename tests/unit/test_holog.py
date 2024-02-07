@@ -3,7 +3,7 @@ import pytest
 import os
 import json
 import shutil
-import astrohack
+import graphviper
 
 import numpy as np
 
@@ -21,10 +21,10 @@ class TestHolog():
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
-        astrohack.data.datasets.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/")
+        graphviper.utils.data.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/")
 
-        astrohack.data.datasets.download(file='extract_holog_verification.json')
-        astrohack.data.datasets.download(file='holog_numerical_verification.json')
+        graphviper.utils.data.download(file='extract_holog_verification.json')
+        graphviper.utils.data.download(file='holog_numerical_verification.json')
 
         extract_pointing(
             ms_name="data/ea25_cal_small_after_fixed.split.ms",

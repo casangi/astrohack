@@ -5,7 +5,7 @@ import json
 import requests
 import zipfile
 
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 
 def is_notebook() -> bool:

@@ -1,8 +1,8 @@
 import json
 import numpy as np
 
-import skriba.logger as logger
-import auror.parameter
+import graphviper.utils.logger as logger
+import graphviper.utils.parameter
 
 from numbers import Number
 from typing import List, Union, NewType
@@ -19,9 +19,7 @@ from astrohack.mds import AstrohackImageFile
 Array = NewType("Array", Union[np.array, List[int], List[float]])
 
 
-@auror.parameter.validate(
-    logger=logger.get_logger(logger_name="astrohack")
-)
+@graphviper.utils.parameter.validate()
 def holog(
         holog_name: str,
         grid_size: Union[int, Array, List] = None,

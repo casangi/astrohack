@@ -1,7 +1,7 @@
 from typing import Union, List
 
-import auror.parameter
-import skriba.logger as logger
+import graphviper.utils.parameter
+import graphviper.utils.logger as logger
 
 from astrohack._utils._combine import _combine_chunk
 from astrohack._utils._dask_graph_tools import _dask_general_compute
@@ -10,9 +10,7 @@ from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
 
-@auror.parameter.validate(
-    logger=logger.get_logger(logger_name="astrohack")
-)
+@graphviper.utils.parameter.validate()
 def combine(
         image_name: str,
         combine_name: str = None,

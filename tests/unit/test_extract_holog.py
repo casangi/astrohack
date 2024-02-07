@@ -1,9 +1,9 @@
-import pytest
+
 
 import os
 import json
 import shutil
-import astrohack
+import graphviper
 
 from astrohack.extract_holog import extract_holog
 from astrohack.extract_pointing import extract_pointing
@@ -15,7 +15,7 @@ class TestExtractHolog():
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
-        astrohack.data.datasets.download(file="ea25_cal_small_after_fixed.split.ms", folder="data")
+        graphviper.utils.data.download(file="ea25_cal_small_after_fixed.split.ms", folder="data")
 
     @classmethod
     def teardown_class(cls):

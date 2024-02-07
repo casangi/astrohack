@@ -4,7 +4,7 @@ import numpy as np
 import xarray as xr
 import astropy
 import astrohack
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 from numba import njit
 from numba.core import types

@@ -1,6 +1,6 @@
 import json
 import pathlib
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 import numpy as np
 
@@ -332,6 +332,9 @@ def print_json(
     :param columns: Columns used to reshape the antenna list., defaults to 7
     :type columns: int, optional
     """
+    import graphviper.utils.console as console
+
+    color = console.Colorize()
 
     if isinstance(obj, np.ndarray):
         obj = list(obj)

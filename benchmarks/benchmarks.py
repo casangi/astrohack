@@ -1,7 +1,7 @@
 import os
 import astrohack
 
-from menrva.client import local_client
+from graphviper.dask.client.client import local_client
 from astrohack.extract_holog import extract_holog
 
 from astrohack.holog import holog
@@ -14,7 +14,7 @@ class Stakeholder:
 
         def setup(self):
         # download test datasets
-        astrohack.data.datasets.download("J1924-2914.ms.calibrated.split.SPW3", folder=os.getcwd())
+        graphviper.utils.data.download("J1924-2914.ms.calibrated.split.SPW3", folder=os.getcwd())
         self.alma_ms = os.path.join(os.getcwd(), "J1924-2914.ms.calibrated.split.SPW3")
 
         print(self.alma_ms)

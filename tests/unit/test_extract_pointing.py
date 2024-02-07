@@ -1,7 +1,6 @@
 import os
 import shutil
-import pytest
-import astrohack
+import graphviper
 
 from astrohack.extract_pointing import extract_pointing
 
@@ -12,7 +11,7 @@ class TestExtractPointing:
         cls.datafolder = "point_data"
         cls.ms = "ea25_cal_small_after_fixed.split.ms"
         
-        astrohack.data.datasets.download(file=cls.ms, folder=cls.datafolder)
+        graphviper.utils.data.download(file=cls.ms, folder=cls.datafolder)
         
         cls.ms_name = os.path.join(cls.datafolder, cls.ms)
 

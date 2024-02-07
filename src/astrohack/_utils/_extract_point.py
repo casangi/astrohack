@@ -2,7 +2,7 @@ import os
 
 import dask
 import numpy as np
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 import xarray as xr
 
 from astrohack._utils._conversion import convert_dict_from_numba

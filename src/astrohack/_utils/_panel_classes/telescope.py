@@ -2,7 +2,7 @@ import sys
 import xarray as xr
 import astrohack
 import os
-import skriba.logger
+import graphviper.utils.logger as logger
 
 py310 = sys.version_info >= (3, 10)
 
@@ -88,7 +88,7 @@ class Telescope:
         Performs a consistency check on the telescope parameters for the ringed telescope case
         """
         error = False
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+
         if not self.nrings == len(self.inrad) == len(self.ourad):
             logger.error("Number of panels don't match radii or number of panels list sizes")
             error = True

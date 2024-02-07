@@ -4,16 +4,16 @@ from astrohack._utils._dio import _aips_holog_to_xds
 from astrohack._utils._conversion import _convert_unit
 
 import numpy as np
-import astrohack
+import graphviper
 import shutil
 
 
-datafolder = "./paneldata/"
+datafolder = "paneldata/"
 
 
 def setup():
     # Download relevant panel test files
-    astrohack.data.datasets.download(file="panel_test_files", folder=datafolder)
+    graphviper.utils.data.download(file="panel_test_files", folder=datafolder)
 
 
 def cleanup():

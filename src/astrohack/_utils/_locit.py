@@ -3,7 +3,7 @@ from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from scipy import optimize as opt
 
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 import astropy.units as units
 import xarray as xr
 import numpy as np
