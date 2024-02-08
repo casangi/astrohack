@@ -3,7 +3,7 @@ import graphviper.utils.logger as logger
 
 from astrohack._utils._dio import _load_point_file, _check_if_file_will_be_overwritten, _check_if_file_exists
 from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._extract_point import _extract_pointing
+from astrohack.core.extract_pointing import process_extract_pointing
 from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackPointFile
 
@@ -70,7 +70,7 @@ def extract_pointing(
     _check_if_file_exists(extract_pointing_params['ms_name'])
     _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
 
-    pnt_dict = _extract_pointing(
+    pnt_dict = process_extract_pointing(
         ms_name=extract_pointing_params['ms_name'],
         pnt_name=extract_pointing_params['point_name'],
         exclude=extract_pointing_params['exclude'],

@@ -15,7 +15,7 @@ from numba.typed import Dict
 from scipy import spatial
 
 
-def _extract_pointing(ms_name, pnt_name, exclude, parallel=True):
+def process_extract_pointing(ms_name, pnt_name, exclude, parallel=True):
     """Top level function to extract subset of pointing table data into a dictionary of xarray dataarrays.
 
     Args:

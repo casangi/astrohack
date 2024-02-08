@@ -8,21 +8,21 @@ from astrohack._utils._plot_commons import custom_plots_checker
 from astrohack._utils._dask_graph_tools import _dask_general_compute
 from astrohack._utils._diagnostics import _calibration_plot_chunk
 from astrohack._utils._dio import _create_destination_folder
-from astrohack._utils._dio import _load_holog_file
-from astrohack._utils._dio import _load_image_file
-from astrohack._utils._dio import _load_locit_file
-from astrohack._utils._dio import _load_panel_file
-from astrohack._utils._dio import _load_point_file
-from astrohack._utils._dio import _load_position_file
-from astrohack._utils._dio import _read_meta_data
-from astrohack.core._extract_holog import _plot_lm_coverage, _export_to_aips
+from astrohack.core.io.file import load_holog_file
+from astrohack.core.io.file import load_image_file
+from astrohack.core.io.file import load_locit_file
+from astrohack.core.io.file import load_panel_file
+from astrohack.core.io.file import load_point_file
+from astrohack.core.io.file import load_position_file
+from astrohack.core.io.file import read_meta_data
+from astrohack.core.extract_holog import _plot_lm_coverage, _export_to_aips
 from astrohack._utils._extract_locit import _plot_source_table, _plot_array_configuration, _print_array_configuration
-from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
+from astrohack.core.holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
 from astrohack._utils._locit import _plot_delays_chunk, _plot_position_corrections
-from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
-from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
-from astrohack._utils._panel_classes.telescope import Telescope
+from astrohack.core.panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
+from astrohack.core.antenna_surface import AntennaSurface
+from astrohack.core.telescope import Telescope
 from astrohack._utils._tools import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
 from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
 
@@ -407,7 +407,7 @@ class AstrohackHologFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        # logger = skriba.logger.get_logger()
+
 
         if file is None:
             file = self.file
@@ -696,7 +696,7 @@ class AstrohackPanelFile(dict):
             file = self.file
 
         try:
-            _load_panel_file(file, panel_dict=self)
+            load_panel_file(file, panel_dict=self)
             self._file_is_open = True
         except Exception as error:
             logger.error(f"{error}")
@@ -715,9 +715,7 @@ class AstrohackPanelFile(dict):
         _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
                             self.plot_antennas])
 
-    @graphviper.utils.parameter.validate(
-        
-    )
+    @graphviper.utils.parameter.validate()
     def get_antenna(
             self,
             ant: str,

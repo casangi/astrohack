@@ -1,12 +1,11 @@
-import numpy as np
 import xarray as xr
 
 from matplotlib import patches
 
 import graphviper.utils.logger as logger
 
-from astrohack._utils._panel_classes.base_panel import PANEL_MODELS, irigid
-from astrohack._utils._panel_classes.ring_panel import RingPanel
+from astrohack.core.base_panel import PANEL_MODELS, irigid
+from astrohack.core.ring_panel import RingPanel
 from astrohack._utils._constants import *
 from astrohack._utils._conversion import _convert_to_db
 from astrohack._utils._conversion import _convert_unit

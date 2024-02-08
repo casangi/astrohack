@@ -4,21 +4,23 @@ import os
 import pathlib
 import pickle
 import shutil
-from typing import Union, List, NewType, Dict, Any, Tuple
 import math
 import multiprocessing
 
 import graphviper.utils.parameter
 import dask
-import numpy as np
+import astrohack
 import psutil
+
+import numpy as np
 import graphviper.utils.logger as logger
+
 from astropy.time import Time
 from casacore import tables as ctables
 from rich.console import Console
 from rich.table import Table
 
-import astrohack
+
 from astrohack._utils._constants import pol_str
 from astrohack._utils._conversion import _convert_ant_name_to_id
 from astrohack._utils._dio import _check_if_file_exists
@@ -26,14 +28,16 @@ from astrohack._utils._dio import _check_if_file_will_be_overwritten
 from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _write_meta_data
-from astrohack.core._extract_holog import _create_holog_meta_data
-from astrohack.core._extract_holog import _create_holog_obs_dict
-from astrohack.core._extract_holog import _extract_holog_chunk
+from astrohack.core.extract_holog import _create_holog_meta_data
+from astrohack.core.extract_holog import _create_holog_obs_dict
+from astrohack.core.extract_holog import process_extract_holog_chunk
 from astrohack._utils._tools import NumpyEncoder, _get_valid_state_ids
 from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackHologFile
 from astrohack.mds import AstrohackPointFile
 from astrohack.extract_pointing import extract_pointing
+
+from typing import Union, List, NewType, Dict, Any, Tuple
 
 JSON = NewType("JSON", Dict[str, Any])
 KWARGS = NewType("KWARGS", Union[Dict[str, str], Dict[str, int]])
@@ -603,12 +607,12 @@ def extract_holog(
 
                     if parallel:
                         delayed_list.append(
-                            dask.delayed(_extract_holog_chunk)(
+                            dask.delayed(process_extract_holog_chunk)(
                                 dask.delayed(extract_holog_params)
                             )
                         )
                     else:
-                        _extract_holog_chunk(extract_holog_params)
+                        process_extract_holog_chunk(extract_holog_params)
 
                     count += 1
 

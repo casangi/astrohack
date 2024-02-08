@@ -12,7 +12,7 @@ from astrohack._utils._dio import _check_if_file_exists
 from astrohack._utils._dio import _check_if_file_will_be_overwritten
 from astrohack._utils._dio import _read_meta_data
 from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._holog import _holog_chunk
+from astrohack.core.holog import process_holog_chunk
 from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
@@ -219,7 +219,7 @@ def holog(
 
     if _dask_general_compute(
             holog_json,
-            _holog_chunk,
+            process_holog_chunk,
             holog_params,
             ['ant', 'ddi'],
             parallel=parallel

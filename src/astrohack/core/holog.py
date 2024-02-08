@@ -3,7 +3,7 @@ import xarray as xr
 
 from scipy.interpolate import griddata
 
-from astrohack._utils._panel_classes.telescope import Telescope
+from astrohack.core.telescope import Telescope
 
 from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _read_meta_data, _write_fits
@@ -25,15 +25,15 @@ from astrohack._utils._imaging import _parallactic_derotation
 from astrohack._utils._imaging import _mask_circular_disk
 from astrohack._utils._imaging import _calculate_aperture_pattern
 
-from astrohack._utils._panel import _get_correct_telescope_from_name
-from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
+from astrohack.core.panel import _get_correct_telescope_from_name
+from astrohack.core.antenna_surface import AntennaSurface
 from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _get_proper_color_map
 from astrohack._utils._conversion import _convert_unit
 
 import graphviper.utils.logger as logger
 
 
-def _holog_chunk(holog_chunk_params):
+def process_holog_chunk(holog_chunk_params):
     """ Process chunk holography data along the antenna axis. Works with holography file to properly grid , normalize,
         average and correct data and returns the aperture pattern.
 

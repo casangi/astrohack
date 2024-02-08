@@ -3,9 +3,9 @@ import graphviper.utils.logger as logger
 
 from astrohack._utils._constants import plot_types
 
-from astrohack._utils._panel_classes.telescope import Telescope
-from astrohack._utils._panel_classes.antenna_surface import AntennaSurface, SUPPORTED_POL_STATES
-from astrohack._utils._panel_classes.base_panel import PANEL_MODELS
+from astrohack.core.telescope import Telescope
+from astrohack.core.antenna_surface import AntennaSurface, SUPPORTED_POL_STATES
+from astrohack.core.base_panel import PANEL_MODELS
 
 
 def _get_correct_telescope_from_name(xds):
@@ -20,7 +20,7 @@ def _get_correct_telescope_from_name(xds):
     return telescope
 
 
-def _panel_chunk(panel_chunk_params):
+def process_panel_chunk(panel_chunk_params):
     """
     Process a chunk of the holographies, usually a chunk consists of an antenna over a ddi
     Args:

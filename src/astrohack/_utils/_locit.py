@@ -6,9 +6,8 @@ from scipy import optimize as opt
 import graphviper.utils.logger as logger
 import astropy.units as units
 import xarray as xr
-import numpy as np
 
-from astrohack._utils._panel_classes.telescope import Telescope
+from astrohack.core.telescope import Telescope
 from astrohack._utils._locit_commons import _get_telescope_lat_lon_rad, _compute_antenna_relative_off
 from astrohack._utils._locit_commons import _time_label, _elevation_label, _declination_label
 from astrohack._utils._locit_commons import _plot_antenna_position

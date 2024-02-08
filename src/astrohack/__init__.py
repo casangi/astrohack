@@ -15,14 +15,18 @@ from .data import *
 from .locit import *
 from .extract_locit import *
 
+
 # Set parameter checking system directory.
 if os.path.exists(os.path.dirname(__file__) + "/config/"):
     if not os.getenv("PARAMETER_CONFIG_PATH"):
+
         os.environ["PARAMETER_CONFIG_PATH"] = os.path.dirname(__file__) + "/config/"
 
     else:
         if os.path.dirname(__file__) + "/config/" not in os.getenv("PARAMETER_CONFIG_PATH"):
-            os.environ["PARAMETER_CONFIG_PATH"] = "/config/"
+            os.environ["PARAMETER_CONFIG_PATH"] = ":".join(
+                (os.environ["PARAMETER_CONFIG_PATH"], os.path.dirname(__file__) + "/config/")
+            )
 
 # This installs a slick, informational tracebacks logger
 from rich.traceback import install

@@ -1,4 +1,4 @@
-from astrohack._utils._panel_classes.ring_panel import RingPanel
+from astrohack.core.ring_panel import RingPanel
 import numpy as np
 
 

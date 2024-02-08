@@ -60,7 +60,7 @@ def open_holog(file: str) -> AstrohackHologFile:
         return _data_file
 
     else:
-        logger.error(f"Error opening holgraphy file: {file}")
+        logger.error(f"Error opening holography file: {file}")
 
 
 def open_image(file: str) -> AstrohackImageFile:

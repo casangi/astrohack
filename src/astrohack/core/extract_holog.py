@@ -19,7 +19,7 @@ from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._dio import _load_point_file
 
 
-def _extract_holog_chunk(extract_holog_params):
+def process_extract_holog_chunk(extract_holog_params):
     """Perform data query on holography data chunk and get unique time and state_ids/
 
     Args:

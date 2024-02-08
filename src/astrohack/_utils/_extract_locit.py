@@ -10,7 +10,7 @@ from astropy.time import Time
 
 from prettytable import PrettyTable
 
-from astrohack._utils._panel_classes.telescope import Telescope
+from astrohack.core.telescope import Telescope
 from astrohack._utils._tools import _casa_time_to_mjd, _rad_to_deg_str
 from astrohack._utils._conversion import _convert_unit
 from astrohack._utils._constants import figsize, twopi, notavail
