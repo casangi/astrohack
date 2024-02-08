@@ -15,7 +15,7 @@ from astrohack._utils._dio import _load_panel_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _load_position_file
 from astrohack._utils._dio import _read_meta_data
-from astrohack._utils._extract_holog import _plot_lm_coverage, _export_to_aips
+from astrohack.core._extract_holog import _plot_lm_coverage, _export_to_aips
 from astrohack._utils._extract_locit import _plot_source_table, _plot_array_configuration, _print_array_configuration
 from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk

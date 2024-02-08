@@ -26,9 +26,9 @@ from astrohack._utils._dio import _check_if_file_will_be_overwritten
 from astrohack._utils._dio import _load_holog_file
 from astrohack._utils._dio import _load_point_file
 from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._extract_holog import _create_holog_meta_data
-from astrohack._utils._extract_holog import _create_holog_obs_dict
-from astrohack._utils._extract_holog import _extract_holog_chunk
+from astrohack.core._extract_holog import _create_holog_meta_data
+from astrohack.core._extract_holog import _create_holog_obs_dict
+from astrohack.core._extract_holog import _extract_holog_chunk
 from astrohack._utils._tools import NumpyEncoder, _get_valid_state_ids
 from astrohack._utils._tools import get_default_file_name
 from astrohack.mds import AstrohackHologFile
