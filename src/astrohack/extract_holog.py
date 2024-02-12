@@ -21,18 +21,18 @@ from rich.console import Console
 from rich.table import Table
 
 
-from astrohack._utils._constants import pol_str
-from astrohack._utils._conversion import _convert_ant_name_to_id
-from astrohack._utils._dio import _check_if_file_exists
-from astrohack._utils._dio import _check_if_file_will_be_overwritten
-from astrohack._utils._dio import _load_holog_file
-from astrohack._utils._dio import _load_point_file
-from astrohack._utils._dio import _write_meta_data
+from astrohack.utils._constants import pol_str
+from astrohack.utils._conversion import _convert_ant_name_to_id
+from astrohack.utils._dio import _check_if_file_exists
+from astrohack.utils._dio import _check_if_file_will_be_overwritten
+from astrohack.core.io.file import load_holog_file
+from astrohack.core.io.file import load_point_file
+from astrohack.core.io.data import write_meta_data
 from astrohack.core.extract_holog import _create_holog_meta_data
 from astrohack.core.extract_holog import _create_holog_obs_dict
 from astrohack.core.extract_holog import process_extract_holog_chunk
-from astrohack._utils._tools import NumpyEncoder, _get_valid_state_ids
-from astrohack._utils._tools import get_default_file_name
+from astrohack.utils.tools import NumpyEncoder, _get_valid_state_ids
+from astrohack.utils.tools import get_default_file_name
 from astrohack.mds import AstrohackHologFile
 from astrohack.mds import AstrohackPointFile
 from astrohack.extract_pointing import extract_pointing
@@ -395,7 +395,7 @@ def extract_holog(
     _check_if_file_will_be_overwritten(extract_holog_params['holog_name'], extract_holog_params['overwrite'])
 
     try:
-        pnt_dict = _load_point_file(extract_holog_params['point_name'])
+        pnt_dict = load_point_file(extract_holog_params['point_name'])
 
     except Exception as error:
         logger.error('Error loading {name}. - {error}'.format(name=extract_holog_params["point_name"], error=error))
@@ -629,7 +629,7 @@ def extract_holog(
     if count > 0:
         logger.info("Finished processing")
 
-        holog_dict = _load_holog_file(
+        holog_dict = load_holog_file(
             holog_file=extract_holog_params["holog_name"],
             dask_load=True,
             load_pnt_dict=False
@@ -644,10 +644,10 @@ def extract_holog(
         )
 
         holog_attr_file = "{name}/{ext}".format(name=extract_holog_params['holog_name'], ext=".holog_attr")
-        _write_meta_data(holog_attr_file, meta_data)
+        write_meta_data(holog_attr_file, meta_data)
 
         holog_attr_file = "{name}/{ext}".format(name=extract_holog_params['holog_name'], ext=".holog_input")
-        _write_meta_data(holog_attr_file, input_pars)
+        write_meta_data(holog_attr_file, input_pars)
 
         holog_mds = AstrohackHologFile(extract_holog_params['holog_name'])
         holog_mds.open()

@@ -10,15 +10,15 @@ from astropy.time import Time
 
 from prettytable import PrettyTable
 
-from astrohack.core.telescope import Telescope
-from astrohack._utils._tools import _casa_time_to_mjd, _rad_to_deg_str
-from astrohack._utils._conversion import _convert_unit
-from astrohack._utils._constants import figsize, twopi, notavail
-from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._locit_commons import _compute_antenna_relative_off, _get_telescope_lat_lon_rad
-from astrohack._utils._locit_commons import _plot_boxes_limits_and_labels
-from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _scatter_plot
-from astrohack._utils._locit_commons import _plot_antenna_position
+from astrohack.antenna.telescope import Telescope
+from astrohack.utils.tools import _casa_time_to_mjd, _rad_to_deg_str
+from astrohack.utils._conversion import _convert_unit
+from astrohack.utils._constants import figsize, twopi, notavail
+from astrohack.core.io.data import write_meta_data
+from astrohack.utils._locit_commons import _compute_antenna_relative_off, _get_telescope_lat_lon_rad
+from astrohack.utils._locit_commons import _plot_boxes_limits_and_labels
+from astrohack.utils._plot_commons import _create_figure_and_axes, _close_figure, _scatter_plot
+from astrohack.utils._locit_commons import _plot_antenna_position
 
 
 def _extract_antenna_data(extract_locit_parms):
@@ -29,7 +29,7 @@ def _extract_antenna_data(extract_locit_parms):
     Returns:
     Antenna dictionary
     """
-    
+
     cal_table = extract_locit_parms['cal_table']
     ant_table = ctables.table(cal_table + '::ANTENNA', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     ant_off = ant_table.getcol('OFFSET')
@@ -88,9 +88,9 @@ def _extract_spectral_info(extract_locit_parms):
     Returns:
     DDI dictionary
     """
-    
+
     cal_table = extract_locit_parms['cal_table']
-    spw_table = ctables.table(cal_table+'::SPECTRAL_WINDOW', readonly=True, lockoptions={'option': 'usernoread'},
+    spw_table = ctables.table(cal_table + '::SPECTRAL_WINDOW', readonly=True, lockoptions={'option': 'usernoread'},
                               ack=False)
     ref_freq = spw_table.getcol('REF_FREQUENCY')
     n_chan = spw_table.getcol('NUM_CHAN')
@@ -133,21 +133,23 @@ def _extract_source_and_telescope(extract_locit_parms):
     """
     cal_table = extract_locit_parms['cal_table']
     basename = extract_locit_parms['locit_name']
-    src_table = ctables.table(cal_table+'::FIELD', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    src_table = ctables.table(cal_table + '::FIELD', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
     src_ids = src_table.getcol('SOURCE_ID')
     phase_center_fk5 = src_table.getcol('PHASE_DIR')[:, 0, :]
     src_name = src_table.getcol('NAME')
     src_table.close()
     n_src = len(src_ids)
 
-    phase_center_fk5[:, 0] = np.where(phase_center_fk5[:, 0] < 0, phase_center_fk5[:, 0]+twopi, phase_center_fk5[:, 0])
+    phase_center_fk5[:, 0] = np.where(phase_center_fk5[:, 0] < 0, phase_center_fk5[:, 0] + twopi,
+                                      phase_center_fk5[:, 0])
 
-    obs_table = ctables.table(cal_table+'::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
+    obs_table = ctables.table(cal_table + '::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'},
+                              ack=False)
     time_range = _casa_time_to_mjd(obs_table.getcol('TIME_RANGE')[0])
     telescope_name = obs_table.getcol('TELESCOPE_NAME')[0]
     obs_table.close()
 
-    mid_time = Time((time_range[-1]+time_range[0])/2, scale='utc', format='mjd')
+    mid_time = Time((time_range[-1] + time_range[0]) / 2, scale='utc', format='mjd')
 
     astropy_fk5 = SkyCoord(phase_center_fk5[:, 0], phase_center_fk5[:, 1], unit=units.rad, frame='fk5')
     astropy_precessed = astropy_fk5.transform_to(CIRS(obstime=mid_time))
@@ -164,7 +166,7 @@ def _extract_source_and_telescope(extract_locit_parms):
 
     obs_dict = {'src_dict': src_dict, 'time_range': time_range.tolist(), 'telescope_name': telescope_name}
 
-    _write_meta_data("/".join([basename, ".observation_info"]), obs_dict)
+    write_meta_data("/".join([basename, ".observation_info"]), obs_dict)
     extract_locit_parms['telescope_name'] = telescope_name
     return telescope_name, n_src
 
@@ -178,13 +180,17 @@ def _extract_antenna_phase_gains(extract_locit_parms):
     Returns:
     Reference antenna
     """
-    
 
     cal_table = extract_locit_parms['cal_table']
     basename = extract_locit_parms['locit_name']
 
-    obs_table = ctables.table(cal_table + '::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'},
-                              ack=False)
+    obs_table = ctables.table(
+        cal_table + '::OBSERVATION',
+        readonly=True,
+        lockoptions={'option': 'usernoread'},
+        ack=False
+    )
+
     telescope_name = obs_table.getcol('TELESCOPE_NAME')[0]
     obs_table.close()
 
@@ -205,14 +211,14 @@ def _extract_antenna_phase_gains(extract_locit_parms):
     n_refant = len(ref_antennas)
     if n_refant > 1:
         i_best_ant = np.argmax(counts)
-        fraction_best = counts[i_best_ant]/n_gains
+        fraction_best = counts[i_best_ant] / n_gains
         if fraction_best < 0.5:
-            logger.warning(f'The best reference Antenna only covers {100*fraction_best:.1f}% of the data')
+            logger.warning(f'The best reference Antenna only covers {100 * fraction_best:.1f}% of the data')
         for i_refant in range(n_refant):
             if i_refant != i_best_ant:
                 logger.info(f'Discarding gains derived with antenna '
                             f'{extract_locit_parms["full_antenna_list"][ref_antennas[i_refant]]}'
-                            f' as reference ({100*counts[i_refant]/n_gains:.2f}% of the data)')
+                            f' as reference ({100 * counts[i_refant] / n_gains:.2f}% of the data)')
                 sel_refant = antenna2 != ref_antennas[i_refant]
                 antenna2 = antenna2[sel_refant]
                 antenna1 = antenna1[sel_refant]
@@ -238,10 +244,7 @@ def _extract_antenna_phase_gains(extract_locit_parms):
         raise Exception(msg)
 
     n_pol = gains.shape[2]
-    if n_pol != 2:
-        msg = f'Calibration table has {n_pol} polarizations, which is not supported'
-        logger.erro(msg)
-        raise Exception(msg)
+    assert n_pol == 2, logger.error(f'Calibration table has {n_pol} polarizations, which is not supported')
 
     used_sources = []
     extract_locit_parms['reference_antenna'] = extract_locit_parms['full_antenna_list'][ref_antenna]
@@ -278,10 +281,10 @@ def _extract_antenna_phase_gains(extract_locit_parms):
             this_ddi_xds.attrs['frequency'] = ddi['frequency']
             this_ddi_xds.attrs['bandwidth'] = ddi['bandwidth']
             this_ddi_xds.attrs['polarization_scheme'] = polarization_scheme
-            outname = "/".join([basename, 'ant_'+antenna['name'], f'ddi_{ddi["id"]}'])
+            outname = "/".join([basename, 'ant_' + antenna['name'], f'ddi_{ddi["id"]}'])
             this_ddi_xds = this_ddi_xds.assign_coords(coords)
             this_ddi_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
-        _write_meta_data("/".join([basename, 'ant_'+antenna['name'], ".antenna_info"]), antenna)
+        write_meta_data("/".join([basename, 'ant_' + antenna['name'], ".antenna_info"]), antenna)
     extract_locit_parms['used_sources'] = np.unique(np.array(used_sources))
     return
 
@@ -299,7 +302,7 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
         figure_size: plot dimensions in inches
         dpi: Dots per inch (plot resolution)
     """
-    
+
     n_src = len(src_dict)
     radec = np.ndarray((n_src, 2))
     name = []
@@ -408,7 +411,7 @@ def _print_array_configuration(params, ant_dict, telescope_name):
         table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Radius [m]']
 
     for ant_name in telescope.ant_list:
-        ant_key = 'ant_'+ant_name
+        ant_key = 'ant_' + ant_name
         if ant_key in ant_dict:
             antenna = ant_dict[ant_key]
             if antenna['reference']:
@@ -418,8 +421,8 @@ def _print_array_configuration(params, ant_dict, telescope_name):
                 offsets = _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad)
                 row.extend([f'{offsets[0]:.4f}', f'{offsets[1]:.4f}', f'{offsets[2]:.4f}', f'{offsets[3]:.4f}'])
             else:
-                row.extend([_rad_to_deg_str(antenna['longitude']),  _rad_to_deg_str(antenna['latitude']),
-                           f'{antenna["radius"]:.4f}'])
+                row.extend([_rad_to_deg_str(antenna['longitude']), _rad_to_deg_str(antenna['latitude']),
+                            f'{antenna["radius"]:.4f}'])
             table.add_row(row)
         else:
             row = [ant_name]
@@ -429,5 +432,3 @@ def _print_array_configuration(params, ant_dict, telescope_name):
 
     print(table)
     return
-
-

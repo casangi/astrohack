@@ -1,10 +1,11 @@
 import graphviper.utils.parameter
 import graphviper.utils.logger as logger
 
-from astrohack._utils._dio import _load_point_file, _check_if_file_will_be_overwritten, _check_if_file_exists
-from astrohack._utils._dio import _write_meta_data
+from astrohack.utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
+from astrohack.core.io.file import load_point_file
+from astrohack.core.io.data import write_meta_data
 from astrohack.core.extract_pointing import process_extract_pointing
-from astrohack._utils._tools import get_default_file_name
+from astrohack.utils.tools import get_default_file_name
 from astrohack.mds import AstrohackPointFile
 
 from typing import List, Union
@@ -78,13 +79,13 @@ def extract_pointing(
     )
 
     # Calling this directly since it is so simple it doesn't need a "_create_{}" function.
-    _write_meta_data(
+    write_meta_data(
         file_name="{name}/{ext}".format(name=extract_pointing_params['point_name'], ext=".point_input"),
         input_dict=input_params
     )
 
     logger.info(f"Finished processing")
-    point_dict = _load_point_file(file=extract_pointing_params["point_name"], dask_load=True)
+    point_dict = load_point_file(file=extract_pointing_params["point_name"], dask_load=True)
 
     pointing_mds = AstrohackPointFile(extract_pointing_params['point_name'])
     pointing_mds.open()

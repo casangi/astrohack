@@ -1,5 +1,5 @@
 import pytest
-from astrohack.core.telescope import Telescope, _find_cfg_file, tel_data_path
+from astrohack.antenna.telescope import Telescope, _find_cfg_file, tel_data_path
 import os
 import filecmp
 import shutil

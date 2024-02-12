@@ -7,13 +7,13 @@ import graphviper.utils.parameter
 from numbers import Number
 from typing import List, Union, NewType
 
-from astrohack._utils._dask_graph_tools import _dask_general_compute
-from astrohack._utils._dio import _check_if_file_exists
-from astrohack._utils._dio import _check_if_file_will_be_overwritten
-from astrohack._utils._dio import _read_meta_data
-from astrohack._utils._dio import _write_meta_data
+from astrohack.utils._dask_graph_tools import _dask_general_compute
+from astrohack.utils._dio import _check_if_file_exists
+from astrohack.utils._dio import _check_if_file_will_be_overwritten
+from astrohack.core.io.data import read_meta_data
+from astrohack.core.io.data import write_meta_data
 from astrohack.core.holog import process_holog_chunk
-from astrohack._utils._tools import get_default_file_name
+from astrohack.utils.tools import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
 Array = NewType("Array", Union[np.array, List[int], List[float]])
@@ -163,7 +163,7 @@ def holog(
     with open(json_data, "r") as json_file:
         holog_json = json.load(json_file)
 
-    meta_data = _read_meta_data(holog_params['holog_name'] + '/.holog_attr')
+    meta_data = read_meta_data(holog_params['holog_name'] + '/.holog_attr')
 
     # If cell size is None, fill from metadata if it exists
     if holog_params["cell_size"] is None:
@@ -226,10 +226,10 @@ def holog(
     ):
 
         output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_attr")
-        _write_meta_data(output_attr_file, holog_params)
+        write_meta_data(output_attr_file, holog_params)
 
         output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_input")
-        _write_meta_data(output_attr_file, input_params)
+        write_meta_data(output_attr_file, input_params)
 
         image_mds = AstrohackImageFile(holog_params['image_name'])
         image_mds.open()

@@ -1,8 +1,8 @@
 import pytest
 
-from astrohack.core.base_panel import _gauss_elimination_numpy, BasePanel, \
+from astrohack.antenna.base_panel import _gauss_elimination_numpy, BasePanel, \
      PANEL_MODELS, imean, irigid, icorscp, icorlst, ixypara, icorrob, irotpara, ifulllst
-from astrohack._utils._conversion import _convert_unit
+from astrohack.utils._conversion import _convert_unit
 import numpy as np
 
 

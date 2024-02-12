@@ -2,7 +2,7 @@ import numpy as np
 import scipy.signal as scisig
 import scipy.constants
 
-from astrohack.core.telescope import Telescope
+from astrohack.antenna.telescope import Telescope
 
 import graphviper.utils.logger as logger
 

@@ -1,8 +1,8 @@
 import numpy as np
 from numba import njit
 
-from astrohack._utils._algorithms import _least_squares_fit_block
-from astrohack._utils._conversion import _convert_unit
+from astrohack.utils.algorithms import _least_squares_fit_block
+from astrohack.utils._conversion import _convert_unit
 
 
 def _create_phase_model(npix, parameters, wavelength, telescope, cellxy):

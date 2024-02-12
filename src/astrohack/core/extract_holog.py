@@ -11,12 +11,12 @@ from numba.core import types
 from datetime import date
 
 from casacore import tables as ctables
-from astrohack._utils._imaging import _calculate_parallactic_angle_chunk
-from astrohack._utils._algorithms import calculate_optimal_grid_parameters, _significant_digits
-from astrohack._utils._plot_commons import _create_figure_and_axes, _scatter_plot, _close_figure
-from astrohack._utils._conversion import _convert_unit
+from astrohack.utils._imaging import _calculate_parallactic_angle_chunk
+from astrohack.utils.algorithms import calculate_optimal_grid_parameters, _significant_digits
+from astrohack.utils._plot_commons import _create_figure_and_axes, _scatter_plot, _close_figure
+from astrohack.utils._conversion import _convert_unit
 
-from astrohack._utils._dio import _load_point_file
+from astrohack.core.io.file import load_point_file
 
 
 def process_extract_holog_chunk(extract_holog_params):
@@ -110,7 +110,7 @@ def process_extract_holog_chunk(extract_holog_params):
 
     map_ant_name_list = ["_".join(("ant", i)) for i in map_ant_name_list]
 
-    pnt_ant_dict = _load_point_file(pnt_name, map_ant_name_list, dask_load=False)
+    pnt_ant_dict = load_point_file(pnt_name, map_ant_name_list, dask_load=False)
     pnt_map_dict = _extract_pointing_chunk(map_ant_name_list, time_vis, pnt_ant_dict)
 
     grid_params = {}
@@ -128,7 +128,7 @@ def process_extract_holog_chunk(extract_holog_params):
 
     # ## To DO: ################## Average multiple repeated samples over_flow_protector_constant = float("%.5g" %
     # time_vis[0])  # For example 5076846059.4 -> 5076800000.0 time_vis = time_vis - over_flow_protector_constant
-    # from astrohack._utils._algorithms import _average_repeated_pointings time_vis = _average_repeated_pointings(
+    # from astrohack.utils._algorithms import _average_repeated_pointings time_vis = _average_repeated_pointings(
     # vis_map_dict, weight_map_dict, flagged_mapping_antennas,time_vis,pnt_map_dict,ant_names) time_vis = time_vis +
     # over_flow_protector_constant
 
@@ -680,7 +680,7 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         logger.warning('Calculating suggested cell size ...')
 
         meta_data["cell_size"] = \
-            astrohack._utils._algorithms._calculate_suggested_grid_parameter(parameter=np.array(cell_sizes))
+            astrohack.utils.algorithms._calculate_suggested_grid_parameter(parameter=np.array(cell_sizes))
 
         logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))
 
@@ -689,7 +689,7 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         logger.warning('Calculating suggested number of pixels ...')
 
         meta_data['n_pix'] = int(
-            astrohack._utils._algorithms._calculate_suggested_grid_parameter(parameter=np.array(n_pixs)))
+            astrohack.utils.algorithms._calculate_suggested_grid_parameter(parameter=np.array(n_pixs)))
 
         logger.info("The suggested number of pixels is calculated to be: {n_pix} (grid: {points} x {points})".format(
             n_pix=meta_data["n_pix"], points=int(np.sqrt(meta_data["n_pix"]))

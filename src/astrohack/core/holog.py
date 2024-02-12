@@ -3,32 +3,39 @@ import xarray as xr
 
 from scipy.interpolate import griddata
 
-from astrohack.core.telescope import Telescope
+from astrohack.antenna.telescope import Telescope
 
-from astrohack._utils._dio import _load_holog_file
-from astrohack._utils._dio import _read_meta_data, _write_fits
+from astrohack.core.io.file import load_holog_file
+from astrohack.core.io.file import write_fits
 
-from astrohack._utils._phase_fitting import _phase_fitting_block
+from astrohack.core.io.data import read_meta_data
 
-from astrohack._utils._algorithms import _chunked_average
-from astrohack._utils._algorithms import _find_peak_beam_value
-from astrohack._utils._algorithms import _find_nearest
-from astrohack._utils._algorithms import _calc_coords
+from astrohack.utils._phase_fitting import _phase_fitting_block
 
-from astrohack._utils._conversion import _to_stokes
-from astrohack._utils._constants import clight
-from astrohack._utils._tools import _bool_to_string, _axis_to_fits_header, _stokes_axis_to_fits_header, \
-    _resolution_to_fits_header, _add_prefix
-from astrohack._utils._plot_commons import _well_positioned_colorbar
+from astrohack.utils.algorithms import _chunked_average
+from astrohack.utils.algorithms import _find_peak_beam_value
+from astrohack.utils.algorithms import _find_nearest
+from astrohack.utils.algorithms import _calc_coords
 
-from astrohack._utils._imaging import _parallactic_derotation
-from astrohack._utils._imaging import _mask_circular_disk
-from astrohack._utils._imaging import _calculate_aperture_pattern
+from astrohack.utils._conversion import _to_stokes
+from astrohack.utils._constants import clight
+
+from astrohack.utils.tools import _bool_to_string
+from astrohack.utils.tools import _axis_to_fits_header
+from astrohack.utils.tools import _stokes_axis_to_fits_header
+from astrohack.utils.tools import _resolution_to_fits_header
+from astrohack.utils.tools import add_prefix
+
+from astrohack.utils._plot_commons import _well_positioned_colorbar
+
+from astrohack.utils._imaging import _parallactic_derotation
+from astrohack.utils._imaging import _mask_circular_disk
+from astrohack.utils._imaging import _calculate_aperture_pattern
 
 from astrohack.core.panel import _get_correct_telescope_from_name
-from astrohack.core.antenna_surface import AntennaSurface
-from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _get_proper_color_map
-from astrohack._utils._conversion import _convert_unit
+from astrohack.antenna.antenna_surface import AntennaSurface
+from astrohack.utils._plot_commons import _create_figure_and_axes, _close_figure, _get_proper_color_map
+from astrohack.utils._conversion import _convert_unit
 
 import graphviper.utils.logger as logger
 
@@ -40,7 +47,7 @@ def process_holog_chunk(holog_chunk_params):
     Args:
         holog_chunk_params (dict): Dictionary containing holography parameters.
     """
-    holog_file, ant_data_dict = _load_holog_file(
+    holog_file, ant_data_dict = load_holog_file(
         holog_chunk_params["holog_name"],
         dask_load=False,
         load_pnt_dict=False,
@@ -48,7 +55,7 @@ def process_holog_chunk(holog_chunk_params):
         ddi_id=holog_chunk_params["this_ddi"]
     )
 
-    meta_data = _read_meta_data(holog_chunk_params["holog_name"]+'/.holog_attr')
+    meta_data = read_meta_data(holog_chunk_params["holog_name"]+'/.holog_attr')
 
     # Calculate lm coordinates
     l, m = _calc_coords(holog_chunk_params["grid_size"], holog_chunk_params["cell_size"])
@@ -402,36 +409,36 @@ def _export_to_fits_holog_chunk(parm_dict):
     beamheader['RADESYSA'] = 'FK5'
     beam = inputxds['BEAM'].values
     if parm_dict['complex_split'] == 'cartesian':
-        _write_fits(beamheader, 'Complex beam real part', beam.real, _add_prefix(basename, 'beam_real')+'.fits',
+        write_fits(beamheader, 'Complex beam real part', beam.real, add_prefix(basename, 'beam_real')+'.fits',
                     'Normalized', 'image')
-        _write_fits(beamheader, 'Complex beam imag part', beam.imag, _add_prefix(basename, 'beam_imag')+'.fits',
+        write_fits(beamheader, 'Complex beam imag part', beam.imag, add_prefix(basename, 'beam_imag')+'.fits',
                     'Normalized', 'image')
     else:
-        _write_fits(beamheader, 'Complex beam amplitude', np.absolute(beam),
-                    _add_prefix(basename, 'beam_amplitude')+'.fits', 'Normalized', 'image')
-        _write_fits(beamheader, 'Complex beam phase', np.angle(beam),
-                    _add_prefix(basename, 'beam_phase')+'.fits', 'Radians', 'image')
+        write_fits(beamheader, 'Complex beam amplitude', np.absolute(beam),
+                    add_prefix(basename, 'beam_amplitude')+'.fits', 'Normalized', 'image')
+        write_fits(beamheader, 'Complex beam phase', np.angle(beam),
+                    add_prefix(basename, 'beam_phase')+'.fits', 'Radians', 'image')
     wavelength = clight / inputxds.chan.values[0]
     apertureheader = _axis_to_fits_header(baseheader, inputxds.u.values*wavelength, 1, 'X----LIN', 'm')
     apertureheader = _axis_to_fits_header(apertureheader, inputxds.u.values*wavelength, 2, 'Y----LIN', 'm')
     apertureheader = _resolution_to_fits_header(apertureheader, aperture_resolution)
     aperture = inputxds['APERTURE'].values
     if parm_dict['complex_split'] == 'cartesian':
-        _write_fits(apertureheader, 'Complex aperture real part', aperture.real,
-                    _add_prefix(basename, 'aperture_real')+'.fits', 'Normalized', 'image')
-        _write_fits(apertureheader, 'Complex aperture imag part', aperture.imag,
-                    _add_prefix(basename, 'aperture_imag')+'.fits', 'Normalized', 'image')
+        write_fits(apertureheader, 'Complex aperture real part', aperture.real,
+                    add_prefix(basename, 'aperture_real')+'.fits', 'Normalized', 'image')
+        write_fits(apertureheader, 'Complex aperture imag part', aperture.imag,
+                    add_prefix(basename, 'aperture_imag')+'.fits', 'Normalized', 'image')
     else:
-        _write_fits(apertureheader, 'Complex aperture amplitude', np.absolute(aperture),
-                    _add_prefix(basename, 'aperture_amplitude')+'.fits', 'Normalized', 'image')
-        _write_fits(apertureheader, 'Complex aperture phase', np.angle(aperture),
-                    _add_prefix(basename, 'aperture_phase')+'.fits', 'rad', 'image')
+        write_fits(apertureheader, 'Complex aperture amplitude', np.absolute(aperture),
+                    add_prefix(basename, 'aperture_amplitude')+'.fits', 'Normalized', 'image')
+        write_fits(apertureheader, 'Complex aperture phase', np.angle(aperture),
+                    add_prefix(basename, 'aperture_phase')+'.fits', 'rad', 'image')
 
     phase_amp_header = _axis_to_fits_header(baseheader, inputxds.u_prime.values*wavelength, 1, 'X----LIN', 'm')
     phase_amp_header = _axis_to_fits_header(phase_amp_header, inputxds.v_prime.values*wavelength, 2, 'Y----LIN', 'm')
     phase_amp_header = _resolution_to_fits_header(phase_amp_header, aperture_resolution)
-    _write_fits(phase_amp_header, 'Cropped aperture corrected phase', inputxds['CORRECTED_PHASE'].values,
-                _add_prefix(basename, 'corrected_phase')+'.fits', 'rad', 'image')
+    write_fits(phase_amp_header, 'Cropped aperture corrected phase', inputxds['CORRECTED_PHASE'].values,
+                add_prefix(basename, 'corrected_phase')+'.fits', 'rad', 'image')
     return
 
 
@@ -527,7 +534,7 @@ def _plot_beam(laxis, maxis, pol_axis, data, basename, label, zunit, parm_dict):
         axis.set_xlabel(f'L axis [{parm_dict["angle_unit"]}]')
         axis.set_ylabel(f'M axis [{parm_dict["angle_unit"]}]')
 
-    plot_name = _add_prefix(_add_prefix(basename, label), 'image_beam')
+    plot_name = add_prefix(add_prefix(basename, label), 'image_beam')
     suptitle = f'Beam {label}, Antenna: {parm_dict["this_ant"].split("_")[1]}, DDI: {parm_dict["this_ddi"].split("_")[1]}'
     _close_figure(fig, suptitle, plot_name, parm_dict["dpi"], parm_dict["display"])
     return

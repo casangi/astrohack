@@ -11,7 +11,7 @@ from astrohack.extract_holog import generate_holog_obs_dict
 from astrohack.extract_holog import extract_holog
 from astrohack.holog import holog
 
-from astrohack._utils._logger._astrohack_logger import _get_astrohack_logger
+from astrohack.utils._logger._astrohack_logger import _get_astrohack_logger
 
 def process():
     # < -------------------------------------------------------------------- >

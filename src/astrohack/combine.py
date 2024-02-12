@@ -3,10 +3,11 @@ from typing import Union, List
 import graphviper.utils.parameter
 import graphviper.utils.logger as logger
 
-from astrohack._utils._combine import _combine_chunk
-from astrohack._utils._dask_graph_tools import _dask_general_compute
-from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
-from astrohack._utils._tools import get_default_file_name
+from astrohack.core.combine import _combine_chunk
+from astrohack.utils._dask_graph_tools import _dask_general_compute
+from astrohack.utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
+from astrohack.core.io.data import write_meta_data
+from astrohack.utils.tools import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
 
@@ -97,10 +98,10 @@ def combine(
         logger.info("Finished processing")
 
         output_attr_file = "{name}/{ext}".format(name=combine_params['combine_name'], ext=".image_attr")
-        _write_meta_data(output_attr_file, image_attr)
+        write_meta_data(output_attr_file, image_attr)
 
         output_attr_file = "{name}/{ext}".format(name=combine_params['combine_name'], ext=".image_input")
-        _write_meta_data(output_attr_file, input_params)
+        write_meta_data(output_attr_file, input_params)
 
         combine_mds = AstrohackImageFile(combine_params['combine_name'])
         combine_mds.open()

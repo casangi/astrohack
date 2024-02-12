@@ -3,11 +3,11 @@ from typing import Union, List
 import graphviper.utils.parameter
 import graphviper.utils.logger as logger
 
-from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
-from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._extract_locit import _extract_antenna_data, _extract_spectral_info
-from astrohack._utils._extract_locit import _extract_source_and_telescope, _extract_antenna_phase_gains
-from astrohack._utils._tools import get_default_file_name
+from astrohack.utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
+from astrohack.core.io.data import write_meta_data
+from astrohack.core.extract_locit import _extract_antenna_data, _extract_spectral_info
+from astrohack.core.extract_locit import _extract_source_and_telescope, _extract_antenna_phase_gains
+from astrohack.utils.tools import get_default_file_name
 from astrohack.mds import AstrohackLocitFile
 
 
@@ -95,10 +95,10 @@ def extract_locit(
     attributes['n_antennas'] = len(extract_locit_params['ant_dict'])
 
     output_attr_file = "{name}/{ext}".format(name=extract_locit_params['locit_name'], ext=".locit_input")
-    _write_meta_data(output_attr_file, input_params)
+    write_meta_data(output_attr_file, input_params)
 
     output_attr_file = "{name}/{ext}".format(name=extract_locit_params['locit_name'], ext=".locit_attr")
-    _write_meta_data(output_attr_file, attributes)
+    write_meta_data(output_attr_file, attributes)
 
     logger.info(f"Finished processing")
     locit_mds = AstrohackLocitFile(extract_locit_params['locit_name'])

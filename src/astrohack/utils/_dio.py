@@ -1,24 +1,12 @@
 import os
-import json
 import zarr
-import copy
-import datetime
 import shutil
-import inspect
 import pathlib
 
 import numpy as np
 import xarray as xr
 
 import graphviper.utils.logger as logger
-
-from astropy.io import fits
-from astrohack import __version__ as code_version
-
-from astrohack._utils._tools import _add_prefix
-from astrohack._utils._tools import NumpyEncoder
-
-DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 
 def _check_if_file_exists(file):
@@ -42,21 +30,6 @@ def _check_if_file_will_be_overwritten(file, overwrite):
         else:
             logger.warning(f'{file} may not be valid hack file. Check the file name again.')
             raise Exception(f"IncorrectFileType: {file}")
-
-
-
-
-def _reorder_axes_for_fits(data: np.ndarray):
-    carta_dim_order = (1, 0, 2, 3,)
-    shape = data.shape
-    n_dim = len(shape)
-    if n_dim == 5:
-        # Ignore the time dimension and flip polarization and frequency axes
-        transpo = np.transpose(data[0, ...], carta_dim_order)
-        # Flip vertical axis
-        return np.flip(transpo, 2)
-    elif n_dim == 2:
-        return np.flipud(data)
 
 
 def _create_destination_folder(destination):
@@ -132,29 +105,6 @@ def _get_aips_headpars(head):
         elif wrds[1] == "Observing":
             wavelength = float(wrds[-2])
     return npoint, wavelength
-
-
-
-
-
-
-
-
-
-
-
-def _get_attrs(zarr_obj):
-    """Get attributes of zarr obj (groups or arrays)
-
-    Args:
-        zarr_obj (zarr): a zarr_group object
-
-    Returns:
-        dict: a group of zarr attributes
-    """
-    return {
-        k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")
-    }
 
 
 def _reshape(array, columns):

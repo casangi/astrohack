@@ -1,10 +1,31 @@
+import copy
+import os
+import datetime
+import zarr
+import astrohack
+
+import xarray as xr
+import numpy as np
 import graphviper.utils.logger as logger
+
+from astropy.io import fits
+
+from astrohack.utils.tools import add_prefix
+from astrohack.utils.tools import reorder_axes_for_fits
+
+from astrohack.core.io.data import get_attrs
+from astrohack.core.io.data import read_meta_data
+from astrohack.core.io.data import read_data_from_holog_json
+
+DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
 
 def load_panel_file(file=None, panel_dict=None, dask_load=True):
     """ Open panel file.
 
     Args:
+        dask_load ():
+        panel_dict ():
         file (str, optional): Path to panel file. Defaults to None.
 
     Returns:
@@ -41,13 +62,16 @@ def load_panel_file(file=None, panel_dict=None, dask_load=True):
 
 
 def load_image_file(file=None, image_dict=None, dask_load=True):
-    """ Open hologgraphy file.
+    """ Open holography file.
 
-    Args:s
+    Args:
         file (str, optional): Path to holography file. Defaults to None.
+        image_dict ():
+        dask_load ():
 
     Returns:
         bool: bool describing whether the file was opened properly
+
     """
 
     ant_data_dict = {}
@@ -84,6 +108,8 @@ def load_locit_file(file=None, locit_dict=None, dask_load=True):
     """ Open Antenna position (locit) file.
 
     Args:
+        dask_load ():
+        locit_dict ():
         file (str, optional): Path to holography file. Defaults to None.
 
 
@@ -98,7 +124,7 @@ def load_locit_file(file=None, locit_dict=None, dask_load=True):
 
     ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
 
-    ant_data_dict['obs_info'] = _read_meta_data(f'{file}/.observation_info')
+    ant_data_dict['obs_info'] = read_meta_data(f'{file}/.observation_info')
     ant_data_dict['ant_info'] = {}
     try:
         for ant in ant_list:
@@ -106,7 +132,7 @@ def load_locit_file(file=None, locit_dict=None, dask_load=True):
                 ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
                             os.path.isdir(file + "/" + str(ant))]
                 ant_data_dict[ant] = {}
-                ant_data_dict['ant_info'][ant] = _read_meta_data(f'{file}/{ant}/.antenna_info')
+                ant_data_dict['ant_info'][ant] = read_meta_data(f'{file}/{ant}/.antenna_info')
                 for ddi in ddi_list:
                     if 'ddi' in ddi:
                         if dask_load:
@@ -125,6 +151,9 @@ def load_position_file(file=None, position_dict=None, dask_load=True, combine=Fa
     """ Open position file.
 
     Args:
+        combine ():
+        dask_load ():
+        position_dict ():
         file (str, optional): Path to holography file. Defaults to None.
 
 
@@ -172,7 +201,13 @@ def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None,
     """Loads holog file from disk
 
     Args:
-        holog_name (str): holog file name
+        holog_dict ():
+        ddi_id ():
+        ant_id ():
+        load_pnt_dict ():
+        dask_load ():
+        holog_file ():
+
 
     Returns:
 
@@ -183,7 +218,7 @@ def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None,
 
     if load_pnt_dict:
         logger.info("Loading pointing dictionary to holog ...")
-        holog_dict["pnt_dict"] = _load_point_file(file=holog_file, ant_list=None, dask_load=dask_load)
+        holog_dict["pnt_dict"] = load_point_file(file=holog_file, ant_list=None, dask_load=dask_load)
 
     for ddi in os.listdir(holog_file):
         if "ddi_" in ddi:
@@ -219,8 +254,12 @@ def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None,
     if ant_id is None:
         return holog_dict
 
-    return holog_dict, _read_data_from_holog_json(holog_file=holog_file, holog_dict=holog_dict, ant_id=ant_id,
-                                                  ddi_id=ddi_id)
+    return holog_dict, read_data_from_holog_json(
+        holog_file=holog_file,
+        holog_dict=holog_dict,
+        ant_id=ant_id,
+        ddi_id=ddi_id
+    )
 
 
 def read_fits(filename):
@@ -262,13 +301,13 @@ def write_fits(header, imagetype, data, filename, unit, origin):
 
     header['BUNIT'] = unit
     header['TYPE'] = imagetype
-    header['ORIGIN'] = f'Astrohack v{code_version}: {origin}'
+    header['ORIGIN'] = f'Astrohack v{astrohack.__version__}: {origin}'
     header['DATE'] = datetime.datetime.now().strftime('%b %d %Y, %H:%M:%S')
 
-    hdu = fits.PrimaryHDU(_reorder_axes_for_fits(data))
+    hdu = fits.PrimaryHDU(reorder_axes_for_fits(data))
     for key in header.keys():
         hdu.header.set(key, header[key])
-    hdu.writeto(_add_prefix(filename, origin), overwrite=True)
+    hdu.writeto(add_prefix(filename, origin), overwrite=True)
     return
 
 
@@ -276,7 +315,8 @@ def load_image_xds(file_stem, ant, ddi, dask_load=True):
     """ Load specific image xds
 
     Args:
-        file_name (str): File directory
+        dask_load ():
+        file_stem (str): File directory
         ant (int): Antenna ID
         ddi (int): DDI
 
@@ -298,90 +338,6 @@ def load_image_xds(file_stem, ant, ddi, dask_load=True):
         raise FileNotFoundError("Image file: {} not found".format(image_path))
 
 
-def read_meta_data(file_name):
-    """Reads dimensional data from holog meta file.
-
-        Args:
-            file_name (str): astorhack file name.
-
-        Returns:
-            dict: dictionary containing dimension data.
-        """
-
-    try:
-        with open(file_name) as json_file:
-            json_dict = json.load(json_file)
-
-    except Exception as error:
-        logger.error(str(error))
-        raise Exception
-
-    return json_dict
-
-
-def write_meta_data(file_name, input_dict):
-    """
-        Creates a metadata dictionary that is compatible with JSON and writes it to a file
-        Args:
-            file_name: Output json file name
-            input_dict: Dictionary to be included in the metadata
-        """
-
-    calling_function = 1
-
-    meta_data = copy.deepcopy(input_dict)
-
-    meta_data.update({
-        'version': code_version,
-        'origin': inspect.stack()[calling_function].function
-    })
-
-    try:
-        with open(file_name, "w") as json_file:
-            json.dump(meta_data, json_file, cls=NumpyEncoder)
-
-    except Exception as error:
-        logger.error(f'{error}')
-
-
-def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
-    """Read holog file meta data and extract antenna based xds information for each (ddi, holog_map)
-
-        Args:
-            holog_file (str): holog file name.
-            holog_dict (dict): holog file dictionary containing msxds data.
-            ant_id (int): Antenna id
-
-        Returns:
-            nested dict: nested dictionary (ddi, holog_map, xds) with xds data embedded in it.
-        """
-
-    ant_id_str = str(ant_id)
-
-    holog_meta_data = str(pathlib.Path(holog_file).joinpath(".holog_json"))
-
-    try:
-        with open(holog_meta_data, "r") as json_file:
-            holog_json = json.load(json_file)
-
-    except Exception as error:
-        logger.error(str(error))
-        raise Exception
-
-    ant_data_dict = {}
-
-    for ddi in holog_json[ant_id_str].keys():
-        if "ddi_" in ddi:
-            if (ddi_id is not None) and (ddi != ddi_id):
-                continue
-
-            for holog_map in holog_json[ant_id_str][ddi].keys():
-                if "map_" in holog_map:
-                    ant_data_dict.setdefault(ddi, {})[holog_map] = holog_dict[ddi][holog_map][ant_id]
-
-    return ant_data_dict
-
-
 def _open_no_dask_zarr(zarr_name, slice_dict=None):
     """
         Alternative to xarray open_zarr where the arrays are not Dask Arrays.
@@ -397,14 +353,14 @@ def _open_no_dask_zarr(zarr_name, slice_dict=None):
         slice_dict = {}
 
     zarr_group = zarr.open_group(store=zarr_name, mode="r")
-    group_attrs = _get_attrs(zarr_group)
+    group_attrs = get_attrs(zarr_group)
 
     slice_dict_complete = copy.deepcopy(slice_dict)
     coords = {}
     xds = xr.Dataset()
 
     for var_name, var in zarr_group.arrays():
-        var_attrs = _get_attrs(var)
+        var_attrs = get_attrs(var)
 
         for dim in var_attrs[DIMENSION_KEY]:
             if dim not in slice_dict_complete:
@@ -457,7 +413,11 @@ def load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None, diagnost
     """Load pointing dictionary from disk.
 
         Args:
-            file (zarr): Input zarr file containing pointing dictionary.
+            file (str): Input zarr file containing pointing dictionary.
+            diagnostic (bool):
+            pnt_dict (dict):
+            dask_load (bool):
+            ant_list (list):
 
         Returns:
             dict: Pointing dictionary

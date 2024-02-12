@@ -3,28 +3,30 @@ import graphviper.utils.parameter
 import graphviper.utils.logger as logger
 
 import numpy as np
-from astrohack._utils._constants import custom_split_checker, custom_unit_checker
-from astrohack._utils._plot_commons import custom_plots_checker
-from astrohack._utils._dask_graph_tools import _dask_general_compute
-from astrohack._utils._diagnostics import _calibration_plot_chunk
-from astrohack._utils._dio import _create_destination_folder
-from astrohack.core.io.file import load_holog_file
-from astrohack.core.io.file import load_image_file
-from astrohack.core.io.file import load_locit_file
+from astrohack.utils._constants import custom_split_checker, custom_unit_checker
+from astrohack.utils._plot_commons import custom_plots_checker
+from astrohack.utils._dask_graph_tools import _dask_general_compute
+from astrohack.utils._diagnostics import _calibration_plot_chunk
+from astrohack.utils._dio import _create_destination_folder
 from astrohack.core.io.file import load_panel_file
+from astrohack.core.io.file import load_image_file
+from astrohack.core.io.file import load_holog_file
 from astrohack.core.io.file import load_point_file
+from astrohack.core.io.file import load_locit_file
 from astrohack.core.io.file import load_position_file
-from astrohack.core.io.file import read_meta_data
+
+from astrohack.core.io.data import read_meta_data
+
 from astrohack.core.extract_holog import _plot_lm_coverage, _export_to_aips
-from astrohack._utils._extract_locit import _plot_source_table, _plot_array_configuration, _print_array_configuration
+from astrohack.core.extract_locit import _plot_source_table, _plot_array_configuration, _print_array_configuration
 from astrohack.core.holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
-from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
-from astrohack._utils._locit import _plot_delays_chunk, _plot_position_corrections
+from astrohack.core.locit import _export_fit_results, _plot_sky_coverage_chunk
+from astrohack.core.locit import _plot_delays_chunk, _plot_position_corrections
 from astrohack.core.panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
-from astrohack.core.antenna_surface import AntennaSurface
-from astrohack.core.telescope import Telescope
-from astrohack._utils._tools import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
-from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
+from astrohack.antenna.antenna_surface import AntennaSurface
+from astrohack.antenna.telescope import Telescope
+from astrohack.utils.tools import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
+from astrohack.utils.tools import _rad_to_deg_str, _rad_to_hour_str
 
 from prettytable import PrettyTable
 
@@ -135,7 +137,7 @@ class AstrohackImageFile(dict):
             file = self.file
 
         try:
-            _load_image_file(file, image_dict=self)
+            load_image_file(file, image_dict=self)
 
             self._file_is_open = True
 
@@ -143,8 +145,8 @@ class AstrohackImageFile(dict):
             logger.error(f"{error}")
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file + '/.image_attr')
-        self._input_pars = _read_meta_data(file + '/.image_input')
+        self._meta_data = read_meta_data(file + '/.image_attr')
+        self._input_pars = read_meta_data(file + '/.image_input')
 
         return self._file_is_open
 
@@ -413,15 +415,15 @@ class AstrohackHologFile(dict):
             file = self.file
 
         try:
-            _load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
+            load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
             self._file_is_open = True
 
         except Exception as error:
             logger.error(f"{error}")
             self._file_is_open = False
 
-        self._meta_data = _read_meta_data(file + '/.holog_attr')
-        self._input_pars = _read_meta_data(file + '/.holog_input')
+        self._meta_data = read_meta_data(file + '/.holog_attr')
+        self._input_pars = read_meta_data(file + '/.holog_input')
 
         return self._file_is_open
 
@@ -702,7 +704,7 @@ class AstrohackPanelFile(dict):
             logger.error(f"{error}")
             self._file_is_open = False
 
-        self._input_pars = _read_meta_data(file + '/.panel_input')
+        self._input_pars = read_meta_data(file + '/.panel_input')
 
         return self._file_is_open
 
@@ -973,14 +975,14 @@ class AstrohackPointFile(dict):
             file = self.file
 
         try:
-            _load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
+            load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
             self._file_is_open = True
 
         except Exception as error:
             logger.error(f"{error}")
             self._file_is_open = False
 
-        self._input_pars = _read_meta_data(file + '/.point_input')
+        self._input_pars = read_meta_data(file + '/.point_input')
 
         return self._file_is_open
 
@@ -1045,15 +1047,15 @@ class AstrohackLocitFile(dict):
             file = self.file
 
         try:
-            _load_locit_file(file=file, dask_load=dask_load, locit_dict=self)
+            load_locit_file(file=file, dask_load=dask_load, locit_dict=self)
             self._file_is_open = True
 
         except Exception as error:
             logger.error(f"{error}")
             self._file_is_open = False
 
-        self._input_pars = _read_meta_data(file + '/.locit_input')
-        self._meta_data = _read_meta_data(file + '/.locit_attr')
+        self._input_pars = read_meta_data(file + '/.locit_input')
+        self._meta_data = read_meta_data(file + '/.locit_attr')
 
         return self._file_is_open
 
@@ -1253,17 +1255,17 @@ class AstrohackPositionFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        # logger = logger.get_logger(logger_name="astrohack")
+
 
         if file is None:
             file = self.file
 
-        self._meta_data = _read_meta_data(file + '/.position_attr')
+        self._meta_data = read_meta_data(file + '/.position_attr')
         self.combined = self._meta_data['combine_ddis'] != 'no'
-        self._input_pars = _read_meta_data(file + '/.position_input')
+        self._input_pars = read_meta_data(file + '/.position_input')
 
         try:
-            _load_position_file(
+            load_position_file(
                 file=file,
                 dask_load=dask_load,
                 position_dict=self,

@@ -7,7 +7,7 @@ import astropy.coordinates as coord
 import graphviper.utils.logger as logger
 
 from skimage.draw import disk
-from astrohack._utils._algorithms import _calc_coords
+from astrohack.utils.algorithms import _calc_coords
 
 
 def _parallactic_derotation(data, parallactic_angle_dict):

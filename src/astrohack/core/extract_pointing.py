@@ -5,9 +5,9 @@ import numpy as np
 import graphviper.utils.logger as logger
 import xarray as xr
 
-from astrohack._utils._conversion import convert_dict_from_numba
-from astrohack._utils._dio import _load_point_file
-from astrohack._utils._tools import _get_valid_state_ids
+from astrohack.utils._conversion import convert_dict_from_numba
+from astrohack.core.io.file import load_point_file
+from astrohack.utils.tools import _get_valid_state_ids
 from casacore import tables as ctables
 from numba import njit
 from numba.core import types
@@ -112,7 +112,7 @@ def process_extract_pointing(ms_name, pnt_name, exclude, parallel=True):
 
             _make_ant_pnt_chunk(ms_name, pnt_params)
 
-    return _load_point_file(pnt_name, diagnostic=True)
+    return load_point_file(pnt_name, diagnostic=True)
 
 
 def _make_ant_pnt_chunk(ms_name, pnt_params):

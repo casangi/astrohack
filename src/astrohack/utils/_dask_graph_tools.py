@@ -2,7 +2,7 @@ import dask
 import xarray
 import graphviper.utils.logger as logger
 
-from astrohack._utils._tools import _param_to_list
+from astrohack.utils.tools import _param_to_list
 
 
 def _construct_general_graph_recursively(

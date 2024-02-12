@@ -7,16 +7,16 @@ import graphviper.utils.logger as logger
 import astropy.units as units
 import xarray as xr
 
-from astrohack.core.telescope import Telescope
-from astrohack._utils._locit_commons import _get_telescope_lat_lon_rad, _compute_antenna_relative_off
-from astrohack._utils._locit_commons import _time_label, _elevation_label, _declination_label
-from astrohack._utils._locit_commons import _plot_antenna_position
-from astrohack._utils._plot_commons import _create_figure_and_axes, _close_figure, _scatter_plot
-from astrohack._utils._locit_commons import _plot_boxes_limits_and_labels, _plot_corrections, _hour_angle_label
-from astrohack._utils._tools import _hadec_to_elevation, _format_value_error, _param_to_list, _add_prefix
-from astrohack._utils._conversion import _convert_unit
-from astrohack._utils._algorithms import _least_squares_fit
-from astrohack._utils._constants import *
+from astrohack.antenna.telescope import Telescope
+from astrohack.utils._locit_commons import _get_telescope_lat_lon_rad, _compute_antenna_relative_off
+from astrohack.utils._locit_commons import _time_label, _elevation_label, _declination_label
+from astrohack.utils._locit_commons import _plot_antenna_position
+from astrohack.utils._plot_commons import _create_figure_and_axes, _close_figure, _scatter_plot
+from astrohack.utils._locit_commons import _plot_boxes_limits_and_labels, _plot_corrections, _hour_angle_label
+from astrohack.utils.tools import _hadec_to_elevation, _format_value_error, _param_to_list, add_prefix
+from astrohack.utils._conversion import _convert_unit
+from astrohack.utils.algorithms import _least_squares_fit
+from astrohack.utils._constants import *
 
 
 def _locit_separated_chunk(locit_parms):
@@ -730,7 +730,7 @@ def _export_fit_results(data_dict, parm_dict):
     selected_antenna_list = _param_to_list(parm_dict['ant'], data_dict, 'ant')
 
     for ant_name in full_antenna_list:
-        ant_key = _add_prefix(ant_name, 'ant')
+        ant_key = add_prefix(ant_name, 'ant')
         row = [ant_name]
         if ant_key in selected_antenna_list:
             if ant_key in data_dict.keys():

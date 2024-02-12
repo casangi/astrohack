@@ -1,11 +1,11 @@
 import xarray as xr
 import graphviper.utils.logger as logger
 
-from astrohack._utils._constants import plot_types
+from astrohack.utils._constants import plot_types
 
-from astrohack.core.telescope import Telescope
-from astrohack.core.antenna_surface import AntennaSurface, SUPPORTED_POL_STATES
-from astrohack.core.base_panel import PANEL_MODELS
+from astrohack.antenna.telescope import Telescope
+from astrohack.antenna.antenna_surface import AntennaSurface, SUPPORTED_POL_STATES
+from astrohack.antenna.base_panel import PANEL_MODELS
 
 
 def _get_correct_telescope_from_name(xds):

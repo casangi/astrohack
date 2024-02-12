@@ -4,13 +4,13 @@ import shutil
 import graphviper.utils.logger as logger
 import graphviper.utils.parameter
 
-from astrohack._utils._dio import _aips_holog_to_xds
-from astrohack._utils._dio import _check_if_file_will_be_overwritten
-from astrohack._utils._dio import _check_if_file_exists
-from astrohack._utils._dio import _write_meta_data
+from astrohack.utils._dio import _aips_holog_to_xds
+from astrohack.utils._dio import _check_if_file_will_be_overwritten
+from astrohack.utils._dio import _check_if_file_exists
+from astrohack.core.io.data import write_meta_data
 from astrohack.core.panel import process_panel_chunk, custom_panel_checker
-from astrohack._utils._tools import get_default_file_name
-from astrohack._utils._dask_graph_tools import _dask_general_compute
+from astrohack.utils.tools import get_default_file_name
+from astrohack.utils._dask_graph_tools import _dask_general_compute
 
 from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 
@@ -193,7 +193,7 @@ def panel(
         if _dask_general_compute(image_mds, process_panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
             logger.info("Finished processing")
             output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_input")
-            _write_meta_data(output_attr_file, input_params)
+            write_meta_data(output_attr_file, input_params)
             panel_mds = AstrohackPanelFile(panel_params['panel_name'])
             panel_mds.open()
 

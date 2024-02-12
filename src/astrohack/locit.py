@@ -1,10 +1,11 @@
 import graphviper.utils.parameter
 import graphviper.utils.logger as logger
 
-from astrohack._utils._dask_graph_tools import _dask_general_compute
-from astrohack._utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists, _write_meta_data
-from astrohack._utils._locit import _locit_separated_chunk, _locit_combined_chunk, _locit_difference_chunk
-from astrohack._utils._tools import get_default_file_name
+from astrohack.utils._dask_graph_tools import _dask_general_compute
+from astrohack.utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
+from astrohack.core.io.data import write_meta_data
+from astrohack.core.locit import _locit_separated_chunk, _locit_combined_chunk, _locit_difference_chunk
+from astrohack.utils.tools import get_default_file_name
 from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 
 from typing import Union, List
@@ -176,10 +177,10 @@ def locit(
         logger.info("Finished processing")
 
         output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_attr")
-        _write_meta_data(output_attr_file, attributes)
+        write_meta_data(output_attr_file, attributes)
 
         output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_input")
-        _write_meta_data(output_attr_file, input_params)
+        write_meta_data(output_attr_file, input_params)
 
         position_mds = AstrohackPositionFile(locit_params['position_name'])
         position_mds.open()

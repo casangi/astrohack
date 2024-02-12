@@ -13,8 +13,21 @@ from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord
 from astropy.time import Time
 from casacore import tables
 
-from astrohack._utils._conversion import _convert_unit
-from astrohack._utils._algorithms import _significant_digits
+from astrohack.utils._conversion import _convert_unit
+from astrohack.utils.algorithms import _significant_digits
+
+
+def reorder_axes_for_fits(data: np.ndarray):
+    carta_dim_order = (1, 0, 2, 3,)
+    shape = data.shape
+    n_dim = len(shape)
+    if n_dim == 5:
+        # Ignore the time dimension and flip polarization and frequency axes
+        transpo = np.transpose(data[0, ...], carta_dim_order)
+        # Flip vertical axis
+        return np.flip(transpo, 2)
+    elif n_dim == 2:
+        return np.flipud(data)
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -123,7 +136,6 @@ def _altaz_to_hadec_astropy(az, el, time, x_ant, y_ant, z_ant):
 
 
 def get_default_file_name(input_file: str, output_type: str) -> str:
-    
     known_data_types = [".ms", ".holog.zarr", ".image.zarr", ".locit.zarr", ".combine.zarr", ".position.zarr"]
 
     output_file = None
@@ -141,7 +153,7 @@ def get_default_file_name(input_file: str, output_type: str) -> str:
     return output_file
 
 
-def _add_prefix(input_string, prefix):
+def add_prefix(input_string, prefix):
     """
     Adds a prefix to a string filename, if the filename is a path with /, adds the prefix to the actual filename at the
     end of the path
@@ -158,8 +170,6 @@ def _add_prefix(input_string, prefix):
 
 
 def print_holog_obs_dict(holog_obj):
-    
-
     OPEN_DICT = ":{"
     CLOSE_DICT = "}"
 
@@ -214,18 +224,21 @@ def _param_to_list(param, data_dict, prefix):
     """
 
     if param == 'all':
-        outlist = list(data_dict.keys())
+        out_list = list(data_dict.keys())
+
     elif isinstance(param, str):
-        outlist = [_add_prefix(param, prefix)]
+        out_list = [add_prefix(param, prefix)]
+
     elif isinstance(param, int):
-        outlist = [f'{prefix}_{param}']
+        out_list = [f'{prefix}_{param}']
+
     elif isinstance(param, (list, tuple)):
-        outlist = []
+        out_list = []
         for item in param:
             if isinstance(item, str):
-                outlist.append(_add_prefix(item, prefix))
+                out_list.append(add_prefix(item, prefix))
             elif isinstance(item, int):
-                outlist.append(f'{prefix}_{item}')
+                out_list.append(f'{prefix}_{item}')
             else:
                 msg = f'Cannot interpret parameter {item} of type {type(item)}'
                 logger.error(msg)
@@ -235,7 +248,7 @@ def _param_to_list(param, data_dict, prefix):
         logger.error(msg)
         raise Exception(msg)
 
-    return outlist
+    return out_list
 
 
 def split_pointing_table(ms_name, antennas):
@@ -349,7 +362,7 @@ def _axis_to_fits_header(header: dict, axis, iaxis, axistype, unit, iswcs=True):
         wcsaxes += 1
     outheader[f'WCSAXES'] = wcsaxes
     outheader[f'NAXIS{iaxis}'] = naxis
-    outheader[f'CRVAL{iaxis}'] = val-inc
+    outheader[f'CRVAL{iaxis}'] = val - inc
     outheader[f'CDELT{iaxis}'] = inc
     outheader[f'CRPIX{iaxis}'] = float(ref)
     outheader[f'CROTA{iaxis}'] = 0.
@@ -454,10 +467,10 @@ def _print_dict_table(input_parameters, split_key=None, alignment='l', heading="
 
 
 def _dict_to_key_list(attr_dict):
-    outlist = []
+    out_list = []
     for key in attr_dict.keys():
-        outlist.append(f'{key}: ...')
-    return outlist
+        out_list.append(f'{key}: ...')
+    return out_list
 
 
 def _rad_to_hour_str(rad):
@@ -631,5 +644,3 @@ def _get_valid_state_ids(obs_modes, desired_intent="MAP_ANTENNA_SURFACE",
             if bad_words == 0:
                 valid_state_ids.append(i_mode)
     return valid_state_ids
-
-

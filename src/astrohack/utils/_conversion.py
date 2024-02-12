@@ -1,7 +1,7 @@
 import numpy as np
 import graphviper.utils.logger as logger
 
-from astrohack._utils._constants import *
+from astrohack.utils._constants import *
 
 
 def _convert_ant_name_to_id(ant_list, ant_names):

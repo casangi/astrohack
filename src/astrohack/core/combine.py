@@ -3,10 +3,10 @@ import xarray as xr
 
 import graphviper.utils.logger as logger
 
-from astrohack._utils._dio import _load_image_xds
+from astrohack.core.io.file import load_image_xds
 from scipy.interpolate import griddata
-from astrohack._utils._constants import clight
-from astrohack._utils._tools import _param_to_list
+from astrohack.utils._constants import clight
+from astrohack.utils.tools import _param_to_list
 
 
 def _combine_chunk(combine_chunk_params):
@@ -31,7 +31,7 @@ def _combine_chunk(combine_chunk_params):
         out_xds = ddi_dict[ddi_list[0]]
         out_xds.to_zarr(out_xds_name, mode='w')
     else:
-        out_xds = _load_image_xds(combine_chunk_params['image_name'], antenna, ddi_list[0], dask_load=False)
+        out_xds = load_image_xds(combine_chunk_params['image_name'], antenna, ddi_list[0], dask_load=False)
         nddi = len(ddi_list)
         shape = list(out_xds['CORRECTED_PHASE'].values.shape)
         if out_xds.dims['chan'] != 1:
@@ -54,7 +54,7 @@ def _combine_chunk(combine_chunk_params):
         dest_v_axis = v.ravel()
         for iddi in range(1, nddi):
             logger.info(f'Regridding {antenna} {ddi_list[iddi]}')
-            this_xds = _load_image_xds(combine_chunk_params['image_name'], antenna, ddi_list[iddi], dask_load=False)
+            this_xds = load_image_xds(combine_chunk_params['image_name'], antenna, ddi_list[iddi], dask_load=False)
             wavelength = clight / this_xds.chan.values[0]
             u, v = np.meshgrid(this_xds.u_prime.values * wavelength, this_xds.v_prime.values * wavelength)
             loca_u_axis = u.ravel()

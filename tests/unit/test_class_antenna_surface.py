@@ -1,7 +1,7 @@
-from astrohack.core.antenna_surface import AntennaSurface
-from astrohack.core.telescope import Telescope
-from astrohack._utils._dio import _aips_holog_to_xds
-from astrohack._utils._conversion import _convert_unit
+from astrohack.antenna.antenna_surface import AntennaSurface
+from astrohack.antenna.telescope import Telescope
+from astrohack.utils._dio import _aips_holog_to_xds
+from astrohack.utils._conversion import _convert_unit
 
 import numpy as np
 import graphviper

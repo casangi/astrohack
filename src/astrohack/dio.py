@@ -14,7 +14,7 @@ from astrohack.mds import AstrohackPointFile
 from astrohack.mds import AstrohackLocitFile
 from astrohack.mds import AstrohackPositionFile
 
-from astrohack._utils._dio import _print_array
+from astrohack.utils._dio import _print_array
 
 from typing import Union, List, NewType, Dict, Any, NoReturn
 
