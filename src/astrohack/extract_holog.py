@@ -881,7 +881,7 @@ def model_memory_usage(
     if not pathlib.Path("model").exists():
         os.mkdir("model")
 
-    astrohack.data.datasets.download('heuristic_model', folder="model")
+    graphviper.utils.data.download('heuristic_model', folder="model")
 
     with open("model/elastic.model", "rb") as model_file:
         model = pickle.load(model_file)

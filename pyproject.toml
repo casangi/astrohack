@@ -9,6 +9,7 @@ dependencies = [
     "dask",
     "distributed",
     "graphviper",
+    "ipywidgets",
     "matplotlib",
     "numba>=0.57.0",
     "numpy",

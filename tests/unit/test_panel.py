@@ -1,7 +1,7 @@
 import os
 import json
 import shutil
-import astrohack
+import graphviper
 
 import numpy as np
 
@@ -15,15 +15,15 @@ def relative_difference(result, expected):
     return 2 * np.abs(result - expected) / (abs(result) + abs(expected))
 
 
-class TestPanel():
+class TestPanel:
     @classmethod
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
-        astrohack.data.datasets.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/")
+        graphviper.utils.data.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/")
 
-        astrohack.data.datasets.download(file='extract_holog_verification.json')
-        astrohack.data.datasets.download(file='holog_numerical_verification.json')
+        graphviper.utils.data.download(file='extract_holog_verification.json')
+        graphviper.utils.data.download(file='holog_numerical_verification.json')
 
         extract_pointing(
             ms_name="data/ea25_cal_small_after_fixed.split.ms",
@@ -208,7 +208,7 @@ class TestPanel():
         """
            Set cutoff=0 and compare results to known truth value array.
         """
-        astrohack.data.datasets.download(file='panel_cutoff_mask')
+        graphviper.utils.data.download(file='panel_cutoff_mask')
 
         with open("panel_cutoff_mask.npy", "rb") as array:
             reference_array = np.load(array)

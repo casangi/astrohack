@@ -3,7 +3,7 @@ import pytest
 import os
 import json
 import shutil
-import astrohack
+import graphviper
 
 import numpy as np
 
@@ -24,7 +24,7 @@ class TestLocit():
             Setup any state specific to the execution of the given test class
             such as fetching test data
         """
-        astrohack.data.datasets.download('locit-input-pha.cal', folder='data')
+        graphviper.utils.data.download('locit-input-pha.cal', folder='data')
 
         locit_mds = extract_locit(
             cal_table="data/locit-input-pha.cal",
