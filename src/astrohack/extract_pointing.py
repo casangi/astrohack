@@ -1,5 +1,5 @@
-import auror.parameter
-import skriba.logger as logger
+import graphviper.utils.parameter
+import graphviper.utils.logger as logger
 
 from astrohack._utils._dio import _load_point_file, _check_if_file_will_be_overwritten, _check_if_file_exists
 from astrohack._utils._dio import _write_meta_data
@@ -10,8 +10,8 @@ from astrohack.mds import AstrohackPointFile
 from typing import List, Union
 
 
-@auror.parameter.validate(
-    logger=logger.get_logger(logger_name="astrohack")
+@graphviper.utils.parameter.validate(
+    external_logger=logger.get_logger(logger_name="astrohack")
 )
 def extract_pointing(
         ms_name: str,

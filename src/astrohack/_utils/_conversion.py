@@ -1,5 +1,5 @@
 import numpy as np
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 from astrohack._utils._constants import *
 
@@ -46,7 +46,7 @@ def _convert_unit(unitin, unitout, kind):
         factorlist = fact_dict[kind]
 
     except KeyError:
-        skriba.logger.get_logger(logger_name="astrohack")
+        graphviper.utils.logger.get_logger(logger_name="astrohack")
         logger.error("Unrecognized unit kind: " + kind)
         raise KeyError('Unrecogized unit kind')
 
@@ -70,7 +70,7 @@ def _test_unit(unit, unitlist):
     try:
         idx = unitlist.index(unit)
     except ValueError:
-        #skriba.logger.get_logger(logger_name="astrohack")
+
         logger.error("Unrecognized unit: " + unit)
         raise ValueError('Unit not in list')
 

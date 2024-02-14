@@ -8,11 +8,11 @@ from typing import Union, List, NewType, Dict, Any, Tuple
 import math
 import multiprocessing
 
-import auror.parameter
+import graphviper.utils.parameter
 import dask
 import numpy as np
 import psutil
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 from astropy.time import Time
 from casacore import tables as ctables
 from rich.console import Console
@@ -229,9 +229,9 @@ class HologObsDict(dict):
         return obs_dict
 
 
-@auror.parameter.validate(
+@graphviper.utils.parameter.validate(
     add_data_type=HologObsDict,
-    logger=logger.get_logger(logger_name="astrohack")
+    external_logger=logger.get_logger(logger_name="astrohack")
 )
 def extract_holog(
         ms_name: str,

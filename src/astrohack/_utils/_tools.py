@@ -5,7 +5,7 @@ import inspect
 import numpy as np
 import astropy.units as units
 
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 from prettytable import PrettyTable
 from textwrap import fill

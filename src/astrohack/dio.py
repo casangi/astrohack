@@ -1,6 +1,6 @@
 import json
 import pathlib
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 import numpy as np
 

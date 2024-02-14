@@ -1,5 +1,5 @@
 import xarray as xr
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 from astrohack._utils._constants import plot_types
 

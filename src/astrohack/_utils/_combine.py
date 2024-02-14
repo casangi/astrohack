@@ -1,7 +1,7 @@
 import numpy as np
 import xarray as xr
 
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 from astrohack._utils._dio import _load_image_xds
 from scipy.interpolate import griddata

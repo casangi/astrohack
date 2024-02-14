@@ -2,7 +2,7 @@ from matplotlib.patches import Rectangle
 
 from astrohack._utils._constants import *
 
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 
 def _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad, scaling=1.0):

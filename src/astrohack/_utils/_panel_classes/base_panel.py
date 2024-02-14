@@ -1,5 +1,5 @@
 from scipy import optimize as opt
-import skriba.logger
+import graphviper.utils.logger
 
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
@@ -86,7 +86,7 @@ class BasePanel:
         """
         Does the fitting method associations according to the model chosen by the user
         """
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+        logger = graphviper.utils.logger.get_logger(logger_name="astrohack")
         try:
             imodel = PANEL_MODELS.index(self.model)
         except ValueError:
@@ -118,7 +118,7 @@ class BasePanel:
         if warned:
             return
         else:
-            logger = skriba.logger.get_logger(logger_name="astrohack")
+            logger = graphviper.utils.logger.get_logger(logger_name="astrohack")
             logger.warning("Experimental model: "+self.model)
             set_warned(True)
 
@@ -304,7 +304,7 @@ class BasePanel:
         Args:
             verbose: Increase verbosity in the fitting process
         """
-        logger = skriba.logger.get_logger(logger_name="astrohack")
+        logger = graphviper.utils.logger.get_logger(logger_name="astrohack")
         devia = np.ndarray([len(self.samples)])
         coords = np.ndarray([2, len(self.samples)])
         for i in range(len(self.samples)):

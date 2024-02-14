@@ -1,6 +1,6 @@
 import dask
 import xarray
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 from astrohack._utils._tools import _param_to_list
 

@@ -4,7 +4,7 @@ import scipy.constants
 
 from astrohack._utils._panel_classes.telescope import Telescope
 
-import skriba.logger as logger
+import graphviper.utils.logger as logger
 
 
 def _calculate_suggested_grid_parameter(parameter, quantile=0.005):

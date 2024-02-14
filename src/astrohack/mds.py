@@ -1,6 +1,6 @@
 import pathlib
-import auror.parameter
-import skriba.logger as logger
+import graphviper.utils.parameter
+import graphviper.utils.logger as logger
 
 import numpy as np
 from astrohack._utils._constants import custom_split_checker, custom_unit_checker
@@ -156,8 +156,8 @@ class AstrohackImageFile(dict):
         _print_data_contents(self, ["Antenna", "DDI"])
         _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_split_checker
     )
     def select(
@@ -192,8 +192,8 @@ class AstrohackImageFile(dict):
             else:
                 return self[ant][ddi]
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_split_checker
     )
     def export_to_fits(
@@ -244,8 +244,8 @@ class AstrohackImageFile(dict):
             parallel=parallel
         )
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_apertures(
@@ -311,8 +311,8 @@ class AstrohackImageFile(dict):
         _create_destination_folder(param_dict['destination'])
         _dask_general_compute(self, _plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_beams(
@@ -411,7 +411,7 @@ class AstrohackHologFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        # logger = skriba.logger.get_logger()
+        # logger = graphviper.utils.logger.get_logger()
 
         if file is None:
             file = self.file
@@ -437,8 +437,8 @@ class AstrohackHologFile(dict):
         _print_data_contents(self, ["DDI", "Map", "Antenna"])
         _print_method_list([self.summary, self.select, self.plot_diagnostics, self.plot_lm_sky_coverage])
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack")
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack")
     )
     def select(
             self,
@@ -479,8 +479,8 @@ class AstrohackHologFile(dict):
 
         return self._meta_data
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_diagnostics(
@@ -539,8 +539,8 @@ class AstrohackHologFile(dict):
         key_order = ["ddi", "map", "ant"]
         _dask_general_compute(self, _calibration_plot_chunk, param_dict, key_order, parallel)
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_lm_sky_coverage(
@@ -614,8 +614,8 @@ class AstrohackHologFile(dict):
         _dask_general_compute(self, _plot_lm_coverage, param_dict, key_order, parallel)
         return
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def export_to_aips(
@@ -722,8 +722,8 @@ class AstrohackPanelFile(dict):
         _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
                             self.plot_antennas])
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack")
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack")
     )
     def get_antenna(
             self,
@@ -746,8 +746,8 @@ class AstrohackPanelFile(dict):
         telescope = Telescope(xds.attrs['telescope_name'])
         return AntennaSurface(xds, telescope, reread=True)
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def export_screws(
@@ -798,8 +798,8 @@ class AstrohackPanelFile(dict):
         _create_destination_folder(param_dict['destination'])
         _dask_general_compute(self, _export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_antennas(
@@ -897,8 +897,8 @@ class AstrohackPanelFile(dict):
         _create_destination_folder(param_dict['destination'])
         _dask_general_compute(self, _plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack")
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack")
     )
     def export_to_fits(
             self,
@@ -1050,7 +1050,7 @@ class AstrohackLocitFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        # logger= skriba.logger.get_logger(logger_name="astrohack")
+
 
         if file is None:
             file = self.file
@@ -1082,8 +1082,8 @@ class AstrohackLocitFile(dict):
         table.align = alignment
         print(table)
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
     )
     def print_array_configuration(
             self,
@@ -1104,8 +1104,8 @@ class AstrohackLocitFile(dict):
         param_dict = locals()
         _print_array_configuration(param_dict, self['ant_info'], self['obs_info']['telescope_name'])
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
     )
     def plot_source_positions(
             self,
@@ -1161,8 +1161,8 @@ class AstrohackLocitFile(dict):
                            display=display, figure_size=figure_size, dpi=dpi, label=labels)
         return
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def plot_array_configuration(
@@ -1292,8 +1292,8 @@ class AstrohackPositionFile(dict):
 
         return self._file_is_open
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def export_fit_results(
@@ -1335,8 +1335,8 @@ class AstrohackPositionFile(dict):
         param_dict['combined'] = self.combined
         _export_fit_results(self, param_dict)
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def plot_sky_coverage(
@@ -1401,8 +1401,8 @@ class AstrohackPositionFile(dict):
             _dask_general_compute(self, _plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
                                   parallel=parallel)
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def plot_delays(
@@ -1478,8 +1478,8 @@ class AstrohackPositionFile(dict):
             _dask_general_compute(self, _plot_delays_chunk, param_dict, ['ant', 'ddi'],
                                   parallel=parallel)
 
-    @auror.parameter.validate(
-        logger=logger.get_logger(logger_name="astrohack"),
+    @graphviper.utils.parameter.validate(
+        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def plot_position_corrections(

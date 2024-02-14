@@ -1,13 +1,31 @@
 [project]
 name = "astrohack"
-version = "0.4.4"
+version = "0.4.5"
 description = "Holography Antenna Commissioning Kit"
 readme = "README.md"
 requires-python = ">= 3.8, < 3.12"
-dependencies = [ "astropy", "auror", "dask", "distributed", "matplotlib", "menrva", "numba>=0.57.0", "numpy", "prettytable", "pytest", "pytest-cov", "pytest-html", "scikit_image", "scikit-learn", "scipy", "rich", "skriba", "xarray", "zarr", "bokeh", "jupyterlab", "python_casacore>=3.5.2; sys_platform != \"darwin\" ",]
-[[project.authors]]
-name = "Jan-Willem Steeb"
-email = "jsteeb@nrao.edu"
+dependencies = [
+    "astropy",
+    "dask",
+    "distributed",
+    "graphviper",
+    "matplotlib",
+    "numba>=0.57.0",
+    "numpy",
+    "prettytable",
+    "pytest",
+    "pytest-cov",
+    "pytest-html",
+    "scikit_image",
+    "scikit-learn",
+    "scipy",
+    "rich",
+    "xarray",
+    "zarr",
+    "bokeh",
+    "jupyterlab",
+    "python_casacore>=3.5.2; sys_platform != \"darwin\" ",
+]
 
 [[project.authors]]
 name = "Joshua Hoskins"
@@ -16,6 +34,10 @@ email = "jhoskins@nrao.edu"
 [[project.authors]]
 name = "Victor de Souza Magalhaes"
 email = "vdesouza@nrao.edu"
+
+[[project.authors]]
+name = "Jan-Willem Steeb"
+email = "jsteeb@nrao.edu"
 
 [project.license]
 file = "LICENSE.txt"
