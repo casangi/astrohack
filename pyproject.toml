@@ -7,7 +7,7 @@ requires-python = ">= 3.8, < 3.12"
 dependencies = [
     "astropy",
     "dask",
-    "distributed",
+    "distributed>=2023.9.2",
     "graphviper",
     "ipywidgets",
     "matplotlib",
