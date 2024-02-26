@@ -2,10 +2,11 @@ import numpy as np
 from numba import njit
 
 from astrohack.utils.algorithms import _least_squares_fit_block
-from astrohack.utils._conversion import _convert_unit
+from astrohack.utils.conversion import convert_unit
 
+NPAR = 10
 
-def _create_phase_model(npix, parameters, wavelength, telescope, cellxy):
+def create_phase_model(npix, parameters, wavelength, telescope, cellxy):
     """
     Create a phase model with npix by npix size according to the given parameters
     Args:
@@ -26,14 +27,11 @@ def _create_phase_model(npix, parameters, wavelength, telescope, cellxy):
     return model
 
 
-NPAR = 10
-
-
-def _phase_fitting_block(pols, wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
+def phase_fitting_block(pols, wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
                          focus_xy_offsets, focus_z_offset, subreflector_tilt, cassegrain_offset):
     """
     Corrects the grading phase for pointing, focus, and feed offset errors using the least squares method, and a model
-    incorporating subreflector position errors.  Includes reference pointing
+    incorporating sub-reflector position errors.  Includes reference pointing
 
     This is a revised version of the task, offering a two-reflector solution.  M. Kesteven, 6/12/1994
 
@@ -127,7 +125,7 @@ def _internal_to_external_parameters(parameters, wavelength, telescope, cellxy):
     scaling = wavelength / 0.36
     results[3:] *= scaling
     # Sub-reflector tilt to degrees
-    rad2deg = _convert_unit('rad', 'deg', 'trigonometric')
+    rad2deg = convert_unit('rad', 'deg', 'trigonometric')
     results[6:8] *= rad2deg / (1000.0 * telescope.secondary_dist)
     # rescale phase ramp to pointing offset
     results[1:3] *= wavelength * rad2deg / 6. / cellxy
@@ -151,7 +149,7 @@ def _external_to_internal_parameters(exparameters, wavelength, telescope, cellxy
     scaling = wavelength / 0.36
     iNPARameters[3:] /= scaling
     # Sub-reflector tilt from degrees
-    rad2deg = _convert_unit('rad', 'deg', 'trigonometric')
+    rad2deg = convert_unit('rad', 'deg', 'trigonometric')
     iNPARameters[6:8] /= rad2deg / (1000.0 * telescope.secondary_dist)
     # rescale phase ramp to pointing offset
     iNPARameters[1:3] /= wavelength * rad2deg / 6. / cellxy

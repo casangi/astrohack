@@ -7,7 +7,7 @@ from astrohack.antenna.telescope import Telescope
 import graphviper.utils.logger as logger
 
 
-def _calculate_suggested_grid_parameter(parameter, quantile=0.005):
+def calculate_suggested_grid_parameter(parameter, quantile=0.005):
     import scipy
 
     logger.warning(parameter)
@@ -166,7 +166,7 @@ def _calculate_euclidean_distance(x, y, center):
     return np.sqrt(np.power(x - center[0], 2) + np.power(y - center[1], 2))
 
 
-def _find_peak_beam_value(data, height=0.5, scaling=0.5):
+def find_peak_beam_value(data, height=0.5, scaling=0.5):
     """ Search algorithm to determine the maximal signal peak in the beam pattern.
 
     Args:
@@ -194,7 +194,7 @@ def _find_peak_beam_value(data, height=0.5, scaling=0.5):
     return masked_data[x[index], y[index]]
 
 
-def _gauss_elimination_numpy(system, vector):
+def gauss_elimination(system, vector):
     """
     Gauss elimination solving of a system using numpy
     Args:
@@ -208,7 +208,7 @@ def _gauss_elimination_numpy(system, vector):
     return np.dot(inverse, vector)
 
 
-def _least_squares_fit(system, vector):
+def least_squares(system, vector):
     """
     Least squares fitting of a system of linear equations
     The variances are simplified as the diagonal of the covariances
@@ -233,6 +233,7 @@ def _least_squares_fit(system, vector):
     sigma2 = np.sum(errs ** 2)
     covar = np.linalg.inv(np.dot(system.T, system))
     variance = np.diagonal(sigma2 * covar)
+
     return result, variance, residuals
 
 
@@ -258,7 +259,7 @@ def _least_squares_fit_block(system, vector):
         for it0 in range(shape[0]):
             results[it0], variances[it0] = _least_squares_fit_block(system[it0], vector[it0])
     else:
-        results, variances, _ = _least_squares_fit(system, vector)
+        results, variances, _ = least_squares(system, vector)
     return results, variances
 
 
@@ -288,12 +289,12 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_name
     return n_pix, cell_size
 
 
-def _significant_digits(x, digits):
+def significant_digits(x, digits):
     if np.isscalar(x):
         return _significant_digits_scalar(x, digits)
 
     else:
-        return list(map(_significant_digits, x, [digits] * len(x)))
+        return list(map(significant_digits, x, [digits] * len(x)))
 
 
 def _significant_digits_scalar(x, digits):

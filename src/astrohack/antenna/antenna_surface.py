@@ -6,14 +6,14 @@ import graphviper.utils.logger as logger
 
 from astrohack.antenna.base_panel import PANEL_MODELS, irigid
 from astrohack.antenna.ring_panel import RingPanel
-from astrohack.utils._constants import *
-from astrohack.utils._conversion import _convert_to_db
-from astrohack.utils._conversion import _convert_unit
-from astrohack.utils.tools import add_prefix, _axis_to_fits_header, _resolution_to_fits_header
-from astrohack.utils._plot_commons import _well_positioned_colorbar, _create_figure_and_axes, _close_figure, \
+from astrohack.utils.constants import *
+from astrohack.utils.conversion import to_db
+from astrohack.utils.conversion import convert_unit
+from astrohack.utils.text import add_prefix
+from astrohack.visualization._plot_commons import _well_positioned_colorbar, _create_figure_and_axes, _close_figure, \
     _get_proper_color_map
 
-from astrohack.core.io.file import write_fits
+from astrohack.utils.fits import write_fits, resolution_to_fits_header, axis_to_fits_header
 
 lnbr = "\n"
 SUPPORTED_POL_STATES = ['I', 'RR', 'LL', 'XX', 'YY']
@@ -411,7 +411,7 @@ class AntennaSurface:
         thgain = fourpi * (1000.0 * self.reso / self.wavelength) ** 2
         gain = thgain * np.sqrt(np.sum(np.cos(arr[self.mask])) ** 2 + np.sum(np.sin(arr[self.mask])) ** 2) / np.sum(
             self.mask)
-        return _convert_to_db(gain), _convert_to_db(thgain)
+        return to_db(gain), to_db(thgain)
 
     def get_rms(self, unit='mm'):
         """
@@ -419,7 +419,7 @@ class AntennaSurface:
         Returns:
         RMS before panel fitting OR RMS before and after panel fitting
         """
-        fac = _convert_unit('m', unit, 'length')
+        fac = convert_unit('m', unit, 'length')
         self.in_rms = self._compute_rms_array(self.deviation)
         if self.residuals is None:
             return fac * self.in_rms
@@ -528,7 +528,7 @@ class AntennaSurface:
         else:
             parm_dict['unit'] = parm_dict['phase_unit']
         parm_dict['z_lim'] = parm_dict['phase_limits']
-        fac = _convert_unit('rad', parm_dict['unit'], 'trigonometric')
+        fac = convert_unit('rad', parm_dict['unit'], 'trigonometric')
         prefix = 'phase'
         if caller == 'image':
             prefix = 'corrected'
@@ -556,7 +556,7 @@ class AntennaSurface:
         else:
             parm_dict['unit'] = parm_dict['deviation_unit']
         parm_dict['z_lim'] = parm_dict['deviation_limits']
-        fac = _convert_unit('m', parm_dict['unit'], 'length')
+        fac = convert_unit('m', parm_dict['unit'], 'length')
         prefix = 'deviation'
         rms = self.get_rms(unit=parm_dict['unit'])
         if caller == 'image':
@@ -633,7 +633,7 @@ class AntennaSurface:
         cmap = _get_proper_color_map(parm_dict['colormap'], default_cmap='RdBu_r')
         fig, ax = _create_figure_and_axes(parm_dict['figure_size'], [1, 1])
 
-        fac = _convert_unit('m', unit, 'length')
+        fac = convert_unit('m', unit, 'length')
         vmax = np.nanmax(np.abs(fac * self.screw_adjustments))
         vmin = -vmax
         if threshold is None or threshold == 'None':
@@ -700,7 +700,7 @@ class AntennaSurface:
         for screw in self.telescope.screw_description:
             outfile += "{0:11s}".format(screw)
         outfile += lnbr
-        fac = _convert_unit('m', unit, 'length')
+        fac = convert_unit('m', unit, 'length')
         for ipanel in range(len(self.panel_labels)):
             outfile += "{0:8s}".format(self.panel_labels[ipanel])
             for iscrew in range(nscrews):
@@ -775,9 +775,9 @@ class AntennaSurface:
             'WAVELENG': self.wavelength,
             'FREQUENC': clight / self.wavelength,
         }
-        head = _axis_to_fits_header(head, self.u_axis, 1, 'X----LIN', 'm')
-        head = _axis_to_fits_header(head, self.v_axis, 2, 'Y----LIN', 'm')
-        head = _resolution_to_fits_header(head, self.resolution)
+        head = axis_to_fits_header(head, self.u_axis, 1, 'X----LIN', 'm')
+        head = axis_to_fits_header(head, self.v_axis, 2, 'Y----LIN', 'm')
+        head = resolution_to_fits_header(head, self.resolution)
 
         write_fits(head, 'Amplitude', self.amplitude, add_prefix(basename, 'amplitude') + '.fits', self.amp_unit,
                    'panel')

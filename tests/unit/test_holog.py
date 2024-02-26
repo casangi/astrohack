@@ -224,7 +224,7 @@ class TestHolog():
 
         assert json_file['chan_tolerance_factor'] == 0.0049
 
-    def test_holog_to_stokes(self):
+    def test_hologto_stokes(self):
         """
             Check that to_stokes flag was set holog is run.
         """

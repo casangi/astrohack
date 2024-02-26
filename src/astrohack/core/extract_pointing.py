@@ -5,9 +5,9 @@ import numpy as np
 import graphviper.utils.logger as logger
 import xarray as xr
 
-from astrohack.utils._conversion import convert_dict_from_numba
-from astrohack.core.io.file import load_point_file
-from astrohack.utils.tools import _get_valid_state_ids
+from astrohack.utils.conversion import convert_dict_from_numba
+from astrohack.utils.file import load_point_file
+from astrohack.utils.tools import get_valid_state_ids
 from casacore import tables as ctables
 from numba import njit
 from numba.core import types
@@ -73,7 +73,7 @@ def process_extract_pointing(ms_name, pnt_name, exclude, parallel=True):
     # scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE sub-table.
     obs_modes = ctb.getcol("OBS_MODE")
     ctb.close()
-    mapping_state_ids = _get_valid_state_ids(obs_modes)
+    mapping_state_ids = get_valid_state_ids(obs_modes)
 
     mapping_state_ids = np.array(mapping_state_ids)
 

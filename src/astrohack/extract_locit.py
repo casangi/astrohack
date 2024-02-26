@@ -1,13 +1,14 @@
-from typing import Union, List
-
+import pathlib
 import graphviper.utils.parameter
 import graphviper.utils.logger as logger
 
-from astrohack.utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
-from astrohack.core.io.data import write_meta_data
-from astrohack.core.extract_locit import _extract_antenna_data, _extract_spectral_info
-from astrohack.core.extract_locit import _extract_source_and_telescope, _extract_antenna_phase_gains
-from astrohack.utils.tools import get_default_file_name
+from typing import Union, List
+
+from astrohack.utils.file import overwrite_file
+from astrohack.utils.data import write_meta_data
+from astrohack.core.extract_locit import extract_antenna_data, extract_spectral_info
+from astrohack.core.extract_locit import extract_source_and_telescope, extract_antenna_phase_gains
+from astrohack.utils.text import get_default_file_name
 from astrohack.mds import AstrohackLocitFile
 
 
@@ -81,13 +82,16 @@ def extract_locit(
     input_params = extract_locit_params.copy()
     attributes = extract_locit_params.copy()
 
-    _check_if_file_exists(extract_locit_params['cal_table'])
-    _check_if_file_will_be_overwritten(extract_locit_params['locit_name'], extract_locit_params['overwrite'])
+    assert pathlib.Path(extract_locit_params['cal_table']).exists() is True, (
+        logger.error(f'File {extract_locit_params["cal_table"]} does not exists.')
+    )
 
-    _extract_antenna_data(extract_locit_params)
-    _extract_spectral_info(extract_locit_params)
-    _extract_antenna_phase_gains(extract_locit_params)
-    telescope_name, n_sources = _extract_source_and_telescope(extract_locit_params)
+    overwrite_file(extract_locit_params['locit_name'], extract_locit_params['overwrite'])
+
+    extract_antenna_data(extract_locit_params)
+    extract_spectral_info(extract_locit_params)
+    extract_antenna_phase_gains(extract_locit_params)
+    telescope_name, n_sources = extract_source_and_telescope(extract_locit_params)
 
     attributes['telescope_name'] = telescope_name
     attributes['n_sources'] = n_sources

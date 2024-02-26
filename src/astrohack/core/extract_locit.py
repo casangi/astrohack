@@ -11,17 +11,17 @@ from astropy.time import Time
 from prettytable import PrettyTable
 
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils.tools import _casa_time_to_mjd, _rad_to_deg_str
-from astrohack.utils._conversion import _convert_unit
-from astrohack.utils._constants import figsize, twopi, notavail
-from astrohack.core.io.data import write_meta_data
-from astrohack.utils._locit_commons import _compute_antenna_relative_off, _get_telescope_lat_lon_rad
-from astrohack.utils._locit_commons import _plot_boxes_limits_and_labels
-from astrohack.utils._plot_commons import _create_figure_and_axes, _close_figure, _scatter_plot
-from astrohack.utils._locit_commons import _plot_antenna_position
+from astrohack.utils.text import _rad_to_deg_str
+from astrohack.utils.conversion import convert_unit, _casa_time_to_mjd
+from astrohack.utils.constants import figsize, twopi, notavail
+from astrohack.utils.data import write_meta_data
+from astrohack.visualization._locit_commons import _compute_antenna_relative_off, _get_telescope_lat_lon_rad
+from astrohack.visualization._locit_commons import _plot_boxes_limits_and_labels
+from astrohack.visualization._plot_commons import _create_figure_and_axes, _close_figure, _scatter_plot
+from astrohack.visualization._locit_commons import _plot_antenna_position
 
 
-def _extract_antenna_data(extract_locit_parms):
+def extract_antenna_data(extract_locit_parms):
     """
     Extract antenna information from the ANTENNA sub table of the cal table
     Args:
@@ -79,7 +79,7 @@ def _extract_antenna_data(extract_locit_parms):
     extract_locit_parms['full_antenna_list'] = ant_nam
 
 
-def _extract_spectral_info(extract_locit_parms):
+def extract_spectral_info(extract_locit_parms):
     """
     Extract spectral information from the SPECTRAL_WINDOW sub table of the cal table
     Args:
@@ -122,7 +122,7 @@ def _extract_spectral_info(extract_locit_parms):
     extract_locit_parms['ddi_dict'] = ddi_dict
 
 
-def _extract_source_and_telescope(extract_locit_parms):
+def extract_source_and_telescope(extract_locit_parms):
     """
     Extract source and telescope  information from the FIELD and OBSERVATION sub tables of the cal table
     Args:
@@ -156,7 +156,7 @@ def _extract_source_and_telescope(extract_locit_parms):
     phase_center_precessed = np.ndarray((n_src, 2))
     phase_center_precessed[:, 0] = astropy_precessed.ra
     phase_center_precessed[:, 1] = astropy_precessed.dec
-    phase_center_precessed *= _convert_unit('deg', 'rad', 'trigonometric')
+    phase_center_precessed *= convert_unit('deg', 'rad', 'trigonometric')
 
     src_dict = {}
     for i_src in range(n_src):
@@ -171,7 +171,7 @@ def _extract_source_and_telescope(extract_locit_parms):
     return telescope_name, n_src
 
 
-def _extract_antenna_phase_gains(extract_locit_parms):
+def extract_antenna_phase_gains(extract_locit_parms):
     """
     Extract antenna based phase gains from the cal table
     Args:
@@ -271,26 +271,26 @@ def _extract_antenna_phase_gains(extract_locit_parms):
 
             coords = {}
             for i_pol in range(n_pol):
-                timekey = f'p{i_pol}_time'
-                coords[timekey] = ddi_time[ddi_not_flagged[:, 0, i_pol]]
+                time_key = f'p{i_pol}_time'
+                coords[time_key] = ddi_time[ddi_not_flagged[:, 0, i_pol]]
                 this_ddi_xds[f'P{i_pol}_PHASE_GAINS'] = xr.DataArray(ddi_gains[ddi_not_flagged[:, 0, i_pol], 0, i_pol],
-                                                                     dims=timekey)
-                this_ddi_xds[f'P{i_pol}_FIELD_ID'] = xr.DataArray(ddi_field[ddi_not_flagged[:, 0, i_pol]], dims=timekey)
+                                                                     dims=time_key)
+                this_ddi_xds[f'P{i_pol}_FIELD_ID'] = xr.DataArray(ddi_field[ddi_not_flagged[:, 0, i_pol]], dims=time_key)
                 used_sources.extend(ddi_field[ddi_not_flagged[:, 0, i_pol]])
 
             this_ddi_xds.attrs['frequency'] = ddi['frequency']
             this_ddi_xds.attrs['bandwidth'] = ddi['bandwidth']
             this_ddi_xds.attrs['polarization_scheme'] = polarization_scheme
-            outname = "/".join([basename, 'ant_' + antenna['name'], f'ddi_{ddi["id"]}'])
+            out_name = "/".join([basename, 'ant_' + antenna['name'], f'ddi_{ddi["id"]}'])
             this_ddi_xds = this_ddi_xds.assign_coords(coords)
-            this_ddi_xds.to_zarr(outname, mode="w", compute=True, consolidated=True)
+            this_ddi_xds.to_zarr(out_name, mode="w", compute=True, consolidated=True)
         write_meta_data("/".join([basename, 'ant_' + antenna['name'], ".antenna_info"]), antenna)
     extract_locit_parms['used_sources'] = np.unique(np.array(used_sources))
     return
 
 
-def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midpoint=None, display=True,
-                       figure_size=figsize, dpi=300):
+def plot_source_table(filename, src_dict, label=True, precessed=False, obs_midpoint=None, display=True,
+                      figure_size=figsize, dpi=300):
     """ Backend function for plotting the source table
     Args:
         filename: Name for the png plot file
@@ -323,8 +323,8 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
         name.append(src['name'])
 
     fig, ax = _create_figure_and_axes(figure_size, [1, 1])
-    radec[:, 0] *= _convert_unit('rad', 'hour', 'trigonometric')
-    radec[:, 1] *= _convert_unit('rad', 'deg', 'trigonometric')
+    radec[:, 0] *= convert_unit('rad', 'hour', 'trigonometric')
+    radec[:, 1] *= convert_unit('rad', 'deg', 'trigonometric')
 
     xlabel = 'Right Ascension [h]'
     ylabel = 'Declination [\u00b0]'
@@ -340,7 +340,7 @@ def _plot_source_table(filename, src_dict, label=True, precessed=False, obs_midp
     return
 
 
-def _plot_array_configuration(ant_dict, telescope_name, parm_dict):
+def plot_array_configuration(ant_dict, telescope_name, parm_dict):
     """ backend for plotting array configuration
 
     Args:
@@ -361,7 +361,7 @@ def _plot_array_configuration(ant_dict, telescope_name, parm_dict):
 
     fig, axes = _create_figure_and_axes(figure_size, [1, 2], default_figsize=[10, 5])
 
-    len_fac = _convert_unit('m', length_unit, 'length')
+    len_fac = convert_unit('m', length_unit, 'length')
 
     inner_ax = axes[1]
     outer_ax = axes[0]
@@ -388,7 +388,7 @@ def _plot_array_configuration(ant_dict, telescope_name, parm_dict):
     return
 
 
-def _print_array_configuration(params, ant_dict, telescope_name):
+def print_array_configuration(params, ant_dict, telescope_name):
     """ Backend for printing the array configuration onto a table
 
     Args:

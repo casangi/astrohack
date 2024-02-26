@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from astrohack.utils._constants import fontsize, markersize
-from astrohack.utils._plot_commons import _create_figure_and_axes, _close_figure
+from astrohack.utils.constants import fontsize, markersize
+from astrohack.visualization._plot_commons import _create_figure_and_axes, _close_figure
 from astropy.time import Time
 
 

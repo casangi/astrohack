@@ -3,13 +3,13 @@ import xarray as xr
 
 import graphviper.utils.logger as logger
 
-from astrohack.core.io.file import load_image_xds
+from astrohack.utils.file import load_image_xds
 from scipy.interpolate import griddata
-from astrohack.utils._constants import clight
-from astrohack.utils.tools import _param_to_list
+from astrohack.utils.constants import clight
+from astrohack.utils.text import _param_to_list
 
 
-def _combine_chunk(combine_chunk_params):
+def process_combine_chunk(combine_chunk_params):
     """
     Process a combine chunk
     Args:

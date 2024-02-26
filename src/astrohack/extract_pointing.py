@@ -1,11 +1,12 @@
+import pathlib
 import graphviper.utils.parameter
 import graphviper.utils.logger as logger
 
-from astrohack.utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
-from astrohack.core.io.file import load_point_file
-from astrohack.core.io.data import write_meta_data
+from astrohack.utils.text import get_default_file_name
+from astrohack.utils.file import overwrite_file
+from astrohack.utils.file import load_point_file
+from astrohack.utils.data import write_meta_data
 from astrohack.core.extract_pointing import process_extract_pointing
-from astrohack.utils.tools import get_default_file_name
 from astrohack.mds import AstrohackPointFile
 
 from typing import List, Union
@@ -68,8 +69,12 @@ def extract_pointing(
     extract_pointing_params = locals()
 
     input_params = extract_pointing_params.copy()
-    _check_if_file_exists(extract_pointing_params['ms_name'])
-    _check_if_file_will_be_overwritten(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
+
+    assert pathlib.Path(extract_pointing_params['ms_name']).exists() is True, (
+        logger.error(f'File {extract_pointing_params["ms_name"]} does not exists.')
+    )
+
+    overwrite_file(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
 
     pnt_dict = process_extract_pointing(
         ms_name=extract_pointing_params['ms_name'],

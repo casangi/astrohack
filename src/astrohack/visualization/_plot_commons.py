@@ -3,7 +3,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import colormaps as matplotlib_cmaps
 from matplotlib.colors import ListedColormap
 from astrohack.utils import figsize, fontsize
-from astrohack.utils._constants import custom_split_checker, custom_unit_checker
+from astrohack.utils.constants import custom_split_checker, custom_unit_checker
 
 
 astrohack_cmaps = list(matplotlib_cmaps.keys())

@@ -10,19 +10,19 @@ from skimage.draw import disk
 from astrohack.utils.algorithms import _calc_coords
 
 
-def _parallactic_derotation(data, parallactic_angle_dict):
+def parallactic_derotation(data, parallactic_angle_dict):
     """ Uses samples of parallactic angle (PA) values to correct differences in PA between maps. The reference PA is
     selected to be the first maps median parallactic angle. All values are rotated to this PA value using
-    scypi.ndimage.rotate(...)
+    scipy.ndimage.rotate(...)
 
     Args: data (numpy.ndarray): beam data grid (map, chan, pol, l, m) parallactic_angle_dict (dict): dictionary
-    containing antenna selected xds from which the aprallactic angle samples are retrieved ==> [map](xds),
-    here the map referres to the map values not the map index.
+    containing antenna selected xds from which the parallactic angle samples are retrieved ==> [map](xds),
+    here the map referred to the map values not the map index.
 
     Returns:
         numpy.ndarray: rotation adjusted beam data grid
     """
-    # Find the middle index of the array. This is calcualted because there might be a desire to change 
+    # Find the middle index of the array. This is calculated because there might be a desire to change
     # the array length at some point and I don't want to hard code the middle value.
     #
     # It is assumed, and should be true, that the parallacitc angle array size is consistent over map.
@@ -45,7 +45,7 @@ def _parallactic_derotation(data, parallactic_angle_dict):
     return data
 
 
-def _mask_circular_disk(center, radius, array, mask_value=np.nan):
+def mask_circular_disk(center, radius, array, mask_value=np.nan):
     """ Create a mask to trim an image
 
     Args:
@@ -73,8 +73,8 @@ def _mask_circular_disk(center, radius, array, mask_value=np.nan):
     return mask
 
 
-def _calculate_aperture_pattern(grid, delta, padding_factor=50):
-    """ Calcualtes the aperture illumination pattern from the beam data.
+def calculate_aperture_pattern(grid, delta, padding_factor=50):
+    """ Calculates the aperture illumination pattern from the beam data.
 
     Args:
         grid (numpy.ndarray): gridded beam data

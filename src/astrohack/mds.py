@@ -3,30 +3,29 @@ import graphviper.utils.parameter
 import graphviper.utils.logger as logger
 
 import numpy as np
-from astrohack.utils._constants import custom_split_checker, custom_unit_checker
-from astrohack.utils._plot_commons import custom_plots_checker
-from astrohack.utils._dask_graph_tools import _dask_general_compute
-from astrohack.utils._diagnostics import _calibration_plot_chunk
-from astrohack.utils._dio import _create_destination_folder
-from astrohack.core.io.file import load_panel_file
-from astrohack.core.io.file import load_image_file
-from astrohack.core.io.file import load_holog_file
-from astrohack.core.io.file import load_point_file
-from astrohack.core.io.file import load_locit_file
-from astrohack.core.io.file import load_position_file
+from astrohack.utils.constants import custom_split_checker, custom_unit_checker
+from astrohack.visualization._plot_commons import custom_plots_checker
+from astrohack.utils.graph import compute_graph
+from astrohack.utils.diagnostics import _calibration_plot_chunk
+from astrohack.utils.file import load_panel_file
+from astrohack.utils.file import load_image_file
+from astrohack.utils.file import load_holog_file
+from astrohack.utils.file import load_point_file
+from astrohack.utils.file import load_locit_file
+from astrohack.utils.file import load_position_file
 
-from astrohack.core.io.data import read_meta_data
+from astrohack.utils.data import read_meta_data
 
 from astrohack.core.extract_holog import _plot_lm_coverage, _export_to_aips
-from astrohack.core.extract_locit import _plot_source_table, _plot_array_configuration, _print_array_configuration
+from astrohack.core.extract_locit import plot_source_table, plot_array_configuration, print_array_configuration
 from astrohack.core.holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
 from astrohack.core.locit import _export_fit_results, _plot_sky_coverage_chunk
 from astrohack.core.locit import _plot_delays_chunk, _plot_position_corrections
 from astrohack.core.panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
 from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils.tools import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
-from astrohack.utils.tools import _rad_to_deg_str, _rad_to_hour_str
+from astrohack.utils.text import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
+from astrohack.utils.text import _rad_to_deg_str, _rad_to_hour_str
 
 from prettytable import PrettyTable
 
@@ -212,7 +211,7 @@ class AstrohackImageFile(dict):
         :type complex_split: str, optional
         :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant: list or str, optional
-        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
+        :param ddi: List of ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param parallel: If True will use an existing astrohack client to export FITS in parallel, default is False
         :type parallel: bool, optional
@@ -234,9 +233,9 @@ class AstrohackImageFile(dict):
         """
 
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         param_dict['metadata'] = self._meta_data
-        _dask_general_compute(
+        compute_graph(
             self,
             _export_to_fits_holog_chunk,
             param_dict,
@@ -307,8 +306,8 @@ class AstrohackImageFile(dict):
 
         param_dict["figuresize"] = figure_size
 
-        _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(self, _plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        compute_graph(self, _plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
@@ -359,8 +358,8 @@ class AstrohackImageFile(dict):
         """
         param_dict = locals()
 
-        _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(self, _plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        compute_graph(self, _plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackHologFile(dict):
@@ -532,9 +531,9 @@ class AstrohackHologFile(dict):
         param_dict = locals()
         param_dict["map"] = map_id
 
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         key_order = ["ddi", "map", "ant"]
-        _dask_general_compute(self, _calibration_plot_chunk, param_dict, key_order, parallel)
+        compute_graph(self, _calibration_plot_chunk, param_dict, key_order, parallel)
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
@@ -605,9 +604,9 @@ class AstrohackHologFile(dict):
         param_dict = locals()
         param_dict["map"] = map_id
 
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         key_order = ["ddi", "map", "ant"]
-        _dask_general_compute(self, _plot_lm_coverage, param_dict, key_order, parallel)
+        compute_graph(self, _plot_lm_coverage, param_dict, key_order, parallel)
         return
 
     @graphviper.utils.parameter.validate(
@@ -643,9 +642,9 @@ class AstrohackHologFile(dict):
         param_dict = locals()
         param_dict["map"] = map_id
 
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         key_order = ["ddi", "map", "ant"]
-        _dask_general_compute(self, _export_to_aips, param_dict, key_order, parallel)
+        compute_graph(self, _export_to_aips, param_dict, key_order, parallel)
         return
 
 
@@ -787,8 +786,8 @@ class AstrohackPanelFile(dict):
         """
         param_dict = locals()
 
-        _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(self, _export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        compute_graph(self, _export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
@@ -885,8 +884,8 @@ class AstrohackPanelFile(dict):
 
         param_dict["figuresize"] = figure_size
 
-        _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(self, _plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        compute_graph(self, _plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
     @graphviper.utils.parameter.validate(
         
@@ -922,8 +921,8 @@ class AstrohackPanelFile(dict):
 
         param_dict = locals()
 
-        _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(self, _export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        compute_graph(self, _export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
                               parallel=parallel)
 
 
@@ -1092,7 +1091,7 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-        _print_array_configuration(param_dict, self['ant_info'], self['obs_info']['telescope_name'])
+        print_array_configuration(param_dict, self['ant_info'], self['obs_info']['telescope_name'])
 
     @graphviper.utils.parameter.validate(
     )
@@ -1135,7 +1134,7 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
 
         if precessed:
             filename = str(pathlib.Path(destination).joinpath('locit_source_table_precessed.png'))
@@ -1146,7 +1145,7 @@ class AstrohackLocitFile(dict):
             filename = str(pathlib.Path(destination).joinpath('locit_source_table_fk5.png'))
             obs_midpoint = None
 
-        _plot_source_table(filename, self['obs_info']['src_dict'], precessed=precessed, obs_midpoint=obs_midpoint,
+        plot_source_table(filename, self['obs_info']['src_dict'], precessed=precessed, obs_midpoint=obs_midpoint,
                            display=display, figure_size=figure_size, dpi=dpi, label=labels)
         return
 
@@ -1195,8 +1194,8 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
-        _plot_array_configuration(self['ant_info'], self['obs_info']['telescope_name'], param_dict)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        plot_array_configuration(self['ant_info'], self['obs_info']['telescope_name'], param_dict)
         return
 
     def summary(self) -> None:
@@ -1318,7 +1317,7 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         param_dict['combined'] = self.combined
         _export_fit_results(self, param_dict)
 
@@ -1379,12 +1378,12 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         param_dict['combined'] = self.combined
         if self.combined:
-            _dask_general_compute(self, _plot_sky_coverage_chunk, param_dict, ['ant'], parallel=parallel)
+            compute_graph(self, _plot_sky_coverage_chunk, param_dict, ['ant'], parallel=parallel)
         else:
-            _dask_general_compute(self, _plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
+            compute_graph(self, _plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
                                   parallel=parallel)
 
     @graphviper.utils.parameter.validate(
@@ -1453,14 +1452,14 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
 
         param_dict['combined'] = self.combined
         param_dict['comb_type'] = self._meta_data["combine_ddis"]
         if self.combined:
-            _dask_general_compute(self, _plot_delays_chunk, param_dict, ['ant'], parallel=parallel)
+            compute_graph(self, _plot_delays_chunk, param_dict, ['ant'], parallel=parallel)
         else:
-            _dask_general_compute(self, _plot_delays_chunk, param_dict, ['ant', 'ddi'],
+            compute_graph(self, _plot_delays_chunk, param_dict, ['ant', 'ddi'],
                                   parallel=parallel)
 
     @graphviper.utils.parameter.validate(
@@ -1518,7 +1517,7 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         param_dict['combined'] = self.combined
         _plot_position_corrections(param_dict, self)
 

@@ -1,7 +1,7 @@
 from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils._dio import _aips_holog_to_xds
-from astrohack.utils._conversion import _convert_unit
+from astrohack import aips_holog_to_xds
+from astrohack.utils.conversion import convert_unit
 
 import numpy as np
 import graphviper
@@ -24,7 +24,7 @@ class TestClassAntennaSurface:
     setup()
     ampfits = datafolder+'amp.fits'
     devfits = datafolder+'dev.fits'
-    inputxds = _aips_holog_to_xds(ampfits, devfits)
+    inputxds = aips_holog_to_xds(ampfits, devfits)
     inputxds.attrs['ant_name'] = 'test'
     inputxds.attrs['ddi'] = 'test'
     tel = Telescope('vla')
@@ -109,7 +109,7 @@ class TestClassAntennaSurface:
         assert zrms[1] == 0, 'RMS should be zero when computed over a zero array'
         self.tant.residuals = self.rand
         self.tant.mask[:, :] = True
-        fac = _convert_unit('mm', 'm', 'length')
+        fac = convert_unit('mm', 'm', 'length')
         rrms = self.tant.get_rms()[1]*fac
         assert abs(rrms - self.sigma)/self.sigma < 0.01, 'Computed RMS does not match expected RMS within 1%'
 

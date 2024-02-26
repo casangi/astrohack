@@ -2,7 +2,7 @@ import dask
 import xarray
 import graphviper.utils.logger as logger
 
-from astrohack.utils.tools import _param_to_list
+from astrohack.utils.text import _param_to_list
 
 
 def _construct_general_graph_recursively(
@@ -14,8 +14,6 @@ def _construct_general_graph_recursively(
         parallel=False,
         oneup=None
 ):
-
-    
     if len(key_order) == 0:
         if isinstance(looping_dict, xarray.Dataset):
             param_dict['xds_data'] = looping_dict
@@ -44,7 +42,7 @@ def _construct_general_graph_recursively(
                         parallel=parallel,
                         oneup=item
                     )
-                    
+
                 else:
                     if oneup is None:
                         logger.warning(f'{item} is not present in looping dict')
@@ -52,7 +50,7 @@ def _construct_general_graph_recursively(
                         logger.warning(f'{item} is not present for {oneup}')
 
 
-def _dask_general_compute(looping_dict, chunk_function, param_dict, key_order, parallel=False):
+def compute_graph(looping_dict, chunk_function, param_dict, key_order, parallel=False):
     """
     General tool for looping over the data and constructing graphs for dask parallel processing
     Args:
@@ -65,7 +63,7 @@ def _dask_general_compute(looping_dict, chunk_function, param_dict, key_order, p
     Returns: True if processing has occurred, False if no data was processed
 
     """
-    
+
     delayed_list = []
     _construct_general_graph_recursively(
         looping_dict,

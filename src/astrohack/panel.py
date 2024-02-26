@@ -4,13 +4,13 @@ import shutil
 import graphviper.utils.logger as logger
 import graphviper.utils.parameter
 
-from astrohack.utils._dio import _aips_holog_to_xds
-from astrohack.utils._dio import _check_if_file_will_be_overwritten
-from astrohack.utils._dio import _check_if_file_exists
-from astrohack.core.io.data import write_meta_data
+from astrohack.utils.fits import aips_holog_to_xds
+from astrohack.utils.file import overwrite_file
+
+from astrohack.utils.data import write_meta_data
 from astrohack.core.panel import process_panel_chunk, custom_panel_checker
-from astrohack.utils.tools import get_default_file_name
-from astrohack.utils._dask_graph_tools import _dask_general_compute
+from astrohack.utils.text import get_default_file_name
+from astrohack.utils.graph import compute_graph
 
 from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 
@@ -177,12 +177,14 @@ def panel(
     panel_params = locals()
 
     input_params = panel_params.copy()
-    _check_if_file_exists(panel_params['image_name'])
+    assert pathlib.Path(panel_params['image_name']).exists() is True, (
+        logger.error(f"File {panel_params['image_name']} does not exists.")
+    )
 
     image_mds = AstrohackImageFile(panel_params['image_name'])
     image_mds.open()
 
-    _check_if_file_will_be_overwritten(panel_params['panel_name'], panel_params['overwrite'])
+    overwrite_file(panel_params['panel_name'], panel_params['overwrite'])
 
     if os.path.exists(panel_params['image_name'] + '/.aips'):
         panel_params['origin'] = 'AIPS'
@@ -190,7 +192,7 @@ def panel(
 
     else:
         panel_params['origin'] = 'astrohack'
-        if _dask_general_compute(image_mds, process_panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
+        if compute_graph(image_mds, process_panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
             logger.info("Finished processing")
             output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_input")
             write_meta_data(output_attr_file, input_params)
@@ -225,11 +227,12 @@ def _aips_holog_to_astrohack(
         holog_name: Name of the output .zarr file
         overwrite: Overwrite previous file of same name?
     """
-    _check_if_file_exists(amp_image)
-    _check_if_file_exists(dev_image)
-    _check_if_file_will_be_overwritten(holog_name, overwrite)
+    assert pathlib.Path(amp_image).exists() is True, logger.error(f'File {amp_image} does not exists.')
+    assert pathlib.Path(dev_image).exists() is True, logger.error(f'File {dev_image} does not exists.')
 
-    xds = _aips_holog_to_xds(amp_image, dev_image)
+    overwrite_file(holog_name, overwrite)
+
+    xds = aips_holog_to_xds(amp_image, dev_image)
     xds.attrs['telescope_name'] = telescope_name
 
     if pathlib.Path(holog_name).exists():

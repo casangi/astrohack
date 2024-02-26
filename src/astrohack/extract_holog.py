@@ -21,18 +21,18 @@ from rich.console import Console
 from rich.table import Table
 
 
-from astrohack.utils._constants import pol_str
-from astrohack.utils._conversion import _convert_ant_name_to_id
-from astrohack.utils._dio import _check_if_file_exists
-from astrohack.utils._dio import _check_if_file_will_be_overwritten
-from astrohack.core.io.file import load_holog_file
-from astrohack.core.io.file import load_point_file
-from astrohack.core.io.data import write_meta_data
-from astrohack.core.extract_holog import _create_holog_meta_data
-from astrohack.core.extract_holog import _create_holog_obs_dict
+from astrohack.utils.constants import pol_str
+
+from astrohack.utils.file import overwrite_file
+from astrohack.utils.file import load_holog_file
+from astrohack.utils.file import load_point_file
+from astrohack.utils.data import write_meta_data
+from astrohack.core.extract_holog import create_holog_meta_data
+from astrohack.core.extract_holog import create_holog_obs_dict
 from astrohack.core.extract_holog import process_extract_holog_chunk
-from astrohack.utils.tools import NumpyEncoder, _get_valid_state_ids
-from astrohack.utils.tools import get_default_file_name
+from astrohack.utils.tools import get_valid_state_ids
+from astrohack.utils.text import get_default_file_name
+from astrohack.utils.text import NumpyEncoder
 from astrohack.mds import AstrohackHologFile
 from astrohack.mds import AstrohackPointFile
 from astrohack.extract_pointing import extract_pointing
@@ -391,8 +391,11 @@ def extract_holog(
 
     input_pars = extract_holog_params.copy()
 
-    _check_if_file_exists(extract_holog_params['ms_name'])
-    _check_if_file_will_be_overwritten(extract_holog_params['holog_name'], extract_holog_params['overwrite'])
+    assert pathlib.Path(extract_holog_params['ms_name']).exists() is True, (
+        logger.error(f'File {extract_holog_params["ms_name"]} does not exists.')
+    )
+
+    overwrite_file(extract_holog_params['holog_name'], extract_holog_params['overwrite'])
 
     try:
         pnt_dict = load_point_file(extract_holog_params['point_name'])
@@ -449,7 +452,7 @@ def extract_holog(
 
     # Create holog_obs_dict if not specified
     if holog_obs_dict is None:
-        holog_obs_dict = _create_holog_obs_dict(
+        holog_obs_dict = create_holog_obs_dict(
             pnt_dict,
             extract_holog_params['baseline_average_distance'],
             extract_holog_params['baseline_average_nearest'],
@@ -483,7 +486,7 @@ def extract_holog(
     obs_modes = ctb.getcol("OBS_MODE")
     ctb.close()
 
-    state_ids = _get_valid_state_ids(obs_modes)
+    state_ids = get_valid_state_ids(obs_modes)
 
     spw_ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "SPECTRAL_WINDOW"),
@@ -637,7 +640,7 @@ def extract_holog(
 
         extract_holog_params['telescope_name'] = telescope_name
 
-        meta_data = _create_holog_meta_data(
+        meta_data = create_holog_meta_data(
             holog_file=extract_holog_params['holog_name'],
             holog_dict=holog_dict,
             input_params=extract_holog_params.copy()
@@ -768,8 +771,8 @@ def generate_holog_obs_dict(
     """
     extract_holog_params = locals()
 
-    _check_if_file_exists(ms_name)
-    _check_if_file_exists(point_name)
+    assert pathlib.Path(ms_name).exists() is True, logger.error(f'File {ms_name} does not exists.')
+    assert pathlib.Path(point_name).exists() is True, logger.error(f'File {point_name} does not exists.')
 
     # Get antenna IDs and names
     ctb = ctables.table(
@@ -803,7 +806,7 @@ def generate_holog_obs_dict(
     pnt_mds = AstrohackPointFile(extract_holog_params['point_name'])
     pnt_mds.open()
 
-    holog_obs_dict = _create_holog_obs_dict(
+    holog_obs_dict = create_holog_obs_dict(
         pnt_mds,
         extract_holog_params['baseline_average_distance'],
         extract_holog_params['baseline_average_nearest'],
@@ -912,3 +915,16 @@ def model_memory_usage(
 
     # Make prediction of memory per core in MB
     return memory_per_core
+
+def _convert_ant_name_to_id(ant_list, ant_names):
+    """_summary_
+
+  Args:
+      ant_list (_type_): _description_
+      ant_names (_type_): _description_
+
+  Returns:
+      _type_: _description_
+  """
+
+    return np.nonzero(np.in1d(ant_list, ant_names))[0]

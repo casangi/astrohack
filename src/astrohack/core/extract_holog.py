@@ -11,12 +11,12 @@ from numba.core import types
 from datetime import date
 
 from casacore import tables as ctables
-from astrohack.utils._imaging import _calculate_parallactic_angle_chunk
-from astrohack.utils.algorithms import calculate_optimal_grid_parameters, _significant_digits
-from astrohack.utils._plot_commons import _create_figure_and_axes, _scatter_plot, _close_figure
-from astrohack.utils._conversion import _convert_unit
+from astrohack.utils.imaging import _calculate_parallactic_angle_chunk
+from astrohack.utils.algorithms import calculate_optimal_grid_parameters, significant_digits
+from astrohack.visualization._plot_commons import _create_figure_and_axes, _scatter_plot, _close_figure
+from astrohack.utils.conversion import convert_unit
 
-from astrohack.core.io.file import load_point_file
+from astrohack.utils.file import load_point_file
 
 
 def process_extract_holog_chunk(extract_holog_params):
@@ -441,7 +441,7 @@ def _create_holog_file(
             logger.warning("Mapping antenna {index} has no data".format(index=ant_names[map_ant_index]))
 
 
-def _create_holog_obs_dict(
+def create_holog_obs_dict(
         pnt_dict,
         baseline_average_distance,
         baseline_average_nearest,
@@ -636,7 +636,7 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
     return avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt
 
 
-def _create_holog_meta_data(holog_file, holog_dict, input_params):
+def create_holog_meta_data(holog_file, holog_dict, input_params):
     """Save holog file meta information to json file with the transformation
         of the ordering (ddi, holog_map, ant) --> (ant, ddi, holog_map).
 
@@ -667,7 +667,7 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
                             n_pixs.append(xds.attrs["grid_params"]["n_pix"])
                             telescope_names.append(xds.attrs['telescope_name'])
 
-    cell_sizes_sigfigs = _significant_digits(cell_sizes, digits=3)
+    cell_sizes_sigfigs = significant_digits(cell_sizes, digits=3)
 
     meta_data = {
         'cell_size': np.mean(cell_sizes),
@@ -680,7 +680,7 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         logger.warning('Calculating suggested cell size ...')
 
         meta_data["cell_size"] = \
-            astrohack.utils.algorithms._calculate_suggested_grid_parameter(parameter=np.array(cell_sizes))
+            astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(cell_sizes))
 
         logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))
 
@@ -689,7 +689,7 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
         logger.warning('Calculating suggested number of pixels ...')
 
         meta_data['n_pix'] = int(
-            astrohack.utils.algorithms._calculate_suggested_grid_parameter(parameter=np.array(n_pixs)))
+            astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(n_pixs)))
 
         logger.info("The suggested number of pixels is calculated to be: {n_pix} (grid: {points} x {points})".format(
             n_pix=meta_data["n_pix"], points=int(np.sqrt(meta_data["n_pix"]))
@@ -717,12 +717,12 @@ def _create_holog_meta_data(holog_file, holog_dict, input_params):
 
 def _plot_lm_coverage(param_dict):
     data = param_dict['xds_data']
-    angle_fact = _convert_unit('rad', param_dict['angle_unit'], 'trigonometric')
+    angle_fact = convert_unit('rad', param_dict['angle_unit'], 'trigonometric')
     real_lm = data['DIRECTIONAL_COSINES'] * angle_fact
     ideal_lm = data['IDEAL_DIRECTIONAL_COSINES'] * angle_fact
     time = data.time.values
     time -= time[0]
-    time *= _convert_unit('sec', param_dict['time_unit'], 'time')
+    time *= convert_unit('sec', param_dict['time_unit'], 'time')
     param_dict['l_label'] = f'L [{param_dict["angle_unit"]}]'
     param_dict['m_label'] = f'M [{param_dict["angle_unit"]}]'
     param_dict['time_label'] = f'Time from observation start [{param_dict["time_unit"]}]'
@@ -760,7 +760,7 @@ def _plot_correlation(visi, weights, correlation, pol_axis, time, lm, param_dict
             y_data = [np.absolute(loc_vis)]
             y_label = [f'{correlation} Amplitude [arb. units]']
             title = ['Amplitude']
-            y_data.append(np.angle(loc_vis) * _convert_unit('rad', param_dict["phase_unit"], 'trigonometric'))
+            y_data.append(np.angle(loc_vis) * convert_unit('rad', param_dict["phase_unit"], 'trigonometric'))
             y_label.append(f'{correlation} Phase [{param_dict["phase_unit"]}]')
             title.append('Phase')
         else:
@@ -903,5 +903,5 @@ def _compute_stokes(data, weight, pol_axis):
     # Both sigmas here are probably wrong because of the uncertainty of how weights are stored.
     sigma_pha = np.pi / np.sqrt(3) * (1 - cst * snr)
     sigma_pha = np.where(snr > 2.5, 1 / snr, sigma_pha)
-    sigma_pha *= _convert_unit('rad', 'deg', 'trigonometric')
+    sigma_pha *= convert_unit('rad', 'deg', 'trigonometric')
     return stokes_amp, stokes_pha, sigma_amp, sigma_pha

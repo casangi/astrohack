@@ -1,4 +1,5 @@
 import json
+import pathlib
 import numpy as np
 
 import graphviper.utils.logger as logger
@@ -7,13 +8,12 @@ import graphviper.utils.parameter
 from numbers import Number
 from typing import List, Union, NewType
 
-from astrohack.utils._dask_graph_tools import _dask_general_compute
-from astrohack.utils._dio import _check_if_file_exists
-from astrohack.utils._dio import _check_if_file_will_be_overwritten
-from astrohack.core.io.data import read_meta_data
-from astrohack.core.io.data import write_meta_data
+from astrohack.utils.graph import compute_graph
+from astrohack.utils.file import overwrite_file
+from astrohack.utils.data import read_meta_data
+from astrohack.utils.data import write_meta_data
 from astrohack.core.holog import process_holog_chunk
-from astrohack.utils.tools import get_default_file_name
+from astrohack.utils.text import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
 Array = NewType("Array", Union[np.array, List[int], List[float]])
@@ -154,9 +154,11 @@ def holog(
     holog_params = locals()
 
     input_params = holog_params.copy()
-    _check_if_file_exists(holog_params['holog_name'])
+    assert pathlib.Path(holog_params['holog_name']).exists() is True, (
+        logger.error(f'File {holog_params["holog_name"]} does not exists.')
+    )
 
-    _check_if_file_will_be_overwritten(holog_params['image_name'], holog_params['overwrite'])
+    overwrite_file(holog_params['image_name'], holog_params['overwrite'])
 
     json_data = "/".join((holog_params['holog_name'], ".holog_json"))
 
@@ -217,7 +219,7 @@ def holog(
     with open(".holog_diagnostic.json", "w") as out_file:
         json.dump(json_data, out_file)
 
-    if _dask_general_compute(
+    if compute_graph(
             holog_json,
             process_holog_chunk,
             holog_params,

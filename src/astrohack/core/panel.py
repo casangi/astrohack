@@ -1,7 +1,7 @@
 import xarray as xr
 import graphviper.utils.logger as logger
 
-from astrohack.utils._constants import plot_types
+from astrohack.utils.constants import plot_types
 
 from astrohack.antenna.telescope import Telescope
 from astrohack.antenna.antenna_surface import AntennaSurface, SUPPORTED_POL_STATES

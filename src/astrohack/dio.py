@@ -14,7 +14,7 @@ from astrohack.mds import AstrohackPointFile
 from astrohack.mds import AstrohackLocitFile
 from astrohack.mds import AstrohackPositionFile
 
-from astrohack.utils._dio import _print_array
+from astrohack.utils.text import print_array
 
 from typing import Union, List, NewType, Dict, Any, NoReturn
 
@@ -346,7 +346,7 @@ def print_json(
             list_indent = 0
 
         print("{open}".format(open="[").rjust(list_indent, ' '))
-        _print_array(obj, columns=columns, indent=indent + 1)
+        print_array(obj, columns=columns, indent=indent + 1)
         print("{close}".format(close="]").rjust(list_indent, ' '))
 
     else:

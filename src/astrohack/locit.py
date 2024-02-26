@@ -1,11 +1,13 @@
+import pathlib
+
 import graphviper.utils.parameter
 import graphviper.utils.logger as logger
 
-from astrohack.utils._dask_graph_tools import _dask_general_compute
-from astrohack.utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
-from astrohack.core.io.data import write_meta_data
+from astrohack.utils.graph import compute_graph
+from astrohack.utils.file import overwrite_file
+from astrohack.utils.data import write_meta_data
 from astrohack.core.locit import _locit_separated_chunk, _locit_combined_chunk, _locit_difference_chunk
-from astrohack.utils.tools import get_default_file_name
+from astrohack.utils.text import get_default_file_name
 from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 
 from typing import Union, List
@@ -149,8 +151,10 @@ def locit(
     input_params = locit_params.copy()
     attributes = locit_params.copy()
 
-    _check_if_file_exists(locit_params['locit_name'])
-    _check_if_file_will_be_overwritten(locit_params['position_name'], locit_params['overwrite'])
+    assert pathlib.Path(locit_params['locit_name']).exists() is True, (
+        logger.error(f'File {locit_params["locit_name"]} does not exists.')
+    )
+    overwrite_file(locit_params['position_name'], locit_params['overwrite'])
 
     locit_mds = AstrohackLocitFile(locit_params['locit_name'])
     locit_mds.open()
@@ -173,7 +177,7 @@ def locit(
         function = _locit_separated_chunk
         key_order = ['ant', 'ddi']
 
-    if _dask_general_compute(locit_mds, function, locit_params, key_order, parallel=parallel):
+    if compute_graph(locit_mds, function, locit_params, key_order, parallel=parallel):
         logger.info("Finished processing")
 
         output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_attr")

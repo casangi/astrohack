@@ -3,8 +3,8 @@ from importlib.metadata import version
 
 __version__ = version('astrohack')
 
-from .extract_holog import *
-from .extract_holog import generate_holog_obs_dict
+from .extract_holog import HologObsDict, extract_holog, generate_holog_obs_dict, model_memory_usage
+
 from .extract_pointing import *
 from .holog import *
 from .dio import *

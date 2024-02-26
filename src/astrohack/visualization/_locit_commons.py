@@ -1,6 +1,6 @@
 from matplotlib.patches import Rectangle
 
-from astrohack.utils._constants import *
+from astrohack.utils.constants import *
 
 import graphviper.utils.logger as logger
 

@@ -1,21 +1,17 @@
 import copy
 import os
-import datetime
-import zarr
-import astrohack
 
-import xarray as xr
+import zarr
+
+import shutil
+import pathlib
+
 import numpy as np
+import xarray as xr
 import graphviper.utils.logger as logger
 
-from astropy.io import fits
-
-from astrohack.utils.tools import add_prefix
-from astrohack.utils.tools import reorder_axes_for_fits
-
-from astrohack.core.io.data import get_attrs
-from astrohack.core.io.data import read_meta_data
-from astrohack.core.io.data import read_data_from_holog_json
+from astrohack.utils.data import get_attrs
+from astrohack.utils.data import read_meta_data
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 
@@ -254,7 +250,7 @@ def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None,
     if ant_id is None:
         return holog_dict
 
-    return holog_dict, read_data_from_holog_json(
+    return holog_dict, _read_data_from_holog_json(
         holog_file=holog_file,
         holog_dict=holog_dict,
         ant_id=ant_id,
@@ -262,53 +258,21 @@ def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None,
     )
 
 
-def read_fits(filename):
-    """
-    Reads a square FITS file and do sanity checks on its dimensionality
-    Args:
-        filename: a string containing the FITS file name/path
+def overwrite_file(file, overwrite):
+    path = pathlib.Path(file)
 
-    Returns:
-    The FITS header and the associated data array
-    """
-    hdul = fits.open(filename)
-    head = hdul[0].header
-    data = hdul[0].data[0, 0, :, :]
-    hdul.close()
-    if head["NAXIS"] != 1:
-        if head["NAXIS"] < 1:
-            raise Exception(filename + " is not bi-dimensional")
-        elif head["NAXIS"] > 1:
-            for iax in range(2, head["NAXIS"]):
-                if head["NAXIS" + str(iax + 1)] != 1:
-                    raise Exception(filename + " is not bi-dimensional")
-    if head["NAXIS1"] != head["NAXIS2"]:
-        raise Exception(filename + " does not have the same amount of pixels in the x and y axes")
-    return head, data
+    if (path.exists() is True) and (overwrite is False):
+        logger.error(f'{file} already exists. To overwrite set overwrite to True, or remove current file.')
 
+        raise FileExistsError("{file} exists.".format(file=file))
 
-def write_fits(header, imagetype, data, filename, unit, origin):
-    """
-    Write a dictionary and a dataset to a FITS file
-    Args:
-        header: The dictionary containing the header
-        imagetype: Type to be added to FITS header
-        data: The dataset
-        filename: The name of the output file
-        unit: to be set to bunit
-        origin: Which astrohack mds has created the FITS being written
-    """
-
-    header['BUNIT'] = unit
-    header['TYPE'] = imagetype
-    header['ORIGIN'] = f'Astrohack v{astrohack.__version__}: {origin}'
-    header['DATE'] = datetime.datetime.now().strftime('%b %d %Y, %H:%M:%S')
-
-    hdu = fits.PrimaryHDU(reorder_axes_for_fits(data))
-    for key in header.keys():
-        hdu.header.set(key, header[key])
-    hdu.writeto(add_prefix(filename, origin), overwrite=True)
-    return
+    elif (path.exists() is True) and (overwrite is True):
+        if file.endswith(".zarr"):
+            logger.warning(f'{file} will be overwritten.')
+            shutil.rmtree(file)
+        else:
+            logger.warning(f'{file} may not be valid astrohack file. Check the file name again.')
+            raise Exception(f"IncorrectFileType: {file}")
 
 
 def load_image_xds(file_stem, ant, ddi, dask_load=True):
@@ -337,6 +301,75 @@ def load_image_xds(file_stem, ant, ddi, dask_load=True):
     else:
         raise FileNotFoundError("Image file: {} not found".format(image_path))
 
+
+def load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None, diagnostic=False):
+    """Load pointing dictionary from disk.
+
+        Args:
+            file (str): Input zarr file containing pointing dictionary.
+            diagnostic (bool):
+            pnt_dict (dict):
+            dask_load (bool):
+            ant_list (list):
+
+        Returns:
+            dict: Pointing dictionary
+        """
+    if pnt_dict is None:
+        pnt_dict = {}
+
+    pnt_dict['point_meta_ds'] = xr.open_zarr(file)
+
+    for ant in os.listdir(file):
+        if "ant_" in ant:
+            if (ant_list is None) or (ant in ant_list):
+                if dask_load:
+                    pnt_dict[ant] = xr.open_zarr(os.path.join(file, ant))
+                else:
+                    pnt_dict[ant] = _open_no_dask_zarr(os.path.join(file, ant))
+
+    if diagnostic:
+        _check_time_axis_consistency(pnt_dict)
+
+    return pnt_dict
+
+def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
+    """Read holog file metadata and extract antenna based xds information for each (ddi, holog_map)
+
+        Args:
+            ddi_id ():
+            holog_file (str): holog file name.
+            holog_dict (dict): holog file dictionary containing msxds data.
+            ant_id (int): Antenna id
+
+        Returns:
+            nested dict: nested dictionary (ddi, holog_map, xds) with xds data embedded in it.
+        """
+
+    ant_id_str = str(ant_id)
+
+    holog_meta_data = str(pathlib.Path(holog_file).joinpath(".holog_json"))
+
+    try:
+        with open(holog_meta_data, "r") as json_file:
+            holog_json = json.load(json_file)
+
+    except Exception as error:
+        logger.error(str(error))
+        raise Exception
+
+    ant_data_dict = {}
+
+    for ddi in holog_json[ant_id_str].keys():
+        if "ddi_" in ddi:
+            if (ddi_id is not None) and (ddi != ddi_id):
+                continue
+
+            for holog_map in holog_json[ant_id_str][ddi].keys():
+                if "map_" in holog_map:
+                    ant_data_dict.setdefault(ddi, {})[holog_map] = holog_dict[ddi][holog_map][ant_id]
+
+    return ant_data_dict
 
 def _open_no_dask_zarr(zarr_name, slice_dict=None):
     """
@@ -407,35 +440,3 @@ def _check_time_axis_consistency(pnt_dict):
 
         logger.debug("Pointing offset time axis length per antenna")
         logger.debug(str(variable_length))
-
-
-def load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None, diagnostic=False):
-    """Load pointing dictionary from disk.
-
-        Args:
-            file (str): Input zarr file containing pointing dictionary.
-            diagnostic (bool):
-            pnt_dict (dict):
-            dask_load (bool):
-            ant_list (list):
-
-        Returns:
-            dict: Pointing dictionary
-        """
-    if pnt_dict is None:
-        pnt_dict = {}
-
-    pnt_dict['point_meta_ds'] = xr.open_zarr(file)
-
-    for ant in os.listdir(file):
-        if "ant_" in ant:
-            if (ant_list is None) or (ant in ant_list):
-                if dask_load:
-                    pnt_dict[ant] = xr.open_zarr(os.path.join(file, ant))
-                else:
-                    pnt_dict[ant] = _open_no_dask_zarr(os.path.join(file, ant))
-
-    if diagnostic:
-        _check_time_axis_consistency(pnt_dict)
-
-    return pnt_dict

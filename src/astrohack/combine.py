@@ -1,13 +1,14 @@
-from typing import Union, List
-
+import pathlib
 import graphviper.utils.parameter
 import graphviper.utils.logger as logger
 
-from astrohack.core.combine import _combine_chunk
-from astrohack.utils._dask_graph_tools import _dask_general_compute
-from astrohack.utils._dio import _check_if_file_will_be_overwritten, _check_if_file_exists
-from astrohack.core.io.data import write_meta_data
-from astrohack.utils.tools import get_default_file_name
+from typing import Union, List
+
+from astrohack.core.combine import process_combine_chunk
+from astrohack.utils.graph import compute_graph
+from astrohack.utils.file import overwrite_file
+from astrohack.utils.data import write_meta_data
+from astrohack.utils.text import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
 
@@ -20,7 +21,7 @@ def combine(
         weighted: bool = False,
         parallel: bool = False,
         overwrite: bool = False
-) -> AstrohackImageFile:
+) -> Union[AstrohackImageFile, None]:
     """Combine DDIs in a Holography image to increase SNR
 
     :param image_name: Input holography data file name. Accepted data format is the output from ``astrohack.holog.holog``
@@ -85,8 +86,11 @@ def combine(
 
     input_params = combine_params.copy()
 
-    _check_if_file_exists(combine_params['image_name'])
-    _check_if_file_will_be_overwritten(combine_params['combine_name'], combine_params['overwrite'])
+    assert pathlib.Path(combine_params['image_name']).exists() is True, (
+        logger.error(f'File {combine_params["image_name"]} does not exists.')
+    )
+
+    overwrite_file(combine_params['combine_name'], combine_params['overwrite'])
 
     image_mds = AstrohackImageFile(combine_params['image_name'])
     image_mds.open()
@@ -94,7 +98,7 @@ def combine(
     combine_params['image_mds'] = image_mds
     image_attr = image_mds._meta_data
 
-    if _dask_general_compute(image_mds, _combine_chunk, combine_params, ['ant'], parallel=parallel):
+    if compute_graph(image_mds, process_combine_chunk, combine_params, ['ant'], parallel=parallel):
         logger.info("Finished processing")
 
         output_attr_file = "{name}/{ext}".format(name=combine_params['combine_name'], ext=".image_attr")

@@ -4,9 +4,9 @@ import graphviper.utils.logger as logger
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 
-from astrohack.utils.algorithms import _gauss_elimination_numpy, _least_squares_fit
-from astrohack.utils._constants import *
-from astrohack.utils._conversion import _convert_unit
+from astrohack.utils.algorithms import gauss_elimination, least_squares
+from astrohack.utils.constants import *
+from astrohack.utils.conversion import convert_unit
 
 PANEL_MODELS = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
                 "rotated_paraboloid", "full_paraboloid_lst_sq"]
@@ -238,7 +238,7 @@ class BasePanel:
         system[:, 6] = data[:, 0]
         system[:, 7] = data[:, 1]
         vector = data[:, -1]
-        self.par, _, _ = _least_squares_fit(system, vector)
+        self.par, _, _ = least_squares(system, vector)
         self.solved = True
 
     def _corr_point_least_squares_paraboloid(self, xcoor, ycoor):
@@ -280,7 +280,7 @@ class BasePanel:
         system[:, 0] = ((data[:, 0] - xc) * np.cos(self.zeta) - (data[:, 1] - yc) * np.sin(self.zeta))**2  # U
         system[:, 1] = ((data[:, 0] - xc) * np.sin(self.zeta) + (data[:, 1] - yc) * np.cos(self.zeta))**2  # V
         vector = data[:, -1]
-        self.par, _, _ = _least_squares_fit(system, vector)
+        self.par, _, _ = least_squares(system, vector)
         self.solved = True
 
     def _corr_point_corotated_lst_sq(self, xcoor, ycoor):
@@ -420,7 +420,7 @@ class BasePanel:
                 vector[1] += self.samples[ipoint][-1] * self.samples[ipoint][1]
                 vector[2] += self.samples[ipoint][-1]
 
-        self.par = _gauss_elimination_numpy(system, vector)
+        self.par = gauss_elimination(system, vector)
         self.solved = True
         return
 
@@ -504,7 +504,7 @@ class BasePanel:
         Returns:
             Numpy array with screw adjustments
         """
-        fac = _convert_unit('m', unit, 'length')
+        fac = convert_unit('m', unit, 'length')
         nscrew = len(self.screws)
         screw_corr = np.zeros(nscrew)
         for iscrew in range(nscrew):
@@ -520,7 +520,7 @@ class BasePanel:
             rotate: Rotate label for better display
         """
         if rotate:
-            angle = (-self.zeta % pi - pi/2)*_convert_unit('rad', 'deg', 'trigonometric')
+            angle = (-self.zeta % pi - pi/2)*convert_unit('rad', 'deg', 'trigonometric')
         else:
             angle = 0
         ax.text(self.center[1], self.center[0], self.label, fontsize=fontsize, ha='center', va='center',
