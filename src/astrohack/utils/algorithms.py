@@ -8,7 +8,7 @@ from astrohack.antenna.telescope import Telescope
 
 import graphviper.utils.logger as logger
 
-from astrohack.utils import convert_unit
+from astrohack.utils.conversion import convert_unit
 
 
 def calculate_suggested_grid_parameter(parameter, quantile=0.005):

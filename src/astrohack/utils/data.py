@@ -1,19 +1,15 @@
-import json
 import copy
 import inspect
+import json
 from datetime import date
 
-import numpy
+import graphviper.utils.logger as logger
 import numpy as np
-from graphviper.utils import logger as logger
 from prettytable import PrettyTable
 
 import astrohack
-
-import graphviper.utils.logger as logger
-
-from astrohack import Telescope, AntennaSurface
-
+from astrohack.antenna.telescope import Telescope
+from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.utils import compute_average_stokes_visibilities, convert_unit, clight, notavail, rotate_to_gmt
 from astrohack.utils.text import NumpyEncoder, param_to_list, add_prefix, format_value_error
 

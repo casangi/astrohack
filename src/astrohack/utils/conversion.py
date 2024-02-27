@@ -1,4 +1,3 @@
-import numpy as np
 import graphviper.utils.logger as logger
 from astropy import units as units
 from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord

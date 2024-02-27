@@ -4,7 +4,7 @@ import numpy as np
 from casacore import tables
 from graphviper.utils import logger as logger
 
-from astrohack import Telescope
+from astrohack.antenna.telescope import Telescope
 
 
 def split_pointing_table(ms_name, antennas):

@@ -1,6 +1,7 @@
-import graphviper.utils.logger as logger
+import astrohack
 import numpy as np
 import xarray as xr
+
 from scipy.interpolate import griddata
 
 from astrohack.antenna.telescope import Telescope
@@ -15,6 +16,8 @@ from astrohack.utils.imaging import calculate_aperture_pattern
 from astrohack.utils.imaging import mask_circular_disk
 from astrohack.utils.imaging import parallactic_derotation
 from astrohack.utils.phase_fitting import phase_fitting_block
+
+import graphviper.utils.logger as logger
 
 
 def process_holog_chunk(holog_chunk_params):
@@ -126,7 +129,7 @@ def process_holog_chunk(holog_chunk_params):
 
     pol = ant_data_dict[ddi][holog_map].pol.values
     if to_stokes:
-        beam_grid = to_stokes(beam_grid, ant_data_dict[ddi][holog_map].pol.values)
+        beam_grid = astrohack.utils.conversion.to_stokes(beam_grid, ant_data_dict[ddi][holog_map].pol.values)
         pol = ['I', 'Q', 'U', 'V']
 
     ###############
@@ -315,5 +318,3 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
         cf_chan_map[i], _ = find_nearest(pb_freq, freq_chan[i])
 
     return cf_chan_map, pb_freq
-
-

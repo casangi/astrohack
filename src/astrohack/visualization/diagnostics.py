@@ -4,7 +4,8 @@ import numpy as np
 from astropy.time import Time
 from graphviper.utils import logger as logger
 
-from astrohack import Telescope, AntennaSurface
+from astrohack.antenna.telescope import Telescope
+from astrohack.antenna.antenna_surface import AntennaSurface
 
 from astrohack.utils import convert_unit, pi, clight, compute_antenna_relative_off, rotate_to_gmt, plot_types
 
