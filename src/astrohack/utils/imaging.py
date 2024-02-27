@@ -7,7 +7,7 @@ import astropy.coordinates as coord
 import graphviper.utils.logger as logger
 
 from skimage.draw import disk
-from astrohack.utils.algorithms import _calc_coords
+from astrohack.utils.algorithms import calc_coords
 
 
 def parallactic_derotation(data, parallactic_angle_dict):
@@ -120,12 +120,12 @@ def calculate_aperture_pattern(grid, delta, padding_factor=50):
 
     cell_size = 1 / (image_size * delta)
 
-    u, v = _calc_coords(image_size, cell_size)
+    u, v = calc_coords(image_size, cell_size)
 
     return aperture_grid, u, v, cell_size
 
 
-def _calculate_parallactic_angle_chunk(
+def calculate_parallactic_angle_chunk(
         time_samples,
         observing_location,
         direction,

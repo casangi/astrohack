@@ -8,7 +8,8 @@ from astrohack.utils.fits import aips_holog_to_xds
 from astrohack.utils.file import overwrite_file
 
 from astrohack.utils.data import write_meta_data
-from astrohack.core.panel import process_panel_chunk, custom_panel_checker
+from astrohack.core.panel import process_panel_chunk
+from astrohack.utils.validation import custom_panel_checker
 from astrohack.utils.text import get_default_file_name
 from astrohack.utils.graph import compute_graph
 

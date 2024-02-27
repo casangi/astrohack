@@ -1,10 +1,14 @@
+import numpy
 import numpy as np
 import scipy.signal as scisig
 import scipy.constants
+import xarray as xr
 
 from astrohack.antenna.telescope import Telescope
 
 import graphviper.utils.logger as logger
+
+from astrohack.utils import convert_unit
 
 
 def calculate_suggested_grid_parameter(parameter, quantile=0.005):
@@ -76,7 +80,7 @@ def _apply_mask(data, scaling=0.5):
     return data[start: (start + mask), start: (start + mask)]
 
 
-def _calc_coords(image_size, cell_size):
+def calc_coords(image_size, cell_size):
     """Calculate the center pixel of the image given a cell and image size
 
     Args:
@@ -95,7 +99,7 @@ def _calc_coords(image_size, cell_size):
     return x, y
 
 
-def _find_nearest(array, value):
+def find_nearest(array, value):
     """ Find the nearest entry in array to that of value.
 
     Args:
@@ -113,7 +117,7 @@ def _find_nearest(array, value):
 
 
 # @njit(cache=False, nogil=True)
-def _chunked_average(data, weight, avg_map, avg_freq):
+def chunked_average(data, weight, avg_map, avg_freq):
     avg_chan_index = np.arange(avg_freq.shape[0])
 
     data_avg_shape = list(data.shape)
@@ -304,3 +308,110 @@ def _significant_digits_scalar(x, digits):
     digits = int(digits - np.ceil(np.log10(abs(x))))
 
     return round(x, digits)
+
+
+def compute_average_stokes_visibilities(vis, stokes):
+    n_chan = len(vis.chan)
+    chan_ave_vis = vis.mean(dim='chan', skipna=True)
+    amp, pha, sigma_amp, sigma_pha = compute_stokes(
+        chan_ave_vis['VIS'].values,
+        n_chan * chan_ave_vis['WEIGHT'].values,
+        chan_ave_vis.pol
+    )
+
+    coords = {
+        'time': chan_ave_vis.time,
+        'pol': ['I', 'Q', 'U', 'V']
+    }
+
+    xds = xr.Dataset()
+    xds = xds.assign_coords(coords)
+    xds["AMPLITUDE"] = xr.DataArray(amp, dims=["time", 'pol'], coords=coords)
+    xds["PHASE"] = xr.DataArray(pha, dims=["time", 'pol'], coords=coords)
+    xds['SIGMA_AMP'] = xr.DataArray(sigma_amp, dims=["time", 'pol'], coords=coords)
+    xds['SIGMA_PHA'] = xr.DataArray(sigma_amp, dims=["time", 'pol'], coords=coords)
+    xds.attrs['frequency'] = np.mean(vis.chan) / 1e9  # in GHz
+    return xds.sel(pol=stokes)
+
+
+def compute_stokes(data, weight, pol_axis):
+    stokes_data = np.zeros_like(data)
+    weight[weight == 0] = np.nan
+    sigma = np.sqrt(1 / weight)
+    sigma_amp = np.zeros_like(weight)
+    if 'RR' in pol_axis:
+        stokes_data[:, 0] = (data[:, 0] + data[:, 3]) / 2
+        sigma_amp[:, 0] = (sigma[:, 0] + sigma[:, 3]) / 2
+        stokes_data[:, 1] = (data[:, 1] + data[:, 2]) / 2
+        sigma_amp[:, 1] = (sigma[:, 1] + sigma[:, 2]) / 2
+        stokes_data[:, 2] = 1j * (data[:, 1] - data[:, 2]) / 2
+        sigma_amp[:, 2] = sigma_amp[:, 1]
+        stokes_data[:, 3] = (data[:, 0] - data[:, 3]) / 2
+        sigma_amp[:, 0] = (sigma[:, 0] + sigma[:, 3]) / 2
+    elif 'XX' in pol_axis:
+        stokes_data[:, 0] = (data[:, 0] + data[:, 3]) / 2
+        sigma_amp[:, 0] = (sigma[:, 0] + sigma[:, 3]) / 2
+        stokes_data[:, 1] = (data[:, 0] - data[:, 3]) / 2
+        sigma_amp[:, 1] = sigma_amp[:, 0]
+        stokes_data[:, 2] = (data[:, 1] + data[:, 2]) / 2
+        sigma_amp[:, 2] = (sigma[:, 1] + sigma[:, 2]) / 2
+        stokes_data[:, 3] = 1j * (data[:, 1] - data[:, 2]) / 2
+        sigma_amp[:, 3] = sigma_amp[:, 2]
+    else:
+        raise Exception("Pol not supported " + str(pol_axis))
+    stokes_amp = np.absolute(stokes_data)
+    stokes_pha = np.angle(stokes_data, deg=True)
+    sigma_amp[~np.isfinite(sigma_amp)] = np.nan
+    sigma_amp[sigma_amp == 0] = np.nan
+    snr = stokes_amp / sigma_amp
+    cst = np.sqrt(9 / (2 * np.pi ** 3))
+    # Both sigmas here are probably wrong because of the uncertainty of how weights are stored.
+    sigma_pha = np.pi / np.sqrt(3) * (1 - cst * snr)
+    sigma_pha = np.where(snr > 2.5, 1 / snr, sigma_pha)
+    sigma_pha *= convert_unit('rad', 'deg', 'trigonometric')
+    return stokes_amp, stokes_pha, sigma_amp, sigma_pha
+
+
+def compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad, scaling=1.0):
+    """
+    Computes an antenna offset to the array center
+    Args:
+        antenna: Antenna information dictionary
+        tel_lon: array center longitude
+        tel_lat: array center latitude
+        tel_rad: array center's distance to the center of the earth
+        scaling: scale factor
+
+    Returns:
+    Offset to the east, Offset to the North, elevation offset and distance to array center
+    """
+    antenna_off_east = tel_rad * (antenna['longitude'] - tel_lon) * np.cos(tel_lat)
+    antenna_off_north = tel_rad * (antenna['latitude'] - tel_lat)
+    antenna_off_ele = antenna['radius'] - tel_rad
+    antenna_dist = np.sqrt(antenna_off_east ** 2 + antenna_off_north ** 2 + antenna_off_ele ** 2)
+    return antenna_off_east * scaling, antenna_off_north * scaling, antenna_off_ele * scaling, antenna_dist * scaling
+
+
+def rotate_to_gmt(positions, errors, longitude):
+    """
+    Rotate geometrical delays from antenna reference frame to GMT reference frame
+    Args:
+        positions: geometrical delays
+        errors: geometrical delay errors
+        longitude: Antenna longitude
+
+    Returns:
+    Rotated geometrical delays and associated errors
+    """
+    xpos, ypos = positions[0:2]
+    delta_lon = longitude
+    cosdelta = np.cos(delta_lon)
+    sindelta = np.sin(delta_lon)
+    newpositions = positions
+    newpositions[0] = xpos * cosdelta - ypos * sindelta
+    newpositions[1] = xpos * sindelta + ypos * cosdelta
+    newerrors = errors
+    xerr, yerr = errors[0:2]
+    newerrors[0] = np.sqrt((xerr * cosdelta) ** 2 + (yerr * sindelta) ** 2)
+    newerrors[1] = np.sqrt((yerr * cosdelta) ** 2 + (xerr * sindelta) ** 2)
+    return newpositions, newerrors

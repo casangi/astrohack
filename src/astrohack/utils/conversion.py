@@ -113,7 +113,7 @@ def altaz_to_hadec_astropy(az, el, time, x_ant, y_ant, z_ant):
 
     """
     ant_pos = EarthLocation.from_geocentric(x_ant, y_ant, z_ant, 'meter')
-    mjd_time = Time(_casa_time_to_mjd(time), format='mjd', scale='utc')
+    mjd_time = Time(casa_time_to_mjd(time), format='mjd', scale='utc')
     az_el_frame = AltAz(location=ant_pos, obstime=mjd_time)
     ha_dec_frame = HADec(location=ant_pos, obstime=mjd_time)
     azel_coor = SkyCoord(az * units.rad, el * units.rad, frame=az_el_frame)
@@ -181,6 +181,6 @@ def altaz_to_hadec(az, el, lat):
     return ha, dec
 
 
-def _casa_time_to_mjd(times):
+def casa_time_to_mjd(times):
     corrected = times / 3600 / 24.0
     return corrected

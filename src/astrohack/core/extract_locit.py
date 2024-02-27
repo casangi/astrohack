@@ -11,14 +11,14 @@ from astropy.time import Time
 from prettytable import PrettyTable
 
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils.text import _rad_to_deg_str
-from astrohack.utils.conversion import convert_unit, _casa_time_to_mjd
+from astrohack.utils.text import rad_to_deg_str
+from astrohack.utils.conversion import convert_unit, casa_time_to_mjd
 from astrohack.utils.constants import figsize, twopi, notavail
 from astrohack.utils.data import write_meta_data
-from astrohack.visualization._locit_commons import _compute_antenna_relative_off, _get_telescope_lat_lon_rad
-from astrohack.visualization._locit_commons import _plot_boxes_limits_and_labels
-from astrohack.visualization._plot_commons import _create_figure_and_axes, _close_figure, _scatter_plot
-from astrohack.visualization._locit_commons import _plot_antenna_position
+from astrohack.utils.tools import get_telescope_lat_lon_rad
+from astrohack.utils.algorithms import compute_antenna_relative_off
+from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure, plot_boxes_limits_and_labels
+from astrohack.visualization.diagnostics import plot_antenna_position, scatter_plot
 
 
 def extract_antenna_data(extract_locit_parms):
@@ -145,7 +145,7 @@ def extract_source_and_telescope(extract_locit_parms):
 
     obs_table = ctables.table(cal_table + '::OBSERVATION', readonly=True, lockoptions={'option': 'usernoread'},
                               ack=False)
-    time_range = _casa_time_to_mjd(obs_table.getcol('TIME_RANGE')[0])
+    time_range = casa_time_to_mjd(obs_table.getcol('TIME_RANGE')[0])
     telescope_name = obs_table.getcol('TELESCOPE_NAME')[0]
     obs_table.close()
 
@@ -198,7 +198,7 @@ def extract_antenna_phase_gains(extract_locit_parms):
 
     antenna1 = main_table.getcol('ANTENNA1')
     antenna2 = main_table.getcol('ANTENNA2')
-    gain_time = _casa_time_to_mjd(main_table.getcol('TIME'))
+    gain_time = casa_time_to_mjd(main_table.getcol('TIME'))
     gains = main_table.getcol('CPARAM')
     fields = main_table.getcol('FIELD_ID')
     spw_id = main_table.getcol('SPECTRAL_WINDOW_ID')
@@ -322,7 +322,7 @@ def plot_source_table(filename, src_dict, label=True, precessed=False, obs_midpo
         radec[int(i_src)] = src[coorkey]
         name.append(src['name'])
 
-    fig, ax = _create_figure_and_axes(figure_size, [1, 1])
+    fig, ax = create_figure_and_axes(figure_size, [1, 1])
     radec[:, 0] *= convert_unit('rad', 'hour', 'trigonometric')
     radec[:, 1] *= convert_unit('rad', 'deg', 'trigonometric')
 
@@ -333,10 +333,10 @@ def plot_source_table(filename, src_dict, label=True, precessed=False, obs_midpo
     else:
         labels = None
 
-    _scatter_plot(ax, radec[:, 0], xlabel, radec[:, 1], ylabel, title=None, labels=labels, xlim=[-0.5, 24.5],
+    scatter_plot(ax, radec[:, 0], xlabel, radec[:, 1], ylabel, title=None, labels=labels, xlim=[-0.5, 24.5],
                   ylim=[-95, 95])
 
-    _close_figure(fig, title, filename, dpi, display)
+    close_figure(fig, title, filename, dpi, display)
     return
 
 
@@ -359,32 +359,32 @@ def plot_array_configuration(ant_dict, telescope_name, parm_dict):
     box_size = parm_dict['box_size']  # In user input unit
     plot_zoff = parm_dict['zoff']
 
-    fig, axes = _create_figure_and_axes(figure_size, [1, 2], default_figsize=[10, 5])
+    fig, axes = create_figure_and_axes(figure_size, [1, 2], default_figsize=[10, 5])
 
     len_fac = convert_unit('m', length_unit, 'length')
 
     inner_ax = axes[1]
     outer_ax = axes[0]
 
-    tel_lon, tel_lat, tel_rad = _get_telescope_lat_lon_rad(telescope)
+    tel_lon, tel_lat, tel_rad = get_telescope_lat_lon_rad(telescope)
 
     for antenna in ant_dict.values():
-        ew_off, ns_off, el_off, _ = _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad, len_fac)
+        ew_off, ns_off, el_off, _ = compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad, len_fac)
         text = f'  {antenna["name"]}'
         if stations:
             text += f'@{antenna["station"]}'
         if plot_zoff:
             text += f' {el_off:.1f} {length_unit}'
-        _plot_antenna_position(outer_ax, inner_ax, ew_off, ns_off, text, box_size)
+        plot_antenna_position(outer_ax, inner_ax, ew_off, ns_off, text, box_size)
 
     # axes labels
     xlabel = f'East [{length_unit}]'
     ylabel = f'North [{length_unit}]'
 
-    _plot_boxes_limits_and_labels(outer_ax, inner_ax, xlabel, ylabel, box_size, 'Outer array', 'Inner array')
+    plot_boxes_limits_and_labels(outer_ax, inner_ax, xlabel, ylabel, box_size, 'Outer array', 'Inner array')
 
     title = f'{len(ant_dict.keys())} antennas during observation'
-    _close_figure(fig, title, filename, dpi, display)
+    close_figure(fig, title, filename, dpi, display)
     return
 
 
@@ -405,7 +405,7 @@ def print_array_configuration(params, ant_dict, telescope_name):
     if relative:
         nfields = 5
         table.field_names = ['Name', 'Station', 'East [m]', 'North [m]', 'Elevation [m]', 'Distance [m]']
-        tel_lon, tel_lat, tel_rad = _get_telescope_lat_lon_rad(telescope)
+        tel_lon, tel_lat, tel_rad = get_telescope_lat_lon_rad(telescope)
     else:
         nfields = 4
         table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Radius [m]']
@@ -418,10 +418,10 @@ def print_array_configuration(params, ant_dict, telescope_name):
                 ant_name += ' (ref)'
             row = [ant_name, antenna['station']]
             if relative:
-                offsets = _compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad)
+                offsets = compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad)
                 row.extend([f'{offsets[0]:.4f}', f'{offsets[1]:.4f}', f'{offsets[2]:.4f}', f'{offsets[3]:.4f}'])
             else:
-                row.extend([_rad_to_deg_str(antenna['longitude']), _rad_to_deg_str(antenna['latitude']),
+                row.extend([rad_to_deg_str(antenna['longitude']), rad_to_deg_str(antenna['latitude']),
                             f'{antenna["radius"]:.4f}'])
             table.add_row(row)
         else:

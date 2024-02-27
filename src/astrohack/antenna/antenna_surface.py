@@ -10,8 +10,8 @@ from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.text import add_prefix
-from astrohack.visualization._plot_commons import _well_positioned_colorbar, _create_figure_and_axes, _close_figure, \
-    _get_proper_color_map
+from astrohack.visualization.plot_tools import well_positioned_colorbar, create_figure_and_axes, close_figure, \
+    get_proper_color_map
 
 from astrohack.utils.fits import write_fits, resolution_to_fits_header, axis_to_fits_header
 
@@ -588,8 +588,8 @@ class AntennaSurface:
             self._plot_map(plotname, factor * maps[iplot], title, parm_dict)
 
     def _plot_map(self, filename, data, title, parm_dict, colorbar=True):
-        cmap = _get_proper_color_map(parm_dict['colormap'])
-        fig, ax = _create_figure_and_axes(parm_dict['figure_size'], [1, 1])
+        cmap = get_proper_color_map(parm_dict['colormap'])
+        fig, ax = create_figure_and_axes(parm_dict['figure_size'], [1, 1])
         ax.set_title(title)
         # set the limits of the plot to the limits of the data
         extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
@@ -598,14 +598,14 @@ class AntennaSurface:
                        vmin=vmin, vmax=vmax, )
         self._add_resolution_to_plot(ax, extent)
         if colorbar:
-            _well_positioned_colorbar(ax, fig, im, "Z Scale [" + parm_dict['unit'] + "]")
+            well_positioned_colorbar(ax, fig, im, "Z Scale [" + parm_dict['unit'] + "]")
         self._add_resolution_to_plot(ax, extent)
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
             panel.plot(ax, screws=parm_dict['plot_screws'], label=parm_dict['panel_labels'])
         suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}'
-        _close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
+        close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
     def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
         lw = 0.5
@@ -630,8 +630,8 @@ class AntennaSurface:
         """
         unit = parm_dict['unit']
         threshold = parm_dict['threshold']
-        cmap = _get_proper_color_map(parm_dict['colormap'], default_cmap='RdBu_r')
-        fig, ax = _create_figure_and_axes(parm_dict['figure_size'], [1, 1])
+        cmap = get_proper_color_map(parm_dict['colormap'], default_cmap='RdBu_r')
+        fig, ax = create_figure_and_axes(parm_dict['figure_size'], [1, 1])
 
         fac = convert_unit('m', unit, 'length')
         vmax = np.nanmax(np.abs(fac * self.screw_adjustments))
@@ -647,7 +647,7 @@ class AntennaSurface:
         im = ax.imshow(np.full_like(self.deviation, fill_value=np.nan), cmap=cmap, interpolation="nearest",
                        extent=extent, vmin=vmin, vmax=vmax)
         self._add_resolution_to_plot(ax, extent)
-        colorbar = _well_positioned_colorbar(ax, fig, im, "Screw adjustments [" + unit + "]")
+        colorbar = well_positioned_colorbar(ax, fig, im, "Screw adjustments [" + unit + "]")
         if threshold > 0:
             line = threshold
             while line < vmax:
@@ -662,7 +662,7 @@ class AntennaSurface:
             self.panels[ipanel].plot_corrections(ax, cmap, fac * self.screw_adjustments[ipanel], threshold, vmin, vmax)
 
         suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}'
-        _close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
+        close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
     def _build_panel_data_arrays(self):
         """

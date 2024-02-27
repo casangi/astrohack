@@ -16,15 +16,16 @@ from scipy import spatial
 
 
 def process_extract_pointing(ms_name, pnt_name, exclude, parallel=True):
-    """Top level function to extract subset of pointing table data into a dictionary of xarray dataarrays.
+    """Top level function to extract subset of pointing table data into a dictionary of xarray data arrays.
 
     Args:
+        exclude ():
         ms_name (str): Measurement file name.
         pnt_name (str): Output pointing dictionary file name.
         parallel (bool, optional): Process in parallel. Defaults to True.
 
     Returns:
-        dict: pointing dictionary of xarray dataarrays
+        dict: pointing dictionary of xarray data arrays
     """
 
     # Get antenna names and ids

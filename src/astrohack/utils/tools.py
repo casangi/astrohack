@@ -1,8 +1,10 @@
 import shutil
 
 import numpy as np
-
 from casacore import tables
+from graphviper.utils import logger as logger
+
+from astrohack import Telescope
 
 
 def split_pointing_table(ms_name, antennas):
@@ -78,3 +80,37 @@ def get_valid_state_ids(
             if bad_words == 0:
                 valid_state_ids.append(i_mode)
     return valid_state_ids
+
+
+def get_telescope_lat_lon_rad(telescope):
+    """
+    Return array center's latitude, longitude and distance to the center of the earth based on the coordinate reference
+    Args:
+        telescope: Telescope object
+
+    Returns:
+    Array center  latitude, longitude and distance to the center of the Earth in meters
+    """
+    if telescope.array_center['refer'] == 'ITRF':
+        lon = telescope.array_center['m0']['value']
+        lat = telescope.array_center['m1']['value']
+        rad = telescope.array_center['m2']['value']
+    else:
+
+        msg = f'Unsupported telescope position reference :{telescope.array_center["refer"]}'
+        logger.error(msg)
+        raise Exception(msg)
+
+    return lon, lat, rad
+
+
+def get_correct_telescope_from_name(xds):
+    if xds.attrs['telescope_name'] == "ALMA":
+        tname = xds.attrs['telescope_name']+'_'+xds.attrs['ant_name'][0:2]
+        telescope = Telescope(tname)
+    elif xds.attrs['telescope_name'] == "EVLA":
+        tname = "VLA"
+        telescope = Telescope(tname)
+    else:
+        raise ValueError('Unsuported telescope {0:s}'.format(xds.attrs['telescope_name']))
+    return telescope
