@@ -3,10 +3,10 @@ import graphviper.utils.parameter
 import graphviper.utils.logger as logger
 
 import numpy as np
-from astrohack.utils.constants import custom_split_checker, custom_unit_checker
-from astrohack.visualization._plot_commons import custom_plots_checker
+from astrohack.utils.validation import custom_plots_checker, custom_unit_checker, custom_split_checker
 from astrohack.utils.graph import compute_graph
-from astrohack.utils.diagnostics import _calibration_plot_chunk
+from astrohack.visualization.diagnostics import calibration_plot_chunk, plot_lm_coverage, plot_sky_coverage_chunk, \
+    plot_delays_chunk, plot_position_corrections, plot_antenna_chunk, plot_aperture_chunk, plot_beam_chunk
 from astrohack.utils.file import load_panel_file
 from astrohack.utils.file import load_image_file
 from astrohack.utils.file import load_holog_file
@@ -14,18 +14,15 @@ from astrohack.utils.file import load_point_file
 from astrohack.utils.file import load_locit_file
 from astrohack.utils.file import load_position_file
 
-from astrohack.utils.data import read_meta_data
+from astrohack.utils.data import read_meta_data, export_to_aips, export_locit_fit_results, export_to_fits_panel_chunk, \
+    export_screws_chunk
 
-from astrohack.core.extract_holog import _plot_lm_coverage, _export_to_aips
 from astrohack.core.extract_locit import plot_source_table, plot_array_configuration, print_array_configuration
-from astrohack.core.holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
-from astrohack.core.locit import _export_fit_results, _plot_sky_coverage_chunk
-from astrohack.core.locit import _plot_delays_chunk, _plot_position_corrections
-from astrohack.core.panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
+from astrohack.utils.fits import export_to_fits_holog_chunk
 from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils.text import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
-from astrohack.utils.text import _rad_to_deg_str, _rad_to_hour_str
+from astrohack.utils.text import print_method_list, print_dict_table, print_data_contents, print_summary_header
+from astrohack.utils.text import rad_to_deg_str, rad_to_hour_str
 
 from prettytable import PrettyTable
 
@@ -152,10 +149,10 @@ class AstrohackImageFile(dict):
     def summary(self):
         """ Prints summary of the AstrohackImageFile object, with available data, attributes and available methods
         """
-        _print_summary_header(self.file)
-        _print_dict_table(self._input_pars)
-        _print_data_contents(self, ["Antenna", "DDI"])
-        _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
+        print_summary_header(self.file)
+        print_dict_table(self._input_pars)
+        print_data_contents(self, ["Antenna", "DDI"])
+        print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_split_checker
@@ -237,7 +234,7 @@ class AstrohackImageFile(dict):
         param_dict['metadata'] = self._meta_data
         compute_graph(
             self,
-            _export_to_fits_holog_chunk,
+            export_to_fits_holog_chunk,
             param_dict,
             ['ant', 'ddi'],
             parallel=parallel
@@ -307,7 +304,7 @@ class AstrohackImageFile(dict):
         param_dict["figuresize"] = figure_size
 
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
-        compute_graph(self, _plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        compute_graph(self, plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
@@ -359,7 +356,7 @@ class AstrohackImageFile(dict):
         param_dict = locals()
 
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
-        compute_graph(self, _plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        compute_graph(self, plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackHologFile(dict):
@@ -409,7 +406,6 @@ class AstrohackHologFile(dict):
         :rtype: bool
         """
 
-
         if file is None:
             file = self.file
 
@@ -429,14 +425,12 @@ class AstrohackHologFile(dict):
     def summary(self) -> None:
         """ Prints summary of the AstrohackHologFile object, with available data, attributes and available methods
         """
-        _print_summary_header(self.file)
-        _print_dict_table(self._input_pars)
-        _print_data_contents(self, ["DDI", "Map", "Antenna"])
-        _print_method_list([self.summary, self.select, self.plot_diagnostics, self.plot_lm_sky_coverage])
+        print_summary_header(self.file)
+        print_dict_table(self._input_pars)
+        print_data_contents(self, ["DDI", "Map", "Antenna"])
+        print_method_list([self.summary, self.select, self.plot_diagnostics, self.plot_lm_sky_coverage])
 
-    @graphviper.utils.parameter.validate(
-        
-    )
+    @graphviper.utils.parameter.validate()
     def select(
             self,
             ddi: int,
@@ -533,7 +527,7 @@ class AstrohackHologFile(dict):
 
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         key_order = ["ddi", "map", "ant"]
-        compute_graph(self, _calibration_plot_chunk, param_dict, key_order, parallel)
+        compute_graph(self, calibration_plot_chunk, param_dict, key_order, parallel)
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
@@ -606,7 +600,7 @@ class AstrohackHologFile(dict):
 
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         key_order = ["ddi", "map", "ant"]
-        compute_graph(self, _plot_lm_coverage, param_dict, key_order, parallel)
+        compute_graph(self, plot_lm_coverage, param_dict, key_order, parallel)
         return
 
     @graphviper.utils.parameter.validate(
@@ -644,7 +638,7 @@ class AstrohackHologFile(dict):
 
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         key_order = ["ddi", "map", "ant"]
-        compute_graph(self, _export_to_aips, param_dict, key_order, parallel)
+        compute_graph(self, export_to_aips, param_dict, key_order, parallel)
         return
 
 
@@ -710,10 +704,10 @@ class AstrohackPanelFile(dict):
     def summary(self) -> None:
         """ Prints summary of the AstrohackPanelFile object, with available data, attributes and available methods
         """
-        _print_summary_header(self.file)
-        _print_dict_table(self._input_pars)
-        _print_data_contents(self, ["Antenna", "DDI"])
-        _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
+        print_summary_header(self.file)
+        print_dict_table(self._input_pars)
+        print_data_contents(self, ["Antenna", "DDI"])
+        print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
                             self.plot_antennas])
 
     @graphviper.utils.parameter.validate()
@@ -787,7 +781,7 @@ class AstrohackPanelFile(dict):
         param_dict = locals()
 
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
-        compute_graph(self, _export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
+        compute_graph(self, export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
@@ -885,11 +879,9 @@ class AstrohackPanelFile(dict):
         param_dict["figuresize"] = figure_size
 
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
-        compute_graph(self, _plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        compute_graph(self, plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
-    @graphviper.utils.parameter.validate(
-        
-    )
+    @graphviper.utils.parameter.validate()
     def export_to_fits(
             self,
             destination: str,
@@ -922,8 +914,8 @@ class AstrohackPanelFile(dict):
         param_dict = locals()
 
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
-        compute_graph(self, _export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
-                              parallel=parallel)
+        compute_graph(self, export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
+                      parallel=parallel)
 
 
 class AstrohackPointFile(dict):
@@ -988,10 +980,10 @@ class AstrohackPointFile(dict):
     def summary(self) -> None:
         """ Prints summary of the AstrohackPointFile object, with available data, attributes and available methods
         """
-        _print_summary_header(self.file)
-        _print_dict_table(self._input_pars)
-        _print_data_contents(self, ["Antenna"])
-        _print_method_list([self.summary])
+        print_summary_header(self.file)
+        print_dict_table(self._input_pars)
+        print_data_contents(self, ["Antenna"])
+        print_method_list([self.summary])
 
 
 class AstrohackLocitFile(dict):
@@ -1066,14 +1058,13 @@ class AstrohackLocitFile(dict):
         table = PrettyTable()
         table.field_names = ['Id', 'Name', 'RA FK5', 'DEC FK5', 'RA precessed', 'DEC precessed']
         for source in self['obs_info']['src_dict'].values():
-            table.add_row([source['id'], source['name'], _rad_to_hour_str(source['fk5'][0]),
-                           _rad_to_deg_str(source['fk5'][1]), _rad_to_hour_str(source['precessed'][0]),
-                           _rad_to_deg_str(source['precessed'][1])])
+            table.add_row([source['id'], source['name'], rad_to_hour_str(source['fk5'][0]),
+                           rad_to_deg_str(source['fk5'][1]), rad_to_hour_str(source['precessed'][0]),
+                           rad_to_deg_str(source['precessed'][1])])
         table.align = alignment
         print(table)
 
-    @graphviper.utils.parameter.validate(
-    )
+    @graphviper.utils.parameter.validate()
     def print_array_configuration(
             self,
             relative: bool = True
@@ -1093,8 +1084,7 @@ class AstrohackLocitFile(dict):
         param_dict = locals()
         print_array_configuration(param_dict, self['ant_info'], self['obs_info']['telescope_name'])
 
-    @graphviper.utils.parameter.validate(
-    )
+    @graphviper.utils.parameter.validate()
     def plot_source_positions(
             self,
             destination: str,
@@ -1145,8 +1135,17 @@ class AstrohackLocitFile(dict):
             filename = str(pathlib.Path(destination).joinpath('locit_source_table_fk5.png'))
             obs_midpoint = None
 
-        plot_source_table(filename, self['obs_info']['src_dict'], precessed=precessed, obs_midpoint=obs_midpoint,
-                           display=display, figure_size=figure_size, dpi=dpi, label=labels)
+        plot_source_table(
+            filename,
+            self['obs_info']['src_dict'],
+            precessed=precessed,
+            obs_midpoint=obs_midpoint,
+            display=display,
+            figure_size=figure_size,
+            dpi=dpi,
+            label=labels
+        )
+
         return
 
     @graphviper.utils.parameter.validate(
@@ -1201,11 +1200,18 @@ class AstrohackLocitFile(dict):
     def summary(self) -> None:
         """ Prints summary of the AstrohackLocitFile object, with available data, attributes and available methods
         """
-        _print_summary_header(self.file)
-        _print_dict_table(self._input_pars)
-        _print_data_contents(self, ["Antenna", "Contents"])
-        _print_method_list([self.summary, self.print_source_table, self.print_array_configuration,
-                            self.plot_source_positions, self.plot_array_configuration])
+        print_summary_header(self.file)
+        print_dict_table(self._input_pars)
+        print_data_contents(self, ["Antenna", "Contents"])
+        print_method_list(
+            [
+                self.summary,
+                self.print_source_table,
+                self.print_array_configuration,
+                self.plot_source_positions,
+                self.plot_array_configuration
+            ]
+        )
 
 
 class AstrohackPositionFile(dict):
@@ -1255,7 +1261,6 @@ class AstrohackPositionFile(dict):
         :rtype: bool
         """
 
-
         if file is None:
             file = self.file
 
@@ -1282,7 +1287,7 @@ class AstrohackPositionFile(dict):
     @graphviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
     )
-    def export_fit_results(
+    def export_locit_fit_results(
             self,
             destination: str,
             ant: Union[str, List[str]] = "all",
@@ -1319,7 +1324,7 @@ class AstrohackPositionFile(dict):
         param_dict = locals()
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         param_dict['combined'] = self.combined
-        _export_fit_results(self, param_dict)
+        export_locit_fit_results(self, param_dict)
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
@@ -1381,10 +1386,10 @@ class AstrohackPositionFile(dict):
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         param_dict['combined'] = self.combined
         if self.combined:
-            compute_graph(self, _plot_sky_coverage_chunk, param_dict, ['ant'], parallel=parallel)
+            compute_graph(self, plot_sky_coverage_chunk, param_dict, ['ant'], parallel=parallel)
         else:
-            compute_graph(self, _plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
-                                  parallel=parallel)
+            compute_graph(self, plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
+                          parallel=parallel)
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
@@ -1457,10 +1462,10 @@ class AstrohackPositionFile(dict):
         param_dict['combined'] = self.combined
         param_dict['comb_type'] = self._meta_data["combine_ddis"]
         if self.combined:
-            compute_graph(self, _plot_delays_chunk, param_dict, ['ant'], parallel=parallel)
+            compute_graph(self, plot_delays_chunk, param_dict, ['ant'], parallel=parallel)
         else:
-            compute_graph(self, _plot_delays_chunk, param_dict, ['ant', 'ddi'],
-                                  parallel=parallel)
+            compute_graph(self, plot_delays_chunk, param_dict, ['ant', 'ddi'],
+                          parallel=parallel)
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
@@ -1512,23 +1517,23 @@ class AstrohackPositionFile(dict):
         The corrections are too small to be visualized on the array plot since they are of the order of mm and the array
         is usually spread over km, or at least hundreds of meters.
         The scaling factor is used to bring the corrections to a scale discernible on the plot, this plot should not be
-        used to estimate correction values, for that purpose use export_fit_results instead.
+        used to estimate correction values, for that purpose use export_locit_fit_results instead.
 
         """
 
         param_dict = locals()
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
         param_dict['combined'] = self.combined
-        _plot_position_corrections(param_dict, self)
+        plot_position_corrections(param_dict, self)
 
     def summary(self) -> None:
-        """ Prints summary of the AstrohackpositionFile object, with available data, attributes and available methods
+        """ Prints summary of the AstrohackPositionFile object, with available data, attributes and available methods
         """
-        _print_summary_header(self.file)
-        _print_dict_table(self._input_pars)
+        print_summary_header(self.file)
+        print_dict_table(self._input_pars)
         if self.combined:
-            _print_data_contents(self, ["Antenna"])
+            print_data_contents(self, ["Antenna"])
         else:
-            _print_data_contents(self, ["Antenna", "Contents"])
-        _print_method_list([self.summary, self.export_fit_results, self.plot_sky_coverage, self.plot_delays,
+            print_data_contents(self, ["Antenna", "Contents"])
+        print_method_list([self.summary, self.export_locit_fit_results, self.plot_sky_coverage, self.plot_delays,
                             self.plot_position_corrections])

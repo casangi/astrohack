@@ -6,7 +6,7 @@ import graphviper.utils.logger as logger
 from astrohack.utils.file import load_image_xds
 from scipy.interpolate import griddata
 from astrohack.utils.constants import clight
-from astrohack.utils.text import _param_to_list
+from astrohack.utils.text import param_to_list
 
 
 def process_combine_chunk(combine_chunk_params):
@@ -19,7 +19,7 @@ def process_combine_chunk(combine_chunk_params):
 
     antenna = combine_chunk_params['this_ant']
     ddi_dict = combine_chunk_params['image_mds'][antenna]
-    ddi_list = _param_to_list(combine_chunk_params['ddi'], ddi_dict, 'ddi')
+    ddi_list = param_to_list(combine_chunk_params['ddi'], ddi_dict, 'ddi')
 
     nddi = len(ddi_list)
     out_xds_name = '/'.join([combine_chunk_params['combine_name'], antenna, ddi_list[0]])

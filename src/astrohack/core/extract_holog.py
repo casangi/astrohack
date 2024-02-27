@@ -8,13 +8,10 @@ import graphviper.utils.logger as logger
 
 from numba import njit
 from numba.core import types
-from datetime import date
 
 from casacore import tables as ctables
-from astrohack.utils.imaging import _calculate_parallactic_angle_chunk
+from astrohack.utils.imaging import calculate_parallactic_angle_chunk
 from astrohack.utils.algorithms import calculate_optimal_grid_parameters, significant_digits
-from astrohack.visualization._plot_commons import _create_figure_and_axes, _scatter_plot, _close_figure
-from astrohack.utils.conversion import convert_unit
 
 from astrohack.utils.file import load_point_file
 
@@ -164,12 +161,12 @@ def _get_time_intervals(time_vis_row, scan_list, time_interval):
         min_time, max_time = np.min(selected_times), np.max(selected_times)
         scan_time_ranges.append([min_time, max_time])
 
-    half_int = time_interval/2
-    start = np.min(time_vis_row)+half_int
-    total_time = np.max(time_vis_row)-start
-    n_time = int(np.ceil(total_time/time_interval))+1
-    stop = start + n_time*time_interval
-    raw_time_samples = np.linspace(start, stop, n_time+1)
+    half_int = time_interval / 2
+    start = np.min(time_vis_row) + half_int
+    total_time = np.max(time_vis_row) - start
+    n_time = int(np.ceil(total_time / time_interval)) + 1
+    stop = start + n_time * time_interval
+    raw_time_samples = np.linspace(start, stop, n_time + 1)
 
     filtered_time_samples = []
     for time_sample in raw_time_samples:
@@ -219,7 +216,7 @@ def _extract_holog_chunk_jit(
 
     n_row, n_chan, n_pol = vis_data.shape
 
-    half_int = time_interval/2
+    half_int = time_interval / 2
 
     vis_map_dict = {}
     sum_weight_map_dict = {}
@@ -384,7 +381,7 @@ def _create_holog_file(
 
             direction = np.take(pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, indicies, axis=0)
 
-            parallactic_samples = _calculate_parallactic_angle_chunk(
+            parallactic_samples = calculate_parallactic_angle_chunk(
                 time_samples=time_samples,
                 observing_location=observing_location[map_ant_index],
                 direction=direction
@@ -574,7 +571,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     coords = {"time": time_vis}
     for antenna in map_ant_ids:
         pnt_xds = pnt_ant_dict[antenna]
-        avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt =\
+        avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = \
             _time_avg_pointing_jit(time_vis,
                                    pnt_xds.time.values,
                                    pnt_xds['DIRECTION'].values,
@@ -614,7 +611,7 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
     i_time = 0
     for i_row in range(n_row):
         if pnt_time[i_row] > time_vis[i_time] + half_int:
-            if i_time == n_samples-1:
+            if i_time == n_samples - 1:
                 break
             else:
                 i_time += 1
@@ -713,195 +710,3 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
     meta_data.update(input_params)
 
     return meta_data
-
-
-def _plot_lm_coverage(param_dict):
-    data = param_dict['xds_data']
-    angle_fact = convert_unit('rad', param_dict['angle_unit'], 'trigonometric')
-    real_lm = data['DIRECTIONAL_COSINES'] * angle_fact
-    ideal_lm = data['IDEAL_DIRECTIONAL_COSINES'] * angle_fact
-    time = data.time.values
-    time -= time[0]
-    time *= convert_unit('sec', param_dict['time_unit'], 'time')
-    param_dict['l_label'] = f'L [{param_dict["angle_unit"]}]'
-    param_dict['m_label'] = f'M [{param_dict["angle_unit"]}]'
-    param_dict['time_label'] = f'Time from observation start [{param_dict["time_unit"]}]'
-
-    param_dict['marker'] = '.'
-    param_dict['linestyle'] = '-'
-    param_dict['color'] = 'blue'
-
-    _plot_lm_coverage_sub(time, real_lm, ideal_lm, param_dict)
-
-    if param_dict['plot_correlation'] is None or param_dict['plot_correlation'] == 'None':
-        pass
-    else:
-        param_dict['linestyle'] = ''
-        visi = np.average(data["VIS"].values, axis=1)
-        weights = np.average(data["WEIGHT"].values, axis=1)
-        pol_axis = data.pol.values
-        if isinstance(param_dict['plot_correlation'], (list, tuple)):
-            for correlation in param_dict['plot_correlation']:
-                _plot_correlation(visi, weights, correlation, pol_axis, time, real_lm, param_dict)
-        else:
-            if param_dict['plot_correlation'] == 'all':
-                for correlation in pol_axis:
-                    _plot_correlation(visi, weights, correlation, pol_axis, time, real_lm, param_dict)
-            else:
-                _plot_correlation(visi, weights, param_dict['plot_correlation'], pol_axis, time, real_lm, param_dict)
-
-
-def _plot_correlation(visi, weights, correlation, pol_axis, time, lm, param_dict):
-    if correlation in pol_axis:
-        ipol = pol_axis == correlation
-        loc_vis = visi[:, ipol]
-        loc_wei = weights[:, ipol]
-        if param_dict['complex_split'] == 'polar':
-            y_data = [np.absolute(loc_vis)]
-            y_label = [f'{correlation} Amplitude [arb. units]']
-            title = ['Amplitude']
-            y_data.append(np.angle(loc_vis) * convert_unit('rad', param_dict["phase_unit"], 'trigonometric'))
-            y_label.append(f'{correlation} Phase [{param_dict["phase_unit"]}]')
-            title.append('Phase')
-        else:
-            y_data = [loc_vis.real]
-            y_label = [f'Real {correlation} [arb. units]']
-            title = ['real part']
-            y_data.append(loc_vis.imag)
-            y_label.append(f'Imaginary {correlation} [arb. units]')
-            title.append('imaginary part')
-
-        y_data.append(loc_wei)
-        y_label.append(f'{correlation} weights [arb. units]')
-        title.append('weights')
-
-        fig, ax = _create_figure_and_axes(param_dict['figure_size'], [3, 3])
-        for isplit in range(3):
-            _scatter_plot(ax[isplit, 0], time, param_dict['time_label'], y_data[isplit], y_label[isplit],
-                          f'Time vs {correlation} {title[isplit]}', data_marker=param_dict['marker'],
-                          data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
-            _scatter_plot(ax[isplit, 1], lm[:, 0], param_dict['l_label'], y_data[isplit], y_label[isplit],
-                          f'L vs {correlation} {title[isplit]}', data_marker=param_dict['marker'],
-                          data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
-            _scatter_plot(ax[isplit, 2], lm[:, 1], param_dict['m_label'], y_data[isplit], y_label[isplit],
-                          f'M vs {correlation} {title[isplit]}', data_marker=param_dict['marker'],
-                          data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
-
-        plotfile = (f'{param_dict["destination"]}/holog_directional_cosines_{correlation}_{param_dict["this_map"]}_'
-                    f'{param_dict["this_ant"]}_{param_dict["this_ddi"]}.png')
-        _close_figure(fig, f'Channel averaged {correlation} vs Directional Cosines', plotfile, param_dict['dpi'],
-                      param_dict['display'])
-    else:
-
-        logger.warning(
-            f'Correlation {correlation} is not present for {param_dict["this_ant"]} {param_dict["this_ddi"]} '
-            f'{param_dict["this_map"]}, skipping...')
-    return
-
-
-def _plot_lm_coverage_sub(time, real_lm, ideal_lm, param_dict):
-    fig, ax = _create_figure_and_axes(param_dict['figure_size'], [2, 2])
-    _scatter_plot(ax[0, 0], time, param_dict['time_label'], real_lm[:, 0], param_dict['l_label'], 'Time vs Real L',
-                  data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'], data_color=
-                  param_dict['color'])
-    _scatter_plot(ax[0, 1], time, param_dict['time_label'], real_lm[:, 1], param_dict['m_label'], 'Time vs Real M',
-                  data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'], data_color=
-                  param_dict['color'])
-    _scatter_plot(ax[1, 0], real_lm[:, 0], param_dict['l_label'], real_lm[:, 1], param_dict['m_label'], 'Real L and M',
-                  data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'], data_color=
-                  param_dict['color'])
-    _scatter_plot(ax[1, 1], ideal_lm[:, 0], param_dict['l_label'], ideal_lm[:, 1], param_dict['m_label'],
-                  'Ideal L and M', data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'],
-                  data_color=param_dict['color'])
-    plotfile = f'{param_dict["destination"]}/holog_directional_cosines_{param_dict["this_map"]}_' \
-               f'{param_dict["this_ant"]}_{param_dict["this_ddi"]}.png'
-    _close_figure(fig, 'Directional Cosines', plotfile, param_dict['dpi'], param_dict['display'])
-
-
-def _export_to_aips(param_dict):
-    xds_data = param_dict['xds_data']
-    stokes = 'I'
-    stokes_vis = _compute_average_stokes_visibilities(xds_data, stokes)
-    filename = f'{param_dict["destination"]}/holog_visibilities_{param_dict["this_map"]}_{param_dict["this_ant"]}_' \
-               f'{param_dict["this_ddi"]}.txt'
-    ant_num = xds_data.attrs['antenna_name'].split('a')[1]
-    cmt = '#! '
-    spc = 6 * ' '
-    today = date.today().strftime("%y%m%d")
-    outstr = cmt + f"RefAnt = ** Antenna = {ant_num} Stokes = '{stokes}_' Freq =  {stokes_vis.attrs['frequency']:.9f}" \
-                   f" DATE-OBS = '{today}'\n"
-    outstr += cmt + "MINsamp =   0  Npoint =   1\n"
-    outstr += cmt + "IFnumber =   2   Channel =    32.0\n"
-    outstr += cmt + "TimeRange = -99,  0,  0,  0,  999,  0,  0,  0\n"
-    outstr += cmt + "Averaged Ref-Ants = 10, 15,\n"
-    outstr += cmt + "DOCAL = T  DOPOL =-1\n"
-    outstr += cmt + "BCHAN=     4 ECHAN=    60 CHINC=  1 averaged\n"
-    outstr += cmt + "   LL             MM             AMPLITUDE      PHASE         SIGMA(AMP)   SIGMA(PHASE)\n"
-    lm = xds_data['DIRECTIONAL_COSINES'].values
-    amp = stokes_vis['AMPLITUDE'].values
-    pha = stokes_vis['PHASE'].values
-    sigma_amp = stokes_vis['SIGMA_AMP']
-    sigma_pha = stokes_vis['SIGMA_PHA']
-    for i_time in range(len(xds_data.time)):
-        if np.isfinite(sigma_amp[i_time]):
-            outstr += f"{lm[i_time, 0]:15.7f}{lm[i_time, 1]:15.7f}{amp[i_time]:15.7f}{pha[i_time]:15.7f}" \
-                      f"{sigma_amp[i_time]:15.7f}{sigma_pha[i_time]:15.7f}\n"
-    outstr += f"{cmt}Average number samples per point =   1.000"
-    with open(filename, 'w') as outfile:
-        outfile.write(outstr)
-    return
-
-
-def _compute_average_stokes_visibilities(vis, stokes):
-    n_chan = len(vis.chan)
-    chan_ave_vis = vis.mean(dim='chan', skipna=True)
-    amp, pha, sigma_amp, sigma_pha = _compute_stokes(chan_ave_vis['VIS'].values, n_chan * chan_ave_vis['WEIGHT'].values,
-                                                     chan_ave_vis.pol)
-    coords = {'time': chan_ave_vis.time,
-              'pol': ['I', 'Q', 'U', 'V']}
-    xds = xr.Dataset()
-    xds = xds.assign_coords(coords)
-    xds["AMPLITUDE"] = xr.DataArray(amp, dims=["time", 'pol'], coords=coords)
-    xds["PHASE"] = xr.DataArray(pha, dims=["time", 'pol'], coords=coords)
-    xds['SIGMA_AMP'] = xr.DataArray(sigma_amp, dims=["time", 'pol'], coords=coords)
-    xds['SIGMA_PHA'] = xr.DataArray(sigma_amp, dims=["time", 'pol'], coords=coords)
-    xds.attrs['frequency'] = np.mean(vis.chan) / 1e9  # in GHz
-    return xds.sel(pol=stokes)
-
-
-def _compute_stokes(data, weight, pol_axis):
-    stokes_data = np.zeros_like(data)
-    weight[weight == 0] = np.nan
-    sigma = np.sqrt(1 / weight)
-    sigma_amp = np.zeros_like(weight)
-    if 'RR' in pol_axis:
-        stokes_data[:, 0] = (data[:, 0] + data[:, 3]) / 2
-        sigma_amp[:, 0] = (sigma[:, 0] + sigma[:, 3]) / 2
-        stokes_data[:, 1] = (data[:, 1] + data[:, 2]) / 2
-        sigma_amp[:, 1] = (sigma[:, 1] + sigma[:, 2]) / 2
-        stokes_data[:, 2] = 1j * (data[:, 1] - data[:, 2]) / 2
-        sigma_amp[:, 2] = sigma_amp[:, 1]
-        stokes_data[:, 3] = (data[:, 0] - data[:, 3]) / 2
-        sigma_amp[:, 0] = (sigma[:, 0] + sigma[:, 3]) / 2
-    elif 'XX' in pol_axis:
-        stokes_data[:, 0] = (data[:, 0] + data[:, 3]) / 2
-        sigma_amp[:, 0] = (sigma[:, 0] + sigma[:, 3]) / 2
-        stokes_data[:, 1] = (data[:, 0] - data[:, 3]) / 2
-        sigma_amp[:, 1] = sigma_amp[:, 0]
-        stokes_data[:, 2] = (data[:, 1] + data[:, 2]) / 2
-        sigma_amp[:, 2] = (sigma[:, 1] + sigma[:, 2]) / 2
-        stokes_data[:, 3] = 1j * (data[:, 1] - data[:, 2]) / 2
-        sigma_amp[:, 3] = sigma_amp[:, 2]
-    else:
-        raise Exception("Pol not supported " + str(pol_axis))
-    stokes_amp = np.absolute(stokes_data)
-    stokes_pha = np.angle(stokes_data, deg=True)
-    sigma_amp[~np.isfinite(sigma_amp)] = np.nan
-    sigma_amp[sigma_amp == 0] = np.nan
-    snr = stokes_amp / sigma_amp
-    cst = np.sqrt(9 / (2 * np.pi ** 3))
-    # Both sigmas here are probably wrong because of the uncertainty of how weights are stored.
-    sigma_pha = np.pi / np.sqrt(3) * (1 - cst * snr)
-    sigma_pha = np.where(snr > 2.5, 1 / snr, sigma_pha)
-    sigma_pha *= convert_unit('rad', 'deg', 'trigonometric')
-    return stokes_amp, stokes_pha, sigma_amp, sigma_pha

@@ -2,7 +2,7 @@ import dask
 import xarray
 import graphviper.utils.logger as logger
 
-from astrohack.utils.text import _param_to_list
+from astrohack.utils.text import param_to_list
 
 
 def _construct_general_graph_recursively(
@@ -26,7 +26,7 @@ def _construct_general_graph_recursively(
             chunk_function(param_dict)
     else:
         key = key_order[0]
-        exec_list = _param_to_list(param_dict[key], looping_dict, key)
+        exec_list = param_to_list(param_dict[key], looping_dict, key)
         for item in exec_list:
             if 'info' in item:
                 pass

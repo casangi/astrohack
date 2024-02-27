@@ -10,7 +10,6 @@ import numpy as np
 import xarray as xr
 import graphviper.utils.logger as logger
 
-from astrohack.utils.data import get_attrs
 from astrohack.utils.data import read_meta_data
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -333,6 +332,7 @@ def load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None, diagnost
 
     return pnt_dict
 
+
 def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
     """Read holog file metadata and extract antenna based xds information for each (ddi, holog_map)
 
@@ -371,6 +371,7 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
 
     return ant_data_dict
 
+
 def _open_no_dask_zarr(zarr_name, slice_dict=None):
     """
         Alternative to xarray open_zarr where the arrays are not Dask Arrays.
@@ -386,14 +387,14 @@ def _open_no_dask_zarr(zarr_name, slice_dict=None):
         slice_dict = {}
 
     zarr_group = zarr.open_group(store=zarr_name, mode="r")
-    group_attrs = get_attrs(zarr_group)
+    group_attrs = _get_attrs(zarr_group)
 
     slice_dict_complete = copy.deepcopy(slice_dict)
     coords = {}
     xds = xr.Dataset()
 
     for var_name, var in zarr_group.arrays():
-        var_attrs = get_attrs(var)
+        var_attrs = _get_attrs(var)
 
         for dim in var_attrs[DIMENSION_KEY]:
             if dim not in slice_dict_complete:
@@ -440,3 +441,17 @@ def _check_time_axis_consistency(pnt_dict):
 
         logger.debug("Pointing offset time axis length per antenna")
         logger.debug(str(variable_length))
+
+
+def _get_attrs(zarr_obj):
+    """Get attributes of zarr obj (groups or arrays)
+
+    Args:
+        zarr_obj (zarr): a zarr_group object
+
+    Returns:
+        dict: a group of zarr attributes
+    """
+    return {
+        k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")
+    }

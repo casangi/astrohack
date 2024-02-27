@@ -1,39 +1,20 @@
+import graphviper.utils.logger as logger
 import numpy as np
 import xarray as xr
-
 from scipy.interpolate import griddata
 
 from astrohack.antenna.telescope import Telescope
-
-from astrohack.utils.file import load_holog_file
-from astrohack.utils.fits import write_fits, resolution_to_fits_header, axis_to_fits_header, stokes_axis_to_fits_header
-
-from astrohack.utils.data import read_meta_data
-
-from astrohack.utils.phase_fitting import phase_fitting_block
-
-from astrohack.utils.algorithms import _chunked_average
+from astrohack.utils.algorithms import calc_coords
+from astrohack.utils.algorithms import chunked_average
+from astrohack.utils.algorithms import find_nearest
 from astrohack.utils.algorithms import find_peak_beam_value
-from astrohack.utils.algorithms import _find_nearest
-from astrohack.utils.algorithms import _calc_coords
-
-from astrohack.utils.conversion import to_stokes
 from astrohack.utils.constants import clight
-
-from astrohack.utils.text import add_prefix
-
-from astrohack.visualization._plot_commons import _well_positioned_colorbar
-
-from astrohack.utils.imaging import parallactic_derotation
-from astrohack.utils.imaging import mask_circular_disk
+from astrohack.utils.data import read_meta_data
+from astrohack.utils.file import load_holog_file
 from astrohack.utils.imaging import calculate_aperture_pattern
-
-from astrohack.core.panel import _get_correct_telescope_from_name
-from astrohack.antenna.antenna_surface import AntennaSurface
-from astrohack.visualization._plot_commons import _create_figure_and_axes, _close_figure, _get_proper_color_map
-from astrohack.utils.conversion import convert_unit
-
-import graphviper.utils.logger as logger
+from astrohack.utils.imaging import mask_circular_disk
+from astrohack.utils.imaging import parallactic_derotation
+from astrohack.utils.phase_fitting import phase_fitting_block
 
 
 def process_holog_chunk(holog_chunk_params):
@@ -54,7 +35,7 @@ def process_holog_chunk(holog_chunk_params):
     meta_data = read_meta_data(holog_chunk_params["holog_name"] + '/.holog_attr')
 
     # Calculate lm coordinates
-    l, m = _calc_coords(holog_chunk_params["grid_size"], holog_chunk_params["cell_size"])
+    l, m = calc_coords(holog_chunk_params["grid_size"], holog_chunk_params["cell_size"])
 
     grid_l, grid_m = list(map(np.transpose, np.meshgrid(l, m)))
 
@@ -97,7 +78,7 @@ def process_holog_chunk(holog_chunk_params):
         weight = ant_xds.WEIGHT.values
 
         if holog_chunk_params["chan_average"]:
-            vis_avg, weight_sum = _chunked_average(vis, weight, avg_chan_map, avg_freq)
+            vis_avg, weight_sum = chunked_average(vis, weight, avg_chan_map, avg_freq)
             lm_freq_scaled = lm[:, :, None] * (avg_freq / reference_scaling_frequency)
 
             n_chan = avg_freq.shape[0]
@@ -331,206 +312,8 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
 
     cf_chan_map = np.zeros((n_chan,), dtype=int)
     for i in range(n_chan):
-        cf_chan_map[i], _ = _find_nearest(pb_freq, freq_chan[i])
+        cf_chan_map[i], _ = find_nearest(pb_freq, freq_chan[i])
 
     return cf_chan_map, pb_freq
 
 
-def _export_to_fits_holog_chunk(parm_dict):
-    """
-    Holog side chunk function for the user facing function export_to_fits
-    Args:
-        parm_dict: parameter dictionary
-    """
-    input_xds = parm_dict['xds_data']
-    metadata = parm_dict['metadata']
-    antenna = parm_dict['this_ant']
-    ddi = parm_dict['this_ddi']
-    destination = parm_dict['destination']
-    basename = f'{destination}/{antenna}_{ddi}'
-
-    logger.info(f'Exporting image contents of {antenna} {ddi} to FITS files in {destination}')
-
-    try:
-        aperture_resolution = input_xds.attrs["aperture_resolution"]
-
-    except KeyError:
-        logger.warning("Holog image does not have resolution information")
-        logger.warning("Rerun holog with astrohack v>0.1.5 for aperture resolution information")
-
-        aperture_resolution = None
-
-    nchan = len(input_xds.chan)
-
-    if nchan == 1:
-        reffreq = input_xds.chan.values[0]
-
-    else:
-        reffreq = input_xds.chan.values[nchan // 2]
-
-    telname = input_xds.attrs['telescope_name']
-
-    if telname in ['EVLA', 'VLA', 'JVLA']:
-        telname = 'VLA'
-
-    polist = []
-
-    for pol in input_xds.pol:
-        polist.append(str(pol.values))
-
-    base_header = {
-        'STOKES': ", ".join(polist),
-        'WAVELENG': clight / reffreq,
-        'FREQUENC': reffreq,
-        'TELESCOP': input_xds.attrs['ant_name'],
-        'INSTRUME': telname,
-        'TIME_CEN': input_xds.attrs['time_centroid'],
-        'PADDING': metadata['padding_factor'],
-        'GRD_INTR': metadata['grid_interpolation_mode'],
-        'CHAN_AVE': "yes" if metadata['chan_average'] is True else "no",
-        'CHAN_TOL': metadata['chan_tolerance_factor'],
-        'SCAN_AVE': "yes" if metadata['scan_average'] is True else "no",
-        'TO_STOKE': "yes" if metadata['to_stokes'] is True else "no",
-    }
-
-    ntime = len(input_xds.time)
-    if ntime != 1:
-        raise Exception("Data with multiple times not supported for FITS export")
-
-    base_header = axis_to_fits_header(base_header, input_xds.chan.values, 3, 'Frequency', 'Hz')
-    base_header = stokes_axis_to_fits_header(base_header, 4)
-    rad_to_deg = convert_unit('rad', 'deg', 'trigonometric')
-    beam_header = axis_to_fits_header(base_header, -input_xds.l.values * rad_to_deg, 1, 'RA---SIN', 'deg')
-    beam_header = axis_to_fits_header(beam_header, input_xds.m.values * rad_to_deg, 2, 'DEC--SIN', 'deg')
-    beam_header['RADESYSA'] = 'FK5'
-    beam = input_xds['BEAM'].values
-    if parm_dict['complex_split'] == 'cartesian':
-        write_fits(beam_header, 'Complex beam real part', beam.real, add_prefix(basename, 'beam_real') + '.fits',
-                   'Normalized', 'image')
-        write_fits(beam_header, 'Complex beam imag part', beam.imag, add_prefix(basename, 'beam_imag') + '.fits',
-                   'Normalized', 'image')
-    else:
-        write_fits(beam_header, 'Complex beam amplitude', np.absolute(beam),
-                   add_prefix(basename, 'beam_amplitude') + '.fits', 'Normalized', 'image')
-        write_fits(beam_header, 'Complex beam phase', np.angle(beam),
-                   add_prefix(basename, 'beam_phase') + '.fits', 'Radians', 'image')
-    wavelength = clight / input_xds.chan.values[0]
-    aperture_header = axis_to_fits_header(base_header, input_xds.u.values * wavelength, 1, 'X----LIN', 'm')
-    aperture_header = axis_to_fits_header(aperture_header, input_xds.u.values * wavelength, 2, 'Y----LIN', 'm')
-    aperture_header = resolution_to_fits_header(aperture_header, aperture_resolution)
-    aperture = input_xds['APERTURE'].values
-    if parm_dict['complex_split'] == 'cartesian':
-        write_fits(aperture_header, 'Complex aperture real part', aperture.real,
-                   add_prefix(basename, 'aperture_real') + '.fits', 'Normalized', 'image')
-        write_fits(aperture_header, 'Complex aperture imag part', aperture.imag,
-                   add_prefix(basename, 'aperture_imag') + '.fits', 'Normalized', 'image')
-    else:
-        write_fits(aperture_header, 'Complex aperture amplitude', np.absolute(aperture),
-                   add_prefix(basename, 'aperture_amplitude') + '.fits', 'Normalized', 'image')
-        write_fits(aperture_header, 'Complex aperture phase', np.angle(aperture),
-                   add_prefix(basename, 'aperture_phase') + '.fits', 'rad', 'image')
-
-    phase_amp_header = axis_to_fits_header(base_header, input_xds.u_prime.values * wavelength, 1, 'X----LIN', 'm')
-    phase_amp_header = axis_to_fits_header(phase_amp_header, input_xds.v_prime.values * wavelength, 2, 'Y----LIN', 'm')
-    phase_amp_header = resolution_to_fits_header(phase_amp_header, aperture_resolution)
-    write_fits(phase_amp_header, 'Cropped aperture corrected phase', input_xds['CORRECTED_PHASE'].values,
-               add_prefix(basename, 'corrected_phase') + '.fits', 'rad', 'image')
-    return
-
-
-def _plot_aperture_chunk(parm_dict):
-    """
-    Chunk function for the user facing function plot_apertures
-    Args:
-        parm_dict: parameter dictionary
-    """
-    antenna = parm_dict['this_ant']
-    ddi = parm_dict['this_ddi']
-    destination = parm_dict['destination']
-    basename = f'{destination}/{antenna}_{ddi}'
-    input_xds = parm_dict['xds_data']
-    input_xds.attrs['AIPS'] = False
-    telescope = _get_correct_telescope_from_name(input_xds)
-    surface = AntennaSurface(input_xds, telescope, nan_out_of_bounds=False)
-
-    surface.plot_phase(basename, 'image', parm_dict)
-    surface.plot_deviation(basename, 'image', parm_dict)
-    surface.plot_amplitude(basename, 'image', parm_dict)
-
-
-def _plot_beam_chunk(parm_dict):
-    """
-    Chunk function for the user facing function plot_beams
-    Args:
-        parm_dict: parameter dictionary
-    """
-    antenna = parm_dict['this_ant']
-    ddi = parm_dict['this_ddi']
-    destination = parm_dict['destination']
-    basename = f'{destination}/{antenna}_{ddi}'
-    input_xds = parm_dict['xds_data']
-    laxis = input_xds.l.values * convert_unit('rad', parm_dict['angle_unit'], 'trigonometric')
-    maxis = input_xds.m.values * convert_unit('rad', parm_dict['angle_unit'], 'trigonometric')
-    if input_xds.dims['chan'] != 1:
-        raise Exception("Only single channel holographies supported")
-
-    if input_xds.dims['time'] != 1:
-        raise Exception("Only single mapping holographies supported")
-
-    full_beam = input_xds.BEAM.isel(time=0, chan=0).values
-    pol_axis = input_xds.pol.values
-    if parm_dict['complex_split'] == 'cartesian':
-        real_part = full_beam.real
-        imag_part = full_beam.imag
-        _plot_beam(laxis, maxis, pol_axis, real_part, basename, 'real', 'normalized', parm_dict)
-        _plot_beam(laxis, maxis, pol_axis, imag_part, basename, 'imag', 'normalized', parm_dict)
-    else:
-        amplitude = np.absolute(full_beam)
-        phase = np.angle(full_beam) * convert_unit('rad', parm_dict['phase_unit'], 'trigonometric')
-        _plot_beam(laxis, maxis, pol_axis, amplitude, basename, 'amplitude', 'normalized', parm_dict)
-        _plot_beam(laxis, maxis, pol_axis, phase, basename, 'phase', parm_dict['phase_unit'], parm_dict)
-
-
-def _plot_beam(laxis, maxis, pol_axis, data, basename, label, zunit, parm_dict):
-    """
-    Plot a beam
-    Args:
-        laxis: L axis
-        maxis: M axis
-        pol_axis: Polarization axis
-        data: Beam data
-        basename: Basename for output file
-        label: data label
-        zunit: data unit
-        parm_dict: dictionary with general and plotting parameters
-    """
-    colormap = _get_proper_color_map(parm_dict['colormap'])
-
-    n_pol = len(pol_axis)
-
-    if n_pol == 4:
-        fig, axes = _create_figure_and_axes(parm_dict['figure_size'], [2, 2])
-        axes = axes.flat
-    elif n_pol == 2:
-        fig, axes = _create_figure_and_axes(parm_dict['figure_size'], [2, 1])
-    elif n_pol == 1:
-        fig, ax = _create_figure_and_axes(parm_dict['figure_size'], [1, 1])
-        axes = [ax]
-    else:
-        msg = f'Do not know how to handle polarization axis with {n_pol} elements'
-        logger.error(msg)
-        raise Exception(msg)
-
-    extent = [laxis[0], laxis[-1], maxis[0], maxis[-1]]
-    for ipol, pol, in enumerate(pol_axis):
-        axis = axes[ipol]
-        axis.set_title(f'Polarization: {pol}')
-        im = axis.imshow(data[ipol, ...], cmap=colormap, interpolation="nearest", extent=extent)
-        _well_positioned_colorbar(axis, fig, im, f"Z Scale [{zunit}]")
-        axis.set_xlabel(f'L axis [{parm_dict["angle_unit"]}]')
-        axis.set_ylabel(f'M axis [{parm_dict["angle_unit"]}]')
-
-    plot_name = add_prefix(add_prefix(basename, label), 'image_beam')
-    suptitle = f'Beam {label}, Antenna: {parm_dict["this_ant"].split("_")[1]}, DDI: {parm_dict["this_ddi"].split("_")[1]}'
-    _close_figure(fig, suptitle, plot_name, parm_dict["dpi"], parm_dict["display"])
-    return

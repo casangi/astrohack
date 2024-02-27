@@ -131,7 +131,7 @@ def print_holog_obs_dict(holog_obj):
     logger.info("{close_bracket}".format(close_bracket=CLOSE_DICT))
 
 
-def _param_to_list(param, data_dict, prefix):
+def param_to_list(param, data_dict, prefix):
     """
     Transforms a string parameter to a list if parameter is all or a single string
     Args:
@@ -189,7 +189,7 @@ def get_default_file_name(input_file: str, output_type: str) -> str:
     return output_file
 
 
-def _print_data_contents(data_dict, field_names, alignment='l'):
+def print_data_contents(data_dict, field_names, alignment='l'):
     """
     Factorized printing of the prettytable with the data contents
     Args:
@@ -221,7 +221,7 @@ def _print_data_contents(data_dict, field_names, alignment='l'):
     print(table)
 
 
-def _print_dict_table(input_parameters, split_key=None, alignment='l', heading="Input Parameters"):
+def print_dict_table(input_parameters, split_key=None, alignment='l', heading="Input Parameters"):
     """
     Print a summary of the attributes
     Args:
@@ -254,7 +254,7 @@ def _dict_to_key_list(attr_dict):
     return out_list
 
 
-def _rad_to_hour_str(rad):
+def rad_to_hour_str(rad):
     """
     Converts an angle in radians to hours minutes and seconds
     Args:
@@ -271,7 +271,7 @@ def _rad_to_hour_str(rad):
     return f'{int(h_int):02d}h{int(m_int):02d}m{s_float:06.3f}s'
 
 
-def _rad_to_deg_str(rad):
+def rad_to_deg_str(rad):
     """
     Converts an angle in radians to degrees minutes and seconds
     Args:
@@ -293,12 +293,12 @@ def _rad_to_deg_str(rad):
     return f'{sign}{int(d_int):02d}\u00B0{int(m_int):02d}m{s_float:06.3f}s'
 
 
-def _print_summary_header(filename, print_len=100, frame_char='#', frame_width=3):
+def print_summary_header(filename, print_len=100, frame_char='#', frame_width=3):
     """
     Print a summary header dynamically adjusted to the filename
     Args:
         filename: filename
-        print_len: Lenght of the print on screen
+        print_len: Length of the print on screen
         frame_char: Character to frame header
         frame_width: Width of the frame
 
@@ -344,8 +344,8 @@ def _print_centralized(string, nlead, ntrail, frame_width, frame_char):
     print(f'{frame_width * frame_char}{nlead * spc}{string}{ntrail * spc}{frame_width * frame_char}')
 
 
-def _print_method_list(method_list, alignment='l', print_len=100):
-    """Print the method list of an mds object"""
+def print_method_list(method_list, alignment='l', print_len=100):
+    """Print the method list of a mds object"""
     name_len = 0
     for obj_method in method_list:
         meth_len = len(obj_method.__name__)
@@ -363,7 +363,7 @@ def _print_method_list(method_list, alignment='l', print_len=100):
     print()
 
 
-def _format_value_error(value, error, scaling, tolerance):
+def format_value_error(value, error, scaling, tolerance):
     """Format values based and errors based on the significant digits"""
     if np.isfinite(value) and np.isfinite(error):
         value *= scaling

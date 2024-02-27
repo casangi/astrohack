@@ -50,24 +50,3 @@ plot_types = ['deviation', 'phase', 'ancillary', 'all']
 figsize = [8, 6.4]
 fontsize = 6.4
 markersize = 3.2
-
-
-def custom_unit_checker(unit_type):
-    if unit_type == "units.trig":
-        return trigo_units
-
-    elif unit_type == "units.length":
-        return length_units
-
-    elif unit_type == "units.time":
-        return time_units
-
-    else:
-        return "Not found"
-
-
-def custom_split_checker(split_type):
-    if split_type == 'split.complex':
-        return possible_splits
-    else:
-        return "Not found"
