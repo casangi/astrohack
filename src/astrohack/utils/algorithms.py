@@ -293,21 +293,22 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_name
     return n_pix, cell_size
 
 
-def significant_digits(x, digits):
+def significant_figures_round(x, digits):
     if np.isscalar(x):
-        return _significant_digits_scalar(x, digits)
+        if x == 0 or not np.isfinite(x):
+            return x
 
+        digits = int(digits - np.ceil(np.log10(abs(x))))
+        return round(x, digits)
+
+    elif isinstance(x, list) or isinstance(x, np.ndarray):
+        return list(map(significant_figures_round, x, [digits] * len(x)))
+    
     else:
-        return list(map(significant_digits, x, [digits] * len(x)))
-
-
-def _significant_digits_scalar(x, digits):
-    if x == 0 or not np.isfinite(x):
+        logger.warning("Unknown data type.")
+        
         return x
-
-    digits = int(digits - np.ceil(np.log10(abs(x))))
-
-    return round(x, digits)
+    
 
 
 def compute_average_stokes_visibilities(vis, stokes):

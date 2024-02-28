@@ -11,7 +11,7 @@ from numba.core import types
 
 from casacore import tables as ctables
 from astrohack.utils.imaging import calculate_parallactic_angle_chunk
-from astrohack.utils.algorithms import calculate_optimal_grid_parameters, significant_digits
+from astrohack.utils.algorithms import calculate_optimal_grid_parameters, significant_figures_round
 
 from astrohack.utils.file import load_point_file
 
@@ -664,7 +664,7 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
                             n_pixs.append(xds.attrs["grid_params"]["n_pix"])
                             telescope_names.append(xds.attrs['telescope_name'])
 
-    cell_sizes_sigfigs = significant_digits(cell_sizes, digits=3)
+    cell_sizes_sigfigs = significant_figures_round(cell_sizes, digits=3)
 
     meta_data = {
         'cell_size': np.mean(cell_sizes),

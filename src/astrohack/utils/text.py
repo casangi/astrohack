@@ -7,7 +7,7 @@ import graphviper.utils.logger as logger
 
 from prettytable import PrettyTable
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.algorithms import significant_digits
+from astrohack.utils.algorithms import significant_figures_round
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -386,15 +386,15 @@ def format_value_error(value, error, scaling, tolerance):
                     digits = places - round(np.log10(abs(error)))
                 else:
                     digits = places - round(np.log10(abs(value)))
-                value = significant_digits(value, digits)
-                error = significant_digits(error, places)
+                value = significant_figures_round(value, digits)
+                error = significant_figures_round(error, places)
                 return f'{value} \u00b1 {error}'
         else:
             digits = round(abs(np.log10(abs(value)))) - 1
             if digits in [-1, 0, 1]:
                 digits = 2
-            value = significant_digits(value, digits)
-            error = significant_digits(error, digits - 1)
+            value = significant_figures_round(value, digits)
+            error = significant_figures_round(error, digits - 1)
             return f'{value} \u00b1 {error}'
     else:
         return f'{value} \u00b1 {error}'

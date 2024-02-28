@@ -1,38 +1,11 @@
-import sys
-import xarray as xr
-import astrohack
 import os
+import sys
+import astrohack
+
+import xarray as xr
 import graphviper.utils.logger as logger
 
-py310 = sys.version_info >= (3, 10)
-
-if py310:
-    from importlib.resources import files as pkgfiles
-else:
-    from importlib_resources import files as pkgfiles
-
-tel_data_path = pkgfiles(astrohack)/'data/telescopes/'
-
-
-def _find_cfg_file(name, path):
-    """
-    Search for the correct telescope configuration file
-    Args:
-        name: Name of the telescope configuration file
-        path: Path to search for the telescope configuration file
-
-    Returns:
-        fullpath to the telescope configuration file
-    """
-    newpath = None
-    for root, dirs, files in os.walk(path):
-        if name in dirs:
-            newpath = os.path.join(root, name)
-
-    if newpath is None:
-        raise FileNotFoundError
-    else:
-        return newpath
+import astrohack.utils.tools
 
 
 class Telescope:
@@ -47,13 +20,12 @@ class Telescope:
 
         filename = self._get_telescope_file_name(name).lower().replace(" ", "_") + ".zarr"
 
-        try:
-            if path is None:
-                filepath = _find_cfg_file(filename, tel_data_path)
-            else:
-                filepath = _find_cfg_file(name, path)
-        except FileNotFoundError:
-            raise Exception("Unknown telescope: " + name)
+        
+        if path is None:
+            filepath = astrohack.utils.tools.file_search(root=astrohack.__path__[0], file_name=filename)
+        else:
+            filepath = astrohack.utils.tools.file_search(root=path, file_name=filename)
+            
         
         self.read(filepath)
         
@@ -123,10 +95,15 @@ class Telescope:
         Args:
             filename: name of the input file
         """
-        xds = xr.open_zarr(filename)
-        for key in xds.attrs:
-            setattr(self, key, xds.attrs[key])
-        return
+        try:
+            xds = xr.open_zarr(filename)
+            for key in xds.attrs:
+                setattr(self, key, xds.attrs[key])
+
+        except FileNotFoundError:
+            logger.error(f"Telescopr file not found: {filename}")
+            raise FileNotFoundError
+        
 
     def print(self):
         """

@@ -1,11 +1,41 @@
+import os
+import glob
+import graphviper
 import shutil
 
 import numpy as np
+import graphviper.utils.console as console
+
 from casacore import tables
 from graphviper.utils import logger as logger
 
 from astrohack.antenna.telescope import Telescope
 
+from typing import Union
+
+
+def file_search(root: str = "/", file_name=None) -> Union[None, str]:
+    colorize = console.Colorize()
+
+    if root == "/":
+        graphviper.utils.logger.warning(
+            "File search from root could take some time ..."
+        )
+
+    graphviper.utils.logger.info(
+        "Searching {} for configuration file, please wait ...".format(
+            colorize.blue(root)
+        )
+    )
+
+    for file in glob.glob("{root}/**".format(root=root), recursive=True):
+        if file_name in file:
+            basename = os.path.dirname(file)
+            return basename
+
+    logger.warning(f"Couldn't locate filename: {colorize.blue(file_name)}")
+
+    return None
 
 def split_pointing_table(ms_name, antennas):
     """ Split pointing table to contain only specified antennas
