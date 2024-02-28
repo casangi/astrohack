@@ -37,7 +37,7 @@ def holog(
         phase_fit: bool = True,
         overwrite: bool = False,
         parallel: bool = False
-) -> AstrohackImageFile:
+) -> Union[AstrohackImageFile, None]:
     """ Process holography data and derive aperture illumination pattern.
 
     :param holog_name: Name of holography .holog.zarr file to process.

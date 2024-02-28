@@ -1,9 +1,8 @@
-import xarray as xr
 import graphviper.utils.logger as logger
+import xarray as xr
 
-from astrohack.antenna.telescope import Telescope
 from astrohack.antenna.antenna_surface import AntennaSurface
-from astrohack.utils.tools import get_correct_telescope_from_name
+from astrohack.antenna.telescope import Telescope
 
 
 def process_panel_chunk(panel_chunk_params):
@@ -24,7 +23,8 @@ def process_panel_chunk(panel_chunk_params):
         inputxds = panel_chunk_params['xds_data']
         logger.info(f'processing {antenna} {ddi}')
         inputxds.attrs['AIPS'] = False
-        telescope = get_correct_telescope_from_name(inputxds)
+        #telescope = get_correct_telescope_from_name(inputxds)
+        telescope = Telescope.from_xds(inputxds)
 
     surface = AntennaSurface(inputxds, telescope, clip_type=panel_chunk_params['clip_type'],
                              pol_state=panel_chunk_params['polarization_state'],

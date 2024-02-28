@@ -1,17 +1,14 @@
 import matplotlib.pyplot as plt
-import numpy
 import numpy as np
 from astropy.time import Time
 from graphviper.utils import logger as logger
 
-from astrohack.antenna.telescope import Telescope
 from astrohack.antenna.antenna_surface import AntennaSurface
-
+from astrohack.antenna.telescope import Telescope
 from astrohack.utils import convert_unit, pi, clight, compute_antenna_relative_off, rotate_to_gmt, plot_types
-
 from astrohack.utils.constants import fontsize, markersize
 from astrohack.utils.text import param_to_list, add_prefix
-from astrohack.utils.tools import get_telescope_lat_lon_rad, get_correct_telescope_from_name
+from astrohack.utils.tools import get_telescope_lat_lon_rad
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure, plot_boxes_limits_and_labels, \
     get_proper_color_map, well_positioned_colorbar
 
@@ -655,7 +652,7 @@ def plot_aperture_chunk(parm_dict):
     basename = f'{destination}/{antenna}_{ddi}'
     input_xds = parm_dict['xds_data']
     input_xds.attrs['AIPS'] = False
-    telescope = get_correct_telescope_from_name(input_xds)
+    telescope = Telescope.from_xds(input_xds)
     surface = AntennaSurface(input_xds, telescope, nan_out_of_bounds=False)
 
     surface.plot_phase(basename, 'image', parm_dict)

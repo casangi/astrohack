@@ -68,7 +68,7 @@ def export_to_aips(param_dict):
                f'{param_dict["this_ddi"]}.txt'
     ant_num = xds_data.attrs['antenna_name'].split('a')[1]
     cmt = '#! '
-    spc = 6 * ' '
+
     today = date.today().strftime("%y%m%d")
     outstr = cmt + f"RefAnt = ** Antenna = {ant_num} Stokes = '{stokes}_' Freq =  {stokes_vis.attrs['frequency']:.9f}" \
                    f" DATE-OBS = '{today}'\n"

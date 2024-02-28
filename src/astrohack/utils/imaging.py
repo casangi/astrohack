@@ -31,8 +31,8 @@ def parallactic_derotation(data, parallactic_angle_dict):
     # Get the median index for the first map (this should be the same for every map).
     median_index = len(parallactic_angle_dict[maps[0]].parallactic_samples) // 2
 
-    # This is the angle we will rotated the maps to.
-    median_angular_reference = parallactic_angle_dict[maps[0]].parallactic_samples[median_index]
+    # This is the angle we will rotate the maps to.
+    # median_angular_reference = parallactic_angle_dict[maps[0]].parallactic_samples[median_index]
 
     for mapping, map_value in enumerate(maps):
         # median_angular_offset = median_angular_reference - parallactic_angle_dict[map_value].parallactic_samples[

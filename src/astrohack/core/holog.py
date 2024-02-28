@@ -94,7 +94,7 @@ def process_holog_chunk(holog_chunk_params):
                                                                                vis_avg[:, chan_index, :],
                                                                                (grid_l, grid_m), method=
                                                                                grid_interpolation_mode,
-                                                                               fill_value=0.0), (2), (0)))
+                                                                               fill_value=0.0), 2, 0))
             # Averaging now complete
             n_chan = 1
             freq_chan = [np.mean(avg_freq)]
@@ -110,7 +110,7 @@ def process_holog_chunk(holog_chunk_params):
             try:
                 xx_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
                 yy_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
-            except:
+            except Exception:
                 center_pixel = np.array(beam_grid.shape[-2:]) // 2
                 xx_peak = beam_grid[holog_map_index, chan, 0, center_pixel[0], center_pixel[1]]
                 yy_peak = beam_grid[holog_map_index, chan, 3, center_pixel[0], center_pixel[1]]
@@ -290,9 +290,6 @@ def process_holog_chunk(holog_chunk_params):
 
 def _create_average_chan_map(freq_chan, chan_tolerance_factor):
     n_chan = len(freq_chan)
-    cf_chan_map = np.zeros((n_chan,), dtype=int)
-
-    orig_width = (np.max(freq_chan) - np.min(freq_chan)) / len(freq_chan)
 
     tol = np.max(freq_chan) * chan_tolerance_factor
     n_pb_chan = int(np.floor((np.max(freq_chan) - np.min(freq_chan)) / tol) + 0.5)

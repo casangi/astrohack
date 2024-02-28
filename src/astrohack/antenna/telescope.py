@@ -1,6 +1,5 @@
-import os
-import sys
 import astrohack
+import pathlib
 
 import xarray as xr
 import graphviper.utils.logger as logger
@@ -18,24 +17,33 @@ class Telescope:
             data directory if None
         """
 
-        filename = self._get_telescope_file_name(name).lower().replace(" ", "_") + ".zarr"
+        self.filename = self._get_telescope_file_name(name).lower().replace(" ", "_") + ".zarr"
 
-        
         if path is None:
-            filepath = astrohack.utils.tools.file_search(root=astrohack.__path__[0], file_name=filename)
+            self.filepath = astrohack.utils.tools.file_search(root=astrohack.__path__[0], file_name=self.filename)
         else:
-            filepath = astrohack.utils.tools.file_search(root=path, file_name=filename)
-            
-        
-        self.read(filepath)
-        
+            self.filepath = astrohack.utils.tools.file_search(root=path, file_name=self.filename)
+
+        self.read(pathlib.Path(self.filepath).joinpath(self.filename))
+
         if self.ringed:
             self._ringed_consistency()
-        
+
         else:
             self._general_consistency()
-        
+
         return
+
+    @classmethod
+    def from_xds(cls, xds):
+        if xds.attrs['telescope_name'] == "ALMA":
+            telescope_name = xds.attrs['telescope_name'] + '_' + xds.attrs['ant_name'][0:2]
+            return cls(telescope_name)
+        elif xds.attrs['telescope_name'] == "EVLA":
+            telescope_name = "VLA"
+            return cls(telescope_name)
+        else:
+            raise ValueError('Unsupported telescope {0:s}'.format(xds.attrs['telescope_name']))
 
     @staticmethod
     def _get_telescope_file_name(name):
@@ -101,9 +109,8 @@ class Telescope:
                 setattr(self, key, xds.attrs[key])
 
         except FileNotFoundError:
-            logger.error(f"Telescopr file not found: {filename}")
+            logger.error(f"Telescope file not found: {filename}")
             raise FileNotFoundError
-        
 
     def print(self):
         """
@@ -111,4 +118,4 @@ class Telescope:
         """
         ledict = vars(self)
         for key in ledict:
-            print("{0:15s} = ".format(key)+str(ledict[key]))
+            print("{0:15s} = ".format(key) + str(ledict[key]))

@@ -15,7 +15,6 @@ def process_combine_chunk(combine_chunk_params):
     Args:
         combine_chunk_params: Param dictionary for combine chunk
     """
-    
 
     antenna = combine_chunk_params['this_ant']
     ddi_dict = combine_chunk_params['image_mds'][antenna]
@@ -39,13 +38,13 @@ def process_combine_chunk(combine_chunk_params):
             logger.error(msg)
             raise Exception(msg)
         npol = shape[2]
-        npoints = shape[3]*shape[4]
+        npoints = shape[3] * shape[4]
         amp_sum = np.zeros((npol, npoints))
         pha_sum = np.zeros((npol, npoints))
         for ipol in range(npol):
             amp_sum[ipol, :] = out_xds['AMPLITUDE'].values[0, 0, ipol, :, :].ravel()
             if combine_chunk_params['weighted']:
-                pha_sum[ipol, :] = out_xds['CORRECTED_PHASE'].values[0, 0, ipol, :, :].ravel()*amp_sum
+                pha_sum[ipol, :] = out_xds['CORRECTED_PHASE'].values[0, 0, ipol, :, :].ravel() * amp_sum
             else:
                 pha_sum[ipol, :] = out_xds['CORRECTED_PHASE'].values[0, 0, ipol, :, :].ravel()
         wavelength = clight / out_xds.chan.values[0]
@@ -66,7 +65,7 @@ def process_combine_chunk(combine_chunk_params):
                 reamp = griddata((loca_u_axis, loca_v_axis), thisamp, (dest_u_axis, dest_v_axis), method='linear')
                 amp_sum[ipol, :] += reamp
                 if combine_chunk_params['weighted']:
-                    pha_sum[ipol, :] += repha*reamp
+                    pha_sum[ipol, :] += repha * reamp
                 else:
                     pha_sum[ipol, :] += repha
 
@@ -76,8 +75,9 @@ def process_combine_chunk(combine_chunk_params):
             phase = pha_sum / nddi
         amplitude = amp_sum / nddi
 
-        out_xds['AMPLITUDE'] = xr.DataArray(amplitude.reshape(shape), dims=["time", "chan", "pol", "u_prime", "v_prime"])
-        out_xds['CORRECTED_PHASE'] = xr.DataArray(phase.reshape(shape), dims=["time", "chan", "pol", "u_prime", "v_prime"])
+        out_xds['AMPLITUDE'] = xr.DataArray(amplitude.reshape(shape),
+                                            dims=["time", "chan", "pol", "u_prime", "v_prime"])
+        out_xds['CORRECTED_PHASE'] = xr.DataArray(phase.reshape(shape),
+                                                  dims=["time", "chan", "pol", "u_prime", "v_prime"])
 
         out_xds.to_zarr(out_xds_name, mode='w')
-

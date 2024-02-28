@@ -9,8 +9,6 @@ import graphviper.utils.console as console
 from casacore import tables
 from graphviper.utils import logger as logger
 
-from astrohack.antenna.telescope import Telescope
-
 from typing import Union
 
 
@@ -23,8 +21,9 @@ def file_search(root: str = "/", file_name=None) -> Union[None, str]:
         )
 
     graphviper.utils.logger.info(
-        "Searching {} for configuration file, please wait ...".format(
-            colorize.blue(root)
+        "Searching {root} for {file_name}, please wait ...".format(
+            root=colorize.blue(root),
+            file_name=colorize.blue(file_name)
         )
     )
 
@@ -36,6 +35,7 @@ def file_search(root: str = "/", file_name=None) -> Union[None, str]:
     logger.warning(f"Couldn't locate filename: {colorize.blue(file_name)}")
 
     return None
+
 
 def split_pointing_table(ms_name, antennas):
     """ Split pointing table to contain only specified antennas
@@ -132,15 +132,3 @@ def get_telescope_lat_lon_rad(telescope):
         raise Exception(msg)
 
     return lon, lat, rad
-
-
-def get_correct_telescope_from_name(xds):
-    if xds.attrs['telescope_name'] == "ALMA":
-        tname = xds.attrs['telescope_name']+'_'+xds.attrs['ant_name'][0:2]
-        telescope = Telescope(tname)
-    elif xds.attrs['telescope_name'] == "EVLA":
-        tname = "VLA"
-        telescope = Telescope(tname)
-    else:
-        raise ValueError('Unsuported telescope {0:s}'.format(xds.attrs['telescope_name']))
-    return telescope

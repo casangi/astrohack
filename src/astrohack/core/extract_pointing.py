@@ -141,7 +141,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
 
     tb = ctables.taql(
         "select DIRECTION, TIME, TARGET, ENCODER, ANTENNA_ID, POINTING_OFFSET from $table_obj WHERE ANTENNA_ID == %s"
-        % (ant_id)
+        % ant_id
     )
 
     # NB: Add check if directions reference frame is Azemuth Elevation (AZELGEO)

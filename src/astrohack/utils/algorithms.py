@@ -286,7 +286,7 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_name
     try:
         n_pix = int(np.ceil(data_range / cell_size)) ** 2
 
-    except ZeroDivisionError as e:
+    except ZeroDivisionError:
         logger.error(f"Zero division error, there was likely a problem calculating the data range.", verbose=True)
         raise ZeroDivisionError
 

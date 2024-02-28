@@ -11,7 +11,7 @@ from astrohack.utils.algorithms import least_squares
 from astrohack.utils.constants import *
 
 
-def _locit_separated_chunk(locit_parms):
+def locit_separated_chunk(locit_parms):
     """
     This is the chunk function for locit when treating each DDI separately
     Args:
@@ -37,7 +37,7 @@ def _locit_separated_chunk(locit_parms):
     return
 
 
-def _locit_combined_chunk(locit_parms):
+def locit_combined_chunk(locit_parms):
     """
     This is the chunk function for locit when we are combining the DDIs for an antenna for a single solution
     Args:
@@ -78,7 +78,7 @@ def _locit_combined_chunk(locit_parms):
     return
 
 
-def _locit_difference_chunk(locit_parms):
+def locit_difference_chunk(locit_parms):
     """
     This is the chunk function for locit when we are combining two DDIs for an antenna for a single solution by using
     the difference in phase between the two DDIs of different frequencies

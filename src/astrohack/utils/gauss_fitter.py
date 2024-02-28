@@ -21,7 +21,7 @@ but foremost being the ability to set limits on parameters, not just force them
 to be fixed.  As far as I can tell, leastsq does not have that capability.
 
 The version of mpfit I use can be found here:
-    http://code.google.com/p/agpy/source/browse/trunk/mpfit
+    https://code.google.com/p/agpy/source/browse/trunk/mpfit
 
 Alternative: lmfit
 
@@ -31,8 +31,7 @@ Alternative: lmfit
 """
 
 
-def moments(data, circle, rotate, vheight, estimator=median, angle_guess=45.0,
-            **kwargs):
+def moments(data, circle, rotate, vheight, estimator=median, angle_guess=45.0, **kwargs):
     """
     Returns (height, amplitude, x, y, width_x, width_y, rotation angle)
     the gaussian parameters of a 2D distribution by calculating its

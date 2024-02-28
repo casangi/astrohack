@@ -447,9 +447,9 @@ def create_holog_obs_dict(
         ant_names_main,
         write_distance_matrix=False
 ):
-    '''
+    """
     Generate holog_obs_dict.
-    '''
+    """
 
     import pandas as pd
     from scipy.spatial import distance_matrix
@@ -638,7 +638,8 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
         of the ordering (ddi, holog_map, ant) --> (ant, ddi, holog_map).
 
     Args:
-        holog_name (str): holog file name.
+        input_params ():
+        holog_file (str): holog file name.
         holog_dict (dict): Dictionary containing msdx data.
     """
 

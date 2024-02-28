@@ -6,7 +6,7 @@ import graphviper.utils.logger as logger
 from astrohack.utils.graph import compute_graph
 from astrohack.utils.file import overwrite_file
 from astrohack.utils.data import write_meta_data
-from astrohack.core.locit import _locit_separated_chunk, _locit_combined_chunk, _locit_difference_chunk
+from astrohack.core.locit import locit_separated_chunk, locit_combined_chunk, locit_difference_chunk
 from astrohack.utils.text import get_default_file_name
 from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 
@@ -166,15 +166,15 @@ def locit(
     attributes['reference_antenna'] = locit_mds._meta_data['reference_antenna']
 
     if combine_ddis == 'simple':
-        function = _locit_combined_chunk
+        function = locit_combined_chunk
         key_order = ['ant']
 
     elif combine_ddis == 'difference':
-        function = _locit_difference_chunk
+        function = locit_difference_chunk
         key_order = ['ant']
 
     else:
-        function = _locit_separated_chunk
+        function = locit_separated_chunk
         key_order = ['ant', 'ddi']
 
     if compute_graph(locit_mds, function, locit_params, key_order, parallel=parallel):

@@ -1,8 +1,9 @@
 import pytest
-from astrohack.antenna.telescope import Telescope, _find_cfg_file, tel_data_path
 import os
 import filecmp
 import shutil
+
+from astrohack.antenna.telescope import Telescope
 
 
 class TestClassTelescope:
@@ -22,7 +23,7 @@ class TestClassTelescope:
         Tests the reading of a hack file and the errors when trying to read a non-existent file
         """
         tel = Telescope('vla')
-        tel.read(tel_data_path/'vlba.zarr')
+        tel.read(tel.filepath+"/vlba.zarr")
         assert tel.name == 'VLBA', 'Telescope name loaded incorrectly'
         assert tel.focus == 8.75, 'Telescope focus length loaded incorrectly'
 
@@ -37,7 +38,7 @@ class TestClassTelescope:
         tel = Telescope("vla")
         tel.write(testfile)
         assert os.path.exists(testfile), 'Telescope configuration file not created at the proper location'
-        assert filecmp.cmp(tel_data_path/'vlba.zarr/.zattrs', testfile+'/.zattrs') == 0, 'Telescope configuration ' \
+        assert filecmp.cmp(tel.filepath+"/vlba.zarr/.zattrs", testfile+'/.zattrs') == 0, 'Telescope configuration ' \
                                                                                           'file is not equal to the ' \
                                                                                           'reference'
         shutil.rmtree(testfile)
@@ -61,12 +62,3 @@ class TestClassTelescope:
         tel = Telescope("vla")
         with pytest.raises(Exception):
             tel._general_consistency()
-
-    def test_find_cfg_file(self):
-        """
-        tests the routine to automatically find a hack cfg file for a Telescope object
-        """
-        filefullpath = _find_cfg_file('vla.zarr', tel_data_path)
-        assert filefullpath == str(tel_data_path/'vla.zarr'), 'Returned path is not the expected path'
-        with pytest.raises(FileNotFoundError):
-            dummy = _find_cfg_file("xxx", "./xxx")
