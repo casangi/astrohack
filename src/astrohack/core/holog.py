@@ -52,8 +52,8 @@ def process_holog_chunk(holog_chunk_params):
     map0 = list(ant_data_dict[ddi].keys())[0]
 
     freq_chan = ant_data_dict[ddi][map0].chan.values
-    n_chan = ant_data_dict[ddi][map0].dims["chan"]
-    n_pol = ant_data_dict[ddi][map0].dims["pol"]
+    n_chan = ant_data_dict[ddi][map0].sizes["chan"]
+    n_pol = ant_data_dict[ddi][map0].sizes["pol"]
     grid_interpolation_mode = holog_chunk_params["grid_interpolation_mode"]
 
     if holog_chunk_params["chan_average"]:
@@ -103,7 +103,7 @@ def process_holog_chunk(holog_chunk_params):
                                                                    method=grid_interpolation_mode,
                                                                    fill_value=0.0), (0, 1), (2, 3))
 
-        time_centroid_index = ant_data_dict[ddi][holog_map].dims["time"] // 2
+        time_centroid_index = ant_data_dict[ddi][holog_map].sizes["time"] // 2
         time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
 
         for chan in range(n_chan):  # Todo: Vectorize holog_map and channel axis

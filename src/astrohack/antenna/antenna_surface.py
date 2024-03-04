@@ -75,7 +75,7 @@ class AntennaSurface:
 
     def _read_holog_xds(self, inputxds):
         if 'chan' in inputxds.dims:
-            if inputxds.dims['chan'] != 1:
+            if inputxds.sizes['chan'] != 1:
                 raise Exception("Only single channel holographies supported")
             self.wavelength = clight / inputxds.chan.values[0]
         else:
@@ -90,7 +90,7 @@ class AntennaSurface:
         self.amplitude = inputxds["AMPLITUDE"].sel(pol=self.pol_state).isel(time=0, chan=0).values
         self.phase = inputxds["CORRECTED_PHASE"].sel(pol=self.pol_state).isel(time=0, chan=0).values
 
-        self.npoint = np.sqrt(inputxds.dims['l'] ** 2 + inputxds.dims['m'] ** 2)
+        self.npoint = np.sqrt(inputxds.sizes['l'] ** 2 + inputxds.sizes['m'] ** 2)
         self.amp_unit = 'V'
         self.u_axis = inputxds.u_prime.values * self.wavelength
         self.v_axis = inputxds.v_prime.values * self.wavelength

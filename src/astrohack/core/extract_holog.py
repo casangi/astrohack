@@ -459,7 +459,7 @@ def create_holog_obs_dict(
     map_id = 0
     ant_names_set = set()
 
-    # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antenas are added
+    # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antennas are added
     # because we first need to populate all mapping antennas.
     for ant_name, ant_ds in pnt_dict.items():
         if 'ant' in ant_name:

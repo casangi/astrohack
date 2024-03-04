@@ -230,7 +230,7 @@ class AstrohackImageFile(dict):
         """
 
         param_dict = locals()
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         param_dict['metadata'] = self._meta_data
         compute_graph(
             self,
@@ -303,7 +303,7 @@ class AstrohackImageFile(dict):
 
         param_dict["figuresize"] = figure_size
 
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
     @graphviper.utils.parameter.validate(
@@ -355,7 +355,7 @@ class AstrohackImageFile(dict):
         """
         param_dict = locals()
 
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
 
@@ -525,7 +525,7 @@ class AstrohackHologFile(dict):
         param_dict = locals()
         param_dict["map"] = map_id
 
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         key_order = ["ddi", "map", "ant"]
         compute_graph(self, calibration_plot_chunk, param_dict, key_order, parallel)
 
@@ -598,7 +598,7 @@ class AstrohackHologFile(dict):
         param_dict = locals()
         param_dict["map"] = map_id
 
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         key_order = ["ddi", "map", "ant"]
         compute_graph(self, plot_lm_coverage, param_dict, key_order, parallel)
         return
@@ -636,7 +636,7 @@ class AstrohackHologFile(dict):
         param_dict = locals()
         param_dict["map"] = map_id
 
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         key_order = ["ddi", "map", "ant"]
         compute_graph(self, export_to_aips, param_dict, key_order, parallel)
         return
@@ -780,7 +780,7 @@ class AstrohackPanelFile(dict):
         """
         param_dict = locals()
 
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
 
     @graphviper.utils.parameter.validate(
@@ -878,7 +878,7 @@ class AstrohackPanelFile(dict):
 
         param_dict["figuresize"] = figure_size
 
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
     @graphviper.utils.parameter.validate()
@@ -913,7 +913,7 @@ class AstrohackPanelFile(dict):
 
         param_dict = locals()
 
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
                       parallel=parallel)
 
@@ -1124,7 +1124,7 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
 
         if precessed:
             filename = str(pathlib.Path(destination).joinpath('locit_source_table_precessed.png'))
@@ -1193,7 +1193,7 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         plot_array_configuration(self['ant_info'], self['obs_info']['telescope_name'], param_dict)
         return
 
@@ -1322,7 +1322,7 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         param_dict['combined'] = self.combined
         export_locit_fit_results(self, param_dict)
 
@@ -1383,7 +1383,7 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         param_dict['combined'] = self.combined
         if self.combined:
             compute_graph(self, plot_sky_coverage_chunk, param_dict, ['ant'], parallel=parallel)
@@ -1457,7 +1457,7 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
 
         param_dict['combined'] = self.combined
         param_dict['comb_type'] = self._meta_data["combine_ddis"]
@@ -1522,7 +1522,7 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        pathlib.Path(param_dict['destination']).mkdir(exist_ok=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         param_dict['combined'] = self.combined
         plot_position_corrections(param_dict, self)
 
