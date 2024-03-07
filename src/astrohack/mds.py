@@ -1,12 +1,24 @@
 import pathlib
 import graphviper.utils.parameter
-import graphviper.utils.logger as logger
 
 import numpy as np
-from astrohack.utils.validation import custom_plots_checker, custom_unit_checker, custom_split_checker
+import graphviper.utils.logger as logger
+
+from astrohack.utils.validation import custom_plots_checker
+from astrohack.utils.validation import custom_unit_checker
+from astrohack.utils.validation import custom_split_checker
+
 from astrohack.utils.graph import compute_graph
-from astrohack.visualization.diagnostics import calibration_plot_chunk, plot_lm_coverage, plot_sky_coverage_chunk, \
-    plot_delays_chunk, plot_position_corrections, plot_antenna_chunk, plot_aperture_chunk, plot_beam_chunk
+
+from astrohack.visualization.diagnostics import calibration_plot_chunk
+from astrohack.visualization.diagnostics import plot_lm_coverage
+from astrohack.visualization.diagnostics import plot_sky_coverage_chunk
+from astrohack.visualization.diagnostics import plot_delays_chunk
+from astrohack.visualization.diagnostics import plot_position_corrections
+from astrohack.visualization.diagnostics import plot_antenna_chunk
+from astrohack.visualization.diagnostics import plot_aperture_chunk
+from astrohack.visualization.diagnostics import plot_beam_chunk
+
 from astrohack.utils.file import load_panel_file
 from astrohack.utils.file import load_image_file
 from astrohack.utils.file import load_holog_file
@@ -14,15 +26,28 @@ from astrohack.utils.file import load_point_file
 from astrohack.utils.file import load_locit_file
 from astrohack.utils.file import load_position_file
 
-from astrohack.utils.data import read_meta_data, export_to_aips, export_locit_fit_results, export_to_fits_panel_chunk, \
-    export_screws_chunk
+from astrohack.utils.data import read_meta_data
+from astrohack.utils.data import export_to_aips
+from astrohack.utils.data import export_locit_fit_results
+from astrohack.utils.data import export_to_fits_panel_chunk
+from astrohack.utils.data import export_screws_chunk
 
-from astrohack.core.extract_locit import plot_source_table, plot_array_configuration, print_array_configuration
+from astrohack.core.extract_locit import plot_source_table
+from astrohack.core.extract_locit import plot_array_configuration
+from astrohack.core.extract_locit import print_array_configuration
+
 from astrohack.utils.fits import export_to_fits_holog_chunk
+
 from astrohack.antenna.antenna_surface import AntennaSurface
+
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils.text import print_method_list, print_dict_table, print_data_contents, print_summary_header
-from astrohack.utils.text import rad_to_deg_str, rad_to_hour_str
+
+from astrohack.utils.text import print_method_list
+from astrohack.utils.text import print_dict_table
+from astrohack.utils.text import print_data_contents
+from astrohack.utils.text import print_summary_header
+from astrohack.utils.text import rad_to_deg_str
+from astrohack.utils.text import rad_to_hour_str
 
 from prettytable import PrettyTable
 
@@ -87,7 +112,7 @@ class AstrohackDataFile:
 class AstrohackImageFile(dict):
     """ Data class for holography image data.
 
-    Data within an object of this class can be selected for further inspection, plotted or outputed to FITS files.
+    Data within an object of this class can be selected for further inspection, plotted or output to FITS files.
     """
 
     def __init__(self, file: str):
