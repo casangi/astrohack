@@ -156,7 +156,7 @@ def chunked_average(data, weight, avg_map, avg_freq):
 
 
 def _calculate_euclidean_distance(x, y, center):
-    """ Calculates the euclidean distance between a pair of pair of input points.
+    """ Calculates the Euclidean distance between a pair of input points.
 
     Args:
         x (float): x-coordinate
@@ -175,8 +175,8 @@ def find_peak_beam_value(data, height=0.5, scaling=0.5):
 
     Args:
         data (numpy.ndarray): beam data grid
-        height (float, optional): Peak threshold. Looks for the maixmimum peak in data and uses a percentage of this 
-                                  peak to determine a threhold for other peaks. Defaults to 0.5.
+        height (float, optional): Peak threshold. Looks for the maximum peak in data and uses a percentage of this
+                                  peak to determine a threshold for other peaks. Defaults to 0.5.
         scaling (float, optional): scaling factor for beam data cropping. Defaults to 0.5.
 
     Returns:
@@ -303,12 +303,11 @@ def significant_figures_round(x, digits):
 
     elif isinstance(x, list) or isinstance(x, np.ndarray):
         return list(map(significant_figures_round, x, [digits] * len(x)))
-    
+
     else:
         logger.warning("Unknown data type.")
-        
+
         return x
-    
 
 
 def compute_average_stokes_visibilities(vis, stokes):

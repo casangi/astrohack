@@ -8,6 +8,7 @@ import numpy as np
 from prettytable import PrettyTable
 
 import astrohack
+
 from astrohack.antenna.telescope import Telescope
 from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.utils import compute_average_stokes_visibilities, convert_unit, clight, notavail, rotate_to_gmt
@@ -18,7 +19,7 @@ def read_meta_data(file_name):
     """Reads dimensional data from holog meta file.
 
         Args:
-            file_name (str): astorhack file name.
+            file_name (str): astrohack file name.
 
         Returns:
             dict: dictionary containing dimension data.
@@ -152,13 +153,14 @@ def export_locit_fit_results(data_dict, parm_dict):
                 antenna = data_dict[ant_key]
                 if combined:
                     table.add_row(_export_locit_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
-                                              rate_present))
+                                                    rate_present))
                 else:
                     ddi_list = param_to_list(parm_dict['ddi'], data_dict[ant_key], 'ddi')
                     for ddi_key in ddi_list:
                         row = [ant_name, ddi_key.split('_')[1]]
-                        table.add_row(_export_locit_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pos_fact, slo_fact,
-                                                  kterm_present, rate_present))
+                        table.add_row(
+                            _export_locit_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pos_fact, slo_fact,
+                                              kterm_present, rate_present))
 
     outname = parm_dict['destination'] + f'/position_{specifier}_fit_results.txt'
     outfile = open(outname, 'w')
@@ -186,9 +188,9 @@ def _export_locit_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_prese
     rms = np.sqrt(attributes["chi_squared"]) * del_fact
     row.append(f'{rms:.2e}')
     row.append(format_value_error(attributes['fixed_delay_fit'], attributes['fixed_delay_error'], del_fact,
-                                   tolerance))
+                                  tolerance))
     position, poserr = rotate_to_gmt(np.copy(attributes['position_fit']), attributes['position_error'],
-                                      attributes['antenna_info']['longitude'])
+                                     attributes['antenna_info']['longitude'])
     for i_pos in range(3):
         row.append(format_value_error(position[i_pos], poserr[i_pos], pos_fact, tolerance))
     if kterm_present:

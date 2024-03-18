@@ -17,6 +17,7 @@ class Telescope:
             data directory if None
         """
 
+        self.ant_list = []
         self.filename = self._get_telescope_file_name(name).lower().replace(" ", "_") + ".zarr"
 
         if path is None:
@@ -36,10 +37,10 @@ class Telescope:
 
     @classmethod
     def from_xds(cls, xds):
-        if xds.attrs['telescope_name'] == "ALMA":
-            telescope_name = xds.attrs['telescope_name'] + '_' + xds.attrs['ant_name'][0:2]
+        if xds.attrs["telescope_name"] == "ALMA":
+            telescope_name = "_".join((xds.attrs["telescope_name"], xds.attrs["ant_name"][0:2]))
             return cls(telescope_name)
-        elif xds.attrs['telescope_name'] == "EVLA":
+        elif xds.attrs["telescope_name"] == "EVLA":
             telescope_name = "VLA"
             return cls(telescope_name)
         else:
@@ -72,11 +73,14 @@ class Telescope:
         if not self.nrings == len(self.inrad) == len(self.ourad):
             logger.error("Number of panels don't match radii or number of panels list sizes")
             error = True
+
         if not self.onaxisoptics:
             logger.error("Off axis optics not yet supported")
             error = True
+
         if error:
             raise Exception("Failed Consistency check")
+
         return
 
     def _general_consistency(self):
