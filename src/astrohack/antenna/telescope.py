@@ -17,7 +17,14 @@ class Telescope:
             data directory if None
         """
 
+        self.onaxisoptics = None
+        self.ourad = None
+        self.inrad = None
+        self.nrings = None
+        self.ringed = None
+
         self.ant_list = []
+
         self.filename = self._get_telescope_file_name(name).lower().replace(" ", "_") + ".zarr"
 
         if path is None:
