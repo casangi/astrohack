@@ -213,7 +213,7 @@ def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None,
 
     if load_pnt_dict:
         logger.info("Loading pointing dictionary to holog ...")
-        holog_dict["pnt_dict"] = load_point_file(file=holog_file, ant_list=None, dask_load=dask_load)
+        holog_dict["pnt_dict"] = load_point_file(file=holog_file, dask_load=dask_load)
 
     for ddi in os.listdir(holog_file):
         if "ddi_" in ddi:
