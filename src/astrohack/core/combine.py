@@ -44,7 +44,7 @@ def process_combine_chunk(combine_chunk_params):
         for ipol in range(npol):
             amp_sum[ipol, :] = out_xds['AMPLITUDE'].values[0, 0, ipol, :, :].ravel()
             if combine_chunk_params['weighted']:
-                pha_sum[ipol, :] = out_xds['CORRECTED_PHASE'].values[0, 0, ipol, :, :].ravel() * amp_sum
+                pha_sum[ipol, :] = out_xds['CORRECTED_PHASE'].values[0, 0, ipol, :, :].ravel() * amp_sum[ipol, :]
             else:
                 pha_sum[ipol, :] = out_xds['CORRECTED_PHASE'].values[0, 0, ipol, :, :].ravel()
         wavelength = clight / out_xds.chan.values[0]
