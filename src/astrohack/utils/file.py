@@ -9,10 +9,12 @@ import numpy as np
 import xarray as xr
 
 import graphviper.utils.logger as logger
+from graphviper.utils.console import Colorize
 
 from astrohack.utils.data import read_meta_data
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
+colorize = Colorize()
 
 
 def load_panel_file(file=None, panel_dict=None, dask_load=True):
@@ -34,25 +36,26 @@ def load_panel_file(file=None, panel_dict=None, dask_load=True):
 
     ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
 
-    try:
-        for ant in ant_list:
-            if 'ant' in ant:
-                ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
-                            os.path.isdir(file + "/" + str(ant))]
-                panel_data_dict[ant] = {}
+    if not pathlib.Path(file).exists():
+        logger.error("Requested file {} doesn't exist ...".format(colorize.blue(file)))
 
-                for ddi in ddi_list:
-                    if 'ddi' in ddi:
-                        if dask_load:
-                            panel_data_dict[ant][ddi] = xr.open_zarr(
-                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
-                        else:
-                            panel_data_dict[ant][ddi] = _open_no_dask_zarr(
-                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+        raise FileNotFoundError
 
-    except Exception as e:
-        logger.error(str(e))
-        raise
+    for ant in ant_list:
+        if 'ant' in ant:
+            ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
+                        os.path.isdir(file + "/" + str(ant))]
+            panel_data_dict[ant] = {}
+
+            for ddi in ddi_list:
+                if 'ddi' in ddi:
+                    if dask_load:
+                        panel_data_dict[ant][ddi] = xr.open_zarr(
+                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                    else:
+                        panel_data_dict[ant][ddi] = _open_no_dask_zarr(
+                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+
     return panel_data_dict
 
 
@@ -76,25 +79,25 @@ def load_image_file(file=None, image_dict=None, dask_load=True):
 
     ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
 
-    try:
-        for ant in ant_list:
-            if 'ant' in ant:
-                ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
-                            os.path.isdir(file + "/" + str(ant))]
-                ant_data_dict[ant] = {}
+    if not pathlib.Path(file).exists():
+        logger.error("Requested file {} doesn't exist ...".format(colorize.blue(file)))
 
-                for ddi in ddi_list:
-                    if 'ddi' in ddi:
-                        if dask_load:
-                            ant_data_dict[ant][ddi] = xr.open_zarr(
-                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
-                        else:
-                            ant_data_dict[ant][ddi] = _open_no_dask_zarr(
-                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+        raise FileNotFoundError
 
-    except Exception as e:
-        logger.error(str(e))
-        raise
+    for ant in ant_list:
+        if 'ant' in ant:
+            ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
+                        os.path.isdir(file + "/" + str(ant))]
+            ant_data_dict[ant] = {}
+
+            for ddi in ddi_list:
+                if 'ddi' in ddi:
+                    if dask_load:
+                        ant_data_dict[ant][ddi] = xr.open_zarr(
+                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                    else:
+                        ant_data_dict[ant][ddi] = _open_no_dask_zarr(
+                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
 
     return ant_data_dict
 
@@ -121,24 +124,27 @@ def load_locit_file(file=None, locit_dict=None, dask_load=True):
 
     ant_data_dict['obs_info'] = read_meta_data(f'{file}/.observation_info')
     ant_data_dict['ant_info'] = {}
-    try:
-        for ant in ant_list:
-            if 'ant' in ant:
-                ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
-                            os.path.isdir(file + "/" + str(ant))]
-                ant_data_dict[ant] = {}
-                ant_data_dict['ant_info'][ant] = read_meta_data(f'{file}/{ant}/.antenna_info')
-                for ddi in ddi_list:
-                    if 'ddi' in ddi:
-                        if dask_load:
-                            ant_data_dict[ant][ddi] = xr.open_zarr(
-                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
-                        else:
-                            ant_data_dict[ant][ddi] = _open_no_dask_zarr(
-                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
-    except Exception as e:
-        logger.error(str(e))
-        raise
+
+    if not pathlib.Path(file).exists():
+        logger.error("Requested file {} doesn't exist ...".format(colorize.blue(file)))
+
+        raise FileNotFoundError
+
+    for ant in ant_list:
+        if 'ant' in ant:
+            ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
+                        os.path.isdir(file + "/" + str(ant))]
+            ant_data_dict[ant] = {}
+            ant_data_dict['ant_info'][ant] = read_meta_data(f'{file}/{ant}/.antenna_info')
+            for ddi in ddi_list:
+                if 'ddi' in ddi:
+                    if dask_load:
+                        ant_data_dict[ant][ddi] = xr.open_zarr(
+                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                    else:
+                        ant_data_dict[ant][ddi] = _open_no_dask_zarr(
+                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+
     return ant_data_dict
 
 
@@ -163,36 +169,38 @@ def load_position_file(file=None, position_dict=None, dask_load=True, combine=Fa
 
     ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
 
-    try:
-        if combine:
-            for ant in ant_list:
-                if 'ant' in ant:
-                    if dask_load:
-                        ant_data_dict[ant] = xr.open_zarr(f'{file}/{ant}')
-                    else:
-                        ant_data_dict[ant] = _open_no_dask_zarr(f'{file}/{ant}')
-        else:
-            for ant in ant_list:
-                if 'ant' in ant:
-                    ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
-                                os.path.isdir(file + "/" + str(ant))]
-                    ant_data_dict[ant] = {}
-                    for ddi in ddi_list:
-                        if 'ddi' in ddi:
-                            if dask_load:
-                                ant_data_dict[ant][ddi] = xr.open_zarr(
-                                    "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
-                            else:
-                                ant_data_dict[ant][ddi] = _open_no_dask_zarr(
-                                    "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
-    except Exception as e:
-        logger.error(str(e))
-        raise
+    if not pathlib.Path(file).exists():
+        logger.error("Requested file {} doesn't exist ...".format(colorize.blue(file)))
+
+        raise FileNotFoundError
+
+    if combine:
+        for ant in ant_list:
+            if 'ant' in ant:
+                if dask_load:
+                    ant_data_dict[ant] = xr.open_zarr(f'{file}/{ant}')
+                else:
+                    ant_data_dict[ant] = _open_no_dask_zarr(f'{file}/{ant}')
+    else:
+        for ant in ant_list:
+            if 'ant' in ant:
+                ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
+                            os.path.isdir(file + "/" + str(ant))]
+                ant_data_dict[ant] = {}
+                for ddi in ddi_list:
+                    if 'ddi' in ddi:
+                        if dask_load:
+                            ant_data_dict[ant][ddi] = xr.open_zarr(
+                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+
+                        else:
+                            ant_data_dict[ant][ddi] = _open_no_dask_zarr(
+                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
 
     return ant_data_dict
 
 
-def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None, ddi_id=None, holog_dict=None):
+def load_holog_file(file, dask_load=True, load_pnt_dict=True, ant_id=None, ddi_id=None, holog_dict=None):
     """Loads holog file from disk
 
     Args:
@@ -201,7 +209,7 @@ def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None,
         ant_id ():
         load_pnt_dict ():
         dask_load ():
-        holog_file ():
+        file ():
 
 
     Returns:
@@ -211,11 +219,16 @@ def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None,
     if holog_dict is None:
         holog_dict = {}
 
+    if not pathlib.Path(file).exists():
+        logger.error("Requested file {} doesn't exist ...".format(colorize.blue(file)))
+
+        raise FileNotFoundError
+
     if load_pnt_dict:
         logger.info("Loading pointing dictionary to holog ...")
-        holog_dict["pnt_dict"] = load_point_file(file=holog_file, dask_load=dask_load)
+        holog_dict["pnt_dict"] = load_point_file(file=file, dask_load=dask_load)
 
-    for ddi in os.listdir(holog_file):
+    for ddi in os.listdir(file):
         if "ddi_" in ddi:
 
             if ddi_id is None:
@@ -227,15 +240,15 @@ def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None,
                 else:
                     continue
 
-            for holog_map in os.listdir(os.path.join(holog_file, ddi)):
+            for holog_map in os.listdir(os.path.join(file, ddi)):
                 if "map_" in holog_map:
                     if holog_map not in holog_dict[ddi]:
                         holog_dict[ddi][holog_map] = {}
-                    for ant in os.listdir(os.path.join(holog_file, ddi + "/" + holog_map)):
+                    for ant in os.listdir(os.path.join(file, ddi + "/" + holog_map)):
                         if "ant_" in ant:
                             if (ant_id is None) or (ant_id in ant):
                                 mapping_ant_vis_holog_data_name = os.path.join(
-                                    holog_file, ddi + "/" + holog_map + "/" + ant
+                                    file, ddi + "/" + holog_map + "/" + ant
                                 )
 
                                 if dask_load:
@@ -250,7 +263,7 @@ def load_holog_file(holog_file, dask_load=True, load_pnt_dict=True, ant_id=None,
         return holog_dict
 
     return holog_dict, _read_data_from_holog_json(
-        holog_file=holog_file,
+        holog_file=file,
         holog_dict=holog_dict,
         ant_id=ant_id,
         ddi_id=ddi_id
@@ -316,6 +329,11 @@ def load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None, diagnost
         """
     if pnt_dict is None:
         pnt_dict = {}
+
+    if not pathlib.Path(file).exists():
+        logger.error("Requested file {} doesn't exist ...".format(colorize.blue(file)))
+
+        raise FileNotFoundError
 
     pnt_dict['point_meta_ds'] = xr.open_zarr(file)
 

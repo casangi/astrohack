@@ -21,14 +21,14 @@ from typing import Union, List, NewType, Dict, Any, NoReturn
 JSON = NewType("JSON", Dict[str, Any])
 
 
-def open_holog(file: str) -> AstrohackHologFile:
+def open_holog(file: str) -> Union[AstrohackHologFile, None]:
     """ Open holog file and return instance of the holog data object. Object includes summary function to list\
      available dictionary keys.
 
     :param file: Path to holog file.
     :type file: str
   
-    :return: Holography holog object.
+    :return: Holography holog object; None if file not found.
     :rtype: AstrohackHologFile
 
     .. _Description:
@@ -60,17 +60,17 @@ def open_holog(file: str) -> AstrohackHologFile:
         return _data_file
 
     else:
-        logger.error(f"Error opening holography file: {file}")
+        return None
 
 
-def open_image(file: str) -> AstrohackImageFile:
+def open_image(file: str) -> Union[AstrohackImageFile, None]:
     """ Open image file and return instance of the image data object. Object includes summary function to list \
     available dictionary keys.
 
     :param file: Path to image file.
     :type file: str
   
-    :return: Holography image object.
+    :return: Holography image object; None if file not found.
     :rtype: AstrohackImageFile
 
     .. _Description:
@@ -99,17 +99,17 @@ def open_image(file: str) -> AstrohackImageFile:
         return _data_file
 
     else:
-        logger.error(f"Error opening holography image file: {file}")
+        return None
 
 
-def open_panel(file: str) -> AstrohackPanelFile:
+def open_panel(file: str) -> Union[AstrohackPanelFile, None]:
     """ Open panel file and return instance of the panel data object. Object includes summary function to list \
     available dictionary keys.
 
     :param file: Path ot panel file.
     :type file: str
 
-    :return: Holography panel object.
+    :return: Holography panel object; None if file not found.
     :rtype: AstrohackPanelFile
 
     .. _Description:
@@ -138,17 +138,17 @@ def open_panel(file: str) -> AstrohackPanelFile:
         return _data_file
 
     else:
-        logger.error(f"Error opening holgraphy panel file: {file}")
+        return None
 
 
-def open_locit(file: str) -> AstrohackLocitFile:
+def open_locit(file: str) -> Union[AstrohackLocitFile, None]:
     """ Open locit file and return instance of the locit data object. Object includes summary function to list \
     available dictionary keys.
 
     :param file: Path of locit file.
     :type file: str
 
-    :return: locit object.
+    :return: locit object; None if file not found.
     :rtype: AstrohackLocitFile
 
     .. _Description:
@@ -177,17 +177,17 @@ def open_locit(file: str) -> AstrohackLocitFile:
         return _data_file
 
     else:
-        logger.error(f"Error opening holgraphy locit file: {file}")
+        return
 
 
-def open_position(file: str) -> AstrohackPositionFile:
+def open_position(file: str) -> Union[AstrohackPositionFile, None]:
     """ Open position file and return instance of the position data object. Object includes summary function to list \
     available dictionary keys.
 
     :param file: Path of position file.
     :type file: str
 
-    :return: position object.
+    :return: position object; None if file does not exist.
     :rtype: AstrohackPositionFile
 
     .. _Description:
@@ -216,17 +216,17 @@ def open_position(file: str) -> AstrohackPositionFile:
         return _data_file
 
     else:
-        logger.error(f"Error opening holgraphy position file: {file}")
+        return None
 
 
-def open_pointing(file: str) -> AstrohackPointFile:
+def open_pointing(file: str) -> Union[AstrohackPointFile, None]:
     """ Open pointing file and return instance of the pointing data object. Object includes summary function to list\
      available dictionary keys.
 
     :param file: Path to pointing file.
     :type file: str
   
-    :return: Holography pointing object.
+    :return: Holography pointing object; None if file does not exist.
     :rtype: AstrohackPointFile
 
     .. _Description:
@@ -252,7 +252,7 @@ def open_pointing(file: str) -> AstrohackPointFile:
         return _data_file
 
     else:
-        logger.error(f"Error opening holography pointing file: {file}")
+        return None
 
 
 def fix_pointing_table(ms_name: str, reference_antenna: List[str]) -> None:

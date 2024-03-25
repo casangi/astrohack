@@ -4,6 +4,8 @@ import graphviper.utils.parameter
 import numpy as np
 import graphviper.utils.logger as logger
 
+from graphviper.utils.console import Colorize
+
 from astrohack.utils.validation import custom_plots_checker
 from astrohack.utils.validation import custom_unit_checker
 from astrohack.utils.validation import custom_split_checker
@@ -52,6 +54,8 @@ from astrohack.utils.text import rad_to_hour_str
 from prettytable import PrettyTable
 
 from typing import Any, List, Union, Tuple
+
+colorize = Colorize()
 
 
 class AstrohackDataFile:
@@ -159,15 +163,13 @@ class AstrohackImageFile(dict):
 
         try:
             load_image_file(file, image_dict=self)
-
+            self._meta_data = read_meta_data(file + '/.image_attr')
+            self._input_pars = read_meta_data(file + '/.image_input')
             self._file_is_open = True
 
         except Exception as error:
-            logger.error(f"{error}")
+            logger.error(f"There was an exception opening the file: {error}")
             self._file_is_open = False
-
-        self._meta_data = read_meta_data(file + '/.image_attr')
-        self._input_pars = read_meta_data(file + '/.image_input')
 
         return self._file_is_open
 
@@ -435,15 +437,14 @@ class AstrohackHologFile(dict):
             file = self.file
 
         try:
-            load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
+            load_holog_file(file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
+            self._meta_data = read_meta_data(file + '/.holog_attr')
+            self._input_pars = read_meta_data(file + '/.holog_input')
             self._file_is_open = True
 
         except Exception as error:
-            logger.error(f"{error}")
+            logger.error(f"There was an exception opening the file: {error}")
             self._file_is_open = False
-
-        self._meta_data = read_meta_data(file + '/.holog_attr')
-        self._input_pars = read_meta_data(file + '/.holog_input')
 
         return self._file_is_open
 
@@ -717,12 +718,12 @@ class AstrohackPanelFile(dict):
 
         try:
             load_panel_file(file, panel_dict=self)
+            self._input_pars = read_meta_data(file + '/.panel_input')
             self._file_is_open = True
-        except Exception as error:
-            logger.error(f"{error}")
-            self._file_is_open = False
 
-        self._input_pars = read_meta_data(file + '/.panel_input')
+        except Exception as error:
+            logger.error(f"There was an exception opening the file: {error}")
+            self._file_is_open = False
 
         return self._file_is_open
 
@@ -733,7 +734,7 @@ class AstrohackPanelFile(dict):
         print_dict_table(self._input_pars)
         print_data_contents(self, ["Antenna", "DDI"])
         print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
-                            self.plot_antennas])
+                           self.plot_antennas])
 
     @graphviper.utils.parameter.validate()
     def get_antenna(
@@ -993,12 +994,15 @@ class AstrohackPointFile(dict):
         try:
             load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
             self._file_is_open = True
+            self._input_pars = read_meta_data(file + '/.point_input')
 
-        except Exception as error:
-            logger.error(f"{error}")
+        except FileNotFoundError:
+            logger.error("Requested file {} doesn't exist ...".format(colorize.blue(file)))
             self._file_is_open = False
 
-        self._input_pars = read_meta_data(file + '/.point_input')
+        except Exception as error:
+            logger.error(f"There was an exception opening the file: {error}")
+            self._file_is_open = False
 
         return self._file_is_open
 
@@ -1064,14 +1068,13 @@ class AstrohackLocitFile(dict):
 
         try:
             load_locit_file(file=file, dask_load=dask_load, locit_dict=self)
+            self._input_pars = read_meta_data(file + '/.locit_input')
+            self._meta_data = read_meta_data(file + '/.locit_attr')
             self._file_is_open = True
 
         except Exception as error:
-            logger.error(f"{error}")
+            logger.error(f"There was an exception opening the file: {error}")
             self._file_is_open = False
-
-        self._input_pars = read_meta_data(file + '/.locit_input')
-        self._meta_data = read_meta_data(file + '/.locit_attr')
 
         return self._file_is_open
 
@@ -1289,10 +1292,6 @@ class AstrohackPositionFile(dict):
         if file is None:
             file = self.file
 
-        self._meta_data = read_meta_data(file + '/.position_attr')
-        self.combined = self._meta_data['combine_ddis'] != 'no'
-        self._input_pars = read_meta_data(file + '/.position_input')
-
         try:
             load_position_file(
                 file=file,
@@ -1300,11 +1299,14 @@ class AstrohackPositionFile(dict):
                 position_dict=self,
                 combine=self.combined
             )
+            self._meta_data = read_meta_data(file + '/.position_attr')
+            self.combined = self._meta_data['combine_ddis'] != 'no'
+            self._input_pars = read_meta_data(file + '/.position_input')
 
             self._file_is_open = True
 
         except Exception as error:
-            logger.error(f'{error}')
+            logger.error(f"There was an exception opening the file: {error}")
             self._file_is_open = False
 
         return self._file_is_open
@@ -1561,4 +1563,4 @@ class AstrohackPositionFile(dict):
         else:
             print_data_contents(self, ["Antenna", "Contents"])
         print_method_list([self.summary, self.export_locit_fit_results, self.plot_sky_coverage, self.plot_delays,
-                            self.plot_position_corrections])
+                           self.plot_position_corrections])
