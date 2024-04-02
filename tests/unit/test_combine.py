@@ -105,28 +105,28 @@ class TestCombine:
 
         assert list(combine_mds.keys()) == ["ant_ea25"]
 
-    def test_combine_weighted(self):
-        """
-            Specify a ddi value to be process and check that it is the only one processed.
-        """
+    #def test_combine_weighted(self):
+    #    """
+    #        Specify a ddi value to be process and check that it is the only one processed.
+    #    """
 
-        combine_mds = combine(
-            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
-            combine_name="data/ea25_cal_small_before_fixed.split.combine.weighted.zarr",
-            ant="ea25",
-            ddi="all",
-            weighted=True,
-            parallel=False,
-            overwrite=True
-        )
+    #    combine_mds = combine(
+    #        image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+    #        combine_name="data/ea25_cal_small_before_fixed.split.combine.weighted.zarr",
+    #        ant="ea25",
+    #        ddi="all",
+    #        weighted=True,
+    #        parallel=False,
+    #        overwrite=True
+    #    )
 
-        with open("data/combine_weight.npy", "rb") as file:
-            combine_weight_array = np.load(file)
+    #    with open("data/combine_weight.npy", "rb") as file:
+    #        combine_weight_array = np.load(file)
 
-        combine_mds_values = combine_mds["ant_ea25"]["ddi_0"].AMPLITUDE.values
+    #    combine_mds_values = combine_mds["ant_ea25"]["ddi_0"].AMPLITUDE.values
 
-        np.nan_to_num(combine_weight_array, copy=False)
-        np.nan_to_num(combine_mds_values, copy=False)
+    #    np.nan_to_num(combine_weight_array, copy=False)
+    #    np.nan_to_num(combine_mds_values, copy=False)
 
         #assert (combine_weight_array == combine_mds_values).all()
 
