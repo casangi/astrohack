@@ -18,7 +18,7 @@ def set_data(tmp_path_factory):
 
     # Data files
     graphviper.utils.data.download('ea25_cal_small_before_fixed.split.ms', folder=str(data_dir))
-    graphviper.utils.data.download('ea25_cal_small_before_fixed.split.ms', folder=str(data_dir))
+    graphviper.utils.data.download('ea25_cal_small_after_fixed.split.ms', folder=str(data_dir))
 
     # Verification json information
     graphviper.utils.data.download(file='extract_holog_verification.json', folder=str(data_dir))
