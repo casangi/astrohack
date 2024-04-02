@@ -10,6 +10,8 @@ from astrohack.extract_pointing import extract_pointing
 from astrohack.extract_holog import generate_holog_obs_dict
 from astrohack.combine import combine
 
+from graphviper.utils.data.remote import download
+
 
 class TestCombine:
     @classmethod
@@ -17,10 +19,12 @@ class TestCombine:
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
         graphviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data")
-        graphviper.utils.data.download(file="combine_weight_array", folder="data", source="api")
+
+        # This gets the remote functionality for now
+        download(file="combine_weight_array", folder="data")
 
         # Generate pointing file
-        point_mds = extract_pointing(
+        extract_pointing(
             ms_name="data/ea25_cal_small_before_fixed.split.ms",
             point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             overwrite=True,
