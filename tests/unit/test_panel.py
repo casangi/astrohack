@@ -20,46 +20,46 @@ class TestPanel():
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
-        graphviper.utils.data.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/")
+        graphviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data/")
 
         graphviper.utils.data.download(file='extract_holog_verification.json')
         graphviper.utils.data.download(file='holog_numerical_verification.json')
 
         extract_pointing(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             overwrite=True,
             parallel=False
         )
 
         # Extract holography data using holog_obd_dict
         holog_mds = extract_holog(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             data_column="CORRECTED_DATA",
             parallel=False,
             overwrite=True
         )
 
         extract_holog(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
             data_column='CORRECTED_DATA',
             parallel=False,
             overwrite=True
         )
 
         holog(
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             overwrite=True,
             parallel=False
         )
 
         panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
+            panel_name='data/ea25_cal_small_before_fixed.split.panel.zarr',
             clip_type='relative',
             clip_level=0.2,
             panel_margins=0.2,
@@ -68,7 +68,7 @@ class TestPanel():
             overwrite=True
         )
 
-        with open('data/ea25_cal_small_after_fixed.split.image.zarr/.image_attr') as json_attr:
+        with open('data/ea25_cal_small_before_fixed.split.image.zarr/.image_attr') as json_attr:
             cls.json_file = json.load(json_attr)
 
     @classmethod
@@ -90,7 +90,7 @@ class TestPanel():
             Check that the panel output name was created correctly.
         """
 
-        assert os.path.exists('data/ea25_cal_small_after_fixed.split.panel.zarr')
+        assert os.path.exists('data/ea25_cal_small_before_fixed.split.panel.zarr')
 
     def test_panel_ant_id(self):
         """
@@ -98,8 +98,8 @@ class TestPanel():
         """
 
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
+            panel_name='data/ea25_cal_small_before_fixed.split.panel.zarr',
             clip_type='relative',
             clip_level=0.2,
             panel_margins=0.2,
@@ -117,8 +117,8 @@ class TestPanel():
         """
 
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
+            panel_name='data/ea25_cal_small_before_fixed.split.panel.zarr',
             clip_type='relative',
             clip_level=0.2,
             panel_margins=0.2,
@@ -136,11 +136,11 @@ class TestPanel():
         """
             Specify the output file should be overwritten; check that it WAS.
         """
-        initial_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.image.zarr')
+        initial_time = os.path.getctime('data/ea25_cal_small_before_fixed.split.image.zarr')
 
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
+            panel_name='data/ea25_cal_small_before_fixed.split.panel.zarr',
             clip_type='relative',
             clip_level=0.2,
             panel_margins=0.2,
@@ -149,7 +149,7 @@ class TestPanel():
             overwrite=True
         )
 
-        modified_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.panel.zarr')
+        modified_time = os.path.getctime('data/ea25_cal_small_before_fixed.split.panel.zarr')
 
         assert initial_time != modified_time
 
@@ -157,12 +157,12 @@ class TestPanel():
         """
            Specify the output file should be NOT be overwritten; check that it WAS NOT.
         """
-        initial_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.panel.zarr')
+        initial_time = os.path.getctime('data/ea25_cal_small_before_fixed.split.panel.zarr')
 
         try:
             panel_mds = panel(
-                image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-                panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
+                image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
+                panel_name='data/ea25_cal_small_before_fixed.split.panel.zarr',
                 clip_type='relative',
                 clip_level=0.2,
                 panel_margins=0.2,
@@ -175,7 +175,7 @@ class TestPanel():
             pass
 
         finally:
-            modified_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.panel.zarr')
+            modified_time = os.path.getctime('data/ea25_cal_small_before_fixed.split.panel.zarr')
 
             assert initial_time == modified_time
 
@@ -186,16 +186,16 @@ class TestPanel():
         panel_list = ['3-4', '5-27', '5-37', '5-38']
 
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
+            panel_name='data/ea25_cal_small_before_fixed.split.panel.zarr',
             overwrite=True
         )
 
         default_rms = panel_mds["ant_ea25"]["ddi_0"].sel(labels=panel_list).map(np.std).PANEL_SCREWS.values
 
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
+            panel_name='data/ea25_cal_small_before_fixed.split.panel.zarr',
             panel_model='mean',
             overwrite=True
         )
@@ -214,7 +214,7 @@ class TestPanel():
             reference_array = np.load(array)
 
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             clip_type='absolute',
             clip_level=0.0,
             parallel=False,
@@ -225,7 +225,7 @@ class TestPanel():
 
     def test_panel_relative_clip(self):
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             clip_type='relative',
             clip_level=1,
             parallel=False,
@@ -236,7 +236,7 @@ class TestPanel():
 
     def test_panel_sigma_clip(self):
         panel_sig2_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             panel_name='data/clip_sigma_2.split.panel.zarr',
             clip_type='sigma',
             clip_level=2,
@@ -246,7 +246,7 @@ class TestPanel():
         n_mask_sig2 = np.sum(panel_sig2_mds["ant_ea25"]["ddi_0"].MASK.values)
 
         panel_sig3_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             panel_name='data/clip_sigma_3.split.panel.zarr',
             clip_type='sigma',
             clip_level=3,

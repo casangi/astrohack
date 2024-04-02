@@ -9,7 +9,7 @@ class TestExtractPointing:
     def setup_class(cls):
         """setup any state specific to the execution of the given test class"""
         cls.datafolder = "point_data"
-        cls.ms = "ea25_cal_small_after_fixed.split.ms"
+        cls.ms = "ea25_cal_small_before_fixed.split.ms"
         
         graphviper.utils.data.download(file=cls.ms, folder=cls.datafolder)
         

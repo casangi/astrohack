@@ -15,7 +15,7 @@ class TestExtractHolog():
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
-        graphviper.utils.data.download(file="ea25_cal_small_after_fixed.split.ms", folder="data")
+        graphviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data")
 
     @classmethod
     def teardown_class(cls):
@@ -39,16 +39,16 @@ class TestExtractHolog():
 
         # Generate pointing file
         extract_pointing(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             overwrite=True,
             parallel=False
         )
 
         # Generate a holog observations dictionary with a subset of data descirbed by ddi=1
         holog_obs_dict = generate_holog_obs_dict(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             baseline_average_distance='all',
             baseline_average_nearest='all',
             parallel=False
@@ -58,8 +58,8 @@ class TestExtractHolog():
 
         # Extract holography data using holog_obd_dict
         holog_mds = extract_holog(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             holog_obs_dict=holog_obs_dict,
             data_column="CORRECTED_DATA",
             parallel=False,
@@ -82,16 +82,16 @@ class TestExtractHolog():
 
         # Generate pointing file
         extract_pointing(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             overwrite=True,
             parallel=False
         )
 
         # Generate a holog observations dictionary with a subset of data described by ddi=1
         holog_obs_dict = generate_holog_obs_dict(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             baseline_average_distance='all',
             baseline_average_nearest='all',
             parallel=False
@@ -99,8 +99,8 @@ class TestExtractHolog():
 
         # Extract holography data using holog_obd_dict
         holog_mds = extract_holog(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             ddi=[1],
             data_column="CORRECTED_DATA",
             parallel=False,
@@ -117,16 +117,16 @@ class TestExtractHolog():
 
         # Generate pointing file
         extract_pointing(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             overwrite=True,
             parallel=False
         )
 
         # Generate a holog observations dictionary with a subset of data descirbed by ddi=1
         holog_obs_dict = generate_holog_obs_dict(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             baseline_average_distance='all',
             baseline_average_nearest='all',
             parallel=False
@@ -134,25 +134,25 @@ class TestExtractHolog():
 
         # Extract holography data
         holog_mds = extract_holog(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             data_column="CORRECTED_DATA",
             parallel=False,
             overwrite=True
         )
 
-        initial_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.holog.zarr')
+        initial_time = os.path.getctime('data/ea25_cal_small_before_fixed.split.holog.zarr')
 
         # Extract holography data
         holog_mds = extract_holog(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             data_column="CORRECTED_DATA",
             parallel=False,
             overwrite=True
         )
 
-        final_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.holog.zarr')
+        final_time = os.path.getctime('data/ea25_cal_small_before_fixed.split.holog.zarr')
 
         # Check that the holog file date has change
         assert initial_time != final_time
@@ -165,16 +165,16 @@ class TestExtractHolog():
 
         # extract pointing data
         pnt_mds = extract_pointing(
-            ms_name='data/ea25_cal_small_after_fixed.split.ms',
-            point_name='data/ea25_cal_small_after_fixed.split.point.zarr',
+            ms_name='data/ea25_cal_small_before_fixed.split.ms',
+            point_name='data/ea25_cal_small_before_fixed.split.point.zarr',
             parallel=False,
             overwrite=True
         )
 
         # Extract holography data
         holog_mds = extract_holog(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             baseline_average_distance=195.1,
             data_column="CORRECTED_DATA",
             parallel=False,
@@ -191,16 +191,16 @@ class TestExtractHolog():
 
         # extract pointing data
         pnt_mds = extract_pointing(
-            ms_name='data/ea25_cal_small_after_fixed.split.ms',
-            point_name='data/ea25_cal_small_after_fixed.split.point.zarr',
+            ms_name='data/ea25_cal_small_before_fixed.split.ms',
+            point_name='data/ea25_cal_small_before_fixed.split.point.zarr',
             parallel=False,
             overwrite=True
         )
 
         # Extract holography data
         holog_mds = extract_holog(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             baseline_average_nearest=1,
             data_column="CORRECTED_DATA",
             parallel=False,

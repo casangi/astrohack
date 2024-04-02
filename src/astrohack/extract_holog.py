@@ -633,7 +633,7 @@ def extract_holog(
         logger.info("Finished processing")
 
         holog_dict = load_holog_file(
-            holog_file=extract_holog_params["holog_name"],
+            file=extract_holog_params["holog_name"],
             dask_load=True,
             load_pnt_dict=False
         )

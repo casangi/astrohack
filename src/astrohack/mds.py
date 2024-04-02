@@ -1292,6 +1292,10 @@ class AstrohackPositionFile(dict):
         if file is None:
             file = self.file
 
+        self._meta_data = read_meta_data(file + '/.position_attr')
+        self.combined = self._meta_data['combine_ddis'] != 'no'
+        self._input_pars = read_meta_data(file + '/.position_input')
+
         try:
             load_position_file(
                 file=file,
