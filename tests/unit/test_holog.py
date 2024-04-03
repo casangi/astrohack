@@ -21,44 +21,44 @@ class TestHolog():
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
-        graphviper.utils.data.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/")
+        graphviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data/")
 
         graphviper.utils.data.download(file='extract_holog_verification.json')
         graphviper.utils.data.download(file='holog_numerical_verification.json')
 
         extract_pointing(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             overwrite=True,
             parallel=False
         )
 
         # Extract holography data using holog_obd_dict
         holog_mds = extract_holog(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             data_column="CORRECTED_DATA",
             parallel=False,
             overwrite=True
         )
 
         extract_holog(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
             data_column='CORRECTED_DATA',
             parallel=False,
             overwrite=True
         )
 
         holog(
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             overwrite=True,
             parallel=False
         )
 
-        with open('data/ea25_cal_small_after_fixed.split.image.zarr/.image_attr') as json_attr:
+        with open('data/ea25_cal_small_before_fixed.split.image.zarr/.image_attr') as json_attr:
             cls.json_file = json.load(json_attr)
 
     @classmethod
@@ -86,7 +86,7 @@ class TestHolog():
         with open("holog_numerical_verification.json") as file:
             reference_dict = json.load(file)
 
-        with open('data/ea25_cal_small_after_fixed.split.image.zarr/.image_attr') as attr_file:
+        with open('data/ea25_cal_small_before_fixed.split.image.zarr/.image_attr') as attr_file:
             image_attr = json.load(attr_file)
 
         for i, _ in enumerate(image_attr['cell_size']):
@@ -105,7 +105,7 @@ class TestHolog():
             Test holog image name created correctly.
         """
 
-        assert os.path.exists('data/ea25_cal_small_after_fixed.split.image.zarr')
+        assert os.path.exists('data/ea25_cal_small_before_fixed.split.image.zarr')
 
     def test_holog_ant_id(self):
         """
@@ -113,8 +113,8 @@ class TestHolog():
         """
 
         image_mds = holog(
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             ant=['ea25'],
             overwrite=True,
             parallel=False
@@ -128,8 +128,8 @@ class TestHolog():
         """
 
         image_mds = holog(
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             overwrite=True,
             ddi=[0],
             parallel=False
@@ -145,8 +145,8 @@ class TestHolog():
         """
 
         image_mds = holog(
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             padding_factor=50,
             overwrite=True,
             parallel=False
@@ -161,14 +161,14 @@ class TestHolog():
             Check that channel average flag was set holog is run.
         """
         image_mds = holog(
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             chan_average=True,
             overwrite=True,
             parallel=False
         )
 
-        with open('data/ea25_cal_small_after_fixed.split.image.zarr/.image_attr') as json_attr:
+        with open('data/ea25_cal_small_before_fixed.split.image.zarr/.image_attr') as json_attr:
             json_file = json.load(json_attr)
 
         assert json_file['chan_average'] == True
@@ -178,14 +178,14 @@ class TestHolog():
             Check that scan average flag was set holog is run.
         """
         image_mds = holog(
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             scan_average=False,
             overwrite=True,
             parallel=False
         )
 
-        with open('data/ea25_cal_small_after_fixed.split.image.zarr/.image_attr') as json_attr:
+        with open('data/ea25_cal_small_before_fixed.split.image.zarr/.image_attr') as json_attr:
             json_file = json.load(json_attr)
 
         assert json_file['scan_average'] == False
@@ -195,14 +195,14 @@ class TestHolog():
             Check that grid interpolation flag was set holog is run.
         """
         image_mds = holog(
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             grid_interpolation_mode='nearest',
             overwrite=True,
             parallel=False
         )
 
-        with open('data/ea25_cal_small_after_fixed.split.image.zarr/.image_attr') as json_attr:
+        with open('data/ea25_cal_small_before_fixed.split.image.zarr/.image_attr') as json_attr:
             json_file = json.load(json_attr)
 
         assert json_file['grid_interpolation_mode'] == 'nearest'
@@ -212,14 +212,14 @@ class TestHolog():
             Check that channel tolerance is propagated correctly.
         """
         image_mds = holog(
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             chan_tolerance_factor=0.0049,
             overwrite=True,
             parallel=False
         )
 
-        with open('data/ea25_cal_small_after_fixed.split.image.zarr/.image_attr') as json_attr:
+        with open('data/ea25_cal_small_before_fixed.split.image.zarr/.image_attr') as json_attr:
             json_file = json.load(json_attr)
 
         assert json_file['chan_tolerance_factor'] == 0.0049
@@ -229,14 +229,14 @@ class TestHolog():
             Check that to_stokes flag was set holog is run.
         """
         image_mds = holog(
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             to_stokes=True,
             overwrite=True,
             parallel=False
         )
 
-        with open('data/ea25_cal_small_after_fixed.split.image.zarr/.image_attr') as json_attr:
+        with open('data/ea25_cal_small_before_fixed.split.image.zarr/.image_attr') as json_attr:
             json_file = json.load(json_attr)
 
         assert json_file['to_stokes'] == True
@@ -247,16 +247,16 @@ class TestHolog():
         """
             Specify the output file should be overwritten; check that it WAS.
         """
-        initial_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.image.zarr')
+        initial_time = os.path.getctime('data/ea25_cal_small_before_fixed.split.image.zarr')
 
         image_mds = holog(
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             overwrite=True,
             parallel=False
         )
 
-        modified_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.image.zarr')
+        modified_time = os.path.getctime('data/ea25_cal_small_before_fixed.split.image.zarr')
 
         assert initial_time != modified_time
 
@@ -264,12 +264,12 @@ class TestHolog():
         """
            Specify the output file should be NOT be overwritten; check that it WAS NOT.
         """
-        initial_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.image.zarr')
+        initial_time = os.path.getctime('data/ea25_cal_small_before_fixed.split.image.zarr')
 
         try:
             holog(
-                holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-                image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+                holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+                image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
                 overwrite=False,
                 parallel=False
             )
@@ -278,6 +278,6 @@ class TestHolog():
             pass
 
         finally:
-            modified_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.image.zarr')
+            modified_time = os.path.getctime('data/ea25_cal_small_before_fixed.split.image.zarr')
 
             assert initial_time == modified_time

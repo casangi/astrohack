@@ -22,7 +22,7 @@ def set_data(tmp_path_factory):
 
     # Data files
     astrohack.graphviper.utils.data.download('ea25_cal_small_before_fixed.split.ms', folder=str(data_dir))
-    astrohack.graphviper.utils.data.download('ea25_cal_small_after_fixed.split.ms', folder=str(data_dir))
+    astrohack.graphviper.utils.data.download('ea25_cal_small_before_fixed.split.ms', folder=str(data_dir))
     astrohack.graphviper.utils.data.download('J1924-2914.ms.calibrated.split.SPW3', folder=str(data_dir))
 
     # Verification json information

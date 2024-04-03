@@ -152,7 +152,7 @@ class TestLocit():
         failed = False
 
         try:
-            position_mds = locit(
+            locit(
                 locit_name="data/locit-input-pha.locit.zarr",
                 position_name="data/locit-input-pha.position.zarr",
                 elevation_limit=90.0,
@@ -199,8 +199,14 @@ class TestLocit():
         )
 
         for key in position_mds.keys():
-            assert list(position_mds[key].keys()) == ['DECLINATION', 'DELAYS', 'ELEVATION', 'HOUR_ANGLE', 'LST',
-                                                      'MODEL']
+            assert list(position_mds[key].keys()) == [
+                'DECLINATION',
+                'DELAYS',
+                'ELEVATION',
+                'HOUR_ANGLE',
+                'LST',
+                'MODEL'
+            ]
 
     def test_locit_overwrite(self):
         """
@@ -208,7 +214,7 @@ class TestLocit():
         """
         initial_time = os.path.getctime("data/locit-input-pha.position.zarr")
 
-        position_mds = locit(
+        locit(
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
             parallel=False,
@@ -226,7 +232,7 @@ class TestLocit():
         initial_time = os.path.getctime("data/locit-input-pha.position.zarr")
 
         try:
-            position_mds = locit(
+            locit(
                 locit_name="data/locit-input-pha.locit.zarr",
                 position_name="data/locit-input-pha.position.zarr",
                 parallel=False,
