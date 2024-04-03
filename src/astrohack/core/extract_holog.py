@@ -158,11 +158,11 @@ def _get_time_intervals(time_vis_row, scan_list, time_interval):
     scan_time_ranges = []
     for scan in unq_scans:
         selected_times = time_vis_row[scan_list == scan]
-        min_time, max_time = np.min(selected_times), np.max(selected_times)
+        min_time, max_time = np.nanmin(selected_times), np.nanmax(selected_times)
         scan_time_ranges.append([min_time, max_time])
 
     half_int = time_interval / 2
-    start = np.min(time_vis_row) + half_int
+    start = np.nanmin(time_vis_row) + half_int
     total_time = np.max(time_vis_row) - start
     n_time = int(np.ceil(total_time / time_interval)) + 1
     stop = start + n_time * time_interval
@@ -310,7 +310,7 @@ def _extract_holog_chunk_jit(
 
 
 def _get_time_samples(time_vis):
-    """Sample three values for time vis and cooresponding indices. Values are sammpled as (first, middle, last)
+    """Sample three values for time vis and corresponding indices. Values are sampled as (first, middle, last)
 
     Args:
         time_vis (numpy.ndarray): a list of visibility times
@@ -322,6 +322,7 @@ def _get_time_samples(time_vis):
     n_time_vis = time_vis.shape[0]
 
     middle = int(n_time_vis // 2)
+
     indices = [0, middle, n_time_vis - 1]
 
     return np.take(time_vis, indices), indices
@@ -411,10 +412,10 @@ def _create_holog_file(
             xds.attrs["telescope_name"] = telescope_name
             xds.attrs["antenna_name"] = ant_names[map_ant_index]
 
-            xds.attrs["l_max"] = np.max(xds["DIRECTIONAL_COSINES"][:, 0].values)
-            xds.attrs["l_min"] = np.min(xds["DIRECTIONAL_COSINES"][:, 0].values)
-            xds.attrs["m_max"] = np.max(xds["DIRECTIONAL_COSINES"][:, 1].values)
-            xds.attrs["m_min"] = np.min(xds["DIRECTIONAL_COSINES"][:, 1].values)
+            xds.attrs["l_max"] = np.nanmax(xds["DIRECTIONAL_COSINES"][:, 0].values)
+            xds.attrs["l_min"] = np.nanmin(xds["DIRECTIONAL_COSINES"][:, 0].values)
+            xds.attrs["m_max"] = np.nanmax(xds["DIRECTIONAL_COSINES"][:, 1].values)
+            xds.attrs["m_min"] = np.nanmin(xds["DIRECTIONAL_COSINES"][:, 1].values)
 
             xds.attrs["grid_params"] = grid_params[map_ant_tag]
             xds.attrs["time_smoothing_interval"] = time_interval
@@ -484,7 +485,7 @@ def create_holog_obs_dict(
 
     df = pd.DataFrame(ant_pos, columns=['x', 'y', 'z'], index=ant_names)
     df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
-    logger.debug("".join(("\n", str(df_mat))))
+    #logger.debug("".join(("\n", str(df_mat))))
 
     if write_distance_matrix:
         df_mat.to_csv(path_or_buf="{base}/.baseline_distance_matrix.csv".format(base=os.getcwd()), sep="\t")
@@ -569,17 +570,24 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
 
     pnt_map_dict = {}
     coords = {"time": time_vis}
+
     for antenna in map_ant_ids:
         pnt_xds = pnt_ant_dict[antenna]
         avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = \
-            _time_avg_pointing_jit(time_vis,
-                                   pnt_xds.time.values,
-                                   pnt_xds['DIRECTION'].values,
-                                   pnt_xds['DIRECTIONAL_COSINES'].values,
-                                   pnt_xds['ENCODER'].values,
-                                   pnt_xds['POINTING_OFFSET'].values,
-                                   pnt_xds['TARGET'].values,
-                                   )
+            _time_avg_pointing_jit(
+                time_vis=time_vis,
+                pnt_time=pnt_xds.time.values,
+                direction=pnt_xds['DIRECTION'].values,
+                dir_cos=pnt_xds['DIRECTIONAL_COSINES'].values,
+                enc=pnt_xds['ENCODER'].values,
+                pnt_off=pnt_xds['POINTING_OFFSET'].values,
+                tgt=pnt_xds['TARGET'].values
+            )
+
+        if np.isnan(avg_pnt_off).any():
+            logger.warning("While performing time averaging on the pointing offset, NaN values were found. This could "
+                           "indicate a problem pointing offset sampling times. Try increasing the "
+                           "time_interval_smoothing parameter.")
 
         new_pnt_xds = xr.Dataset()
         new_pnt_xds.assign_coords(coords)
@@ -591,11 +599,12 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
         new_pnt_xds["TARGET"] = xr.DataArray(avg_tgt, dims=("time", "az_el"))
         new_pnt_xds.attrs = pnt_xds.attrs
         pnt_map_dict[antenna] = new_pnt_xds
+
     return pnt_map_dict
 
 
 @njit(cache=False, nogil=True)
-def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt):
+def _time_avg_pointing_jit(time_vis, pnt_time, direction, dir_cos, enc, pnt_off, tgt):
     half_int = (time_vis[1] - time_vis[0]) / 2
     n_samples = time_vis.shape[0]
     the_shape = (n_samples, 2)
@@ -613,11 +622,14 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
         if pnt_time[i_row] > time_vis[i_time] + half_int:
             if i_time == n_samples - 1:
                 break
+
             else:
                 i_time += 1
+
         elif pnt_time[i_row] < time_vis[i_time] - half_int:
             continue
-        avg_dir[i_time] += dire[i_row]
+
+        avg_dir[i_time] += direction[i_row]
         avg_dir_cos[i_time] += dir_cos[i_row]
         avg_enc[i_time] += enc[i_row]
         avg_pnt_off[i_time] += pnt_off[i_row]
