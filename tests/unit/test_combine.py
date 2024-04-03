@@ -17,7 +17,7 @@ class TestCombine:
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
         graphviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data")
-        graphviper.utils.data.download(file="combine_weight_array", folder="data", source="api")
+        #graphviper.utils.data.download(file="combine_weight_array", folder="data", source="api")
 
         # Generate pointing file
         point_mds = extract_pointing(

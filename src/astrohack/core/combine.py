@@ -33,7 +33,7 @@ def process_combine_chunk(combine_chunk_params):
         out_xds = load_image_xds(combine_chunk_params['image_name'], antenna, ddi_list[0], dask_load=False)
         nddi = len(ddi_list)
         shape = list(out_xds['CORRECTED_PHASE'].values.shape)
-        if out_xds.dims['chan'] != 1:
+        if out_xds.sizes['chan'] != 1:
             msg = f'Only single channel holographies supported'
             logger.error(msg)
             raise Exception(msg)
