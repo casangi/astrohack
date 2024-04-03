@@ -586,8 +586,8 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
 
         if np.isnan(avg_pnt_off).any():
             logger.warning("While performing time averaging on the pointing offset, NaN values were found. This could "
-                           "indicate a problem pointing offset sampling times. Try increasing the "
-                           "time_interval_smoothing parameter.")
+                           "indicate a problem in the pointing table sampling times. Try increasing the "
+                           "time_smoothing_interval parameter to avoid this problem.")
 
         new_pnt_xds = xr.Dataset()
         new_pnt_xds.assign_coords(coords)

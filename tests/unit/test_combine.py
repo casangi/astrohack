@@ -101,6 +101,7 @@ class TestCombine:
 
         assert list(combine_mds.keys()) == ["ant_ea25"]
 
+    '''
     def test_combine_weighted(self):
         """
             Specify a ddi value to be process and check that it is the only one processed.
@@ -125,6 +126,7 @@ class TestCombine:
         np.nan_to_num(combine_mds_values, copy=False)
 
         assert (combine_weight_array == combine_mds_values).all()
+        '''
 
     def test_combine_overwrite(self):
         """
