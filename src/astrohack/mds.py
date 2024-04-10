@@ -267,14 +267,15 @@ class AstrohackImageFile(dict):
             parallel=parallel
         )
 
-    @graphviper.utils.parameter.validate(
-        custom_checker=custom_plots_checker
-    )
+    # @graphviper.utils.parameter.validate(
+    #     custom_checker=custom_plots_checker
+    # )
     def plot_apertures(
             self,
             destination: str,
             ant: Union[str, List[str]] = "all",
             ddi: Union[int, List[int]] = "all",
+            polarization_state: Union[int, List[int]] = "all",
             plot_screws: bool = False,
             amplitude_limits: Union[List[float], Tuple, np.array] = None,
             phase_unit: str = 'deg',
