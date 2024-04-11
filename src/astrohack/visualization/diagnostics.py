@@ -690,10 +690,10 @@ def plot_beam_chunk(parm_dict):
     input_xds = parm_dict['xds_data']
     laxis = input_xds.l.values * convert_unit('rad', parm_dict['angle_unit'], 'trigonometric')
     maxis = input_xds.m.values * convert_unit('rad', parm_dict['angle_unit'], 'trigonometric')
-    if input_xds.dims['chan'] != 1:
+    if input_xds.sizes['chan'] != 1:
         raise Exception("Only single channel holographies supported")
 
-    if input_xds.dims['time'] != 1:
+    if input_xds.sizes['time'] != 1:
         raise Exception("Only single mapping holographies supported")
 
     full_beam = input_xds.BEAM.isel(time=0, chan=0).values
