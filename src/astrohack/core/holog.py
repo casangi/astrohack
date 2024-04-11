@@ -15,7 +15,7 @@ from astrohack.utils.file import load_holog_file
 from astrohack.utils.imaging import calculate_aperture_pattern
 from astrohack.utils.imaging import mask_circular_disk
 from astrohack.utils.imaging import parallactic_derotation
-from astrohack.utils.phase_fitting import phase_fitting_block
+from astrohack.utils.phase_fitting import execute_phase_fitting
 
 import graphviper.utils.logger as logger
 
@@ -197,57 +197,22 @@ def process_holog_chunk(holog_chunk_params):
     u_prime = u[start_cut[0]:end_cut[0]]
     v_prime = v[start_cut[1]:end_cut[1]]
 
-    phase_fit_par = holog_chunk_params["phase_fit"]
-    if isinstance(phase_fit_par, bool):
-        do_phase_fit = phase_fit_par
-        do_pnt_off = True
-        do_xy_foc_off = True
-        do_z_foc_off = True
-        do_cass_off = True
-        if telescope.name == 'VLA' or telescope.name == 'VLBA':
-            do_sub_til = True
-        else:
-            do_sub_til = False
+    ###############################################
+    #   Near field corrections will come here   ###
+    ###############################################
+    try:
+        is_near_field = ant_data_dict[ddi][map0].attrs['near_field']
+    except KeyError:
+        is_near_field = False
 
-    elif isinstance(phase_fit_par, (np.ndarray, list, tuple)):
-        if len(phase_fit_par) != 5:
-            raise Exception("Phase fit parameter must have 5 elements")
-
-        else:
-            if np.sum(phase_fit_par) == 0:
-                do_phase_fit = False
-            else:
-                do_phase_fit = True
-                do_pnt_off, do_xy_foc_off, do_z_foc_off, do_sub_til, do_cass_off = phase_fit_par
-
-    else:
-        raise Exception('Phase fit parameter is neither a boolean nor an array of booleans.')
-
-    if do_phase_fit:
-        logger.info('Applying phase correction')
-
-        if to_stokes:
-            pols = (0,)
-        else:
-            pols = (0, 3)
-
-        max_wavelength = clight / freq_chan[-1]
-
-        results, errors, phase_corrected_angle, _, in_rms, out_rms = phase_fitting_block(
-            pols=pols,
-            wavelength=max_wavelength,
-            telescope=telescope,
-            cellxy=uv_cell_size[0] * max_wavelength,  # THIS HAS TO BE CHANGES, (X, Y) CELL SIZE ARE NOT THE SAME.
-            amplitude_image=amplitude,
-            phase_image=phase,
-            pointing_offset=do_pnt_off,
-            focus_xy_offsets=do_xy_foc_off,
-            focus_z_offset=do_z_foc_off,
-            subreflector_tilt=do_sub_til,
-            cassegrain_offset=do_cass_off)
-
-    else:
-        logger.info('Skipping phase correction')
+    ##########################################################
+    #   Phase fitting all done in utils/phase_fitting.py   ###
+    ##########################################################
+    phase_corrected_angle, phase_fit_results = execute_phase_fitting(amplitude, phase,
+                                                                     ant_data_dict[ddi][map0].coords["pol"].values,
+                                                                     freq_chan, telescope, uv_cell_size,
+                                                                     holog_chunk_params["phase_fit"], to_stokes,
+                                                                     is_near_field)
 
     # Here we compute the aperture resolution from Equation 7 In EVLA memo 212
     # https://library.nrao.edu/public/memos/evla/EVLAM_212.pdf
@@ -271,6 +236,7 @@ def process_holog_chunk(holog_chunk_params):
     xds.attrs["telescope_name"] = meta_data['telescope_name']
     xds.attrs["time_centroid"] = np.array(time_centroid)
     xds.attrs["ddi"] = ddi
+    xds.attrs["phase_fitting"] = phase_fit_results
 
     coords = {
         "ddi": list(ant_data_dict.keys()),
