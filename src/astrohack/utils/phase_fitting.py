@@ -4,6 +4,7 @@ from numba import njit
 from astrohack.utils.algorithms import _least_squares_fit_block
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.constants import clight
+from astrohack.utils.text import get_str_idx_in_list
 
 import graphviper.utils.logger as logger
 
@@ -40,12 +41,12 @@ def execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_c
                 pol_indexes = (0, )
             else:
                 if 'RR' in pol_axis:
-                    i_rr = pol_axis.index('RR')
-                    i_ll = pol_axis.index('LL')
+                    i_rr = get_str_idx_in_list('RR', pol_axis)
+                    i_ll = get_str_idx_in_list('LL', pol_axis)
                     pol_indexes = (i_rr, i_ll)
                 elif 'XX' in pol_axis:
-                    i_xx = pol_axis.index('XX')
-                    i_yy = pol_axis.index('YY')
+                    i_xx = get_str_idx_in_list('XX', pol_axis)
+                    i_yy = get_str_idx_in_list('YY', pol_axis)
                     pol_indexes = (i_xx, i_yy)
                 else:
                     msg = f'Unknown polarization scheme: {pol_axis}'
