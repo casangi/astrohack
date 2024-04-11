@@ -52,6 +52,7 @@ def locit_combined_chunk(locit_parms):
     time_list = []
     field_list = []
     freq_list = []
+
     for ddi, xds_data in data.items():
         this_field_id, this_time, this_delays, freq = _get_data_from_locit_xds(xds_data, locit_parms['polarization'])
         freq_list.append(freq)
@@ -249,6 +250,7 @@ def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False, split_po
 
     pol = xds_data.attrs['polarization_scheme']
     freq = xds_data.attrs['frequency']
+
     if len(pol) != 2:
         msg = f'Polarization scheme {pol} is not what is expected for antenna based gains'
         logger.error(msg)
@@ -295,7 +297,7 @@ def _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, mod
     """
     fit_kterm = locit_parms['fit_kterm']
     fit_rate = locit_parms['fit_delay_rate']
-    antenna = locit_parms['ant_info'][locit_parms['this_ant']]
+    antenna = locit_parms['antenna_info'][locit_parms['this_ant']]
     error = np.sqrt(variance)
 
     output_xds = xr.Dataset()
@@ -402,8 +404,8 @@ def _build_filtered_arrays(field_id, time, delays, locit_parms):
     """
     """ Build the coordinate arrays (ha, dec, elevation, angle) for use in the fitting"""
     elevation_limit = locit_parms['elevation_limit'] * convert_unit('deg', 'rad', 'trigonometric')
-    antenna = locit_parms['ant_info'][locit_parms['this_ant']]
-    src_list = locit_parms['obs_info']['src_dict']
+    antenna = locit_parms['antenna_info'][locit_parms['this_ant']]
+    src_list = locit_parms['observation_info']['src_dict']
     geo_pos = antenna['geocentric_position']
     ant_pos = EarthLocation.from_geocentric(geo_pos[0], geo_pos[1], geo_pos[2], 'meter')
     astro_time = Time(time, format='mjd', scale='utc', location=ant_pos)
@@ -671,5 +673,3 @@ def _delay_model_kterm_rate(coordinates, fixed_delay, xoff, yoff, zoff, koff, ra
     sterm = _rate_coeff(coordinates) * rate
     kterm = _kterm_coeff(coordinates) * koff
     return xterm + yterm + zterm + fixed_delay + kterm + sterm
-
-

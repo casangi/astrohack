@@ -411,11 +411,12 @@ class AntennaSurface:
         """
         thgain = fourpi * (1000.0 * self.reso / self.wavelength) ** 2
 
-        if (self.mask == False).all():
+        if (self.mask==False).all():
             return -np.inf, to_db(thgain)
 
         gain = \
-            thgain * np.sqrt(np.sum(np.cos(arr[self.mask]))**2 + np.sum(np.sin(arr[self.mask]))**2) / np.sum(self.mask)
+            thgain * np.sqrt(np.sum(np.cos(arr[self.mask])) ** 2 + np.sum(np.sin(arr[self.mask])) ** 2) / np.sum(
+                self.mask)
 
         return to_db(gain), to_db(thgain)
 

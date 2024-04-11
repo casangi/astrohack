@@ -73,6 +73,18 @@ def print_array(array, columns, indent=4):
     print(str_line)
 
 
+def approve_prefix(key):
+    approved_prefix = ["ant_", "map_", "ddi_"]
+
+    for prefix in approved_prefix:
+        if key.startswith(prefix):
+            return True
+
+    logger.warning(f"File meta data contains and unknown key ({key}), the file may not complete properly.")
+
+    return False
+
+
 def add_prefix(input_string, prefix):
     """
     Adds a prefix to a string filename, if the filename is a path with /, adds the prefix to the actual filename at the

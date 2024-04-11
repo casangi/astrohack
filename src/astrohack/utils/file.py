@@ -122,8 +122,8 @@ def load_locit_file(file=None, locit_dict=None, dask_load=True):
 
     ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
 
-    ant_data_dict['obs_info'] = read_meta_data(f'{file}/.observation_info')
-    ant_data_dict['ant_info'] = {}
+    ant_data_dict['observation_info'] = read_meta_data(f'{file}/.observation_info')
+    ant_data_dict['antenna_info'] = {}
 
     if not pathlib.Path(file).exists():
         logger.error("Requested file {} doesn't exist ...".format(colorize.blue(file)))
@@ -132,10 +132,13 @@ def load_locit_file(file=None, locit_dict=None, dask_load=True):
 
     for ant in ant_list:
         if 'ant' in ant:
-            ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
-                        os.path.isdir(file + "/" + str(ant))]
+            ddi_list = [
+                dir_name for dir_name in os.listdir(file + "/" + str(ant)) if os.path.isdir(file + "/" + str(ant))
+            ]
+
             ant_data_dict[ant] = {}
-            ant_data_dict['ant_info'][ant] = read_meta_data(f'{file}/{ant}/.antenna_info')
+            ant_data_dict['antenna_info'][ant] = read_meta_data(f'{file}/{ant}/.antenna_info')
+
             for ddi in ddi_list:
                 if 'ddi' in ddi:
                     if dask_load:

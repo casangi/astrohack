@@ -35,7 +35,7 @@ class TestExtractLocit():
         # Create locit_mds and check the dictionary structure
         locit_mds = extract_locit(cal_table=self.cal_table, locit_name=self.locit_name)
 
-        expected_keys = ['obs_info', 'ant_info', 'ant_ea01', 'ant_ea02', 'ant_ea04', 'ant_ea05', 'ant_ea06', 'ant_ea07',
+        expected_keys = ['observation_info', 'antenna_info', 'ant_ea01', 'ant_ea02', 'ant_ea04', 'ant_ea05', 'ant_ea06', 'ant_ea07',
                          'ant_ea08', 'ant_ea09', 'ant_ea10', 'ant_ea11', 'ant_ea12', 'ant_ea13', 'ant_ea15', 'ant_ea16',
                          'ant_ea17', 'ant_ea18', 'ant_ea19', 'ant_ea20', 'ant_ea21', 'ant_ea22', 'ant_ea23', 'ant_ea24',
                          'ant_ea25', 'ant_ea26', 'ant_ea27', 'ant_ea28']
@@ -60,7 +60,7 @@ class TestExtractLocit():
         assert len(locit_mds.keys()) == 3
 
         # Check that only the specific antenna is in the keys.
-        assert list(locit_mds.keys()) == ['obs_info', 'ant_info', 'ant_ea17']
+        assert list(locit_mds.keys()) == ['observation_info', 'antenna_info', 'ant_ea17']
 
     def test_extract_locit_ddi(self):
         """

@@ -159,8 +159,8 @@ def locit(
     locit_mds = AstrohackLocitFile(locit_params['locit_name'])
     locit_mds.open()
 
-    locit_params['ant_info'] = locit_mds['ant_info']
-    locit_params['obs_info'] = locit_mds['obs_info']
+    locit_params['antenna_info'] = locit_mds['antenna_info']
+    locit_params['observation_info'] = locit_mds['observation_info']
 
     attributes['telescope_name'] = locit_mds._meta_data['telescope_name']
     attributes['reference_antenna'] = locit_mds._meta_data['reference_antenna']

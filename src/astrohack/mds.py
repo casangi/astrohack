@@ -1085,7 +1085,7 @@ class AstrohackLocitFile(dict):
         print("\nSources:")
         table = PrettyTable()
         table.field_names = ['Id', 'Name', 'RA FK5', 'DEC FK5', 'RA precessed', 'DEC precessed']
-        for source in self['obs_info']['src_dict'].values():
+        for source in self['observation_info']['src_dict'].values():
             table.add_row([source['id'], source['name'], rad_to_hour_str(source['fk5'][0]),
                            rad_to_deg_str(source['fk5'][1]), rad_to_hour_str(source['precessed'][0]),
                            rad_to_deg_str(source['precessed'][1])])
@@ -1110,7 +1110,7 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-        print_array_configuration(param_dict, self['ant_info'], self['obs_info']['telescope_name'])
+        print_array_configuration(param_dict, self['antenna_info'], self['observation_info']['telescope_name'])
 
     @graphviper.utils.parameter.validate()
     def plot_source_positions(
@@ -1156,7 +1156,7 @@ class AstrohackLocitFile(dict):
 
         if precessed:
             filename = str(pathlib.Path(destination).joinpath('locit_source_table_precessed.png'))
-            time_range = self['obs_info']['time_range']
+            time_range = self['observation_info']['time_range']
             obs_midpoint = (time_range[1] + time_range[0]) / 2.
 
         else:
@@ -1165,7 +1165,7 @@ class AstrohackLocitFile(dict):
 
         plot_source_table(
             filename,
-            self['obs_info']['src_dict'],
+            self['observation_info']['src_dict'],
             precessed=precessed,
             obs_midpoint=obs_midpoint,
             display=display,
@@ -1222,7 +1222,7 @@ class AstrohackLocitFile(dict):
         """
         param_dict = locals()
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
-        plot_array_configuration(self['ant_info'], self['obs_info']['telescope_name'], param_dict)
+        plot_array_configuration(self['antenna_info'], self['observation_info']['telescope_name'], param_dict)
         return
 
     def summary(self) -> None:
