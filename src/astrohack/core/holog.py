@@ -16,6 +16,7 @@ from astrohack.utils.imaging import calculate_aperture_pattern
 from astrohack.utils.imaging import mask_circular_disk
 from astrohack.utils.imaging import parallactic_derotation
 from astrohack.utils.phase_fitting import execute_phase_fitting
+from astrohack.utils.text import get_str_idx_in_list
 
 import graphviper.utils.logger as logger
 
@@ -61,6 +62,7 @@ def process_holog_chunk(holog_chunk_params):
     n_chan = ant_data_dict[ddi][map0].sizes["chan"]
     n_pol = ant_data_dict[ddi][map0].sizes["pol"]
     grid_interpolation_mode = holog_chunk_params["grid_interpolation_mode"]
+    pol_axis = ant_data_dict[ddi][map0].pol.values
 
     if holog_chunk_params["chan_average"]:
         reference_scaling_frequency = np.mean(freq_chan)
@@ -117,13 +119,25 @@ def process_holog_chunk(holog_chunk_params):
                 xx_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
                 yy_peak = xx_peak
             else:
+                # This makes finding the parallel hands much more robust
+                if 'RR' in pol_axis:
+                    i_p1 = get_str_idx_in_list('RR', pol_axis)
+                    i_p2 = get_str_idx_in_list('LL', pol_axis)
+                elif 'XX' in pol_axis:
+                    i_p1 = get_str_idx_in_list('XX', pol_axis)
+                    i_p2 = get_str_idx_in_list('YY', pol_axis)
+                else:
+                    msg = f'Unknown polarization scheme: {pol_axis}'
+                    logger.error(msg)
+                    raise Exception(msg)
+
                 try:
-                    xx_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
-                    yy_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
+                    xx_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, i_p1, ...], scaling=0.25)
+                    yy_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, i_p2, ...], scaling=0.25)
                 except Exception:
                     center_pixel = np.array(beam_grid.shape[-2:]) // 2
-                    xx_peak = beam_grid[holog_map_index, chan, 0, center_pixel[0], center_pixel[1]]
-                    yy_peak = beam_grid[holog_map_index, chan, 3, center_pixel[0], center_pixel[1]]
+                    xx_peak = beam_grid[holog_map_index, chan, i_p1, center_pixel[0], center_pixel[1]]
+                    yy_peak = beam_grid[holog_map_index, chan, i_p2, center_pixel[0], center_pixel[1]]
 
             normalization = np.abs(0.5 * (xx_peak + yy_peak))
 
@@ -137,10 +151,9 @@ def process_holog_chunk(holog_chunk_params):
 
     ###############
 
-    pol = ant_data_dict[ddi][holog_map].pol.values
     if to_stokes:
         beam_grid = astrohack.utils.conversion.to_stokes(beam_grid, ant_data_dict[ddi][holog_map].pol.values)
-        pol = ['I', 'Q', 'U', 'V']
+        pol_axis = ['I', 'Q', 'U', 'V']
 
     ###############
 
@@ -203,7 +216,6 @@ def process_holog_chunk(holog_chunk_params):
 
     amplitude = np.absolute(aperture_grid[..., start_cut[0]:end_cut[0], start_cut[1]:end_cut[1]])
     phase = np.angle(aperture_grid[..., start_cut[0]:end_cut[0], start_cut[1]:end_cut[1]])
-    phase_corrected_angle = np.zeros_like(phase)
     u_prime = u[start_cut[0]:end_cut[0]]
     v_prime = v[start_cut[1]:end_cut[1]]
 
@@ -246,7 +258,7 @@ def process_holog_chunk(holog_chunk_params):
 
     coords = {
         "ddi": list(ant_data_dict.keys()),
-        "pol": pol,
+        "pol": pol_axis,
         "l": l,
         "m": m,
         "u": u,
