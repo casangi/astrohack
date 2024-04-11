@@ -105,6 +105,18 @@
                 "string"
             ]
         },
+        "polarization_state": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "str"
+            ],
+            "minlength": 1,
+            "type": [
+                "string",
+                "list"
+            ]
+        },
         "plot_screws": {
             "nullable": false,
             "required": false,
