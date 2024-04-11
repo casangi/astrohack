@@ -51,6 +51,12 @@ def process_holog_chunk(holog_chunk_params):
     # first holog_map.
     map0 = list(ant_data_dict[ddi].keys())[0]
 
+    # Get near field status
+    try:
+        is_near_field = ant_data_dict[ddi][map0].attrs['near_field']
+    except KeyError:
+        is_near_field = False
+
     freq_chan = ant_data_dict[ddi][map0].chan.values
     n_chan = ant_data_dict[ddi][map0].sizes["chan"]
     n_pol = ant_data_dict[ddi][map0].sizes["pol"]
@@ -107,13 +113,17 @@ def process_holog_chunk(holog_chunk_params):
         time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
 
         for chan in range(n_chan):  # Todo: Vectorize holog_map and channel axis
-            try:
+            if is_near_field:
                 xx_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
-                yy_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
-            except Exception:
-                center_pixel = np.array(beam_grid.shape[-2:]) // 2
-                xx_peak = beam_grid[holog_map_index, chan, 0, center_pixel[0], center_pixel[1]]
-                yy_peak = beam_grid[holog_map_index, chan, 3, center_pixel[0], center_pixel[1]]
+                yy_peak = xx_peak
+            else:
+                try:
+                    xx_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
+                    yy_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, 3, ...], scaling=0.25)
+                except Exception:
+                    center_pixel = np.array(beam_grid.shape[-2:]) // 2
+                    xx_peak = beam_grid[holog_map_index, chan, 0, center_pixel[0], center_pixel[1]]
+                    yy_peak = beam_grid[holog_map_index, chan, 3, center_pixel[0], center_pixel[1]]
 
             normalization = np.abs(0.5 * (xx_peak + yy_peak))
 
@@ -200,10 +210,6 @@ def process_holog_chunk(holog_chunk_params):
     ###############################################
     #   Near field corrections will come here   ###
     ###############################################
-    try:
-        is_near_field = ant_data_dict[ddi][map0].attrs['near_field']
-    except KeyError:
-        is_near_field = False
 
     ##########################################################
     #   Phase fitting all done in utils/phase_fitting.py   ###
