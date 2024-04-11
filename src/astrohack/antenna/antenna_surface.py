@@ -394,6 +394,7 @@ class AntennaSurface:
         self.ingains = self._gains_array(self.phase)
         if self.residuals is None:
             return self.ingains
+
         else:
             self.ougains = self._gains_array(self.phase_residuals)
             return self.ingains, self.ougains
@@ -409,8 +410,13 @@ class AntennaSurface:
         Actual and theoretical gains
         """
         thgain = fourpi * (1000.0 * self.reso / self.wavelength) ** 2
-        gain = thgain * np.sqrt(np.sum(np.cos(arr[self.mask])) ** 2 + np.sum(np.sin(arr[self.mask])) ** 2) / np.sum(
-            self.mask)
+
+        if (self.mask == False).all():
+            return -np.inf, to_db(thgain)
+
+        gain = \
+            thgain * np.sqrt(np.sum(np.cos(arr[self.mask]))**2 + np.sum(np.sin(arr[self.mask]))**2) / np.sum(self.mask)
+
         return to_db(gain), to_db(thgain)
 
     def get_rms(self, unit='mm'):
@@ -599,11 +605,13 @@ class AntennaSurface:
         self._add_resolution_to_plot(ax, extent)
         if colorbar:
             well_positioned_colorbar(ax, fig, im, "Z Scale [" + parm_dict['unit'] + "]")
+
         self._add_resolution_to_plot(ax, extent)
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
             panel.plot(ax, screws=parm_dict['plot_screws'], label=parm_dict['panel_labels'])
+
         suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}'
         close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
@@ -646,14 +654,17 @@ class AntennaSurface:
         extent = [np.min(self.u_axis), np.max(self.u_axis), np.min(self.v_axis), np.max(self.v_axis)]
         im = ax.imshow(np.full_like(self.deviation, fill_value=np.nan), cmap=cmap, interpolation="nearest",
                        extent=extent, vmin=vmin, vmax=vmax)
+
         self._add_resolution_to_plot(ax, extent)
         colorbar = well_positioned_colorbar(ax, fig, im, "Screw adjustments [" + unit + "]")
         if threshold > 0:
             line = threshold
+
             while line < vmax:
                 colorbar.ax.axhline(y=line, color='black', linestyle='-', lw=0.2)
                 colorbar.ax.axhline(y=-line, color='black', linestyle='-', lw=0.2)
                 line += threshold
+
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
 
@@ -673,9 +684,11 @@ class AntennaSurface:
         npanels = len(self.panels)
         NPAR = self.panels[0].NPAR
         nscrews = self.panels[0].screws.shape[0]
+
         self.panel_labels = np.ndarray([npanels], dtype=object)
         self.panel_pars = np.ndarray((npanels, NPAR), dtype=float)
         self.screw_adjustments = np.ndarray((npanels, nscrews), dtype=float)
+
         for ipanel in range(npanels):
             self.panel_labels[ipanel] = self.panels[ipanel].label
             self.panel_pars[ipanel, :] = self.panels[ipanel].par
@@ -699,12 +712,16 @@ class AntennaSurface:
         nscrews = len(self.telescope.screw_description)
         for screw in self.telescope.screw_description:
             outfile += "{0:11s}".format(screw)
+
         outfile += lnbr
         fac = convert_unit('m', unit, 'length')
+
         for ipanel in range(len(self.panel_labels)):
             outfile += "{0:8s}".format(self.panel_labels[ipanel])
+
             for iscrew in range(nscrews):
                 outfile += " {0:10.2f}".format(fac * self.screw_adjustments[ipanel, iscrew])
+
             outfile += lnbr
 
         lefile = open(filename, "w")
@@ -715,7 +732,7 @@ class AntennaSurface:
         """
         Export all the data to Xarray dataset
         Returns:
-            XarrayDataSet contaning all the relevant information
+            XarrayDataSet containing all the relevant information
         """
         xds = xr.Dataset()
         gains = self.gains()
@@ -736,6 +753,7 @@ class AntennaSurface:
         xds['DEVIATION'] = xr.DataArray(self.deviation, dims=["u", "v"])
         xds['MASK'] = xr.DataArray(self.mask, dims=["u", "v"])
         xds['PANEL_DISTRIBUTION'] = xr.DataArray(self.panel_distribution, dims=["u", "v"])
+
         if self.solved:
             xds['PHASE_RESIDUALS'] = xr.DataArray(self.phase_residuals, dims=["u", "v"])
             xds['RESIDUALS'] = xr.DataArray(self.residuals, dims=["u", "v"])
@@ -748,13 +766,24 @@ class AntennaSurface:
             xds.attrs['theoretical_gain'] = gains[0][1]
             xds['PANEL_PARAMETERS'] = xr.DataArray(self.panel_pars, dims=['labels', 'pars'])
             xds['PANEL_SCREWS'] = xr.DataArray(self.screw_adjustments, dims=['labels', 'screws'])
-            coords = {"u": self.u_axis, "v": self.v_axis, 'labels': self.panel_labels,
-                      'screws': self.telescope.screw_description, 'pars': np.arange(self.panel_pars.shape[1])}
+
+            coords = {
+                "u": self.u_axis,
+                "v": self.v_axis,
+                "labels": self.panel_labels,
+                "screws": self.telescope.screw_description,
+                "pars": np.arange(self.panel_pars.shape[1])
+            }
+
         else:
             xds.attrs['input_rms'] = rms
             xds.attrs['input_gain'] = gains[0]
             xds.attrs['theoretical_gain'] = gains[1]
-            coords = {"u": self.u_axis, "v": self.v_axis}
+
+            coords = {
+                "u": self.u_axis,
+                "v": self.v_axis
+            }
 
         xds = xds.assign_coords(coords)
         return xds
