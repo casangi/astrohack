@@ -7,16 +7,42 @@ from matplotlib import pyplot as plt
 from scipy import interpolate
 import time as timer
 
-
+RAD2DEG = 180/np.pi
 DAY2SEC = 86400
 VERSION = '0.0.1'
 
-################################
-###   Direct ASDM handling   ###
-################################
+##############################
+#   Direct ASDM handling   ###
+##############################
 
-def asdm_to_holog(asdm_name, holog_name, int_time, verbose, fake_corr,
-                  cal_amp, cal_pha, cal_cycle, plot_cal, save_cal):
+
+def asdm_to_holog(asdm_name: str,
+                  holog_name: str,
+                  int_time: float = None,
+                  verbose: bool = False,
+                  fake_corr: bool = False,
+                  cal_amp: str = 'linterp',
+                  cal_pha: str = 'linterp',
+                  cal_cycle: int = 3,
+                  plot_cal: bool = False,
+                  save_cal: bool = False):
+    """
+    Master filler routine that controls the work flow
+    Args:
+        asdm_name: Near field ASDM file + its path
+        holog_name: Nome of the .holog.zarr file to be created without extension
+        int_time: Integration time bin, if None it is set to the largest time bin between pointing and total power
+        verbose: print processing detailed messages
+        fake_corr: Add copies of the R2 correlations to the data set (useful for testing)
+        cal_amp: Amplitude calibration fitting, None means no amplitude calibration
+        cal_pha: Phase calibration fitting, None means no phase calibration
+        cal_cycle: Number of subscans in a Calibration, data cycle, seems to always be 3
+        plot_cal: Plot calibration to png files for inspection
+        save_cal: Save calibrated total power data to a .zarr file
+
+    Returns:
+    None
+    """
     start = timer.time()
     print(f'Processing {asdm_name} to {holog_name}.holog.zarr...\n')
     
@@ -28,8 +54,7 @@ def asdm_to_holog(asdm_name, holog_name, int_time, verbose, fake_corr,
     calibrated_data = calibrate_tp_data(tp_info, cal_amp, cal_pha, cal_cycle,
                                         plot_cal, holog_name, verbose)
     if save_cal:
-        calibrated_data.to_zarr(holog_name+'.cal.zarr', mode='w', compute=True,
-                consolidated=True)
+        calibrated_data.to_zarr(holog_name+'.cal.zarr', mode='w', compute=True, consolidated=True)
 
     combined_data = combine_data(meta_dict, pnt_info, calibrated_data, int_time,
                                  verbose)
@@ -41,20 +66,36 @@ def asdm_to_holog(asdm_name, holog_name, int_time, verbose, fake_corr,
     
 
 def _open_asdm(asdm_name):
+    """
+    This routine interacts with the ASDM bindings to render the data accessible
+    Args:
+        asdm_name: Near field ASDM file + its path
+
+    Returns:
+    ASDM object with the data now accessible
+    """
     parser = ASDMParseOptions()
     parser.asALMA()
     parser.loadTablesOnDemand(True)
 
     asdm_object = ASDM()
-    asdm_object.setFromFile(asdm_name,parser)
+    asdm_object.setFromFile(asdm_name, parser)
     return asdm_object
 
 
-#########################
-### Retrieve metadata ###
-#########################
+#######################
+# Retrieve metadata ###
+#######################
 
 def get_asdm_metadata(asdm_object):
+    """
+    Retrieve metadata relevant for near field holography from the ASDM object
+    Args:
+        asdm_object: The ASDM object
+
+    Returns:
+    A dictionary containing the relevant metadata
+    """
     meta_dict = {'holo': _get_holography_info(asdm_object),
                  'spw': _get_frequency_info(asdm_object),
                  'ant': _get_antenna_info(asdm_object),
@@ -63,6 +104,14 @@ def get_asdm_metadata(asdm_object):
 
 
 def _get_frequency_info(asdm_object):
+    """
+    Retrieve spectral window metadata from the ASDM
+    Args:
+        asdm_object: ASDM object
+
+    Returns:
+    dictionary with relevant frequency metadata
+    """
     spw_info = asdm_object.spectralWindowTable().get()[0]
     
     spw_dict = {'nchan': spw_info.numChan(),
@@ -71,6 +120,14 @@ def _get_frequency_info(asdm_object):
 
 
 def _get_antenna_info(asdm_object):
+    """
+    Get antenna metadata from the ASDM
+    Args:
+        asdm_object: ASDM object
+
+    Returns:
+    Dictionary with relevant antenna metadata
+    """
     ant_info = asdm_object.antennaTable().get()[0]
 
     tel_dict = {'antenna': ant_info.name(),
@@ -80,6 +137,14 @@ def _get_antenna_info(asdm_object):
 
 
 def _get_holography_info(asdm_object):
+    """
+    Retrieve near field holography metadata from the ASDM object
+    Args:
+        asdm_object: ASDM object
+
+    Returns:
+    Dictionary with near field holography metadata
+    """
     try:
         holo_info = asdm_object.holographyTable().get()[0]
     except:
@@ -97,6 +162,14 @@ def _get_holography_info(asdm_object):
 
 
 def _get_flag_info(asdm_object):
+    """
+    Retrieve flagging data from the ASDM object
+    Args:
+        asdm_object: ASDM object
+
+    Returns:
+    List with all the flagging times
+    """
     flag_table = asdm_object.flagTable().get()
     nflags = len(flag_table)
 
@@ -108,19 +181,28 @@ def _get_flag_info(asdm_object):
     return flag_times
 
 
-#############################
-###   Retrieve pointing   ###
-#############################
+###########################
+#   Retrieve pointing   ###
+###########################
 
 def get_pnt_from_asdm(asdm_object, verbose):
+    """
+    Retrieve pointing data from the ASDM object and excludes pointing outliers
+    Args:
+        asdm_object: ASDM object
+        verbose: Print processing messages?
+
+    Returns:
+    Dictionary with filtered pointing data
+    """
     pnt_table = asdm_object.pointingTable().get()
     num_samples = 0
-    pnt_time = np.ndarray((0))
-    pnt_scan = np.ndarray((0))
-    pnt_dir = np.ndarray((0,2))
-    pnt_enc = np.ndarray((0,2))
-    pnt_tgt = np.ndarray((0,2))
-    pnt_off = np.ndarray((0,2))
+    pnt_time = np.ndarray((0, ))
+    pnt_scan = np.ndarray((0, ))
+    pnt_dir = np.ndarray((0, 2))
+    pnt_enc = np.ndarray((0, 2))
+    pnt_tgt = np.ndarray((0, 2))
+    pnt_off = np.ndarray((0, 2))
     
     for irow, pnt_row in enumerate(pnt_table):
         row_time, row_scan, row_dir, row_enc, row_tgt, row_off, n_samp =  _get_pnt_from_row(pnt_row, irow)
@@ -133,22 +215,21 @@ def get_pnt_from_asdm(asdm_object, verbose):
         pnt_tgt = np.concatenate([pnt_tgt, row_tgt])
         pnt_off = np.concatenate([pnt_off, row_off])
 
-    
     if verbose:    
-        print("Total number of pointing samples: ",num_samples)
+        print("Total number of pointing samples: ", num_samples)
     pnt_dict = {'time': pnt_time,
                 'scan': pnt_scan,
                 'direction': pnt_dir,
                 'encoder': pnt_enc,
                 'target': pnt_tgt,
                 'offset': pnt_off,           
-    }
-    l = np.cos(pnt_dict['target'][:, 1]) * np.sin(pnt_dict['target'][:, 0] - pnt_dict['direction'][:, 0])
-    m = np.sin(pnt_dict['target'][:, 1]) * np.cos(pnt_dict['direction'][:, 1]) - np.cos(pnt_dict['target'][:,1])\
+                }
+    l_axis = np.cos(pnt_dict['target'][:, 1]) * np.sin(pnt_dict['target'][:, 0] - pnt_dict['direction'][:, 0])
+    m_axis = np.sin(pnt_dict['target'][:, 1]) * np.cos(pnt_dict['direction'][:, 1]) - np.cos(pnt_dict['target'][:, 1])\
         * np.sin(pnt_dict['direction'][:, 1]) * np.cos(pnt_dict['target'][:, 0] - pnt_dict['direction'][:, 0])
 
-    pnt_dict['l'] = l
-    pnt_dict['m'] = m
+    pnt_dict['l'] = l_axis
+    pnt_dict['m'] = m_axis
      
     pnt_dict = _filter_axes(pnt_dict, tol=0.0001, ref_axis='l')
     pnt_dict = _filter_axes(pnt_dict, tol=0.0001, ref_axis='m')
@@ -156,12 +237,21 @@ def get_pnt_from_asdm(asdm_object, verbose):
     pnt_dict['nsamp'] = pnt_dict['time'].shape[0]
 
     if verbose:
-        print("Total number of valid pointing samples: ", pnt_dict['nsamp'],'\n')
+        print("Total number of valid pointing samples: ", pnt_dict['nsamp'], '\n')
     
     return pnt_dict
 
 
 def _filter_axes(pnt_dict, tol=0.0001, ref_axis='direction'):
+    """
+    Removes outliers based on a standard deviation rate of change recursevely.
+    Args:
+        pnt_dict: The unfiltered pointing dictionary
+        tol: The standard deviation change gauge
+        ref_axis: Axis over which to apply the filtering
+    Returns:
+    Outlier filtered pointing dictionary
+    """
     in_axis = pnt_dict[ref_axis]
     in_std = np.nanstd(in_axis)
     outlier = np.nanmax(np.abs([np.nanmin(in_axis), np.nanmax(in_axis)]))
@@ -179,26 +269,16 @@ def _filter_axes(pnt_dict, tol=0.0001, ref_axis='direction'):
         return _filter_axes(ou_dict, tol=tol, ref_axis=ref_axis)
 
 
-def _print_pnt_dict(pnt_dict):
-    print('\n############################################################\n')
-    
-    RAD2DEG = 180/np.pi
-    print('X direction, min max', np.min(pnt_dict['direction'][:,0])*RAD2DEG,
-          np.max(pnt_dict['direction'][:,0])*RAD2DEG)
-    print('Y direction, min max', np.min(pnt_dict['direction'][:,1])*RAD2DEG,
-          np.max(pnt_dict['direction'][:,1])*RAD2DEG)
-    print('X Offset, min max:', np.min(pnt_dict['offset'][:,0])*RAD2DEG, np.max(pnt_dict['offset'][:,0])*RAD2DEG)
-    print('Y Offset, min max:', np.min(pnt_dict['offset'][:,1])*RAD2DEG, np.max(pnt_dict['offset'][:,1])*RAD2DEG)
-
-    l = np.cos(pnt_dict['target'][:, 1]) * np.sin(pnt_dict['target'][:, 0] - pnt_dict['direction'][:, 0])
-    m = np.sin(pnt_dict['target'][:, 1]) * np.cos(pnt_dict['direction'][:, 1]) - np.cos(pnt_dict['target'][:,1])\
-        * np.sin(pnt_dict['direction'][:, 1]) * np.cos(pnt_dict['target'][:, 0] - pnt_dict['direction'][:, 0])
-
-    print('L, min max', np.min(l)*RAD2DEG, np.max(l)*RAD2DEG)
-    print('M, min max', np.min(m)*RAD2DEG, np.max(m)*RAD2DEG)
-
-
 def _get_pnt_from_row(pnt_row, irow):
+    """
+    get pointing information from an ASDM's pointing row (subscan)
+    Args:
+        pnt_row: the ASDM's pointing row
+        irow: rows number
+
+    Returns:
+    numpy arrays for time, scan, direction, encoder, target and offset, also number of samples
+    """
     time_int = pnt_row.timeInterval()
     start_MJD = time_int.start().getMJD()
     # Where does this 1e9 comes from???
@@ -217,7 +297,15 @@ def _get_pnt_from_row(pnt_row, irow):
 
 
 def _asdm_angle_tuple_to_numpy(letuple):
-    # I assume a 2D tuple here
+    """
+    Convert from ASDM tuple of angle quantities to a numpy array of float angles in radians
+    Args:
+        letuple: the ASDM row tuple
+
+    Returns:
+    numpy array of float angles in radians
+    """
+    # 2D tuple assumed here
     n_long = len(letuple)
     n_wide = len(letuple[0])
     np_data = np.ndarray((n_long, n_wide))
@@ -227,11 +315,21 @@ def _asdm_angle_tuple_to_numpy(letuple):
     return np_data
 
 
-############################
-###   Retrieve tp data   ###
-############################
+##########################
+#   Retrieve tp data   ###
+##########################
 
 def get_tp_from_asdm(asdm_object, holo_info, verbose):
+    """
+    Retrieve total power data from the ASDM rows, also converts correlations to Intensity amplitude and phase.
+    Args:
+        asdm_object: ASDM object
+        holo_info: Holography relevant metadata
+        verbose: print processing messages?
+
+    Returns:
+    dictionary with the total power data
+    """
     if verbose:
         print('Retrieving Total Power Table...')
         start = timer.time()
@@ -240,13 +338,12 @@ def get_tp_from_asdm(asdm_object, holo_info, verbose):
         el_time = timer.time()-start
         print(f'Done retrieving Total Power Table, took {el_time:.2f} seconds')
     num_samples = len(tp_table)
-    n_corr = holo_info['ncorr']
-    
-    tp_time = np.ndarray((num_samples))
-    tp_scan = np.ndarray((num_samples))
-    tp_r2 = np.ndarray((num_samples))
-    tp_qr = np.ndarray((num_samples))
-    tp_rs = np.ndarray((num_samples))
+
+    tp_time = np.ndarray((num_samples, ))
+    tp_scan = np.ndarray((num_samples, ))
+    tp_r2 = np.ndarray((num_samples, ))
+    tp_qr = np.ndarray((num_samples, ))
+    tp_rs = np.ndarray((num_samples, ))
     
     idict = _get_corr_indexes(holo_info, ['R2', 'QR', 'RS'])
 
@@ -258,16 +355,16 @@ def get_tp_from_asdm(asdm_object, holo_info, verbose):
         tp_rs[i_row] = tp_row.floatData()[0][0][idict['RS']]
 
     if verbose:
-        print("Total number of Total power samples: ",num_samples,'\n')
+        print("Total number of Total power samples: ", num_samples, '\n')
 
-    # Real and imag parts from correlations
+    # Real and imaginary parts from correlations
     tp_s = tp_rs/tp_r2
     tp_q = tp_qr/tp_r2
 
     # Amplitude = sqrt(Q2 + S2)
     tp_amp = np.sqrt(tp_s**2+tp_q**2)
     
-    # Phase = arctan(Q/S)
+    # Phase = arc-tangent(Q/S)
     tp_pha = np.arctan(tp_q/tp_s)
 
     tp_dict = {'time': tp_time,
@@ -280,6 +377,14 @@ def get_tp_from_asdm(asdm_object, holo_info, verbose):
 
 
 def _get_corr_indexes(holo_info, wanted_corr):
+    """
+    Get the indexes of the wanted correlations from the holography metadata
+    Args:
+        holo_info: Holography metadata
+        wanted_corr: The correlation for which we want indexes
+    Returns:
+    Dictionary of correlation indexes
+    """
     idict = {}
     for corr in wanted_corr:
         if corr in holo_info['corr_axis']:
@@ -289,15 +394,28 @@ def _get_corr_indexes(holo_info, wanted_corr):
     return idict
 
 
-#######################    
-###   Calibration   ###
-#######################
+#####################
+#   Calibration   ###
+#####################
 
 def calibrate_tp_data(tp_info, cal_amp, cal_pha, cal_cycle, plot_cal,
                       holog_name, verbose):
-    """Calibration scheme derived from:
-    Near-Field Radio Holography of Large Reﬂector Antennas
+    """
+    Calibrate the data bade on a simple scheme derived from:
+    Near-Field Radio Holography of Large Reflector Antennas
     DOI: 10.1109/MAP.2007.4395293 · Source: IEEE Xplore
+
+    Args:
+        tp_info: Total Power dictionary
+        cal_amp: al_amp: Amplitude calibration fitting, None means no amplitude calibration
+        cal_pha: Phase calibration fitting, None means no phase calibration
+        cal_cycle: Number of subscans in a Calibration, data cycle, seems to always be 3
+        plot_cal: Plot calibration to png files for inspection
+        holog_name: Name of the output .holog.zarr file (used to determine the plot filenames)
+        verbose: print processing messages?
+
+    Returns:
+    Enriched total power Xarray dataset with the calibrated data (when aplicable)
     """
 
     cal_data, data = _separate_cal_from_data(tp_info, cal_cycle)
@@ -311,6 +429,16 @@ def calibrate_tp_data(tp_info, cal_amp, cal_pha, cal_cycle, plot_cal,
 
 
 def _separate_cal_from_data(tp_info, cal_cycle):
+    """
+    Separate the total power dictionary onto two Xarray datasets, one with the calibration data, the other with the
+    holography data
+    Args:
+        tp_info: total power dictionary
+        cal_cycle: Number of subscans in a calibration cycle, usually 3 (cal, obs, obs, cal, obs, obs)
+
+    Returns:
+    Calibration data, and holography data Xarray datasets.
+    """
     time = tp_info['time']
     scan = tp_info['scan'] 
     amp = tp_info['amp']
@@ -338,6 +466,18 @@ def _separate_cal_from_data(tp_info, cal_cycle):
 
 
 def _create_xds(time, amp, pha, is_cal, ref=None):
+    """
+    Create an Xarray dataset from the given lists
+    Args:
+        time: Total power times
+        amp: Total power Amplitudes
+        pha: Total power Phases
+        is_cal: Is this a calibration data set
+        ref: Total power reference power
+
+    Returns:
+    An Xarray dataset with the input lists
+    """
     coords = {"time": np.array(time)}
     
     xds = xr.Dataset()
@@ -352,31 +492,71 @@ def _create_xds(time, amp, pha, is_cal, ref=None):
     if not is_cal:
         xds.attrs['phase_cal'] = False
         xds.attrs['amplitude_cal'] = False
-
     return xds
     
 
 def _solve_calibration(cal_time, cal_values, data_time, cal_type):
+    """
+    Fits the calibration data using the correct cal_type
+    Args:
+        cal_time: The calibration time axis
+        cal_values: The quantity over which to find an interpolation
+        data_time: The data sampling times
+        cal_type: The type of calibration fitting to be performed
+
+    Returns:
+    The calibration value sinterpolated to the data sampling times
+    """
     if cal_type == 'none':
         return None
     elif cal_type in cal_methods.keys():
         return cal_methods[cal_type](cal_time, cal_values, data_time)
     else:
-        raise Exception(f"Unknown calibration solving algorithm {cal_fit}")
+        raise Exception(f"Unknown calibration solving algorithm {cal_type}")
 
     
 def _spline_fit(cal_time, cal_data, data_time):
+    """
+    Fit calibration data to a spline (Very bad fits)
+    Args:
+        cal_time: Calibration time samnpling
+        cal_data: Calibration data
+        data_time: Observation time samnpling
+
+    Returns:
+    The fitted calibration interpolated over the data time sampling
+    """
     spl_coeff = interpolate.splrep(cal_time, cal_data)
     spl_val = interpolate.splev(data_time, spl_coeff)
     return spl_val
 
 
 def _mean_fit(cal_time, cal_data, data_time):
+    """
+    Fit calibration data to a simple mean of the calibration data (too rough)
+    Args:
+        cal_time: Calibration time samnpling (Added for interface compatibility)
+        cal_data: Calibration data
+        data_time: Observation time samnpling
+
+    Returns:
+    The fitted calibration interpolated over the data time sampling
+    """
     mean_val = np.nanmean(cal_data)
     return np.full_like(data_time, mean_val)
 
 
 def _linear_regression_fit(cal_time, cal_data, data_time):
+    """
+    Fit calibration data with a linear regression (Too rough)
+    Args:
+        cal_time: Calibration time samnpling
+        cal_data: Calibration data
+        data_time: Observation time samnpling
+
+    Returns:
+    The fitted calibration interpolated over the data time sampling
+    """
     system = np.empty([cal_time.shape[0], 2])
     system[:, 0] = cal_time
     system[:, 1] = 1.0
@@ -388,26 +568,62 @@ def _linear_regression_fit(cal_time, cal_data, data_time):
 
 
 def _linear_interpolation_fit(cal_time, cal_data, data_time):
+    """
+    Fit calibration data using a simple linear interpolation in between gaps (best results)
+    Args:
+        cal_time: Calibration time samnpling
+        cal_data: Calibration data
+        data_time: Observation time samnpling
+
+    Returns:
+    The fitted calibration interpolated over the data time sampling
+    """
     func = interpolate.interp1d(cal_time, cal_data)
     return func(data_time)
 
 
 def _square_interpolation_fit(cal_time, cal_data, data_time):
+    """
+    Fit calibration data to a quadratic spline (Very bad fits)
+    Args:
+        cal_time: Calibration time samnpling
+        cal_data: Calibration data
+        data_time: Observation time samnpling
+
+    Returns:
+    The fitted calibration interpolated over the data time sampling
+    """
     func = interpolate.interp1d(cal_time, cal_data, kind='quadratic')
     return func(data_time)
     
-
+    
+"""
+Dictionary of calibration methods used to overload functions
+"""
 cal_methods = {'linterp': _linear_interpolation_fit,
                'spline': _spline_fit,
                'mean': _mean_fit,
                'regression': _linear_regression_fit,
                'sqinterp': _square_interpolation_fit,
                }
-
 CALIBRATION_OPTIONS = list(cal_methods.keys())
 CALIBRATION_OPTIONS.append('none')
 
+
 def _amplitude_calibration(cal, data, cal_type, plot_cal, holog_name, verbose):
+    """
+    Performs amplitude calibration by dividing data by the interpolated values of the calibration
+    Args:
+        cal: Calibration Xarray dataset
+        data: Data Xarray dataset
+        cal_type: Type of amplitude calibration to be performed
+        plot_cal: Plot amplitude calibration to a png file?
+        holog_name: Name of the output .holog.zarr file (used to determine plot filename)
+        verbose: Print processing messages?
+
+    Returns:
+    The data Xarray dataset enriched with the calibrated amplitude 
+    """
     start = timer.time()
     amp_sol = _solve_calibration(cal.time.values, cal['AMPLITUDE'].values,
                                  data.time.values, cal_type)
@@ -441,6 +657,19 @@ def _amplitude_calibration(cal, data, cal_type, plot_cal, holog_name, verbose):
 
 
 def _phase_calibration(cal, data, cal_type, plot_cal, holog_name, verbose):
+    """
+    Performs phase calibration by subtracting interpolated values of the calibration from the data
+    Args:
+        cal: Calibration Xarray dataset
+        data: Data Xarray dataset
+        cal_type: Type of phase calibration to be performed
+        plot_cal: Plot phase calibration to a png file?
+        holog_name: Name of the output .holog.zarr file (used to determine plot filename)
+        verbose: Print processing messages?
+
+    Returns:
+    The data Xarray dataset enriched with the calibrated phase 
+    """
     start = timer.time()
     pha_sol = _solve_calibration(cal.time.values, cal['PHASE'].values,
                                  data.time.values, cal_type)
@@ -476,6 +705,19 @@ def _phase_calibration(cal, data, cal_type, plot_cal, holog_name, verbose):
 
 
 def _plot_cal(sol, cal, data, cal_type, holog_name, verbose):
+    """
+    Plot calibration information to a png file
+    Args:
+        sol: The interpolated calibration solution
+        cal: The calibration data Xarray dataset
+        data: The actual observation Xarray datset
+        cal_type: Is it phase or amplitude?
+        holog_name: The base output name for the png file
+        verbose: print processing messages?
+
+    Returns:
+    None
+    """
     data_time = data.time.values.copy()
     cal_time = cal.time.values.copy()
     
@@ -492,7 +734,7 @@ def _plot_cal(sol, cal, data, cal_type, holog_name, verbose):
     cal_time *= 24*60
 
     if cal_type == 'PHASE':
-        RAD2DEG = 180/np.pi
+
         sol *= RAD2DEG
         raw_data *= RAD2DEG
         cal *= RAD2DEG
@@ -522,14 +764,24 @@ def _plot_cal(sol, cal, data, cal_type, holog_name, verbose):
     return
 
 
-#######################
-###   Data mixing   ###
-#######################
+#####################
+#   Data mixing   ###
+#####################
 
 def combine_data(meta_dict, pnt_info, tp_info, int_time, verbose):
-    """This function combines the pointing data with the tp data while
+    """
+    This function combines the pointing data with the tp data while
     taking into account the flags, all work here assumes time is
-    monotonically crescent.
+    monotonically crescent
+    Args:
+        meta_dict: The metadata dictionary
+        pnt_info: The pointing dictionary
+        tp_info: The total power Xarray dataset
+        int_time: The time bin size
+        verbose: print processing messages?
+
+    Returns:
+    Matched tp and pnt data dictionary
     """
     start = timer.time()
     if verbose:
@@ -554,6 +806,16 @@ def combine_data(meta_dict, pnt_info, tp_info, int_time, verbose):
     
     
 def _get_time_interval(int_time, pnt_time, tp_time):
+    """
+    Derive the best integration time based on tp and pnt time samplings
+    Args:
+        int_time: User input integration time
+        pnt_time: Pointing time sampling
+        tp_time: Total power time sampling
+
+    Returns:
+    The integration time bin
+    """
     if int_time is None:
         tp_int = tp_time[1]-tp_time[0]
         pnt_int = pnt_time[1]-pnt_time[0]
@@ -567,6 +829,15 @@ def _get_time_interval(int_time, pnt_time, tp_time):
 
 
 def _get_start_stop(pnt_time, tp_time):
+    """
+    Get the complete range of observation times
+    Args:
+        pnt_time: pointing time sampling
+        tp_time: total power time sampling
+
+    Returns:
+    The observation start and stop times
+    """
     if pnt_time[0] > tp_time[0]:
         start = pnt_time[0]
     else:
@@ -579,6 +850,16 @@ def _get_start_stop(pnt_time, tp_time):
 
 
 def _get_time_axes(int_time, pnt_info, tp_info):
+    """
+    Derive the best time axis based on the integration time and time samplings
+    Args:
+        int_time: The user defined integration time
+        pnt_info: the pointing information dictionary
+        tp_info: The total power Xarray dataset
+
+    Returns:
+    The start and stop times of all samples and integration time
+    """
     pnt_time = pnt_info['time']
     tp_time = tp_info['time'].values
     
@@ -595,6 +876,16 @@ def _get_time_axes(int_time, pnt_info, tp_info):
 
 
 def _match_pnt_to_time(pnt_info, time_axes, meta_dict):
+    """
+    Match pointing data to the new time axes
+    Args:
+        pnt_info: pointing info dictionary
+        time_axes: The new time axes
+        meta_dict: Metadata dictionary containing flags
+
+    Returns:
+    Time matched pointing data dictionary
+    """
     flag_times = meta_dict['flagged_times']
     iflag = 0
     itime = 0
@@ -644,6 +935,16 @@ def _match_pnt_to_time(pnt_info, time_axes, meta_dict):
 
 
 def _match_tp_to_time(tp_info, time_axes, meta_dict):
+    """
+    Match total power data to the new time axes
+    Args:
+        tp_info: total power info Xarray
+        time_axes: The new time axes
+        meta_dict: Metadata dictionary containing flags
+
+    Returns:
+    Time matched total power data dictionary
+    """
     flag_times = meta_dict['flagged_times']
     iflag = 0
     itime = 0
@@ -705,14 +1006,23 @@ def _match_tp_to_time(tp_info, time_axes, meta_dict):
 
 
 def _match_tp_and_pnt(tp_info, pnt_info):
+    """
+    Match together total power and pointing info and filtering samples with no data
+    Args:
+        tp_info: time matched total power dictionary
+        pnt_info: time matched pointing dictionary
+
+    Returns:
+    Complete dictionary of pointing and total power data
+    """
     tp_sel = tp_info['weight'] > 0
     pnt_sel = pnt_info['weight'] > 0
     sel = np.logical_and(tp_sel, pnt_sel)
     
     full_dict = {'time': tp_info['time'][sel],
-                 'amp' : tp_info['amp'][sel],
-                 'pha' : tp_info['pha'][sel],
-                 'ref' : tp_info['ref'][sel],
+                 'amp': tp_info['amp'][sel],
+                 'pha': tp_info['pha'][sel],
+                 'ref': tp_info['ref'][sel],
                  'weight': tp_info['weight'][sel],
                  'direction': pnt_info['direction'][sel],
                  'lm': pnt_info['lm'][sel],
@@ -721,18 +1031,32 @@ def _match_tp_and_pnt(tp_info, pnt_info):
     return full_dict
 
 
-##########################
-###   Data exporting   ###
-##########################
+########################
+#   Data exporting   ###
+########################
 
 def export_data(asdm_name, combined_data, meta_dict, holog_name, int_time,
                 verbose, fake_corr):
+    """
+    Export data to disk in the .holog.zarr format
+    Args:
+        asdm_name: The name of the input ASDM file
+        combined_data: The time matched pointing ad total power dictionary
+        meta_dict: The metadata dictionary
+        holog_name: The base name for the output file
+        int_time: The used integration time
+        verbose: print processing messages?
+        fake_corr: Add copies of the reference signal to simulate 4 correlations?
+
+    Returns:
+    .holog.zarr on disk
+    """
     xds = _data_to_xds(combined_data, meta_dict, fake_corr)
     
     input_dict = _create_base_attr_dict(asdm_name, holog_name)
     input_dict["time_smoothing_interval"] = int_time
 
-    path = _create_holog_structure(meta_dict, holog_name, input_dict, xds)
+    _create_holog_structure(meta_dict, holog_name, input_dict, xds)
 
     if verbose:
         print(f'Xarray dataset saved to {holog_name}.holog.zarr:\n')
@@ -740,8 +1064,18 @@ def export_data(asdm_name, combined_data, meta_dict, holog_name, int_time,
 
 
 def _data_to_xds(combined_data, meta_dict, fake_corr):
+    """
+    Export the time matched pointing and total power data to a Xarray dataset compatible with the astrohackHologFile
+    format
+    Args:
+        combined_data: The time matched pointing ad total power dictionary
+        meta_dict: The metadata dictionary
+        fake_corr: Add copies of the reference signal to simulate 4 correlations?
 
-    # This is not relevant in the NF case so we leave it at 0
+    Returns:
+    Xarray dataset compatible with the astrohackHologFile format
+    """
+    # This is not relevant in the NF case, so we leave it at 0
     parallactic_samples = np.array([0, 0, 0]) 
     
     extent = _compute_real_extent(combined_data['lm'])
@@ -763,15 +1097,15 @@ def _data_to_xds(combined_data, meta_dict, fake_corr):
     imag_sig = combined_data['amp'] * np.sin(combined_data['pha'])
 
     vis = np.empty(vis_shape, dtype=np.complex128)         
-    vis[:,0,0].real = real_sig
-    vis[:,0,0].imag = imag_sig
-    vis[:,0,1].real = combined_data['ref']
-    vis[:,0,1].imag = 0.0
+    vis[:, 0, 0].real = real_sig
+    vis[:, 0, 0].imag = imag_sig
+    vis[:, 0, 1].real = combined_data['ref']
+    vis[:, 0, 1].imag = 0.0
     if fake_corr:
-        vis[:,0,2].real = combined_data['ref']
-        vis[:,0,2].imag = 0.0
-        vis[:,0,3].real = combined_data['ref']
-        vis[:,0,3].imag = 0.0
+        vis[:, 0, 2].real = combined_data['ref']
+        vis[:, 0, 2].imag = 0.0
+        vis[:, 0, 3].real = combined_data['ref']
+        vis[:, 0, 3].imag = 0.0
 
     wei = np.empty(vis_shape)
     wei[:, 0, 0] = combined_data['weight']
@@ -793,6 +1127,7 @@ def _data_to_xds(combined_data, meta_dict, fake_corr):
     xds.attrs["telescope_name"] = meta_dict['ant']['telescope']
     xds.attrs["antenna_name"] = meta_dict['ant']['antenna']
     xds.attrs["near_field"] = True
+    xds.attrs["nf_focus_off"] = meta_dict['holo']['focus']
 
     for key, value in extent.items():
         xds.attrs[key] = value
@@ -804,7 +1139,16 @@ def _data_to_xds(combined_data, meta_dict, fake_corr):
 
 
 def _compute_grid_params(meta_dict, extent):
-    # Code copied but simplified from astrohack
+    """
+    Estimate beam gridding parameters
+    Code copied but simplified from astrohack
+    Args:
+        meta_dict: metadata dictionary
+        extent: L and M axes extents
+
+    Returns:
+    grid parameters
+    """
     clight = scipy.constants.speed_of_light
     wavelength = clight / meta_dict['spw']['frequency'][0]
 
@@ -820,6 +1164,14 @@ def _compute_grid_params(meta_dict, extent):
 
 
 def _compute_real_extent(lm):
+    """
+    Compute L and M extents
+    Args:
+        lm: L and M arrays
+
+    Returns:
+    Dictionary with L and M extents
+    """
     extent = {'l_min': np.min(lm[:, 0]),
               'l_max': np.max(lm[:, 0]),
               'm_min': np.min(lm[:, 1]),
@@ -828,6 +1180,17 @@ def _compute_real_extent(lm):
 
 
 def _create_holog_structure(meta_dict, holog_name, input_dict, xds):
+    """
+    Create the .holog.zarr structure in disk
+    Args:
+        meta_dict: metada dictionary
+        holog_name: the base name for the .holg.zarr file
+        input_dict: Dictionary with user inputs
+        xds: The Xarray dataset with the data on the astrohackHologFile format
+
+    Returns:
+    .holog.zarr file on disk
+    """
     basename = f'./{holog_name}.holog.zarr'
     import os
     ant_name = 'ant_'+meta_dict['ant']['antenna']
@@ -851,6 +1214,15 @@ def _create_holog_structure(meta_dict, holog_name, input_dict, xds):
     
 
 def _create_base_attr_dict(asdm_name, holog_name):
+    """
+    Create a basic astrohack inout dictionary
+    Args:
+        asdm_name: The name of the input ASDM file
+        holog_name: The base name of the output .holog.zarr file
+
+    Returns:
+    The basic dictionary
+    """
     base_dict = {"asdm_name": asdm_name,
                  "point_name": None,
                  "holog_name": holog_name,
@@ -865,6 +1237,17 @@ def _create_base_attr_dict(asdm_name, holog_name):
 
 
 def _write_dict_as_json(file_name, input_dict, add_origin=True):
+    """
+    Write dictionary as a json file for use in astrohack
+    copied from astrohack
+    Args:
+        file_name: Name for the outpur json file
+        input_dict: Dictionary to be written to disk
+        add_origin: Add origin and version to dictionary?
+
+    Returns:
+    json file in disk
+    """
     import json
     import copy
 
@@ -906,16 +1289,37 @@ def _write_dict_as_json(file_name, input_dict, add_origin=True):
         print(error)
                 
 
-#########################
-###   ASDM Printing   ###
-#########################
+#######################
+#   ASDM Printing   ###
+#######################
     
 def _print_heading(text, wide=60, n_lb=1, sep='*'):
+    """
+    Print an ASDM table heading
+    Args:
+        text: The table name
+        wide: Separator length
+        n_lb: Number of skipped lines after heading
+        sep: Separator character to use
+
+    Returns:
+    Printed Heading on terminal
+    """
     print(wide*sep)
     print(text+n_lb*'\n')
 
     
-def _print_table(table, heading, nmax = 4):
+def _print_table(table, heading, nmax=4):
+    """
+    Print an ASDM table to the terminal
+    Args:
+        table: The ASDM table
+        heading: The ASDM table name
+        nmax: Maximum number of rows before abbreviating table
+
+    Returns:
+    Printed table on terminal
+    """
     le_table = table()
     table_rows = le_table.get()
     size = len(table_rows)
@@ -935,7 +1339,14 @@ def _print_table(table, heading, nmax = 4):
 
                 
 def print_asdm_summary(asdm_name):
-    excluded_methods = ['entity', 'setFromFile']
+    """
+    Print a summary of ASDM tables to the terminal
+    Args:
+        asdm_name: The ASDM file on disk
+
+    Returns:
+    printed ASDM summary on terminal
+    """
     asdm_object = _open_asdm(asdm_name)
     print(asdm_object)
     for table in asdm_object.tables():
