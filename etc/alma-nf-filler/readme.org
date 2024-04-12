@@ -1,0 +1,4 @@
+* before running the ASDM filler
+
+- Remember to add the paths to the custom ASDM binders with the bash function:
+  - add_asdm_path
