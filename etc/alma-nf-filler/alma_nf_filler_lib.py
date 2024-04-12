@@ -205,7 +205,7 @@ def get_pnt_from_asdm(asdm_object, verbose):
     pnt_off = np.ndarray((0, 2))
     
     for irow, pnt_row in enumerate(pnt_table):
-        row_time, row_scan, row_dir, row_enc, row_tgt, row_off, n_samp =  _get_pnt_from_row(pnt_row, irow)
+        row_time, row_scan, row_dir, row_enc, row_tgt, row_off, n_samp = _get_pnt_from_row(pnt_row, irow)
         num_samples += n_samp
         
         pnt_time = np.concatenate([pnt_time, row_time])
@@ -467,7 +467,7 @@ def _separate_cal_from_data(tp_info, cal_cycle):
 
 def _create_xds(time, amp, pha, is_cal, ref=None):
     """
-    Create an Xarray dataset from the given lists
+    Create a Xarray dataset from the given lists
     Args:
         time: Total power times
         amp: Total power Amplitudes
@@ -904,14 +904,14 @@ def _match_pnt_to_time(pnt_info, time_axes, meta_dict):
             else:
                 iflag += 1
         
-        while pnt_time > time_axes[itime,1]:
+        while pnt_time > time_axes[itime, 1]:
             if itime == the_shape[0]-1:
                 break
             else:
                 itime += 1
-        if pnt_time < time_axes[itime,0]:
+        if pnt_time < time_axes[itime, 0]:
             continue
-        elif flag_times[iflag, 0] <= pnt_time <= flag_times[iflag,1]:
+        elif flag_times[iflag, 0] <= pnt_time <= flag_times[iflag, 1]:
             continue
         
         pnt_dir[itime] += pnt_info['direction'][ipnt]
@@ -1353,7 +1353,3 @@ def print_asdm_summary(asdm_name):
         _print_table(getattr(asdm_object, table), table)
         
     return
-
-
-
-
