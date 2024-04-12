@@ -1,4 +1,13 @@
 * before running the ASDM filler
 
-- Remember to add the paths to the custom ASDM binders with the bash function:
-  - add_asdm_path
+** Getting the correct ASDM python bindings
+
+** Getting some example data
+
+** Adding the paths to the ASDM bindings
+
+* Running the ASDM filler
+
+** Using the convenience script
+
+** Using the library directly
