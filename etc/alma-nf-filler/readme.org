@@ -19,15 +19,16 @@ containing some example ALMA NF ASDMs.
 ** Adding the paths to the ASDM bindings
 
 When the python bindings have been downloaded it is necessary to add
-them to yout PYTHON_PATH and LD_LIBRARY_PATH environment variable to
+them to yout PYTHONPATH and LD_LIBRARY_PATH environment variable to
 make them available in your python environment. In the following
-examples the python bindings are stored at `/home/thisuser/python`,
-and the user is assumed to be using bash as their login shell.
+examples the python bindings are stored at
+"/home/thisuser/python/asdm_bindings", and the user is assumed to be
+using bash as their login shell.
 
 This can be done by a simple addition to your ~/.profile:
 
 #+BEGIN_SRC bash
-asdm_base="/home/thisuser/python"
+asdm_base="/home/thisuser/python/asdm_bindings"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${asdm_base}/lib
 export PYTHONPATH=$PYTHONPATH:${asdm_base}/lib/python3.12/site-packages/
 #+END_SRC
@@ -39,16 +40,58 @@ depend to your current shell, by including the following lines to your
 #+BEGIN_SRC bash
 function add_asdm_path
 {
-    asdm_base="/home/thisuser/python"
+    asdm_base="/home/thisuser/python/asdm_bindings"
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${asdm_base}/lib
     export PYTHONPATH=$PYTHONPATH:${asdm_base}/lib/python3.12/site-packages/
 }
 #+END_SRC
 
-
-
 * Running the ASDM filler
+The filler has been writen as a python library that can be accessed
+directly in a python script but a script with an argparse interface
+has been provided for convenience. No installation is necessary to run
+the filler. One can add the filler and convinience scripts to one's
+PYTHONPATH and PATH respectively for ease of use but that is not
+necessary, the easiest way to use them is to simply copy them to the
+working directory where you want to import the NF ASDMs to the
+astrohack format.
 
 ** Using the convenience script
+This assumes that the user has copied both the library and the
+convenience script to the current working directory.  The convenience
+script contains a series of options that control the workflow of the
+filler, for example which kind of calibration is to be performed or if
+no calibration is to be performed. The user can see all this options
+by calling for the script's help:
+
+#+BEGIN_EXAMPLE
+$ python import-nf-asdm.py -h
+usage: import-nf-asdm.py [-h] [-t INTEG_TIME] [-v] [-q] [-p {linterp,spline,mean,regression,sqinterp,none}]
+                         [-a {linterp,spline,mean,regression,sqinterp,none}] [-c CAL_CYCLE] [-pc] [-s]
+                         nf_asdm holog_name
+
+Import an ALMA Near-Field ASDM to an AstroHACK .holog.zarr file
+
+positional arguments:
+  nf_asdm               Path to the root of the ALMA NF ASDM
+  holog_name            Name of the created AstroHACK file to be created (no extension)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -t INTEG_TIME, --integ-time INTEG_TIME
+                        Integration time on the visibilities and pointings, defaults to the largest interval of
+                        sampling (pointing or total power)
+  -v, --verbose         Print processing messages
+  -q, --print-and-quit  Print ASDM summary and quit
+  -p {linterp,spline,mean,regression,sqinterp,none}, --phase_cal {linterp,spline,mean,regression,sqinterp,none}
+                        Apply phase calibration of the specified type, "none" means no phase cal
+  -a {linterp,spline,mean,regression,sqinterp,none}, --amplitude_cal {linterp,spline,mean,regression,sqinterp,none}
+                        Apply amplitude calibration of the specified type, "none" means no amplitude cal
+  -c CAL_CYCLE, --cal_cycle CAL_CYCLE
+                        How many subscans in each calibration cycle, i.e. how many subscans from one
+                        calibration to the next
+  -pc, --plot_cal       Plot calibration to png files
+  -s, --save_cal        Save calibration Xarray dataset
+#+END_EXAMPLE
 
 ** Using the library directly
