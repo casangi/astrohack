@@ -275,6 +275,7 @@ class AstrohackImageFile(dict):
             destination: str,
             ant: Union[str, List[str]] = "all",
             ddi: Union[int, List[int]] = "all",
+            polarization_state: Union[str, List[str]] = "all",
             plot_screws: bool = False,
             amplitude_limits: Union[List[float], Tuple, np.array] = None,
             phase_unit: str = 'deg',
@@ -296,6 +297,8 @@ class AstrohackImageFile(dict):
         :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
+        :param polarization_state: List of polarization states/ polarization state to be plotted, defaults to "all"
+        :type polarization_state: list or str, optional
         :param plot_screws: Add screw positions to plot, default is False
         :type plot_screws: bool, optional
         :param amplitude_limits: Lower than Upper limit for amplitude in volts default is None (Guess from data)

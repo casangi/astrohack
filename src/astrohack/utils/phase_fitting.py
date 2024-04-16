@@ -3,8 +3,156 @@ from numba import njit
 
 from astrohack.utils.algorithms import _least_squares_fit_block
 from astrohack.utils.conversion import convert_unit
+from astrohack.utils.constants import clight
+from astrohack.utils.text import get_str_idx_in_list
+
+import graphviper.utils.logger as logger
 
 NPAR = 10
+
+
+def execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size, phase_fit_parameter,
+                          to_stokes, is_near_field):
+    """
+    Executes the phase fitting controls here to declutter core/holog.py
+    Args:
+        amplitude: Amplitude image(s)
+        phase: Phase image(s)
+        pol_axis: Polarization axis of the dataset
+        freq_axis: Frequency axis of the dataset at phase fitting stage
+        telescope: Telescope class object
+        uv_cell_size: UV cell size
+        phase_fit_parameter: phase_fit control from user
+        to_stokes: Dataset is in stokes parameters rather than correlations
+        is_near_field: Dataset is a near field holography dataset
+
+    Returns: Corrected phase dataset (set to the phase if no phase fit is to be performed), phase fitting results in a
+    dictionary
+
+    """
+    do_phase_fit, phase_fit_control = _solve_phase_fitting_controls(phase_fit_parameter, telescope.name)
+
+    if do_phase_fit:
+        logger.info('Applying phase correction')
+        if to_stokes:
+            pol_indexes = (0,)
+        else:
+            if is_near_field:
+                pol_indexes = (0, )
+            else:
+                if 'RR' in pol_axis:
+                    i_rr = get_str_idx_in_list('RR', pol_axis)
+                    i_ll = get_str_idx_in_list('LL', pol_axis)
+                    pol_indexes = (i_rr, i_ll)
+                elif 'XX' in pol_axis:
+                    i_xx = get_str_idx_in_list('XX', pol_axis)
+                    i_yy = get_str_idx_in_list('YY', pol_axis)
+                    pol_indexes = (i_xx, i_yy)
+                else:
+                    msg = f'Unknown polarization scheme: {pol_axis}'
+                    logger.error(msg)
+                    raise Exception(msg)
+
+        max_wavelength = clight / freq_axis[-1]
+
+        results, errors, phase_corrected_angle, _, in_rms, out_rms = phase_fitting_block(
+                pol_indexes=pol_indexes,
+                wavelength=max_wavelength,
+                telescope=telescope,
+                cellxy=uv_cell_size[0] * max_wavelength,  # THIS HAS TO BE CHANGED, (X, Y) CELL SIZE ARE NOT THE SAME.
+                amplitude_image=amplitude,
+                phase_image=phase,
+                pointing_offset=phase_fit_control[0],
+                focus_xy_offsets=phase_fit_control[1],
+                focus_z_offset=phase_fit_control[2],
+                subreflector_tilt=phase_fit_control[3],
+                cassegrain_offset=phase_fit_control[4])
+
+        phase_fit_results = _unpack_results(results, errors, pol_axis, freq_axis, pol_indexes)
+    else:
+        phase_fit_results = None
+        phase_corrected_angle = phase.copy()
+        logger.info('Skipping phase correction')
+
+    return phase_corrected_angle, phase_fit_results
+
+
+def _unpack_results(results, errors, pol_axis, freq_axis, pol_indexes):
+    """
+    Unpack phase fitting results onto a neat dictionary
+    Args:
+        results: phase fit results
+        errors: phase fit errors
+        pol_axis: polarization axis of the dataset
+        freq_axis: frequency axis of the dataset
+        pol_indexes: polarization indexes used
+
+    Returns:
+    A dictionary containing the phase fit results
+    """
+    par_name = ['phase_offset', 'x_point_offset', 'y_point_offset', 'x_focus_offset', 'y_focus_offset',
+                'z_focus_offset', 'x_subreflector_tilt', 'y_subreflector_tilt', 'x_cassegrain_offset',
+                'y_cassegrain_offset']
+    par_unit = ['deg', 'deg', 'deg', 'mm', 'mm', 'mm', 'deg', 'deg', 'mm', 'mm']
+
+    res_dict = {}
+    for i_time in range(len(results)):
+        time_dict = {}
+        for i_freq in range(len(results[i_time])):
+            freq_dict = {}
+            for i_pol in range(len(results[i_time][i_freq])):
+                par_val = results[i_time][i_freq][i_pol]
+                par_err = errors[i_time][i_freq][i_pol]
+                pol_dict = {}
+                for i_par in range(NPAR):
+                    par_dict = {'value': par_val[i_par],
+                                'error': par_err[i_par],
+                                'unit': par_unit[i_par]}
+                    pol_dict[par_name[i_par]] = par_dict
+                freq_dict[pol_axis[pol_indexes[i_pol]]] = pol_dict
+            time_dict[freq_axis[i_freq]] = freq_dict
+        res_dict[f'map_{i_time}'] = time_dict
+
+    return res_dict
+
+
+def _solve_phase_fitting_controls(phase_fit_par, tel_name):
+    """
+    Solve user interface inputs onto the actual phase fitting controls
+    Args:
+        phase_fit_par: user defined phase fitting paramters
+        tel_name: name of the telescope being used
+
+    Returns:
+    Whether to perform phase fitting, phasefitting controls
+    """
+    if isinstance(phase_fit_par, bool):
+        do_phase_fit = phase_fit_par
+        do_pnt_off = True
+        do_xy_foc_off = True
+        do_z_foc_off = True
+        do_cass_off = True
+        if tel_name == 'VLA' or tel_name == 'VLBA':
+            do_sub_til = True
+        else:
+            do_sub_til = False
+
+    elif isinstance(phase_fit_par, (np.ndarray, list, tuple)):
+        if len(phase_fit_par) != 5:
+            raise Exception("Phase fit parameter must have 5 elements")
+
+        else:
+            if np.sum(phase_fit_par) == 0:
+                do_phase_fit = False
+                do_pnt_off, do_xy_foc_off, do_z_foc_off, do_sub_til, do_cass_off = False, False, False, False, False
+            else:
+                do_phase_fit = True
+                do_pnt_off, do_xy_foc_off, do_z_foc_off, do_sub_til, do_cass_off = phase_fit_par
+
+    else:
+        raise Exception('Phase fit parameter is neither a boolean nor an array of booleans.')
+    return do_phase_fit, [do_pnt_off, do_xy_foc_off, do_z_foc_off, do_sub_til, do_cass_off]
+
 
 def create_phase_model(npix, parameters, wavelength, telescope, cellxy):
     """
@@ -27,8 +175,8 @@ def create_phase_model(npix, parameters, wavelength, telescope, cellxy):
     return model
 
 
-def phase_fitting_block(pols, wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
-                         focus_xy_offsets, focus_z_offset, subreflector_tilt, cassegrain_offset):
+def phase_fitting_block(pol_indexes, wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
+                        focus_xy_offsets, focus_z_offset, subreflector_tilt, cassegrain_offset):
     """
     Corrects the grading phase for pointing, focus, and feed offset errors using the least squares method, and a model
     incorporating sub-reflector position errors.  Includes reference pointing
@@ -59,7 +207,7 @@ def phase_fitting_block(pols, wavelength, telescope, cellxy, amplitude_image, ph
         RAP, 27/05/08
 
     Args:
-        pols: Indices of the polarizations to be used for phase fitting
+        pol_indexes: Indices of the polarizations to be used for phase fitting
         wavelength: Observing wavelength, in meters
         telescope: Telescope object containing the optics parameters
         cellxy: Map cell spacing, in meters
@@ -79,7 +227,7 @@ def phase_fitting_block(pols, wavelength, telescope, cellxy, amplitude_image, ph
         in_rms: Phase RMS before fitting
         out_rms: Phase RMS after fitting
     """
-    matrix, vector = _build_design_matrix_block(pols, -telescope.inlim, -telescope.diam/2, cellxy, phase_image,
+    matrix, vector = _build_design_matrix_block(pol_indexes, -telescope.inlim, -telescope.diam / 2, cellxy, phase_image,
                                                 amplitude_image, telescope.magnification, telescope.surp_slope,
                                                 telescope.focus)
 
@@ -94,7 +242,7 @@ def phase_fitting_block(pols, wavelength, telescope, cellxy, amplitude_image, ph
     results, variances = _reconstruct_full_results_block(results, variances, ignored)
     #
     # apply the correction.
-    corrected_phase, phase_model = _correct_phase_block(pols, phase_image, cellxy, results, telescope.magnification,
+    corrected_phase, phase_model = _correct_phase_block(pol_indexes, phase_image, cellxy, results, telescope.magnification,
                                                         telescope.focus, telescope.surp_slope)
     # get RMSes before and after the fit
     in_rms = _compute_phase_rms_block(phase_image)

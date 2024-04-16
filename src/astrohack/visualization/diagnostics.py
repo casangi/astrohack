@@ -649,15 +649,32 @@ def plot_aperture_chunk(parm_dict):
     antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
-    basename = f'{destination}/{antenna}_{ddi}'
     input_xds = parm_dict['xds_data']
     input_xds.attrs['AIPS'] = False
     telescope = Telescope.from_xds(input_xds)
-    surface = AntennaSurface(input_xds, telescope, nan_out_of_bounds=False)
 
-    surface.plot_phase(basename, 'image', parm_dict)
-    surface.plot_deviation(basename, 'image', parm_dict)
-    surface.plot_amplitude(basename, 'image', parm_dict)
+    asked_pol_states = parm_dict['polarization_state']
+    avail_pol_states = input_xds.pol.values
+    if asked_pol_states == 'all':
+        plot_pol_states = avail_pol_states
+    elif type(asked_pol_states) is str:
+        plot_pol_states = [asked_pol_states]
+    elif type(asked_pol_states) is list:
+        plot_pol_states = asked_pol_states
+    else:
+        msg = f'Uncomprehensible polarization state: {asked_pol_states}'
+        logger.error(msg)
+        raise Exception(msg)
+
+    for pol_state in plot_pol_states:
+        if pol_state in avail_pol_states:
+            surface = AntennaSurface(input_xds, telescope, nan_out_of_bounds=True, pol_state=str(pol_state))
+            basename = f'{destination}/{antenna}_{ddi}_pol_{pol_state}'
+            surface.plot_phase(basename, 'image', parm_dict)
+            surface.plot_deviation(basename, 'image', parm_dict)
+            surface.plot_amplitude(basename, 'image', parm_dict)
+        else:
+            logger.warning(f'Polarization state {pol_state} not available in data')
 
 
 def plot_beam_chunk(parm_dict):
@@ -673,10 +690,10 @@ def plot_beam_chunk(parm_dict):
     input_xds = parm_dict['xds_data']
     laxis = input_xds.l.values * convert_unit('rad', parm_dict['angle_unit'], 'trigonometric')
     maxis = input_xds.m.values * convert_unit('rad', parm_dict['angle_unit'], 'trigonometric')
-    if input_xds.dims['chan'] != 1:
+    if input_xds.sizes['chan'] != 1:
         raise Exception("Only single channel holographies supported")
 
-    if input_xds.dims['time'] != 1:
+    if input_xds.sizes['time'] != 1:
         raise Exception("Only single mapping holographies supported")
 
     full_beam = input_xds.BEAM.isel(time=0, chan=0).values

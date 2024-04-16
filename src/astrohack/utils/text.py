@@ -410,3 +410,12 @@ def format_value_error(value, error, scaling, tolerance):
             return f'{value} \u00b1 {error}'
     else:
         return f'{value} \u00b1 {error}'
+
+
+def get_str_idx_in_list(target, array):
+    for i_tgt, item in enumerate(array):
+        if target == item:
+            return i_tgt
+    logger.error(f'Target {target} not found in {array}')
+    return None
+
