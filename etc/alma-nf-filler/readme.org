@@ -1,10 +1,50 @@
-* before running the ASDM filler
+* Before running the ASDM filler
+
+The near field ALMA holography ASDM to .holog.zarr filler, simply
+refered to as the filler from now on, is dependent on the ASDM python
+bindings that allow python access to the data stores in the ASDM.
 
 ** Getting the correct ASDM python bindings
+The ALMA NF holographies are stored in a custom ASDM format that are
+not accessible with the regular ASDM python bindings. To open these
+datasets we need to use custom python ASDM bindings, that are as of
+yet (Mid April 2024) not available to the public via pip.  We have
+stored a copy of these bindings in a dropbox that is available upon
+request to JW Steeb. Once access is granted oyu can download them at:
+[[https://www.dropbox.com/home/astroHACK/ALMA%20Near-Field%20Holography][Jan-Willem's dropbox]]
 
-** Getting some example data
+The same dropbox folder containing the ASDM contains a .tar.gz file
+containing some example ALMA NF ASDMs.
 
 ** Adding the paths to the ASDM bindings
+
+When the python bindings have been downloaded it is necessary to add
+them to yout PYTHON_PATH and LD_LIBRARY_PATH environment variable to
+make them available in your python environment. In the following
+examples the python bindings are stored at `/home/thisuser/python`,
+and the user is assumed to be using bash as their login shell.
+
+This can be done by a simple addition to your ~/.profile:
+```
+asdm_base="/home/thisuser/python"
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${asdm_base}/lib
+export PYTHONPATH=$PYTHONPATH:${asdm_base}/lib/python3.12/site-packages/
+```
+
+Or it can be done as a function that will deliver these paths on
+depend to your current shell, by including the following lines to your
+~/.profile:
+
+```
+function add_asdm_path
+{
+    asdm_base="/home/thisuser/python"
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${asdm_base}/lib
+    export PYTHONPATH=$PYTHONPATH:${asdm_base}/lib/python3.12/site-packages/
+}
+```
+
+
 
 * Running the ASDM filler
 
