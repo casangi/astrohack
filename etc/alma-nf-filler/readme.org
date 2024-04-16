@@ -25,7 +25,7 @@ examples the python bindings are stored at `/home/thisuser/python`,
 and the user is assumed to be using bash as their login shell.
 
 This can be done by a simple addition to your ~/.profile:
-```
+```python
 asdm_base="/home/thisuser/python"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${asdm_base}/lib
 export PYTHONPATH=$PYTHONPATH:${asdm_base}/lib/python3.12/site-packages/
