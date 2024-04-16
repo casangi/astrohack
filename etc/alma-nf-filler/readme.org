@@ -25,24 +25,25 @@ examples the python bindings are stored at `/home/thisuser/python`,
 and the user is assumed to be using bash as their login shell.
 
 This can be done by a simple addition to your ~/.profile:
-```python
+
+#+BEGIN_SRC bash
 asdm_base="/home/thisuser/python"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${asdm_base}/lib
 export PYTHONPATH=$PYTHONPATH:${asdm_base}/lib/python3.12/site-packages/
-```
+#+END_SRC
 
 Or it can be done as a function that will deliver these paths on
 depend to your current shell, by including the following lines to your
 ~/.profile:
 
-```
+#+BEGIN_SRC bash
 function add_asdm_path
 {
     asdm_base="/home/thisuser/python"
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${asdm_base}/lib
     export PYTHONPATH=$PYTHONPATH:${asdm_base}/lib/python3.12/site-packages/
 }
-```
+#+END_SRC
 
 
 
