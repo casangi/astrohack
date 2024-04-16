@@ -94,4 +94,85 @@ optional arguments:
   -s, --save_cal        Save calibration Xarray dataset
 #+END_EXAMPLE
 
+Below is an example of a call to the convenience script where we ask
+the filler to print ou all the processing messages:
+
+#+BEGIN_EXAMPLE
+$ python import-nf-asdm.py ALMA_holography/uid___A002_Xad52b4_X3 X3 -v 
+Processing ALMA_holography/uid___A002_Xad52b4_X3 to X3.holog.zarr...
+
+Total number of pointing samples:  65355
+Total number of valid pointing samples:  55905 
+
+Retrieving Total Power Table...
+Done retrieving Total Power Table, took 25.58 seconds
+Total number of Total power samples:  261420 
+
+Calibrating Amplitude
+Amplitude calibration took: 0.0055 seconds
+Calibrating phase
+Phase calibration took: 0.0041 seconds
+
+Combining pointing and total power data...
+Number of time matched samples: 101029
+Number of filtered samples: 55799
+Combination took 0.66 seconds
+
+[2024-04-16 14:57:54,653]     INFO  graphviper:  Searching /export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack for alma_da.zarr, please wait ... 
+Xarray dataset saved to X3.holog.zarr:
+
+<xarray.Dataset>
+Dimensions:                    (time: 55799, chan: 1, pol: 2, lm: 2)
+Coordinates:
+  * time                       (time) float64 4.956e+09 4.956e+09 ... 4.956e+09
+  * chan                       (chan) float64 1.04e+11
+  * pol                        (pol) <U2 'I' 'R2'
+Dimensions without coordinates: lm
+Data variables:
+    VIS                        (time, chan, pol) complex128 (0.00178573188609...
+    WEIGHT                     (time, chan, pol) float64 5.0 5.0 4.0 ... 7.0 7.0
+    DIRECTIONAL_COSINES        (time, lm) float64 0.01073 0.01077 ... -0.01073
+    IDEAL_DIRECTIONAL_COSINES  (time, lm) float64 -0.01086 -0.01076 ... 0.01074
+Attributes: (12/13)
+    holog_map_key:            map_0
+    ddi:                      0
+    parallactic_samples:      [0 0 0]
+    telescope_name:           ALMA
+    antenna_name:             DV08
+    near_field:               True
+    ...                       ...
+    l_min:                    -0.010765705250140348
+    l_max:                    0.010765707429685939
+    m_min:                    -0.010751019298791298
+    m_max:                    0.0108383490450486
+    grid_params:              {'n_pix': 11236, 'cell_size': 0.000204146309443...
+    time_smoothing_interval:  0.04800001624971628
+
+Finished processing (31.28 seconds)
+#+END_EXAMPLE
+
 ** Using the library directly
+Another way to use the filler is to write a python script that imports
+the relevant functions from the library. This can be useful when one
+wants to import multiple datasets or import a single dataset with
+multiple parameter settings. Below is an example of such a python
+script where several NF ASDMS are imported.
+
+#+BEGIN_SRC python
+from alma_nf_filler_lib import asdm_to_holog
+
+names = ['X3', 'X4', 'X5', 'X6']
+base = 'ALMA_holography/uid___A002_Xad52b4_'
+
+for name in names:
+    asdm_to_holog(asdm_name=base+name, 
+                  holog_name=name, 
+		  integ_time=None, 
+		  verbose=True, 
+		  fake_corr=False,
+                  cal_amp='linterp', 
+		  cal_pha='linterp', 
+		  cal_cycle=3, 
+		  plot_cal=True, 
+		  save_cal=False)
+#+END_SRC
