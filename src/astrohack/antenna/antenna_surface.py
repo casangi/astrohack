@@ -10,7 +10,7 @@ from astrohack.antenna.ring_panel import RingPanel
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.text import add_prefix
+from astrohack.utils.text import add_prefix, bool_to_str
 from astrohack.visualization.plot_tools import well_positioned_colorbar, create_figure_and_axes, close_figure, \
     get_proper_color_map
 
@@ -113,6 +113,7 @@ class AntennaSurface:
         self.clip = inputxds.attrs['clip']
         self.solved = inputxds.attrs['solved']
         self.fitted = inputxds.attrs['fitted']
+        self.pol_state = inputxds.attrs['pol_state']
         # Arrays
         self.amplitude = inputxds['AMPLITUDE'].values
         self.phase = inputxds['PHASE'].values
@@ -130,6 +131,8 @@ class AntennaSurface:
             self.resolution = None
 
         if self.solved:
+            self.panel_fallback = inputxds['PANEL_FALLBACK'].values
+            self.panel_model_array = inputxds['PANEL_MODEL'].values
             self.phase_residuals = inputxds['PHASE_RESIDUALS'].values
             self.residuals = inputxds['RESIDUALS'].values
             self.phase_corrections = inputxds['PHASE_CORRECTIONS'].values
@@ -695,12 +698,14 @@ class AntennaSurface:
         self.panel_model_array = np.ndarray([npanels], dtype=object)
         self.panel_pars = np.full((npanels, max_par), np.nan, dtype=float)
         self.screw_adjustments = np.ndarray((npanels, nscrews), dtype=float)
+        self.panel_fallback = np.ndarray([npanels], dtype=bool)
 
         for ipanel in range(npanels):
             self.panel_labels[ipanel] = self.panels[ipanel].label
             self.panel_pars[ipanel, :] = self.panels[ipanel].par
             self.screw_adjustments[ipanel, :] = self.panels[ipanel].export_screws(unit='m')
             self.panel_model_array[ipanel] = self.panels[ipanel].model
+            self.panel_fallback[ipanel] = self.panels[ipanel].fall_back_fit
 
     def export_screws(self, filename, unit="mm"):
         """
@@ -709,19 +714,26 @@ class AntennaSurface:
             filename: ASCII file name/path
             unit: unit for panel screw adjustments ['mm','miliinches']
         """
-        outfile = "# Screw adjustments for {0:s} {1:s} antenna\n".format(self.telescope.name, self.antenna_name)
+        outfile = f"# Screw adjustments for {self.telescope.name}'s {self.antenna_name} antenna, DDI " \
+                  f"{self.ddi.split('_')[1]}, polarization state {self.pol_state}\n"
+        freq = clight/self.wavelength/1e9
+        if freq >= 1:
+            frequnit = 'GHz'
+        else:
+            frequnit = 'MHz'
+            freq *= 1e3
+        outfile += f"# Frequency = {freq:.1f} {frequnit}\n"
         outfile += "# Adjustments are in " + unit + 2 * lnbr
         outfile += "# Lower means away from subreflector" + lnbr
         outfile += "# Raise means toward the subreflector" + lnbr
         outfile += "# LOWER the panel if the number is POSITIVE" + lnbr
         outfile += "# RAISE the panel if the number is NEGATIVE" + lnbr
         outfile += 2 * lnbr
-        outfile += "{0:16s}".format('Panel')
+        outfile += 'Panel      '
         nscrews = len(self.telescope.screw_description)
         for screw in self.telescope.screw_description:
-            outfile += "{0:11s}".format(screw)
-
-        outfile += lnbr
+            outfile += "     {0:2s}    ".format(screw)
+        outfile += '   Model     Fallback\n'
         fac = convert_unit('m', unit, 'length')
 
         for ipanel in range(len(self.panel_labels)):
@@ -730,7 +742,7 @@ class AntennaSurface:
             for iscrew in range(nscrews):
                 outfile += " {0:10.2f}".format(fac * self.screw_adjustments[ipanel, iscrew])
 
-            outfile += lnbr
+            outfile += f'{self.panel_model_array[ipanel]:>11s}{bool_to_str(self.panel_fallback[ipanel]):>11s}'+lnbr
 
         lefile = open(filename, "w")
         lefile.write(outfile)
@@ -756,6 +768,7 @@ class AntennaSurface:
         xds.attrs['solved'] = self.solved
         xds.attrs['fitted'] = self.fitted
         xds.attrs['aperture_resolution'] = self.resolution
+        xds.attrs['pol_state'] = self.pol_state
         xds['AMPLITUDE'] = xr.DataArray(self.amplitude, dims=["u", "v"])
         xds['PHASE'] = xr.DataArray(self.phase, dims=["u", "v"])
         xds['DEVIATION'] = xr.DataArray(self.deviation, dims=["u", "v"])
@@ -778,6 +791,7 @@ class AntennaSurface:
             xds['PANEL_PARAMETERS'] = xr.DataArray(self.panel_pars, dims=['labels', 'pars'])
             xds['PANEL_SCREWS'] = xr.DataArray(self.screw_adjustments, dims=['labels', 'screws'])
             xds['PANEL_MODEL'] = xr.DataArray(self.panel_model_array, dims=['labels'])
+            xds['PANEL_FALLBACK'] = xr.DataArray(self.panel_fallback, dims=['labels'])
 
             coords = {**coords,
                       "labels": self.panel_labels,
