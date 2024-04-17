@@ -1,3 +1,4 @@
+import numpy as np
 import xarray as xr
 
 from matplotlib import patches
@@ -683,17 +684,23 @@ class AntennaSurface:
             List with panel labels, panel fitting parameters, screw_adjustments
         """
         npanels = len(self.panels)
-        NPAR = self.panels[0].NPAR
+        # First panel might fail hence we need to check npar for all panels
+        max_par = 0
+        for panel in self.panels:
+            if panel.NPAR > max_par:
+                max_par = panel.NPAR
         nscrews = self.panels[0].screws.shape[0]
 
         self.panel_labels = np.ndarray([npanels], dtype=object)
-        self.panel_pars = np.ndarray((npanels, NPAR), dtype=float)
+        self.panel_model_array = np.ndarray([npanels], dtype=object)
+        self.panel_pars = np.full((npanels, max_par), np.nan, dtype=float)
         self.screw_adjustments = np.ndarray((npanels, nscrews), dtype=float)
 
         for ipanel in range(npanels):
             self.panel_labels[ipanel] = self.panels[ipanel].label
             self.panel_pars[ipanel, :] = self.panels[ipanel].par
             self.screw_adjustments[ipanel, :] = self.panels[ipanel].export_screws(unit='m')
+            self.panel_model_array[ipanel] = self.panels[ipanel].model
 
     def export_screws(self, filename, unit="mm"):
         """
@@ -755,6 +762,9 @@ class AntennaSurface:
         xds['MASK'] = xr.DataArray(self.mask, dims=["u", "v"])
         xds['PANEL_DISTRIBUTION'] = xr.DataArray(self.panel_distribution, dims=["u", "v"])
 
+        coords = {"u": self.u_axis,
+                  "v": self.v_axis}
+
         if self.solved:
             xds['PHASE_RESIDUALS'] = xr.DataArray(self.phase_residuals, dims=["u", "v"])
             xds['RESIDUALS'] = xr.DataArray(self.residuals, dims=["u", "v"])
@@ -767,24 +777,18 @@ class AntennaSurface:
             xds.attrs['theoretical_gain'] = gains[0][1]
             xds['PANEL_PARAMETERS'] = xr.DataArray(self.panel_pars, dims=['labels', 'pars'])
             xds['PANEL_SCREWS'] = xr.DataArray(self.screw_adjustments, dims=['labels', 'screws'])
+            xds['PANEL_MODEL'] = xr.DataArray(self.panel_model_array, dims=['labels'])
 
-            coords = {
-                "u": self.u_axis,
-                "v": self.v_axis,
-                "labels": self.panel_labels,
-                "screws": self.telescope.screw_description,
-                "pars": np.arange(self.panel_pars.shape[1])
-            }
+            coords = {**coords,
+                      "labels": self.panel_labels,
+                      "screws": self.telescope.screw_description,
+                      "pars": np.arange(self.panel_pars.shape[1])
+                      }
 
         else:
             xds.attrs['input_rms'] = rms
             xds.attrs['input_gain'] = gains[0]
             xds.attrs['theoretical_gain'] = gains[1]
-
-            coords = {
-                "u": self.u_axis,
-                "v": self.v_axis
-            }
 
         xds = xds.assign_coords(coords)
         return xds
