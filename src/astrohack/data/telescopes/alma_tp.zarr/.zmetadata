@@ -1,6 +1,7 @@
 {
     "metadata": {
         ".zattrs": {
+            "ant_list": [],
             "array_center": {
                 "m0": {
                     "unit": "rad",
@@ -19,6 +20,8 @@
             },
             "comment": "Preliminary data for ALMA total power Melco antennas. Diameter, focus, magnification and secondary distance taken from ALMA memo 339. npanel, nrings and inlim from ALMA cycle 9 technical handbook. inrad and ourad fetched from the CLIC (GILDAS) script for ALMA holography (J. Magnum, private communication). surp_slope assumed to be zero. Numbering of panels and screw positions taken from ALMA Holography memo: Baars, Lucas & Mangum 2004, Array center location from CASA 6.5.5.21",
             "diam": 12.0,
+            "filename": "alma_tp.zarr",
+            "filepath": "/export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack/data/telescopes",
             "focus": 4.800000000000001,
             "inlim": 0.375,
             "inrad": [
@@ -64,6 +67,7 @@
             ],
             "screw_offset": null,
             "secondary_dist": 0.294,
+            "secondary_support": "+",
             "surp_slope": 0.0
         },
         ".zgroup": {

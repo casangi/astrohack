@@ -1,4 +1,5 @@
 {
+    "ant_list": [],
     "array_center": {
         "m0": {
             "unit": "rad",
@@ -17,6 +18,8 @@
     },
     "comment": "Data taken from AIPS source code and EVLA memo 212, Screw offset taken from measurements done insitu by VSM on March 14 2023, Array center location from CASA 6.5.5.21",
     "diam": 25.0,
+    "filename": "vlba.zarr",
+    "filepath": "/export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack/data/telescopes",
     "focus": 8.75,
     "inlim": 2.0,
     "inrad": [
@@ -58,5 +61,6 @@
     ],
     "screw_offset": 0.0635,
     "secondary_dist": 0.522,
+    "secondary_support": "X",
     "surp_slope": 0.65
 }
