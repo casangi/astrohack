@@ -729,20 +729,22 @@ class AntennaSurface:
         outfile += "# LOWER the panel if the number is POSITIVE" + lnbr
         outfile += "# RAISE the panel if the number is NEGATIVE" + lnbr
         outfile += 2 * lnbr
-        outfile += 'Panel      '
+        spc = ' '
+        outfile += f'Panel{3*spc}'
         nscrews = len(self.telescope.screw_description)
         for screw in self.telescope.screw_description:
-            outfile += "     {0:2s}    ".format(screw)
-        outfile += '   Model     Fallback\n'
+            outfile += f"{4*spc}{screw:2s}{4*spc}"
+        outfile += f'Fallback{4*spc}Model\n'
         fac = convert_unit('m', unit, 'length')
 
         for ipanel in range(len(self.panel_labels)):
-            outfile += "{0:8s}".format(self.panel_labels[ipanel])
+            outfile += "{0:>5s}".format(self.panel_labels[ipanel])
 
             for iscrew in range(nscrews):
-                outfile += " {0:10.2f}".format(fac * self.screw_adjustments[ipanel, iscrew])
+                outfile += " {0:>9.2f}".format(fac * self.screw_adjustments[ipanel, iscrew])
 
-            outfile += f'{self.panel_model_array[ipanel]:>11s}{bool_to_str(self.panel_fallback[ipanel]):>11s}'+lnbr
+            outfile += (f'{5*spc}{bool_to_str(self.panel_fallback[ipanel]):>3s}{7*spc}{self.panel_model_array[ipanel]}'
+                        + lnbr)
 
         lefile = open(filename, "w")
         lefile.write(outfile)
