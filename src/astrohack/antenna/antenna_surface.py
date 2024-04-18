@@ -617,7 +617,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.plot(ax, screws=parm_dict['plot_screws'], label=parm_dict['panel_labels'])
 
-        suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}'
+        suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}, Pol. state: {self.pol_state}'
         close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
     def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
@@ -677,7 +677,7 @@ class AntennaSurface:
             self.panels[ipanel].plot(ax, screws=False, label=parm_dict['panel_labels'])
             self.panels[ipanel].plot_corrections(ax, cmap, fac * self.screw_adjustments[ipanel], threshold, vmin, vmax)
 
-        suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}'
+        suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}, Pol. state: {self.pol_state}'
         close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
     def _build_panel_data_arrays(self):
