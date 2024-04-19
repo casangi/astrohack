@@ -5,6 +5,8 @@ name: Linux
 env:
     ROOT_DIR: /home/runner/work/astrohack/astrohack/src/astrohack
 on:
+  workflow_dispatch:
+    
   push:
     paths-ignore:
       - '**.md'
