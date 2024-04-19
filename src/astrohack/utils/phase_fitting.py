@@ -670,7 +670,7 @@ def _correct_phase_block(pols, phase_image, cellxy, parameters, magnification, f
     ix0 = npix//2
     iy0 = npix//2
     phase_model = np.zeros_like(phase_image)
-    corrected_phase = np.zeros_like(phase_image)
+    corrected_phase = phase_image.copy()
 
     for time in range(ntime):
         for chan in range(nchan):

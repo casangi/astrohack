@@ -419,3 +419,11 @@ def get_str_idx_in_list(target, array):
     logger.error(f'Target {target} not found in {array}')
     return None
 
+
+def bool_to_str(boolean):
+    if boolean:
+        return 'yes'
+    else:
+        return 'no'
+
+

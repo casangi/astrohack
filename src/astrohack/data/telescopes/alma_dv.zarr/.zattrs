@@ -1,4 +1,5 @@
 {
+    "ant_list": [],
     "array_center": {
         "m0": {
             "unit": "rad",
@@ -43,7 +44,7 @@
     ],
     "nrings": 8,
     "onaxisoptics": true,
-    "oulim": 6,
+    "oulim": 6.0,
     "ourad": [
         1.265,
         1.861,
@@ -65,5 +66,6 @@
     ],
     "screw_offset": null,
     "secondary_dist": 0.294,
+    "secondary_support": "+",
     "surp_slope": 0.0
 }

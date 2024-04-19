@@ -64,6 +64,7 @@ class BasePanel:
         """
         self.model = model
         self.solved = False
+        self.fall_back_fit = False
         self.label = label
         self.screws = screws
         self.plot_screw_pos = plot_screw_pos
@@ -157,6 +158,7 @@ class BasePanel:
         """
         Associate the proper methods to enable fitting by mean determination
         """
+        self.model = PANEL_MODELS[imean]
         self.NPAR = 1
         self._solve_sub = self._solve_mean
         self.corr_point = self._corr_point_mean
@@ -218,6 +220,7 @@ class BasePanel:
         """
         Changes the method association to mean surface fitting, and fits the panel with it
         """
+        self.fall_back_fit = True
         self._associate_mean()
         self._solve_sub()
 
