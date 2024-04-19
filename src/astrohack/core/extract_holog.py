@@ -236,9 +236,10 @@ def _extract_holog_chunk_jit(
         if flag_row is False:
             continue
         # Find index of time_vis_row[row] in time_samples, assumes time_vis_row is ordered in time
+
         if time_vis_row[row] < time_samples[time_index] - half_int:
             continue
-        elif time_vis_row[row] > time_samples[time_index] + half_int:
+        while time_vis_row[row] > time_samples[time_index] + half_int:
             time_index += 1
         if time_index == n_time:
             break
@@ -610,13 +611,13 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
 
     i_time = 0
     for i_row in range(n_row):
-        if pnt_time[i_row] > time_vis[i_time] + half_int:
-            if i_time == n_samples - 1:
-                break
-            else:
-                i_time += 1
-        elif pnt_time[i_row] < time_vis[i_time] - half_int:
+        if pnt_time[i_row] < time_vis[i_time] - half_int:
             continue
+        while pnt_time[i_row] > time_vis[i_time] + half_int:
+            i_time += 1
+        if i_time == n_samples:
+            break
+
         avg_dir[i_time] += dire[i_row]
         avg_dir_cos[i_time] += dir_cos[i_row]
         avg_enc[i_time] += enc[i_row]
