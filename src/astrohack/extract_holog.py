@@ -916,6 +916,7 @@ def model_memory_usage(
     # Make prediction of memory per core in MB
     return memory_per_core
 
+
 def _convert_ant_name_to_id(ant_list, ant_names):
     """_summary_
 
