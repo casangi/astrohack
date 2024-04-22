@@ -63,11 +63,16 @@ class Telescope:
         Returns:
         appropriate telescope object
         """
-        if 'VLA' in name:
+        name = name.lower()
+        if 'vla' in name:
             name = 'VLA'
-        elif 'ALMA' in name:
-            # It does not matter which ALMA layout since the array center is the same
-            name = 'ALMA_DA'
+        elif 'alma' in name:
+            if 'dv' in name:
+                name = 'ALMA_DV'
+            elif 'tp' in name:
+                name = 'ALMA_TP'
+            else:
+                name = 'ALMA_DA'
 
         return name
 
