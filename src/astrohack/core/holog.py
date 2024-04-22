@@ -116,8 +116,8 @@ def process_holog_chunk(holog_chunk_params):
 
         for chan in range(n_chan):  # Todo: Vectorize holog_map and channel axis
             if is_near_field:
-                xx_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
-                yy_peak = xx_peak
+                i_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
+                beam_grid[holog_map_index, chan, 0, ...] /= i_peak
             else:
                 # This makes finding the parallel hands much more robust
                 if 'RR' in pol_axis:
@@ -139,13 +139,13 @@ def process_holog_chunk(holog_chunk_params):
                     xx_peak = beam_grid[holog_map_index, chan, i_p1, center_pixel[0], center_pixel[1]]
                     yy_peak = beam_grid[holog_map_index, chan, i_p2, center_pixel[0], center_pixel[1]]
 
-            normalization = np.abs(0.5 * (xx_peak + yy_peak))
+                normalization = np.abs(0.5 * (xx_peak + yy_peak))
 
-            if normalization == 0:
-                logger.warning("Peak of zero found! Setting normalization to unity.")
-                normalization = 1
+                if normalization == 0:
+                    logger.warning("Peak of zero found! Setting normalization to unity.")
+                    normalization = 1
 
-            beam_grid[holog_map_index, chan, ...] /= normalization
+                beam_grid[holog_map_index, chan, ...] /= normalization
 
     beam_grid = parallactic_derotation(data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi])
 
