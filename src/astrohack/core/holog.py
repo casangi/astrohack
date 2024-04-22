@@ -116,8 +116,18 @@ def process_holog_chunk(holog_chunk_params):
 
         for chan in range(n_chan):  # Todo: Vectorize holog_map and channel axis
             if is_near_field:
-                i_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, 0, ...], scaling=0.25)
-                beam_grid[holog_map_index, chan, 0, ...] /= i_peak
+                i_i = get_str_idx_in_list('I', pol_axis)
+                i_r2 = get_str_idx_in_list('R2', pol_axis)
+
+                # Normalize by R2:
+                beam_grid[holog_map_index, chan, i_i, ...] /= beam_grid[holog_map_index, chan, i_r2, ...]
+                beam_grid[holog_map_index, chan, i_i, ...] = np.nan_to_num(beam_grid[holog_map_index, chan, i_i, ...],
+                                                                           nan=0.0, posinf=None, neginf=None)
+
+                # Then Normalize to Beam peak:
+                i_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, i_i, ...], scaling=0.25)
+                beam_grid[holog_map_index, chan, i_i, ...] /= i_peak
+
             else:
                 # This makes finding the parallel hands much more robust
                 if 'RR' in pol_axis:
