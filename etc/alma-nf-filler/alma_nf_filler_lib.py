@@ -1093,13 +1093,15 @@ def _data_to_xds(combined_data, meta_dict, fake_corr):
                  coords['chan'].shape[0],
                  coords['pol'].shape[0]]
 
+    ref_median = np.nanmedian(combined_data['ref'])
     real_sig = combined_data['amp'] * np.cos(combined_data['pha'])
     imag_sig = combined_data['amp'] * np.sin(combined_data['pha'])
 
     vis = np.empty(vis_shape, dtype=np.complex128)         
     vis[:, 0, 0].real = real_sig
     vis[:, 0, 0].imag = imag_sig
-    vis[:, 0, 1].real = combined_data['ref']
+    # R2 is to be divided by its median so that we can gauge power variations
+    vis[:, 0, 1].real = combined_data['ref'] / ref_median
     vis[:, 0, 1].imag = 0.0
     if fake_corr:
         vis[:, 0, 2].real = combined_data['ref']
