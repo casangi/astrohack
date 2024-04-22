@@ -347,7 +347,7 @@ class AstrohackImageFile(dict):
             phase_unit: str = 'deg',
             display: bool = False,
             colormap: str = 'viridis',
-            figure_size: Union[Tuple, List[float], np.array] = None,
+            figure_size: Union[Tuple, List[float], np.array] = (8, 4.5),
             dpi: int = 300,
             parallel: bool = False
     ) -> None:

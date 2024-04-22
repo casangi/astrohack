@@ -668,7 +668,7 @@ def plot_aperture_chunk(parm_dict):
 
     for pol_state in plot_pol_states:
         if pol_state in avail_pol_states:
-            surface = AntennaSurface(input_xds, telescope, nan_out_of_bounds=True, pol_state=str(pol_state))
+            surface = AntennaSurface(input_xds, telescope, nan_out_of_bounds=False, pol_state=str(pol_state))
             basename = f'{destination}/{antenna}_{ddi}_pol_{pol_state}'
             surface.plot_phase(basename, 'image', parm_dict)
             surface.plot_deviation(basename, 'image', parm_dict)
@@ -686,7 +686,6 @@ def plot_beam_chunk(parm_dict):
     antenna = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
     destination = parm_dict['destination']
-    basename = f'{destination}/{antenna}_{ddi}'
     input_xds = parm_dict['xds_data']
     laxis = input_xds.l.values * convert_unit('rad', parm_dict['angle_unit'], 'trigonometric')
     maxis = input_xds.m.values * convert_unit('rad', parm_dict['angle_unit'], 'trigonometric')
@@ -698,58 +697,68 @@ def plot_beam_chunk(parm_dict):
 
     full_beam = input_xds.BEAM.isel(time=0, chan=0).values
     pol_axis = input_xds.pol.values
-    if parm_dict['complex_split'] == 'cartesian':
-        real_part = full_beam.real
-        imag_part = full_beam.imag
-        plot_beam(laxis, maxis, pol_axis, real_part, basename, 'real', 'normalized', parm_dict)
-        plot_beam(laxis, maxis, pol_axis, imag_part, basename, 'imag', 'normalized', parm_dict)
-    else:
-        amplitude = np.absolute(full_beam)
-        phase = np.angle(full_beam) * convert_unit('rad', parm_dict['phase_unit'], 'trigonometric')
-        plot_beam(laxis, maxis, pol_axis, amplitude, basename, 'amplitude', 'normalized', parm_dict)
-        plot_beam(laxis, maxis, pol_axis, phase, basename, 'phase', parm_dict['phase_unit'], parm_dict)
+
+    for i_pol, pol in enumerate(pol_axis):
+        basename = f'{destination}/{antenna}_{ddi}_pol_{pol}'
+        plot_beam_by_pol(laxis, maxis, pol, full_beam[i_pol, ...], basename, parm_dict)
 
 
-def plot_beam(laxis, maxis, pol_axis, data, basename, label, zunit, parm_dict):
+def plot_beam_by_pol(laxis, maxis, pol, beam_image, basename, parm_dict):
     """
     Plot a beam
     Args:
         laxis: L axis
         maxis: M axis
-        pol_axis: Polarization axis
-        data: Beam data
+        pol: Polarization state
+        beam_image: Beam data
         basename: Basename for output file
-        label: data label
-        zunit: data unit
         parm_dict: dictionary with general and plotting parameters
     """
-    colormap = get_proper_color_map(parm_dict['colormap'])
 
-    n_pol = len(pol_axis)
-
-    if n_pol == 4:
-        fig, axes = create_figure_and_axes(parm_dict['figure_size'], [2, 2])
-        axes = axes.flat
-    elif n_pol == 2:
-        fig, axes = create_figure_and_axes(parm_dict['figure_size'], [2, 1])
-    elif n_pol == 1:
-        fig, ax = create_figure_and_axes(parm_dict['figure_size'], [1, 1])
-        axes = [ax]
-    else:
-        msg = f'Do not know how to handle polarization axis with {n_pol} elements'
-        logger.error(msg)
-        raise Exception(msg)
-
+    fig, axes = create_figure_and_axes(parm_dict['figure_size'], [1, 2])
     extent = [laxis[0], laxis[-1], maxis[0], maxis[-1]]
-    for ipol, pol, in enumerate(pol_axis):
-        axis = axes[ipol]
-        axis.set_title(f'Polarization: {pol}')
-        im = axis.imshow(data[ipol, ...], cmap=colormap, interpolation="nearest", extent=extent)
-        well_positioned_colorbar(axis, fig, im, f"Z Scale [{zunit}]")
-        axis.set_xlabel(f'L axis [{parm_dict["angle_unit"]}]')
-        axis.set_ylabel(f'M axis [{parm_dict["angle_unit"]}]')
+    norm = 'Nomalized'
 
-    plot_name = add_prefix(add_prefix(basename, label), 'image_beam')
-    suptitle = f'Beam {label}, Antenna: {parm_dict["this_ant"].split("_")[1]}, DDI: {parm_dict["this_ddi"].split("_")[1]}'
+    if parm_dict['complex_split'] == 'cartesian':
+        vmin = np.min([np.nanmin(beam_image.real), np.nanmin(beam_image.imag)])
+        vmax = np.max([np.nanmax(beam_image.real), np.nanmax(beam_image.imag)])
+        plot_beam_sub(extent, axes[0], fig, beam_image.real, 'Real part', parm_dict, vmin, vmax, norm)
+        plot_beam_sub(extent, axes[1], fig, beam_image.imag, 'Imag. part', parm_dict, vmin, vmax, norm)
+    else:
+        scale = convert_unit('rad', parm_dict['phase_unit'], 'trigonometric')
+        amplitude = np.absolute(beam_image)
+        phase = np.angle(beam_image) * scale
+        plot_beam_sub(extent, axes[0], fig, amplitude, 'Amplitude', parm_dict,
+                      np.nanmin(amplitude[amplitude > 1e-8]), np.nanmax(amplitude), norm)
+        plot_beam_sub(extent, axes[1], fig, phase, 'Phase', parm_dict, -np.pi*scale, np.pi*scale,
+                      parm_dict['phase_unit'])
+
+    plot_name = add_prefix(add_prefix(basename, parm_dict['complex_split']), 'image_beam')
+    suptitle = (f'Beam for Antenna: {parm_dict["this_ant"].split("_")[1]}, DDI: {parm_dict["this_ddi"].split("_")[1]}, '
+                f'pol. State: {pol}')
     close_figure(fig, suptitle, plot_name, parm_dict["dpi"], parm_dict["display"])
     return
+
+
+def plot_beam_sub(extent, axis, fig, beam_image, label, parm_dict, vmin, vmax, zunit):
+    """
+    Plot beam panel
+    Args:
+        extent: the full X and Y extents
+        axis: the matplotlib axis instance
+        fig: The figure onto which to add panel
+        beam_image: the beam image to plot
+        label: The label on the panel
+        parm_dict: dictionary with general and plotting parameters
+        vmin: Minimum in panel
+        vmax: Maximum in panel
+        zunit: Unit for the map
+
+    """
+    colormap = get_proper_color_map(parm_dict['colormap'])
+    im = axis.imshow(beam_image, cmap=colormap, interpolation="nearest", extent=extent, vmin=vmin, vmax=vmax)
+    well_positioned_colorbar(axis, fig, im, f"Z Scale [{zunit}]")
+    axis.set_xlabel(f'L axis [{parm_dict["angle_unit"]}]')
+    axis.set_ylabel(f'M axis [{parm_dict["angle_unit"]}]')
+    axis.set_title(label)
+
