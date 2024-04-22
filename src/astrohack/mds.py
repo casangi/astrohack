@@ -331,8 +331,6 @@ class AstrohackImageFile(dict):
         """
         param_dict = locals()
 
-        param_dict["figuresize"] = figure_size
-
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
