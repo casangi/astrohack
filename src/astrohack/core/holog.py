@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 import astrohack
 import numpy as np
 import xarray as xr
@@ -157,7 +159,8 @@ def process_holog_chunk(holog_chunk_params):
 
                 beam_grid[holog_map_index, chan, ...] /= normalization
 
-    beam_grid = parallactic_derotation(data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi])
+    if not is_near_field:
+        beam_grid = parallactic_derotation(data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi])
 
     ###############
 
