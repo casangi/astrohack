@@ -338,7 +338,7 @@ def load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None, diagnost
 
         raise FileNotFoundError
 
-    pnt_dict['point_meta_ds'] = xr.open_zarr(file)
+    pnt_dict['meta_data'] = xr.open_zarr("/".join((file, "meta_data")))
 
     for ant in os.listdir(file):
         if "ant_" in ant:
@@ -447,7 +447,7 @@ def _check_time_axis_consistency(pnt_dict):
     variable_length = {}
 
     for ant in pnt_dict.keys():
-        if ant != "point_meta_ds":
+        if ant != "meta_data":
             variable_length[ant] = pnt_dict[ant].POINTING_OFFSET.values.shape[0]
 
     # Calculate a fractional error

@@ -83,7 +83,7 @@ def process_extract_pointing(ms_name, pnt_name, exclude, parallel=True):
 
     point_meta_ds = xr.Dataset()
     point_meta_ds.attrs['mapping_state_ids'] = mapping_state_ids
-    point_meta_ds.to_zarr(pnt_name, mode="w", compute=True, consolidated=True)
+    point_meta_ds.to_zarr("/".join((pnt_name, "meta_data")), mode="w", compute=True, consolidated=True)
 
     ###########################################################################################
     pnt_params = {
