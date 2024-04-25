@@ -139,27 +139,27 @@ def calculate_near_field_aperture(grid, delta, padding_factor=50):
     Returns:
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
+    #
+    # # Fit reference data and then divide beam by it
+    # ref_measure = np.absolute(grid[0, 0, 1, ...])
+    # fitted_ref = fit_2d_gaussian(ref_measure)
+    # beam2d = grid[0, 0, 0, ...]
+    # beam2d /= fitted_ref
+    #
+    # grid[0, 0, 0, ...] = beam2d
+    apodizer = apodize_beam(grid[0, 0, 0, ...])
+    apodized_grid = grid.copy()
+    apodized_grid[0, 0, 0, ...] *= apodizer
 
-    logger.info("Calculating aperture illumination pattern ...")
+    padded_grid = pad_beam_image(apodized_grid, padding_factor)
 
-    assert grid.shape[-1] == grid.shape[-2]  ###To do: why is this expected that l.shape == m.shape
-    initial_dimension = grid.shape[-1]
+    print(apodizer.shape)
+    # plt.imshow(apodizer)
+    # plt.show()
+    # plt.close()
 
-    # Calculate padding as the nearest power of 2
-    # k log (2) = log(N) => k = log(N)/log(2)
-    # New shape => K = math.ceil(k) => shape = (K, K)
-
-    k = np.log(initial_dimension * padding_factor) / np.log(2)
-    K = math.ceil(k)
-
-    padding = (np.power(2, K) - padding_factor * initial_dimension) // 2
-
-    padded_grid = np.pad(
-        array=grid,
-        pad_width=[(0, 0), (0, 0), (0, 0), (padding, padding), (padding, padding)],
-        mode="constant",
-    )
-    beam2d = np.absolute(grid[0, 0, 0, ...])
+    # ref_value = np.absolute(grid[0, 0, 1, ...])
+    beam2d = np.absolute(apodized_grid[0, 0, 0, ...])
     nel = beam2d.shape[0]
     xaxis = np.arange(nel)
     plt.plot(xaxis, beam2d[0, :], label='beam[0, :]')
@@ -171,19 +171,19 @@ def calculate_near_field_aperture(grid, delta, padding_factor=50):
     plt.legend()
     plt.show()
 
-    # Large gaussian to smooth aperture edges
-    gaussian_kernel = gauss_kernel(padded_grid, grid)
-    # plt.imshow(np.absolute(gaussian_kernel[0, 0, 0, ...]))
-    # plt.show()
-    # plt.close()
-
-    smoothed_beam = padded_grid*gaussian_kernel
-    # plt.imshow(np.absolute(smoothed_beam[0, 0, 0, ...]))
+    # # Large gaussian to smooth aperture edges
+    # gauss_kernel = gaussian_kernel(padded_grid, grid)
+    # # plt.imshow(np.absolute(gaussian_kernel[0, 0, 0, ...]))
+    # # plt.show()
+    # # plt.close()
+    #
+    # smoothed_beam = padded_grid*gauss_kernel
+    # # plt.imshow(np.absolute(smoothed_beam[0, 0, 0, ...]))
     # plt.show()
     # plt.close()
 
     import scipy.fftpack
-    shifted = scipy.fftpack.ifftshift(smoothed_beam)
+    shifted = scipy.fftpack.ifftshift(padded_grid)
 
     grid_fft = scipy.fftpack.fft2(shifted)
 
@@ -254,7 +254,7 @@ def calculate_parallactic_angle_chunk(
 
 
 @njit(cache=False, nogil=True)
-def gauss_kernel(padded, original):
+def gaussian_kernel(padded, original):
     mx = padded.shape[-2]//2
     my = padded.shape[-1]//2
     dx = original.shape[-2]//2
@@ -270,4 +270,76 @@ def gauss_kernel(padded, original):
                         kernel[it, ic, ip, ix, iy] = np.exp(-expo)
                         #kernel[it, ic, ip, ix, iy] = 1.
     return kernel
+
+
+def gaussian_2d(axes, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+    xaxis, yaxis = axes
+    xo = float(xo)
+    yo = float(yo)
+    acoeff = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
+    bcoeff = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
+    ccoeff = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
+    expo = acoeff*((xaxis-xo)**2) + 2*bcoeff*(xaxis-xo)*(yaxis-yo) + ccoeff*((yaxis-yo)**2)
+    gaussian = offset + amplitude*np.exp(-expo)
+    return gaussian.ravel()
+
+
+def fit_2d_gaussian(ref):
+
+    # use your favorite image processing library to load an image
+    nx, ny = ref.shape
+    data = ref.ravel()
+
+    xaxis = np.arange(nx)
+    yaxis = np.arange(ny)
+    xaxis, yaxis = np.meshgrid(xaxis, yaxis)
+
+    # initial guess of parameters
+    initial_guess = (1, nx//2, ny//2, nx, ny, 0, 0)
+
+    import scipy.optimize as opt
+    # find the optimal Gaussian parameters
+    popt, pcov = opt.curve_fit(gaussian_2d, (xaxis, yaxis), data, p0=initial_guess, maxfev=int(1e6))
+
+    # create new data with these parameters
+    data_fitted = gaussian_2d((xaxis, yaxis), *popt)
+    ref_fit = data_fitted.reshape(nx, ny)
+
+    return ref_fit
+
+
+def pad_beam_image(grid, padding_factor):
+    assert grid.shape[-1] == grid.shape[-2]  ###To do: why is this expected that l.shape == m.shape
+    initial_dimension = grid.shape[-1]
+
+    # Calculate padding as the nearest power of 2
+    # k log (2) = log(N) => k = log(N)/log(2)
+    # New shape => K = math.ceil(k) => shape = (K, K)
+
+    k = np.log(initial_dimension * padding_factor) / np.log(2)
+    K = math.ceil(k)
+
+    padding = (np.power(2, K) - padding_factor * initial_dimension) // 2
+
+    padded_grid = np.pad(
+        array=grid,
+        pad_width=[(0, 0), (0, 0), (0, 0), (padding, padding), (padding, padding)],
+        mode="constant",
+    )
+    return padded_grid
+
+
+@njit(cache=False, nogil=True)
+def apodize_beam(padded_beam, degree=2):
+    nx, ny = padded_beam.shape
+    apodizer = np.zeros(padded_beam.shape)
+    for ix in range(nx):
+        xfac = 4*(ix-nx-1)*(ix-1)/(nx**degree)
+        for iy in range(ny):
+            yfac = 4*(iy-ny-1)*(iy-1)/(ny**degree)
+            # if np.sqrt((ix-nx//2)**2 + (iy-ny//2)**2) > nx//2:
+            #     apodizer[ix, iy] = 0.0
+            # else:
+            apodizer[ix, iy] = xfac*yfac
+    return apodizer
 
