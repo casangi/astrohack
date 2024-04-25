@@ -14,7 +14,7 @@ from astrohack.utils.algorithms import find_peak_beam_value
 from astrohack.utils.constants import clight
 from astrohack.utils.data import read_meta_data
 from astrohack.utils.file import load_holog_file
-from astrohack.utils.imaging import calculate_aperture_pattern
+from astrohack.utils.imaging import calculate_far_field_aperture, calculate_near_field_aperture
 from astrohack.utils.imaging import mask_circular_disk
 from astrohack.utils.imaging import parallactic_derotation
 from astrohack.utils.phase_fitting import execute_phase_fitting
@@ -176,11 +176,18 @@ def process_holog_chunk(holog_chunk_params):
 
     logger.info("Calculating aperture pattern ...")
     # Current bottleneck
-    aperture_grid, u, v, uv_cell_size = calculate_aperture_pattern(
-        grid=beam_grid,
-        delta=holog_chunk_params["cell_size"],
-        padding_factor=holog_chunk_params["padding_factor"],
-    )
+    if is_near_field:
+        aperture_grid, u, v, uv_cell_size = calculate_near_field_aperture(
+            grid=beam_grid,
+            delta=holog_chunk_params["cell_size"],
+            padding_factor=holog_chunk_params["padding_factor"],
+        )
+    else:
+        aperture_grid, u, v, uv_cell_size = calculate_far_field_aperture(
+            grid=beam_grid,
+            delta=holog_chunk_params["cell_size"],
+            padding_factor=holog_chunk_params["padding_factor"],
+        )
 
     # Get telescope info
     ant_name = ant_data_dict[ddi][holog_map].attrs["antenna_name"]

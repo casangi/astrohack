@@ -3,6 +3,8 @@ import scipy
 import numpy as np
 import astropy.units as u
 import astropy.coordinates as coord
+from numba import njit
+from matplotlib import pyplot as plt
 
 import graphviper.utils.logger as logger
 
@@ -73,7 +75,7 @@ def mask_circular_disk(center, radius, array, mask_value=np.nan):
     return mask
 
 
-def calculate_aperture_pattern(grid, delta, padding_factor=50):
+def calculate_far_field_aperture(grid, delta, padding_factor=50):
     """ Calculates the aperture illumination pattern from the beam data.
 
     Args:
@@ -125,6 +127,88 @@ def calculate_aperture_pattern(grid, delta, padding_factor=50):
     return aperture_grid, u, v, cell_size
 
 
+def calculate_near_field_aperture(grid, delta, padding_factor=50):
+    """" Calculates the aperture illumination pattern from the near_fiedl beam data.
+
+    Args:
+        grid (numpy.ndarray): gridded beam data
+        delta (float): incremental spacing between lm values, ie. delta_l = l_(n+1) - l_(n)
+        padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edged of
+                                        each beam data grid and not between layers. Defaults to 20.
+
+    Returns:
+        numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
+    """
+
+    logger.info("Calculating aperture illumination pattern ...")
+
+    assert grid.shape[-1] == grid.shape[-2]  ###To do: why is this expected that l.shape == m.shape
+    initial_dimension = grid.shape[-1]
+
+    # Calculate padding as the nearest power of 2
+    # k log (2) = log(N) => k = log(N)/log(2)
+    # New shape => K = math.ceil(k) => shape = (K, K)
+
+    k = np.log(initial_dimension * padding_factor) / np.log(2)
+    K = math.ceil(k)
+
+    padding = (np.power(2, K) - padding_factor * initial_dimension) // 2
+
+    padded_grid = np.pad(
+        array=grid,
+        pad_width=[(0, 0), (0, 0), (0, 0), (padding, padding), (padding, padding)],
+        mode="constant",
+    )
+    beam2d = np.absolute(grid[0, 0, 0, ...])
+    nel = beam2d.shape[0]
+    xaxis = np.arange(nel)
+    plt.plot(xaxis, beam2d[0, :], label='beam[0, :]')
+    plt.plot(xaxis, beam2d[-1, :], label='beam[-1, :]')
+    plt.plot(xaxis, beam2d[:, 0], label='beam[:, 0]')
+    plt.plot(xaxis, beam2d[:, -1], label='beam[:, -1]')
+    plt.plot(xaxis, beam2d[nel//2, :], label='beam[center]')
+
+    plt.legend()
+    plt.show()
+
+    # Large gaussian to smooth aperture edges
+    gaussian_kernel = gauss_kernel(padded_grid, grid)
+    # plt.imshow(np.absolute(gaussian_kernel[0, 0, 0, ...]))
+    # plt.show()
+    # plt.close()
+
+    smoothed_beam = padded_grid*gaussian_kernel
+    # plt.imshow(np.absolute(smoothed_beam[0, 0, 0, ...]))
+    # plt.show()
+    # plt.close()
+
+    import scipy.fftpack
+    shifted = scipy.fftpack.ifftshift(smoothed_beam)
+
+    grid_fft = scipy.fftpack.fft2(shifted)
+
+    aperture_grid = scipy.fftpack.fftshift(grid_fft)
+
+    u_size = aperture_grid.shape[-2]
+    v_size = aperture_grid.shape[-1]
+
+    image_size = np.array([u_size, v_size])
+
+    cell_size = 1 / (image_size * delta)
+
+    u, v = calc_coords(image_size, cell_size)
+
+    # shifted = scipy.fftpack.fftshift(aperture_grid)
+    # grid_fft = scipy.fftpack.fft2(shifted)
+    # re_beam = scipy.fftpack.ifftshift(grid_fft)
+    #
+    # plt.imshow(np.absolute(re_beam[0, 0, 0, ...]))
+    # plt.show()
+    # plt.close()
+
+    return aperture_grid, u, v, cell_size
+
+
 def calculate_parallactic_angle_chunk(
         time_samples,
         observing_location,
@@ -167,3 +251,23 @@ def calculate_parallactic_angle_chunk(
     direction_altaz = direction.transform_to(altaz_frame)
 
     return direction_altaz.position_angle(zenith_altaz).value
+
+
+@njit(cache=False, nogil=True)
+def gauss_kernel(padded, original):
+    mx = padded.shape[-2]//2
+    my = padded.shape[-1]//2
+    dx = original.shape[-2]//2
+    dy = original.shape[-1]//2
+
+    kernel = np.empty_like(padded)
+    for it in range(padded.shape[0]):
+        for ic in range(padded.shape[1]):
+            for ip in range(padded.shape[2]):
+                for ix in range(padded.shape[3]):
+                    for iy in range(padded.shape[4]):
+                        expo = (ix-mx)**2/(2*dx**2) + (iy-my)**2/(2*dy**2)
+                        kernel[it, ic, ip, ix, iy] = np.exp(-expo)
+                        #kernel[it, ic, ip, ix, iy] = 1.
+    return kernel
+
