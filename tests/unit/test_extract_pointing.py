@@ -33,7 +33,7 @@ class TestExtractPointing:
         point_obj = extract_pointing(ms_name=self.ms_name)
 
         # Check the keys of the returned dictionary
-        expected_keys = ["point_meta_ds", "ant_ea04", "ant_ea06", "ant_ea25"]
+        expected_keys = ["meta_data", "ant_ea04", "ant_ea06", "ant_ea25"]
         
         for key in point_obj.keys():
             assert key in expected_keys
