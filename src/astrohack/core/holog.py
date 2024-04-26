@@ -14,7 +14,7 @@ from astrohack.utils.algorithms import find_peak_beam_value
 from astrohack.utils.constants import clight
 from astrohack.utils.data import read_meta_data
 from astrohack.utils.file import load_holog_file
-from astrohack.utils.imaging import calculate_far_field_aperture, calculate_near_field_aperture
+from astrohack.utils.imaging import calculate_far_field_aperture, calculate_near_field_aperture, correct_phase_nf_effects
 from astrohack.utils.imaging import mask_circular_disk
 from astrohack.utils.imaging import parallactic_derotation
 from astrohack.utils.phase_fitting import execute_phase_fitting
@@ -174,21 +174,6 @@ def process_holog_chunk(holog_chunk_params):
         beam_grid = np.mean(beam_grid, axis=0)[None, ...]
         time_centroid = np.mean(np.array(time_centroid))
 
-    logger.info("Calculating aperture pattern ...")
-    # Current bottleneck
-    if is_near_field:
-        aperture_grid, u, v, uv_cell_size = calculate_near_field_aperture(
-            grid=beam_grid,
-            delta=holog_chunk_params["cell_size"],
-            padding_factor=holog_chunk_params["padding_factor"],
-        )
-    else:
-        aperture_grid, u, v, uv_cell_size = calculate_far_field_aperture(
-            grid=beam_grid,
-            delta=holog_chunk_params["cell_size"],
-            padding_factor=holog_chunk_params["padding_factor"],
-        )
-
     # Get telescope info
     ant_name = ant_data_dict[ddi][holog_map].attrs["antenna_name"]
 
@@ -203,8 +188,27 @@ def process_holog_chunk(holog_chunk_params):
 
     else:
         raise Exception("Antenna type not found: {name}".format(name=meta_data['ant_name']))
-
     telescope = Telescope(telescope_name)
+
+    logger.info("Calculating aperture pattern ...")
+    # Current bottleneck
+    if is_near_field:
+        aperture_grid, u, v, uv_cell_size = calculate_near_field_aperture(
+            grid=beam_grid,
+            delta=holog_chunk_params["cell_size"],
+            padding_factor=holog_chunk_params["padding_factor"],
+        )
+        distance = 307  # Supposed distance in meters
+        focus_offset = ant_xds.attrs["nf_focus_off"]
+        wavelength = clight / freq_chan[0]
+        aperture_grid = correct_phase_nf_effects(aperture_grid, u, v, distance, focus_offset, telescope.focus,
+                                                 uv_cell_size, wavelength)
+    else:
+        aperture_grid, u, v, uv_cell_size = calculate_far_field_aperture(
+            grid=beam_grid,
+            delta=holog_chunk_params["cell_size"],
+            padding_factor=holog_chunk_params["padding_factor"],
+        )
 
     min_wavelength = clight / freq_chan[0]
     max_aperture_radius = (0.5 * telescope.diam) / min_wavelength

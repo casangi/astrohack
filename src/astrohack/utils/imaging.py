@@ -153,23 +153,23 @@ def calculate_near_field_aperture(grid, delta, padding_factor=50):
 
     padded_grid = pad_beam_image(apodized_grid, padding_factor)
 
-    print(apodizer.shape)
+    # print(apodizer.shape)
     # plt.imshow(apodizer)
     # plt.show()
     # plt.close()
 
     # ref_value = np.absolute(grid[0, 0, 1, ...])
-    beam2d = np.absolute(apodized_grid[0, 0, 0, ...])
-    nel = beam2d.shape[0]
-    xaxis = np.arange(nel)
-    plt.plot(xaxis, beam2d[0, :], label='beam[0, :]')
-    plt.plot(xaxis, beam2d[-1, :], label='beam[-1, :]')
-    plt.plot(xaxis, beam2d[:, 0], label='beam[:, 0]')
-    plt.plot(xaxis, beam2d[:, -1], label='beam[:, -1]')
-    plt.plot(xaxis, beam2d[nel//2, :], label='beam[center]')
-
-    plt.legend()
-    plt.show()
+    # beam2d = np.absolute(apodized_grid[0, 0, 0, ...])
+    # nel = beam2d.shape[0]
+    # xaxis = np.arange(nel)
+    # plt.plot(xaxis, beam2d[0, :], label='beam[0, :]')
+    # plt.plot(xaxis, beam2d[-1, :], label='beam[-1, :]')
+    # plt.plot(xaxis, beam2d[:, 0], label='beam[:, 0]')
+    # plt.plot(xaxis, beam2d[:, -1], label='beam[:, -1]')
+    # plt.plot(xaxis, beam2d[nel//2, :], label='beam[center]')
+    #
+    # plt.legend()
+    # plt.show()
 
     # # Large gaussian to smooth aperture edges
     # gauss_kernel = gaussian_kernel(padded_grid, grid)
@@ -330,9 +330,9 @@ def pad_beam_image(grid, padding_factor):
 
 
 @njit(cache=False, nogil=True)
-def apodize_beam(padded_beam, degree=2):
-    nx, ny = padded_beam.shape
-    apodizer = np.zeros(padded_beam.shape)
+def apodize_beam(unpadded_beam, degree=2):
+    nx, ny = unpadded_beam.shape
+    apodizer = np.zeros(unpadded_beam.shape)
     for ix in range(nx):
         xfac = 4*(ix-nx-1)*(ix-1)/(nx**degree)
         for iy in range(ny):
@@ -342,4 +342,30 @@ def apodize_beam(padded_beam, degree=2):
             # else:
             apodizer[ix, iy] = xfac*yfac
     return apodizer
+
+
+@njit(cache=False, nogil=True)
+def correct_phase_nf_effects(aperture, uaxis, vaxis, distance, focus_offset, focal_length, lmdelta, wavelength):
+    wvl = lmdelta[0] * (uaxis[1]-uaxis[0]) * uaxis.shape[0]
+    print(focal_length, focus_offset)
+    print(wvl, wavelength)
+    wave_vector = 0. + 2*np.pi*1j/wavelength
+
+    for iu, uval in enumerate(uaxis):
+        uval *= wavelength
+        for iv, vval in enumerate(vaxis):
+            vval *= wavelength
+            # print(iu, iv)
+            axis_dist2 = uval**2 + vval**2
+            z_term = axis_dist2/4/focal_length
+
+            path_variation = (axis_dist2/2/distance - axis_dist2**2/8/distance**3 +
+                              np.sqrt(axis_dist2 + (focal_length + focus_offset - z_term)**2) -
+                              (focal_length + z_term + focus_offset))
+            aperture[0, 0, 0, iu, iv] *= np.exp(wave_vector * path_variation)
+
+    # aperture[0, 0, 0, ...] = phase
+
+    return aperture
+
 
