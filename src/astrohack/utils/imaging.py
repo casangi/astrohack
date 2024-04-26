@@ -128,7 +128,7 @@ def calculate_far_field_aperture(grid, delta, padding_factor=50):
     return aperture_grid, u, v, cell_size
 
 
-def calculate_near_field_aperture(grid, sky_cell_size, lmaxes, distance, wavelength, padding_factor=50):
+def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, padding_factor=50):
     """" Calculates the aperture illumination pattern from the near_fiedl beam data.
 
     Args:
@@ -146,9 +146,20 @@ def calculate_near_field_aperture(grid, sky_cell_size, lmaxes, distance, wavelen
     apodized_grid[0, 0, 0, ...] *= apodizer
 
     padded_grid = pad_beam_image(apodized_grid, padding_factor)
-    uaxis, vaxis, aperture_cell_size = compute_uv_axes(padded_grid.shape, sky_cell_size)
+    uaxis, vaxis, laxis, maxis, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size)
+
+    fresnel = True
 
     aperture_grid = compute_aperture_fft(padded_grid)
+    ref = aperture_grid[0, 0, 0, ...].copy()
+    if fresnel:
+        aperture_grid = compute_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
+                                                    distance)
+        # diff = np.sqrt((aperture_grid[0, 0, 0, ...]-ref)**2)/ref*100
+        # print('RMS = ', np.mean(diff))
+        # print('RMS STD', np.std(diff))
+    else:
+        pass
 
     return aperture_grid, uaxis, vaxis, aperture_cell_size
 
@@ -305,13 +316,14 @@ def correct_phase_nf_effects(aperture, uaxis, vaxis, distance, focus_offset, foc
     return aperture
 
 
-def compute_uv_axes(shape, sky_cell_size):
+def compute_axes(shape, sky_cell_size):
     u_size = shape[-2]
     v_size = shape[-1]
     image_size = np.array([u_size, v_size])
     aperture_cell_size = 1 / (image_size * sky_cell_size)
     uaxis, vaxis = calc_coords(image_size, aperture_cell_size)
-    return uaxis, vaxis, aperture_cell_size
+    laxis, maxis = calc_coords(image_size, sky_cell_size)
+    return uaxis, vaxis, laxis, maxis, aperture_cell_size
 
 
 def compute_aperture_fft(padded_grid):
@@ -321,3 +333,42 @@ def compute_aperture_fft(padded_grid):
     return aperture_grid
 
 
+def compute_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength, distance, max_it=6):
+    logger.info('Applying fresnel corrections...')
+    wave_vector = 0. + 2*np.pi*1j/wavelength
+    lmesh, mmesh = np.meshgrid(laxis, maxis)
+    umesh, vmesh = np.meshgrid(uaxis, vaxis)
+    umesh *= wavelength
+    vmesh *= wavelength
+    u2mesh = np.power(umesh, 2)
+    v2mesh = np.power(vmesh, 2)
+
+    it = 1
+    while it < max_it:
+        fft_work_array = padded_grid[0, 0, 0, ...].copy()
+        if it == 1:
+            fft_work_array *= lmesh
+        elif it == 2:
+            fft_work_array *= mmesh
+        elif it == 3:
+            fft_work_array *= np.power(lmesh, 2)
+        elif it == 4:
+            fft_work_array *= np.power(mmesh, 2)
+        elif it == 5:
+            fft_work_array *= lmesh * mmesh
+
+        fresnel_corr = compute_aperture_fft(fft_work_array)
+
+        if it == 1:
+            aperture_grid += fresnel_corr * umesh*(u2mesh + v2mesh) / 2 / distance**2 * wave_vector
+        elif it == 2:
+            aperture_grid += fresnel_corr * vmesh*(u2mesh + v2mesh) / 2 / distance**2 * wave_vector
+        elif it == 3:
+            aperture_grid += fresnel_corr * u2mesh / 2 / distance * wave_vector
+        elif it == 4:
+            aperture_grid += fresnel_corr * v2mesh / 2 / distance * wave_vector
+        elif it == 5:
+            aperture_grid += fresnel_corr * umesh * vmesh / distance * wave_vector
+        it += 1
+
+    return aperture_grid
