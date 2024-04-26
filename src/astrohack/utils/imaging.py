@@ -4,6 +4,7 @@ import numpy as np
 import astropy.units as u
 import astropy.coordinates as coord
 from numba import njit
+import scipy.fftpack
 from matplotlib import pyplot as plt
 
 import graphviper.utils.logger as logger
@@ -127,12 +128,12 @@ def calculate_far_field_aperture(grid, delta, padding_factor=50):
     return aperture_grid, u, v, cell_size
 
 
-def calculate_near_field_aperture(grid, delta, padding_factor=50):
+def calculate_near_field_aperture(grid, sky_cell_size, lmaxes, distance, wavelength, padding_factor=50):
     """" Calculates the aperture illumination pattern from the near_fiedl beam data.
 
     Args:
         grid (numpy.ndarray): gridded beam data
-        delta (float): incremental spacing between lm values, ie. delta_l = l_(n+1) - l_(n)
+        sky_cell_size (float): incremental spacing between lm values, ie. delta_l = l_(n+1) - l_(n)
         padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edged of
                                         each beam data grid and not between layers. Defaults to 20.
 
@@ -140,73 +141,16 @@ def calculate_near_field_aperture(grid, delta, padding_factor=50):
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
     #
-    # # Fit reference data and then divide beam by it
-    # ref_measure = np.absolute(grid[0, 0, 1, ...])
-    # fitted_ref = fit_2d_gaussian(ref_measure)
-    # beam2d = grid[0, 0, 0, ...]
-    # beam2d /= fitted_ref
-    #
-    # grid[0, 0, 0, ...] = beam2d
     apodizer = apodize_beam(grid[0, 0, 0, ...])
     apodized_grid = grid.copy()
     apodized_grid[0, 0, 0, ...] *= apodizer
 
     padded_grid = pad_beam_image(apodized_grid, padding_factor)
+    uaxis, vaxis, aperture_cell_size = compute_uv_axes(padded_grid.shape, sky_cell_size)
 
-    # print(apodizer.shape)
-    # plt.imshow(apodizer)
-    # plt.show()
-    # plt.close()
+    aperture_grid = compute_aperture_fft(padded_grid)
 
-    # ref_value = np.absolute(grid[0, 0, 1, ...])
-    # beam2d = np.absolute(apodized_grid[0, 0, 0, ...])
-    # nel = beam2d.shape[0]
-    # xaxis = np.arange(nel)
-    # plt.plot(xaxis, beam2d[0, :], label='beam[0, :]')
-    # plt.plot(xaxis, beam2d[-1, :], label='beam[-1, :]')
-    # plt.plot(xaxis, beam2d[:, 0], label='beam[:, 0]')
-    # plt.plot(xaxis, beam2d[:, -1], label='beam[:, -1]')
-    # plt.plot(xaxis, beam2d[nel//2, :], label='beam[center]')
-    #
-    # plt.legend()
-    # plt.show()
-
-    # # Large gaussian to smooth aperture edges
-    # gauss_kernel = gaussian_kernel(padded_grid, grid)
-    # # plt.imshow(np.absolute(gaussian_kernel[0, 0, 0, ...]))
-    # # plt.show()
-    # # plt.close()
-    #
-    # smoothed_beam = padded_grid*gauss_kernel
-    # # plt.imshow(np.absolute(smoothed_beam[0, 0, 0, ...]))
-    # plt.show()
-    # plt.close()
-
-    import scipy.fftpack
-    shifted = scipy.fftpack.ifftshift(padded_grid)
-
-    grid_fft = scipy.fftpack.fft2(shifted)
-
-    aperture_grid = scipy.fftpack.fftshift(grid_fft)
-
-    u_size = aperture_grid.shape[-2]
-    v_size = aperture_grid.shape[-1]
-
-    image_size = np.array([u_size, v_size])
-
-    cell_size = 1 / (image_size * delta)
-
-    u, v = calc_coords(image_size, cell_size)
-
-    # shifted = scipy.fftpack.fftshift(aperture_grid)
-    # grid_fft = scipy.fftpack.fft2(shifted)
-    # re_beam = scipy.fftpack.ifftshift(grid_fft)
-    #
-    # plt.imshow(np.absolute(re_beam[0, 0, 0, ...]))
-    # plt.show()
-    # plt.close()
-
-    return aperture_grid, u, v, cell_size
+    return aperture_grid, uaxis, vaxis, aperture_cell_size
 
 
 def calculate_parallactic_angle_chunk(
@@ -345,17 +289,12 @@ def apodize_beam(unpadded_beam, degree=2):
 
 
 @njit(cache=False, nogil=True)
-def correct_phase_nf_effects(aperture, uaxis, vaxis, distance, focus_offset, focal_length, lmdelta, wavelength):
-    wvl = lmdelta[0] * (uaxis[1]-uaxis[0]) * uaxis.shape[0]
-    print(focal_length, focus_offset)
-    print(wvl, wavelength)
+def correct_phase_nf_effects(aperture, uaxis, vaxis, distance, focus_offset, focal_length, wavelength):
     wave_vector = 0. + 2*np.pi*1j/wavelength
-
     for iu, uval in enumerate(uaxis):
         uval *= wavelength
         for iv, vval in enumerate(vaxis):
             vval *= wavelength
-            # print(iu, iv)
             axis_dist2 = uval**2 + vval**2
             z_term = axis_dist2/4/focal_length
 
@@ -363,9 +302,22 @@ def correct_phase_nf_effects(aperture, uaxis, vaxis, distance, focus_offset, foc
                               np.sqrt(axis_dist2 + (focal_length + focus_offset - z_term)**2) -
                               (focal_length + z_term + focus_offset))
             aperture[0, 0, 0, iu, iv] *= np.exp(wave_vector * path_variation)
-
-    # aperture[0, 0, 0, ...] = phase
-
     return aperture
+
+
+def compute_uv_axes(shape, sky_cell_size):
+    u_size = shape[-2]
+    v_size = shape[-1]
+    image_size = np.array([u_size, v_size])
+    aperture_cell_size = 1 / (image_size * sky_cell_size)
+    uaxis, vaxis = calc_coords(image_size, aperture_cell_size)
+    return uaxis, vaxis, aperture_cell_size
+
+
+def compute_aperture_fft(padded_grid):
+    shifted = scipy.fftpack.ifftshift(padded_grid)
+    grid_fft = scipy.fftpack.fft2(shifted)
+    aperture_grid = scipy.fftpack.fftshift(grid_fft)
+    return aperture_grid
 
 

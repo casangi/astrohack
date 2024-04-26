@@ -193,16 +193,20 @@ def process_holog_chunk(holog_chunk_params):
     logger.info("Calculating aperture pattern ...")
     # Current bottleneck
     if is_near_field:
-        aperture_grid, u, v, uv_cell_size = calculate_near_field_aperture(
-            grid=beam_grid,
-            delta=holog_chunk_params["cell_size"],
-            padding_factor=holog_chunk_params["padding_factor"],
-        )
         distance = 307  # Supposed distance in meters
         focus_offset = ant_xds.attrs["nf_focus_off"]
         wavelength = clight / freq_chan[0]
+
+        aperture_grid, u, v, uv_cell_size = calculate_near_field_aperture(
+            grid=beam_grid,
+            sky_cell_size=holog_chunk_params["cell_size"],
+            lmaxes=(l, m),
+            distance=distance,
+            wavelength=wavelength,
+            padding_factor=holog_chunk_params["padding_factor"],
+        )
         aperture_grid = correct_phase_nf_effects(aperture_grid, u, v, distance, focus_offset, telescope.focus,
-                                                 uv_cell_size, wavelength)
+                                                 wavelength)
     else:
         aperture_grid, u, v, uv_cell_size = calculate_far_field_aperture(
             grid=beam_grid,
