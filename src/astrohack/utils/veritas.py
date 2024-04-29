@@ -1,16 +1,17 @@
+import os
 import json
-import numpy as np
 import pathlib
-import pandas as pd
 import dropbox
+
+import pandas as pd
+import numpy as np
 
 from dropbox.exceptions import AuthError
 from astrohack.dio import open_image
+from graphviper.utils import logger
 
-ACCESS_TOKEN = ""
 
 def get_center_pixel(file, antenna, ddi):
-
     mds = open_image(file)[antenna][ddi]
 
     aperture_shape = mds.APERTURE.values.shape[-2], mds.APERTURE.values.shape[-1]
@@ -60,33 +61,35 @@ def generate_verification_json(path, antenna, ddi, write=False):
         numerical_dict["vla"]["pixels"][tag]["aperture"] = list(map(str, pixels["aperture"]))
         numerical_dict["vla"]["pixels"][tag]["beam"] = list(map(str, pixels["beam"]))
 
-        cell_size, grid_size = get_grid_parameters(file=f"{path}/{tag}.split.holog.zarr")
+    cell_size, grid_size = get_grid_parameters(file=f"{path}/after.split.holog.zarr")
 
-        numerical_dict["vla"]["cell_size"] = [-cell_size, cell_size]
-        numerical_dict["vla"]["grid_size"] = [grid_size, grid_size]
+    numerical_dict["vla"]["cell_size"] = [-cell_size, cell_size]
+    numerical_dict["vla"]["grid_size"] = [grid_size, grid_size]
 
-        if write:
-            with open("holog_numerical_verification.json", "w") as json_file:
-                json.dump(numerical_dict, json_file)
+    if write:
+        with open("holog_numerical_verification.json", "w") as json_file:
+            json.dump(numerical_dict, json_file)
 
     return numerical_dict
 
 
-def dropbox_connect():
+def connect():
     """Create a connection to Dropbox."""
+    #ACCESS_TOKEN = os.getenv("SECRET_TOKEN")
+    ACCESS_TOKEN = ""
 
     try:
         dbx = dropbox.Dropbox(ACCESS_TOKEN)
     except AuthError as e:
-        print('Error connecting to Dropbox with access token: ' + str(e))
+        logger.error('Error connecting to Dropbox with access token: ' + str(e))
     return dbx
 
 
-def dropbox_list_files(path):
+def list_files(path):
     """Return a Pandas dataframe of files in a given Dropbox folder path in the Apps directory.
     """
 
-    dbx = dropbox_connect()
+    dbx = connect()
 
     try:
         files = dbx.files_list_folder(path).entries
@@ -105,23 +108,23 @@ def dropbox_list_files(path):
         return df.sort_values(by='server_modified', ascending=False)
 
     except Exception as e:
-        print('Error getting list of files from Dropbox: ' + str(e))
+        logger.error('Error getting list of files from Dropbox: ' + str(e))
 
 
-def dropbox_download_file(dropbox_file_path, local_file_path):
+def download_file(dropbox_file_path, local_file_path):
     """Download a file from Dropbox to the local machine."""
 
     try:
-        dbx = dropbox_connect()
+        dbx = connect()
 
         with open(local_file_path, 'wb') as f:
             metadata, result = dbx.files_download(path=dropbox_file_path)
             f.write(result.content)
     except Exception as e:
-        print('Error downloading file from Dropbox: ' + str(e))
+        logger.error('Error downloading file from Dropbox: ' + str(e))
 
 
-def dropbox_upload_file(local_path, local_file, dropbox_file_path):
+def upload_file(local_path, local_file, dropbox_file_path):
     """Upload a file from the local machine to a path in the Dropbox app directory.
 
     Args:
@@ -137,7 +140,7 @@ def dropbox_upload_file(local_path, local_file, dropbox_file_path):
     """
 
     try:
-        dbx = dropbox_connect()
+        dbx = connect()
 
         local_file_path = pathlib.Path(local_path) / local_file
 
@@ -146,4 +149,33 @@ def dropbox_upload_file(local_path, local_file, dropbox_file_path):
 
             return meta
     except Exception as e:
-        print('Error uploading file to Dropbox: ' + str(e))
+        logger.error('Error uploading file to Dropbox: ' + str(e))
+
+
+def connect_o2_auth():
+    from dropbox import DropboxOAuth2FlowNoRedirect
+
+    '''
+    This example walks through a basic oauth flow using the existing long-lived token type
+    Populate your app key and app secret in order to run this locally
+    '''
+    APP_KEY = ""
+    APP_SECRET = ""
+
+    auth_flow = DropboxOAuth2FlowNoRedirect(APP_KEY, APP_SECRET)
+
+    authorize_url = auth_flow.start()
+    print("1. Go to: " + authorize_url)
+    print("2. Click \"Allow\" (you might have to log in first).")
+    print("3. Copy the authorization code.")
+    auth_code = input("Enter the authorization code here: ").strip()
+
+    try:
+        oauth_result = auth_flow.finish(auth_code)
+    except Exception as e:
+        logger.error('Error: %s' % (e,))
+        exit(1)
+
+    with dropbox.Dropbox(oauth2_access_token=oauth_result.access_token) as dbx:
+        dbx.users_get_current_account()
+        logger.info("Successfully set up client!")
