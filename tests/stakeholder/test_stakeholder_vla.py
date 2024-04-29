@@ -198,6 +198,7 @@ def test_holography_pipeline(set_data):
     holog(
         holog_name=before_holog,
         padding_factor=50,
+        grid_size=[29, 29],
         grid_interpolation_mode='linear',
         chan_average=True,
         scan_average=True,
@@ -219,6 +220,7 @@ def test_holography_pipeline(set_data):
     holog(
         holog_name=after_holog,
         padding_factor=50,
+        grid_size=[29, 29],
         grid_interpolation_mode='linear',
         chan_average=True,
         scan_average=True,
