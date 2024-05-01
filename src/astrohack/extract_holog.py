@@ -410,7 +410,7 @@ def extract_holog(
         os.path.join(extract_holog_params['ms_name'], "DATA_DESCRIPTION"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     ddi_spw = ctb.getcol("SPECTRAL_WINDOW_ID")
@@ -423,7 +423,7 @@ def extract_holog(
         os.path.join(extract_holog_params['ms_name'], "ANTENNA"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     ant_names = np.array(ctb.getcol("NAME"))
@@ -437,7 +437,7 @@ def extract_holog(
         extract_holog_params['ms_name'],
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     ant1 = np.unique(ctb.getcol("ANTENNA1"))
@@ -479,7 +479,7 @@ def extract_holog(
         os.path.join(extract_holog_params['ms_name'], "STATE"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     # Scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE sub-table.
@@ -492,20 +492,20 @@ def extract_holog(
         os.path.join(extract_holog_params['ms_name'], "SPECTRAL_WINDOW"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
     pol_ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "POLARIZATION"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     obs_ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "OBSERVATION"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     telescope_name = obs_ctb.getcol("TELESCOPE_NAME")[0]
@@ -520,7 +520,7 @@ def extract_holog(
             os.path.join(extract_holog_params['ms_name'], "HISTORY"),
             readonly=True,
             lockoptions={"option": "usernoread"},
-            ack=True,
+            ack=False,
         )
 
         if "pnt_tbl:fixed" not in his_ctb.getcol("MESSAGE"):
@@ -779,7 +779,7 @@ def generate_holog_obs_dict(
         os.path.join(extract_holog_params['ms_name'], "ANTENNA"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     ant_names = np.array(ctb.getcol("NAME"))
@@ -793,7 +793,7 @@ def generate_holog_obs_dict(
         extract_holog_params['ms_name'],
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     ant1 = np.unique(ctb.getcol("ANTENNA1"))
