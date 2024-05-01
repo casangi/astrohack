@@ -674,25 +674,29 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
         'telescope_name': telescope_names[0]
     }
 
-    if not (len(set(cell_sizes_sigfigs)) == 1):
-        logger.warning('Cell size not consistent: ' + str(cell_sizes))
-        logger.warning('Calculating suggested cell size ...')
+    # Commented out tests on grid_size and cell_size as they do not help us in catching problems since grid_size and
+    # cell_size should be free to vary between antennas and DDIs, e.g. DDIs at different frequencies and arrays with
+    # antennas of different sizes
 
-        meta_data["cell_size"] = \
-            astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(cell_sizes))
-
-        logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))
-
-    if not (len(set(n_pixs)) == 1):
-        logger.warning('Number of pixels not consistent: ' + str(n_pixs))
-        logger.warning('Calculating suggested number of pixels ...')
-
-        meta_data['n_pix'] = int(
-            astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(n_pixs)))
-
-        logger.info("The suggested number of pixels is calculated to be: {n_pix} (grid: {points} x {points})".format(
-            n_pix=meta_data["n_pix"], points=int(np.sqrt(meta_data["n_pix"]))
-        ))
+    # if not (len(set(cell_sizes_sigfigs)) == 1):
+    #     logger.warning('Cell size not consistent: ' + str(cell_sizes))
+    #     logger.warning('Calculating suggested cell size ...')
+    #
+    #     meta_data["cell_size"] = \
+    #         astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(cell_sizes))
+    #
+    #     logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))
+    #
+    # if not (len(set(n_pixs)) == 1):
+    #     logger.warning('Number of pixels not consistent: ' + str(n_pixs))
+    #     logger.warning('Calculating suggested number of pixels ...')
+    #
+    #     meta_data['n_pix'] = int(
+    #         astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(n_pixs)))
+    #
+    #     logger.info("The suggested number of pixels is calculated to be: {n_pix} (grid: {points} x {points})".format(
+    #         n_pix=meta_data["n_pix"], points=int(np.sqrt(meta_data["n_pix"]))
+    #     ))
 
     if not (len(set(telescope_names)) == 1):
         logger.error('Telescope name not consistent: ' + str(telescope_names))
