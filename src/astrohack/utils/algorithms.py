@@ -415,32 +415,3 @@ def rotate_to_gmt(positions, errors, longitude):
     newerrors[0] = np.sqrt((xerr * cosdelta) ** 2 + (yerr * sindelta) ** 2)
     newerrors[1] = np.sqrt((yerr * cosdelta) ** 2 + (xerr * sindelta) ** 2)
     return newpositions, newerrors
-
-
-def time_smoothing(in_time, in_data, ou_time, int_time, in_weight=None):
-    assert in_time.shape[0] == in_data.shape[0]
-    assert len(in_time.shape) == 1
-    assert len(in_data.shape) >= 2
-    if in_weight is None:
-        in_weight = np.full_like(in_data, 1.0)
-    else:
-        assert in_data.shape == in_weight.shape
-
-    ou_data = np.full([ou_time.shape[0], *in_data.shape[1:]], 0.0, dtype=in_data.dtype)
-    ou_weight = np.full([ou_time.shape[0], *in_data.shape[1:]], 0.0)
-
-    i_ot = 0
-    for i_it, stamp in enumerate(in_time):
-        while ou_time[i_ot]+int_time < stamp: # not exactly this we need precision
-            i_ot += 1
-
-        if stamp < ou_time[i_ot]:
-            continue
-
-        ou_data[i_ot] += in_data[i_it]*in_weight[i_it]
-        ou_weight[i_ot] += in_weight[i_it]
-
-    # add numpy protection against division by zero
-    ou_data /= ou_weight
-
-    return ou_data, ou_weight
