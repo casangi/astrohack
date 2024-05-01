@@ -33,6 +33,7 @@ def process_extract_pointing(ms_name, pnt_name, exclude, parallel=True):
         os.path.join(ms_name, "ANTENNA"),
         readonly=True,
         lockoptions={"option": "usernoread"},
+        ack=False,
     )
 
     antenna_name = ctb.getcol("NAME")
