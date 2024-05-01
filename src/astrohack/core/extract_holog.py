@@ -54,6 +54,7 @@ def process_extract_holog_chunk(extract_holog_params):
 
     chan_freq = extract_holog_params["chan_setup"]["chan_freq"]
     pol = extract_holog_params["pol_setup"]["pol"]
+
     table_obj = ctables.table(ms_name, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
 
     if sel_state_ids:
@@ -68,7 +69,6 @@ def process_extract_holog_chunk(extract_holog_params):
             "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
             % (data_column, ddi, list(scans))
         )
-
     vis_data = ctb.getcol(data_column)
     weight = ctb.getcol("WEIGHT")
     ant1 = ctb.getcol("ANTENNA1")
@@ -360,10 +360,10 @@ def _create_holog_file(
         ddi (numpy.ndarray): data description id; a combination of polarization and spectral window
     """
 
-    ctb = ctables.table("/".join((ms_name, "ANTENNA")))
+    ctb = ctables.table("/".join((ms_name, "ANTENNA")), ack=False)
     observing_location = ctb.getcol("POSITION")
 
-    ctb = ctables.table("/".join((ms_name, "OBSERVATION")))
+    ctb = ctables.table("/".join((ms_name, "OBSERVATION")), ack=False)
     telescope_name = ctb.getcol("TELESCOPE_NAME")[0]
 
     ctb.close()
