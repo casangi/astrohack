@@ -33,6 +33,8 @@ def get_grid_parameters(file):
 
 
 def generate_verification_json(path, antenna, ddi, write=False):
+    from astrohack.dio import open_panel
+
     numerical_dict = {
         "vla": {
             "pixels": {
@@ -46,7 +48,8 @@ def generate_verification_json(path, antenna, ddi, write=False):
                 }
             },
             "cell_size": [],
-            "grid_size": []
+            "grid_size": [],
+            "offsets": []
         }
     }
 
@@ -65,6 +68,19 @@ def generate_verification_json(path, antenna, ddi, write=False):
     numerical_dict["vla"]["cell_size"] = [-cell_size, cell_size]
     numerical_dict["vla"]["grid_size"] = [grid_size, grid_size]
 
+    # Fill panel offsets
+    panel_list = ['3-4', '5-27', '5-37', '5-38']
+
+    M_TO_MILS = 39370.1
+
+    before_mds = open_panel(f"{path}/before.split.panel.zarr")
+    after_mds = open_panel(f"{path}/after.split.panel.zarr")
+
+    before_shift = before_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
+    after_shift = after_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
+
+    numerical_dict["vla"]["offsets"] = np.mean(after_shift - before_shift, axis=1)
+
     if write:
         with open("holog_numerical_verification.json", "w") as json_file:
             json.dump(numerical_dict, json_file)
@@ -73,6 +89,8 @@ def generate_verification_json(path, antenna, ddi, write=False):
 
 
 class Veritas:
+
+    __slots__ = ["dbx", "key", "secret", "certificate_path"]
 
     def __init__(self):
         self.dbx = None
