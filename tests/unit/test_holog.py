@@ -54,6 +54,7 @@ class TestHolog():
         holog(
             holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
             image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
+            grid_size=[29, 29],
             overwrite=True,
             parallel=False
         )

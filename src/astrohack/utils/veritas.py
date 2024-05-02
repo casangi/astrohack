@@ -79,7 +79,7 @@ def generate_verification_json(path, antenna, ddi, write=False):
     before_shift = before_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
     after_shift = after_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
 
-    numerical_dict["vla"]["offsets"] = np.mean(after_shift - before_shift, axis=1)
+    numerical_dict["vla"]["offsets"] = np.mean(after_shift - before_shift, axis=1).tolist()
 
     if write:
         with open("holog_numerical_verification.json", "w") as json_file:
@@ -204,9 +204,9 @@ class Veritas:
             oauth_result = auth_flow.finish(auth_code)
             self.dbx = dropbox.Dropbox(oauth2_access_token=oauth_result.access_token)
 
-        except Exception as e:
-            logger.error('Error: %s' % (e,))
-            exit(1)
+        except Exception as error:
+            logger.exception(f"Error: {error}")
+            raise AuthError
 
     def decrypt_data(self, certificate_path=None):
         from Crypto.PublicKey import RSA
@@ -236,7 +236,7 @@ class Veritas:
             self.key, self.secret = token.split(":")
 
         except Exception as error:
-            logger.error('Error: %s' % (error,))
+            logger.exception(f"Error: {error}")
             raise AuthError
 
 
