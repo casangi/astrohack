@@ -33,13 +33,6 @@ class TestPanel():
         )
 
         # Extract holography data using holog_obd_dict
-        holog_mds = extract_holog(
-            ms_name="data/ea25_cal_small_before_fixed.split.ms",
-            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
-            data_column="CORRECTED_DATA",
-            parallel=False,
-            overwrite=True
-        )
 
         extract_holog(
             ms_name="data/ea25_cal_small_before_fixed.split.ms",
@@ -220,6 +213,9 @@ class TestPanel():
             parallel=False,
             overwrite=True
         )
+
+        print(panel_mds["ant_ea25"]["ddi_0"].MASK.values.shape)
+        print(reference_array.shape)
 
         assert np.all(panel_mds["ant_ea25"]["ddi_0"].MASK.values == reference_array)
 

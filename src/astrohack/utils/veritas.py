@@ -1,9 +1,16 @@
 import json
 import dropbox
 import pathlib
+import graphviper
 
 import pandas as pd
 import numpy as np
+
+from astrohack.extract_pointing import extract_pointing
+from astrohack.extract_holog import extract_holog
+from astrohack.holog import holog
+from astrohack.panel import panel
+from astrohack.dio import open_panel
 
 from dropbox.exceptions import AuthError
 from astrohack.dio import open_image
@@ -87,6 +94,48 @@ def generate_verification_json(path, antenna, ddi, write=False):
 
     return numerical_dict
 
+def generate_panel_mask_array():
+    graphviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data/")
+
+    extract_pointing(
+        ms_name="data/ea25_cal_small_before_fixed.split.ms",
+        point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
+        overwrite=True,
+        parallel=False
+    )
+
+    # Extract holography data using holog_obd_dict
+    holog_mds = extract_holog(
+        ms_name="data/ea25_cal_small_before_fixed.split.ms",
+        point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
+        holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+        data_column='CORRECTED_DATA',
+        parallel=False,
+        overwrite=True
+    )
+
+    image_mds = holog(
+        holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
+        image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
+        overwrite=True,
+        parallel=False
+    )
+
+    after_mds = panel(
+        image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
+        clip_type='absolute',
+        clip_level=0.0,
+        parallel=False,
+        overwrite=True
+    )
+
+    after_mds = open_panel("data/ea25_cal_small_before_fixed.split.panel.zarr")
+
+
+    with open("panel_cutoff_mask.npy", "wb") as outfile:
+        np.save(outfile, after_mds["ant_ea25"]["ddi_0"].MASK.values)
+
+
 
 class Veritas:
 
@@ -154,13 +203,13 @@ class Veritas:
         except Exception as e:
             logger.error('Error downloading file from Dropbox: ' + str(e))
 
-    def upload_file(self, local_path, local_file, dropbox_file_path):
+    def upload_file(self, local_path, local_file, remote_file_path):
         """Upload a file from the local machine to a path in the Dropbox app directory.
 
         Args:
             local_path (str): The path to the local file.
             local_file (str): The name of the local file.
-            dropbox_file_path (str): The path to the file in the Dropbox app directory.
+            remote_file_path (str): The path to the file in the Dropbox app directory.
 
         Example:
             dropbox_upload_file('.', 'test.csv', '/stuff/test.csv')
@@ -178,7 +227,7 @@ class Veritas:
             local_file_path = pathlib.Path(local_path) / local_file
 
             with local_file_path.open("rb") as f:
-                meta = self.dbx.files_upload(f.read(), dropbox_file_path, mode=dropbox.files.WriteMode("overwrite"))
+                meta = self.dbx.files_upload(f.read(), remote_file_path, mode=dropbox.files.WriteMode("overwrite"))
 
                 return meta
         except Exception as e:
