@@ -148,13 +148,13 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
     padded_grid = pad_beam_image(apodized_grid, padding_factor)
     uaxis, vaxis, laxis, maxis, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size)
 
-    fresnel = True
+    nonfresnel = True
 
     aperture_grid = compute_aperture_fft(padded_grid)
     ref = aperture_grid[0, 0, 0, ...].copy()
-    if fresnel:
-        aperture_grid = compute_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
-                                                    distance)
+    if nonfresnel:
+        aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
+                                                        distance)
         # diff = np.sqrt((aperture_grid[0, 0, 0, ...]-ref)**2)/ref*100
         # print('RMS = ', np.mean(diff))
         # print('RMS STD', np.std(diff))
@@ -292,9 +292,6 @@ def apodize_beam(unpadded_beam, degree=2):
         xfac = 4*(ix-nx-1)*(ix-1)/(nx**degree)
         for iy in range(ny):
             yfac = 4*(iy-ny-1)*(iy-1)/(ny**degree)
-            # if np.sqrt((ix-nx//2)**2 + (iy-ny//2)**2) > nx//2:
-            #     apodizer[ix, iy] = 0.0
-            # else:
             apodizer[ix, iy] = xfac*yfac
     return apodizer
 
@@ -333,8 +330,8 @@ def compute_aperture_fft(padded_grid):
     return aperture_grid
 
 
-def compute_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength, distance, max_it=6):
-    logger.info('Applying fresnel corrections...')
+def compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength, distance, max_it=6):
+    logger.info('Applying non-fresnel corrections...')
     wave_vector = 0. + 2*np.pi*1j/wavelength
     lmesh, mmesh = np.meshgrid(laxis, maxis)
     umesh, vmesh = np.meshgrid(uaxis, vaxis)
@@ -357,18 +354,18 @@ def compute_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis,
         elif it == 5:
             fft_work_array *= lmesh * mmesh
 
-        fresnel_corr = compute_aperture_fft(fft_work_array)
+        nonfresnel_corr = compute_aperture_fft(fft_work_array)
 
         if it == 1:
-            aperture_grid += fresnel_corr * umesh*(u2mesh + v2mesh) / 2 / distance**2 * wave_vector
+            aperture_grid += nonfresnel_corr * umesh*(u2mesh + v2mesh) / 2 / distance**2 * wave_vector
         elif it == 2:
-            aperture_grid += fresnel_corr * vmesh*(u2mesh + v2mesh) / 2 / distance**2 * wave_vector
+            aperture_grid += nonfresnel_corr * vmesh*(u2mesh + v2mesh) / 2 / distance**2 * wave_vector
         elif it == 3:
-            aperture_grid += fresnel_corr * u2mesh / 2 / distance * wave_vector
+            aperture_grid += nonfresnel_corr * u2mesh / 2 / distance * wave_vector
         elif it == 4:
-            aperture_grid += fresnel_corr * v2mesh / 2 / distance * wave_vector
+            aperture_grid += nonfresnel_corr * v2mesh / 2 / distance * wave_vector
         elif it == 5:
-            aperture_grid += fresnel_corr * umesh * vmesh / distance * wave_vector
+            aperture_grid += nonfresnel_corr * umesh * vmesh / distance * wave_vector
         it += 1
 
     return aperture_grid
