@@ -93,8 +93,8 @@ def calc_coords(image_size, cell_size):
 
     image_center = image_size // 2
 
-    x = np.arange(-image_center[0], image_size[0] - image_center[0]) * cell_size[0]
-    y = np.arange(-image_center[1], image_size[1] - image_center[1]) * cell_size[1]
+    x = np.arange(-image_center[0], image_size[0] - image_center[0]) * cell_size[0] + cell_size[0]/2
+    y = np.arange(-image_center[1], image_size[1] - image_center[1]) * cell_size[1] + cell_size[1]/2
 
     return x, y
 
