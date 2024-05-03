@@ -90,31 +90,9 @@ def calculate_far_field_aperture(grid, delta, padding_factor=50):
     """
     
     logger.info("Calculating aperture illumination pattern ...")
+    padded_grid = pad_beam_image(grid, padding_factor)
 
-    assert grid.shape[-1] == grid.shape[-2]  ###To do: why is this expected that l.shape == m.shape
-    initial_dimension = grid.shape[-1]
-
-    # Calculate padding as the nearest power of 2
-    # k log (2) = log(N) => k = log(N)/log(2)
-    # New shape => K = math.ceil(k) => shape = (K, K)
-
-    k = np.log(initial_dimension * padding_factor) / np.log(2)
-    K = math.ceil(k)
-
-    padding = (np.power(2, K) - padding_factor * initial_dimension) // 2
-
-    padded_grid = np.pad(
-        array=grid,
-        pad_width=[(0, 0), (0, 0), (0, 0), (padding, padding), (padding, padding)],
-        mode="constant",
-    )
-
-    import scipy.fftpack
-    shifted = scipy.fftpack.ifftshift(padded_grid)
-
-    grid_fft = scipy.fftpack.fft2(shifted)
-
-    aperture_grid = scipy.fftpack.fftshift(grid_fft)
+    aperture_grid = compute_aperture_fft(padded_grid)
 
     u_size = aperture_grid.shape[-2]
     v_size = aperture_grid.shape[-1]
@@ -123,9 +101,9 @@ def calculate_far_field_aperture(grid, delta, padding_factor=50):
 
     cell_size = 1 / (image_size * delta)
 
-    u, v = calc_coords(image_size, cell_size)
+    uaxis, vaxis = calc_coords(image_size, cell_size)
 
-    return aperture_grid, u, v, cell_size
+    return aperture_grid, uaxis, vaxis, cell_size
 
 
 def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, padding_factor=50):
@@ -151,13 +129,9 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
     nonfresnel = True
 
     aperture_grid = compute_aperture_fft(padded_grid)
-    ref = aperture_grid[0, 0, 0, ...].copy()
     if nonfresnel:
-        aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
-                                                        distance)
-        # diff = np.sqrt((aperture_grid[0, 0, 0, ...]-ref)**2)/ref*100
-        # print('RMS = ', np.mean(diff))
-        # print('RMS STD', np.std(diff))
+        aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis,
+                                                        wavelength, distance)
     else:
         pass
 
