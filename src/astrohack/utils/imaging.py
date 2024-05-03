@@ -106,7 +106,8 @@ def calculate_far_field_aperture(grid, delta, padding_factor=50):
     return aperture_grid, uaxis, vaxis, cell_size
 
 
-def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, padding_factor=50):
+def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, padding_factor, focus_offset, focal_length,
+                                  apodize=True):
     """" Calculates the aperture illumination pattern from the near_fiedl beam data.
 
     Args:
@@ -114,28 +115,35 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
         sky_cell_size (float): incremental spacing between lm values, ie. delta_l = l_(n+1) - l_(n)
         padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edged of
                                         each beam data grid and not between layers. Defaults to 20.
+        distance: distance to holographic tower
+        wavelength: holography wavelength
+        focus_offset: Offset from primary focus on holographic receiver
+        focal_length: Antenna focal length
+        apodize: Apodize beam to avoid boxing effects in the FFT (the dashed line cross)
 
     Returns:
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
     #
-    apodizer = apodize_beam(grid[0, 0, 0, ...])
-    apodized_grid = grid.copy()
-    apodized_grid[0, 0, 0, ...] *= apodizer
+    work_grid = grid.copy()
+    if apodize:
+        apodizer = apodize_beam(grid[0, 0, 0, ...])
+        work_grid[0, 0, 0, ...] *= apodizer
 
-    padded_grid = pad_beam_image(apodized_grid, padding_factor)
+    padded_grid = pad_beam_image(work_grid, padding_factor)
     uaxis, vaxis, laxis, maxis, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size)
 
-    nonfresnel = True
-
     aperture_grid = compute_aperture_fft(padded_grid)
-    if nonfresnel:
+
+    if distance is None:
+        logger.info('Fitting distance is long and you should feel bad =0')
+    else:
         aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis,
                                                         wavelength, distance)
-    else:
-        pass
+        aperture_grid = correct_phase_nf_effects(aperture_grid, uaxis, vaxis, distance, focus_offset, focal_length,
+                                                 wavelength)
 
-    return aperture_grid, uaxis, vaxis, aperture_cell_size
+    return aperture_grid, uaxis, vaxis, aperture_cell_size, distance
 
 
 def calculate_parallactic_angle_chunk(
@@ -304,8 +312,10 @@ def compute_aperture_fft(padded_grid):
     return aperture_grid
 
 
-def compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength, distance, max_it=6):
-    logger.info('Applying non-fresnel corrections...')
+def compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength, distance,
+                                    max_it=6, verbose=True):
+    if verbose:
+        logger.info('Applying non-fresnel corrections...')
     wave_vector = 0. + 2*np.pi*1j/wavelength
     lmesh, mmesh = np.meshgrid(laxis, maxis)
     umesh, vmesh = np.meshgrid(uaxis, vaxis)
