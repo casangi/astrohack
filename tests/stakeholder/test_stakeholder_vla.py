@@ -160,7 +160,6 @@ def test_holography_pipeline(set_data):
         ms_name=before_ms,
         point_name=before_point,
         holog_name=before_holog,
-        ddi=[0],
         data_column='CORRECTED_DATA',
         parallel=False,
         overwrite=True
@@ -173,15 +172,6 @@ def test_holography_pipeline(set_data):
         data_column='CORRECTED_DATA',
         parallel=False,
         overwrite=True
-    )
-
-    with open(str(set_data / "vla.after.split.holog.zarr/.holog_attr")) as attr_file:
-        holog_attr = json.load(attr_file)
-
-    assert verify_holog_diagnostics(
-        json_data=holog_attr,
-        truth_json=str(set_data / "holog_numerical_verification.json"),
-        tolerance=1e-4
     )
 
     assert verify_holog_obs_dictionary(holog_obs_dict["vla"]["after"])
@@ -198,6 +188,7 @@ def test_holography_pipeline(set_data):
     holog(
         holog_name=before_holog,
         padding_factor=50,
+        grid_size=[29, 29],
         grid_interpolation_mode='linear',
         chan_average=True,
         scan_average=True,
@@ -219,6 +210,7 @@ def test_holography_pipeline(set_data):
     holog(
         holog_name=after_holog,
         padding_factor=50,
+        grid_size=[29, 29],
         grid_interpolation_mode='linear',
         chan_average=True,
         scan_average=True,
@@ -227,6 +219,15 @@ def test_holography_pipeline(set_data):
         apply_mask=True,
         to_stokes=True,
         parallel=False
+    )
+
+    with open(str(set_data / "vla.after.split.holog.zarr/.holog_attr")) as attr_file:
+        holog_attr = json.load(attr_file)
+
+    assert verify_holog_diagnostics(
+        json_data=holog_attr,
+        truth_json=str(set_data / "holog_numerical_verification.json"),
+        tolerance=1e-4
     )
 
     assert verify_center_pixels(
@@ -254,4 +255,4 @@ def test_holography_pipeline(set_data):
         overwrite=True
     )
 
-    assert verify_panel_shifts(data_dir=str(set_data))
+    assert verify_panel_shifts(data_dir=str(set_data), ref_mean_shift=reference_dict["vla"]["offsets"])

@@ -3,7 +3,6 @@ import json
 import numpy as np
 import xarray as xr
 import astropy
-import astrohack
 import graphviper.utils.logger as logger
 
 from numba import njit
@@ -54,6 +53,7 @@ def process_extract_holog_chunk(extract_holog_params):
 
     chan_freq = extract_holog_params["chan_setup"]["chan_freq"]
     pol = extract_holog_params["pol_setup"]["pol"]
+
     table_obj = ctables.table(ms_name, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
 
     if sel_state_ids:
@@ -68,7 +68,6 @@ def process_extract_holog_chunk(extract_holog_params):
             "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
             % (data_column, ddi, list(scans))
         )
-
     vis_data = ctb.getcol(data_column)
     weight = ctb.getcol("WEIGHT")
     ant1 = ctb.getcol("ANTENNA1")
@@ -174,7 +173,8 @@ def _get_time_intervals(time_vis_row, scan_list, time_interval):
             if time_range[0] <= time_sample <= time_range[1]:
                 filtered_time_samples.append(time_sample)
                 break
-    return np.array(filtered_time_samples)
+    time_samples = np.array(filtered_time_samples)
+    return time_samples
 
 
 @njit(cache=False, nogil=True)
@@ -224,10 +224,12 @@ def _extract_holog_chunk_jit(
 
     for antenna_id in map_ant_tuple:
         vis_map_dict[antenna_id] = np.zeros(
-            (n_time, n_chan, n_pol), dtype=types.complex64
+            (n_time, n_chan, n_pol),
+            dtype=types.complex128,
         )
         sum_weight_map_dict[antenna_id] = np.zeros(
-            (n_time, n_chan, n_pol), dtype=types.float64
+            (n_time, n_chan, n_pol),
+            dtype=types.float64,
         )
         used_samples_dict[antenna_id] = np.full(n_time, False, dtype=bool)
 
@@ -235,12 +237,14 @@ def _extract_holog_chunk_jit(
     for row in range(n_row):
         if flag_row is False:
             continue
+
         # Find index of time_vis_row[row] in time_samples, assumes time_vis_row is ordered in time
+
         if time_vis_row[row] < time_samples[time_index] - half_int:
             continue
-        elif time_vis_row[row] > time_samples[time_index] + half_int:
-            time_index += 1
-        if time_index == n_time:
+        else:
+            time_index = _get_time_index(time_vis_row[row], time_index, time_samples, half_int)
+        if time_index < 0:
             break
 
         ant1_id = ant1[row]
@@ -359,10 +363,10 @@ def _create_holog_file(
         ddi (numpy.ndarray): data description id; a combination of polarization and spectral window
     """
 
-    ctb = ctables.table("/".join((ms_name, "ANTENNA")))
+    ctb = ctables.table("/".join((ms_name, "ANTENNA")), ack=False)
     observing_location = ctb.getcol("POSITION")
 
-    ctb = ctables.table("/".join((ms_name, "OBSERVATION")))
+    ctb = ctables.table("/".join((ms_name, "OBSERVATION")), ack=False)
     telescope_name = ctb.getcol("TELESCOPE_NAME")[0]
 
     ctb.close()
@@ -610,13 +614,12 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
 
     i_time = 0
     for i_row in range(n_row):
-        if pnt_time[i_row] > time_vis[i_time] + half_int:
-            if i_time == n_samples - 1:
-                break
-            else:
-                i_time += 1
-        elif pnt_time[i_row] < time_vis[i_time] - half_int:
+        if pnt_time[i_row] < time_vis[i_time] - half_int:
             continue
+        else:
+            i_time = _get_time_index(pnt_time[i_row], i_time, time_vis, half_int)
+        if i_time < 0:
+            break
         avg_dir[i_time] += dire[i_row]
         avg_dir_cos[i_time] += dir_cos[i_row]
         avg_enc[i_time] += enc[i_row]
@@ -673,25 +676,29 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
         'telescope_name': telescope_names[0]
     }
 
-    if not (len(set(cell_sizes_sigfigs)) == 1):
-        logger.warning('Cell size not consistent: ' + str(cell_sizes))
-        logger.warning('Calculating suggested cell size ...')
+    # Commented out tests on grid_size and cell_size as they do not help us in catching problems since grid_size and
+    # cell_size should be free to vary between antennas and DDIs, e.g. DDIs at different frequencies and arrays with
+    # antennas of different sizes
 
-        meta_data["cell_size"] = \
-            astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(cell_sizes))
-
-        logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))
-
-    if not (len(set(n_pixs)) == 1):
-        logger.warning('Number of pixels not consistent: ' + str(n_pixs))
-        logger.warning('Calculating suggested number of pixels ...')
-
-        meta_data['n_pix'] = int(
-            astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(n_pixs)))
-
-        logger.info("The suggested number of pixels is calculated to be: {n_pix} (grid: {points} x {points})".format(
-            n_pix=meta_data["n_pix"], points=int(np.sqrt(meta_data["n_pix"]))
-        ))
+    # if not (len(set(cell_sizes_sigfigs)) == 1):
+    #     logger.warning('Cell size not consistent: ' + str(cell_sizes))
+    #     logger.warning('Calculating suggested cell size ...')
+    #
+    #     meta_data["cell_size"] = \
+    #         astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(cell_sizes))
+    #
+    #     logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))
+    #
+    # if not (len(set(n_pixs)) == 1):
+    #     logger.warning('Number of pixels not consistent: ' + str(n_pixs))
+    #     logger.warning('Calculating suggested number of pixels ...')
+    #
+    #     meta_data['n_pix'] = int(
+    #         astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(n_pixs)))
+    #
+    #     logger.info("The suggested number of pixels is calculated to be: {n_pix} (grid: {points} x {points})".format(
+    #         n_pix=meta_data["n_pix"], points=int(np.sqrt(meta_data["n_pix"]))
+    #     ))
 
     if not (len(set(telescope_names)) == 1):
         logger.error('Telescope name not consistent: ' + str(telescope_names))
@@ -711,3 +718,14 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
     meta_data.update(input_params)
 
     return meta_data
+
+
+@njit(cache=False, nogil=True)
+def _get_time_index(data_time, i_time, time_axis, half_int):
+    if i_time == time_axis.shape[0]:
+        return -1
+    while data_time > time_axis[i_time] + half_int:
+        i_time += 1
+        if i_time == time_axis.shape[0]:
+            return -1
+    return i_time

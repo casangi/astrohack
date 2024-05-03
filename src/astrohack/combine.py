@@ -19,7 +19,7 @@ def combine(
         image_name: str,
         combine_name: str = None,
         ant: Union[str, List[str]] = "all",
-        ddi: Union[int, List[int]] = "all",
+        ddi: Union[int, List[int], str] = "all",
         weighted: bool = False,
         parallel: bool = False,
         overwrite: bool = False
