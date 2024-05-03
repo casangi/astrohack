@@ -193,7 +193,7 @@ def process_holog_chunk(holog_chunk_params):
     logger.info("Calculating aperture pattern ...")
     # Current bottleneck
     if is_near_field:
-        distance = 3  # Supposed distance in meters
+        distance = holog_chunk_params["distance_to_tower"]
         focus_offset = ant_xds.attrs["nf_focus_off"]
         wavelength = clight / freq_chan[0]
 

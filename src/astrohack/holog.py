@@ -30,6 +30,7 @@ def holog(
         chan_average: bool = True,
         chan_tolerance_factor: float = 0.005,
         scan_average: bool = True,
+        distance_to_tower: float = None,
         ant: Union[str, List[str]] = "all",
         ddi: Union[int, List[int]] = "all",
         to_stokes: bool = True,
@@ -79,6 +80,10 @@ def holog(
 
     :param scan_average: Boolean dictating whether averaging is done over scan., defaults to True
     :type scan_average: bool, optional
+
+    :param distance_to_tower: Distance (in meters) to holography tower, only relevant to near field data, None means fit
+    for distance (it may be extremely long).
+    :type distance_to_tower: float, optional
 
     :param ant: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant: list or str, optional
