@@ -107,7 +107,7 @@ def calculate_far_field_aperture(grid, delta, padding_factor=50):
 
 
 def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, padding_factor, focus_offset, focal_length,
-                                  apodize=True):
+                                  diameter, apodize=True):
     """" Calculates the aperture illumination pattern from the near_fiedl beam data.
 
     Args:
@@ -137,6 +137,10 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
 
     if distance is None:
         logger.info('Fitting distance is long and you should feel bad =0')
+        result = fit_holo_tower_distance(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
+                                         focus_offset, focal_length, diameter)
+        print(result)
+
     else:
         aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis,
                                                         wavelength, distance)
@@ -278,20 +282,17 @@ def apodize_beam(unpadded_beam, degree=2):
     return apodizer
 
 
-@njit(cache=False, nogil=True)
 def correct_phase_nf_effects(aperture, uaxis, vaxis, distance, focus_offset, focal_length, wavelength):
+    umesh, vmesh = np.meshgrid(uaxis, vaxis)
+    umesh *= wavelength
+    vmesh *= wavelength
     wave_vector = 0. + 2*np.pi*1j/wavelength
-    for iu, uval in enumerate(uaxis):
-        uval *= wavelength
-        for iv, vval in enumerate(vaxis):
-            vval *= wavelength
-            axis_dist2 = uval**2 + vval**2
-            z_term = axis_dist2/4/focal_length
-
-            path_variation = (axis_dist2/2/distance - axis_dist2**2/8/distance**3 +
-                              np.sqrt(axis_dist2 + (focal_length + focus_offset - z_term)**2) -
-                              (focal_length + z_term + focus_offset))
-            aperture[0, 0, 0, iu, iv] *= np.exp(wave_vector * path_variation)
+    axis_dist2 = umesh**2+vmesh**2
+    z_term = axis_dist2/4/focal_length
+    path_var = (axis_dist2/2/distance - axis_dist2**2/8/distance**3 +
+                np.sqrt(axis_dist2 + (focal_length + focus_offset - z_term)**2) - (focal_length + z_term +
+                                                                                   focus_offset))
+    aperture[0, 0, 0, ...] *= np.exp(wave_vector * path_var)
     return aperture
 
 
@@ -353,3 +354,37 @@ def compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, ua
         it += 1
 
     return aperture_grid
+
+
+def fit_holo_tower_distance(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength, focus_offset,
+                            focal_length, diameter):
+    from scipy.optimize import minimize
+    fixed_par_dict = locals()
+    initial_guess = 300  # Tower is ~300m from pads in OSF, gathered from Google Maps
+    result = minimize(distance_fitting_function, initial_guess, args=fixed_par_dict)
+
+    return result
+
+
+def distance_fitting_function(distance, par_dict):
+    aperture_grid = compute_non_fresnel_corrections(par_dict["padded_grid"], par_dict["aperture_grid"],
+                                                    par_dict["laxis"], par_dict["maxis"], par_dict["uaxis"],
+                                                    par_dict["vaxis"], par_dict["wavelength"], distance)
+    aperture_grid = correct_phase_nf_effects(aperture_grid, par_dict["uaxis"], par_dict["vaxis"],
+                                             distance, par_dict["focus_offset"], par_dict["focal_length"],
+                                             par_dict["wavelength"])
+    rms = compute_phase_rms(aperture_grid, par_dict["diameter"], par_dict["uaxis"], par_dict["vaxis"],
+                            par_dict["wavelength"])
+    return rms
+
+
+def compute_phase_rms(aperture, diameter, uaxis, vaxis, wavelength):
+    phase = np.angle(aperture[0, 0, 0, ...], deg=False)
+    umesh, vmesh = np.meshgrid(uaxis, vaxis)
+    umesh *= wavelength
+    vmesh *= wavelength
+    aper_radius = np.sqrt(umesh**2+vmesh**2)
+    ant_radius = diameter/2.
+    mask = np.where(aper_radius > ant_radius, False, True)
+    rms = np.sqrt(np.mean(phase[mask] ** 2))
+    return rms

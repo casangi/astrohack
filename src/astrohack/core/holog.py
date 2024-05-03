@@ -1,5 +1,3 @@
-import matplotlib.pyplot as plt
-
 import astrohack
 import numpy as np
 import xarray as xr
@@ -14,7 +12,7 @@ from astrohack.utils.algorithms import find_peak_beam_value
 from astrohack.utils.constants import clight
 from astrohack.utils.data import read_meta_data
 from astrohack.utils.file import load_holog_file
-from astrohack.utils.imaging import calculate_far_field_aperture, calculate_near_field_aperture, correct_phase_nf_effects
+from astrohack.utils.imaging import calculate_far_field_aperture, calculate_near_field_aperture
 from astrohack.utils.imaging import mask_circular_disk
 from astrohack.utils.imaging import parallactic_derotation
 from astrohack.utils.phase_fitting import execute_phase_fitting
@@ -200,7 +198,8 @@ def process_holog_chunk(holog_chunk_params):
             wavelength=clight / freq_chan[0],
             padding_factor=holog_chunk_params["padding_factor"],
             focus_offset=ant_xds.attrs["nf_focus_off"],
-            focal_length=telescope.focus
+            focal_length=telescope.focus,
+            diameter=telescope.diam
         )
     else:
         aperture_grid, u, v, uv_cell_size = calculate_far_field_aperture(
