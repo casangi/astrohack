@@ -106,6 +106,28 @@ def calculate_far_field_aperture(grid, delta, padding_factor=50):
     return aperture_grid, uaxis, vaxis, cell_size
 
 
+def line_statistics(array, ix, iy):
+    if ix is None:
+        line = array[:, iy]
+        sx = ':'
+        sy = str(iy)
+    if iy is None:
+        line = array[ix, iy]
+        sx = str(ix)
+        sy = ':'
+    mini = np.min(line)
+    maxi = np.max(line)
+    mean = np.mean(line)
+    median = np.median(line)
+    histo = np.histogram(line)
+    print(f'amp[{sx},{sy}]:')
+    print(f'min= {mini}')
+    print(f'max= {maxi}')
+    print(f'mean= {mean}')
+    print(f'median= {median}')
+    print(f'histogram= {histo}')
+
+
 def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, padding_factor, focus_offset, focal_length,
                                   diameter, apodize=True):
     """" Calculates the aperture illumination pattern from the near_fiedl beam data.
@@ -126,8 +148,46 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
     """
     #
     work_grid = grid.copy()
+
+    # fwhm = 0.007584383013388113
+    # laxis, maxis = calc_coords(np.array([work_grid.shape[-2], work_grid.shape[-1]]), sky_cell_size)
+    # sigma = fwhm/2.355
+    # gaussian = gaussian_2d((laxis, maxis), 1, 0, 0, sigma, sigma, 0.0, 0.0)
+    # # work_grid[0, 0, 0, ...] *= gaussian
+    # #
+    # # plt.imshow(gaussian)
+    # # plt.show()
+    #
+    # amp = np.absolute(work_grid[0, 0, 0, ...])
+    # pha = np.angle(work_grid[0, 0, 0, ...])
+    # # #
+    # # # cutoff = np.nanmin(amp[amp > 0])
+    # # cutoff = 0.002
+    # # print(f'Cutoff: {cutoff}')
+    # amp -= 800*gaussian
+    # # amp[amp < 0] = 0
+    # work_grid[0, 0, 0, ...].real = amp*np.cos(pha)
+    # work_grid[0, 0, 0, ...].imag = amp*np.sin(pha)
+    # line_statistics(amp, 1, None)
+    # line_statistics(amp, -2, None)
+    # line_statistics(amp, None, 1)
+    # line_statistics(amp, None, -2)
+    # line_statistics(amp, 0, None)
+    # line_statistics(amp, -1, None)
+    # line_statistics(amp, None, 0)
+    # line_statistics(amp, None, -1)
+
+    # edge_value = np.median(amp[1, :])
+    # print(''edge_value)
+    # edge_value = np.median(amp[-2, :])
+    # print(edge_value)
+    # edge_value = np.median(amp[:, 1])
+    # print(edge_value)
+    # edge_value = np.median(amp[:, -2])
+    # print(edge_value)
+
     if apodize:
-        apodizer = apodize_beam(grid[0, 0, 0, ...])
+        apodizer = apodize_beam(work_grid[0, 0, 0, ...])
         work_grid[0, 0, 0, ...] *= apodizer
 
     padded_grid = pad_beam_image(work_grid, padding_factor)
@@ -139,13 +199,27 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
         logger.info('Fitting distance is long and you should feel bad =0')
         result = fit_holo_tower_distance(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
                                          focus_offset, focal_length, diameter)
-        print(result)
 
     else:
         aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis,
                                                         wavelength, distance)
         aperture_grid = correct_phase_nf_effects(aperture_grid, uaxis, vaxis, distance, focus_offset, focal_length,
                                                  wavelength)
+
+    # CHEATING by subtracting weird gaussian in the middle!
+    # ap_amp = np.abs(aperture_grid[0, 0, 0, ...])
+    # ap_pha = np.angle(aperture_grid[0, 0, 0, ...])
+    # max_amp = np.max(ap_amp)
+    # fwhm = 0.38/wavelength
+    # sigma = fwhm/2.355
+    # gaussian = gaussian_2d((uaxis, vaxis), max_amp, 0, 0, sigma, sigma, 0.0, 0.0)
+    # ap_amp -= gaussian
+    # fwhm = 2*0.38/wavelength
+    # sigma = fwhm/2.355
+    # gaussian = gaussian_2d((uaxis, vaxis), 0.1*max_amp, 0, 0, sigma, sigma, 0.0, 0.0)
+    # ap_amp -= gaussian
+    # aperture_grid[0, 0, 0, ...].real = ap_amp * np.cos(ap_pha)
+    # aperture_grid[0, 0, 0, ...].imag = ap_amp * np.sin(ap_pha)
 
     return aperture_grid, uaxis, vaxis, aperture_cell_size, distance
 
@@ -214,15 +288,16 @@ def gaussian_kernel(padded, original):
 
 
 def gaussian_2d(axes, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
-    xaxis, yaxis = axes
+    xaxis, yaxis = np.meshgrid(*axes)
     xo = float(xo)
     yo = float(yo)
     acoeff = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
     bcoeff = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
     ccoeff = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
     expo = acoeff*((xaxis-xo)**2) + 2*bcoeff*(xaxis-xo)*(yaxis-yo) + ccoeff*((yaxis-yo)**2)
+    # print(expo.shape, expo.dtype)
     gaussian = offset + amplitude*np.exp(-expo)
-    return gaussian.ravel()
+    return gaussian
 
 
 def fit_2d_gaussian(ref):
