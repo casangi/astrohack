@@ -57,7 +57,9 @@
             "type":["boolean"]
         },
         "phase_fit":{
-            "type":["boolean"]
+            "type":["boolean", "list", "ndarray"],
+            "minlength": 5,
+            "maxlength": 5
         },
         "parallel":{
             "type":["boolean"]
