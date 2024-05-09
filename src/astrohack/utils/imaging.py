@@ -112,7 +112,7 @@ def line_statistics(array, ix, iy):
         sx = ':'
         sy = str(iy)
     if iy is None:
-        line = array[ix, iy]
+        line = array[ix, :]
         sx = str(ix)
         sy = ':'
     mini = np.min(line)
@@ -147,44 +147,11 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
     #
-    work_grid = grid.copy()
-
-    # fwhm = 0.007584383013388113
-    # laxis, maxis = calc_coords(np.array([work_grid.shape[-2], work_grid.shape[-1]]), sky_cell_size)
-    # sigma = fwhm/2.355
-    # gaussian = gaussian_2d((laxis, maxis), 1, 0, 0, sigma, sigma, 0.0, 0.0)
-    # # work_grid[0, 0, 0, ...] *= gaussian
-    # #
-    # # plt.imshow(gaussian)
-    # # plt.show()
+    # # gridding here?
     #
-    # amp = np.absolute(work_grid[0, 0, 0, ...])
-    # pha = np.angle(work_grid[0, 0, 0, ...])
-    # # #
-    # # # cutoff = np.nanmin(amp[amp > 0])
-    # # cutoff = 0.002
-    # # print(f'Cutoff: {cutoff}')
-    # amp -= 800*gaussian
-    # # amp[amp < 0] = 0
-    # work_grid[0, 0, 0, ...].real = amp*np.cos(pha)
-    # work_grid[0, 0, 0, ...].imag = amp*np.sin(pha)
-    # line_statistics(amp, 1, None)
-    # line_statistics(amp, -2, None)
-    # line_statistics(amp, None, 1)
-    # line_statistics(amp, None, -2)
-    # line_statistics(amp, 0, None)
-    # line_statistics(amp, -1, None)
-    # line_statistics(amp, None, 0)
-    # line_statistics(amp, None, -1)
 
-    # edge_value = np.median(amp[1, :])
-    # print(''edge_value)
-    # edge_value = np.median(amp[-2, :])
-    # print(edge_value)
-    # edge_value = np.median(amp[:, 1])
-    # print(edge_value)
-    # edge_value = np.median(amp[:, -2])
-    # print(edge_value)
+
+    work_grid = grid.copy()
 
     if apodize:
         apodizer = apodize_beam(work_grid[0, 0, 0, ...])
@@ -195,33 +162,30 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
 
     aperture_grid = compute_aperture_fft(padded_grid)
 
-    if distance is None:
-        logger.info('Fitting distance is long and you should feel bad =0')
-        result = fit_holo_tower_distance(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
-                                         focus_offset, focal_length, diameter)
+    # if distance is None:
+    #     logger.info('Fitting distance is long and you should feel bad =0')
+    #     result = fit_holo_tower_distance(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
+    #                                      focus_offset, focal_length, diameter)
+    #
+    # else:
+    aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
+                                                    distance)
+    # VVV
+    # Insert here gridding correction here
+    #
+    aperture_grid = correct_phase_nf_effects(aperture_grid, uaxis, vaxis, distance, focus_offset, focal_length,
+                                             wavelength)
+    # VVV
+    # Insert feed correction here
+    #
 
-    else:
-        aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis,
-                                                        wavelength, distance)
-        aperture_grid = correct_phase_nf_effects(aperture_grid, uaxis, vaxis, distance, focus_offset, focal_length,
-                                                 wavelength)
-
-    # CHEATING by subtracting weird gaussian in the middle!
-    # ap_amp = np.abs(aperture_grid[0, 0, 0, ...])
-    # ap_pha = np.angle(aperture_grid[0, 0, 0, ...])
-    # max_amp = np.max(ap_amp)
-    # fwhm = 0.38/wavelength
-    # sigma = fwhm/2.355
-    # gaussian = gaussian_2d((uaxis, vaxis), max_amp, 0, 0, sigma, sigma, 0.0, 0.0)
-    # ap_amp -= gaussian
-    # fwhm = 2*0.38/wavelength
-    # sigma = fwhm/2.355
-    # gaussian = gaussian_2d((uaxis, vaxis), 0.1*max_amp, 0, 0, sigma, sigma, 0.0, 0.0)
-    # ap_amp -= gaussian
-    # aperture_grid[0, 0, 0, ...].real = ap_amp * np.cos(ap_pha)
-    # aperture_grid[0, 0, 0, ...].imag = ap_amp * np.sin(ap_pha)
 
     return aperture_grid, uaxis, vaxis, aperture_cell_size, distance
+
+
+def gridding_correction():
+
+    return
 
 
 def calculate_parallactic_angle_chunk(
