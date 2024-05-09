@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 import graphviper.utils.logger as logger
 
 from skimage.draw import disk
-from astrohack.utils.algorithms import calc_coords
+from astrohack.utils.algorithms import calc_coords, least_squares
 
 
 def parallactic_derotation(data, parallactic_angle_dict):
@@ -175,17 +175,71 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
     #
     aperture_grid = correct_phase_nf_effects(aperture_grid, uaxis, vaxis, distance, focus_offset, focal_length,
                                              wavelength)
+
     # VVV
     # Insert feed correction here
     #
-
+    phase = np.angle(aperture_grid[0, 0, 0, ...])
+    amp = np.absolute(aperture_grid[0, 0, 0, ...])
+    phase = feed_correction(phase, uaxis, vaxis, focal_length, wavelength)
+    fitted_amp = fit_illumination_pattern(amp, uaxis, vaxis, wavelength)
+    aperture_grid[0, 0, 0, ...] = fitted_amp * (np.cos(phase) + 1j*np.sin(phase))
 
     return aperture_grid, uaxis, vaxis, aperture_cell_size, distance
 
 
-def gridding_correction():
+def feed_correction(phase, uaxis, vaxis, focal_length, wavelength, nk=10):
+    # Tabulated Sigma GE and GH functions:
+    gh_tab = [13.33004 - 0.03155j, -1.27077 + 0.00656j, 0.38349 - 0.17755j, 0.78041 - 0.11238j, -0.54821 + 0.16739j,
+              -0.68021 + 0.11472j, 1.05341 - 0.01921j, -0.80119 + 0.06443j, 0.36258 - 0.01845j, -0.07905 + 0.00515j]
+    ge_tab = [12.79400 + 2.27305j, 1.06279 - 0.56235j, -1.92694 - 1.72309j, 1.79152 - 0.08008j,  0.09406 + 0.46197j,
+              -2.82441 - 1.06010j, 2.77077 + 1.02349j, -1.74437 - 0.45956j, 0.62276 + 0.11504j, -0.11176 + 0.01616j]
 
-    return
+    umesh, vmesh = np.meshgrid(uaxis*wavelength, vaxis*wavelength)
+    radius2 = umesh**2 + vmesh**2
+    theta2 = radius2 / 4 / focal_length**2
+    theta = np.sqrt(theta2)
+    z_term = np.cos(theta) + np.sin(theta)*1j
+
+    zz_term = np.full_like(phase, 1+0j, dtype=complex)
+    geth = np.zeros_like(phase, dtype=complex)
+    ghth = np.zeros_like(phase, dtype=complex)
+
+    for k in range(nk):
+        zz_term *= z_term
+        costh = zz_term.real
+        geth += ge_tab[k] * costh
+        ghth += gh_tab[k] * costh
+    phi = np.arctan2(vmesh, umesh)
+    gain = geth * np.sin(phi)**2 + ghth * np.cos(phi)**2
+    phase += np.angle(gain)
+    return phase
+
+
+def fit_illumination_pattern(amp, uaxis, vaxis, wavelength):
+    amp_max = np.max(amp)
+    db_amp = 10.*np.log10(amp/amp_max)
+
+    npar = 5
+    umesh, vmesh = np.meshgrid(uaxis*wavelength, vaxis*wavelength)
+    umesh = umesh.ravel()
+    vmesh = vmesh.ravel()
+    umesh2 = umesh**2
+    vmesh2 = vmesh**2
+
+    npoints = umesh.shape[0]
+    matrix = np.empty([npoints, npar])
+    matrix[:, 0] = umesh2
+    matrix[:, 1] = vmesh2
+    matrix[:, 2] = umesh
+    matrix[:, 3] = vmesh
+    matrix[:, 4] = 1.0
+    vector = db_amp.ravel()
+
+    result, _, _ = least_squares(matrix, vector)
+    db_fitted = umesh2*result[0] + vmesh2*result[1] + umesh*result[2] + vmesh*result[3] + result[4]
+    fitted = 10**(db_fitted/10)
+    return fitted.reshape(amp.shape)
 
 
 def calculate_parallactic_angle_chunk(
