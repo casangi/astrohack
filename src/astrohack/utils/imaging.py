@@ -129,7 +129,7 @@ def line_statistics(array, ix, iy):
 
 
 def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, padding_factor, focus_offset, focal_length,
-                                  diameter, apodize=True):
+                                  diameter, blockage, apodize=True):
     """" Calculates the aperture illumination pattern from the near_fiedl beam data.
 
     Args:
@@ -182,7 +182,7 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
     phase = np.angle(aperture_grid[0, 0, 0, ...])
     amp = np.absolute(aperture_grid[0, 0, 0, ...])
     phase = feed_correction(phase, uaxis, vaxis, focal_length, wavelength)
-    fitted_amp = fit_illumination_pattern(amp, uaxis, vaxis, wavelength)
+    fitted_amp = fit_illumination_pattern(amp, uaxis, vaxis, wavelength, diameter, blockage)
     aperture_grid[0, 0, 0, ...] = fitted_amp * (np.cos(phase) + 1j*np.sin(phase))
 
     return aperture_grid, uaxis, vaxis, aperture_cell_size, distance
@@ -216,7 +216,7 @@ def feed_correction(phase, uaxis, vaxis, focal_length, wavelength, nk=10):
     return phase
 
 
-def fit_illumination_pattern(amp, uaxis, vaxis, wavelength):
+def fit_illumination_pattern(amp, uaxis, vaxis, wavelength, diameter, blockage):
     amp_max = np.max(amp)
     db_amp = 10.*np.log10(amp/amp_max)
 
@@ -227,19 +227,117 @@ def fit_illumination_pattern(amp, uaxis, vaxis, wavelength):
     umesh2 = umesh**2
     vmesh2 = vmesh**2
 
-    npoints = umesh.shape[0]
+    oulim2 = (diameter/2)**2
+    inlim2 = blockage**2
+    dist2 = umesh2 + vmesh2
+
+    mask = np.where(dist2 >= inlim2, True, False)
+    mask = np.where(dist2 >= oulim2, False, mask)
+    # mask = np.full_like(umesh, True, dtype=bool)
+
+    npoints = np.sum(mask)
     matrix = np.empty([npoints, npar])
-    matrix[:, 0] = umesh2
-    matrix[:, 1] = vmesh2
-    matrix[:, 2] = umesh
-    matrix[:, 3] = vmesh
+    matrix[:, 0] = umesh2[mask]
+    matrix[:, 1] = vmesh2[mask]
+    matrix[:, 2] = umesh[mask]
+    matrix[:, 3] = vmesh[mask]
     matrix[:, 4] = 1.0
-    vector = db_amp.ravel()
+    vector = db_amp.ravel()[mask]
 
     result, _, _ = least_squares(matrix, vector)
     db_fitted = umesh2*result[0] + vmesh2*result[1] + umesh*result[2] + vmesh*result[3] + result[4]
     fitted = 10**(db_fitted/10)
     return fitted.reshape(amp.shape)
+
+
+def exponential_convolution_kernel(support, width, exponent):
+    # Number of rows
+    used_support = int(max(support + 0.995, 1.0))
+    used_support = used_support * 2 + 1
+    kernel_size = used_support * 100 + 1
+
+    bias = 50.0 * used_support + 1.0
+    u_axis = np.abs(np.arange(kernel_size)-bias*0.01)
+    kernel = np.where(u_axis > support, 0, np.exp(-(u_axis/width)**exponent))
+
+    ker_dict = {'kernel': kernel,
+                'bias': bias,
+                'support': support}
+    # kernel = np.empty(kernel_size)
+    # par1 = 1.0 / width
+    # for i_u in range(kernel_size):
+    #     u_pix = (i_u-bias) * 0.01
+    #     absu = abs(u_pix)
+    #     if absu > support:
+    #         kernel[i_u] = 0.0
+    #     else:
+    #         kernel[i_u] = np.exp(-((par1*absu) ** exponent))
+
+    return ker_dict
+
+
+def convolution_gridding(grid_type, visibilities, weights, lmaxis, diameter, freq, sky_cell_size):
+    # This beam size is anchored at NOEMA beam measurements we might need a more general formula
+    beam_size = 41*(115000./freq)*np.sqrt(2.)*(15./diameter)*np.pi/180/3600
+    smoothing = beam_size/2.0
+    support = 4*smoothing
+    l_support = support/sky_cell_size[0]
+    m_support = support/sky_cell_size[1]
+    l_width = smoothing/(2*np.sqrt(np.log(2.0)))/np.abs(sky_cell_size[0])
+    m_width = smoothing/(2*np.sqrt(np.log(2.0)))/np.abs(sky_cell_size[1])
+    exponent = 2
+
+    if grid_type == 'exponential':
+        l_kernel = exponential_convolution_kernel(l_support, l_width, exponent)
+        m_kernel = exponential_convolution_kernel(m_support, m_width, exponent)
+    else:
+        msg = f'Unknown grid type {grid_type}.'
+        logger.error(msg)
+        raise Exception(msg)
+
+    #grid = convolution_gridding_jit()
+
+
+def convolution_gridding_jit(visibilities, lmaxis, weights, l_kernel, m_kernel, sky_cell_size, grid_size):
+    ntime, nchan, npol = visibilities.shape
+
+    if nchan > 1:
+        msg = 'Convolution gridding only supported for a single channel currently'
+        logger.error(msg)
+        raise Exception(msg)
+
+    beam_grid = np.zeros([1, nchan, npol, *grid_size], dtype=complex)
+    weig_grid = np.zeros([1, nchan, npol, *grid_size])
+    laxis, maxis = calc_coords(grid_size, sky_cell_size)
+
+    for i_time in range(ntime):
+        lval, mval = lmaxis[i_time]
+        i_lmin, i_lmax = compute_imin_max(lval, laxis, l_kernel['support'], grid_size[0])
+        i_mmin, i_mmax = compute_imin_max(mval, maxis, m_kernel['support'], grid_size[1])
+
+        for i_chan in range(nchan):
+            for i_pol in range(npol):
+                for il in range(i_lmin, i_lmax):
+                    dl = laxis(il)-lval/sky_cell_size[0]
+                    for im in range(i_mmin, i_lmax):
+                        dm = maxis(im)-mval/sky_cell_size[1]
+                        conv_fact = (conv_factor(dl, l_kernel) * conv_factor(dm, m_kernel) *
+                                     weights[i_time, i_chan, i_pol])
+                        beam_grid[il, im] += conv_fact*visibilities[i_time, i_chan, i_pol]
+                        weig_grid[il, im] += conv_fact
+
+    beam_grid /= weig_grid
+
+    return beam_grid, weig_grid
+
+
+def compute_imin_max(coor, axis, support, size):
+    return 0, 1
+
+
+def conv_factor(delta, kernel):
+    ikern = round(100.0*delta+kernel['bias'])
+    return kernel['kernel'][ikern]
 
 
 def calculate_parallactic_angle_chunk(

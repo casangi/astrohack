@@ -199,7 +199,8 @@ def process_holog_chunk(holog_chunk_params):
             padding_factor=holog_chunk_params["padding_factor"],
             focus_offset=ant_xds.attrs["nf_focus_off"],
             focal_length=telescope.focus,
-            diameter=telescope.diam
+            diameter=telescope.diam,
+            blockage=telescope.inlim,
         )
     else:
         aperture_grid, u, v, uv_cell_size = calculate_far_field_aperture(
