@@ -13,7 +13,7 @@ from astrohack.utils.constants import clight
 from astrohack.utils.data import read_meta_data
 from astrohack.utils.file import load_holog_file
 from astrohack.utils.imaging import calculate_far_field_aperture, calculate_near_field_aperture
-from astrohack.utils.imaging import mask_circular_disk
+from astrohack.utils.imaging import mask_circular_disk, convolution_gridding
 from astrohack.utils.imaging import parallactic_derotation
 from astrohack.utils.phase_fitting import execute_phase_fitting
 from astrohack.utils.text import get_str_idx_in_list
@@ -77,6 +77,22 @@ def process_holog_chunk(holog_chunk_params):
 
     time_centroid = []
 
+    # Get telescope info
+    ant_name = ant_data_dict[ddi]['map_0'].attrs["antenna_name"]
+
+    if ant_name.upper().__contains__('DV'):
+        telescope_name = "_".join((meta_data['telescope_name'], 'DV'))
+
+    elif ant_name.upper().__contains__('DA'):
+        telescope_name = "_".join((meta_data['telescope_name'], 'DA'))
+
+    elif ant_name.upper().__contains__('EA'):
+        telescope_name = 'VLA'
+
+    else:
+        raise Exception("Antenna type not found: {name}".format(name=meta_data['ant_name']))
+    telescope = Telescope(telescope_name)
+
     for holog_map_index, holog_map in enumerate(ant_data_dict[ddi].keys()):
         ant_xds = ant_data_dict[ddi][holog_map]
 
@@ -88,31 +104,37 @@ def process_holog_chunk(holog_chunk_params):
         lm = ant_xds.DIRECTIONAL_COSINES.values
         weight = ant_xds.WEIGHT.values
 
-        if holog_chunk_params["chan_average"]:
-            vis_avg, weight_sum = chunked_average(vis, weight, avg_chan_map, avg_freq)
-            lm_freq_scaled = lm[:, :, None] * (avg_freq / reference_scaling_frequency)
-
-            n_chan = avg_freq.shape[0]
-
-            # Unavoidable for loop because lm change over frequency.
-            for chan_index in range(n_chan):
-                # Average scaled beams.
-                beam_grid[holog_map_index, 0, :, :, :] = (beam_grid[holog_map_index, 0, :, :, :] +
-                                                          np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index],
-                                                                               vis_avg[:, chan_index, :],
-                                                                               (grid_l, grid_m), method=
-                                                                               grid_interpolation_mode,
-                                                                               fill_value=0.0), 2, 0))
-            # Averaging now complete
-            n_chan = 1
-            freq_chan = [np.mean(avg_freq)]
+        if is_near_field:
+            beam_grid[holog_map_index, ...] = convolution_gridding('exponential', vis, weight, lm, telescope.diam,
+                                                                   avg_freq, holog_chunk_params["cell_size"],
+                                                                   holog_chunk_params["grid_size"])
         else:
-            beam_grid[holog_map_index, ...] = np.moveaxis(griddata(lm, vis, (grid_l, grid_m),
-                                                                   method=grid_interpolation_mode,
-                                                                   fill_value=0.0), (0, 1), (2, 3))
+            if holog_chunk_params["chan_average"]:
+                vis_avg, weight_sum = chunked_average(vis, weight, avg_chan_map, avg_freq)
+                lm_freq_scaled = lm[:, :, None] * (avg_freq / reference_scaling_frequency)
+
+                n_chan = avg_freq.shape[0]
+
+                # Unavoidable for loop because lm change over frequency.
+                for chan_index in range(n_chan):
+                    # Average scaled beams.
+                    beam_grid[holog_map_index, 0, :, :, :] = (beam_grid[holog_map_index, 0, :, :, :] +
+                                                              np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index],
+                                                                                   vis_avg[:, chan_index, :],
+                                                                                   (grid_l, grid_m), method=
+                                                                                   grid_interpolation_mode,
+                                                                                   fill_value=0.0), 2, 0))
+                # Averaging now complete
+                n_chan = 1
+                freq_chan = [np.mean(avg_freq)]
+            else:
+                beam_grid[holog_map_index, ...] = np.moveaxis(griddata(lm, vis, (grid_l, grid_m),
+                                                                       method=grid_interpolation_mode,
+                                                                       fill_value=0.0), (0, 1), (2, 3))
 
         time_centroid_index = ant_data_dict[ddi][holog_map].sizes["time"] // 2
         time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
+
 
         for chan in range(n_chan):  # Todo: Vectorize holog_map and channel axis
             if is_near_field:
@@ -172,21 +194,7 @@ def process_holog_chunk(holog_chunk_params):
         beam_grid = np.mean(beam_grid, axis=0)[None, ...]
         time_centroid = np.mean(np.array(time_centroid))
 
-    # Get telescope info
-    ant_name = ant_data_dict[ddi][holog_map].attrs["antenna_name"]
 
-    if ant_name.upper().__contains__('DV'):
-        telescope_name = "_".join((meta_data['telescope_name'], 'DV'))
-
-    elif ant_name.upper().__contains__('DA'):
-        telescope_name = "_".join((meta_data['telescope_name'], 'DA'))
-
-    elif ant_name.upper().__contains__('EA'):
-        telescope_name = 'VLA'
-
-    else:
-        raise Exception("Antenna type not found: {name}".format(name=meta_data['ant_name']))
-    telescope = Telescope(telescope_name)
 
     logger.info("Calculating aperture pattern ...")
     # Current bottleneck
