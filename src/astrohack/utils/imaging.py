@@ -4,6 +4,7 @@ import numpy as np
 import astropy.units as u
 import astropy.coordinates as coord
 from numba import njit
+from numba.core import types
 import scipy.fftpack
 from matplotlib import pyplot as plt
 import time
@@ -301,13 +302,16 @@ def convolution_gridding(grid_type, visibilities, weights, lmaxis, diameter, fre
 
     logger.info('Creating convolved beam...')
     start = time.time()
-    beam, wei = convolution_gridding_jit(visibilities, lmaxis, weights, l_kernel, m_kernel, sky_cell_size, grid_size)
+    laxis, maxis = calc_coords(grid_size, sky_cell_size)
+    beam, wei = convolution_gridding_jit(visibilities, lmaxis, weights, l_kernel, m_kernel, sky_cell_size, grid_size,
+                                         laxis, maxis)
     duration = time.time()-start
     logger.info(f'Convolution took {duration:.3} seconds')
     return beam
 
 
-def convolution_gridding_jit(visibilities, lmaxis, weights, l_kernel, m_kernel, sky_cell_size, grid_size):
+@njit(cache=False, nogil=True)
+def convolution_gridding_jit(visibilities, lmaxis, weights, l_kernel, m_kernel, sky_cell_size, grid_size, laxis, maxis):
     ntime, nchan, npol = visibilities.shape
 
     if nchan > 1:
@@ -315,13 +319,12 @@ def convolution_gridding_jit(visibilities, lmaxis, weights, l_kernel, m_kernel, 
         logger.error(msg)
         raise Exception(msg)
 
-    beam_grid = np.zeros([nchan, npol, *grid_size], dtype=complex)
-    weig_grid = np.zeros([nchan, npol, *grid_size])
-    laxis, maxis = calc_coords(grid_size, sky_cell_size)
+    beam_grid = np.zeros([nchan, npol, grid_size[0], grid_size[1]], dtype=types.complex128)
+    weig_grid = np.zeros([nchan, npol, grid_size[0], grid_size[1]])
 
     for i_time in range(ntime):
-        if i_time % 100 == 0:
-            print(f'{100*i_time/ntime:.1f}% done')
+        # if i_time % 100 == 0:
+        #     print(f'{100*i_time/ntime:.1f}% done')
 
         lval, mval = lmaxis[i_time]
         #print('l')
@@ -342,13 +345,13 @@ def convolution_gridding_jit(visibilities, lmaxis, weights, l_kernel, m_kernel, 
                         beam_grid[i_chan, i_pol, il, im] += conv_fact*visibilities[i_time, i_chan, i_pol]
                         weig_grid[i_chan, i_pol, il, im] += conv_fact
 
-    plt.imshow(np.abs(beam_grid[0, 0, ...]))
-    plt.show()
+    # plt.imshow(np.abs(beam_grid[0, 0, ...]))
+    # plt.show()
 
     beam_grid /= weig_grid
     return beam_grid, weig_grid
 
-
+@njit(cache=False, nogil=True)
 def find_nearest(value, array):
     diff = np.abs(array-value)
     idx = diff.argmin()
@@ -361,7 +364,7 @@ def find_nearest(value, array):
     # else:
     #     return idx
 
-
+@njit(cache=False, nogil=True)
 def compute_i_min_max(coor, axis, support, cell_size, grid_size):
     idx = find_nearest(coor, axis)
     pix_support = np.ceil(np.abs(support/cell_size))[0]
@@ -381,7 +384,7 @@ def compute_i_min_max(coor, axis, support, cell_size, grid_size):
 
     return int(i_min), int(i_max)
 
-
+@njit(cache=False, nogil=True)
 def conv_factor(delta, kernel):
     # print(delta)
     ikern = round(100.0*delta+kernel['bias'])
