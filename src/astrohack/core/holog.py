@@ -13,7 +13,8 @@ from astrohack.utils.constants import clight
 from astrohack.utils.data import read_meta_data
 from astrohack.utils.file import load_holog_file
 from astrohack.utils.imaging import calculate_far_field_aperture, calculate_near_field_aperture
-from astrohack.utils.imaging import mask_circular_disk, convolution_gridding
+from astrohack.utils.imaging import mask_circular_disk
+from astrohack.utils.covolution_gridding import convolution_gridding
 from astrohack.utils.imaging import parallactic_derotation
 from astrohack.utils.phase_fitting import execute_phase_fitting
 from astrohack.utils.text import get_str_idx_in_list
