@@ -10,6 +10,8 @@ import graphviper.utils.logger as logger
 
 from skimage.draw import disk
 from astrohack.utils.algorithms import calc_coords, least_squares
+from astrohack.utils.covolution_gridding import gridding_correction
+from astrohack.utils.constants import clight
 
 
 def parallactic_derotation(data, parallactic_angle_dict):
@@ -169,20 +171,20 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
     # else:
     aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
                                                     distance)
-    # VVV
-    # Insert here gridding correction here
-    #
+
+    freq = clight/wavelength
+    aperture_grid = gridding_correction(aperture_grid, freq, diameter, sky_cell_size, uaxis, vaxis)
+
     aperture_grid = correct_phase_nf_effects(aperture_grid, uaxis, vaxis, distance, focus_offset, focal_length,
                                              wavelength)
 
-    # VVV
-    # Insert feed correction here
     #
     phase = np.angle(aperture_grid[0, 0, 0, ...])
     amp = np.absolute(aperture_grid[0, 0, 0, ...])
     phase = feed_correction(phase, uaxis, vaxis, focal_length, wavelength)
     fitted_amp = fit_illumination_pattern(amp, uaxis, vaxis, wavelength, diameter, blockage)
-    aperture_grid[0, 0, 0, ...] = fitted_amp * (np.cos(phase) + 1j*np.sin(phase))
+    # aperture_grid[0, 0, 0, ...] = fitted_amp * (np.cos(phase) + 1j * np.sin(phase))
+    aperture_grid[0, 0, 0, ...] = amp * (np.cos(phase) + 1j * np.sin(phase))
 
     return aperture_grid, uaxis, vaxis, aperture_cell_size, distance
 
