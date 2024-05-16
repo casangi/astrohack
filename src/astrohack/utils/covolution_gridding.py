@@ -56,7 +56,6 @@ def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, laxis
                     l_fac = _convolution_factor(l_kernel, laxis[il] - lval)
                     for im in range(i_mmin, i_mmax):
                         m_fac = _convolution_factor(m_kernel, maxis[im] - mval)
-
                         conv_fact = l_fac * m_fac * weights[i_time, i_chan, i_pol]
                         beam_grid[i_chan, i_pol, il, im] += conv_fact*visibilities[i_time, i_chan, i_pol]
                         weig_grid[i_chan, i_pol, il, im] += conv_fact
@@ -104,8 +103,8 @@ def _create_exponential_kernel(beam_size, cell_size, exponent=2):
 @njit(cache=False, nogil=True)
 def _compute_kernel_range(kernel, coor, axis):
     idx = _find_nearest(coor, axis)
-    i_min = idx - kernel['pix_support']
-    i_max = idx + kernel['pix_support']
+    i_min = round(idx - kernel['pix_support'])
+    i_max = round(idx + kernel['pix_support'])
 
     if i_min < 0:
         i_min = 0
