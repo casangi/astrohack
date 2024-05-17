@@ -1,4 +1,6 @@
 import math
+
+import matplotlib.pyplot as plt
 import scipy
 import numpy as np
 import astropy.units as u
@@ -11,7 +13,8 @@ import graphviper.utils.logger as logger
 from skimage.draw import disk
 from astrohack.utils.algorithms import calc_coords, least_squares
 from astrohack.utils.covolution_gridding import gridding_correction
-from astrohack.utils.constants import clight
+from astrohack.utils.constants import clight, sig_2_fwhm
+from astrohack.visualization.plot_tools import create_figure_and_axes
 
 
 def parallactic_derotation(data, parallactic_angle_dict):
@@ -150,8 +153,6 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
     #
     # # gridding here?
     #
-
-
     work_grid = grid.copy()
 
     if apodize:
@@ -181,6 +182,9 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
     #
     phase = np.angle(aperture_grid[0, 0, 0, ...])
     amp = np.absolute(aperture_grid[0, 0, 0, ...])
+    dishhorn_artefact = fit_dishhorn_beam_artefact(amp, blockage, uaxis, vaxis, wavelength, diameter)
+    amp -= dishhorn_artefact
+
     phase = feed_correction(phase, uaxis, vaxis, focal_length, wavelength)
     fitted_amp = fit_illumination_pattern(amp, uaxis, vaxis, wavelength, diameter, blockage)
     # aperture_grid[0, 0, 0, ...] = fitted_amp * (np.cos(phase) + 1j * np.sin(phase))
@@ -295,60 +299,90 @@ def calculate_parallactic_angle_chunk(
     return direction_altaz.position_angle(zenith_altaz).value
 
 
-@njit(cache=False, nogil=True)
-def gaussian_kernel(padded, original):
-    mx = padded.shape[-2]//2
-    my = padded.shape[-1]//2
-    dx = original.shape[-2]//2
-    dy = original.shape[-1]//2
-
-    kernel = np.empty_like(padded)
-    for it in range(padded.shape[0]):
-        for ic in range(padded.shape[1]):
-            for ip in range(padded.shape[2]):
-                for ix in range(padded.shape[3]):
-                    for iy in range(padded.shape[4]):
-                        expo = (ix-mx)**2/(2*dx**2) + (iy-my)**2/(2*dy**2)
-                        kernel[it, ic, ip, ix, iy] = np.exp(-expo)
-                        #kernel[it, ic, ip, ix, iy] = 1.
-    return kernel
-
-
-def gaussian_2d(axes, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
-    xaxis, yaxis = np.meshgrid(*axes)
-    xo = float(xo)
+def eliptical_gaussian(axes, amplitude, x0, yo, sigma_x, sigma_y, theta, offset):
+    xaxis, yaxis = axes
+    x0 = float(x0)
     yo = float(yo)
     acoeff = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
     bcoeff = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
     ccoeff = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
-    expo = acoeff*((xaxis-xo)**2) + 2*bcoeff*(xaxis-xo)*(yaxis-yo) + ccoeff*((yaxis-yo)**2)
-    # print(expo.shape, expo.dtype)
+    expo = acoeff*((xaxis-x0)**2) + 2*bcoeff*(xaxis-x0)*(yaxis-yo) + ccoeff*((yaxis-yo)**2)
     gaussian = offset + amplitude*np.exp(-expo)
     return gaussian
 
 
-def fit_2d_gaussian(ref):
+def circular_gaussian(axes, amp, x0, yo, sigma, offset):
+    xaxis, yaxis = axes
+    x0 = float(x0)
+    yo = float(yo)
+    expo = 1*((xaxis-x0)**2 + (yaxis-yo)**2)
+    expo /= 2*sigma**2
+    return amp*np.exp(-expo)+offset
 
-    # use your favorite image processing library to load an image
-    nx, ny = ref.shape
-    data = ref.ravel()
 
-    xaxis = np.arange(nx)
-    yaxis = np.arange(ny)
-    xaxis, yaxis = np.meshgrid(xaxis, yaxis)
+def two_gaussians(axes, x0, y0, amp_narrow, sigma_narrow, amp_broad, sigma_broad, offset):
+    #offset = 0
+    narrow = circular_gaussian(axes, amp_narrow, x0, y0, sigma_narrow, 0)
+    broad = circular_gaussian(axes, amp_broad, x0, y0, sigma_broad, 0)
+    return narrow+broad+offset
+
+
+def fit_dishhorn_beam_artefact(amp, blockage, uaxis, vaxis, wavelength, diameter):
+    logger.info('Fitting feed horn artefact')
+    nx, ny = amp.shape
+
+    u_mesh, v_mesh = np.meshgrid(uaxis*wavelength, vaxis*wavelength)
+
+    dist2 = u_mesh**2+v_mesh**2
+    #sel = dist2 < (diameter/2)**2
+    sel = dist2 < (4*blockage) ** 2
+
+    # Ravel data for the fit
+    fit_data = amp[sel]
+    fit_u = u_mesh[sel]
+    fit_v = v_mesh[sel]
+    print(fit_data.shape, u_mesh.shape)
 
     # initial guess of parameters
-    initial_guess = (1, nx//2, ny//2, nx, ny, 0, 0)
-
+    # initial_guess = (600, nx//2, ny//2, blockage/sig_2_fwhm, blockage/sig_2_fwhm, 0, 0)
+    # initial_guess = (np.max(amp), 0, 0, blockage / sig_2_fwhm, 0)
+    initial_guess = (0, 0, np.max(amp), blockage / sig_2_fwhm, 4.0, 2*blockage/sig_2_fwhm, 0)
     import scipy.optimize as opt
     # find the optimal Gaussian parameters
-    popt, pcov = opt.curve_fit(gaussian_2d, (xaxis, yaxis), data, p0=initial_guess, maxfev=int(1e6))
+    # results = opt.curve_fit(gaussian_2d, (u_mesh, v_mesh), data, p0=initial_guess, maxfev=int(1e6))
+    print(np.count_nonzero(np.isnan(fit_data)))
+    # results = opt.curve_fit(circular_gaussian, (fit_u, fit_v), fit_data, p0=initial_guess, maxfev=int(1e6))
+    results = opt.curve_fit(two_gaussians, (fit_u, fit_v), fit_data, p0=initial_guess, maxfev=int(1e6))
 
+    popt = results[0]
     # create new data with these parameters
-    data_fitted = gaussian_2d((xaxis, yaxis), *popt)
-    ref_fit = data_fitted.reshape(nx, ny)
+    # data_fitted = gaussian_2d((u_mesh, v_mesh), *popt)
+    # data_fitted = circular_gaussian((u_mesh, v_mesh), *popt)
+    popt[-1] = 0
+    data_fitted = two_gaussians((u_mesh, v_mesh), *popt)
 
-    return ref_fit
+
+    popt[3] *= sig_2_fwhm
+    popt[5] *= sig_2_fwhm
+
+    print(popt)
+
+    # data_fitted = two_gaussians((u_mesh, v_mesh), [0, 0, ])
+    feed_fit = data_fitted
+
+    print(amp.shape, sel.shape, feed_fit.shape, feed_fit[sel].shape)
+    fig, axes = create_figure_and_axes(None, [2, 2])
+    axes[0, 0].imshow(feed_fit)
+    axes[1, 0].imshow(amp)
+    axes[0, 1].plot(uaxis*wavelength, amp[nx//2, :], color='red')
+    axes[0, 1].plot(uaxis*wavelength, feed_fit[nx//2, :], color='blue')
+    axes[0, 1].axvline(x=diameter / 2, color='yellow')
+    axes[0, 1].axvline(x=-diameter / 2, color='yellow')
+    axes[0, 1].set_xlim([-1.5*diameter/2, 1.5*diameter/2])
+
+    plt.show()
+
+    return feed_fit
 
 
 def pad_beam_image(grid, padding_factor):
