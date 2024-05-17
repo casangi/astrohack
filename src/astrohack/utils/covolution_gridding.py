@@ -5,6 +5,7 @@ from numba import njit
 from numba.core import types
 from matplotlib import pyplot as plt
 
+from astrohack.utils import sig_2_fwhm
 from astrohack.utils import calc_coords
 
 
@@ -77,7 +78,7 @@ def _find_nearest(value, array):
 def _create_exponential_kernel(beam_size, cell_size, exponent=2):
     smoothing = beam_size
     support = 4*smoothing
-    width = smoothing/(2*np.sqrt(np.log(2.0)))
+    width = smoothing/sig_2_fwhm
 
     pix_support = support/np.abs(cell_size)
     pix_width = width/np.abs(cell_size)
@@ -131,7 +132,7 @@ def _compute_kernel_correction(kernel, grid_size):
     kernel_extent = 2*bias+1
     for i_kern in range(kernel_extent):
         if ker_val[i_kern] != 0:
-            kx_coeff  = kw_coeff*(i_kern-bias)
+            kx_coeff = kw_coeff*(i_kern-bias)
             for i_corr in range(grid_size):
                 correction[i_corr] += ker_val[i_kern] * np.cos(kx_coeff*(i_corr-m_point))
 
