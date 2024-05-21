@@ -1,10 +1,12 @@
 import numpy as np
 from numba import njit
 
-from astrohack.utils.algorithms import _least_squares_fit_block, least_squares, calc_coords
+from astrohack.utils.algorithms import _least_squares_fit_block, least_squares
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.constants import clight
 from astrohack.utils.text import get_str_idx_in_list
+from astrohack.visualization.plot_tools import create_figure_and_axes
+from matplotlib import pyplot as plt
 
 import graphviper.utils.logger as logger
 
@@ -743,16 +745,52 @@ def _compute_phase_rms_block(phase_image):
     return rms
 
 
-# def _build_astigmatism_matrix(phase, uaxis, vaxis, focus, defocus):
-#     cz = 1./2./focus**2
-#     defocus_ratio = defocus/focus
-#     u_mesh, v_mesh = np.meshgrid(uaxis, vaxis)
-#     u_mesh2 = u_mesh**2
-#     v_mesh2 = v_mesh**2
-#
-#
-#
-#
+def _build_astigmatism_matrix(phase, uaxis, vaxis, focus, defocus, diameter, blockage, npar, astangle):
+    cz = 1./2./focus**2
+    defocus_ratio = defocus/focus
+    u_mesh, v_mesh = np.meshgrid(uaxis, vaxis)
+    u_mesh2 = u_mesh**2
+    v_mesh2 = v_mesh**2
+    radius2 = u_mesh2 + v_mesh2
+    radius = np.sqrt(radius2)
+    sel = np.where(radius < diameter/2, True, False)
+    sel = np.where(radius < blockage, False, sel)
+
+    matrix_shape = (phase.shape[0], phase.shape[1], npar)
+
+    matrix = np.zeros(matrix_shape)
+    vector = phase.copy()
+
+    radfocus2 = radius2/focus**2
+    focus2def_coeff = (1 - radfocus2/4 + defocus_ratio)
+
+    matrix[:, :, 0] = 1.0
+    matrix[:, :, 1] = u_mesh
+    matrix[:, :, 2] = v_mesh
+
+    # include defocus
+    matrix[:, :, 3] = 1 - focus2def_coeff / np.sqrt(radfocus2 + focus2def_coeff**2)
+    matrix[:, :, 4] = u_mesh / focus * (1. / (1. + defocus_ratio)  - 1. / np.sqrt(radfocus2 + focus2def_coeff**2))
+    matrix[:, :, 5] = v_mesh / focus * (1. / (1. + defocus_ratio)  - 1. / np.sqrt(radfocus2 + focus2def_coeff**2))
+    #
+    if npar == 7:
+        matrix[:, :, 6] = ((u_mesh2-v_mesh2)*np.cos(2*astangle) + 2*u_mesh*v_mesh*np.sin(2*astangle))*cz
+    elif npar > 7:
+        matrix[:, :, 6] = (u_mesh2-v_mesh2)*cz
+        matrix[:, :, 7] = 2*u_mesh*v_mesh*cz
+
+    return matrix, vector, sel
+
+
+def _perturbed_fit(matrix, vector, sel, fit_offset, npar):
+    perturbed = vector.copy()
+    for i_par in range(npar):
+        perturbed[:, :] -= matrix[:, :, i_par] * fit_offset[i_par]
+    matrix2d = matrix[sel, :]
+    perturbed1d = np.mod(perturbed[sel]+21*np.pi, 2*np.pi)-np.pi
+    result, _, _, sigma = least_squares(matrix2d, perturbed1d, return_sigma=True)
+    return result, sigma
+
 
 def _clic_phase_fitting_matrix_building(astangle, blockage, diameter, focus, defocus, phase, uaxis, vaxis, fit_offset,
                                         npar):
@@ -843,6 +881,9 @@ def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus
         xrange = range0
         yrange = range0
 
+    matrix, vector, sel = _build_astigmatism_matrix(phase, uaxis, vaxis, focus, defocus, diameter, blockage, npar,
+                                                    astangle)
+
     #  Perturbate fit for guarantee of a better solution
     for ix in xrange:
         fit_offset[4] = (start[0] + ix * step) * wave_number
@@ -854,12 +895,16 @@ def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus
                     fit_offset[1] = ia * step / radius * wave_number
                     for ib in range3:
                         fit_offset[2] = ib * step / radius * wave_number
-                        result, sigma = _clic_phase_fitting_matrix_building(astangle, blockage, diameter, focus,
-                                                                            defocus, phase, uaxis, vaxis, fit_offset,
-                                                                            npar)
+                        result, sigma = _perturbed_fit(matrix, vector, sel, fit_offset, npar)
+
+                        # result, sigma = _clic_phase_fitting_matrix_building(astangle, blockage, diameter, focus,
+                        #                                                     defocus, phase, uaxis, vaxis, fit_offset,
+                        #                                                     npar)
                     if sigma < sigmin:
                         sigmin = sigma
                         best_fit = result
+
+    phase_model = _clic_phase_model(matrix, best_fit)
 
     if npar < 4:
         best_fit[3] = start[2] * wave_number
@@ -873,7 +918,15 @@ def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus
         best_fit[7] = np.sin(2*astangle) * best_fit[6]
         best_fit[6] = np.cos(2*astangle) * best_fit[6]
 
-    return best_fit
+    return best_fit, phase_model
+
+
+def _clic_phase_model(matrix, best_fit):
+    flat_shape = (matrix.shape[0]*matrix.shape[1], matrix.shape[2])
+    flat_matrix = np.reshape(matrix, flat_shape)
+    flat_phase_model = np.dot(flat_matrix, best_fit)
+    phase_model = np.reshape(flat_phase_model, (matrix.shape[0], matrix.shape[1]))
+    return phase_model
 
 
 def _clic_like_phase_fitting(phase, freq_axis, telescope, focus_offset, uaxis, vaxis):
@@ -884,10 +937,18 @@ def _clic_like_phase_fitting(phase, freq_axis, telescope, focus_offset, uaxis, v
     uaxis_m = uaxis*wavelength
     vaxis_m = vaxis*wavelength
 
-    best_fit = _clic_full_phase_fitting(8, freq, telescope.diam, telescope.inlim, telescope.focus,
+    best_fit, phase_model = _clic_full_phase_fitting(8, freq, telescope.diam, telescope.inlim, telescope.focus,
                                         focus_offset, phase_i, uaxis_m, vaxis_m)
 
     print(best_fit)
+
+    fig, axes = create_figure_and_axes(None, [2, 2])
+    axes[0, 0].imshow(phase_i)
+    axes[1, 0].imshow(phase_model)
+    axes[0, 1].imshow(phase_i-phase_model)
+    plt.show()
+
+
 
     return phase, best_fit
 
