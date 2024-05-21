@@ -212,13 +212,14 @@ def gauss_elimination(system, vector):
     return np.dot(inverse, vector)
 
 
-def least_squares(system, vector):
+def least_squares(system, vector, return_sigma=False):
     """
     Least squares fitting of a system of linear equations
     The variances are simplified as the diagonal of the covariances
     Args:
         system: System matrix to be solved
         vector: Vector that represents the right hand side of the system
+        return_sigma: Return sigma value
 
     Returns:
     The solved system, the variances of the system solution and the sum of the residuals
@@ -238,7 +239,10 @@ def least_squares(system, vector):
     covar = np.linalg.inv(np.dot(system.T, system))
     variance = np.diagonal(sigma2 * covar)
 
-    return result, variance, residuals
+    if return_sigma:
+        return result, variance, residuals, np.sqrt(sigma2)
+    else:
+        return result, variance, residuals
 
 
 def _least_squares_fit_block(system, vector):
