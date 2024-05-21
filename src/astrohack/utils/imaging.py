@@ -161,6 +161,8 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
 
     padded_grid = pad_beam_image(work_grid, padding_factor)
     uaxis, vaxis, laxis, maxis, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size)
+    uaxis /= 2
+    vaxis /= 2
 
     aperture_grid = compute_aperture_fft(padded_grid)
 
@@ -182,8 +184,8 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
     #
     phase = np.angle(aperture_grid[0, 0, 0, ...])
     amp = np.absolute(aperture_grid[0, 0, 0, ...])
-    dishhorn_artefact = fit_dishhorn_beam_artefact(amp, blockage, uaxis, vaxis, wavelength, diameter)
-    amp -= dishhorn_artefact
+    # dishhorn_artefact = fit_dishhorn_beam_artefact(amp, blockage, uaxis, vaxis, wavelength, diameter)
+    # amp -= dishhorn_artefact
 
     phase = feed_correction(phase, uaxis, vaxis, focal_length, wavelength)
     fitted_amp = fit_illumination_pattern(amp, uaxis, vaxis, wavelength, diameter, blockage)
