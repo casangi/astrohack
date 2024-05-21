@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit
 
-from astrohack.utils.algorithms import _least_squares_fit_block, least_squares
+from astrohack.utils.algorithms import _least_squares_fit_block, least_squares, calc_coords
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.constants import clight
 from astrohack.utils.text import get_str_idx_in_list
@@ -12,7 +12,7 @@ NPAR = 10
 
 
 def execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size, phase_fit_parameter,
-                          to_stokes, is_near_field):
+                          to_stokes, is_near_field, focus_offset, uaxis, vaxis):
     """
     Executes the phase fitting controls here to declutter core/holog.py
     Args:
@@ -33,47 +33,56 @@ def execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_c
     do_phase_fit, phase_fit_control = _solve_phase_fitting_controls(phase_fit_parameter, telescope.name)
 
     if do_phase_fit:
-        logger.info('Applying phase correction')
-        if to_stokes:
-            pol_indexes = (0,)
+        if is_near_field:
+            phase_corrected_angle, phase_fit_results = _clic_like_phase_fitting(phase, freq_axis, telescope,
+                                                                                focus_offset, uaxis, vaxis)
         else:
-            if is_near_field:
-                pol_indexes = (0, )
-            else:
-                if 'RR' in pol_axis:
-                    i_rr = get_str_idx_in_list('RR', pol_axis)
-                    i_ll = get_str_idx_in_list('LL', pol_axis)
-                    pol_indexes = (i_rr, i_ll)
-                elif 'XX' in pol_axis:
-                    i_xx = get_str_idx_in_list('XX', pol_axis)
-                    i_yy = get_str_idx_in_list('YY', pol_axis)
-                    pol_indexes = (i_xx, i_yy)
-                else:
-                    msg = f'Unknown polarization scheme: {pol_axis}'
-                    logger.error(msg)
-                    raise Exception(msg)
-
-        max_wavelength = clight / freq_axis[-1]
-
-        results, errors, phase_corrected_angle, _, in_rms, out_rms = phase_fitting_block(
-                pol_indexes=pol_indexes,
-                wavelength=max_wavelength,
-                telescope=telescope,
-                cellxy=uv_cell_size[0] * max_wavelength,  # THIS HAS TO BE CHANGED, (X, Y) CELL SIZE ARE NOT THE SAME.
-                amplitude_image=amplitude,
-                phase_image=phase,
-                pointing_offset=phase_fit_control[0],
-                focus_xy_offsets=phase_fit_control[1],
-                focus_z_offset=phase_fit_control[2],
-                subreflector_tilt=phase_fit_control[3],
-                cassegrain_offset=phase_fit_control[4])
-
-        phase_fit_results = _unpack_results(results, errors, pol_axis, freq_axis, pol_indexes)
+            phase_corrected_angle, phase_fit_results = _aips_like_phase_fitting(amplitude, phase, pol_axis, freq_axis,
+                                                                                telescope, uv_cell_size,
+                                                                                phase_fit_control, to_stokes)
     else:
         phase_fit_results = None
         phase_corrected_angle = phase.copy()
         logger.info('Skipping phase correction')
 
+    return phase_corrected_angle, phase_fit_results
+
+
+def _aips_like_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size, phase_fit_control,
+                             to_stokes):
+    logger.info('Applying phase correction')
+    if to_stokes:
+        pol_indexes = (0,)
+    else:
+        if 'RR' in pol_axis:
+            i_rr = get_str_idx_in_list('RR', pol_axis)
+            i_ll = get_str_idx_in_list('LL', pol_axis)
+            pol_indexes = (i_rr, i_ll)
+        elif 'XX' in pol_axis:
+            i_xx = get_str_idx_in_list('XX', pol_axis)
+            i_yy = get_str_idx_in_list('YY', pol_axis)
+            pol_indexes = (i_xx, i_yy)
+        else:
+            msg = f'Unknown polarization scheme: {pol_axis}'
+            logger.error(msg)
+            raise Exception(msg)
+
+    max_wavelength = clight / freq_axis[-1]
+
+    results, errors, phase_corrected_angle, _, in_rms, out_rms = phase_fitting_block(
+        pol_indexes=pol_indexes,
+        wavelength=max_wavelength,
+        telescope=telescope,
+        cellxy=uv_cell_size[0] * max_wavelength,  # THIS HAS TO BE CHANGED, (X, Y) CELL SIZE ARE NOT THE SAME.
+        amplitude_image=amplitude,
+        phase_image=phase,
+        pointing_offset=phase_fit_control[0],
+        focus_xy_offsets=phase_fit_control[1],
+        focus_z_offset=phase_fit_control[2],
+        subreflector_tilt=phase_fit_control[3],
+        cassegrain_offset=phase_fit_control[4])
+
+    phase_fit_results = _unpack_results(results, errors, pol_axis, freq_axis, pol_indexes)
     return phase_corrected_angle, phase_fit_results
 
 
@@ -734,6 +743,17 @@ def _compute_phase_rms_block(phase_image):
     return rms
 
 
+# def _build_astigmatism_matrix(phase, uaxis, vaxis, focus, defocus):
+#     cz = 1./2./focus**2
+#     defocus_ratio = defocus/focus
+#     u_mesh, v_mesh = np.meshgrid(uaxis, vaxis)
+#     u_mesh2 = u_mesh**2
+#     v_mesh2 = v_mesh**2
+#
+#
+#
+#
+
 def _clic_phase_fitting_matrix_building(astangle, blockage, diameter, focus, defocus, phase, uaxis, vaxis, fit_offset,
                                         npar):
     cz = 1./2./focus**2
@@ -795,7 +815,7 @@ def _clic_phase_fitting_matrix_building(astangle, blockage, diameter, focus, def
                 i_line += 1
 
     matrix = matrix[:i_line, :]
-    vector = vector[:i_line, :]
+    vector = vector[:i_line]
     result, _, _, sigma = least_squares(matrix, vector, return_sigma=True)
     return result, sigma
 
@@ -803,40 +823,36 @@ def _clic_phase_fitting_matrix_building(astangle, blockage, diameter, focus, def
 def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus, phase, uaxis, vaxis):
     # Astigmatism angle is fitted if npar = 8
     astangle = np.pi
-    wave_number = frequency  # fill properly
+    wave_number = frequency * 2.*np.pi / clight
     step = 1e-3  # 1 per one thousand wavelength
     radius = diameter/2
     sigmin = 1e10
     fit_offset = np.zeros((npar))
     start = np.zeros((3))
     best_fit = np.full((npar), np.nan)
+    range3 = [-1, 0, 1]
+    range0 = [0]
     if npar > 3:
-        iz1 = -1
-        iz2 = 1
+        zrange = range3
     else:
-        iz1 = 0
-        iz2 = 0
+        zrange = range0
     if npar > 4:
-        ix1 = -1
-        ix2 = 1
-        iy1 = -1
-        iy2 = 1
+        xrange = range3
+        yrange = range3
     else:
-        ix1 = 0
-        ix2 = 0
-        iy1 = 0
-        iy2 = 0
+        xrange = range0
+        yrange = range0
 
     #  Perturbate fit for guarantee of a better solution
-    for ix in range(ix1, ix2):
+    for ix in xrange:
         fit_offset[4] = (start[0] + ix * step) * wave_number
-        for iy in range(iy1, iy2):
+        for iy in yrange:
             fit_offset[5] = (start[1] + iy * step) * wave_number
-            for iz in range(iz1, iz2):
+            for iz in zrange:
                 fit_offset[3] = (start[2] + iy * step) * wave_number
-                for ia in range(-1, 1):
+                for ia in range3:
                     fit_offset[1] = ia * step / radius * wave_number
-                    for ib in range(-1, 1):
+                    for ib in range3:
                         fit_offset[2] = ib * step / radius * wave_number
                         result, sigma = _clic_phase_fitting_matrix_building(astangle, blockage, diameter, focus,
                                                                             defocus, phase, uaxis, vaxis, fit_offset,
@@ -858,6 +874,22 @@ def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus
         best_fit[6] = np.cos(2*astangle) * best_fit[6]
 
     return best_fit
+
+
+def _clic_like_phase_fitting(phase, freq_axis, telescope, focus_offset, uaxis, vaxis):
+    logger.info('Going into CLIC code')
+    phase_i = phase[0, 0, 0, ...]
+    freq = freq_axis[0]
+    wavelength = clight/freq
+    uaxis_m = uaxis*wavelength
+    vaxis_m = vaxis*wavelength
+
+    best_fit = _clic_full_phase_fitting(8, freq, telescope.diam, telescope.inlim, telescope.focus,
+                                        focus_offset, phase_i, uaxis_m, vaxis_m)
+
+    print(best_fit)
+
+    return phase, best_fit
 
 
 

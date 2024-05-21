@@ -136,7 +136,6 @@ def process_holog_chunk(holog_chunk_params):
         time_centroid_index = ant_data_dict[ddi][holog_map].sizes["time"] // 2
         time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
 
-
         for chan in range(n_chan):  # Todo: Vectorize holog_map and channel axis
             if is_near_field:
                 i_i = get_str_idx_in_list('I', pol_axis)
@@ -195,23 +194,23 @@ def process_holog_chunk(holog_chunk_params):
         beam_grid = np.mean(beam_grid, axis=0)[None, ...]
         time_centroid = np.mean(np.array(time_centroid))
 
-
-
     logger.info("Calculating aperture pattern ...")
     # Current bottleneck
     if is_near_field:
+        focus_offset = ant_xds.attrs["nf_focus_off"]
         aperture_grid, u, v, uv_cell_size, distance = calculate_near_field_aperture(
             grid=beam_grid,
             sky_cell_size=holog_chunk_params["cell_size"],
             distance=holog_chunk_params["distance_to_tower"],
             wavelength=clight / freq_chan[0],
             padding_factor=holog_chunk_params["padding_factor"],
-            focus_offset=ant_xds.attrs["nf_focus_off"],
+            focus_offset=focus_offset,
             focal_length=telescope.focus,
             diameter=telescope.diam,
             blockage=telescope.inlim,
         )
     else:
+        focus_offset = 0
         aperture_grid, u, v, uv_cell_size = calculate_far_field_aperture(
             grid=beam_grid,
             delta=holog_chunk_params["cell_size"],
@@ -262,7 +261,7 @@ def process_holog_chunk(holog_chunk_params):
                                                                      ant_data_dict[ddi][map0].coords["pol"].values,
                                                                      freq_chan, telescope, uv_cell_size,
                                                                      holog_chunk_params["phase_fit"], to_stokes,
-                                                                     is_near_field)
+                                                                     is_near_field, focus_offset, u_prime, v_prime)
 
     # Here we compute the aperture resolution from Equation 7 In EVLA memo 212
     # https://library.nrao.edu/public/memos/evla/EVLAM_212.pdf
