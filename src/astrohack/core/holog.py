@@ -14,7 +14,7 @@ from astrohack.utils.data import read_meta_data
 from astrohack.utils.file import load_holog_file
 from astrohack.utils.imaging import calculate_far_field_aperture, calculate_near_field_aperture
 from astrohack.utils.imaging import mask_circular_disk
-from astrohack.utils.gridding import convolution_gridding
+from astrohack.utils.gridding import _convolution_gridding
 from astrohack.utils.imaging import parallactic_derotation
 from astrohack.utils.phase_fitting import execute_phase_fitting
 from astrohack.utils.text import get_str_idx_in_list
@@ -92,9 +92,9 @@ def process_holog_chunk(holog_chunk_params):
         weight = ant_xds.WEIGHT.values
 
         if is_near_field:
-            beam_grid[holog_map_index, ...] = convolution_gridding('exponential', vis, weight, lm, telescope.diam,
-                                                                   avg_freq, holog_chunk_params["cell_size"],
-                                                                   holog_chunk_params["grid_size"])
+            beam_grid[holog_map_index, ...] = _convolution_gridding('exponential', vis, weight, lm, telescope.diam,
+                                                                    avg_freq, holog_chunk_params["cell_size"],
+                                                                    holog_chunk_params["grid_size"])
         else:
             if holog_chunk_params["chan_average"]:
                 vis_avg, weight_sum = chunked_average(vis, weight, avg_chan_map, avg_freq)

@@ -1,39 +1,135 @@
 import time
 import numpy as np
 from graphviper.utils import logger as logger
+from scipy.interpolate import griddata
 from numba import njit
 from numba.core import types
 from matplotlib import pyplot as plt
 
-from astrohack.utils import sig_2_fwhm, find_nearest, calc_coords
+from astrohack.utils import sig_2_fwhm, find_nearest, calc_coords, find_peak_beam_value, chunked_average
+from astrohack.utils.text import get_str_idx_in_list
 
 
-def _create_beam_grid(ant_ddi_dict, grid_size, cell_size, avg_chan, chan_tol_fac):
+def grid_beam(ant_ddi_dict, grid_size, cell_size, avg_chan, chan_tol_fac, telescope, grid_interpolation_mode):
     n_holog_map = len(ant_ddi_dict.keys())
-
-    # For a fixed ddi the frequency axis should not change over holog_maps, consequently we only have to consider the
-    # first holog_map.
     map0 = list(ant_ddi_dict.keys())[0]
-
     freq_axis = ant_ddi_dict[map0].chan.values
+    pol_axis = ant_ddi_dict[map0].pol.values
     n_chan = ant_ddi_dict[map0].sizes["chan"]
     n_pol = ant_ddi_dict[map0].sizes["pol"]
-
-    l_axis, m_axis = calc_coords(grid_size, cell_size)
-    grid_l, grid_m = list(map(np.transpose, np.meshgrid(l_axis, m_axis)))
+    # Get near field status
 
     reference_scaling_frequency = np.mean(freq_axis)
     if avg_chan:
         avg_chan_map, avg_freq = _create_average_chan_map(freq_axis, chan_tol_fac)
-        # Only a single channel left after averaging.
-        beam_grid = np.zeros((n_holog_map,) + (1, n_pol) + grid_l.shape, dtype=np.complex128)
-
+        n_chan = 1
+        freq_axis = [np.mean(avg_freq)]
     else:
-        beam_grid = np.zeros((n_holog_map,) + (n_chan, n_pol) + grid_l.shape, dtype=np.complex128)
         avg_chan_map = None
         avg_freq = None
 
-    return l_axis, m_axis, grid_l, grid_m, reference_scaling_frequency, avg_chan_map, avg_freq, beam_grid
+    l_axis, m_axis, grid_l, grid_m, beam_grid = _create_beam_grid(grid_size, cell_size, n_chan, n_pol, n_holog_map)
+    scipy_interp = ['linear', 'nearest', 'cubic']
+
+    time_centroid = []
+    for holog_map_index, holog_map in enumerate(ant_ddi_dict.keys()):
+        ant_xds = ant_ddi_dict[holog_map]
+
+        # Grid the data
+        vis = ant_xds.VIS.values
+        vis[vis == np.nan] = 0.0
+        lm = ant_xds.DIRECTIONAL_COSINES.values
+        weight = ant_xds.WEIGHT.values
+
+        if grid_interpolation_mode in scipy_interp:
+            grid_corr = False
+            beam_grid[holog_map_index, ...] = _scipy_gridding(vis, weight, lm, grid_l, grid_m, grid_interpolation_mode,
+                                                              avg_chan_map, avg_freq, reference_scaling_frequency)
+        elif grid_interpolation_mode == 'gaussian':
+            grid_corr = True
+            beam_grid[holog_map_index, ...] = _convolution_gridding(vis, weight, lm, telescope.diam, freq_axis, l_axis,
+                                                                    m_axis, cell_size)
+        else:
+            msg = f'Unknown grid type {grid_interpolation_mode}.'
+            logger.error(msg)
+            raise Exception(msg)
+
+        time_centroid_index = ant_ddi_dict[holog_map].sizes["time"] // 2
+        time_centroid.append(ant_ddi_dict[holog_map].coords["time"][time_centroid_index].values)
+
+        beam_grid[holog_map_index, ...] = _normalize_beam(beam_grid[holog_map_index, ...], n_chan, pol_axis)
+
+    return beam_grid, time_centroid, freq_axis, pol_axis, l_axis, m_axis, grid_corr
+
+
+def gridding_correction(aperture, freq, diameter, sky_cell_size, u_axis, v_axis):
+    beam_size = _compute_beam_size(diameter, freq)
+    return _gridding_correction_jit(aperture, beam_size, sky_cell_size, u_axis, v_axis)
+
+
+def _create_beam_grid(grid_size, cell_size, n_chan, n_pol, n_map):
+
+    l_axis, m_axis = calc_coords(grid_size, cell_size)
+    grid_l, grid_m = list(map(np.transpose, np.meshgrid(l_axis, m_axis)))
+
+    beam_grid = np.zeros((n_map,) + (n_chan, n_pol) + grid_l.shape, dtype=np.complex128)
+
+    return l_axis, m_axis, grid_l, grid_m, beam_grid
+
+
+def _scipy_gridding(vis, weight, lm, grid_l, grid_m, grid_interpolation_mode, avg_chan_map, avg_freq,
+                    reference_scaling_frequency):
+    if avg_freq is not None:
+        vis_avg, weight_sum = chunked_average(vis, weight, avg_chan_map, avg_freq)
+        lm_freq_scaled = lm[:, :, None] * (avg_freq / reference_scaling_frequency)
+        n_pol = vis_avg.shape[1]
+        beam_grid = np.zeros((1, n_pol, grid_l.shape[0], grid_l.shape[1]))
+        # Unavoidable for loop because lm change over frequency.
+        for i_chan in range(avg_freq.shape[0]):
+            # Average scaled beams.
+            beam_grid[0, :, :, :] += np.moveaxis(griddata(lm_freq_scaled[:, :, i_chan], vis_avg[:, i_chan, :],
+                                                          (grid_l, grid_m), method=grid_interpolation_mode,
+                                                          fill_value=0.0), 2, 0)
+    else:
+        beam_grid = np.moveaxis(griddata(lm, vis, (grid_l, grid_m), method=grid_interpolation_mode, fill_value=0.0),
+                                (0, 1), (2, 3))
+    return beam_grid
+
+
+def _normalize_beam(beam_grid, n_chan, pol_axis):
+    if 'I' in pol_axis:
+        i_i = get_str_idx_in_list('I', pol_axis)
+        i_peak = find_peak_beam_value(beam_grid[0, i_i, ...], scaling=0.25)
+        beam_grid[0, i_i, ...] /= i_peak
+    else:
+        if 'RR' in pol_axis:
+            i_p1 = get_str_idx_in_list('RR', pol_axis)
+            i_p2 = get_str_idx_in_list('LL', pol_axis)
+        elif 'XX' in pol_axis:
+            i_p1 = get_str_idx_in_list('XX', pol_axis)
+            i_p2 = get_str_idx_in_list('YY', pol_axis)
+        else:
+            msg = f'Unknown polarization scheme: {pol_axis}'
+            logger.error(msg)
+            raise Exception(msg)
+
+        for chan in range(n_chan):
+            try:
+                p1_peak = find_peak_beam_value(beam_grid[chan, i_p1, ...], scaling=0.25)
+                p2_peak = find_peak_beam_value(beam_grid[chan, i_p2, ...], scaling=0.25)
+            except Exception:
+                center_pixel = np.array(beam_grid.shape[-2:]) // 2
+                p1_peak = beam_grid[chan, i_p1, center_pixel[0], center_pixel[1]]
+                p2_peak = beam_grid[chan, i_p2, center_pixel[0], center_pixel[1]]
+
+            normalization = np.abs(0.5 * (p1_peak + p2_peak))
+
+            if normalization == 0:
+                logger.warning("Peak of zero found! Setting normalization to unity.")
+                normalization = 1
+
+                beam_grid[chan, ...] /= normalization
+    return beam_grid
 
 
 def _create_average_chan_map(freq_chan, chan_tolerance_factor):
@@ -65,17 +161,8 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
     return cf_chan_map, pb_freq
 
 
-
-
-def convolution_gridding(grid_type, visibilities, weights, lmvis, diameter, freq, sky_cell_size, grid_size):
-
+def _convolution_gridding(visibilities, weights, lmvis, diameter, freq, laxis, maxis, sky_cell_size):
     beam_size = _compute_beam_size(diameter, freq)
-    if grid_type == 'exponential':
-        pass
-    else:
-        msg = f'Unknown grid type {grid_type}.'
-        logger.error(msg)
-        raise Exception(msg)
 
     nchan = visibilities.shape[1]
     if nchan > 1:
@@ -85,7 +172,6 @@ def convolution_gridding(grid_type, visibilities, weights, lmvis, diameter, freq
 
     logger.info('Creating convolved beam...')
     start = time.time()
-    laxis, maxis = calc_coords(grid_size, sky_cell_size)
     beam, wei = _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, laxis, maxis, beam_size)
     duration = time.time()-start
     logger.info(f'Convolution took {duration:.3} seconds')
@@ -121,7 +207,6 @@ def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, laxis
 
     beam_grid /= weig_grid
     beam_grid = np.nan_to_num(beam_grid)
-
     return beam_grid, weig_grid
 
 
@@ -205,12 +290,6 @@ def _compute_beam_size(diameter, frequency):
     # This beam size is anchored at NOEMA beam measurements we might need a more general formula
     size = 41 * (115e9 / freq) * np.sqrt(2.) * (15. / diameter) * np.pi / 180 / 3600
     return size
-
-
-def gridding_correction(aperture, freq, diameter, sky_cell_size, u_axis, v_axis):
-    beam_size = _compute_beam_size(diameter, freq)
-
-    return _gridding_correction_jit(aperture, beam_size, sky_cell_size, u_axis, v_axis)
 
 
 @njit(cache=False, nogil=True)
