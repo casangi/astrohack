@@ -78,21 +78,7 @@ def process_holog_chunk(holog_chunk_params):
 
     time_centroid = []
 
-    # Get telescope info
-    ant_name = ant_data_dict[ddi]['map_0'].attrs["antenna_name"]
-
-    if ant_name.upper().__contains__('DV'):
-        telescope_name = "_".join((meta_data['telescope_name'], 'DV'))
-
-    elif ant_name.upper().__contains__('DA'):
-        telescope_name = "_".join((meta_data['telescope_name'], 'DA'))
-
-    elif ant_name.upper().__contains__('EA'):
-        telescope_name = 'VLA'
-
-    else:
-        raise Exception("Antenna type not found: {name}".format(name=meta_data['ant_name']))
-    telescope = Telescope(telescope_name)
+    telescope = _get_correct_telescope(ant_data_dict[ddi]['map_0'].attrs["antenna_name"], meta_data['telescope_name'])
 
     for holog_map_index, holog_map in enumerate(ant_data_dict[ddi].keys()):
         ant_xds = ant_data_dict[ddi][holog_map]
@@ -281,7 +267,7 @@ def process_holog_chunk(holog_chunk_params):
 
     xds.attrs["aperture_resolution"] = aperture_resolution
     xds.attrs["ant_id"] = holog_chunk_params["this_ant"]
-    xds.attrs["ant_name"] = ant_name
+    xds.attrs["ant_name"] = ant_data_dict[ddi]['map_0'].attrs["antenna_name"]
     xds.attrs["telescope_name"] = meta_data['telescope_name']
     xds.attrs["time_centroid"] = np.array(time_centroid)
     xds.attrs["ddi"] = ddi
@@ -330,3 +316,20 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
         cf_chan_map[i], _ = find_nearest(pb_freq, freq_chan[i])
 
     return cf_chan_map, pb_freq
+
+
+def _get_correct_telescope(ant_name, telescope_name):
+    # Get telescope info
+    if ant_name.upper().__contains__('DV'):
+        telescope_name = "_".join((telescope_name, 'DV'))
+
+    elif ant_name.upper().__contains__('DA'):
+        telescope_name = "_".join((telescope_name, 'DA'))
+
+    elif ant_name.upper().__contains__('EA'):
+        telescope_name = 'VLA'
+
+    else:
+        raise Exception("Antenna type not found: {name}".format(name=ant_name))
+
+    return Telescope(telescope_name)
