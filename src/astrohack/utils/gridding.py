@@ -5,8 +5,66 @@ from numba import njit
 from numba.core import types
 from matplotlib import pyplot as plt
 
-from astrohack.utils import sig_2_fwhm
-from astrohack.utils import calc_coords
+from astrohack.utils import sig_2_fwhm, find_nearest, calc_coords
+
+
+def _create_beam_grid(ant_ddi_dict, grid_size, cell_size, avg_chan, chan_tol_fac):
+    n_holog_map = len(ant_ddi_dict.keys())
+
+    # For a fixed ddi the frequency axis should not change over holog_maps, consequently we only have to consider the
+    # first holog_map.
+    map0 = list(ant_ddi_dict.keys())[0]
+
+    freq_axis = ant_ddi_dict[map0].chan.values
+    n_chan = ant_ddi_dict[map0].sizes["chan"]
+    n_pol = ant_ddi_dict[map0].sizes["pol"]
+
+    l_axis, m_axis = calc_coords(grid_size, cell_size)
+    grid_l, grid_m = list(map(np.transpose, np.meshgrid(l_axis, m_axis)))
+
+    reference_scaling_frequency = np.mean(freq_axis)
+    if avg_chan:
+        avg_chan_map, avg_freq = _create_average_chan_map(freq_axis, chan_tol_fac)
+        # Only a single channel left after averaging.
+        beam_grid = np.zeros((n_holog_map,) + (1, n_pol) + grid_l.shape, dtype=np.complex128)
+
+    else:
+        beam_grid = np.zeros((n_holog_map,) + (n_chan, n_pol) + grid_l.shape, dtype=np.complex128)
+        avg_chan_map = None
+        avg_freq = None
+
+    return l_axis, m_axis, grid_l, grid_m, reference_scaling_frequency, avg_chan_map, avg_freq, beam_grid
+
+
+def _create_average_chan_map(freq_chan, chan_tolerance_factor):
+    n_chan = len(freq_chan)
+
+    tol = np.max(freq_chan) * chan_tolerance_factor
+    n_pb_chan = int(np.floor((np.max(freq_chan) - np.min(freq_chan)) / tol) + 0.5)
+
+    # Create PB's for each channel
+    if n_pb_chan == 0:
+        n_pb_chan = 1
+
+    if n_pb_chan >= n_chan:
+        cf_chan_map = np.arange(n_chan)
+        pb_freq = freq_chan
+        return cf_chan_map, pb_freq
+
+    pb_delta_bandwdith = (np.max(freq_chan) - np.min(freq_chan)) / n_pb_chan
+    pb_freq = (
+            np.arange(n_pb_chan) * pb_delta_bandwdith
+            + np.min(freq_chan)
+            + pb_delta_bandwdith / 2
+    )
+
+    cf_chan_map = np.zeros((n_chan,), dtype=int)
+    for i in range(n_chan):
+        cf_chan_map[i], _ = find_nearest(pb_freq, freq_chan[i])
+
+    return cf_chan_map, pb_freq
+
+
 
 
 def convolution_gridding(grid_type, visibilities, weights, lmvis, diameter, freq, sky_cell_size, grid_size):
