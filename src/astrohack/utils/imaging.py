@@ -12,7 +12,7 @@ import graphviper.utils.logger as logger
 
 from skimage.draw import disk
 from astrohack.utils.algorithms import calc_coords, least_squares
-from astrohack.utils.covolution_gridding import gridding_correction
+from astrohack.utils.gridding import gridding_correction
 from astrohack.utils.constants import clight, sig_2_fwhm
 from astrohack.visualization.plot_tools import create_figure_and_axes
 
