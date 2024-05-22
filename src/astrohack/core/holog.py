@@ -2,22 +2,16 @@ import astrohack
 import numpy as np
 import xarray as xr
 
-from scipy.interpolate import griddata
-
 from astrohack.antenna.telescope import Telescope
 from astrohack.utils.algorithms import calc_coords
-from astrohack.utils.algorithms import chunked_average
-from astrohack.utils.algorithms import find_nearest
-from astrohack.utils.algorithms import find_peak_beam_value
 from astrohack.utils.constants import clight
 from astrohack.utils.data import read_meta_data
 from astrohack.utils.file import load_holog_file
 from astrohack.utils.imaging import calculate_far_field_aperture, calculate_near_field_aperture
 from astrohack.utils.imaging import mask_circular_disk
-from astrohack.utils.gridding import _convolution_gridding
+from astrohack.utils.gridding import grid_beam
 from astrohack.utils.imaging import parallactic_derotation
 from astrohack.utils.phase_fitting import execute_phase_fitting
-from astrohack.utils.text import get_str_idx_in_list
 
 import graphviper.utils.logger as logger
 
@@ -38,132 +32,24 @@ def process_holog_chunk(holog_chunk_params):
     )
 
     meta_data = read_meta_data(holog_chunk_params["holog_name"] + '/.holog_attr')
-
-    # Calculate lm coordinates
-    l, m = calc_coords(holog_chunk_params["grid_size"], holog_chunk_params["cell_size"])
-
-    grid_l, grid_m = list(map(np.transpose, np.meshgrid(l, m)))
-
-    to_stokes = holog_chunk_params["to_stokes"]
-
     ddi = holog_chunk_params["this_ddi"]
-    n_holog_map = len(ant_data_dict[ddi].keys())
-
-    # For a fixed ddi the frequency axis should not change over holog_maps, consequently we only have to consider the
-    # first holog_map.
-    map0 = list(ant_data_dict[ddi].keys())[0]
-
-    # Get near field status
+    to_stokes = holog_chunk_params["to_stokes"]
+    ref_xds = ant_data_dict[ddi]['map_0']
+    telescope = _get_correct_telescope(ref_xds.attrs["antenna_name"], meta_data['telescope_name'])
     try:
-        is_near_field = ant_data_dict[ddi][map0].attrs['near_field']
+        is_near_field = ref_xds.attrs['near_field']
     except KeyError:
         is_near_field = False
 
-    freq_chan = ant_data_dict[ddi][map0].chan.values
-    n_chan = ant_data_dict[ddi][map0].sizes["chan"]
-    n_pol = ant_data_dict[ddi][map0].sizes["pol"]
-    grid_interpolation_mode = holog_chunk_params["grid_interpolation_mode"]
-    pol_axis = ant_data_dict[ddi][map0].pol.values
-
-    if holog_chunk_params["chan_average"]:
-        reference_scaling_frequency = np.mean(freq_chan)
-
-        avg_chan_map, avg_freq = _create_average_chan_map(freq_chan, holog_chunk_params["chan_tolerance_factor"])
-
-        # Only a single channel left after averaging.
-        beam_grid = np.zeros((n_holog_map,) + (1, n_pol) + grid_l.shape, dtype=np.complex128)
-
-    else:
-        beam_grid = np.zeros((n_holog_map,) + (n_chan, n_pol) + grid_l.shape, dtype=np.complex128)
-
-    time_centroid = []
-
-    telescope = _get_correct_telescope(ant_data_dict[ddi]['map_0'].attrs["antenna_name"], meta_data['telescope_name'])
-
-    for holog_map_index, holog_map in enumerate(ant_data_dict[ddi].keys()):
-        ant_xds = ant_data_dict[ddi][holog_map]
-
-        # Todo: Add flagging code
-
-        # Grid the data
-        vis = ant_xds.VIS.values
-        vis[vis == np.nan] = 0.0
-        lm = ant_xds.DIRECTIONAL_COSINES.values
-        weight = ant_xds.WEIGHT.values
-
-        if is_near_field:
-            beam_grid[holog_map_index, ...] = _convolution_gridding('exponential', vis, weight, lm, telescope.diam,
-                                                                    avg_freq, holog_chunk_params["cell_size"],
-                                                                    holog_chunk_params["grid_size"])
-        else:
-            if holog_chunk_params["chan_average"]:
-                vis_avg, weight_sum = chunked_average(vis, weight, avg_chan_map, avg_freq)
-                lm_freq_scaled = lm[:, :, None] * (avg_freq / reference_scaling_frequency)
-
-                n_chan = avg_freq.shape[0]
-
-                # Unavoidable for loop because lm change over frequency.
-                for chan_index in range(n_chan):
-                    # Average scaled beams.
-                    beam_grid[holog_map_index, 0, :, :, :] = (beam_grid[holog_map_index, 0, :, :, :] +
-                                                              np.moveaxis(griddata(lm_freq_scaled[:, :, chan_index],
-                                                                                   vis_avg[:, chan_index, :],
-                                                                                   (grid_l, grid_m), method=
-                                                                                   grid_interpolation_mode,
-                                                                                   fill_value=0.0), 2, 0))
-                # Averaging now complete
-                n_chan = 1
-                freq_chan = [np.mean(avg_freq)]
-            else:
-                beam_grid[holog_map_index, ...] = np.moveaxis(griddata(lm, vis, (grid_l, grid_m),
-                                                                       method=grid_interpolation_mode,
-                                                                       fill_value=0.0), (0, 1), (2, 3))
-
-        time_centroid_index = ant_data_dict[ddi][holog_map].sizes["time"] // 2
-        time_centroid.append(ant_data_dict[ddi][holog_map].coords["time"][time_centroid_index].values)
-
-        for chan in range(n_chan):  # Todo: Vectorize holog_map and channel axis
-            if is_near_field:
-                i_i = get_str_idx_in_list('I', pol_axis)
-                i_r2 = get_str_idx_in_list('R2', pol_axis)
-
-                # Normalize by R2:
-                beam_grid[holog_map_index, chan, i_i, ...] /= beam_grid[holog_map_index, chan, i_r2, ...]
-                beam_grid[holog_map_index, chan, i_i, ...] = np.nan_to_num(beam_grid[holog_map_index, chan, i_i, ...],
-                                                                           nan=0.0, posinf=None, neginf=None)
-
-                # Then Normalize to Beam peak:
-                i_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, i_i, ...], scaling=0.25)
-                beam_grid[holog_map_index, chan, i_i, ...] /= i_peak
-
-            else:
-                # This makes finding the parallel hands much more robust
-                if 'RR' in pol_axis:
-                    i_p1 = get_str_idx_in_list('RR', pol_axis)
-                    i_p2 = get_str_idx_in_list('LL', pol_axis)
-                elif 'XX' in pol_axis:
-                    i_p1 = get_str_idx_in_list('XX', pol_axis)
-                    i_p2 = get_str_idx_in_list('YY', pol_axis)
-                else:
-                    msg = f'Unknown polarization scheme: {pol_axis}'
-                    logger.error(msg)
-                    raise Exception(msg)
-
-                try:
-                    xx_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, i_p1, ...], scaling=0.25)
-                    yy_peak = find_peak_beam_value(beam_grid[holog_map_index, chan, i_p2, ...], scaling=0.25)
-                except Exception:
-                    center_pixel = np.array(beam_grid.shape[-2:]) // 2
-                    xx_peak = beam_grid[holog_map_index, chan, i_p1, center_pixel[0], center_pixel[1]]
-                    yy_peak = beam_grid[holog_map_index, chan, i_p2, center_pixel[0], center_pixel[1]]
-
-                normalization = np.abs(0.5 * (xx_peak + yy_peak))
-
-                if normalization == 0:
-                    logger.warning("Peak of zero found! Setting normalization to unity.")
-                    normalization = 1
-
-                beam_grid[holog_map_index, chan, ...] /= normalization
+    beam_grid, time_centroid, freq_chan, \
+        pol_axis, l, m, grid_corr = grid_beam(ant_ddi_dict=ant_data_dict[ddi],
+                                              grid_size=holog_chunk_params["grid_size"],
+                                              cell_size=holog_chunk_params["cell_size"],
+                                              avg_chan=holog_chunk_params["chan_average"],
+                                              chan_tol_fac=holog_chunk_params["chan_tolerance_factor"],
+                                              telescope=telescope,
+                                              grid_interpolation_mode=holog_chunk_params["grid_interpolation_mode"]
+                                              )
 
     if not is_near_field:
         beam_grid = parallactic_derotation(data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi])
@@ -171,7 +57,7 @@ def process_holog_chunk(holog_chunk_params):
     ###############
 
     if to_stokes:
-        beam_grid = astrohack.utils.conversion.to_stokes(beam_grid, ant_data_dict[ddi][holog_map].pol.values)
+        beam_grid = astrohack.utils.conversion.to_stokes(beam_grid, pol_axis)
         pol_axis = ['I', 'Q', 'U', 'V']
 
     ###############
@@ -183,7 +69,7 @@ def process_holog_chunk(holog_chunk_params):
     logger.info("Calculating aperture pattern ...")
     # Current bottleneck
     if is_near_field:
-        focus_offset = ant_xds.attrs["nf_focus_off"]
+        focus_offset = ref_xds.attrs["nf_focus_off"]
         aperture_grid, u, v, uv_cell_size, distance = calculate_near_field_aperture(
             grid=beam_grid,
             sky_cell_size=holog_chunk_params["cell_size"],
@@ -220,12 +106,7 @@ def process_holog_chunk(holog_chunk_params):
 
     if holog_chunk_params['apply_mask']:
         # Masking Aperture image
-        mask = mask_circular_disk(
-            center=None,
-            radius=radius,
-            array=aperture_grid,
-        )
-
+        mask = mask_circular_disk(center=None, radius=radius, array=aperture_grid)
         aperture_grid = mask * aperture_grid
 
     start_cut = center_pixel - radius
@@ -236,15 +117,8 @@ def process_holog_chunk(holog_chunk_params):
     u_prime = u[start_cut[0]:end_cut[0]]
     v_prime = v[start_cut[1]:end_cut[1]]
 
-    ###############################################
-    #   Near field corrections will come here   ###
-    ###############################################
-
-    ##########################################################
-    #   Phase fitting all done in utils/phase_fitting.py   ###
-    ##########################################################
     phase_corrected_angle, phase_fit_results = execute_phase_fitting(amplitude, phase,
-                                                                     ant_data_dict[ddi][map0].coords["pol"].values,
+                                                                     pol_axis,
                                                                      freq_chan, telescope, uv_cell_size,
                                                                      holog_chunk_params["phase_fit"], to_stokes,
                                                                      is_near_field, focus_offset, u_prime, v_prime)
@@ -287,35 +161,6 @@ def process_holog_chunk(holog_chunk_params):
     xds = xds.assign_coords(coords)
     xds.to_zarr("{name}/{ant}/{ddi}".format(name=holog_chunk_params["image_name"], ant=holog_chunk_params["this_ant"],
                                             ddi=ddi), mode="w", compute=True, consolidated=True)
-
-
-def _create_average_chan_map(freq_chan, chan_tolerance_factor):
-    n_chan = len(freq_chan)
-
-    tol = np.max(freq_chan) * chan_tolerance_factor
-    n_pb_chan = int(np.floor((np.max(freq_chan) - np.min(freq_chan)) / tol) + 0.5)
-
-    # Create PB's for each channel
-    if n_pb_chan == 0:
-        n_pb_chan = 1
-
-    if n_pb_chan >= n_chan:
-        cf_chan_map = np.arange(n_chan)
-        pb_freq = freq_chan
-        return cf_chan_map, pb_freq
-
-    pb_delta_bandwdith = (np.max(freq_chan) - np.min(freq_chan)) / n_pb_chan
-    pb_freq = (
-            np.arange(n_pb_chan) * pb_delta_bandwdith
-            + np.min(freq_chan)
-            + pb_delta_bandwdith / 2
-    )
-
-    cf_chan_map = np.zeros((n_chan,), dtype=int)
-    for i in range(n_chan):
-        cf_chan_map[i], _ = find_nearest(pb_freq, freq_chan[i])
-
-    return cf_chan_map, pb_freq
 
 
 def _get_correct_telescope(ant_name, telescope_name):

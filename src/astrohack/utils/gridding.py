@@ -79,20 +79,24 @@ def _create_beam_grid(grid_size, cell_size, n_chan, n_pol, n_map):
 
 def _scipy_gridding(vis, weight, lm, grid_l, grid_m, grid_interpolation_mode, avg_chan_map, avg_freq,
                     reference_scaling_frequency):
+    logger.info('Interpolating beam onto grid...')
+    start = time.time()
     if avg_freq is not None:
         vis_avg, weight_sum = chunked_average(vis, weight, avg_chan_map, avg_freq)
         lm_freq_scaled = lm[:, :, None] * (avg_freq / reference_scaling_frequency)
-        n_pol = vis_avg.shape[1]
-        beam_grid = np.zeros((1, n_pol, grid_l.shape[0], grid_l.shape[1]))
+        n_pol = vis_avg.shape[2]
+        beam_grid = np.zeros((1, n_pol, grid_l.shape[0], grid_l.shape[1]), dtype=complex)
         # Unavoidable for loop because lm change over frequency.
         for i_chan in range(avg_freq.shape[0]):
             # Average scaled beams.
-            beam_grid[0, :, :, :] += np.moveaxis(griddata(lm_freq_scaled[:, :, i_chan], vis_avg[:, i_chan, :],
-                                                          (grid_l, grid_m), method=grid_interpolation_mode,
-                                                          fill_value=0.0), 2, 0)
+            gridded_chan = np.moveaxis(griddata(lm_freq_scaled[:, :, i_chan], vis_avg[:, i_chan, :],(grid_l, grid_m),
+                                                method=grid_interpolation_mode, fill_value=0.0), 2, 0)
+            beam_grid[0, :, :, :] += gridded_chan
     else:
         beam_grid = np.moveaxis(griddata(lm, vis, (grid_l, grid_m), method=grid_interpolation_mode, fill_value=0.0),
                                 (0, 1), (2, 3))
+    duration = time.time()-start
+    logger.info(f'Interpolation took {duration:.3} seconds')
     return beam_grid
 
 
@@ -163,7 +167,6 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
 
 def _convolution_gridding(visibilities, weights, lmvis, diameter, freq, laxis, maxis, sky_cell_size):
     beam_size = _compute_beam_size(diameter, freq)
-
     nchan = visibilities.shape[1]
     if nchan > 1:
         msg = 'Convolution gridding only supported for a single channel currently'
@@ -283,7 +286,7 @@ def _compute_kernel_correction(kernel, grid_size):
 
 
 def _compute_beam_size(diameter, frequency):
-    if isinstance(frequency, np.ndarray):
+    if isinstance(frequency, (np.ndarray, list, tuple)):
         freq = frequency[0]
     else:
         freq = frequency
