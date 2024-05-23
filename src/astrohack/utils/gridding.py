@@ -236,10 +236,11 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
     kernel_size = used_support * 100 + 1
     bias = 50.0 * used_support + 1.0
     u_axis = (np.arange(kernel_size) - bias) * 0.01
+    kernel = np.exp(-(u_axis/pix_width)**exponent)
 
     ker_dict = {'bias': bias,
                 'u-axis': u_axis,
-                'kernel': np.exp(-(u_axis/pix_width)**exponent),
+                'kernel': kernel,
                 'user_support': support,
                 'user_width': width,
                 'pix_support': pix_support,
@@ -275,12 +276,12 @@ def _compute_kernel_correction(kernel, grid_size):
     m_point = grid_size/2 + 1
 
     kw_coeff = 0.01 * np.pi / m_point
-    kernel_extent = 2*bias+1
-    for i_kern in range(kernel_extent):
-        if ker_val[i_kern] != 0:
+    for i_kern in range(kernel.shape[0]):
+        if ker_val[i_kern] > 1e-30:
             kx_coeff = kw_coeff*(i_kern-bias)
             for i_corr in range(grid_size):
-                correction[i_corr] += ker_val[i_kern] * np.cos(kx_coeff*(i_corr-m_point))
+                costerm = np.cos(kx_coeff*(i_corr-m_point))
+                correction[i_corr] += ker_val[i_kern] * costerm
 
     return correction
 
@@ -317,13 +318,11 @@ def _gridding_correction_jit(aperture, beam_size, sky_cell_size, u_axis, v_axis)
     u_corr = _compute_kernel_correction(l_kernel, u_axis.shape[0])
     v_corr = _compute_kernel_correction(m_kernel, v_axis.shape[0])
     norm_corr = _get_normalized_correction(u_corr, v_corr)
-
     ntime, nchan, npol = aperture.shape[:3]
     for i_time in range(ntime):
         for i_chan in range(nchan):
             for i_pol in range(npol):
                 aperture[i_time, i_chan, i_pol] /= norm_corr
-
     return aperture
 
 
