@@ -44,7 +44,7 @@ def process_holog_chunk(holog_chunk_params):
     beam_grid, time_centroid, freq_chan, \
         pol_axis, l, m, grid_corr = grid_beam(ant_ddi_dict=ant_data_dict[ddi],
                                               grid_size=holog_chunk_params["grid_size"],
-                                              cell_size=holog_chunk_params["cell_size"],
+                                              sky_cell_size=holog_chunk_params["cell_size"],
                                               avg_chan=holog_chunk_params["chan_average"],
                                               chan_tol_fac=holog_chunk_params["chan_tolerance_factor"],
                                               telescope=telescope,
