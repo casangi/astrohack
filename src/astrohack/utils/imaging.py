@@ -103,14 +103,14 @@ def calculate_far_field_aperture(grid, padding_factor, freq, telescope, sky_cell
 
     image_size = np.array([u_size, v_size])
 
-    cell_size = 1 / (image_size * sky_cell_size)
+    aperture_cell_size = 1 / (image_size * sky_cell_size)
 
-    uaxis, vaxis = calc_coords(image_size, cell_size)
+    u_axis, v_axis = calc_coords(image_size, aperture_cell_size)
 
     if apply_grid_correction:
-        aperture_grid = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, uaxis, vaxis)
+        aperture_grid = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, u_axis, v_axis)
 
-    return aperture_grid, uaxis, vaxis, cell_size
+    return aperture_grid, u_axis, v_axis, aperture_cell_size
 
 
 def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_factor, focus_offset, telescope,
@@ -131,11 +131,6 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
     Returns:
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
-    focal_length = telescope.focus
-    diameter = telescope.diam
-    blockage = telescope.inlim
-
-
     work_grid = grid.copy()
 
     if apodize:
@@ -143,47 +138,48 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
         work_grid[0, 0, 0, ...] *= apodizer
 
     padded_grid = pad_beam_image(work_grid, padding_factor)
-    uaxis, vaxis, laxis, maxis, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size)
+    u_axis, v_axis, l_axis, m_axis, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size)
 
     aperture_grid = compute_aperture_fft(padded_grid)
 
     # if distance is None:
     #     logger.info('Fitting distance is long and you should feel bad =0')
-    #     result = fit_holo_tower_distance(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
-    #                                      focus_offset, focal_length, diameter)
+    #     result = fit_holo_tower_distance(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis, wavelength,
+    #                                      focus_offset, focal_length, telescope.diam)
     #
     # else:
     wavelength = clight / freq[0]
-    aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
-                                                    distance)
+    aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis,
+                                                    wavelength, distance)
     if apply_grid_correction:
-        aperture_grid = gridding_correction(aperture_grid, freq, diameter, sky_cell_size, uaxis, vaxis)
+        aperture_grid, norm_corr = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, u_axis,
+                                                       v_axis)
 
-    aperture_grid = correct_phase_nf_effects(aperture_grid, uaxis, vaxis, distance, focus_offset, focal_length,
+    aperture_grid = correct_phase_nf_effects(aperture_grid, u_axis, v_axis, distance, focus_offset, telescope.focus,
                                              wavelength)
 
     #
     phase = np.angle(aperture_grid[0, 0, 0, ...])
     amp = np.absolute(aperture_grid[0, 0, 0, ...])
-    # dishhorn_artefact = fit_dishhorn_beam_artefact(amp, blockage, uaxis, vaxis, wavelength, diameter)
+    # dishhorn_artefact = fit_dishhorn_beam_artefact(amp, telescope.inlim, u_axis, v_axis, wavelength, telescope.diam)
     # amp -= dishhorn_artefact
 
-    phase = feed_correction(phase, uaxis, vaxis, focal_length, wavelength)
-    # fitted_amp = fit_illumination_pattern(amp, uaxis, vaxis, wavelength, diameter, blockage)
+    phase = feed_correction(phase, u_axis, v_axis, telescope.focus, wavelength)
+    # fitted_amp = fit_illumination_pattern(amp, u_axis, v_axis, wavelength, telescope.diam, blockage)
     # aperture_grid[0, 0, 0, ...] = fitted_amp * (np.cos(phase) + 1j * np.sin(phase))
     aperture_grid[0, 0, 0, ...] = amp * (np.cos(phase) + 1j * np.sin(phase))
 
-    return aperture_grid, uaxis, vaxis, aperture_cell_size, distance
+    return aperture_grid, u_axis, v_axis, aperture_cell_size, distance
 
 
-def feed_correction(phase, uaxis, vaxis, focal_length, wavelength, nk=10):
+def feed_correction(phase, u_axis, v_axis, focal_length, wavelength, nk=10):
     # Tabulated Sigma GE and GH functions:
     gh_tab = [13.33004 - 0.03155j, -1.27077 + 0.00656j, 0.38349 - 0.17755j, 0.78041 - 0.11238j, -0.54821 + 0.16739j,
               -0.68021 + 0.11472j, 1.05341 - 0.01921j, -0.80119 + 0.06443j, 0.36258 - 0.01845j, -0.07905 + 0.00515j]
     ge_tab = [12.79400 + 2.27305j, 1.06279 - 0.56235j, -1.92694 - 1.72309j, 1.79152 - 0.08008j,  0.09406 + 0.46197j,
               -2.82441 - 1.06010j, 2.77077 + 1.02349j, -1.74437 - 0.45956j, 0.62276 + 0.11504j, -0.11176 + 0.01616j]
 
-    umesh, vmesh = np.meshgrid(uaxis*wavelength, vaxis*wavelength)
+    umesh, vmesh = np.meshgrid(u_axis*wavelength, v_axis*wavelength)
     radius2 = umesh**2 + vmesh**2
     theta2 = radius2 / 4 / focal_length**2
     theta = np.sqrt(theta2)
@@ -204,12 +200,12 @@ def feed_correction(phase, uaxis, vaxis, focal_length, wavelength, nk=10):
     return phase
 
 
-def fit_illumination_pattern(amp, uaxis, vaxis, wavelength, diameter, blockage):
+def fit_illumination_pattern(amp, u_axis, v_axis, wavelength, diameter, blockage):
     amp_max = np.max(amp)
     db_amp = 10.*np.log10(amp/amp_max)
 
     npar = 5
-    umesh, vmesh = np.meshgrid(uaxis*wavelength, vaxis*wavelength)
+    umesh, vmesh = np.meshgrid(u_axis*wavelength, v_axis*wavelength)
     umesh = umesh.ravel()
     vmesh = vmesh.ravel()
     umesh2 = umesh**2
@@ -283,22 +279,22 @@ def calculate_parallactic_angle_chunk(
 
 
 def eliptical_gaussian(axes, amplitude, x0, yo, sigma_x, sigma_y, theta, offset):
-    xaxis, yaxis = axes
+    x_axis, y_axis = axes
     x0 = float(x0)
     yo = float(yo)
     acoeff = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
     bcoeff = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
     ccoeff = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
-    expo = acoeff*((xaxis-x0)**2) + 2*bcoeff*(xaxis-x0)*(yaxis-yo) + ccoeff*((yaxis-yo)**2)
+    expo = acoeff*((x_axis-x0)**2) + 2*bcoeff*(x_axis-x0)*(y_axis-yo) + ccoeff*((y_axis-yo)**2)
     gaussian = offset + amplitude*np.exp(-expo)
     return gaussian
 
 
 def circular_gaussian(axes, amp, x0, yo, sigma, offset):
-    xaxis, yaxis = axes
+    x_axis, y_axis = axes
     x0 = float(x0)
     yo = float(yo)
-    expo = 1*((xaxis-x0)**2 + (yaxis-yo)**2)
+    expo = 1*((x_axis-x0)**2 + (y_axis-yo)**2)
     expo /= 2*sigma**2
     return amp*np.exp(-expo)+offset
 
@@ -310,11 +306,11 @@ def two_gaussians(axes, x0, y0, amp_narrow, sigma_narrow, amp_broad, sigma_broad
     return narrow+broad+offset
 
 
-def fit_dishhorn_beam_artefact(amp, blockage, uaxis, vaxis, wavelength, diameter):
+def fit_dishhorn_beam_artefact(amp, blockage, u_axis, v_axis, wavelength, diameter):
     logger.info('Fitting feed horn artefact')
     nx, ny = amp.shape
 
-    u_mesh, v_mesh = np.meshgrid(uaxis*wavelength, vaxis*wavelength)
+    u_mesh, v_mesh = np.meshgrid(u_axis*wavelength, v_axis*wavelength)
 
     dist2 = u_mesh**2+v_mesh**2
     #sel = dist2 < (diameter/2)**2
@@ -357,8 +353,8 @@ def fit_dishhorn_beam_artefact(amp, blockage, uaxis, vaxis, wavelength, diameter
     fig, axes = create_figure_and_axes(None, [2, 2])
     axes[0, 0].imshow(feed_fit)
     axes[1, 0].imshow(amp)
-    axes[0, 1].plot(uaxis*wavelength, amp[nx//2, :], color='red')
-    axes[0, 1].plot(uaxis*wavelength, feed_fit[nx//2, :], color='blue')
+    axes[0, 1].plot(u_axis*wavelength, amp[nx//2, :], color='red')
+    axes[0, 1].plot(u_axis*wavelength, feed_fit[nx//2, :], color='blue')
     axes[0, 1].axvline(x=diameter / 2, color='yellow')
     axes[0, 1].axvline(x=-diameter / 2, color='yellow')
     axes[0, 1].set_xlim([-1.5*diameter/2, 1.5*diameter/2])
@@ -401,8 +397,8 @@ def apodize_beam(unpadded_beam, degree=2):
     return apodizer
 
 
-def correct_phase_nf_effects(aperture, uaxis, vaxis, distance, focus_offset, focal_length, wavelength):
-    umesh, vmesh = np.meshgrid(uaxis, vaxis)
+def correct_phase_nf_effects(aperture, u_axis, v_axis, distance, focus_offset, focal_length, wavelength):
+    umesh, vmesh = np.meshgrid(u_axis, v_axis)
     umesh *= wavelength
     vmesh *= wavelength
     wave_vector = 0. + 2*np.pi*1j/wavelength
@@ -420,9 +416,9 @@ def compute_axes(shape, sky_cell_size):
     v_size = shape[-1]
     image_size = np.array([u_size, v_size])
     aperture_cell_size = 1 / (image_size * sky_cell_size)
-    uaxis, vaxis = calc_coords(image_size, aperture_cell_size)
-    laxis, maxis = calc_coords(image_size, sky_cell_size)
-    return uaxis, vaxis, laxis, maxis, aperture_cell_size
+    u_axis, v_axis = calc_coords(image_size, aperture_cell_size)
+    l_axis, m_axis = calc_coords(image_size, sky_cell_size)
+    return u_axis, v_axis, l_axis, m_axis, aperture_cell_size
 
 
 def compute_aperture_fft(padded_grid):
@@ -432,13 +428,13 @@ def compute_aperture_fft(padded_grid):
     return aperture_grid
 
 
-def compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength, distance,
+def compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis, wavelength, distance,
                                     max_it=6, verbose=True):
     if verbose:
         logger.info('Applying non-fresnel corrections...')
     wave_vector = 0. + 2*np.pi*1j/wavelength
-    lmesh, mmesh = np.meshgrid(laxis, maxis)
-    umesh, vmesh = np.meshgrid(uaxis, vaxis)
+    lmesh, mmesh = np.meshgrid(l_axis, m_axis)
+    umesh, vmesh = np.meshgrid(u_axis, v_axis)
     umesh *= wavelength
     vmesh *= wavelength
     u2mesh = np.power(umesh, 2)
@@ -475,7 +471,7 @@ def compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, ua
     return aperture_grid
 
 
-def fit_holo_tower_distance(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength, focus_offset,
+def fit_holo_tower_distance(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis, wavelength, focus_offset,
                             focal_length, diameter):
     from scipy.optimize import minimize
     fixed_par_dict = locals()
@@ -487,19 +483,19 @@ def fit_holo_tower_distance(padded_grid, aperture_grid, laxis, maxis, uaxis, vax
 
 def distance_fitting_function(distance, par_dict):
     aperture_grid = compute_non_fresnel_corrections(par_dict["padded_grid"], par_dict["aperture_grid"],
-                                                    par_dict["laxis"], par_dict["maxis"], par_dict["uaxis"],
-                                                    par_dict["vaxis"], par_dict["wavelength"], distance)
-    aperture_grid = correct_phase_nf_effects(aperture_grid, par_dict["uaxis"], par_dict["vaxis"],
+                                                    par_dict["l_axis"], par_dict["m_axis"], par_dict["u_axis"],
+                                                    par_dict["v_axis"], par_dict["wavelength"], distance)
+    aperture_grid = correct_phase_nf_effects(aperture_grid, par_dict["u_axis"], par_dict["v_axis"],
                                              distance, par_dict["focus_offset"], par_dict["focal_length"],
                                              par_dict["wavelength"])
-    rms = compute_phase_rms(aperture_grid, par_dict["diameter"], par_dict["uaxis"], par_dict["vaxis"],
+    rms = compute_phase_rms(aperture_grid, par_dict["diameter"], par_dict["u_axis"], par_dict["v_axis"],
                             par_dict["wavelength"])
     return rms
 
 
-def compute_phase_rms(aperture, diameter, uaxis, vaxis, wavelength):
+def compute_phase_rms(aperture, diameter, u_axis, v_axis, wavelength):
     phase = np.angle(aperture[0, 0, 0, ...], deg=False)
-    umesh, vmesh = np.meshgrid(uaxis, vaxis)
+    umesh, vmesh = np.meshgrid(u_axis, v_axis)
     umesh *= wavelength
     vmesh *= wavelength
     aper_radius = np.sqrt(umesh**2+vmesh**2)

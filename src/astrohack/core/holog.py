@@ -97,11 +97,10 @@ def process_holog_chunk(holog_chunk_params):
     amplitude, phase, u_prime, v_prime = _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope,
                                                                   min_wavelength, holog_chunk_params['apply_mask'])
 
-    phase_corrected_angle, phase_fit_results = execute_phase_fitting(amplitude, phase,
-                                                                     pol_axis,
-                                                                     freq_axis, telescope, uv_cell_size,
-                                                                     holog_chunk_params["phase_fit"], to_stokes,
-                                                                     is_near_field, focus_offset, u_prime, v_prime)
+    phase_corrected_angle, phase_fit_results = execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope,
+                                                                     uv_cell_size, holog_chunk_params["phase_fit"],
+                                                                     to_stokes, is_near_field, focus_offset, u_prime,
+                                                                     v_prime)
 
     aperture_resolution = _compute_aperture_resolution(l_axis, m_axis, min_wavelength)
     _export_to_xds(beam_grid, aperture_grid, amplitude, phase_corrected_angle, aperture_resolution,
