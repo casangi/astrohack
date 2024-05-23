@@ -80,7 +80,7 @@ def mask_circular_disk(center, radius, array, mask_value=np.nan):
     return mask
 
 
-def calculate_far_field_aperture(grid, delta, padding_factor=50):
+def calculate_far_field_aperture(grid, padding_factor, freq, telescope, sky_cell_size, apply_grid_correction):
     """ Calculates the aperture illumination pattern from the beam data.
 
     Args:
@@ -103,37 +103,18 @@ def calculate_far_field_aperture(grid, delta, padding_factor=50):
 
     image_size = np.array([u_size, v_size])
 
-    cell_size = 1 / (image_size * delta)
+    cell_size = 1 / (image_size * sky_cell_size)
 
     uaxis, vaxis = calc_coords(image_size, cell_size)
+
+    if apply_grid_correction:
+        aperture_grid = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, uaxis, vaxis)
 
     return aperture_grid, uaxis, vaxis, cell_size
 
 
-def line_statistics(array, ix, iy):
-    if ix is None:
-        line = array[:, iy]
-        sx = ':'
-        sy = str(iy)
-    if iy is None:
-        line = array[ix, :]
-        sx = str(ix)
-        sy = ':'
-    mini = np.min(line)
-    maxi = np.max(line)
-    mean = np.mean(line)
-    median = np.median(line)
-    histo = np.histogram(line)
-    print(f'amp[{sx},{sy}]:')
-    print(f'min= {mini}')
-    print(f'max= {maxi}')
-    print(f'mean= {mean}')
-    print(f'median= {median}')
-    print(f'histogram= {histo}')
-
-
-def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, padding_factor, focus_offset, focal_length,
-                                  diameter, blockage, apodize=True):
+def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_factor, focus_offset, telescope,
+                                  apply_grid_correction, apodize=True):
     """" Calculates the aperture illumination pattern from the near_fiedl beam data.
 
     Args:
@@ -150,9 +131,11 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
     Returns:
         numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
     """
-    #
-    # # gridding here?
-    #
+    focal_length = telescope.focus
+    diameter = telescope.diam
+    blockage = telescope.inlim
+
+
     work_grid = grid.copy()
 
     if apodize:
@@ -170,11 +153,11 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
     #                                      focus_offset, focal_length, diameter)
     #
     # else:
+    wavelength = clight / freq[0]
     aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, laxis, maxis, uaxis, vaxis, wavelength,
                                                     distance)
-
-    freq = clight/wavelength
-    aperture_grid = gridding_correction(aperture_grid, freq, diameter, sky_cell_size, uaxis, vaxis)
+    if apply_grid_correction:
+        aperture_grid = gridding_correction(aperture_grid, freq, diameter, sky_cell_size, uaxis, vaxis)
 
     aperture_grid = correct_phase_nf_effects(aperture_grid, uaxis, vaxis, distance, focus_offset, focal_length,
                                              wavelength)
@@ -186,7 +169,7 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, wavelength, pad
     # amp -= dishhorn_artefact
 
     phase = feed_correction(phase, uaxis, vaxis, focal_length, wavelength)
-    fitted_amp = fit_illumination_pattern(amp, uaxis, vaxis, wavelength, diameter, blockage)
+    # fitted_amp = fit_illumination_pattern(amp, uaxis, vaxis, wavelength, diameter, blockage)
     # aperture_grid[0, 0, 0, ...] = fitted_amp * (np.cos(phase) + 1j * np.sin(phase))
     aperture_grid[0, 0, 0, ...] = amp * (np.cos(phase) + 1j * np.sin(phase))
 

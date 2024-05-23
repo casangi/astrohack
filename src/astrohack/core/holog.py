@@ -75,19 +75,21 @@ def process_holog_chunk(holog_chunk_params):
             grid=beam_grid,
             sky_cell_size=holog_chunk_params["cell_size"],
             distance=holog_chunk_params["distance_to_tower"],
-            wavelength=clight / freq_axis[0],
+            freq=freq_axis,
             padding_factor=holog_chunk_params["padding_factor"],
             focus_offset=focus_offset,
-            focal_length=telescope.focus,
-            diameter=telescope.diam,
-            blockage=telescope.inlim,
+            telescope=telescope,
+            apply_grid_correction=grid_corr
         )
     else:
         focus_offset = 0
         aperture_grid, u_axis, v_axis, uv_cell_size = calculate_far_field_aperture(
             grid=beam_grid,
-            delta=holog_chunk_params["cell_size"],
             padding_factor=holog_chunk_params["padding_factor"],
+            freq=freq_axis,
+            telescope=telescope,
+            sky_cell_size=holog_chunk_params["cell_size"],
+            apply_grid_correction=grid_corr
         )
 
     min_wavelength = clight / freq_axis[0]
