@@ -69,13 +69,12 @@ def _aips_like_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, u
             logger.error(msg)
             raise Exception(msg)
 
-    max_wavelength = clight / freq_axis[-1]
-
+    min_wavelength = clight / freq_axis[0]
     results, errors, phase_corrected_angle, _, in_rms, out_rms = phase_fitting_block(
         pol_indexes=pol_indexes,
-        wavelength=max_wavelength,
+        wavelength=min_wavelength,
         telescope=telescope,
-        cellxy=uv_cell_size[0] * max_wavelength,  # THIS HAS TO BE CHANGED, (X, Y) CELL SIZE ARE NOT THE SAME.
+        cellxy=uv_cell_size[0],  # THIS HAS TO BE CHANGED, (X, Y) CELL SIZE ARE NOT THE SAME.
         amplitude_image=amplitude,
         phase_image=phase,
         pointing_offset=phase_fit_control[0],
@@ -792,72 +791,6 @@ def _perturbed_fit(matrix, vector, sel, fit_offset, npar):
     return result, sigma
 
 
-def _clic_phase_fitting_matrix_building(astangle, blockage, diameter, focus, defocus, phase, uaxis, vaxis, fit_offset,
-                                        npar):
-    cz = 1./2./focus**2
-    defocus_ratio = defocus/focus
-    npoints = phase.shape[0]*phase.shape[1]
-    matrix = np.zeros((npoints, npar))
-    vector = np.zeros((npoints))
-    #
-    i_line = 0
-    for i_u in range(phase.shape[0]):
-        uval = uaxis[i_u]
-        uval2 = uval**2
-        for i_v in range(phase.shape[1]):
-            vval = vaxis[i_v]
-            vval2 = vval**2
-            rad2 = uval2 + vval2
-            rad = np.sqrt(rad2)
-            if blockage < rad < diameter/2:
-                radfocus2 = rad2/focus**2
-                focus2def_coeff = (1 - radfocus2/4 + defocus_ratio)
-
-                matrix[i_line, 0] = 1.0
-                matrix[i_line, 1] = uval
-                matrix[i_line, 2] = vval
-                # Z now in 4.
-                # include defocus
-                matrix[i_line, 3] = 1 - focus2def_coeff / np.sqrt(radfocus2 + focus2def_coeff**2)
-                matrix[i_line, 4] = uval / focus * (1. / (1. + defocus_ratio)  - 1. / np.sqrt(radfocus2 + focus2def_coeff**2))
-                matrix[i_line, 5] = vval / focus * (1. / (1. + defocus_ratio)  - 1. / np.sqrt(radfocus2 + focus2def_coeff**2))
-                # old formulation :
-                #                  matrix[K,5] = X/FOCUS*(1.-1./(1.+R2/4/FOCUS**2))
-                #                  matrix[K,6] = vval/FOCUS*(1.-1./(1.+R2/4/FOCUS**2))
-                #                  matrix[K,4] = 1-(1-R2/4/FOCUS**2)/(1.+R2/4/FOCUS**2)
-                # end old formulation
-                #
-                if npar == 7:
-                    matrix[i_line, 6] = ((uval2-vval2)*np.cos(2*astangle) + 2*uval*vval*np.sin(2*astangle))*cz
-                elif npar > 7:
-                    matrix[i_line, 6] = (uval2-vval2)*cz
-                    matrix[i_line, 7] = 2*uval*vval*cz
-
-                # plane 4 is the observed phase
-                vector[i_line] = phase[i_u, i_v]
-                for i_par in range(npar):
-                    vector[i_line] -= matrix[i_line, i_par] * fit_offset[i_par]
-
-                # Set in [-PI,PI[ range
-                vector[i_line] = np.mod(vector[i_line]+21*np.pi, 2*np.pi)-np.pi
-                #     CALL RANGE_PI8(vector[K))
-                # do not weigh by amplitude.
-                # This gives too much weight to the central part to fit the focus
-                # and can produce long range phase errors on the edge of the dish.
-                #                  W = 0.1D0*V(I,J,3)
-                #                  W = 10.D0**W
-                #                  vector[K) = vector[K)*W
-                #                  DO L=1,6
-                #                     matrix[K,L) = matrix[K,L)*W
-                #                  ENDDO
-                i_line += 1
-
-    matrix = matrix[:i_line, :]
-    vector = vector[:i_line]
-    result, _, _, sigma = least_squares(matrix, vector, return_sigma=True)
-    return result, sigma
-
-
 def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus, phase, uaxis, vaxis):
     # Astigmatism angle is fitted if npar = 8
     astangle = np.pi
@@ -933,23 +866,10 @@ def _clic_like_phase_fitting(phase, freq_axis, telescope, focus_offset, uaxis, v
     logger.info('Going into CLIC code')
     phase_i = phase[0, 0, 0, ...]
     freq = freq_axis[0]
-    wavelength = clight/freq
-    uaxis_m = uaxis*wavelength
-    vaxis_m = vaxis*wavelength
 
     best_fit, phase_model = _clic_full_phase_fitting(8, freq, telescope.diam, telescope.inlim, telescope.focus,
-                                        focus_offset, phase_i, uaxis_m, vaxis_m)
-
-    print(best_fit)
-
-    fig, axes = create_figure_and_axes(None, [2, 2])
-    axes[0, 0].imshow(phase_i)
-    axes[1, 0].imshow(phase_model)
-    axes[0, 1].imshow(phase_i-phase_model)
-    plt.show()
-
-
-
+                                                     focus_offset, phase_i, uaxis, vaxis)
+    phase[0, 0, 0, ...] -= phase_model
     return phase, best_fit
 
 

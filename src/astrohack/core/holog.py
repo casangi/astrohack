@@ -71,7 +71,7 @@ def process_holog_chunk(holog_chunk_params):
     # Current bottleneck
     if is_near_field:
         focus_offset = ref_xds.attrs["nf_focus_off"]
-        aperture_grid, u_axis, v_axis, uv_cell_size, distance = calculate_near_field_aperture(
+        aperture_grid, u_axis, v_axis, uv_cell_size, distance, used_wavelength = calculate_near_field_aperture(
             grid=beam_grid,
             sky_cell_size=holog_chunk_params["cell_size"],
             distance=holog_chunk_params["distance_to_tower"],
@@ -83,7 +83,7 @@ def process_holog_chunk(holog_chunk_params):
         )
     else:
         focus_offset = 0
-        aperture_grid, u_axis, v_axis, uv_cell_size = calculate_far_field_aperture(
+        aperture_grid, u_axis, v_axis, uv_cell_size, used_wavelength = calculate_far_field_aperture(
             grid=beam_grid,
             padding_factor=holog_chunk_params["padding_factor"],
             freq=freq_axis,
@@ -92,17 +92,15 @@ def process_holog_chunk(holog_chunk_params):
             apply_grid_correction=grid_corr
         )
 
-    min_wavelength = clight / freq_axis[0]
-
     amplitude, phase, u_prime, v_prime = _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope,
-                                                                  min_wavelength, holog_chunk_params['apply_mask'])
+                                                                  holog_chunk_params['apply_mask'])
 
     phase_corrected_angle, phase_fit_results = execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope,
                                                                      uv_cell_size, holog_chunk_params["phase_fit"],
                                                                      to_stokes, is_near_field, focus_offset, u_prime,
                                                                      v_prime)
 
-    aperture_resolution = _compute_aperture_resolution(l_axis, m_axis, min_wavelength)
+    aperture_resolution = _compute_aperture_resolution(l_axis, m_axis, used_wavelength)
     _export_to_xds(beam_grid, aperture_grid, amplitude, phase_corrected_angle, aperture_resolution,
                    holog_chunk_params["this_ant"], ant_data_dict[ddi]['map_0'].attrs["antenna_name"],
                    meta_data['telescope_name'], time_centroid, ddi, phase_fit_results, pol_axis, freq_axis, l_axis,
@@ -126,9 +124,9 @@ def _get_correct_telescope(ant_name, telescope_name):
     return Telescope(telescope_name)
 
 
-def _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope, wavelength, apply_mask, scaling=1.1):
+def _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope, apply_mask, scaling=1.1):
     # Default scaling factor of 1.1: Let's not be too aggressive
-    max_aperture_radius = (0.5 * telescope.diam)/wavelength
+    max_aperture_radius = (0.5 * telescope.diam)
 
     image_slice = aperture_grid[0, 0, 0, ...]
     center_pixel = np.array(image_slice.shape[0:2]) // 2

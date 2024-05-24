@@ -98,15 +98,16 @@ def calculate_far_field_aperture(grid, padding_factor, freq, telescope, sky_cell
 
     aperture_grid = compute_aperture_fft(padded_grid)
 
+    wavelength = clight/freq[0]
     image_size = _get_img_size(aperture_grid.shape)
-    aperture_cell_size = _compute_aperture_cell_size(clight/freq[0], image_size, sky_cell_size)
+    aperture_cell_size = _compute_aperture_cell_size(wavelength, image_size, sky_cell_size)
 
     u_axis, v_axis = calc_coords(image_size, aperture_cell_size)
 
     if apply_grid_correction:
         aperture_grid = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, u_axis, v_axis)
 
-    return aperture_grid, u_axis, v_axis, aperture_cell_size
+    return aperture_grid, u_axis, v_axis, aperture_cell_size, wavelength
 
 
 def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_factor, focus_offset, telescope,
@@ -166,7 +167,7 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
     # aperture_grid[0, 0, 0, ...] = fitted_amp * (np.cos(phase) + 1j * np.sin(phase))
     aperture_grid[0, 0, 0, ...] = amp * (np.cos(phase) + 1j * np.sin(phase))
 
-    return aperture_grid, u_axis, v_axis, aperture_cell_size, distance
+    return aperture_grid, u_axis, v_axis, aperture_cell_size, distance, wavelength
 
 
 def feed_correction(phase, u_axis, v_axis, focal_length, nk=10):
