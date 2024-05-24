@@ -276,7 +276,7 @@ def _compute_kernel_correction(kernel, grid_size):
     m_point = grid_size/2 + 1
 
     kw_coeff = 0.01 * np.pi / m_point
-    for i_kern in range(kernel.shape[0]):
+    for i_kern in range(ker_val.shape[0]):
         if ker_val[i_kern] > 1e-30:
             kx_coeff = kw_coeff*(i_kern-bias)
             for i_corr in range(grid_size):
