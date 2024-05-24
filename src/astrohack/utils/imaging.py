@@ -1,6 +1,7 @@
 import math
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Circle
 import scipy
 import numpy as np
 import astropy.units as u
@@ -14,7 +15,7 @@ from skimage.draw import disk
 from astrohack.utils.algorithms import calc_coords, least_squares
 from astrohack.utils.gridding import gridding_correction
 from astrohack.utils.constants import clight, sig_2_fwhm
-from astrohack.visualization.plot_tools import create_figure_and_axes
+from astrohack.visualization.plot_tools import create_figure_and_axes, well_positioned_colorbar, get_proper_color_map
 
 
 def parallactic_derotation(data, parallactic_angle_dict):
@@ -99,10 +100,7 @@ def calculate_far_field_aperture(grid, padding_factor, freq, telescope, sky_cell
     aperture_grid = compute_aperture_fft(padded_grid)
 
     wavelength = clight/freq[0]
-    image_size = _get_img_size(aperture_grid.shape)
-    aperture_cell_size = _compute_aperture_cell_size(wavelength, image_size, sky_cell_size)
-
-    u_axis, v_axis = calc_coords(image_size, aperture_cell_size)
+    u_axis, v_axis, _, _, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size, wavelength)
 
     if apply_grid_correction:
         aperture_grid = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, u_axis, v_axis)
@@ -146,15 +144,16 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
     #                                      focus_offset, focal_length, telescope.diam)
     #
     # else:
-
+    wvl = 2*wavelength
+    print(wvl)
+    factor = 2j*np.pi/wvl
     aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis,
-                                                    wavelength, distance)
+                                                    factor, distance)
     if apply_grid_correction:
-        aperture_grid, norm_corr = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, u_axis,
-                                                       v_axis)
+        aperture_grid = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, u_axis, v_axis)
 
-    aperture_grid = correct_phase_nf_effects(aperture_grid, u_axis, v_axis, distance, focus_offset, telescope.focus,
-                                             wavelength)
+    # aperture_grid = correct_phase_nf_effects(aperture_grid, u_axis, v_axis, distance, focus_offset, telescope.focus,
+    #                                          factor)
 
     #
     phase = np.angle(aperture_grid[0, 0, 0, ...])
@@ -395,21 +394,58 @@ def apodize_beam(unpadded_beam, degree=2):
     return apodizer
 
 
-def correct_phase_nf_effects(aperture, u_axis, v_axis, distance, focus_offset, focal_length, wavelength):
+def correct_phase_nf_effects(aperture, u_axis, v_axis, distance, focus_offset, focal_length, factor):
+    # zm = (diameter/2.)**2/4/focus
+    # do i2 = 1, n2
+    #   yy = (i2-ref2)*dy
+    #   do i1 = 1, n1
+    #     xx = (i1-ref1)*dy
+    #     r2 = xx**2 + yy**2
+    #     z = r2 /4 /focus
+    #     dp = r2 /2/distance - r2**2 /8/distance**3   &
+    #       +  sqrt(r2+(focus+dfocus-z)**2) - (focus+z +dfocus)
+    #     ! do the correction
+    #     y(i1,i2) = y(i1,i2) * exp(factor * dp)
+    #   !            y(i1,i2) = exp(factor * dp)
+    #   enddo
+    # enddo
+
     umesh, vmesh = np.meshgrid(u_axis, v_axis)
-    wave_vector = 0. + 2*np.pi*1j/wavelength
+    wave_vector = factor
     axis_dist2 = umesh**2+vmesh**2
     z_term = axis_dist2/4/focal_length
-    path_var = (axis_dist2/2/distance - axis_dist2**2/8/distance**3 +
-                np.sqrt(axis_dist2 + (focal_length + focus_offset - z_term)**2) - (focal_length + z_term +
-                                                                                   focus_offset))
+    part1 = axis_dist2/2/distance
+    part2 = axis_dist2**2/8/distance**3
+    part3 = np.sqrt(axis_dist2 + (focal_length + focus_offset - z_term)**2)
+    part4 = focal_length + z_term + focus_offset
+    path_var = (part1 - part2 + part3 - part4)
+    expo = np.exp(wave_vector * path_var)
+
+    fig, axes = create_figure_and_axes(None, [2, 2])
+    plot_map_simple(expo.real, fig, axes[0, 0], 'real', u_axis, v_axis)
+    plot_map_simple(expo.imag, fig, axes[0, 1], 'imag', u_axis, v_axis)
+    plot_map_simple(np.angle(expo), fig, axes[1, 0], 'phase', u_axis, v_axis)
+    plot_map_simple(path_var, fig, axes[1, 1], 'path_var', u_axis, v_axis)
+    plt.show()
     aperture[0, 0, 0, ...] *= np.exp(wave_vector * path_var)
     return aperture
 
 
+def plot_map_simple(data, fig, ax, title, u_axis, v_axis):
+    extent = [np.min(u_axis), np.max(u_axis), np.min(v_axis), np.max(v_axis)]
+    cmap = get_proper_color_map('viridis')
+    im = ax.imshow(data, cmap=cmap, extent=extent)
+    circ = Circle((0, 0), 6, fill=False, color='black')
+    ax.add_patch(circ)
+    circ = Circle((0, 0), 3, fill=False, color='black')
+    ax.add_patch(circ)
+    ax.set_title(title)
+    well_positioned_colorbar(ax, fig, im, title)
+
+
 def compute_axes(shape, sky_cell_size, wavelength):
-    image_size = _get_img_size(shape)
-    aperture_cell_size = _compute_aperture_cell_size(wavelength, image_size, sky_cell_size)
+    image_size = np.array([shape[-2], shape[-1]])
+    aperture_cell_size = wavelength / (image_size * sky_cell_size)
     u_axis, v_axis = calc_coords(image_size, aperture_cell_size)
     l_axis, m_axis = calc_coords(image_size, sky_cell_size)
     return u_axis, v_axis, l_axis, m_axis, aperture_cell_size
@@ -430,11 +466,11 @@ def compute_aperture_fft(padded_grid):
     return aperture_grid
 
 
-def compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis, wavelength, distance,
+def compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis, factor, distance,
                                     max_it=6, verbose=True):
     if verbose:
         logger.info('Applying non-fresnel corrections...')
-    wave_vector = 0. + 2*np.pi*1j/wavelength
+    wave_vector = factor
     lmesh, mmesh = np.meshgrid(l_axis, m_axis)
     umesh, vmesh = np.meshgrid(u_axis, v_axis)
     u2mesh = np.power(umesh, 2)
