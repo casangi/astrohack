@@ -144,16 +144,18 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
     #                                      focus_offset, focal_length, telescope.diam)
     #
     # else:
-    wvl = 2*wavelength
-    print(wvl)
+    wvl = wavelength
+    print(wvl, 2*np.pi)
     factor = 2j*np.pi/wvl
+    print(factor, factor*wvl)
+    focus_offset *= 1
     aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis,
                                                     factor, distance)
     if apply_grid_correction:
         aperture_grid = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, u_axis, v_axis)
 
-    # aperture_grid = correct_phase_nf_effects(aperture_grid, u_axis, v_axis, distance, focus_offset, telescope.focus,
-    #                                          factor)
+    aperture_grid = correct_phase_nf_effects(aperture_grid, u_axis, v_axis, distance, focus_offset, telescope.focus,
+                                             factor)
 
     #
     phase = np.angle(aperture_grid[0, 0, 0, ...])
@@ -180,7 +182,8 @@ def feed_correction(phase, u_axis, v_axis, focal_length, nk=10):
     radius2 = umesh**2 + vmesh**2
     theta2 = radius2 / 4 / focal_length**2
     theta = np.sqrt(theta2)
-    z_term = np.cos(theta) + np.sin(theta)*1j
+    #z_term = np.cos(theta) + np.sin(theta)*1j
+    z_term = (1-theta2+2j*theta)/(1+theta2)
 
     zz_term = np.full_like(phase, 1+0j, dtype=complex)
     geth = np.zeros_like(phase, dtype=complex)
@@ -193,7 +196,15 @@ def feed_correction(phase, u_axis, v_axis, focal_length, nk=10):
         ghth += gh_tab[k] * costh
     phi = np.arctan2(vmesh, umesh)
     gain = geth * np.sin(phi)**2 + ghth * np.cos(phi)**2
+
+    fig, axes = create_figure_and_axes(None, [1, 2])
+    plot_map_simple(phase, fig, axes[0], 'observed', u_axis, v_axis)
+    plot_map_simple(np.angle(gain), fig, axes[1], 'gain', u_axis, v_axis)
+    plt.show()
+
     phase += np.angle(gain)
+
+
     return phase
 
 
@@ -409,24 +420,28 @@ def correct_phase_nf_effects(aperture, u_axis, v_axis, distance, focus_offset, f
     #   !            y(i1,i2) = exp(factor * dp)
     #   enddo
     # enddo
-
+    print(focus_offset, focal_length, distance)
     umesh, vmesh = np.meshgrid(u_axis, v_axis)
     wave_vector = factor
-    axis_dist2 = umesh**2+vmesh**2
-    z_term = axis_dist2/4/focal_length
-    part1 = axis_dist2/2/distance
-    part2 = axis_dist2**2/8/distance**3
-    part3 = np.sqrt(axis_dist2 + (focal_length + focus_offset - z_term)**2)
-    part4 = focal_length + z_term + focus_offset
-    path_var = (part1 - part2 + part3 - part4)
+    axis_dist2 = umesh**2+vmesh**2  # \epsilon^2 + \eta^2
+    z_term = axis_dist2/4/focal_length  # \frac{\epsilon^2 + \eta^2}{4f}
+    first_term = axis_dist2/2/distance  # \frac{\epsilon^2 + \eta^2}{2R}
+    second_term = axis_dist2**2/8/distance**3  # \frac{(\epsilon^2 + \eta^2)^2}{8R^3}
+    dp1 = first_term - second_term
+    # \sqrt{(\epsilon^2 + \eta^2) + (f - \frac{\epsilon^2 + \eta^2}{4f} +df)^2}
+    furst_term = np.sqrt(axis_dist2 + (focal_length + focus_offset - z_term)**2)
+    # f - \frac{\epsilon^2 + \eta^2}{4f} +df
+    sucond_term = focal_length + z_term + focus_offset
+    dp2 = furst_term-sucond_term
+    path_var = dp1+dp2
     expo = np.exp(wave_vector * path_var)
 
-    fig, axes = create_figure_and_axes(None, [2, 2])
-    plot_map_simple(expo.real, fig, axes[0, 0], 'real', u_axis, v_axis)
-    plot_map_simple(expo.imag, fig, axes[0, 1], 'imag', u_axis, v_axis)
-    plot_map_simple(np.angle(expo), fig, axes[1, 0], 'phase', u_axis, v_axis)
-    plot_map_simple(path_var, fig, axes[1, 1], 'path_var', u_axis, v_axis)
-    plt.show()
+    # fig, axes = create_figure_and_axes(None, [2, 2])
+    # plot_map_simple(expo.real, fig, axes[0, 0], 'real', u_axis, v_axis)
+    # plot_map_simple(expo.imag, fig, axes[0, 1], 'imag', u_axis, v_axis)
+    # plot_map_simple(np.angle(expo), fig, axes[1, 0], 'phase', u_axis, v_axis)
+    # plot_map_simple(path_var, fig, axes[1, 1], 'path_var', u_axis, v_axis)
+    # plt.show()
     aperture[0, 0, 0, ...] *= np.exp(wave_vector * path_var)
     return aperture
 
@@ -475,6 +490,7 @@ def compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, 
     umesh, vmesh = np.meshgrid(u_axis, v_axis)
     u2mesh = np.power(umesh, 2)
     v2mesh = np.power(vmesh, 2)
+    dist2 = u2mesh+v2mesh
 
     it = 1
     while it < max_it:
@@ -490,20 +506,43 @@ def compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, 
         elif it == 5:
             fft_work_array *= lmesh * mmesh
 
-        nonfresnel_corr = compute_aperture_fft(fft_work_array)
+        fft_term = compute_aperture_fft(fft_work_array)
 
+        print(80*'#')
+        print(it)
         if it == 1:
-            aperture_grid += nonfresnel_corr * umesh*(u2mesh + v2mesh) / 2 / distance**2 * wave_vector
+            corr_term = umesh * dist2 / 2 / distance**2 * wave_vector
         elif it == 2:
-            aperture_grid += nonfresnel_corr * vmesh*(u2mesh + v2mesh) / 2 / distance**2 * wave_vector
+            corr_term = vmesh * dist2 / 2 / distance**2 * wave_vector
         elif it == 3:
-            aperture_grid += nonfresnel_corr * u2mesh / 2 / distance * wave_vector
+            corr_term = -1 * u2mesh / 2 / distance * wave_vector
         elif it == 4:
-            aperture_grid += nonfresnel_corr * v2mesh / 2 / distance * wave_vector
+            corr_term = -1 * v2mesh / 2 / distance * wave_vector
         elif it == 5:
-            aperture_grid += nonfresnel_corr * umesh * vmesh / distance * wave_vector
-        it += 1
+            corr_term = -1 * umesh * vmesh / distance * wave_vector
+        print(np.min(fft_term), np.max(fft_term))
+        print(np.min(corr_term), np.max(corr_term))
+        add_term = corr_term * fft_term
+        print(np.min(add_term), np.max(add_term))
+        aperture_grid += add_term
+        print(np.min(aperture_grid[0, 0, 0, ...]), np.max(aperture_grid[0, 0, 0, ...]))
+        print(80*'#')
+        # fig, axes = create_figure_and_axes(None, [2, 4])
+        # plot_map_simple(fft_term.real, fig, axes[0, 0], 'real fft', u_axis, v_axis)
+        # plot_map_simple(fft_term.imag, fig, axes[1, 0], 'imag fft', u_axis, v_axis)
+        # plot_map_simple(corr_term.real, fig, axes[0, 1], 'real corr', u_axis, v_axis)
+        # plot_map_simple(corr_term.imag, fig, axes[1, 1], 'imag corr', u_axis, v_axis)
+        # plot_map_simple(add_term.real, fig, axes[0, 2], 'real add', u_axis, v_axis)
+        # plot_map_simple(add_term.imag, fig, axes[1, 2], 'imag add', u_axis, v_axis)
+        # plot_map_simple(aperture_grid[0, 0, 0, ...].real, fig, axes[0, 3], 'real aperture', u_axis, v_axis)
+        # plot_map_simple(aperture_grid[0, 0, 0, ...].imag, fig, axes[1, 3], 'imag aperture', u_axis, v_axis)
+        # fig.suptitle(f'iteration: {it}')
+        # plt.show()
 
+
+        it += 1
+    #print(np.min(aperture_grid), np.max(aperture_grid))
+    print(fft_term.shape, aperture_grid.shape, corr_term.shape)
     return aperture_grid
 
 

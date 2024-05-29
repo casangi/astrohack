@@ -7,6 +7,8 @@ from astrohack.utils.constants import clight
 from astrohack.utils.text import get_str_idx_in_list
 from astrohack.visualization.plot_tools import create_figure_and_axes
 from matplotlib import pyplot as plt
+from matplotlib.patches import Circle
+from astrohack.visualization.plot_tools import create_figure_and_axes, well_positioned_colorbar, get_proper_color_map
 
 import graphviper.utils.logger as logger
 
@@ -769,8 +771,8 @@ def _build_astigmatism_matrix(phase, uaxis, vaxis, focus, defocus, diameter, blo
 
     # include defocus
     matrix[:, :, 3] = 1 - focus2def_coeff / np.sqrt(radfocus2 + focus2def_coeff**2)
-    matrix[:, :, 4] = u_mesh / focus * (1. / (1. + defocus_ratio)  - 1. / np.sqrt(radfocus2 + focus2def_coeff**2))
-    matrix[:, :, 5] = v_mesh / focus * (1. / (1. + defocus_ratio)  - 1. / np.sqrt(radfocus2 + focus2def_coeff**2))
+    matrix[:, :, 4] = u_mesh / focus * (1. / (1. + defocus_ratio) - 1. / np.sqrt(radfocus2 + focus2def_coeff**2))
+    matrix[:, :, 5] = v_mesh / focus * (1. / (1. + defocus_ratio) - 1. / np.sqrt(radfocus2 + focus2def_coeff**2))
     #
     if npar == 7:
         matrix[:, :, 6] = ((u_mesh2-v_mesh2)*np.cos(2*astangle) + 2*u_mesh*v_mesh*np.sin(2*astangle))*cz
@@ -793,6 +795,7 @@ def _perturbed_fit(matrix, vector, sel, fit_offset, npar):
 
 def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus, phase, uaxis, vaxis):
     # Astigmatism angle is fitted if npar = 8
+    npar=6
     astangle = np.pi
     wave_number = frequency * 2.*np.pi / clight
     step = 1e-3  # 1 per one thousand wavelength
@@ -823,7 +826,7 @@ def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus
         for iy in yrange:
             fit_offset[5] = (start[1] + iy * step) * wave_number
             for iz in zrange:
-                fit_offset[3] = (start[2] + iy * step) * wave_number
+                fit_offset[3] = (start[2] + iz * step) * wave_number
                 for ia in range3:
                     fit_offset[1] = ia * step / radius * wave_number
                     for ib in range3:
@@ -836,7 +839,8 @@ def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus
                     if sigma < sigmin:
                         sigmin = sigma
                         best_fit = result
-
+    # result, sigma = _perturbed_fit(matrix, vector, sel, fit_offset, npar)
+    # best_fit = result
     phase_model = _clic_phase_model(matrix, best_fit)
 
     if npar < 4:
@@ -844,12 +848,12 @@ def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus
     if npar < 5:
         best_fit[4] = start[0] * wave_number
         best_fit[5] = start[2] * wave_number
-    if npar < 7:
-        best_fit[6] = 0
-        best_fit[7] = 0
-    if npar == 7:
-        best_fit[7] = np.sin(2*astangle) * best_fit[6]
-        best_fit[6] = np.cos(2*astangle) * best_fit[6]
+    # if npar < 7:
+    #     best_fit[6] = 0
+    #     best_fit[7] = 0
+    # if npar == 7:
+    #     best_fit[7] = np.sin(2*astangle) * best_fit[6]
+    #     best_fit[6] = np.cos(2*astangle) * best_fit[6]
 
     return best_fit, phase_model
 
@@ -870,7 +874,22 @@ def _clic_like_phase_fitting(phase, freq_axis, telescope, focus_offset, uaxis, v
     best_fit, phase_model = _clic_full_phase_fitting(8, freq, telescope.diam, telescope.inlim, telescope.focus,
                                                      focus_offset, phase_i, uaxis, vaxis)
     phase[0, 0, 0, ...] -= phase_model
+
+    fig, axes = create_figure_and_axes(None, [1, 2])
+    plot_map_simple(phase[0, 0, 0, ...], fig, axes[0], 'observed', uaxis, vaxis)
+    plot_map_simple(phase_model, fig, axes[1], 'model', uaxis, vaxis)
+    plt.show()
+
     return phase, best_fit
 
 
-
+def plot_map_simple(data, fig, ax, title, u_axis, v_axis):
+    extent = [np.min(u_axis), np.max(u_axis), np.min(v_axis), np.max(v_axis)]
+    cmap = get_proper_color_map('viridis')
+    im = ax.imshow(data, cmap=cmap, extent=extent)
+    circ = Circle((0, 0), 6, fill=False, color='black')
+    ax.add_patch(circ)
+    circ = Circle((0, 0), 3, fill=False, color='black')
+    ax.add_patch(circ)
+    ax.set_title(title)
+    well_positioned_colorbar(ax, fig, im, title)
