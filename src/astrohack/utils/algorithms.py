@@ -3,9 +3,10 @@ import numpy as np
 import scipy.signal as scisig
 import scipy.constants
 import xarray as xr
+from numba import njit
 
 from astrohack.antenna.telescope import Telescope
-
+from astrohack.utils.tools import silence_stderr
 import graphviper.utils.logger as logger
 
 from astrohack.utils.conversion import convert_unit
@@ -229,7 +230,7 @@ def least_squares(system, vector, return_sigma=False):
     if system.shape[0] < system.shape[1]:
         raise Exception('System must have at least the same number of rows as it has of columns')
 
-    result, residuals, _, _ = np.linalg.lstsq(system, vector, rcond=None)
+    result, residuals, _, _ = np.linalg.lstsq(system, vector)
     dof = len(vector) - len(result)
     if dof > 0:
         errs = (vector - np.dot(system, result)) / dof
@@ -237,12 +238,41 @@ def least_squares(system, vector, return_sigma=False):
         errs = (vector - np.dot(system, result))
     sigma2 = np.sum(errs ** 2)
     covar = np.linalg.inv(np.dot(system.T, system))
-    variance = np.diagonal(sigma2 * covar)
+    variance = np.diag(sigma2 * covar)
 
     if return_sigma:
         return result, variance, residuals, np.sqrt(sigma2)
     else:
         return result, variance, residuals
+
+
+@njit(cache=False, nogil=True)
+def least_squares_jit(system, vector):
+    """
+    Least squares fitting of a system of linear equations
+    The variances are simplified as the diagonal of the covariances
+    Args:
+        system: System matrix to be solved
+        vector: Vector that represents the right hand side of the system
+
+    Returns:
+    The solved system, the variances of the system solution and the sum of the residuals
+    """
+    if len(system.shape) != 2:
+        raise Exception('System must have 2 dimensions')
+    if system.shape[0] < system.shape[1]:
+        raise Exception('System must have at least the same number of rows as it has of columns')
+
+    result, residuals, _, _ = np.linalg.lstsq(system, vector)
+    dof = len(vector) - len(result)
+    if dof > 0:
+        errs = (vector - np.dot(system, result)) / dof
+    else:
+        errs = (vector - np.dot(system, result))
+    sigma2 = np.sum(errs ** 2)
+    covar = np.linalg.inv(np.dot(system.T, system))
+    variance = np.diag(sigma2 * covar)
+    return result, variance, residuals, np.sqrt(sigma2)
 
 
 def _least_squares_fit_block(system, vector):
