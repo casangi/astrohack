@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit
 
-from astrohack.utils.algorithms import _least_squares_fit_block, least_squares
+from astrohack.utils.algorithms import _least_squares_fit_block, least_squares, least_squares_jit
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.constants import clight
 from astrohack.utils.text import get_str_idx_in_list
@@ -783,26 +783,20 @@ def _build_astigmatism_matrix(phase, uaxis, vaxis, focus, defocus, diameter, blo
     return matrix, vector, sel
 
 
-def _perturbed_fit(matrix, vector, sel, fit_offset, npar):
-    perturbed = vector.copy()
-    for i_par in range(npar):
-        perturbed[:, :] -= matrix[:, :, i_par] * fit_offset[i_par]
-    matrix2d = matrix[sel, :]
-    perturbed1d = np.mod(perturbed[sel]+21*np.pi, 2*np.pi)-np.pi
-    result, _, _, sigma = least_squares(matrix2d, perturbed1d, return_sigma=True)
+@njit(cache=False, nogil=True)
+def _perturbed_fit_jit(matrix, vector, fit_offset):
+    perturbed = np.empty_like(vector)
+    for i_par in range(fit_offset.shape[0]):
+        perturbed[:] = vector[:] - matrix[:, i_par] * fit_offset[i_par]
+    perturbed = np.mod(perturbed+21*np.pi, 2*np.pi)-np.pi
+    result, _, _, sigma = least_squares_jit(matrix, perturbed)
     return result, sigma
 
 
-def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus, phase, uaxis, vaxis):
-    # Astigmatism angle is fitted if npar = 8
-    npar=6
-    astangle = np.pi
-    wave_number = frequency * 2.*np.pi / clight
-    step = 1e-3  # 1 per one thousand wavelength
-    radius = diameter/2
+@njit(cache=False, nogil=True)
+def _fit_perturbation_loop_jit(start, radius, wave_number, solving_matrix, solving_vector, npar, step=1e-3):
     sigmin = 1e10
     fit_offset = np.zeros((npar))
-    start = np.zeros((3))
     best_fit = np.full((npar), np.nan)
     range3 = [-1, 0, 1]
     range0 = [0]
@@ -817,10 +811,6 @@ def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus
         xrange = range0
         yrange = range0
 
-    matrix, vector, sel = _build_astigmatism_matrix(phase, uaxis, vaxis, focus, defocus, diameter, blockage, npar,
-                                                    astangle)
-
-    #  Perturbate fit for guarantee of a better solution
     for ix in xrange:
         fit_offset[4] = (start[0] + ix * step) * wave_number
         for iy in yrange:
@@ -831,17 +821,27 @@ def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus
                     fit_offset[1] = ia * step / radius * wave_number
                     for ib in range3:
                         fit_offset[2] = ib * step / radius * wave_number
-                        result, sigma = _perturbed_fit(matrix, vector, sel, fit_offset, npar)
-
-                        # result, sigma = _clic_phase_fitting_matrix_building(astangle, blockage, diameter, focus,
-                        #                                                     defocus, phase, uaxis, vaxis, fit_offset,
-                        #                                                     npar)
+                        result, sigma = _perturbed_fit_jit(solving_matrix, solving_vector, fit_offset)
                     if sigma < sigmin:
                         sigmin = sigma
                         best_fit = result
-    # result, sigma = _perturbed_fit(matrix, vector, sel, fit_offset, npar)
-    # best_fit = result
-    phase_model = _clic_phase_model(matrix, best_fit)
+    return sigmin, best_fit
+
+
+def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus, phase, uaxis, vaxis):
+    # Astigmatism angle is fitted if npar = 8
+    astangle = np.pi
+    wave_number = frequency * 2.*np.pi / clight
+    radius = diameter/2
+    start = np.zeros((3))
+
+    full_matrix, full_vector, sel = _build_astigmatism_matrix(phase, uaxis, vaxis, focus, defocus, diameter, blockage,
+                                                              npar, astangle)
+    solving_matrix = full_matrix[sel, :]
+    solving_vector = full_vector[sel]
+
+    sigmin, best_fit = _fit_perturbation_loop_jit(start, radius, wave_number, solving_matrix, solving_vector, npar)
+    phase_model = _clic_phase_model(full_matrix, best_fit)
 
     if npar < 4:
         best_fit[3] = start[2] * wave_number
