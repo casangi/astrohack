@@ -196,16 +196,15 @@ def feed_correction(phase, u_axis, v_axis, focal_length, nk=10):
         ghth += gh_tab[k] * costh
     phi = np.arctan2(vmesh, umesh)
     gain = geth * np.sin(phi)**2 + ghth * np.cos(phi)**2
+    feed_phase = np.angle(gain)
+    # fig, axes = create_figure_and_axes(None, [1, 1])
+    # plot_map_simple(feed_phase, fig, axes, 'feed_correction', u_axis, v_axis)
+    # plot_map_simple(expo.imag, fig, axes[0, 1], 'imag', u_axis, v_axis)
+    # plot_map_simple(np.angle(expo), fig, axes[1, 0], 'phase', u_axis, v_axis)
+    # plot_map_simple(path_var, fig, axes[1, 1], 'path_var', u_axis, v_axis)
+    # plt.show()
 
-    fig, axes = create_figure_and_axes(None, [1, 2])
-    plot_map_simple(phase, fig, axes[0], 'observed', u_axis, v_axis)
-    plot_map_simple(np.angle(gain), fig, axes[1], 'gain', u_axis, v_axis)
-    plt.show()
-
-    phase += np.angle(gain)
-
-
-    return phase
+    return phase + feed_phase
 
 
 def fit_illumination_pattern(amp, u_axis, v_axis, diameter, blockage):

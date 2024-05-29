@@ -768,7 +768,6 @@ def _build_astigmatism_matrix(phase, uaxis, vaxis, focus, defocus, diameter, blo
     matrix[:, :, 0] = 1.0
     matrix[:, :, 1] = u_mesh
     matrix[:, :, 2] = v_mesh
-
     # include defocus
     matrix[:, :, 3] = 1 - focus2def_coeff / np.sqrt(radfocus2 + focus2def_coeff**2)
     matrix[:, :, 4] = u_mesh / focus * (1. / (1. + defocus_ratio) - 1. / np.sqrt(radfocus2 + focus2def_coeff**2))
@@ -840,6 +839,13 @@ def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus
     solving_matrix = full_matrix[sel, :]
     solving_vector = full_vector[sel]
 
+    # for zvar in np.linspace(-2e-3, 2e-3, 10):
+    #     phase_pars = [zvar, 0, 0, 0, 0, 0, 0, 0]
+    #     phase_model = _clic_phase_model(full_matrix, phase_pars)
+    #     plt.imshow(phase_model)
+    #     plt.title(f'zvar = {zvar}')
+    #     plt.show()
+
     sigmin, best_fit = _fit_perturbation_loop_jit(start, radius, wave_number, solving_matrix, solving_vector, npar)
     phase_model = _clic_phase_model(full_matrix, best_fit)
 
@@ -847,14 +853,14 @@ def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus
         best_fit[3] = start[2] * wave_number
     if npar < 5:
         best_fit[4] = start[0] * wave_number
-        best_fit[5] = start[2] * wave_number
-    # if npar < 7:
-    #     best_fit[6] = 0
-    #     best_fit[7] = 0
-    # if npar == 7:
-    #     best_fit[7] = np.sin(2*astangle) * best_fit[6]
-    #     best_fit[6] = np.cos(2*astangle) * best_fit[6]
-
+        best_fit[5] = start[1] * wave_number
+    if npar < 7:
+        best_fit[6] = 0
+        best_fit[7] = 0
+    if npar == 7:
+        best_fit[7] = np.sin(2*astangle) * best_fit[6]
+        best_fit[6] = np.cos(2*astangle) * best_fit[6]
+    print(best_fit)
     return best_fit, phase_model
 
 
