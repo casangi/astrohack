@@ -881,10 +881,10 @@ def _clic_like_phase_fitting(phase, freq_axis, telescope, focus_offset, uaxis, v
                                                      focus_offset, phase_i, uaxis, vaxis)
     phase[0, 0, 0, ...] -= phase_model
 
-    fig, axes = create_figure_and_axes(None, [1, 2])
-    plot_map_simple(phase[0, 0, 0, ...], fig, axes[0], 'observed', uaxis, vaxis)
-    plot_map_simple(phase_model, fig, axes[1], 'model', uaxis, vaxis)
-    plt.show()
+    # fig, axes = create_figure_and_axes(None, [1, 2])
+    # plot_map_simple(phase[0, 0, 0, ...], fig, axes[0], 'observed', uaxis, vaxis)
+    # plot_map_simple(phase_model, fig, axes[1], 'model', uaxis, vaxis)
+    # plt.show()
 
     return phase, best_fit
 

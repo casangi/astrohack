@@ -144,9 +144,10 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
     #                                      focus_offset, focal_length, telescope.diam)
     #
     # else:
-    wvl = wavelength
+    wvl = np.abs(sky_cell_size[0]*aperture_cell_size[0]*aperture_grid.shape[-1])
+    print(wavelength, sky_cell_size[0]*aperture_cell_size[0])
     print(wvl, 2*np.pi)
-    factor = 2j*np.pi/wvl
+    factor = 2j*np.pi/wavelength
     print(factor, factor*wvl)
     focus_offset *= 1
     aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis,
@@ -154,8 +155,8 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
     if apply_grid_correction:
         aperture_grid = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, u_axis, v_axis)
 
-    aperture_grid = correct_phase_nf_effects(aperture_grid, u_axis, v_axis, distance, focus_offset, telescope.focus,
-                                             factor)
+    # aperture_grid = correct_phase_nf_effects(aperture_grid, u_axis, v_axis, distance, focus_offset, telescope.focus,
+    #                                          factor)
 
     #
     phase = np.angle(aperture_grid[0, 0, 0, ...])
