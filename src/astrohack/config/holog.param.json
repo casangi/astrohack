@@ -34,11 +34,8 @@
         "scan_average":{
             "type":["boolean"]
         },
-        "distance_to_tower": {
-            "type": ["float"],
-            "nullable": true,
-            "min": 1e-8,
-            "max": 1e6
+        "pad": {
+            "type": ["str"]
         },
         "ant":{
             "type":["list", "str"],

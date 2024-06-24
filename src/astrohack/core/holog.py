@@ -67,14 +67,29 @@ def process_holog_chunk(holog_chunk_params):
         beam_grid = np.mean(beam_grid, axis=0)[None, ...]
         time_centroid = np.mean(np.array(time_centroid))
 
+
+
     logger.info("Calculating aperture pattern ...")
     # Current bottleneck
     if is_near_field:
-        focus_offset = ref_xds.attrs["nf_focus_off"]
+        vertex_dict = {'TF01': [349.8470, 0.0785],
+                       'TF02': [326.0615, 0.0843],
+                       'TF03': [302.3115, 0.0910],
+                       'TF04': [278.6315, 0.0988],
+                       'TF05': [354.9370, 0.0773],
+                       'TF06': [331.1575, 0.0829],
+                       'TF07': [307.7505, 0.0894],
+                       'TF08': [323.4975, 0.0849],
+                       'TF09': [340.0215, 0.0808],
+                       'TF10': [365.7275, 0.0750],
+                       'VX1': [325.9925, 0.0843]}
+        distance, focus_offset = vertex_dict[holog_chunk_params["pad"]]
+        # #focus_offset = ref_xds.attrs["nf_focus_off"]
+        # focus_offset = 0.0750
         aperture_grid, u_axis, v_axis, uv_cell_size, distance, used_wavelength = calculate_near_field_aperture(
             grid=beam_grid,
             sky_cell_size=holog_chunk_params["cell_size"],
-            distance=holog_chunk_params["distance_to_tower"],
+            distance=distance,
             freq=freq_axis,
             padding_factor=holog_chunk_params["padding_factor"],
             focus_offset=focus_offset,
