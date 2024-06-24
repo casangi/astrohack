@@ -138,25 +138,14 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
     u_axis, v_axis, l_axis, m_axis, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size, wavelength)
     aperture_grid = compute_aperture_fft(padded_grid)
 
-    # if distance is None:
-    #     logger.info('Fitting distance is long and you should feel bad =0')
-    #     result = fit_holo_tower_distance(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis, wavelength,
-    #                                      focus_offset, focal_length, telescope.diam)
-    #
-    # else:
-    wvl = np.abs(sky_cell_size[0]*aperture_cell_size[0]*aperture_grid.shape[-1])
-    print(wavelength, sky_cell_size[0]*aperture_cell_size[0])
-    print(wvl, 2*np.pi)
     factor = 2j*np.pi/wavelength
-    print(factor, factor*wvl)
-    focus_offset *= 1
     aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis,
                                                     factor, distance)
     if apply_grid_correction:
         aperture_grid = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, u_axis, v_axis)
 
-    # aperture_grid = correct_phase_nf_effects(aperture_grid, u_axis, v_axis, distance, focus_offset, telescope.focus,
-    #                                          factor)
+    aperture_grid = correct_phase_nf_effects(aperture_grid, u_axis, v_axis, distance, focus_offset, telescope.focus,
+                                             factor)
 
     #
     phase = np.angle(aperture_grid[0, 0, 0, ...])
@@ -183,7 +172,6 @@ def feed_correction(phase, u_axis, v_axis, focal_length, nk=10):
     radius2 = umesh**2 + vmesh**2
     theta2 = radius2 / 4 / focal_length**2
     theta = np.sqrt(theta2)
-    #z_term = np.cos(theta) + np.sin(theta)*1j
     z_term = (1-theta2+2j*theta)/(1+theta2)
 
     zz_term = np.full_like(phase, 1+0j, dtype=complex)
@@ -544,27 +532,6 @@ def compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, 
     #print(np.min(aperture_grid), np.max(aperture_grid))
     print(fft_term.shape, aperture_grid.shape, corr_term.shape)
     return aperture_grid
-
-
-def fit_holo_tower_distance(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis, wavelength, focus_offset,
-                            focal_length, diameter):
-    from scipy.optimize import minimize
-    fixed_par_dict = locals()
-    initial_guess = 300  # Tower is ~300m from pads in OSF, gathered from Google Maps
-    result = minimize(distance_fitting_function, initial_guess, args=fixed_par_dict)
-
-    return result
-
-
-def distance_fitting_function(distance, par_dict):
-    aperture_grid = compute_non_fresnel_corrections(par_dict["padded_grid"], par_dict["aperture_grid"],
-                                                    par_dict["l_axis"], par_dict["m_axis"], par_dict["u_axis"],
-                                                    par_dict["v_axis"], par_dict["wavelength"], distance)
-    aperture_grid = correct_phase_nf_effects(aperture_grid, par_dict["u_axis"], par_dict["v_axis"],
-                                             distance, par_dict["focus_offset"], par_dict["focal_length"],
-                                             par_dict["wavelength"])
-    rms = compute_phase_rms(aperture_grid, par_dict["diameter"], par_dict["u_axis"], par_dict["v_axis"])
-    return rms
 
 
 def compute_phase_rms(aperture, diameter, u_axis, v_axis):
