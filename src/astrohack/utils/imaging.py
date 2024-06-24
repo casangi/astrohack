@@ -134,8 +134,11 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
 
     padded_grid = pad_beam_image(work_grid, padding_factor)
     wavelength = clight / freq[0]
-
-    u_axis, v_axis, l_axis, m_axis, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size, wavelength)
+    zm = (telescope.diam/2)**2/4/telescope.focus
+    el_axis_off = 2.18
+    scale = 1. + (el_axis_off+zm/2.)/distance
+    print(zm, scale)
+    u_axis, v_axis, l_axis, m_axis, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size, wavelength, scale=scale)
     aperture_grid = compute_aperture_fft(padded_grid)
 
     factor = 2j*np.pi/wavelength
@@ -446,11 +449,11 @@ def plot_map_simple(data, fig, ax, title, u_axis, v_axis):
     well_positioned_colorbar(ax, fig, im, title)
 
 
-def compute_axes(shape, sky_cell_size, wavelength):
+def compute_axes(shape, sky_cell_size, wavelength, scale=1.0):
     image_size = np.array([shape[-2], shape[-1]])
-    aperture_cell_size = wavelength / (image_size * sky_cell_size)
+    aperture_cell_size = wavelength / (image_size * scale * sky_cell_size)
     u_axis, v_axis = calc_coords(image_size, aperture_cell_size)
-    l_axis, m_axis = calc_coords(image_size, sky_cell_size)
+    l_axis, m_axis = calc_coords(image_size, scale * sky_cell_size)
     return u_axis, v_axis, l_axis, m_axis, aperture_cell_size
 
 
@@ -532,13 +535,3 @@ def compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, 
     #print(np.min(aperture_grid), np.max(aperture_grid))
     print(fft_term.shape, aperture_grid.shape, corr_term.shape)
     return aperture_grid
-
-
-def compute_phase_rms(aperture, diameter, u_axis, v_axis):
-    phase = np.angle(aperture[0, 0, 0, ...], deg=False)
-    umesh, vmesh = np.meshgrid(u_axis, v_axis)
-    aper_radius = np.sqrt(umesh**2+vmesh**2)
-    ant_radius = diameter/2.
-    mask = np.where(aper_radius > ant_radius, False, True)
-    rms = np.sqrt(np.mean(phase[mask] ** 2))
-    return rms
