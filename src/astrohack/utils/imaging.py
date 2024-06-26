@@ -18,6 +18,50 @@ from astrohack.utils.constants import clight, sig_2_fwhm
 from astrohack.visualization.plot_tools import create_figure_and_axes, well_positioned_colorbar, get_proper_color_map
 
 
+def calculate_parallactic_angle_chunk(
+        time_samples,
+        observing_location,
+        direction,
+        dir_frame="FK5",
+        zenith_frame="FK5",
+):
+    """
+    Converts a direction and zenith (frame FK5) to a topocentric Altitude-Azimuth (https://docs.astropy.org/en/stable/api/astropy.coordinates.AltAz.html)
+    frame centered at the observing_location (frame ITRF) for a UTC time. The parallactic angles is calculated as the position angle of the Altitude-Azimuth
+    direction and zenith.
+
+    Parameters
+    ----------
+    time_samples: str np.array, [n_time], 'YYYY-MM-DDTHH:MM:SS.SSS'
+        UTC time series. Example '2019-10-03T19:00:00.000'.
+    observing_location: int np.array, [3], [x,y,z], meters
+        ITRF geocentric coordinates.
+    direction: float np.array, [n_time,2], [time,ra,dec], radians
+        The pointing direction.
+    Returns
+    -------
+    parallactic_angles: float np.array, [n_time], radians
+        An array of parallactic angles.
+    """
+
+    observing_location = coord.EarthLocation.from_geocentric(
+        x=observing_location[0] * u.m,
+        y=observing_location[1] * u.m,
+        z=observing_location[2] * u.m,
+    )
+
+    direction = coord.SkyCoord(
+        ra=direction[:, 0] * u.rad, dec=direction[:, 1] * u.rad, frame=dir_frame.lower()
+    )
+    zenith = coord.SkyCoord(0, 90, unit=u.deg, frame=zenith_frame.lower())
+
+    altaz_frame = coord.AltAz(location=observing_location, obstime=time_samples)
+    zenith_altaz = zenith.transform_to(altaz_frame)
+    direction_altaz = direction.transform_to(altaz_frame)
+
+    return direction_altaz.position_angle(zenith_altaz).value
+
+
 def parallactic_derotation(data, parallactic_angle_dict):
     """ Uses samples of parallactic angle (PA) values to correct differences in PA between maps. The reference PA is
     selected to be the first maps median parallactic angle. All values are rotated to this PA value using
@@ -152,7 +196,7 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
     #
     phase = np.angle(aperture_grid[0, 0, 0, ...])
     amp = np.absolute(aperture_grid[0, 0, 0, ...])
-    # dishhorn_artefact = fit_dishhorn_beam_artefact(amp, telescope.inlim, u_axis, v_axis, telescope.diam)
+    # dishhorn_artefact = fit_dishhorn_beam_artefact(amp, telescope.inlim, u_axis, v_axis)
     # amp -= dishhorn_artefact
 
     phase = feed_correction(phase, u_axis, v_axis, telescope.focus)
@@ -188,12 +232,6 @@ def feed_correction(phase, u_axis, v_axis, focal_length, nk=10):
     phi = np.arctan2(vmesh, umesh)
     gain = geth * np.sin(phi)**2 + ghth * np.cos(phi)**2
     feed_phase = np.angle(gain)
-    # fig, axes = create_figure_and_axes(None, [1, 1])
-    # plot_map_simple(feed_phase, fig, axes, 'feed_correction', u_axis, v_axis)
-    # plot_map_simple(expo.imag, fig, axes[0, 1], 'imag', u_axis, v_axis)
-    # plot_map_simple(np.angle(expo), fig, axes[1, 0], 'phase', u_axis, v_axis)
-    # plot_map_simple(path_var, fig, axes[1, 1], 'path_var', u_axis, v_axis)
-    # plt.show()
 
     return phase + feed_phase
 
@@ -215,7 +253,6 @@ def fit_illumination_pattern(amp, u_axis, v_axis, diameter, blockage):
 
     mask = np.where(dist2 >= inlim2, True, False)
     mask = np.where(dist2 >= oulim2, False, mask)
-    # mask = np.full_like(umesh, True, dtype=bool)
 
     npoints = np.sum(mask)
     matrix = np.empty([npoints, npar])
@@ -230,62 +267,6 @@ def fit_illumination_pattern(amp, u_axis, v_axis, diameter, blockage):
     db_fitted = umesh2*result[0] + vmesh2*result[1] + umesh*result[2] + vmesh*result[3] + result[4]
     fitted = 10**(db_fitted/10)
     return fitted.reshape(amp.shape)
-
-
-def calculate_parallactic_angle_chunk(
-        time_samples,
-        observing_location,
-        direction,
-        dir_frame="FK5",
-        zenith_frame="FK5",
-):
-    """
-    Converts a direction and zenith (frame FK5) to a topocentric Altitude-Azimuth (https://docs.astropy.org/en/stable/api/astropy.coordinates.AltAz.html)
-    frame centered at the observing_location (frame ITRF) for a UTC time. The parallactic angles is calculated as the position angle of the Altitude-Azimuth
-    direction and zenith.
-
-    Parameters
-    ----------
-    time_samples: str np.array, [n_time], 'YYYY-MM-DDTHH:MM:SS.SSS'
-        UTC time series. Example '2019-10-03T19:00:00.000'.
-    observing_location: int np.array, [3], [x,y,z], meters
-        ITRF geocentric coordinates.
-    direction: float np.array, [n_time,2], [time,ra,dec], radians
-        The pointing direction.
-    Returns
-    -------
-    parallactic_angles: float np.array, [n_time], radians
-        An array of parallactic angles.
-    """
-
-    observing_location = coord.EarthLocation.from_geocentric(
-        x=observing_location[0] * u.m,
-        y=observing_location[1] * u.m,
-        z=observing_location[2] * u.m,
-    )
-
-    direction = coord.SkyCoord(
-        ra=direction[:, 0] * u.rad, dec=direction[:, 1] * u.rad, frame=dir_frame.lower()
-    )
-    zenith = coord.SkyCoord(0, 90, unit=u.deg, frame=zenith_frame.lower())
-
-    altaz_frame = coord.AltAz(location=observing_location, obstime=time_samples)
-    zenith_altaz = zenith.transform_to(altaz_frame)
-    direction_altaz = direction.transform_to(altaz_frame)
-
-    return direction_altaz.position_angle(zenith_altaz).value
-
-
-def eliptical_gaussian(axes, amplitude, x0, yo, sigma_x, sigma_y, theta, offset):
-    x_axis, y_axis = axes
-    x0 = float(x0)
-    yo = float(yo)
-    acoeff = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
-    bcoeff = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
-    ccoeff = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
-    expo = acoeff*((x_axis-x0)**2) + 2*bcoeff*(x_axis-x0)*(y_axis-yo) + ccoeff*((y_axis-yo)**2)
-    gaussian = offset + amplitude*np.exp(-expo)
-    return gaussian
 
 
 def circular_gaussian(axes, amp, x0, yo, sigma, offset):
@@ -304,61 +285,32 @@ def two_gaussians(axes, x0, y0, amp_narrow, sigma_narrow, amp_broad, sigma_broad
     return narrow+broad+offset
 
 
-def fit_dishhorn_beam_artefact(amp, blockage, u_axis, v_axis, diameter):
+def fit_dishhorn_beam_artefact(amp, blockage, u_axis, v_axis):
     logger.info('Fitting feed horn artefact')
-    nx, ny = amp.shape
-
     u_mesh, v_mesh = np.meshgrid(u_axis, v_axis)
 
     dist2 = u_mesh**2+v_mesh**2
-    #sel = dist2 < (diameter/2)**2
     sel = dist2 < (4*blockage) ** 2
 
     # Ravel data for the fit
     fit_data = amp[sel]
     fit_u = u_mesh[sel]
     fit_v = v_mesh[sel]
-    print(fit_data.shape, u_mesh.shape)
 
     # initial guess of parameters
-    # initial_guess = (600, nx//2, ny//2, blockage/sig_2_fwhm, blockage/sig_2_fwhm, 0, 0)
-    # initial_guess = (np.max(amp), 0, 0, blockage / sig_2_fwhm, 0)
     initial_guess = (0, 0, np.max(amp), blockage / sig_2_fwhm, 4.0, 2*blockage/sig_2_fwhm, 0)
     import scipy.optimize as opt
     # find the optimal Gaussian parameters
-    # results = opt.curve_fit(gaussian_2d, (u_mesh, v_mesh), data, p0=initial_guess, maxfev=int(1e6))
-    print(np.count_nonzero(np.isnan(fit_data)))
-    # results = opt.curve_fit(circular_gaussian, (fit_u, fit_v), fit_data, p0=initial_guess, maxfev=int(1e6))
     results = opt.curve_fit(two_gaussians, (fit_u, fit_v), fit_data, p0=initial_guess, maxfev=int(1e6))
 
     popt = results[0]
     # create new data with these parameters
-    # data_fitted = gaussian_2d((u_mesh, v_mesh), *popt)
-    # data_fitted = circular_gaussian((u_mesh, v_mesh), *popt)
     popt[-1] = 0
     data_fitted = two_gaussians((u_mesh, v_mesh), *popt)
 
-
     popt[3] *= sig_2_fwhm
     popt[5] *= sig_2_fwhm
-
-    print(popt)
-
-    # data_fitted = two_gaussians((u_mesh, v_mesh), [0, 0, ])
     feed_fit = data_fitted
-
-    print(amp.shape, sel.shape, feed_fit.shape, feed_fit[sel].shape)
-    fig, axes = create_figure_and_axes(None, [2, 2])
-    axes[0, 0].imshow(feed_fit)
-    axes[1, 0].imshow(amp)
-    axes[0, 1].plot(u_axis, amp[nx//2, :], color='red')
-    axes[0, 1].plot(u_axis, feed_fit[nx//2, :], color='blue')
-    axes[0, 1].axvline(x=diameter / 2, color='yellow')
-    axes[0, 1].axvline(x=-diameter / 2, color='yellow')
-    axes[0, 1].set_xlim([-1.5*diameter/2, 1.5*diameter/2])
-
-    plt.show()
-
     return feed_fit
 
 
@@ -369,11 +321,9 @@ def pad_beam_image(grid, padding_factor):
     # Calculate padding as the nearest power of 2
     # k log (2) = log(N) => k = log(N)/log(2)
     # New shape => K = math.ceil(k) => shape = (K, K)
-
-    k = np.log(initial_dimension * padding_factor) / np.log(2)
-    K = math.ceil(k)
-
-    padding = (np.power(2, K) - padding_factor * initial_dimension) // 2
+    k_coeff = np.log(initial_dimension * padding_factor) / np.log(2)
+    k_integer = math.ceil(k_coeff)
+    padding = (np.power(2, k_integer) - padding_factor * initial_dimension) // 2
 
     padded_grid = np.pad(
         array=grid,
@@ -396,20 +346,6 @@ def apodize_beam(unpadded_beam, degree=2):
 
 
 def correct_phase_nf_effects(aperture, u_axis, v_axis, distance, focus_offset, focal_length, factor):
-    # zm = (diameter/2.)**2/4/focus
-    # do i2 = 1, n2
-    #   yy = (i2-ref2)*dy
-    #   do i1 = 1, n1
-    #     xx = (i1-ref1)*dy
-    #     r2 = xx**2 + yy**2
-    #     z = r2 /4 /focus
-    #     dp = r2 /2/distance - r2**2 /8/distance**3   &
-    #       +  sqrt(r2+(focus+dfocus-z)**2) - (focus+z +dfocus)
-    #     ! do the correction
-    #     y(i1,i2) = y(i1,i2) * exp(factor * dp)
-    #   !            y(i1,i2) = exp(factor * dp)
-    #   enddo
-    # enddo
     print(focus_offset, focal_length, distance)
     umesh, vmesh = np.meshgrid(u_axis, v_axis)
     wave_vector = factor
@@ -419,33 +355,13 @@ def correct_phase_nf_effects(aperture, u_axis, v_axis, distance, focus_offset, f
     second_term = axis_dist2**2/8/distance**3  # \frac{(\epsilon^2 + \eta^2)^2}{8R^3}
     dp1 = first_term - second_term
     # \sqrt{(\epsilon^2 + \eta^2) + (f - \frac{\epsilon^2 + \eta^2}{4f} +df)^2}
-    furst_term = np.sqrt(axis_dist2 + (focal_length + focus_offset - z_term)**2)
+    first_term = np.sqrt(axis_dist2 + (focal_length + focus_offset - z_term)**2)
     # f - \frac{\epsilon^2 + \eta^2}{4f} +df
-    sucond_term = focal_length + z_term + focus_offset
-    dp2 = furst_term-sucond_term
+    second_term = focal_length + z_term + focus_offset
+    dp2 = first_term-second_term
     path_var = dp1+dp2
-    expo = np.exp(wave_vector * path_var)
-
-    # fig, axes = create_figure_and_axes(None, [2, 2])
-    # plot_map_simple(expo.real, fig, axes[0, 0], 'real', u_axis, v_axis)
-    # plot_map_simple(expo.imag, fig, axes[0, 1], 'imag', u_axis, v_axis)
-    # plot_map_simple(np.angle(expo), fig, axes[1, 0], 'phase', u_axis, v_axis)
-    # plot_map_simple(path_var, fig, axes[1, 1], 'path_var', u_axis, v_axis)
-    # plt.show()
     aperture[0, 0, 0, ...] *= np.exp(wave_vector * path_var)
     return aperture
-
-
-def plot_map_simple(data, fig, ax, title, u_axis, v_axis):
-    extent = [np.min(u_axis), np.max(u_axis), np.min(v_axis), np.max(v_axis)]
-    cmap = get_proper_color_map('viridis')
-    im = ax.imshow(data, cmap=cmap, extent=extent)
-    circ = Circle((0, 0), 6, fill=False, color='black')
-    ax.add_patch(circ)
-    circ = Circle((0, 0), 3, fill=False, color='black')
-    ax.add_patch(circ)
-    ax.set_title(title)
-    well_positioned_colorbar(ax, fig, im, title)
 
 
 def compute_axes(shape, sky_cell_size, wavelength, scale=1.0):
@@ -454,14 +370,6 @@ def compute_axes(shape, sky_cell_size, wavelength, scale=1.0):
     u_axis, v_axis = calc_coords(image_size, aperture_cell_size)
     l_axis, m_axis = calc_coords(image_size, scale * sky_cell_size)
     return u_axis, v_axis, l_axis, m_axis, aperture_cell_size
-
-
-def _get_img_size(shape):
-    return np.array([shape[-2], shape[-1]])
-
-
-def _compute_aperture_cell_size(wavelength, image_size, sky_cell_size):
-    return wavelength / (image_size * sky_cell_size)
 
 
 def compute_aperture_fft(padded_grid):
@@ -517,20 +425,7 @@ def compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, 
         aperture_grid += add_term
         print(np.min(aperture_grid[0, 0, 0, ...]), np.max(aperture_grid[0, 0, 0, ...]))
         print(80*'#')
-        # fig, axes = create_figure_and_axes(None, [2, 4])
-        # plot_map_simple(fft_term.real, fig, axes[0, 0], 'real fft', u_axis, v_axis)
-        # plot_map_simple(fft_term.imag, fig, axes[1, 0], 'imag fft', u_axis, v_axis)
-        # plot_map_simple(corr_term.real, fig, axes[0, 1], 'real corr', u_axis, v_axis)
-        # plot_map_simple(corr_term.imag, fig, axes[1, 1], 'imag corr', u_axis, v_axis)
-        # plot_map_simple(add_term.real, fig, axes[0, 2], 'real add', u_axis, v_axis)
-        # plot_map_simple(add_term.imag, fig, axes[1, 2], 'imag add', u_axis, v_axis)
-        # plot_map_simple(aperture_grid[0, 0, 0, ...].real, fig, axes[0, 3], 'real aperture', u_axis, v_axis)
-        # plot_map_simple(aperture_grid[0, 0, 0, ...].imag, fig, axes[1, 3], 'imag aperture', u_axis, v_axis)
-        # fig.suptitle(f'iteration: {it}')
-        # plt.show()
-
 
         it += 1
-    #print(np.min(aperture_grid), np.max(aperture_grid))
     print(fft_term.shape, aperture_grid.shape, corr_term.shape)
     return aperture_grid
