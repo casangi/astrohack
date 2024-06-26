@@ -134,11 +134,10 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
 
     padded_grid = pad_beam_image(work_grid, padding_factor)
     wavelength = clight / freq[0]
-    zm = (telescope.diam/2)**2/4/telescope.focus
-    el_axis_off = 2.18
-    scale = 1. + (el_axis_off+zm/2.)/distance
-    print(zm, scale)
-    u_axis, v_axis, l_axis, m_axis, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size, wavelength, scale=scale)
+    z_max = (telescope.diam/2)**2/4/telescope.focus
+    scale = 1. + (telescope.el_axis_off+z_max/2.)/distance
+    u_axis, v_axis, l_axis, m_axis, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size, wavelength,
+                                                                      scale=scale)
     aperture_grid = compute_aperture_fft(padded_grid)
 
     factor = 2j*np.pi/wavelength
