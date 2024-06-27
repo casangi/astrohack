@@ -668,7 +668,8 @@ def plot_aperture_chunk(parm_dict):
 
     for pol_state in plot_pol_states:
         if pol_state in avail_pol_states:
-            surface = AntennaSurface(input_xds, telescope, nan_out_of_bounds=True, pol_state=str(pol_state))
+            surface = AntennaSurface(input_xds, telescope, nan_out_of_bounds=True, pol_state=str(pol_state),
+                                     clip_type='absolute', clip_level=0)
             basename = f'{destination}/{antenna}_{ddi}_pol_{pol_state}'
             surface.plot_phase(basename, 'image_aperture', parm_dict)
             surface.plot_deviation(basename, 'image_aperture', parm_dict)

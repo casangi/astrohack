@@ -447,7 +447,7 @@ class AntennaSurface:
         Returns:
             RMS of the input array
         """
-        return np.sqrt(np.mean(array[self.mask] ** 2))
+        return np.sqrt(np.nanmean(array[self.mask] ** 2))
 
     def fit_surface(self):
         """
