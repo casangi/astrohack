@@ -208,9 +208,6 @@ def holog(
 
     else:
         logger.debug("Using user specified grid size.", holog_params["grid_size"])
-        meta_data["n_pix"] = np.power(holog_params["grid_size"][0], 2)
-        write_meta_data(holog_params['holog_name'] + '/.holog_attr', meta_data)
-
         holog_params["grid_size"] = _convert_gridding_parameter(
             gridding_parameter=holog_params["grid_size"],
             reflect_on_axis=False
