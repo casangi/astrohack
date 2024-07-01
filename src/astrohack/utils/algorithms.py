@@ -117,7 +117,6 @@ def find_nearest(array, value):
     return idx, array[idx]
 
 
-# @njit(cache=False, nogil=True)
 def chunked_average(data, weight, avg_map, avg_freq):
     avg_chan_index = np.arange(avg_freq.shape[0])
 
@@ -137,7 +136,7 @@ def chunked_average(data, weight, avg_map, avg_freq):
     for avg_index in avg_chan_index:
 
         while (index < n_chan) and (avg_map[index] == avg_index):
-            # Most probably will have to unravel assigment
+            # Most probably will have to unravel assignment
             data_avg[:, avg_index, :] = (data_avg[:, avg_index, :] + weight[:, index, :] * data[:, index, :])
             weight_sum[:, avg_index, :] = weight_sum[:, avg_index, :] + weight[:, index, :]
 
@@ -150,8 +149,7 @@ def chunked_average(data, weight, avg_map, avg_freq):
 
                 else:
                     data_avg[time_index, avg_index, pol_index] = (
-                            data_avg[time_index, avg_index, pol_index] / weight_sum[
-                        time_index, avg_index, pol_index])
+                            data_avg[time_index, avg_index, pol_index] / weight_sum[time_index, avg_index, pol_index])
 
     return data_avg, weight_sum
 

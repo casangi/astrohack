@@ -17,7 +17,6 @@ def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, te
     pol_axis = ant_ddi_dict[map0].pol.values
     n_chan = ant_ddi_dict[map0].sizes["chan"]
     n_pol = ant_ddi_dict[map0].sizes["pol"]
-    # Get near field status
 
     reference_scaling_frequency = np.mean(freq_axis)
     if avg_chan:
@@ -85,9 +84,10 @@ def _scipy_gridding(vis, weight, lm, l_grid, m_grid, grid_interpolation_mode, av
         vis_avg, weight_sum = chunked_average(vis, weight, avg_chan_map, avg_freq)
         lm_freq_scaled = lm[:, :, None] * (avg_freq / reference_scaling_frequency)
         n_pol = vis_avg.shape[2]
+        n_chan = avg_freq.shape[0]
         beam_grid = np.zeros((1, n_pol, l_grid.shape[0], l_grid.shape[1]), dtype=complex)
         # Unavoidable for loop because lm change over frequency.
-        for i_chan in range(avg_freq.shape[0]):
+        for i_chan in range(n_chan):
             # Average scaled beams.
             gridded_chan = np.moveaxis(griddata(lm_freq_scaled[:, :, i_chan], vis_avg[:, i_chan, :], (l_grid, m_grid),
                                                 method=grid_interpolation_mode, fill_value=0.0), 2, 0)
