@@ -1,8 +1,5 @@
 import math
-
-import matplotlib.pyplot as plt
-from matplotlib.patches import Circle
-import scipy
+import scipy.ndimage
 import numpy as np
 import astropy.units as u
 import astropy.coordinates as coord
@@ -15,7 +12,6 @@ from skimage.draw import disk
 from astrohack.utils.algorithms import calc_coords, least_squares
 from astrohack.utils.gridding import gridding_correction
 from astrohack.utils.constants import clight, sig_2_fwhm
-from astrohack.visualization.plot_tools import create_figure_and_axes, well_positioned_colorbar, get_proper_color_map
 
 
 def calculate_parallactic_angle_chunk(
@@ -38,6 +34,8 @@ def calculate_parallactic_angle_chunk(
         ITRF geocentric coordinates.
     direction: float np.array, [n_time,2], [time,ra,dec], radians
         The pointing direction.
+    dir_frame: frame of refecerence of the direction
+    zenith_frame: Frame of reference of Zenith's coordinates?
     Returns
     -------
     parallactic_angles: float np.array, [n_time], radians
@@ -130,21 +128,24 @@ def calculate_far_field_aperture(grid, padding_factor, freq, telescope, sky_cell
 
     Args:
         grid (numpy.ndarray): gridded beam data
-        delta (float): incremental spacing between lm values, ie. delta_l = l_(n+1) - l_(n)
-        padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edged of 
+        padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edged of
                                         each beam data grid and not between layers. Defaults to 20.
+        freq: Beam grid frequency axis
+        telescope: telescope object with optical parameters
+        sky_cell_size: Sky cell size (radians)
+        apply_grid_correction: Apply grid correction (True for gaussian convolution of the beam)
 
     Returns:
-        numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
+        aperture grid, u-coordinate array, v-coordinate array, aperture cell size, representative wavelength
     """
     
     logger.info("Calculating aperture illumination pattern ...")
-    padded_grid = pad_beam_image(grid, padding_factor)
+    padded_grid = _pad_beam_image(grid, padding_factor)
 
-    aperture_grid = compute_aperture_fft(padded_grid)
+    aperture_grid = _compute_aperture_fft(padded_grid)
 
     wavelength = clight/freq[0]
-    u_axis, v_axis, _, _, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size, wavelength)
+    u_axis, v_axis, _, _, aperture_cell_size = _compute_axes(padded_grid.shape, sky_cell_size, wavelength)
 
     if apply_grid_correction:
         aperture_grid = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, u_axis, v_axis)
@@ -159,39 +160,40 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
     Args:
         grid (numpy.ndarray): gridded beam data
         sky_cell_size (float): incremental spacing between lm values, ie. delta_l = l_(n+1) - l_(n)
-        padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edged of
-                                        each beam data grid and not between layers. Defaults to 20.
+        padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edges
+                                        of each beam data grid and not between layers. Defaults to 20.
         distance: distance to holographic tower
-        wavelength: holography wavelength
         focus_offset: Offset from primary focus on holographic receiver
-        focal_length: Antenna focal length
+        freq: Beam grid frequency axis
+        telescope: telescope object with optical parameters
+        apply_grid_correction: Apply grid correction (True for gaussian convolution of the beam)
         apodize: Apodize beam to avoid boxing effects in the FFT (the dashed line cross)
 
     Returns:
-        numpy.ndarray, numpy.ndarray, numpy.ndarray: aperture grid, u-coordinate array, v-coordinate array
+        aperture grid, u-coordinate array, v-coordinate array, aperture cell size, representative wavelength
     """
     work_grid = grid.copy()
 
     if apodize:
-        apodizer = apodize_beam(work_grid[0, 0, 0, ...])
+        apodizer = _apodize_beam(work_grid[0, 0, 0, ...])
         work_grid[0, 0, 0, ...] *= apodizer
 
-    padded_grid = pad_beam_image(work_grid, padding_factor)
+    padded_grid = _pad_beam_image(work_grid, padding_factor)
     wavelength = clight / freq[0]
     z_max = (telescope.diam/2)**2/4/telescope.focus
     scale = 1. + (telescope.el_axis_off+z_max/2.)/distance
-    u_axis, v_axis, l_axis, m_axis, aperture_cell_size = compute_axes(padded_grid.shape, sky_cell_size, wavelength,
-                                                                      scale=scale)
-    aperture_grid = compute_aperture_fft(padded_grid)
+    u_axis, v_axis, l_axis, m_axis, aperture_cell_size = _compute_axes(padded_grid.shape, sky_cell_size, wavelength,
+                                                                       scale=scale)
+    aperture_grid = _compute_aperture_fft(padded_grid)
 
     factor = 2j*np.pi/wavelength
-    aperture_grid = compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis,
-                                                    factor, distance)
+    aperture_grid = _compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis,
+                                                     factor, distance)
     if apply_grid_correction:
         aperture_grid = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, u_axis, v_axis)
 
-    aperture_grid = correct_phase_nf_effects(aperture_grid, u_axis, v_axis, distance, focus_offset, telescope.focus,
-                                             factor)
+    aperture_grid = _correct_phase_nf_effects(aperture_grid, u_axis, v_axis, distance, focus_offset, telescope.focus,
+                                              factor)
 
     #
     phase = np.angle(aperture_grid[0, 0, 0, ...])
@@ -199,15 +201,27 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
     # dishhorn_artefact = fit_dishhorn_beam_artefact(amp, telescope.inlim, u_axis, v_axis)
     # amp -= dishhorn_artefact
 
-    phase = feed_correction(phase, u_axis, v_axis, telescope.focus)
+    phase = _feed_correction(phase, u_axis, v_axis, telescope.focus)
     # fitted_amp = fit_illumination_pattern(amp, u_axis, v_axis, telescope.diam, blockage)
     # aperture_grid[0, 0, 0, ...] = fitted_amp * (np.cos(phase) + 1j * np.sin(phase))
     aperture_grid[0, 0, 0, ...] = amp * (np.cos(phase) + 1j * np.sin(phase))
 
-    return aperture_grid, u_axis, v_axis, aperture_cell_size, distance, wavelength
+    return aperture_grid, u_axis, v_axis, aperture_cell_size, wavelength
 
 
-def feed_correction(phase, u_axis, v_axis, focal_length, nk=10):
+def _feed_correction(phase, u_axis, v_axis, focal_length, nk=10):
+    """
+    Correction to the phases due to the phase change created by the antenna feed
+    Args:
+        phase: Aperture phase
+        u_axis: U axis
+        v_axis: V Axis
+        focal_length: Telescope focal length
+        nk: number of terms to include
+
+    Returns:
+
+    """
     # Tabulated Sigma GE and GH functions:
     gh_tab = [13.33004 - 0.03155j, -1.27077 + 0.00656j, 0.38349 - 0.17755j, 0.78041 - 0.11238j, -0.54821 + 0.16739j,
               -0.68021 + 0.11472j, 1.05341 - 0.01921j, -0.80119 + 0.06443j, 0.36258 - 0.01845j, -0.07905 + 0.00515j]
@@ -236,7 +250,19 @@ def feed_correction(phase, u_axis, v_axis, focal_length, nk=10):
     return phase + feed_phase
 
 
-def fit_illumination_pattern(amp, u_axis, v_axis, diameter, blockage):
+def _fit_illumination_pattern(amp, u_axis, v_axis, diameter, blockage):
+    """
+    Fit aperture amplitude pattern to a gaussian
+    Args:
+        amp: Aperture amplitude
+        u_axis: U axis
+        v_axis: V axis
+        diameter: Telescope diameter
+        blockage: Inner blockage radius
+
+    Returns:
+        Best fit gaussian to the ilumination pattern
+    """
     amp_max = np.max(amp)
     db_amp = 10.*np.log10(amp/amp_max)
 
@@ -269,23 +295,62 @@ def fit_illumination_pattern(amp, u_axis, v_axis, diameter, blockage):
     return fitted.reshape(amp.shape)
 
 
-def circular_gaussian(axes, amp, x0, yo, sigma, offset):
+def _circular_gaussian(axes, amp, x0, y0, sigma, offset):
+    """
+    Compute a Circular gaussian image
+    Args:
+        axes: X and Y axes mesh grids
+        amp: Gaussian amplitude
+        x0: Gaussian center in X
+        y0: Gaussian center in Y
+        sigma: Gaussian width
+        offset: gaussian base offset
+
+    Returns:
+        circular gaussian image
+    """
     x_axis, y_axis = axes
     x0 = float(x0)
-    yo = float(yo)
-    expo = 1*((x_axis-x0)**2 + (y_axis-yo)**2)
+    y0 = float(y0)
+    expo = 1*((x_axis-x0) ** 2 + (y_axis - y0) ** 2)
     expo /= 2*sigma**2
     return amp*np.exp(-expo)+offset
 
 
-def two_gaussians(axes, x0, y0, amp_narrow, sigma_narrow, amp_broad, sigma_broad, offset):
+def _two_gaussians(axes, x0, y0, amp_narrow, sigma_narrow, amp_broad, sigma_broad, offset):
+    """
+    Compute the sum of two Circular gaussian images, one narrow the othe broad
+    Args:
+        axes: X and Y axes mesh grids
+        x0: Gaussian center in X
+        y0: Gaussian center in Y
+        amp_narrow: Narrow Gaussian amplitude
+        sigma_narrow: Narrow Gaussian width
+        amp_broad: broad Gaussian amplitude
+        sigma_broad: broad Gaussian width
+        offset: gaussian base offset
+
+    Returns:
+        sum of two circular gaussian images
+    """
     #offset = 0
-    narrow = circular_gaussian(axes, amp_narrow, x0, y0, sigma_narrow, 0)
-    broad = circular_gaussian(axes, amp_broad, x0, y0, sigma_broad, 0)
+    narrow = _circular_gaussian(axes, amp_narrow, x0, y0, sigma_narrow, 0)
+    broad = _circular_gaussian(axes, amp_broad, x0, y0, sigma_broad, 0)
     return narrow+broad+offset
 
 
-def fit_dishhorn_beam_artefact(amp, blockage, u_axis, v_axis):
+def _fit_dishhorn_beam_artefact(amp, blockage, u_axis, v_axis):
+    """
+    Attempt to fit the artefact that appears at the center of an aperture amplitude iamge
+    Args:
+        amp: Aperture amplitude
+        blockage: Inner blockage radius
+        u_axis: U axis
+        v_axis: V axis
+
+    Returns:
+        Fitted artefact
+    """
     logger.info('Fitting feed horn artefact')
     u_mesh, v_mesh = np.meshgrid(u_axis, v_axis)
 
@@ -301,12 +366,12 @@ def fit_dishhorn_beam_artefact(amp, blockage, u_axis, v_axis):
     initial_guess = (0, 0, np.max(amp), blockage / sig_2_fwhm, 4.0, 2*blockage/sig_2_fwhm, 0)
     import scipy.optimize as opt
     # find the optimal Gaussian parameters
-    results = opt.curve_fit(two_gaussians, (fit_u, fit_v), fit_data, p0=initial_guess, maxfev=int(1e6))
+    results = opt.curve_fit(_two_gaussians, (fit_u, fit_v), fit_data, p0=initial_guess, maxfev=int(1e6))
 
     popt = results[0]
     # create new data with these parameters
     popt[-1] = 0
-    data_fitted = two_gaussians((u_mesh, v_mesh), *popt)
+    data_fitted = _two_gaussians((u_mesh, v_mesh), *popt)
 
     popt[3] *= sig_2_fwhm
     popt[5] *= sig_2_fwhm
@@ -314,7 +379,16 @@ def fit_dishhorn_beam_artefact(amp, blockage, u_axis, v_axis):
     return feed_fit
 
 
-def pad_beam_image(grid, padding_factor):
+def _pad_beam_image(grid, padding_factor):
+    """
+    Pad beam image with zeros to avoid aliasing in FFTs
+    Args:
+        grid: beam grid
+        padding_factor: padding factor to determine padded size
+
+    Returns:
+        Zero padded beam grid
+    """
     assert grid.shape[-1] == grid.shape[-2]  ###To do: why is this expected that l.shape == m.shape
     initial_dimension = grid.shape[-1]
 
@@ -334,7 +408,16 @@ def pad_beam_image(grid, padding_factor):
 
 
 @njit(cache=False, nogil=True)
-def apodize_beam(unpadded_beam, degree=2):
+def _apodize_beam(unpadded_beam, degree=2):
+    """
+    Apodize beam image to avoid artefacts in aperture image
+    Args:
+        unpadded_beam: Unpadded beam image
+        degree: Degree of apodization
+
+    Returns:
+        Apodizing image
+    """
     nx, ny = unpadded_beam.shape
     apodizer = np.zeros(unpadded_beam.shape)
     for ix in range(nx):
@@ -345,8 +428,22 @@ def apodize_beam(unpadded_beam, degree=2):
     return apodizer
 
 
-def correct_phase_nf_effects(aperture, u_axis, v_axis, distance, focus_offset, focal_length, factor):
-    print(focus_offset, focal_length, distance)
+def _correct_phase_nf_effects(aperture, u_axis, v_axis, distance, focus_offset, focal_length, factor):
+    """
+    DOES NOT WORK AS INTENDED
+    Compute the near field corrections to be applied to the phases
+    Args:
+        aperture: Aperture Grid image
+        u_axis: U axis
+        v_axis: V axis
+        distance: Distance to holographic tower
+        focus_offset: Defocus used to mitigate NF effects
+        focal_length: Telescope focal length
+        factor: wave number scaling
+
+    Returns:
+        Aperture with phase corrected for the NF effects
+    """
     umesh, vmesh = np.meshgrid(u_axis, v_axis)
     wave_vector = factor
     axis_dist2 = umesh**2+vmesh**2  # \epsilon^2 + \eta^2
@@ -364,7 +461,18 @@ def correct_phase_nf_effects(aperture, u_axis, v_axis, distance, focus_offset, f
     return aperture
 
 
-def compute_axes(shape, sky_cell_size, wavelength, scale=1.0):
+def _compute_axes(shape, sky_cell_size, wavelength, scale=1.0):
+    """
+    Compute the axes of the padded beam image and also the aperture axes
+    Args:
+        shape: Padded beam image shape
+        sky_cell_size: Sky cell size (radians)
+        wavelength: representative wavelenght
+        scale: axis scaling
+
+    Returns:
+        U, V, L and M axis and aperture cell size
+    """
     image_size = np.array([shape[-2], shape[-1]])
     aperture_cell_size = wavelength / (image_size * scale * sky_cell_size)
     u_axis, v_axis = calc_coords(image_size, aperture_cell_size)
@@ -372,15 +480,40 @@ def compute_axes(shape, sky_cell_size, wavelength, scale=1.0):
     return u_axis, v_axis, l_axis, m_axis, aperture_cell_size
 
 
-def compute_aperture_fft(padded_grid):
+def _compute_aperture_fft(padded_grid):
+    """
+    Compute aperture FFT
+    Args:
+        padded_grid: Zero padded beam grid
+
+    Returns:
+        Aperture
+    """
     shifted = scipy.fftpack.ifftshift(padded_grid)
     grid_fft = scipy.fftpack.fft2(shifted)
     aperture_grid = scipy.fftpack.fftshift(grid_fft)
     return aperture_grid
 
 
-def compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis, factor, distance,
-                                    max_it=6, verbose=True):
+def _compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, u_axis, v_axis, factor, distance,
+                                     max_it=6, verbose=True):
+    """
+    DOES NOT WORK AS INTENDED
+    Compute non fresnel corrections to the aperture
+    Args:
+        padded_grid: Zero padded beam grid
+        aperture_grid: The FFT of the padde beam grid
+        l_axis: Beam's L axis
+        m_axis: Beam's M axis
+        u_axis: Aperture's U axis
+        v_axis: Aperture's V axis
+        factor: Wave number
+        distance: Distance to the hologrphy tower
+        max_it: Number of iterations
+        verbose: Print messages?
+    Returns:
+        Aperture with non fresnel corrections
+    """
     if verbose:
         logger.info('Applying non-fresnel corrections...')
     wave_vector = factor
@@ -404,10 +537,8 @@ def compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, 
         elif it == 5:
             fft_work_array *= lmesh * mmesh
 
-        fft_term = compute_aperture_fft(fft_work_array)
+        fft_term = _compute_aperture_fft(fft_work_array)
 
-        print(80*'#')
-        print(it)
         if it == 1:
             corr_term = umesh * dist2 / 2 / distance**2 * wave_vector
         elif it == 2:
@@ -418,14 +549,8 @@ def compute_non_fresnel_corrections(padded_grid, aperture_grid, l_axis, m_axis, 
             corr_term = -1 * v2mesh / 2 / distance * wave_vector
         elif it == 5:
             corr_term = -1 * umesh * vmesh / distance * wave_vector
-        print(np.min(fft_term), np.max(fft_term))
-        print(np.min(corr_term), np.max(corr_term))
         add_term = corr_term * fft_term
-        print(np.min(add_term), np.max(add_term))
         aperture_grid += add_term
-        print(np.min(aperture_grid[0, 0, 0, ...]), np.max(aperture_grid[0, 0, 0, ...]))
-        print(80*'#')
 
         it += 1
-    print(fft_term.shape, aperture_grid.shape, corr_term.shape)
     return aperture_grid
