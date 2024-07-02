@@ -4,13 +4,28 @@ from graphviper.utils import logger as logger
 from scipy.interpolate import griddata
 from numba import njit
 from numba.core import types
-from matplotlib import pyplot as plt
 
 from astrohack.utils import sig_2_fwhm, find_nearest, calc_coords, find_peak_beam_value, chunked_average
 from astrohack.utils.text import get_str_idx_in_list
 
 
 def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, telescope, grid_interpolation_mode):
+    """
+    Grids the visibilities onto a 2D plane based on their Sky coordinates, using scipy griddata or a gaussian
+    convolution
+    Args:
+        ant_ddi_dict: Dictionary with the description of the data
+        grid_size: The size of the beam image grid (pixels)
+        sky_cell_size: Size of the beam grid cell in the sky (radians)
+        avg_chan: Average cahnnels? (boolean)
+        chan_tol_fac: Frequency tolerance to chunk channels together
+        telescope: Telescope object containing optical description of the telescope
+        grid_interpolation_mode: linear, nearest, cubic or gaussian (convolution)
+
+    Returns:
+        The gridded beam, its time centroid, frequency axis, polarization axis, L and M axes and a boolean about the
+        necessity of gridding corrections after fourier transform.
+    """
     n_holog_map = len(ant_ddi_dict.keys())
     map0 = list(ant_ddi_dict.keys())[0]
     freq_axis = ant_ddi_dict[map0].chan.values
@@ -31,6 +46,7 @@ def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, te
     scipy_interp = ['linear', 'nearest', 'cubic']
 
     time_centroid = []
+    grid_corr = False
     for holog_map_index, holog_map in enumerate(ant_ddi_dict.keys()):
         ant_xds = ant_ddi_dict[holog_map]
 
@@ -41,7 +57,6 @@ def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, te
         weight = ant_xds.WEIGHT.values
 
         if grid_interpolation_mode in scipy_interp:
-            grid_corr = False
             beam_grid[holog_map_index, ...] = _scipy_gridding(vis, weight, lm, l_grid, m_grid, grid_interpolation_mode,
                                                               avg_chan_map, avg_freq, reference_scaling_frequency)
         elif grid_interpolation_mode == 'gaussian':
@@ -62,12 +77,36 @@ def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, te
 
 
 def gridding_correction(aperture, freq, diameter, sky_cell_size, u_axis, v_axis):
+    """
+    Execute gridding correction after fourier transform for the case of the gaussian convolution
+    Args:
+        aperture: Aperture image
+        freq: representative frequency
+        diameter: Telescope diameter
+        sky_cell_size: Size of the beam grid cell in the sky (radians)
+        u_axis: U axis of the aperture grid
+        v_axis: V axis of the aperture grid
+
+    Returns:
+        The gridding corrected aperture grid
+    """
     beam_size = _compute_beam_size(diameter, freq)
     return _gridding_correction_jit(aperture, beam_size, sky_cell_size, u_axis, v_axis)
 
 
 def _create_beam_grid(grid_size, sky_cell_size, n_chan, n_pol, n_map):
+    """
+    Create the beam onto which to store the beam image
+    Args:
+        grid_size: The size of the beam image grid (pixels)
+        sky_cell_size: Size of the beam grid cell in the sky (radians)
+        n_chan: Number of channels
+        n_pol: Number of polarization states
+        n_map: Number of mappings
 
+    Returns:
+        L and M axes, 2D mesh of the L and M axes, the actual beam grid
+    """
     l_axis, m_axis = calc_coords(grid_size, sky_cell_size)
     l_grid, m_grid = list(map(np.transpose, np.meshgrid(l_axis, m_axis)))
 
@@ -78,6 +117,22 @@ def _create_beam_grid(grid_size, sky_cell_size, n_chan, n_pol, n_map):
 
 def _scipy_gridding(vis, weight, lm, l_grid, m_grid, grid_interpolation_mode, avg_chan_map, avg_freq,
                     reference_scaling_frequency):
+    """
+    Grid the visibility data using scipy gridding algorithms.
+    Args:
+        vis: Visibilities
+        weight: Weights
+        lm: Visibilities sky coordinates
+        l_grid: 2D mesh of the L axis
+        m_grid: 2D mesh of the M axis
+        grid_interpolation_mode: linear, nearest, cubic
+        avg_chan_map: Map of channel chunking
+        avg_freq: frequency axis of the data
+        reference_scaling_frequency: reference scaling frequency for sky coordinates
+
+    Returns:
+        beam data gridded
+    """
     logger.info('Interpolating beam onto grid...')
     start = time.time()
     if avg_freq is not None:
@@ -101,6 +156,16 @@ def _scipy_gridding(vis, weight, lm, l_grid, m_grid, grid_interpolation_mode, av
 
 
 def _normalize_beam(beam_grid, n_chan, pol_axis):
+    """
+    Normalize the gridded beam data
+    Args:
+        beam_grid: the gridded beam
+        n_chan: The number of channels in the beam data
+        pol_axis: polarization axis
+
+    Returns:
+        Normalized beam grid
+    """
     if 'I' in pol_axis:
         i_i = get_str_idx_in_list('I', pol_axis)
         i_peak = find_peak_beam_value(beam_grid[0, i_i, ...], scaling=0.25)
@@ -137,6 +202,15 @@ def _normalize_beam(beam_grid, n_chan, pol_axis):
 
 
 def _create_average_chan_map(freq_chan, chan_tolerance_factor):
+    """
+    Create the mapping of channels to later apply their chunking
+    Args:
+        freq_chan: frequency axis
+        chan_tolerance_factor: Maximum distance in frequency between channels in the same chunk
+
+    Returns:
+        Map of channel chunking, new frequency axis
+    """
     n_chan = len(freq_chan)
 
     tol = np.max(freq_chan) * chan_tolerance_factor
@@ -166,6 +240,21 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
 
 
 def _convolution_gridding(visibilities, weights, lmvis, diameter, freq, l_axis, m_axis, sky_cell_size):
+    """
+    Grid the visibility data using a gaussian convolution with a kernel based on primary beam size
+    Args:
+        visibilities: Visibilities
+        weights: Weights
+        lmvis: Visibilities sky coordinates
+        diameter: Telescope diameter
+        freq: Data frequancy axis
+        l_axis: L axis
+        m_axis: M axis
+        sky_cell_size: Size of the beam grid cell in the sky (radians)
+
+    Returns:
+        beam data gridded
+    """
     beam_size = _compute_beam_size(diameter, freq)
     nchan = visibilities.shape[1]
     if nchan > 1:
@@ -183,6 +272,21 @@ def _convolution_gridding(visibilities, weights, lmvis, diameter, freq, l_axis, 
 
 @njit(cache=False, nogil=True)
 def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axis, m_axis, beam_size):
+    """
+    Actual Gridding of the visibility data using a gaussian convolution with a kernel based on primary beam size,
+    using numba jit for fast code
+    Args:
+        visibilities: Visibilities
+        weights: Weights
+        lmvis: Visibilities sky coordinates
+        l_axis: L axis
+        m_axis: M axis
+        sky_cell_size:  Size of the beam grid cell in the sky (radians)
+        beam_size: Primary beam size
+
+    Returns:
+        beam data gridded
+    """
     ntime, nchan, npol = visibilities.shape
 
     l_kernel = _create_exponential_kernel(beam_size, sky_cell_size[0])
@@ -215,6 +319,15 @@ def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axi
 
 @njit(cache=False, nogil=True)
 def _find_nearest(value, array):
+    """
+    Find nearest array element to value (array must be sorted)
+    Args:
+        value: value to test
+        array: array to onto which to find the nearest element
+
+    Returns:
+        Index in the array containing the nearest value to input value
+    """
     diff = np.abs(array-value)
     idx = diff.argmin()
     return idx
@@ -222,6 +335,16 @@ def _find_nearest(value, array):
 
 @njit(cache=False, nogil=True)
 def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
+    """
+    Creates an exponential kernel to use in convolution
+    Args:
+        beam_size: Beam size (used to determine kernel's width, radians)
+        sky_cell_size: Size of the beam grid cell in the sky (radians)
+        exponent: exponent of the kernels exponent
+
+    Returns:
+        Adictionary containing the convolution kernel
+    """
     smoothing = beam_size
     support = 4*smoothing
     width = smoothing/sig_2_fwhm
@@ -250,6 +373,16 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
 
 @njit(cache=False, nogil=True)
 def _compute_kernel_range(kernel, coor, axis):
+    """
+    Compute the range of pixels over which to perform the convolution
+    Args:
+        kernel: Convolution kernel
+        coor: Coordenate of the visibility
+        axis: axis over which convolution is being done
+
+    Returns:
+        first and last pixel over which to perform the convolution
+    """
     idx = _find_nearest(coor, axis)
     i_min = round(idx - kernel['pix_support'])
     i_max = round(idx + kernel['pix_support'])
@@ -263,6 +396,15 @@ def _compute_kernel_range(kernel, coor, axis):
 
 @njit(cache=False, nogil=True)
 def _convolution_factor(kernel, delta):
+    """
+    Compute the convolution factor for a specific pixel
+    Args:
+        kernel: convolution kernel
+        delta: Distance of pixel to the central pixel
+
+    Returns:
+        Kernel value at delta
+    """
     pix_delta = delta/np.abs(kernel['sky_cell_size'])
     ikern = round(100.0*pix_delta+kernel['bias'])
     return kernel['kernel'][ikern]
@@ -270,6 +412,15 @@ def _convolution_factor(kernel, delta):
 
 @njit(cache=False, nogil=True)
 def _compute_kernel_correction(kernel, grid_size):
+    """
+    Compute kernel's fourier transform convolution correction
+    Args:
+        kernel: the convolution kernel
+        grid_size: the size of the output grid
+
+    Returns:
+        the convolution correction
+    """
     correction = np.zeros(grid_size)
     ker_val = kernel['kernel']
     bias = kernel['bias']
@@ -287,6 +438,15 @@ def _compute_kernel_correction(kernel, grid_size):
 
 
 def _compute_beam_size(diameter, frequency):
+    """
+    Compute primary beam for diameter and frequency
+    Args:
+        diameter: telescope diameter
+        frequency: frequency of observation
+
+    Returns:
+        primary beam HPBW
+    """
     if isinstance(frequency, (np.ndarray, list, tuple)):
         freq = frequency[0]
     else:
@@ -298,6 +458,15 @@ def _compute_beam_size(diameter, frequency):
 
 @njit(cache=False, nogil=True)
 def _get_normalized_correction(u_corr, v_corr):
+    """
+    Compute full grid convolution grid correction
+    Args:
+        u_corr: Correction over U axis
+        v_corr: Correction over V axis
+
+    Returns:
+        Normalized gridding correction (2D)
+    """
     u_size = u_corr.shape[0]
     v_size = v_corr.shape[0]
     u_mid = int(np.floor(u_size/2)+1)
@@ -312,6 +481,18 @@ def _get_normalized_correction(u_corr, v_corr):
 
 @njit(cache=False, nogil=True)
 def _gridding_correction_jit(aperture, beam_size, sky_cell_size, u_axis, v_axis):
+    """
+    Actual convolution gridding correction numba jitted for speed
+    Args:
+        aperture: Aperture image grid
+        beam_size: Primary beam size (radians)
+        sky_cell_size: Size of the beam grid cell in the sky (radians)
+        u_axis: Aperture U axis
+        v_axis: Aperture V axis
+
+    Returns:
+        convolution corrected aperture
+    """
     l_kernel = _create_exponential_kernel(beam_size, sky_cell_size[0])
     m_kernel = _create_exponential_kernel(beam_size, sky_cell_size[1])
 
