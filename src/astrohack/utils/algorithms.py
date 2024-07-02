@@ -6,7 +6,6 @@ import xarray as xr
 from numba import njit
 
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils.tools import silence_stderr
 import graphviper.utils.logger as logger
 
 from astrohack.utils.conversion import convert_unit
@@ -118,6 +117,17 @@ def find_nearest(array, value):
 
 
 def chunked_average(data, weight, avg_map, avg_freq):
+    """
+    Average visibilities in chunks with close enough frequencies
+    Args:
+        data: Visibility data
+        weight: Visibility weights
+        avg_map: mapping of channels to average
+        avg_freq:  new frequency ranges
+
+    Returns:
+    Chunked average of visibilities and weights
+    """
     avg_chan_index = np.arange(avg_freq.shape[0])
 
     data_avg_shape = list(data.shape)
