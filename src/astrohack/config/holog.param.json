@@ -35,7 +35,8 @@
             "type":["boolean"]
         },
         "pad": {
-            "type": ["str"]
+            "type": ["str"],
+            "nullable": true
         },
         "ant":{
             "type":["list", "str"],
