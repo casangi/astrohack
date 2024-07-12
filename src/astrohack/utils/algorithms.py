@@ -238,7 +238,7 @@ def least_squares(system, vector, return_sigma=False):
     if system.shape[0] < system.shape[1]:
         raise Exception('System must have at least the same number of rows as it has of columns')
 
-    result, residuals, _, _ = np.linalg.lstsq(system, vector)
+    result, residuals, _, _ = np.linalg.lstsq(system, vector, rcond=None)
     dof = len(vector) - len(result)
     if dof > 0:
         errs = (vector - np.dot(system, result)) / dof
