@@ -30,8 +30,7 @@ def holog(
         chan_average: bool = True,
         chan_tolerance_factor: float = 0.005,
         scan_average: bool = True,
-        # distance_to_tower: float = None,
-        pad = None,
+        alma_osf_pad: str = None,
         ant: Union[str, List[str]] = "all",
         ddi: Union[int, List[int]] = "all",
         to_stokes: bool = True,
@@ -59,7 +58,7 @@ def holog(
 
     :param padding_factor: Padding factor applied to beam grid before computing the fast-fourier transform. The default\
      has been set for operation on most systems. The user should be aware of memory constraints before increasing this\
-      parameter significantly., defaults to 50
+      parameter significantly., defaults to 10
     :type padding_factor: int, optional
 
     :param parallel: Run in parallel with Dask or in serial., defaults to False
@@ -82,9 +81,9 @@ def holog(
     :param scan_average: Boolean dictating whether averaging is done over scan., defaults to True
     :type scan_average: bool, optional
 
-    :param distance_to_tower: Distance (in meters) to holography tower, only relevant to near field data, None means fit
-    for distance (it may be extremely long).
-    :type distance_to_tower: float, optional
+    :param alma_osf_pad: Pad on which the antenna was poitioned at the ALMA OSF (only relevant for ALMA near field
+    holographies).
+    :type alma_osf_pad: str, optional
 
     :param ant: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant: list or str, optional
