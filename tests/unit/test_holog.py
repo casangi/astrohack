@@ -157,8 +157,7 @@ class TestHolog():
 
         for ant in image_mds.keys():
             for ddi in image_mds[ant].keys():
-                assert image_mds[ant][ddi].APERTURE.shape == (1, 1, 4, 529, 529)
-                #assert image_mds[ant][ddi].APERTURE.shape == (1, 1, 4, 676, 676)
+                assert image_mds[ant][ddi].APERTURE.shape == (1, 1, 4, 512, 512)
 
     def test_holog_chan_average(self):
         """
@@ -175,7 +174,7 @@ class TestHolog():
         with open('data/ea25_cal_small_before_fixed.split.image.zarr/.image_attr') as json_attr:
             json_file = json.load(json_attr)
 
-        assert json_file['chan_average'] == True
+        assert json_file['chan_average'] is True
 
     def test_holog_scan_average(self):
         """

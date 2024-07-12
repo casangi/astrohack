@@ -25,7 +25,7 @@ def holog(
         grid_size: Union[int, Array, List] = None,
         cell_size: Union[int, Array, List] = None,
         image_name: str = None,
-        padding_factor: int = 50,
+        padding_factor: int = 10,
         grid_interpolation_mode: str = "linear",
         chan_average: bool = True,
         chan_tolerance_factor: float = 0.005,
