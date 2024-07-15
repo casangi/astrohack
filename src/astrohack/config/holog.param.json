@@ -34,7 +34,7 @@
         "scan_average":{
             "type":["boolean"]
         },
-        "pad": {
+        "alma_osf_pad": {
             "type": ["str"],
             "nullable": true
         },
