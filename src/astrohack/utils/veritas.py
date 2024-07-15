@@ -39,8 +39,11 @@ def get_grid_parameters(file):
     return cell_size, grid_size
 
 
-def generate_verification_json(path, antenna, ddi, write=False):
+def generate_verification_json(path, antenna, ddi, write=False, generate_files=True):
     from astrohack.dio import open_panel
+
+    if generate_files:
+        generate_verification_files()
 
     numerical_dict = {
         "vla": {
@@ -89,51 +92,56 @@ def generate_verification_json(path, antenna, ddi, write=False):
     numerical_dict["vla"]["offsets"] = np.mean(after_shift - before_shift, axis=1).tolist()
 
     if write:
-        with open("holog_numerical_verification.json", "w") as json_file:
+        with open("data/holog_numerical_verification.json", "w") as json_file:
             json.dump(numerical_dict, json_file)
 
     return numerical_dict
 
-def generate_panel_mask_array():
-    graphviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data/")
+def generate_verification_files():
+    for stub in ["before", "after"]:
+        graphviper.utils.data.download(file=f"ea25_cal_small_{stub}_fixed.split.ms", folder="data/")
 
-    extract_pointing(
-        ms_name="data/ea25_cal_small_before_fixed.split.ms",
-        point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
-        overwrite=True,
-        parallel=False
-    )
+        extract_pointing(
+            ms_name=f"data/ea25_cal_small_{stub}_fixed.split.ms",
+            point_name=f"data/{stub}.split.point.zarr",
+            overwrite=True,
+            parallel=False
+        )
 
-    # Extract holography data using holog_obd_dict
-    holog_mds = extract_holog(
-        ms_name="data/ea25_cal_small_before_fixed.split.ms",
-        point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
-        holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
-        data_column='CORRECTED_DATA',
-        parallel=False,
-        overwrite=True
-    )
+        # Extract holography data using holog_obd_dict
+        holog_mds = extract_holog(
+            ms_name=f"data/ea25_cal_small_{stub}_fixed.split.ms",
+            point_name=f"data/{stub}.split.point.zarr",
+            holog_name=f"data/{stub}.split.holog.zarr",
+            data_column="CORRECTED_DATA",
+            parallel=False,
+            overwrite=True
+        )
 
-    image_mds = holog(
-        holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
-        image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
-        overwrite=True,
-        parallel=False
-    )
+        image_mds = holog(
+            holog_name=f"data/{stub}.split.holog.zarr",
+            image_name=f"data/{stub}.split.image.zarr",
+            overwrite=True,
+            parallel=False
+        )
 
-    after_mds = panel(
-        image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
-        clip_type='absolute',
-        clip_level=0.0,
-        parallel=False,
-        overwrite=True
-    )
+        before_mds = panel(
+            image_name=f"data/{stub}.split.image.zarr",
+            clip_type="absolute",
+            clip_level=0.0,
+            parallel=False,
+            overwrite=True
+        )
 
-    after_mds = open_panel("data/ea25_cal_small_before_fixed.split.panel.zarr")
+def generate_panel_mask_array(generate_files=True):
+    if generate_files:
+        generate_verification_files()
+
+    before_mds = open_panel("data/before.split.panel.zarr")
 
 
-    with open("panel_cutoff_mask.npy", "wb") as outfile:
-        np.save(outfile, after_mds["ant_ea25"]["ddi_0"].MASK.values)
+    with open("data/panel_cutoff_mask.npy", "wb") as outfile:
+        np.save(outfile, before_mds["ant_ea25"]["ddi_0"].MASK.values)
 
 
 
