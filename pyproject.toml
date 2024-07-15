@@ -8,6 +8,7 @@ dependencies = [
     "astropy",
     "dask",
     "distributed",
+    "dropbox",
     "graphviper",
     "ipywidgets",
     "matplotlib",
