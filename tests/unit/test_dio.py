@@ -24,8 +24,7 @@ class TestAstrohackDio():
     def setup_class(cls):
         graphviper.utils.data.download(
             file="ea25_cal_small_before_fixed.split.ms",
-            folder=cls.datafolder,
-            source="serial"
+            folder=cls.datafolder
         )
 
         extract_pointing(

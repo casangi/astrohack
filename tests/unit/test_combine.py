@@ -3,15 +3,11 @@ import shutil
 import graphviper
 import pytest
 
-import numpy as np
-
 from astrohack.holog import holog
 from astrohack.extract_holog import extract_holog
 from astrohack.extract_pointing import extract_pointing
 from astrohack.extract_holog import generate_holog_obs_dict
 from astrohack.combine import combine
-
-from graphviper.utils.data.remote import download
 
 
 @pytest.mark.skip(reason="Fix later")
@@ -22,8 +18,7 @@ class TestCombine:
         such as fetching test data """
         graphviper.utils.data.download(
             file="ea25_cal_small_before_fixed.split.ms",
-            folder="data",
-            source="serial"
+            folder="data"
         )
 
         # This gets the remote functionality for now

@@ -73,7 +73,7 @@ def generate_verification_json(path, antenna, ddi, write=False, generate_files=T
         numerical_dict["vla"]["pixels"][tag]["aperture"] = list(map(str, pixels["aperture"]))
         numerical_dict["vla"]["pixels"][tag]["beam"] = list(map(str, pixels["beam"]))
 
-    cell_size, grid_size = get_grid_parameters(file=f"{path}/after.split.holog.zarr")
+    cell_size, grid_size = get_grid_parameters(file=f"{path}/before.split.holog.zarr")
 
     numerical_dict["vla"]["cell_size"] = [-cell_size, cell_size]
     numerical_dict["vla"]["grid_size"] = [grid_size, grid_size]

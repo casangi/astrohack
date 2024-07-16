@@ -54,7 +54,6 @@ class TestHolog():
         holog(
             holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
             image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
-            grid_size=[29, 29],
             overwrite=True,
             parallel=False
         )
@@ -91,6 +90,9 @@ class TestHolog():
             image_attr = json.load(attr_file)
 
         for i, _ in enumerate(image_attr['cell_size']):
+            print(image_attr['grid_size'][i])
+            print(reference_dict["vla"]['grid_size'][i])
+
             assert relative_difference(
                 image_attr['cell_size'][i],
                 reference_dict["vla"]['cell_size'][i]
