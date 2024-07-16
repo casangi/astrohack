@@ -157,7 +157,7 @@ class TestHolog():
 
         for ant in image_mds.keys():
             for ddi in image_mds[ant].keys():
-                assert image_mds[ant][ddi].APERTURE.shape == (1, 1, 4, 627, 627)
+                assert image_mds[ant][ddi].APERTURE.shape == (1, 1, 4, 676, 676)
 
     def test_holog_chan_average(self):
         """

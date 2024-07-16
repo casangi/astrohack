@@ -139,7 +139,6 @@ def generate_panel_mask_array(generate_files=True):
 
     before_mds = open_panel("data/before.split.panel.zarr")
 
-
     with open("data/panel_cutoff_mask.npy", "wb") as outfile:
         np.save(outfile, before_mds["ant_ea25"]["ddi_0"].MASK.values)
 
