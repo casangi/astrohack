@@ -36,6 +36,7 @@ jobs:
       run: |
         python -m pip list
         python --version
+        uname -a
 
     - name: Upload pytest test results and coverage reports
       uses: actions/upload-artifact@v3
