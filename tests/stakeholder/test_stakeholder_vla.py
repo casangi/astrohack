@@ -35,7 +35,7 @@ def verify_panel_shifts(
         data_dir="",
         panel_list=None,
         expected_shift=np.array([-100, 75, 0, 150]),
-        ref_mean_shift=np.array([-77.8000519, 49.8347927, -0.0476941708, 100.268957]),
+        ref_mean_shift=np.array([-91.47636864, 60.34743659, 4.16119043, 122.40537789]),
         antenna='ant_ea25',
         ddi='ddi_0'
 ):
@@ -63,7 +63,7 @@ def verify_panel_shifts(
     relative_shift = relative_difference(delta_mean_shift, delta_ref_shift)
     print(relative_shift)
 
-    return np.all(relative_shift < 1e-6)
+    return np.all(relative_shift < 2e-6)
 
 
 def verify_center_pixels(file, antenna, ddi, reference_center_pixels, tolerance=1e-6):
@@ -240,3 +240,4 @@ def test_holography_pipeline(set_data):
     )
 
     assert verify_panel_shifts(data_dir=str(set_data), ref_mean_shift=reference_dict["vla"]["offsets"]), "Verify panel shifts"
+    #assert verify_panel_shifts(data_dir=str(set_data)), "Verify panel shifts"

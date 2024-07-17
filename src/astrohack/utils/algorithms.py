@@ -283,6 +283,9 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_name
         (pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].max()
          - pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].min())
 
+    logger.info(f"cell_size: {cell_size}")
+    logger.info(f"data_range: {data_range}")
+
     try:
         n_pix = int(np.ceil(data_range / cell_size)) ** 2
 

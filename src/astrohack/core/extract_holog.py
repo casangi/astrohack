@@ -671,8 +671,8 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
     cell_sizes_sigfigs = significant_figures_round(cell_sizes, digits=3)
 
     meta_data = {
-        'cell_size': np.mean(cell_sizes),
-        'n_pix': n_pixs[0],
+        'cell_size': np.min(cell_sizes),
+        'n_pix': np.max(n_pixs),
         'telescope_name': telescope_names[0]
     }
 
