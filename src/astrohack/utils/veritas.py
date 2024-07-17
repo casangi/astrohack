@@ -90,12 +90,14 @@ def generate_verification_json(path, antenna, ddi, write=False, generate_files=T
     after_shift = after_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
 
     numerical_dict["vla"]["offsets"] = np.mean(after_shift - before_shift, axis=1).tolist()
+    print(np.mean(after_shift - before_shift, axis=1).tolist())
 
     if write:
         with open("data/holog_numerical_verification.json", "w") as json_file:
             json.dump(numerical_dict, json_file)
 
     return numerical_dict
+
 
 def generate_verification_files():
     for stub in ["before", "after"]:
@@ -127,11 +129,11 @@ def generate_verification_files():
 
         before_mds = panel(
             image_name=f"data/{stub}.split.image.zarr",
-            clip_type="absolute",
-            clip_level=0.0,
+            panel_model='rigid',
             parallel=False,
             overwrite=True
         )
+
 
 def generate_panel_mask_array(generate_files=True):
     if generate_files:
@@ -143,9 +145,7 @@ def generate_panel_mask_array(generate_files=True):
         np.save(outfile, before_mds["ant_ea25"]["ddi_0"].MASK.values)
 
 
-
 class Veritas:
-
     __slots__ = ["dbx", "key", "secret", "certificate_path"]
 
     def __init__(self):
@@ -339,4 +339,3 @@ def encrypt_data(key: str, secret: str):
         f.write(cipher_aes.nonce)
         f.write(tag)
         f.write(ciphertext)
-
