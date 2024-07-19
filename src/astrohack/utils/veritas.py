@@ -139,6 +139,14 @@ def generate_panel_mask_array(generate_files=True):
     if generate_files:
         generate_verification_files()
 
+    panel_mds = panel(
+            image_name='data/before.split.image.zarr',
+            clip_type='absolute',
+            clip_level=0.0,
+            parallel=False,
+            overwrite=True
+        )
+
     before_mds = open_panel("data/before.split.panel.zarr")
 
     with open("data/panel_cutoff_mask.npy", "wb") as outfile:
