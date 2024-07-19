@@ -406,10 +406,8 @@ def _pad_beam_image(grid, padding_factor):
     else:
         pad_wid = [padding+1, padding]
 
-    print(k_integer, padding, initial_dimension+2*padding)
     pad_width = np.array([z_pad, z_pad, z_pad, pad_wid, pad_wid])
     padded_grid = np.pad(array=grid,   pad_width=pad_width, mode='constant')
-    print(k_integer, padding, padded_grid.shape)
     return padded_grid
 
 
