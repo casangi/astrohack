@@ -93,8 +93,8 @@ class AntennaSurface:
 
         self.npoint = np.sqrt(inputxds.sizes['l'] ** 2 + inputxds.sizes['m'] ** 2)
         self.amp_unit = 'V'
-        self.u_axis = inputxds.u_prime.values * self.wavelength
-        self.v_axis = inputxds.v_prime.values * self.wavelength
+        self.u_axis = inputxds.u_prime.values
+        self.v_axis = inputxds.v_prime.values
         self.computephase = False
 
         try:
@@ -447,7 +447,7 @@ class AntennaSurface:
         Returns:
             RMS of the input array
         """
-        return np.sqrt(np.mean(array[self.mask] ** 2))
+        return np.sqrt(np.nanmean(array[self.mask] ** 2))
 
     def fit_surface(self):
         """

@@ -1,10 +1,14 @@
 import numpy as np
 from numba import njit
 
-from astrohack.utils.algorithms import _least_squares_fit_block
+from astrohack.utils.algorithms import _least_squares_fit_block, least_squares, least_squares_jit
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.constants import clight
 from astrohack.utils.text import get_str_idx_in_list
+from astrohack.visualization.plot_tools import create_figure_and_axes
+from matplotlib import pyplot as plt
+from matplotlib.patches import Circle
+from astrohack.visualization.plot_tools import create_figure_and_axes, well_positioned_colorbar, get_proper_color_map
 
 import graphviper.utils.logger as logger
 
@@ -12,7 +16,7 @@ NPAR = 10
 
 
 def execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size, phase_fit_parameter,
-                          to_stokes, is_near_field):
+                          to_stokes, is_near_field, focus_offset, uaxis, vaxis):
     """
     Executes the phase fitting controls here to declutter core/holog.py
     Args:
@@ -33,47 +37,55 @@ def execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_c
     do_phase_fit, phase_fit_control = _solve_phase_fitting_controls(phase_fit_parameter, telescope.name)
 
     if do_phase_fit:
-        logger.info('Applying phase correction')
-        if to_stokes:
-            pol_indexes = (0,)
+        if is_near_field:
+            phase_corrected_angle, phase_fit_results = _clic_like_phase_fitting(phase, freq_axis, telescope,
+                                                                                focus_offset, uaxis, vaxis)
         else:
-            if is_near_field:
-                pol_indexes = (0, )
-            else:
-                if 'RR' in pol_axis:
-                    i_rr = get_str_idx_in_list('RR', pol_axis)
-                    i_ll = get_str_idx_in_list('LL', pol_axis)
-                    pol_indexes = (i_rr, i_ll)
-                elif 'XX' in pol_axis:
-                    i_xx = get_str_idx_in_list('XX', pol_axis)
-                    i_yy = get_str_idx_in_list('YY', pol_axis)
-                    pol_indexes = (i_xx, i_yy)
-                else:
-                    msg = f'Unknown polarization scheme: {pol_axis}'
-                    logger.error(msg)
-                    raise Exception(msg)
-
-        max_wavelength = clight / freq_axis[-1]
-
-        results, errors, phase_corrected_angle, _, in_rms, out_rms = phase_fitting_block(
-                pol_indexes=pol_indexes,
-                wavelength=max_wavelength,
-                telescope=telescope,
-                cellxy=uv_cell_size[0] * max_wavelength,  # THIS HAS TO BE CHANGED, (X, Y) CELL SIZE ARE NOT THE SAME.
-                amplitude_image=amplitude,
-                phase_image=phase,
-                pointing_offset=phase_fit_control[0],
-                focus_xy_offsets=phase_fit_control[1],
-                focus_z_offset=phase_fit_control[2],
-                subreflector_tilt=phase_fit_control[3],
-                cassegrain_offset=phase_fit_control[4])
-
-        phase_fit_results = _unpack_results(results, errors, pol_axis, freq_axis, pol_indexes)
+            phase_corrected_angle, phase_fit_results = _aips_like_phase_fitting(amplitude, phase, pol_axis, freq_axis,
+                                                                                telescope, uv_cell_size,
+                                                                                phase_fit_control, to_stokes)
     else:
         phase_fit_results = None
         phase_corrected_angle = phase.copy()
         logger.info('Skipping phase correction')
 
+    return phase_corrected_angle, phase_fit_results
+
+
+def _aips_like_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size, phase_fit_control,
+                             to_stokes):
+    logger.info('Applying phase correction')
+    if to_stokes:
+        pol_indexes = (0,)
+    else:
+        if 'RR' in pol_axis:
+            i_rr = get_str_idx_in_list('RR', pol_axis)
+            i_ll = get_str_idx_in_list('LL', pol_axis)
+            pol_indexes = (i_rr, i_ll)
+        elif 'XX' in pol_axis:
+            i_xx = get_str_idx_in_list('XX', pol_axis)
+            i_yy = get_str_idx_in_list('YY', pol_axis)
+            pol_indexes = (i_xx, i_yy)
+        else:
+            msg = f'Unknown polarization scheme: {pol_axis}'
+            logger.error(msg)
+            raise Exception(msg)
+
+    min_wavelength = clight / freq_axis[0]
+    results, errors, phase_corrected_angle, _, in_rms, out_rms = phase_fitting_block(
+        pol_indexes=pol_indexes,
+        wavelength=min_wavelength,
+        telescope=telescope,
+        cellxy=uv_cell_size[0],  # THIS HAS TO BE CHANGED, (X, Y) CELL SIZE ARE NOT THE SAME.
+        amplitude_image=amplitude,
+        phase_image=phase,
+        pointing_offset=phase_fit_control[0],
+        focus_xy_offsets=phase_fit_control[1],
+        focus_z_offset=phase_fit_control[2],
+        subreflector_tilt=phase_fit_control[3],
+        cassegrain_offset=phase_fit_control[4])
+
+    phase_fit_results = _unpack_results(results, errors, pol_axis, freq_axis, pol_indexes)
     return phase_corrected_angle, phase_fit_results
 
 
@@ -732,3 +744,158 @@ def _compute_phase_rms_block(phase_image):
             for pol in range(npol):
                 rms[time, chan, pol] = np.sqrt(np.nanmean(phase_image[time, chan, pol] ** 2))
     return rms
+
+
+def _build_astigmatism_matrix(phase, uaxis, vaxis, focus, defocus, diameter, blockage, npar, astangle):
+    cz = 1./2./focus**2
+    defocus_ratio = defocus/focus
+    u_mesh, v_mesh = np.meshgrid(uaxis, vaxis)
+    u_mesh2 = u_mesh**2
+    v_mesh2 = v_mesh**2
+    radius2 = u_mesh2 + v_mesh2
+    radius = np.sqrt(radius2)
+    sel = np.where(radius < diameter/2, True, False)
+    sel = np.where(radius < blockage, False, sel)
+
+    matrix_shape = (phase.shape[0], phase.shape[1], npar)
+
+    matrix = np.zeros(matrix_shape)
+    vector = phase.copy()
+
+    radfocus2 = radius2/focus**2
+    focus2def_coeff = (1 - radfocus2/4 + defocus_ratio)
+
+    matrix[:, :, 0] = 1.0
+    matrix[:, :, 1] = u_mesh
+    matrix[:, :, 2] = v_mesh
+    # include defocus
+    matrix[:, :, 3] = 1 - focus2def_coeff / np.sqrt(radfocus2 + focus2def_coeff**2)
+    matrix[:, :, 4] = u_mesh / focus * (1. / (1. + defocus_ratio) - 1. / np.sqrt(radfocus2 + focus2def_coeff**2))
+    matrix[:, :, 5] = v_mesh / focus * (1. / (1. + defocus_ratio) - 1. / np.sqrt(radfocus2 + focus2def_coeff**2))
+    #
+    if npar == 7:
+        matrix[:, :, 6] = ((u_mesh2-v_mesh2)*np.cos(2*astangle) + 2*u_mesh*v_mesh*np.sin(2*astangle))*cz
+    elif npar > 7:
+        matrix[:, :, 6] = (u_mesh2-v_mesh2)*cz
+        matrix[:, :, 7] = 2*u_mesh*v_mesh*cz
+
+    return matrix, vector, sel
+
+
+@njit(cache=False, nogil=True)
+def _perturbed_fit_jit(matrix, vector, fit_offset):
+    perturbed = np.empty_like(vector)
+    for i_par in range(fit_offset.shape[0]):
+        perturbed[:] = vector[:] - matrix[:, i_par] * fit_offset[i_par]
+    perturbed = np.mod(perturbed+21*np.pi, 2*np.pi)-np.pi
+    result, _, _, sigma = least_squares_jit(matrix, perturbed)
+    return result, sigma
+
+
+@njit(cache=False, nogil=True)
+def _fit_perturbation_loop_jit(start, radius, wave_number, solving_matrix, solving_vector, npar, step=1e-3):
+    sigmin = 1e10
+    fit_offset = np.zeros((npar))
+    best_fit = np.full((npar), np.nan)
+    range3 = [-1, 0, 1]
+    range0 = [0]
+    if npar > 3:
+        zrange = range3
+    else:
+        zrange = range0
+    if npar > 4:
+        xrange = range3
+        yrange = range3
+    else:
+        xrange = range0
+        yrange = range0
+
+    for ix in xrange:
+        fit_offset[4] = (start[0] + ix * step) * wave_number
+        for iy in yrange:
+            fit_offset[5] = (start[1] + iy * step) * wave_number
+            for iz in zrange:
+                fit_offset[3] = (start[2] + iz * step) * wave_number
+                for ia in range3:
+                    fit_offset[1] = ia * step / radius * wave_number
+                    for ib in range3:
+                        fit_offset[2] = ib * step / radius * wave_number
+                        result, sigma = _perturbed_fit_jit(solving_matrix, solving_vector, fit_offset)
+                    if sigma < sigmin:
+                        sigmin = sigma
+                        best_fit = result
+    return sigmin, best_fit
+
+
+def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus, phase, uaxis, vaxis):
+    # Astigmatism angle is fitted if npar = 8
+    astangle = np.pi
+    wave_number = frequency * 2.*np.pi / clight
+    radius = diameter/2
+    start = np.zeros((3))
+
+    full_matrix, full_vector, sel = _build_astigmatism_matrix(phase, uaxis, vaxis, focus, defocus, diameter, blockage,
+                                                              npar, astangle)
+    solving_matrix = full_matrix[sel, :]
+    solving_vector = full_vector[sel]
+
+    # for zvar in np.linspace(-2e-3, 2e-3, 10):
+    #     phase_pars = [zvar, 0, 0, 0, 0, 0, 0, 0]
+    #     phase_model = _clic_phase_model(full_matrix, phase_pars)
+    #     plt.imshow(phase_model)
+    #     plt.title(f'zvar = {zvar}')
+    #     plt.show()
+
+    sigmin, best_fit = _fit_perturbation_loop_jit(start, radius, wave_number, solving_matrix, solving_vector, npar)
+    phase_model = _clic_phase_model(full_matrix, best_fit)
+
+    if npar < 4:
+        best_fit[3] = start[2] * wave_number
+    if npar < 5:
+        best_fit[4] = start[0] * wave_number
+        best_fit[5] = start[1] * wave_number
+    if npar < 7:
+        best_fit[6] = 0
+        best_fit[7] = 0
+    if npar == 7:
+        best_fit[7] = np.sin(2*astangle) * best_fit[6]
+        best_fit[6] = np.cos(2*astangle) * best_fit[6]
+    print(best_fit)
+    return best_fit, phase_model
+
+
+def _clic_phase_model(matrix, best_fit):
+    flat_shape = (matrix.shape[0]*matrix.shape[1], matrix.shape[2])
+    flat_matrix = np.reshape(matrix, flat_shape)
+    flat_phase_model = np.dot(flat_matrix, best_fit)
+    phase_model = np.reshape(flat_phase_model, (matrix.shape[0], matrix.shape[1]))
+    return phase_model
+
+
+def _clic_like_phase_fitting(phase, freq_axis, telescope, focus_offset, uaxis, vaxis):
+    logger.info('Going into CLIC code')
+    phase_i = phase[0, 0, 0, ...]
+    freq = freq_axis[0]
+
+    best_fit, phase_model = _clic_full_phase_fitting(8, freq, telescope.diam, telescope.inlim, telescope.focus,
+                                                     focus_offset, phase_i, uaxis, vaxis)
+    phase[0, 0, 0, ...] -= phase_model
+
+    # fig, axes = create_figure_and_axes(None, [1, 2])
+    # plot_map_simple(phase[0, 0, 0, ...], fig, axes[0], 'observed', uaxis, vaxis)
+    # plot_map_simple(phase_model, fig, axes[1], 'model', uaxis, vaxis)
+    # plt.show()
+
+    return phase, best_fit
+
+
+def plot_map_simple(data, fig, ax, title, u_axis, v_axis):
+    extent = [np.min(u_axis), np.max(u_axis), np.min(v_axis), np.max(v_axis)]
+    cmap = get_proper_color_map('viridis')
+    im = ax.imshow(data, cmap=cmap, extent=extent)
+    circ = Circle((0, 0), 6, fill=False, color='black')
+    ax.add_patch(circ)
+    circ = Circle((0, 0), 3, fill=False, color='black')
+    ax.add_patch(circ)
+    ax.set_title(title)
+    well_positioned_colorbar(ax, fig, im, title)

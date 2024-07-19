@@ -20,6 +20,51 @@
             },
             "comment": "Preliminary data for ALMA total power Melco antennas. Diameter, focus, magnification and secondary distance taken from ALMA memo 339. npanel, nrings and inlim from ALMA cycle 9 technical handbook. inrad and ourad fetched from the CLIC (GILDAS) script for ALMA holography (J. Magnum, private communication). surp_slope assumed to be zero. Numbering of panels and screw positions taken from ALMA Holography memo: Baars, Lucas & Mangum 2004, Array center location from CASA 6.5.5.21",
             "diam": 12.0,
+            "dist_dict": {
+                "TF01": [
+                    350.017,
+                    0.0785
+                ],
+                "TF02": [
+                    326.2315,
+                    0.0843
+                ],
+                "TF03": [
+                    302.4815,
+                    0.091
+                ],
+                "TF04": [
+                    278.8015,
+                    0.0988
+                ],
+                "TF05": [
+                    355.107,
+                    0.0773
+                ],
+                "TF06": [
+                    331.3275,
+                    0.0829
+                ],
+                "TF07": [
+                    307.921,
+                    0.0894
+                ],
+                "TF08": [
+                    323.6675,
+                    0.0849
+                ],
+                "TF09": [
+                    340.1915,
+                    0.0808
+                ],
+                "TF10": [
+                    365.8975,
+                    0.075
+                ]
+            },
+            "el_axis_off": 2.01,
+            "filename": "alma_tp.zarr",
+            "filepath": "/export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack/data/telescopes",
             "focus": 4.800000000000001,
             "inlim": 0.375,
             "inrad": [

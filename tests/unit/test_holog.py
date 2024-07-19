@@ -23,8 +23,7 @@ class TestHolog():
         such as fetching test data """
         graphviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data/")
 
-        graphviper.utils.data.download(file='extract_holog_verification.json')
-        graphviper.utils.data.download(file='holog_numerical_verification.json')
+        graphviper.utils.data.download(file='holog_numerical_verification.json', folder="data/")
 
         extract_pointing(
             ms_name="data/ea25_cal_small_before_fixed.split.ms",
@@ -83,7 +82,7 @@ class TestHolog():
 
         tolerance = 2.e-5
 
-        with open("holog_numerical_verification.json") as file:
+        with open("data/holog_numerical_verification.json") as file:
             reference_dict = json.load(file)
 
         with open('data/ea25_cal_small_before_fixed.split.image.zarr/.image_attr') as attr_file:
@@ -157,8 +156,7 @@ class TestHolog():
 
         for ant in image_mds.keys():
             for ddi in image_mds[ant].keys():
-                assert image_mds[ant][ddi].APERTURE.shape == (1, 1, 4, 529, 529)
-                #assert image_mds[ant][ddi].APERTURE.shape == (1, 1, 4, 676, 676)
+                assert image_mds[ant][ddi].APERTURE.shape == (1, 1, 4, 512, 512)
 
     def test_holog_chan_average(self):
         """
@@ -175,7 +173,7 @@ class TestHolog():
         with open('data/ea25_cal_small_before_fixed.split.image.zarr/.image_attr') as json_attr:
             json_file = json.load(json_attr)
 
-        assert json_file['chan_average'] == True
+        assert json_file['chan_average'] is True
 
     def test_holog_scan_average(self):
         """

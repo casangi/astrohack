@@ -3,9 +3,9 @@ import numpy as np
 import scipy.signal as scisig
 import scipy.constants
 import xarray as xr
+from numba import njit
 
 from astrohack.antenna.telescope import Telescope
-
 import graphviper.utils.logger as logger
 
 from astrohack.utils.conversion import convert_unit
@@ -93,8 +93,8 @@ def calc_coords(image_size, cell_size):
 
     image_center = image_size // 2
 
-    x = np.arange(-image_center[0], image_size[0] - image_center[0]) * cell_size[0]
-    y = np.arange(-image_center[1], image_size[1] - image_center[1]) * cell_size[1]
+    x = np.arange(-image_center[0], image_size[0] - image_center[0]) * cell_size[0] + cell_size[0]/2
+    y = np.arange(-image_center[1], image_size[1] - image_center[1]) * cell_size[1] + cell_size[1]/2
 
     return x, y
 
@@ -116,8 +116,18 @@ def find_nearest(array, value):
     return idx, array[idx]
 
 
-# @njit(cache=False, nogil=True)
 def chunked_average(data, weight, avg_map, avg_freq):
+    """
+    Average visibilities in chunks with close enough frequencies
+    Args:
+        data: Visibility data
+        weight: Visibility weights
+        avg_map: mapping of channels to average
+        avg_freq:  new frequency ranges
+
+    Returns:
+    Chunked average of visibilities and weights
+    """
     avg_chan_index = np.arange(avg_freq.shape[0])
 
     data_avg_shape = list(data.shape)
@@ -136,7 +146,7 @@ def chunked_average(data, weight, avg_map, avg_freq):
     for avg_index in avg_chan_index:
 
         while (index < n_chan) and (avg_map[index] == avg_index):
-            # Most probably will have to unravel assigment
+            # Most probably will have to unravel assignment
             data_avg[:, avg_index, :] = (data_avg[:, avg_index, :] + weight[:, index, :] * data[:, index, :])
             weight_sum[:, avg_index, :] = weight_sum[:, avg_index, :] + weight[:, index, :]
 
@@ -149,8 +159,7 @@ def chunked_average(data, weight, avg_map, avg_freq):
 
                 else:
                     data_avg[time_index, avg_index, pol_index] = (
-                            data_avg[time_index, avg_index, pol_index] / weight_sum[
-                        time_index, avg_index, pol_index])
+                            data_avg[time_index, avg_index, pol_index] / weight_sum[time_index, avg_index, pol_index])
 
     return data_avg, weight_sum
 
@@ -212,13 +221,14 @@ def gauss_elimination(system, vector):
     return np.dot(inverse, vector)
 
 
-def least_squares(system, vector):
+def least_squares(system, vector, return_sigma=False):
     """
     Least squares fitting of a system of linear equations
     The variances are simplified as the diagonal of the covariances
     Args:
         system: System matrix to be solved
         vector: Vector that represents the right hand side of the system
+        return_sigma: Return sigma value
 
     Returns:
     The solved system, the variances of the system solution and the sum of the residuals
@@ -236,9 +246,41 @@ def least_squares(system, vector):
         errs = (vector - np.dot(system, result))
     sigma2 = np.sum(errs ** 2)
     covar = np.linalg.inv(np.dot(system.T, system))
-    variance = np.diagonal(sigma2 * covar)
+    variance = np.diag(sigma2 * covar)
 
-    return result, variance, residuals
+    if return_sigma:
+        return result, variance, residuals, np.sqrt(sigma2)
+    else:
+        return result, variance, residuals
+
+
+@njit(cache=False, nogil=True)
+def least_squares_jit(system, vector):
+    """
+    Least squares fitting of a system of linear equations
+    The variances are simplified as the diagonal of the covariances
+    Args:
+        system: System matrix to be solved
+        vector: Vector that represents the right hand side of the system
+
+    Returns:
+    The solved system, the variances of the system solution and the sum of the residuals
+    """
+    if len(system.shape) != 2:
+        raise Exception('System must have 2 dimensions')
+    if system.shape[0] < system.shape[1]:
+        raise Exception('System must have at least the same number of rows as it has of columns')
+
+    result, residuals, _, _ = np.linalg.lstsq(system, vector)
+    dof = len(vector) - len(result)
+    if dof > 0:
+        errs = (vector - np.dot(system, result)) / dof
+    else:
+        errs = (vector - np.dot(system, result))
+    sigma2 = np.sum(errs ** 2)
+    covar = np.linalg.inv(np.dot(system.T, system))
+    variance = np.diag(sigma2 * covar)
+    return result, variance, residuals, np.sqrt(sigma2)
 
 
 def _least_squares_fit_block(system, vector):

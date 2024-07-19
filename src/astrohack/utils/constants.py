@@ -5,6 +5,9 @@ import scipy.constants as constants
 clight = constants.speed_of_light
 notavail = 'N/A'
 
+# Mathematical constants
+sig_2_fwhm = 2*np.sqrt(2*np.log(2))
+
 # Length units
 length_units = ['km', 'mi', 'm', 'yd', 'ft', 'in', 'cm', 'mm', 'um', 'mils']
 # From m to unit

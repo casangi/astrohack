@@ -20,7 +20,6 @@ def asdm_to_holog(asdm_name: str,
                   holog_name: str,
                   int_time: float = None,
                   verbose: bool = False,
-                  fake_corr: bool = False,
                   cal_amp: str = 'linterp',
                   cal_pha: str = 'linterp',
                   cal_cycle: int = 3,
@@ -33,7 +32,6 @@ def asdm_to_holog(asdm_name: str,
         holog_name: Nome of the .holog.zarr file to be created without extension
         int_time: Integration time bin, if None it is set to the largest time bin between pointing and total power
         verbose: print processing detailed messages
-        fake_corr: Add copies of the R2 correlations to the data set (useful for testing)
         cal_amp: Amplitude calibration fitting, None means no amplitude calibration
         cal_pha: Phase calibration fitting, None means no phase calibration
         cal_cycle: Number of subscans in a Calibration, data cycle, seems to always be 3
@@ -59,7 +57,7 @@ def asdm_to_holog(asdm_name: str,
     combined_data = combine_data(meta_dict, pnt_info, calibrated_data, int_time,
                                  verbose)
     export_data(asdm_name, combined_data, meta_dict, holog_name, int_time,
-                verbose, fake_corr)
+                verbose)
 
     el_time = timer.time()-start
     print(f'\nFinished processing ({el_time:.2f} seconds)')
@@ -421,6 +419,8 @@ def calibrate_tp_data(tp_info, cal_amp, cal_pha, cal_cycle, plot_cal,
     cal_data, data = _separate_cal_from_data(tp_info, cal_cycle)
 
     _amplitude_calibration(cal_data, data, cal_amp, plot_cal, holog_name, verbose)
+    if verbose:
+        print()
     _phase_calibration(cal_data, data, cal_pha, plot_cal, holog_name, verbose)
     if verbose:
         print()
@@ -1036,7 +1036,7 @@ def _match_tp_and_pnt(tp_info, pnt_info):
 ########################
 
 def export_data(asdm_name, combined_data, meta_dict, holog_name, int_time,
-                verbose, fake_corr):
+                verbose):
     """
     Export data to disk in the .holog.zarr format
     Args:
@@ -1046,12 +1046,10 @@ def export_data(asdm_name, combined_data, meta_dict, holog_name, int_time,
         holog_name: The base name for the output file
         int_time: The used integration time
         verbose: print processing messages?
-        fake_corr: Add copies of the reference signal to simulate 4 correlations?
-
     Returns:
     .holog.zarr on disk
     """
-    xds = _data_to_xds(combined_data, meta_dict, fake_corr)
+    xds = _data_to_xds(combined_data, meta_dict)
     
     input_dict = _create_base_attr_dict(asdm_name, holog_name)
     input_dict["time_smoothing_interval"] = int_time
@@ -1063,63 +1061,103 @@ def export_data(asdm_name, combined_data, meta_dict, holog_name, int_time,
         print(xds)
 
 
-def _data_to_xds(combined_data, meta_dict, fake_corr):
+def _conjugate_beam_data(combined_data):
+    time = combined_data['time']*DAY2SEC
+    amp = combined_data['amp']
+    pha = combined_data['pha']
+    wei = combined_data['weight']
+    ref = combined_data['ref']
+    lm = combined_data['lm']
+    off = combined_data['offset']
+    ref_median = np.nanmedian(combined_data['ref'])
+
+    n_time = time.shape[0]
+    ou_n_time = 2*n_time
+    vis_shape = [ou_n_time, 1, 2]  # nchan = 1, npol =2
+    pnt_shape = [ou_n_time, 2]
+
+    ou_vis = np.empty(vis_shape, dtype=np.complex128)
+    ou_wei = np.empty(vis_shape)
+    ou_time = np.empty([ou_n_time])
+    ou_lm = np.empty(pnt_shape)
+    ou_off = np.empty(pnt_shape)
+
+    for i_time in range(n_time):
+        i_ou_time = 2*i_time
+        # Time, weight, reference and pointing are equal in conjugate
+        ou_time[i_ou_time:i_ou_time+2] = time[i_time]
+        ou_wei[i_ou_time:i_ou_time+2, 0, :] = wei[i_time]
+        reference = ref[i_time]/ref_median + 0j
+        ou_vis[i_ou_time:i_ou_time + 2, 0, 1] = reference
+        ou_lm[i_ou_time] = lm[i_time]
+        ou_lm[i_ou_time + 1] = lm[i_time]
+        ou_off[i_ou_time] = off[i_time]
+        ou_off[i_ou_time + 1] = off[i_time]
+
+        real = amp[i_time] * np.cos(pha[i_time])
+        imag = amp[i_time] * np.sin(pha[i_time])
+        # Value
+        ou_vis[i_ou_time, 0, 0] = real + imag*1j
+        # its complex conjugate
+        ou_vis[i_ou_time+1, 0, 0] = real - imag*1j
+
+    return ou_time, ou_vis, ou_wei, ou_lm, ou_off
+
+
+def _beam_no_conjugate(combined_data):
+    ref_median = np.nanmedian(combined_data['ref'])
+
+    ou_time = combined_data['time']*DAY2SEC
+    real_sig = combined_data['amp'] * np.cos(combined_data['pha'])
+    imag_sig = combined_data['amp'] * np.sin(combined_data['pha'])
+    vis_shape = [ou_time.shape[0], 1, 2]  # nchan = 1, npol =2
+
+    ou_vis = np.empty(vis_shape, dtype=np.complex128)
+    ou_vis[:, 0, 0].real = real_sig
+    ou_vis[:, 0, 0].imag = imag_sig
+    # R2 is to be divided by its median so that we can gauge power variations
+    ou_vis[:, 0, 1].real = combined_data['ref'] / ref_median
+    ou_vis[:, 0, 1].imag = 0.0
+
+    ou_wei = np.empty(vis_shape)
+    ou_wei[:, 0, 0] = combined_data['weight']
+    ou_wei[:, 0, 1] = combined_data['weight']
+
+    return ou_time, ou_vis, ou_wei, combined_data['lm'], combined_data['offset']
+
+
+def _data_to_xds(combined_data, meta_dict):
     """
     Export the time matched pointing and total power data to a Xarray dataset compatible with the astrohackHologFile
     format
     Args:
         combined_data: The time matched pointing ad total power dictionary
         meta_dict: The metadata dictionary
-        fake_corr: Add copies of the reference signal to simulate 4 correlations?
-
     Returns:
     Xarray dataset compatible with the astrohackHologFile format
     """
-    # This is not relevant in the NF case, so we leave it at 0
-    parallactic_samples = np.array([0, 0, 0]) 
-    
-    extent = _compute_real_extent(combined_data['lm'])
 
-    if fake_corr:
-        pol_axis = np.array(['I', 'R2', 'R3', 'R4'])
+    conjugate = False
+    if conjugate:
+        time, vis, wei, pnt_lm, pnt_off = _conjugate_beam_data(combined_data)
     else:
-        pol_axis = np.array(['I', 'R2'])
-              
-    coords = {"time": np.array(combined_data['time']*DAY2SEC),
+        time, vis, wei, pnt_lm, pnt_off = _beam_no_conjugate(combined_data)
+
+    coords = {"time": time,
               "chan": np.array(meta_dict['spw']['frequency']),
-              "pol": pol_axis}
+              "pol": np.array(['I', 'R2'])}
 
-    vis_shape = [coords['time'].shape[0],
-                 coords['chan'].shape[0],
-                 coords['pol'].shape[0]]
-
-    real_sig = combined_data['amp'] * np.cos(combined_data['pha'])
-    imag_sig = combined_data['amp'] * np.sin(combined_data['pha'])
-
-    vis = np.empty(vis_shape, dtype=np.complex128)         
-    vis[:, 0, 0].real = real_sig
-    vis[:, 0, 0].imag = imag_sig
-    vis[:, 0, 1].real = combined_data['ref']
-    vis[:, 0, 1].imag = 0.0
-    if fake_corr:
-        vis[:, 0, 2].real = combined_data['ref']
-        vis[:, 0, 2].imag = 0.0
-        vis[:, 0, 3].real = combined_data['ref']
-        vis[:, 0, 3].imag = 0.0
-
-    wei = np.empty(vis_shape)
-    wei[:, 0, 0] = combined_data['weight']
-    wei[:, 0, 1] = combined_data['weight']
-    
     xds = xr.Dataset()
     xds = xds.assign_coords(coords)
     xds["VIS"] = xr.DataArray(vis, dims=["time", "chan", "pol"])
     xds["WEIGHT"] = xr.DataArray(wei, dims=["time", "chan", "pol"])
 
-    xds["DIRECTIONAL_COSINES"] = \
-        xr.DataArray(combined_data['lm'], dims=["time", "lm"])
-    xds["IDEAL_DIRECTIONAL_COSINES"] = \
-        xr.DataArray(combined_data['offset'], dims=["time", "lm"])
+    xds["DIRECTIONAL_COSINES"] = xr.DataArray(pnt_lm, dims=["time", "lm"])
+    xds["IDEAL_DIRECTIONAL_COSINES"] = xr.DataArray(pnt_off, dims=["time", "lm"])
+
+    # This is not relevant in the NF case, so we leave it at 0
+    parallactic_samples = np.array([0, 0, 0])
+    extent = _compute_real_extent(combined_data['lm'])
 
     xds.attrs["holog_map_key"] = "map_0"
     xds.attrs["ddi"] = 0
@@ -1153,9 +1191,9 @@ def _compute_grid_params(meta_dict, extent):
     wavelength = clight / meta_dict['spw']['frequency'][0]
 
     tel_name = meta_dict['ant']['telescope']+'_'+meta_dict['ant']['antenna'][0:2]
-    telescope = Telescope(tel_name)
+    telescope = Telescope(tel_name.lower())
 
-    cell_size = 0.85 * wavelength/telescope.diam
+    cell_size = wavelength/telescope.diam/3.
 
     min_range = np.min([extent['l_max']-extent['l_min'],
                         extent['m_max']-extent['m_min']])

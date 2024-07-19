@@ -25,11 +25,12 @@ def holog(
         grid_size: Union[int, Array, List] = None,
         cell_size: Union[int, Array, List] = None,
         image_name: str = None,
-        padding_factor: int = 50,
+        padding_factor: int = 10,
         grid_interpolation_mode: str = "linear",
         chan_average: bool = True,
         chan_tolerance_factor: float = 0.005,
         scan_average: bool = True,
+        alma_osf_pad: str = None,
         ant: Union[str, List[str]] = "all",
         ddi: Union[int, List[int]] = "all",
         to_stokes: bool = True,
@@ -57,7 +58,7 @@ def holog(
 
     :param padding_factor: Padding factor applied to beam grid before computing the fast-fourier transform. The default\
      has been set for operation on most systems. The user should be aware of memory constraints before increasing this\
-      parameter significantly., defaults to 50
+      parameter significantly., defaults to 10
     :type padding_factor: int, optional
 
     :param parallel: Run in parallel with Dask or in serial., defaults to False
@@ -79,6 +80,10 @@ def holog(
 
     :param scan_average: Boolean dictating whether averaging is done over scan., defaults to True
     :type scan_average: bool, optional
+
+    :param alma_osf_pad: Pad on which the antenna was poitioned at the ALMA OSF (only relevant for ALMA near field
+    holographies).
+    :type alma_osf_pad: str, optional
 
     :param ant: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant: list or str, optional
@@ -202,9 +207,6 @@ def holog(
 
     else:
         logger.debug("Using user specified grid size.", holog_params["grid_size"])
-        meta_data["n_pix"] = np.power(holog_params["grid_size"][0], 2)
-        write_meta_data(holog_params['holog_name'] + '/.holog_attr', meta_data)
-
         holog_params["grid_size"] = _convert_gridding_parameter(
             gridding_parameter=holog_params["grid_size"],
             reflect_on_axis=False

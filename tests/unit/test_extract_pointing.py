@@ -4,6 +4,7 @@ import graphviper
 
 from astrohack.extract_pointing import extract_pointing
 
+
 class TestExtractPointing:
     @classmethod
     def setup_class(cls):
