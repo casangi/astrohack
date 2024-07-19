@@ -23,9 +23,6 @@ class TestPanel():
         such as fetching test data """
         graphviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data/")
 
-        graphviper.utils.data.download(file='extract_holog_verification.json')
-        graphviper.utils.data.download(file='holog_numerical_verification.json')
-
         extract_pointing(
             ms_name="data/ea25_cal_small_before_fixed.split.ms",
             point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
@@ -51,20 +48,6 @@ class TestPanel():
             parallel=False
         )
 
-        panel(
-            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_before_fixed.split.panel.zarr',
-            clip_type='relative',
-            clip_level=0.2,
-            panel_margins=0.2,
-            panel_model='rigid',
-            parallel=False,
-            overwrite=True
-        )
-
-        with open('data/ea25_cal_small_before_fixed.split.image.zarr/.image_attr') as json_attr:
-            cls.json_file = json.load(json_attr)
-
     @classmethod
     def teardown_class(cls):
         """ teardown any state that was previously setup with a call to setup_class
@@ -83,7 +66,11 @@ class TestPanel():
         """
             Check that the panel output name was created correctly.
         """
-
+        panel_mds = panel(
+            image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
+            parallel=False,
+            overwrite=True
+        )
         assert os.path.exists('data/ea25_cal_small_before_fixed.split.panel.zarr')
 
     def test_panel_ant_id(self):
@@ -116,7 +103,7 @@ class TestPanel():
             clip_type='relative',
             clip_level=0.2,
             panel_margins=0.2,
-            ddi=[0],
+            ddi=['0'],
             panel_model='rigid',
             parallel=False,
             overwrite=True
@@ -203,9 +190,9 @@ class TestPanel():
         """
            Set cutoff=0 and compare results to known truth value array.
         """
-        graphviper.utils.data.download(file='panel_cutoff_mask')
+        graphviper.utils.data.download(file='panel_cutoff_mask', folder='data')
 
-        with open("panel_cutoff_mask.npy", "rb") as array:
+        with open("data/panel_cutoff_mask.npy", "rb") as array:
             reference_array = np.load(array)
 
         panel_mds = panel(
@@ -215,9 +202,6 @@ class TestPanel():
             parallel=False,
             overwrite=True
         )
-
-        print(panel_mds["ant_ea25"]["ddi_0"].MASK.values.shape)
-        print(reference_array.shape)
 
         assert np.all(panel_mds["ant_ea25"]["ddi_0"].MASK.values == reference_array)
 
