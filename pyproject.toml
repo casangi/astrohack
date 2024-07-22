@@ -1,33 +1,10 @@
 [project]
 name = "astrohack"
-version = "0.4.8"
+version = "0.5.0"
 description = "Holography Antenna Commissioning Kit"
 readme = "README.md"
-requires-python = ">= 3.8, < 3.12"
-dependencies = [
-    "astropy",
-    "dask",
-    "distributed",
-    "graphviper",
-    "ipywidgets",
-    "matplotlib",
-    "numba>=0.57.0",
-    "numpy",
-    "prettytable",
-    "pytest",
-    "pytest-cov",
-    "pytest-html",
-    "scikit_image",
-    "scikit-learn",
-    "scipy",
-    "rich",
-    "xarray",
-    "zarr",
-    "bokeh",
-    "jupyterlab",
-    "python_casacore>=3.5.2; sys_platform != \"darwin\" ",
-]
-
+requires-python = ">= 3.9, < 3.12"
+dependencies = [ "astropy", "dask", "distributed", "dropbox", "graphviper", "ipywidgets", "matplotlib", "numba>=0.57.0", "numpy==1.26.4", "prettytable", "pycryptodome", "pytest", "pytest-cov", "pytest-html", "scikit_image", "scikit-learn", "scipy", "rich", "xarray", "zarr", "bokeh", "jupyterlab", "python_casacore>=3.5.2; sys_platform != \"darwin\" ",]
 [[project.authors]]
 name = "Joshua Hoskins"
 email = "jhoskins@nrao.edu"

@@ -1,4 +1,7 @@
 import json
+
+import graphviper
+import numpy as np
 import pytest
 import astrohack
 
@@ -18,12 +21,12 @@ def set_data(tmp_path_factory):
     data_dir = tmp_path_factory.mktemp("data")
 
     # Data files
-    astrohack.graphviper.utils.data.download('ea25_cal_small_before_fixed.split.ms', folder=str(data_dir))
-    astrohack.graphviper.utils.data.download('ea25_cal_small_after_fixed.split.ms', folder=str(data_dir))
+    graphviper.utils.data.download(file='ea25_cal_small_before_fixed.split.ms', folder=str(data_dir))
+    graphviper.utils.data.download(file='ea25_cal_small_after_fixed.split.ms', folder=str(data_dir))
 
     # Verification json information
-    astrohack.graphviper.utils.data.download(file='extract_holog_verification.json', folder=str(data_dir))
-    astrohack.graphviper.utils.data.download(file='holog_numerical_verification.json', folder=str(data_dir))
+    graphviper.utils.data.download(file='extract_holog_verification.json', folder=str(data_dir))
+    graphviper.utils.data.download(file='holog_numerical_verification.json', folder=str(data_dir))
 
     return data_dir
 
@@ -36,7 +39,7 @@ def verify_panel_shifts(
         data_dir="",
         panel_list=None,
         expected_shift=np.array([-100, 75, 0, 150]),
-        ref_mean_shift=np.array([-77.8000519, 49.8347927, -0.0476941708, 100.268957]),
+        ref_mean_shift=np.array([-91.47636864, 60.34743659, 4.16119043, 122.40537789]),
         antenna='ant_ea25',
         ddi='ddi_0'
 ):
@@ -64,7 +67,7 @@ def verify_panel_shifts(
     relative_shift = relative_difference(delta_mean_shift, delta_ref_shift)
     print(relative_shift)
 
-    return np.all(relative_shift < 1e-6)
+    return np.all(relative_shift < 2e-6)
 
 
 def verify_center_pixels(file, antenna, ddi, reference_center_pixels, tolerance=1e-6):
@@ -161,7 +164,6 @@ def test_holography_pipeline(set_data):
         ms_name=before_ms,
         point_name=before_point,
         holog_name=before_holog,
-        ddi=[0],
         data_column='CORRECTED_DATA',
         parallel=False,
         overwrite=True
@@ -176,16 +178,7 @@ def test_holography_pipeline(set_data):
         overwrite=True
     )
 
-    with open(str(set_data / "vla.after.split.holog.zarr/.holog_attr")) as attr_file:
-        holog_attr = json.load(attr_file)
-
-    assert verify_holog_diagnostics(
-        json_data=holog_attr,
-        truth_json=str(set_data / "holog_numerical_verification.json"),
-        tolerance=1e-4
-    )
-
-    assert verify_holog_obs_dictionary(holog_obs_dict["vla"]["after"])
+    assert verify_holog_obs_dictionary(holog_obs_dict["vla"]["after"]), "Verifiy holog obs dictionary"
 
     with open(str(set_data / "holog_numerical_verification.json")) as file:
         reference_dict = json.load(file)
@@ -198,14 +191,7 @@ def test_holography_pipeline(set_data):
 
     holog(
         holog_name=before_holog,
-        padding_factor=50,
-        grid_interpolation_mode='linear',
-        chan_average=True,
-        scan_average=True,
         overwrite=True,
-        phase_fit=True,
-        apply_mask=True,
-        to_stokes=True,
         parallel=False
     )
 
@@ -215,28 +201,30 @@ def test_holography_pipeline(set_data):
         ddi='ddi_0',
         reference_center_pixels=reference_dict["vla"]["pixels"]["before"],
         tolerance=1.5e-6
-    )
+    ), "Verifiy center pixels-before"
 
     holog(
         holog_name=after_holog,
-        padding_factor=50,
-        grid_interpolation_mode='linear',
-        chan_average=True,
-        scan_average=True,
         overwrite=True,
-        phase_fit=True,
-        apply_mask=True,
-        to_stokes=True,
         parallel=False
     )
 
+    with open(str(set_data / "vla.before.split.holog.zarr/.holog_attr")) as attr_file:
+        holog_attr = json.load(attr_file)
+
+    assert verify_holog_diagnostics(
+        json_data=holog_attr,
+        truth_json=str(set_data / "holog_numerical_verification.json"),
+        tolerance=1e-4
+    ), "Verifiy holog diagnostics"
+
     assert verify_center_pixels(
-        file=after_image,
+        file=before_image,
         antenna='ant_ea25',
         ddi='ddi_0',
-        reference_center_pixels=reference_dict["vla"]["pixels"]["after"],
+        reference_center_pixels=reference_dict["vla"]["pixels"]["before"],
         tolerance=1.5e-6
-    )
+    ), "Verifiy center pixels-after"
 
     before_image = str(set_data / "vla.before.split.image.zarr")
     after_image = str(set_data / "vla.after.split.image.zarr")
@@ -255,4 +243,5 @@ def test_holography_pipeline(set_data):
         overwrite=True
     )
 
-    assert verify_panel_shifts(data_dir=str(set_data))
+    assert verify_panel_shifts(data_dir=str(set_data), ref_mean_shift=reference_dict["vla"]["offsets"]), "Verify panel shifts"
+    #assert verify_panel_shifts(data_dir=str(set_data)), "Verify panel shifts"

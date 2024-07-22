@@ -1,6 +1,7 @@
 {
     "metadata": {
         ".zattrs": {
+            "ant_list": [],
             "array_center": {
                 "m0": {
                     "unit": "rad",
@@ -60,6 +61,7 @@
             ],
             "screw_offset": 0.0635,
             "secondary_dist": 0.522,
+            "secondary_support": "X",
             "surp_slope": 0.65
         },
         ".zgroup": {

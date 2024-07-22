@@ -1,6 +1,7 @@
 {
     "metadata": {
         ".zattrs": {
+            "ant_list": [],
             "array_center": {
                 "m0": {
                     "unit": "rad",
@@ -19,6 +20,51 @@
             },
             "comment": "Preliminary data for ALMA AEM antennas. Diameter, focus, magnification and secondary distance taken from ALMA memo 339. npanel, nrings and inlim from ALMA cycle 9 technical handbook. inrad and ourad fetched from the CLIC (GILDAS) script for ALMA holography (J. Magnum, private communication). surp_slope assumed to be zero. Numbering of panels and screw positions taken from ALMA Holography memo: Baars, Lucas & Mangum 2004, Array center location from CASA 6.5.5.21",
             "diam": 12.0,
+            "dist_dict": {
+                "TF01": [
+                    349.847,
+                    0.0785
+                ],
+                "TF02": [
+                    326.0615,
+                    0.0843
+                ],
+                "TF03": [
+                    302.3115,
+                    0.091
+                ],
+                "TF04": [
+                    278.6315,
+                    0.0988
+                ],
+                "TF05": [
+                    354.937,
+                    0.0773
+                ],
+                "TF06": [
+                    331.1575,
+                    0.0829
+                ],
+                "TF07": [
+                    307.7505,
+                    0.0894
+                ],
+                "TF08": [
+                    323.4975,
+                    0.0849
+                ],
+                "TF09": [
+                    340.0215,
+                    0.0808
+                ],
+                "TF10": [
+                    365.7275,
+                    0.075
+                ]
+            },
+            "el_axis_off": 2.18,
+            "filename": "alma_da.zarr",
+            "filepath": "/export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack/data/telescopes",
             "focus": 4.800000000000001,
             "inlim": 0.375,
             "inrad": [
@@ -58,6 +104,7 @@
             ],
             "screw_offset": null,
             "secondary_dist": 0.294,
+            "secondary_support": "X",
             "surp_slope": 0.0
         },
         ".zgroup": {

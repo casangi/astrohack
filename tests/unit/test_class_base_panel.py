@@ -1,15 +1,15 @@
 import pytest
 
-from astrohack._utils._panel_classes.base_panel import _gauss_elimination_numpy, BasePanel, \
+from astrohack.antenna.base_panel import gauss_elimination, BasePanel, \
      PANEL_MODELS, imean, irigid, icorscp, icorlst, ixypara, icorrob, irotpara, ifulllst
-from astrohack._utils._conversion import _convert_unit
+from astrohack.utils.conversion import convert_unit
 import numpy as np
 
 
 class TestBasePanel:
     tolerance = 1e-6
 
-    def test_gauss_elimination_numpy(self):
+    def testgauss_elimination(self):
         """
         Tests the gaussian elimination routine by using an identity matrix
         """
@@ -17,7 +17,7 @@ class TestBasePanel:
         identity = np.identity(size)
         vector = np.arange(size)
         for pos in range(size):
-            assert _gauss_elimination_numpy(identity, vector)[pos] == vector[pos], 'Gaussian elimination failed'
+            assert gauss_elimination(identity, vector)[pos] == vector[pos], 'Gaussian elimination failed'
 
     def test_init(self):
         screws = np.zeros([4, 2])
@@ -72,12 +72,12 @@ class TestBasePanel:
         assert abs(onecorr - expectedmean)/expectedmean < self.tolerance, 'Correction for a point did not match the ' \
                                                                           'expected value'
         mmscrews = meanpanel.export_screws(unit='mm')
-        fac = _convert_unit('m', 'mm', 'length')
+        fac = convert_unit('m', 'mm', 'length')
         for screw in mmscrews:
             assert abs(screw - fac*expectedmean) < self.tolerance, 'mm screw adjustments not within 0.1% tolerance '\
                                                                       'of the expected value'
         miscrews = meanpanel.export_screws(unit='mils')
-        fac = _convert_unit('m', 'mils', 'length')
+        fac = convert_unit('m', 'mils', 'length')
         for screw in miscrews:
             assert abs(screw - fac * expectedmean) < 1e-2, 'Miliinches screw adjustments not ' \
                                                                          'within 1% of the expected value'
@@ -107,7 +107,7 @@ class TestBasePanel:
         assert abs(onecorr - expectedpar[2])/expectedpar[2] < self.tolerance, 'Correction for a point did not match ' \
                                                                               'the expected value'
         mmscrews = rigidpanel.export_screws()
-        fac = _convert_unit('m', 'mm', 'length')
+        fac = convert_unit('m', 'mm', 'length')
         for screw in mmscrews:
             assert abs(screw - fac*expectedpar[2]) < self.tolerance, 'mm screw adjustments not within 0.1% ' \
                                                                         'tolerance of the expected value'
@@ -139,7 +139,7 @@ class TestBasePanel:
         assert abs(onecorr - expectedpar[2]) / expectedpar[2] < self.tolerance, 'Correction for a point did not match '\
                                                                                 'the expected value'
         mmscrews = xyparapanel.export_screws()
-        fac = _convert_unit('m', 'mm', 'length')
+        fac = convert_unit('m', 'mm', 'length')
         for screw in mmscrews:
             assert abs(screw - fac*expectedpar[2]) < self.tolerance, 'mm screw adjustments not within 0.1% ' \
                                                                         'tolerance of the expected value'
@@ -174,7 +174,7 @@ class TestBasePanel:
         assert abs(onecorr - expectedpar[2]) / expectedpar[2] < self.tolerance, 'Correction for a point did not match '\
                                                                                 'the expected value'
         mmscrews = rotparapanel.export_screws()
-        fac = _convert_unit('m', 'mm', 'length')
+        fac = convert_unit('m', 'mm', 'length')
         for screw in mmscrews:
             assert abs(screw - fac*expectedpar[2]) < 1e3*self.tolerance, 'mm screw adjustments not within 0.1% ' \
                                                                         'tolerance of the expected value'
@@ -206,7 +206,7 @@ class TestBasePanel:
         assert abs(onecorr - expectedpar[2]) / expectedpar[2] < self.tolerance, 'Correction for a point did not match ' \
                                                                                 'the expected value'
         mmscrews = corotparapanel.export_screws()
-        fac = _convert_unit('m', 'mm', 'length')
+        fac = convert_unit('m', 'mm', 'length')
         for screw in mmscrews:
             assert abs(screw - fac * expectedpar[2]) < self.tolerance, 'mm screw adjustments not within 0.1% ' \
                                                                        'tolerance of the expected value'
@@ -239,7 +239,7 @@ class TestBasePanel:
         assert abs(onecorr - expectedpar[2]) / expectedpar[2] < self.tolerance, 'Correction for a point did not match ' \
                                                                                 'the expected value'
         mmscrews = corotparapanel.export_screws()
-        fac = _convert_unit('m', 'mm', 'length')
+        fac = convert_unit('m', 'mm', 'length')
         for screw in mmscrews:
             assert abs(screw - fac * expectedpar[2]) < self.tolerance, 'mm screw adjustments not within 0.1% ' \
                                                                        'tolerance of the expected value'
@@ -273,7 +273,7 @@ class TestBasePanel:
         assert abs(onecorr - expectedpar[2]) / expectedpar[2] < self.tolerance, 'Correction for a point did not match ' \
                                                                                 'the expected value'
         mmscrews = corotparapanel.export_screws()
-        fac = _convert_unit('m', 'mm', 'length')
+        fac = convert_unit('m', 'mm', 'length')
         for screw in mmscrews:
             assert abs(screw - fac * expectedpar[2]) < self.tolerance, 'mm screw adjustments not within 0.1% ' \
                                                                        'tolerance of the expected value'

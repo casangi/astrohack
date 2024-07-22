@@ -1,4 +1,5 @@
 import json
+import pathlib
 import numpy as np
 
 import graphviper.utils.logger as logger
@@ -7,31 +8,29 @@ import graphviper.utils.parameter
 from numbers import Number
 from typing import List, Union, NewType
 
-from astrohack._utils._dask_graph_tools import _dask_general_compute
-from astrohack._utils._dio import _check_if_file_exists
-from astrohack._utils._dio import _check_if_file_will_be_overwritten
-from astrohack._utils._dio import _read_meta_data
-from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._holog import _holog_chunk
-from astrohack._utils._tools import get_default_file_name
+from astrohack.utils.graph import compute_graph
+from astrohack.utils.file import overwrite_file
+from astrohack.utils.data import read_meta_data
+from astrohack.utils.data import write_meta_data
+from astrohack.core.holog import process_holog_chunk
+from astrohack.utils.text import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
 Array = NewType("Array", Union[np.array, List[int], List[float]])
 
 
-@graphviper.utils.parameter.validate(
-    external_logger=logger.get_logger(logger_name="astrohack")
-)
+@graphviper.utils.parameter.validate()
 def holog(
         holog_name: str,
         grid_size: Union[int, Array, List] = None,
         cell_size: Union[int, Array, List] = None,
         image_name: str = None,
-        padding_factor: int = 50,
+        padding_factor: int = 10,
         grid_interpolation_mode: str = "linear",
         chan_average: bool = True,
         chan_tolerance_factor: float = 0.005,
         scan_average: bool = True,
+        alma_osf_pad: str = None,
         ant: Union[str, List[str]] = "all",
         ddi: Union[int, List[int]] = "all",
         to_stokes: bool = True,
@@ -39,7 +38,7 @@ def holog(
         phase_fit: bool = True,
         overwrite: bool = False,
         parallel: bool = False
-) -> AstrohackImageFile:
+) -> Union[AstrohackImageFile, None]:
     """ Process holography data and derive aperture illumination pattern.
 
     :param holog_name: Name of holography .holog.zarr file to process.
@@ -59,7 +58,7 @@ def holog(
 
     :param padding_factor: Padding factor applied to beam grid before computing the fast-fourier transform. The default\
      has been set for operation on most systems. The user should be aware of memory constraints before increasing this\
-      parameter significantly., defaults to 50
+      parameter significantly., defaults to 10
     :type padding_factor: int, optional
 
     :param parallel: Run in parallel with Dask or in serial., defaults to False
@@ -81,6 +80,10 @@ def holog(
 
     :param scan_average: Boolean dictating whether averaging is done over scan., defaults to True
     :type scan_average: bool, optional
+
+    :param alma_osf_pad: Pad on which the antenna was poitioned at the ALMA OSF (only relevant for ALMA near field
+    holographies).
+    :type alma_osf_pad: str, optional
 
     :param ant: List of antennas/antenna to be processed, defaults to "all" when None, ex. ea25
     :type ant: list or str, optional
@@ -156,16 +159,18 @@ def holog(
     holog_params = locals()
 
     input_params = holog_params.copy()
-    _check_if_file_exists(holog_params['holog_name'])
+    assert pathlib.Path(holog_params['holog_name']).exists() is True, (
+        logger.error(f'File {holog_params["holog_name"]} does not exists.')
+    )
 
-    _check_if_file_will_be_overwritten(holog_params['image_name'], holog_params['overwrite'])
+    overwrite_file(holog_params['image_name'], holog_params['overwrite'])
 
     json_data = "/".join((holog_params['holog_name'], ".holog_json"))
 
     with open(json_data, "r") as json_file:
         holog_json = json.load(json_file)
 
-    meta_data = _read_meta_data(holog_params['holog_name'] + '/.holog_attr')
+    meta_data = read_meta_data(holog_params['holog_name'] + '/.holog_attr')
 
     # If cell size is None, fill from metadata if it exists
     if holog_params["cell_size"] is None:
@@ -201,6 +206,7 @@ def holog(
             holog_params["grid_size"] = np.array([n_pix, n_pix])
 
     else:
+        logger.debug("Using user specified grid size.", holog_params["grid_size"])
         holog_params["grid_size"] = _convert_gridding_parameter(
             gridding_parameter=holog_params["grid_size"],
             reflect_on_axis=False
@@ -219,19 +225,19 @@ def holog(
     with open(".holog_diagnostic.json", "w") as out_file:
         json.dump(json_data, out_file)
 
-    if _dask_general_compute(
+    if compute_graph(
             holog_json,
-            _holog_chunk,
+            process_holog_chunk,
             holog_params,
             ['ant', 'ddi'],
             parallel=parallel
     ):
 
         output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_attr")
-        _write_meta_data(output_attr_file, holog_params)
+        write_meta_data(output_attr_file, holog_params)
 
         output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_input")
-        _write_meta_data(output_attr_file, input_params)
+        write_meta_data(output_attr_file, input_params)
 
         image_mds = AstrohackImageFile(holog_params['image_name'])
         image_mds.open()

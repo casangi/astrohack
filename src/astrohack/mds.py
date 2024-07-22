@@ -1,34 +1,61 @@
 import pathlib
 import graphviper.utils.parameter
-import graphviper.utils.logger as logger
 
 import numpy as np
-from astrohack._utils._constants import custom_split_checker, custom_unit_checker
-from astrohack._utils._plot_commons import custom_plots_checker
-from astrohack._utils._dask_graph_tools import _dask_general_compute
-from astrohack._utils._diagnostics import _calibration_plot_chunk
-from astrohack._utils._dio import _create_destination_folder
-from astrohack._utils._dio import _load_holog_file
-from astrohack._utils._dio import _load_image_file
-from astrohack._utils._dio import _load_locit_file
-from astrohack._utils._dio import _load_panel_file
-from astrohack._utils._dio import _load_point_file
-from astrohack._utils._dio import _load_position_file
-from astrohack._utils._dio import _read_meta_data
-from astrohack._utils._extract_holog import _plot_lm_coverage, _export_to_aips
-from astrohack._utils._extract_locit import _plot_source_table, _plot_array_configuration, _print_array_configuration
-from astrohack._utils._holog import _export_to_fits_holog_chunk, _plot_aperture_chunk, _plot_beam_chunk
-from astrohack._utils._locit import _export_fit_results, _plot_sky_coverage_chunk
-from astrohack._utils._locit import _plot_delays_chunk, _plot_position_corrections
-from astrohack._utils._panel import _plot_antenna_chunk, _export_to_fits_panel_chunk, _export_screws_chunk
-from astrohack._utils._panel_classes.antenna_surface import AntennaSurface
-from astrohack._utils._panel_classes.telescope import Telescope
-from astrohack._utils._tools import _print_method_list, _print_dict_table, _print_data_contents, _print_summary_header
-from astrohack._utils._tools import _rad_to_deg_str, _rad_to_hour_str
+import graphviper.utils.logger as logger
+
+from graphviper.utils.console import Colorize
+
+from astrohack.utils.validation import custom_plots_checker
+from astrohack.utils.validation import custom_unit_checker
+from astrohack.utils.validation import custom_split_checker
+
+from astrohack.utils.graph import compute_graph
+
+from astrohack.visualization.diagnostics import calibration_plot_chunk
+from astrohack.visualization.diagnostics import plot_lm_coverage
+from astrohack.visualization.diagnostics import plot_sky_coverage_chunk
+from astrohack.visualization.diagnostics import plot_delays_chunk
+from astrohack.visualization.diagnostics import plot_position_corrections
+from astrohack.visualization.diagnostics import plot_antenna_chunk
+from astrohack.visualization.diagnostics import plot_aperture_chunk
+from astrohack.visualization.diagnostics import plot_beam_chunk
+
+from astrohack.utils.file import load_panel_file
+from astrohack.utils.file import load_image_file
+from astrohack.utils.file import load_holog_file
+from astrohack.utils.file import load_point_file
+from astrohack.utils.file import load_locit_file
+from astrohack.utils.file import load_position_file
+
+from astrohack.utils.data import read_meta_data
+from astrohack.utils.data import export_to_aips
+from astrohack.utils.data import export_locit_fit_results
+from astrohack.utils.data import export_to_fits_panel_chunk
+from astrohack.utils.data import export_screws_chunk
+
+from astrohack.core.extract_locit import plot_source_table
+from astrohack.core.extract_locit import plot_array_configuration
+from astrohack.core.extract_locit import print_array_configuration
+
+from astrohack.utils.fits import export_to_fits_holog_chunk
+
+from astrohack.antenna.antenna_surface import AntennaSurface
+
+from astrohack.antenna.telescope import Telescope
+
+from astrohack.utils.text import print_method_list
+from astrohack.utils.text import print_dict_table
+from astrohack.utils.text import print_data_contents
+from astrohack.utils.text import print_summary_header
+from astrohack.utils.text import rad_to_deg_str
+from astrohack.utils.text import rad_to_hour_str
 
 from prettytable import PrettyTable
 
 from typing import Any, List, Union, Tuple
+
+colorize = Colorize()
 
 
 class AstrohackDataFile:
@@ -89,7 +116,7 @@ class AstrohackDataFile:
 class AstrohackImageFile(dict):
     """ Data class for holography image data.
 
-    Data within an object of this class can be selected for further inspection, plotted or outputed to FITS files.
+    Data within an object of this class can be selected for further inspection, plotted or output to FITS files.
     """
 
     def __init__(self, file: str):
@@ -135,29 +162,26 @@ class AstrohackImageFile(dict):
             file = self.file
 
         try:
-            _load_image_file(file, image_dict=self)
-
+            load_image_file(file, image_dict=self)
+            self._meta_data = read_meta_data(file + '/.image_attr')
+            self._input_pars = read_meta_data(file + '/.image_input')
             self._file_is_open = True
 
         except Exception as error:
-            logger.error(f"{error}")
+            logger.error(f"There was an exception opening the file: {error}")
             self._file_is_open = False
-
-        self._meta_data = _read_meta_data(file + '/.image_attr')
-        self._input_pars = _read_meta_data(file + '/.image_input')
 
         return self._file_is_open
 
     def summary(self):
         """ Prints summary of the AstrohackImageFile object, with available data, attributes and available methods
         """
-        _print_summary_header(self.file)
-        _print_dict_table(self._input_pars)
-        _print_data_contents(self, ["Antenna", "DDI"])
-        _print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
+        print_summary_header(self.file)
+        print_dict_table(self._input_pars)
+        print_data_contents(self, ["Antenna", "DDI"])
+        print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_split_checker
     )
     def select(
@@ -193,7 +217,6 @@ class AstrohackImageFile(dict):
                 return self[ant][ddi]
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_split_checker
     )
     def export_to_fits(
@@ -212,7 +235,7 @@ class AstrohackImageFile(dict):
         :type complex_split: str, optional
         :param ant: List of antennas/antenna to be plotted, defaults to "all" when None, ex. ea25
         :type ant: list or str, optional
-        :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
+        :param ddi: List of ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param parallel: If True will use an existing astrohack client to export FITS in parallel, default is False
         :type parallel: bool, optional
@@ -234,18 +257,17 @@ class AstrohackImageFile(dict):
         """
 
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         param_dict['metadata'] = self._meta_data
-        _dask_general_compute(
+        compute_graph(
             self,
-            _export_to_fits_holog_chunk,
+            export_to_fits_holog_chunk,
             param_dict,
             ['ant', 'ddi'],
             parallel=parallel
         )
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_apertures(
@@ -253,6 +275,7 @@ class AstrohackImageFile(dict):
             destination: str,
             ant: Union[str, List[str]] = "all",
             ddi: Union[int, List[int]] = "all",
+            polarization_state: Union[str, List[str]] = "I",
             plot_screws: bool = False,
             amplitude_limits: Union[List[float], Tuple, np.array] = None,
             phase_unit: str = 'deg',
@@ -274,6 +297,8 @@ class AstrohackImageFile(dict):
         :type ant: list or str, optional
         :param ddi: List of ddis/ddi to be plotted, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
+        :param polarization_state: List of polarization states/ polarization state to be plotted, defaults to "I"
+        :type polarization_state: list or str, optional
         :param plot_screws: Add screw positions to plot, default is False
         :type plot_screws: bool, optional
         :param amplitude_limits: Lower than Upper limit for amplitude in volts default is None (Guess from data)
@@ -306,13 +331,10 @@ class AstrohackImageFile(dict):
         """
         param_dict = locals()
 
-        param_dict["figuresize"] = figure_size
-
-        _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(self, _plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
+        compute_graph(self, plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_beams(
@@ -325,7 +347,7 @@ class AstrohackImageFile(dict):
             phase_unit: str = 'deg',
             display: bool = False,
             colormap: str = 'viridis',
-            figure_size: Union[Tuple, List[float], np.array] = None,
+            figure_size: Union[Tuple, List[float], np.array] = (8, 4.5),
             dpi: int = 300,
             parallel: bool = False
     ) -> None:
@@ -361,8 +383,8 @@ class AstrohackImageFile(dict):
         """
         param_dict = locals()
 
-        _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(self, _plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
+        compute_graph(self, plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackHologFile(dict):
@@ -411,35 +433,31 @@ class AstrohackHologFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        # logger = graphviper.utils.logger.get_logger()
 
         if file is None:
             file = self.file
 
         try:
-            _load_holog_file(holog_file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
+            load_holog_file(file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self)
+            self._meta_data = read_meta_data(file + '/.holog_attr')
+            self._input_pars = read_meta_data(file + '/.holog_input')
             self._file_is_open = True
 
         except Exception as error:
-            logger.error(f"{error}")
+            logger.error(f"There was an exception opening the file: {error}")
             self._file_is_open = False
-
-        self._meta_data = _read_meta_data(file + '/.holog_attr')
-        self._input_pars = _read_meta_data(file + '/.holog_input')
 
         return self._file_is_open
 
     def summary(self) -> None:
         """ Prints summary of the AstrohackHologFile object, with available data, attributes and available methods
         """
-        _print_summary_header(self.file)
-        _print_dict_table(self._input_pars)
-        _print_data_contents(self, ["DDI", "Map", "Antenna"])
-        _print_method_list([self.summary, self.select, self.plot_diagnostics, self.plot_lm_sky_coverage])
+        print_summary_header(self.file)
+        print_dict_table(self._input_pars)
+        print_data_contents(self, ["DDI", "Map", "Antenna"])
+        print_method_list([self.summary, self.select, self.plot_diagnostics, self.plot_lm_sky_coverage])
 
-    @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack")
-    )
+    @graphviper.utils.parameter.validate()
     def select(
             self,
             ddi: int,
@@ -480,7 +498,6 @@ class AstrohackHologFile(dict):
         return self._meta_data
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_diagnostics(
@@ -535,12 +552,11 @@ class AstrohackHologFile(dict):
         param_dict = locals()
         param_dict["map"] = map_id
 
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         key_order = ["ddi", "map", "ant"]
-        _dask_general_compute(self, _calibration_plot_chunk, param_dict, key_order, parallel)
+        compute_graph(self, calibration_plot_chunk, param_dict, key_order, parallel)
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_lm_sky_coverage(
@@ -609,13 +625,12 @@ class AstrohackHologFile(dict):
         param_dict = locals()
         param_dict["map"] = map_id
 
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         key_order = ["ddi", "map", "ant"]
-        _dask_general_compute(self, _plot_lm_coverage, param_dict, key_order, parallel)
+        compute_graph(self, plot_lm_coverage, param_dict, key_order, parallel)
         return
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def export_to_aips(
@@ -648,9 +663,9 @@ class AstrohackHologFile(dict):
         param_dict = locals()
         param_dict["map"] = map_id
 
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         key_order = ["ddi", "map", "ant"]
-        _dask_general_compute(self, _export_to_aips, param_dict, key_order, parallel)
+        compute_graph(self, export_to_aips, param_dict, key_order, parallel)
         return
 
 
@@ -703,28 +718,26 @@ class AstrohackPanelFile(dict):
             file = self.file
 
         try:
-            _load_panel_file(file, panel_dict=self)
+            load_panel_file(file, panel_dict=self)
+            self._input_pars = read_meta_data(file + '/.panel_input')
             self._file_is_open = True
-        except Exception as error:
-            logger.error(f"{error}")
-            self._file_is_open = False
 
-        self._input_pars = _read_meta_data(file + '/.panel_input')
+        except Exception as error:
+            logger.error(f"There was an exception opening the file: {error}")
+            self._file_is_open = False
 
         return self._file_is_open
 
     def summary(self) -> None:
         """ Prints summary of the AstrohackPanelFile object, with available data, attributes and available methods
         """
-        _print_summary_header(self.file)
-        _print_dict_table(self._input_pars)
-        _print_data_contents(self, ["Antenna", "DDI"])
-        _print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
-                            self.plot_antennas])
+        print_summary_header(self.file)
+        print_dict_table(self._input_pars)
+        print_data_contents(self, ["Antenna", "DDI"])
+        print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
+                           self.plot_antennas])
 
-    @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack")
-    )
+    @graphviper.utils.parameter.validate()
     def get_antenna(
             self,
             ant: str,
@@ -747,7 +760,6 @@ class AstrohackPanelFile(dict):
         return AntennaSurface(xds, telescope, reread=True)
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def export_screws(
@@ -795,11 +807,10 @@ class AstrohackPanelFile(dict):
         """
         param_dict = locals()
 
-        _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(self, _export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
+        compute_graph(self, export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_plots_checker
     )
     def plot_antennas(
@@ -894,12 +905,10 @@ class AstrohackPanelFile(dict):
 
         param_dict["figuresize"] = figure_size
 
-        _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(self, _plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
+        compute_graph(self, plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
-    @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack")
-    )
+    @graphviper.utils.parameter.validate()
     def export_to_fits(
             self,
             destination: str,
@@ -931,9 +940,9 @@ class AstrohackPanelFile(dict):
 
         param_dict = locals()
 
-        _create_destination_folder(param_dict['destination'])
-        _dask_general_compute(self, _export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
-                              parallel=parallel)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
+        compute_graph(self, export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
+                      parallel=parallel)
 
 
 class AstrohackPointFile(dict):
@@ -984,24 +993,27 @@ class AstrohackPointFile(dict):
             file = self.file
 
         try:
-            _load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
+            load_point_file(file=file, dask_load=dask_load, pnt_dict=self)
             self._file_is_open = True
+            self._input_pars = read_meta_data(file + '/.point_input')
 
-        except Exception as error:
-            logger.error(f"{error}")
+        except FileNotFoundError:
+            logger.error("Requested file {} doesn't exist ...".format(colorize.blue(file)))
             self._file_is_open = False
 
-        self._input_pars = _read_meta_data(file + '/.point_input')
+        except Exception as error:
+            logger.error(f"There was an exception opening the file: {error}")
+            self._file_is_open = False
 
         return self._file_is_open
 
     def summary(self) -> None:
         """ Prints summary of the AstrohackPointFile object, with available data, attributes and available methods
         """
-        _print_summary_header(self.file)
-        _print_dict_table(self._input_pars)
-        _print_data_contents(self, ["Antenna"])
-        _print_method_list([self.summary])
+        print_summary_header(self.file)
+        print_dict_table(self._input_pars)
+        print_data_contents(self, ["Antenna"])
+        print_method_list([self.summary])
 
 
 class AstrohackLocitFile(dict):
@@ -1056,15 +1068,14 @@ class AstrohackLocitFile(dict):
             file = self.file
 
         try:
-            _load_locit_file(file=file, dask_load=dask_load, locit_dict=self)
+            load_locit_file(file=file, dask_load=dask_load, locit_dict=self)
+            self._input_pars = read_meta_data(file + '/.locit_input')
+            self._meta_data = read_meta_data(file + '/.locit_attr')
             self._file_is_open = True
 
         except Exception as error:
-            logger.error(f"{error}")
+            logger.error(f"There was an exception opening the file: {error}")
             self._file_is_open = False
-
-        self._input_pars = _read_meta_data(file + '/.locit_input')
-        self._meta_data = _read_meta_data(file + '/.locit_attr')
 
         return self._file_is_open
 
@@ -1075,16 +1086,14 @@ class AstrohackLocitFile(dict):
         print("\nSources:")
         table = PrettyTable()
         table.field_names = ['Id', 'Name', 'RA FK5', 'DEC FK5', 'RA precessed', 'DEC precessed']
-        for source in self['obs_info']['src_dict'].values():
-            table.add_row([source['id'], source['name'], _rad_to_hour_str(source['fk5'][0]),
-                           _rad_to_deg_str(source['fk5'][1]), _rad_to_hour_str(source['precessed'][0]),
-                           _rad_to_deg_str(source['precessed'][1])])
+        for source in self['observation_info']['src_dict'].values():
+            table.add_row([source['id'], source['name'], rad_to_hour_str(source['fk5'][0]),
+                           rad_to_deg_str(source['fk5'][1]), rad_to_hour_str(source['precessed'][0]),
+                           rad_to_deg_str(source['precessed'][1])])
         table.align = alignment
         print(table)
 
-    @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
-    )
+    @graphviper.utils.parameter.validate()
     def print_array_configuration(
             self,
             relative: bool = True
@@ -1102,11 +1111,9 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-        _print_array_configuration(param_dict, self['ant_info'], self['obs_info']['telescope_name'])
+        print_array_configuration(param_dict, self['antenna_info'], self['observation_info']['telescope_name'])
 
-    @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
-    )
+    @graphviper.utils.parameter.validate()
     def plot_source_positions(
             self,
             destination: str,
@@ -1146,23 +1153,31 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
 
         if precessed:
             filename = str(pathlib.Path(destination).joinpath('locit_source_table_precessed.png'))
-            time_range = self['obs_info']['time_range']
+            time_range = self['observation_info']['time_range']
             obs_midpoint = (time_range[1] + time_range[0]) / 2.
 
         else:
             filename = str(pathlib.Path(destination).joinpath('locit_source_table_fk5.png'))
             obs_midpoint = None
 
-        _plot_source_table(filename, self['obs_info']['src_dict'], precessed=precessed, obs_midpoint=obs_midpoint,
-                           display=display, figure_size=figure_size, dpi=dpi, label=labels)
+        plot_source_table(
+            filename,
+            self['observation_info']['src_dict'],
+            precessed=precessed,
+            obs_midpoint=obs_midpoint,
+            display=display,
+            figure_size=figure_size,
+            dpi=dpi,
+            label=labels
+        )
+
         return
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def plot_array_configuration(
@@ -1207,18 +1222,25 @@ class AstrohackLocitFile(dict):
 
         """
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
-        _plot_array_configuration(self['ant_info'], self['obs_info']['telescope_name'], param_dict)
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
+        plot_array_configuration(self['antenna_info'], self['observation_info']['telescope_name'], param_dict)
         return
 
     def summary(self) -> None:
         """ Prints summary of the AstrohackLocitFile object, with available data, attributes and available methods
         """
-        _print_summary_header(self.file)
-        _print_dict_table(self._input_pars)
-        _print_data_contents(self, ["Antenna", "Contents"])
-        _print_method_list([self.summary, self.print_source_table, self.print_array_configuration,
-                            self.plot_source_positions, self.plot_array_configuration])
+        print_summary_header(self.file)
+        print_dict_table(self._input_pars)
+        print_data_contents(self, ["Antenna", "Contents"])
+        print_method_list(
+            [
+                self.summary,
+                self.print_source_table,
+                self.print_array_configuration,
+                self.plot_source_positions,
+                self.plot_array_configuration
+            ]
+        )
 
 
 class AstrohackPositionFile(dict):
@@ -1267,36 +1289,37 @@ class AstrohackPositionFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        # logger = logger.get_logger(logger_name="astrohack")
 
         if file is None:
             file = self.file
 
-        self._meta_data = _read_meta_data(file + '/.position_attr')
+        self._meta_data = read_meta_data(file + '/.position_attr')
         self.combined = self._meta_data['combine_ddis'] != 'no'
-        self._input_pars = _read_meta_data(file + '/.position_input')
+        self._input_pars = read_meta_data(file + '/.position_input')
 
         try:
-            _load_position_file(
+            load_position_file(
                 file=file,
                 dask_load=dask_load,
                 position_dict=self,
                 combine=self.combined
             )
+            self._meta_data = read_meta_data(file + '/.position_attr')
+            self.combined = self._meta_data['combine_ddis'] != 'no'
+            self._input_pars = read_meta_data(file + '/.position_input')
 
             self._file_is_open = True
 
         except Exception as error:
-            logger.error(f'{error}')
+            logger.error(f"There was an exception opening the file: {error}")
             self._file_is_open = False
 
         return self._file_is_open
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
-    def export_fit_results(
+    def export_locit_fit_results(
             self,
             destination: str,
             ant: Union[str, List[str]] = "all",
@@ -1331,12 +1354,11 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         param_dict['combined'] = self.combined
-        _export_fit_results(self, param_dict)
+        export_locit_fit_results(self, param_dict)
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def plot_sky_coverage(
@@ -1393,16 +1415,15 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         param_dict['combined'] = self.combined
         if self.combined:
-            _dask_general_compute(self, _plot_sky_coverage_chunk, param_dict, ['ant'], parallel=parallel)
+            compute_graph(self, plot_sky_coverage_chunk, param_dict, ['ant'], parallel=parallel)
         else:
-            _dask_general_compute(self, _plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
-                                  parallel=parallel)
+            compute_graph(self, plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
+                          parallel=parallel)
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def plot_delays(
@@ -1468,18 +1489,17 @@ class AstrohackPositionFile(dict):
         """
 
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
 
         param_dict['combined'] = self.combined
         param_dict['comb_type'] = self._meta_data["combine_ddis"]
         if self.combined:
-            _dask_general_compute(self, _plot_delays_chunk, param_dict, ['ant'], parallel=parallel)
+            compute_graph(self, plot_delays_chunk, param_dict, ['ant'], parallel=parallel)
         else:
-            _dask_general_compute(self, _plot_delays_chunk, param_dict, ['ant', 'ddi'],
-                                  parallel=parallel)
+            compute_graph(self, plot_delays_chunk, param_dict, ['ant', 'ddi'],
+                          parallel=parallel)
 
     @graphviper.utils.parameter.validate(
-        external_logger=logger.get_logger(logger_name="astrohack"),
         custom_checker=custom_unit_checker
     )
     def plot_position_corrections(
@@ -1529,23 +1549,23 @@ class AstrohackPositionFile(dict):
         The corrections are too small to be visualized on the array plot since they are of the order of mm and the array
         is usually spread over km, or at least hundreds of meters.
         The scaling factor is used to bring the corrections to a scale discernible on the plot, this plot should not be
-        used to estimate correction values, for that purpose use export_fit_results instead.
+        used to estimate correction values, for that purpose use export_locit_fit_results instead.
 
         """
 
         param_dict = locals()
-        _create_destination_folder(param_dict['destination'])
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         param_dict['combined'] = self.combined
-        _plot_position_corrections(param_dict, self)
+        plot_position_corrections(param_dict, self)
 
     def summary(self) -> None:
-        """ Prints summary of the AstrohackpositionFile object, with available data, attributes and available methods
+        """ Prints summary of the AstrohackPositionFile object, with available data, attributes and available methods
         """
-        _print_summary_header(self.file)
-        _print_dict_table(self._input_pars)
+        print_summary_header(self.file)
+        print_dict_table(self._input_pars)
         if self.combined:
-            _print_data_contents(self, ["Antenna"])
+            print_data_contents(self, ["Antenna"])
         else:
-            _print_data_contents(self, ["Antenna", "Contents"])
-        _print_method_list([self.summary, self.export_fit_results, self.plot_sky_coverage, self.plot_delays,
-                            self.plot_position_corrections])
+            print_data_contents(self, ["Antenna", "Contents"])
+        print_method_list([self.summary, self.export_locit_fit_results, self.plot_sky_coverage, self.plot_delays,
+                           self.plot_position_corrections])

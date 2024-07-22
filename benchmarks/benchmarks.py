@@ -1,7 +1,7 @@
 import os
 import astrohack
 
-from graphviper.dask.client import local_client
+from graphviper.dask.client.client import local_client
 from astrohack.extract_holog import extract_holog
 
 from astrohack.holog import holog

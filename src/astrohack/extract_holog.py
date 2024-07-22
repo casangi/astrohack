@@ -4,36 +4,40 @@ import os
 import pathlib
 import pickle
 import shutil
-from typing import Union, List, NewType, Dict, Any, Tuple
 import math
 import multiprocessing
 
 import graphviper.utils.parameter
 import dask
-import numpy as np
+import astrohack
 import psutil
+
+import numpy as np
 import graphviper.utils.logger as logger
+
 from astropy.time import Time
 from casacore import tables as ctables
 from rich.console import Console
 from rich.table import Table
 
-import astrohack
-from astrohack._utils._constants import pol_str
-from astrohack._utils._conversion import _convert_ant_name_to_id
-from astrohack._utils._dio import _check_if_file_exists
-from astrohack._utils._dio import _check_if_file_will_be_overwritten
-from astrohack._utils._dio import _load_holog_file
-from astrohack._utils._dio import _load_point_file
-from astrohack._utils._dio import _write_meta_data
-from astrohack._utils._extract_holog import _create_holog_meta_data
-from astrohack._utils._extract_holog import _create_holog_obs_dict
-from astrohack._utils._extract_holog import _extract_holog_chunk
-from astrohack._utils._tools import NumpyEncoder, _get_valid_state_ids
-from astrohack._utils._tools import get_default_file_name
+
+from astrohack.utils.constants import pol_str
+
+from astrohack.utils.file import overwrite_file
+from astrohack.utils.file import load_holog_file
+from astrohack.utils.file import load_point_file
+from astrohack.utils.data import write_meta_data
+from astrohack.core.extract_holog import create_holog_meta_data
+from astrohack.core.extract_holog import create_holog_obs_dict
+from astrohack.core.extract_holog import process_extract_holog_chunk
+from astrohack.utils.tools import get_valid_state_ids
+from astrohack.utils.text import get_default_file_name
+from astrohack.utils.text import NumpyEncoder
 from astrohack.mds import AstrohackHologFile
 from astrohack.mds import AstrohackPointFile
 from astrohack.extract_pointing import extract_pointing
+
+from typing import Union, List, NewType, Dict, Any, Tuple
 
 JSON = NewType("JSON", Dict[str, Any])
 KWARGS = NewType("KWARGS", Union[Dict[str, str], Dict[str, int]])
@@ -230,8 +234,7 @@ class HologObsDict(dict):
 
 
 @graphviper.utils.parameter.validate(
-    add_data_type=HologObsDict,
-    external_logger=logger.get_logger(logger_name="astrohack")
+    add_data_type=HologObsDict
 )
 def extract_holog(
         ms_name: str,
@@ -388,11 +391,14 @@ def extract_holog(
 
     input_pars = extract_holog_params.copy()
 
-    _check_if_file_exists(extract_holog_params['ms_name'])
-    _check_if_file_will_be_overwritten(extract_holog_params['holog_name'], extract_holog_params['overwrite'])
+    assert pathlib.Path(extract_holog_params['ms_name']).exists() is True, (
+        logger.error(f'File {extract_holog_params["ms_name"]} does not exists.')
+    )
+
+    overwrite_file(extract_holog_params['holog_name'], extract_holog_params['overwrite'])
 
     try:
-        pnt_dict = _load_point_file(extract_holog_params['point_name'])
+        pnt_dict = load_point_file(extract_holog_params['point_name'])
 
     except Exception as error:
         logger.error('Error loading {name}. - {error}'.format(name=extract_holog_params["point_name"], error=error))
@@ -404,7 +410,7 @@ def extract_holog(
         os.path.join(extract_holog_params['ms_name'], "DATA_DESCRIPTION"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     ddi_spw = ctb.getcol("SPECTRAL_WINDOW_ID")
@@ -417,7 +423,7 @@ def extract_holog(
         os.path.join(extract_holog_params['ms_name'], "ANTENNA"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     ant_names = np.array(ctb.getcol("NAME"))
@@ -431,7 +437,7 @@ def extract_holog(
         extract_holog_params['ms_name'],
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     ant1 = np.unique(ctb.getcol("ANTENNA1"))
@@ -446,7 +452,7 @@ def extract_holog(
 
     # Create holog_obs_dict if not specified
     if holog_obs_dict is None:
-        holog_obs_dict = _create_holog_obs_dict(
+        holog_obs_dict = create_holog_obs_dict(
             pnt_dict,
             extract_holog_params['baseline_average_distance'],
             extract_holog_params['baseline_average_nearest'],
@@ -473,33 +479,33 @@ def extract_holog(
         os.path.join(extract_holog_params['ms_name'], "STATE"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     # Scan intent (with subscan intent) is stored in the OBS_MODE column of the STATE sub-table.
     obs_modes = ctb.getcol("OBS_MODE")
     ctb.close()
 
-    state_ids = _get_valid_state_ids(obs_modes)
+    state_ids = get_valid_state_ids(obs_modes)
 
     spw_ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "SPECTRAL_WINDOW"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
     pol_ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "POLARIZATION"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     obs_ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "OBSERVATION"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     telescope_name = obs_ctb.getcol("TELESCOPE_NAME")[0]
@@ -514,7 +520,7 @@ def extract_holog(
             os.path.join(extract_holog_params['ms_name'], "HISTORY"),
             readonly=True,
             lockoptions={"option": "usernoread"},
-            ack=True,
+            ack=False,
         )
 
         if "pnt_tbl:fixed" not in his_ctb.getcol("MESSAGE"):
@@ -604,12 +610,12 @@ def extract_holog(
 
                     if parallel:
                         delayed_list.append(
-                            dask.delayed(_extract_holog_chunk)(
+                            dask.delayed(process_extract_holog_chunk)(
                                 dask.delayed(extract_holog_params)
                             )
                         )
                     else:
-                        _extract_holog_chunk(extract_holog_params)
+                        process_extract_holog_chunk(extract_holog_params)
 
                     count += 1
 
@@ -626,25 +632,25 @@ def extract_holog(
     if count > 0:
         logger.info("Finished processing")
 
-        holog_dict = _load_holog_file(
-            holog_file=extract_holog_params["holog_name"],
+        holog_dict = load_holog_file(
+            file=extract_holog_params["holog_name"],
             dask_load=True,
             load_pnt_dict=False
         )
 
         extract_holog_params['telescope_name'] = telescope_name
 
-        meta_data = _create_holog_meta_data(
+        meta_data = create_holog_meta_data(
             holog_file=extract_holog_params['holog_name'],
             holog_dict=holog_dict,
             input_params=extract_holog_params.copy()
         )
 
         holog_attr_file = "{name}/{ext}".format(name=extract_holog_params['holog_name'], ext=".holog_attr")
-        _write_meta_data(holog_attr_file, meta_data)
+        write_meta_data(holog_attr_file, meta_data)
 
         holog_attr_file = "{name}/{ext}".format(name=extract_holog_params['holog_name'], ext=".holog_input")
-        _write_meta_data(holog_attr_file, input_pars)
+        write_meta_data(holog_attr_file, input_pars)
 
         holog_mds = AstrohackHologFile(extract_holog_params['holog_name'])
         holog_mds.open()
@@ -765,15 +771,15 @@ def generate_holog_obs_dict(
     """
     extract_holog_params = locals()
 
-    _check_if_file_exists(ms_name)
-    _check_if_file_exists(point_name)
+    assert pathlib.Path(ms_name).exists() is True, logger.error(f'File {ms_name} does not exists.')
+    assert pathlib.Path(point_name).exists() is True, logger.error(f'File {point_name} does not exists.')
 
     # Get antenna IDs and names
     ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "ANTENNA"),
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     ant_names = np.array(ctb.getcol("NAME"))
@@ -787,7 +793,7 @@ def generate_holog_obs_dict(
         extract_holog_params['ms_name'],
         readonly=True,
         lockoptions={"option": "usernoread"},
-        ack=True,
+        ack=False,
     )
 
     ant1 = np.unique(ctb.getcol("ANTENNA1"))
@@ -800,7 +806,7 @@ def generate_holog_obs_dict(
     pnt_mds = AstrohackPointFile(extract_holog_params['point_name'])
     pnt_mds.open()
 
-    holog_obs_dict = _create_holog_obs_dict(
+    holog_obs_dict = create_holog_obs_dict(
         pnt_mds,
         extract_holog_params['baseline_average_distance'],
         extract_holog_params['baseline_average_nearest'],
@@ -909,3 +915,17 @@ def model_memory_usage(
 
     # Make prediction of memory per core in MB
     return memory_per_core
+
+
+def _convert_ant_name_to_id(ant_list, ant_names):
+    """_summary_
+
+  Args:
+      ant_list (_type_): _description_
+      ant_names (_type_): _description_
+
+  Returns:
+      _type_: _description_
+  """
+
+    return np.nonzero(np.in1d(ant_list, ant_names))[0]
