@@ -306,19 +306,18 @@ def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axi
     beam_grid = np.zeros(grid_shape, dtype=types.complex128)
     weig_grid = np.zeros(grid_shape)
 
-    for i_time in range(ntime):
+    scaling = freq_axis / reference_scaling_frequency
+    o_chan = np.arange(freq_axis.shape[0])
+    if avg_chan:
+        o_chan[:] = 0
+    else:
+        scaling[:] = 1.0
 
+    for i_time in range(ntime):
         in_lval, in_mval = lmvis[i_time]
         for i_chan in range(nchan):
-            if avg_chan:
-                scaling = freq_axis[i_chan] / reference_scaling_frequency
-                o_chan = 0
-            else:
-                scaling = 1.0
-                o_chan = i_chan
-
-            lval = scaling*in_lval
-            mval = scaling*in_mval
+            lval = scaling[i_chan]*in_lval
+            mval = scaling[i_chan]*in_mval
             i_lmin, i_lmax = _compute_kernel_range(l_kernel, lval, l_axis)
             i_mmin, i_mmax = _compute_kernel_range(m_kernel, mval, m_axis)
             for i_pol in range(npol):
@@ -327,8 +326,8 @@ def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axi
                     for im in range(i_mmin, i_mmax):
                         m_fac = _convolution_factor(m_kernel, m_axis[im] - mval)
                         conv_fact = l_fac * m_fac * weights[i_time, i_chan, i_pol]
-                        beam_grid[o_chan, i_pol, il, im] += conv_fact*visibilities[i_time, i_chan, i_pol]
-                        weig_grid[o_chan, i_pol, il, im] += conv_fact
+                        beam_grid[o_chan[i_chan], i_pol, il, im] += conv_fact*visibilities[i_time, i_chan, i_pol]
+                        weig_grid[o_chan[i_chan], i_pol, il, im] += conv_fact
 
     beam_grid /= weig_grid
     beam_grid = np.nan_to_num(beam_grid)
@@ -365,7 +364,7 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
     """
     oversampling = 100
     smoothing = beam_size
-    support = 7*smoothing
+    support = 6*smoothing
     width = smoothing/sig_2_fwhm
 
     pix_support = support/np.abs(sky_cell_size)
