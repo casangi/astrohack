@@ -29,7 +29,6 @@ def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, te
     n_holog_map = len(ant_ddi_dict.keys())
     map0 = list(ant_ddi_dict.keys())[0]
     freq_axis = ant_ddi_dict[map0].chan.values
-    #print(freq_axis)
     pol_axis = ant_ddi_dict[map0].pol.values
     n_chan = ant_ddi_dict[map0].sizes["chan"]
     n_pol = ant_ddi_dict[map0].sizes["pol"]
@@ -303,23 +302,21 @@ def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axi
         grid_shape = (1, npol, l_axis.shape[0], m_axis.shape[0])
     else:
         grid_shape = (nchan, npol, l_axis.shape[0], m_axis.shape[0])
+    # This type has to be changed to np.complex128 when debuging with jit off
     beam_grid = np.zeros(grid_shape, dtype=types.complex128)
-    #beam_grid = np.zeros(grid_shape, dtype=np.complex128)
     weig_grid = np.zeros(grid_shape)
-    #logger.error(f'{len(freq_axis)} {nchan}')
 
     for i_time in range(ntime):
 
         in_lval, in_mval = lmvis[i_time]
         for i_chan in range(nchan):
             if avg_chan:
-                scaling = reference_scaling_frequency / freq_axis[i_chan]
+                scaling = freq_axis[i_chan] / reference_scaling_frequency
                 o_chan = 0
             else:
                 scaling = 1.0
                 o_chan = i_chan
 
-            #print(scaling)
             lval = scaling*in_lval
             mval = scaling*in_mval
             i_lmin, i_lmax = _compute_kernel_range(l_kernel, lval, l_axis)
