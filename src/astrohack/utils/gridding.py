@@ -29,19 +29,14 @@ def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, te
     n_holog_map = len(ant_ddi_dict.keys())
     map0 = list(ant_ddi_dict.keys())[0]
     freq_axis = ant_ddi_dict[map0].chan.values
+    #print(freq_axis)
     pol_axis = ant_ddi_dict[map0].pol.values
     n_chan = ant_ddi_dict[map0].sizes["chan"]
     n_pol = ant_ddi_dict[map0].sizes["pol"]
 
     reference_scaling_frequency = np.mean(freq_axis)
     if avg_chan:
-        avg_chan_map, avg_freq = _create_average_chan_map(freq_axis, chan_tol_fac)
         n_chan = 1
-        freq_axis = [np.mean(avg_freq)]
-    else:
-        avg_chan_map = None
-        avg_freq = None
-
     l_axis, m_axis, l_grid, m_grid, beam_grid = _create_beam_grid(grid_size, sky_cell_size, n_chan, n_pol, n_holog_map)
     scipy_interp = ['linear', 'nearest', 'cubic']
 
@@ -57,12 +52,21 @@ def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, te
         weight = ant_xds.WEIGHT.values
 
         if grid_interpolation_mode in scipy_interp:
+            if avg_chan:
+                avg_chan_map, avg_freq = _create_average_chan_map(freq_axis, chan_tol_fac)
+                freq_axis = [np.mean(avg_freq)]
+            else:
+                avg_chan_map = None
+                avg_freq = None
             beam_grid[holog_map_index, ...] = _scipy_gridding(vis, weight, lm, l_grid, m_grid, grid_interpolation_mode,
                                                               avg_chan_map, avg_freq, reference_scaling_frequency)
         elif grid_interpolation_mode == 'gaussian':
             grid_corr = True
             beam_grid[holog_map_index, ...] = _convolution_gridding(vis, weight, lm, telescope.diam, freq_axis, l_axis,
-                                                                    m_axis, sky_cell_size)
+                                                                    m_axis, sky_cell_size, reference_scaling_frequency,
+                                                                    avg_chan)
+            if avg_chan:
+                freq_axis = [reference_scaling_frequency]
         else:
             msg = f'Unknown grid type {grid_interpolation_mode}.'
             logger.error(msg)
@@ -239,7 +243,8 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
     return cf_chan_map, pb_freq
 
 
-def _convolution_gridding(visibilities, weights, lmvis, diameter, freq, l_axis, m_axis, sky_cell_size):
+def _convolution_gridding(visibilities, weights, lmvis, diameter, freq_axis, l_axis, m_axis, sky_cell_size,
+                          reference_scaling_frequency, avg_chan):
     """
     Grid the visibility data using a gaussian convolution with a kernel based on primary beam size
     Args:
@@ -255,23 +260,25 @@ def _convolution_gridding(visibilities, weights, lmvis, diameter, freq, l_axis, 
     Returns:
         beam data gridded
     """
-    beam_size = _compute_beam_size(diameter, freq)
-    nchan = visibilities.shape[1]
-    if nchan > 1:
-        msg = 'Convolution gridding only supported for a single channel currently'
-        logger.error(msg)
-        raise Exception(msg)
+    beam_size = _compute_beam_size(diameter, reference_scaling_frequency)
+    # nchan = visibilities.shape[1]
+    # if nchan > 1:
+    #     msg = 'Convolution gridding only supported for a single channel currently'
+    #     logger.error(msg)
+    #     raise Exception(msg)
 
     logger.info('Creating convolved beam...')
     start = time.time()
-    beam, wei = _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axis, m_axis, beam_size)
+    beam, wei = _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axis, m_axis, beam_size,
+                                          reference_scaling_frequency, freq_axis, avg_chan)
     duration = time.time()-start
     logger.info(f'Convolution took {duration:.3} seconds')
     return beam
 
 
 @njit(cache=False, nogil=True)
-def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axis, m_axis, beam_size):
+def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axis, m_axis, beam_size,
+                              reference_scaling_frequency, freq_axis, avg_chan):
     """
     Actual Gridding of the visibility data using a gaussian convolution with a kernel based on primary beam size,
     using numba jit for fast code
@@ -292,25 +299,39 @@ def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axi
     l_kernel = _create_exponential_kernel(beam_size, sky_cell_size[0])
     m_kernel = _create_exponential_kernel(beam_size, sky_cell_size[1])
 
-    grid_shape = (nchan, npol, l_axis.shape[0], m_axis.shape[0])
+    if avg_chan:
+        grid_shape = (1, npol, l_axis.shape[0], m_axis.shape[0])
+    else:
+        grid_shape = (nchan, npol, l_axis.shape[0], m_axis.shape[0])
     beam_grid = np.zeros(grid_shape, dtype=types.complex128)
+    #beam_grid = np.zeros(grid_shape, dtype=np.complex128)
     weig_grid = np.zeros(grid_shape)
+    #logger.error(f'{len(freq_axis)} {nchan}')
 
     for i_time in range(ntime):
 
-        lval, mval = lmvis[i_time]
-        i_lmin, i_lmax = _compute_kernel_range(l_kernel, lval, l_axis)
-        i_mmin, i_mmax = _compute_kernel_range(m_kernel, mval, m_axis)
-
+        in_lval, in_mval = lmvis[i_time]
         for i_chan in range(nchan):
+            if avg_chan:
+                scaling = reference_scaling_frequency / freq_axis[i_chan]
+                o_chan = 0
+            else:
+                scaling = 1.0
+                o_chan = i_chan
+
+            #print(scaling)
+            lval = scaling*in_lval
+            mval = scaling*in_mval
+            i_lmin, i_lmax = _compute_kernel_range(l_kernel, lval, l_axis)
+            i_mmin, i_mmax = _compute_kernel_range(m_kernel, mval, m_axis)
             for i_pol in range(npol):
                 for il in range(i_lmin, i_lmax):
                     l_fac = _convolution_factor(l_kernel, l_axis[il] - lval)
                     for im in range(i_mmin, i_mmax):
                         m_fac = _convolution_factor(m_kernel, m_axis[im] - mval)
                         conv_fact = l_fac * m_fac * weights[i_time, i_chan, i_pol]
-                        beam_grid[i_chan, i_pol, il, im] += conv_fact*visibilities[i_time, i_chan, i_pol]
-                        weig_grid[i_chan, i_pol, il, im] += conv_fact
+                        beam_grid[o_chan, i_pol, il, im] += conv_fact*visibilities[i_time, i_chan, i_pol]
+                        weig_grid[o_chan, i_pol, il, im] += conv_fact
 
     beam_grid /= weig_grid
     beam_grid = np.nan_to_num(beam_grid)
@@ -346,7 +367,7 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
         Adictionary containing the convolution kernel
     """
     smoothing = beam_size
-    support = 4*smoothing
+    support = 7*smoothing
     width = smoothing/sig_2_fwhm
 
     pix_support = support/np.abs(sky_cell_size)
