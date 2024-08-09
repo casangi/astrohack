@@ -302,7 +302,7 @@ def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axi
         grid_shape = (1, npol, l_axis.shape[0], m_axis.shape[0])
     else:
         grid_shape = (nchan, npol, l_axis.shape[0], m_axis.shape[0])
-    # This type has to be changed to np.complex128 when debuging with jit off
+    # This type has to be changed to np.complex128 when debugging with jit off
     beam_grid = np.zeros(grid_shape, dtype=types.complex128)
     weig_grid = np.zeros(grid_shape)
 
@@ -363,6 +363,7 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
     Returns:
         Adictionary containing the convolution kernel
     """
+    oversampling = 100
     smoothing = beam_size
     support = 7*smoothing
     width = smoothing/sig_2_fwhm
@@ -374,9 +375,9 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
     else:
         used_support = 2*pix_support + 1
 
-    kernel_size = used_support * 100 + 1
-    bias = 50.0 * used_support + 1.0
-    u_axis = (np.arange(kernel_size) - bias) * 0.01
+    kernel_size = used_support * oversampling + 1
+    bias = oversampling / 2 * used_support + 1.0
+    u_axis = (np.arange(kernel_size) - bias) / oversampling
     kernel = np.exp(-(u_axis/pix_width)**exponent)
 
     ker_dict = {'bias': bias,
@@ -385,6 +386,7 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
                 'user_support': support,
                 'user_width': width,
                 'pix_support': pix_support,
+                'oversampling': oversampling,
                 'sky_cell_size': sky_cell_size}
     return ker_dict
 
@@ -424,7 +426,7 @@ def _convolution_factor(kernel, delta):
         Kernel value at delta
     """
     pix_delta = delta/np.abs(kernel['sky_cell_size'])
-    ikern = round(100.0*pix_delta+kernel['bias'])
+    ikern = round(kernel['oversampling']*pix_delta+kernel['bias'])
     return kernel['kernel'][ikern]
 
 
@@ -444,7 +446,7 @@ def _compute_kernel_correction(kernel, grid_size):
     bias = kernel['bias']
     m_point = grid_size/2 + 1
 
-    kw_coeff = 0.01 * np.pi / m_point
+    kw_coeff = np.pi / m_point / kernel['oversampling']
     for i_kern in range(ker_val.shape[0]):
         if ker_val[i_kern] > 1e-30:
             kx_coeff = kw_coeff*(i_kern-bias)
