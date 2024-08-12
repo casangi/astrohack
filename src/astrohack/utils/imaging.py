@@ -395,7 +395,6 @@ def _pad_beam_image(grid, padding_factor):
     # Calculate padding as the nearest power of 2
     # k log (2) = log(N) => k = log(N)/log(2)
     # New shape => K = math.ceil(k) => shape = (K, K)
-    padding_factor = 10
     k_coeff = np.log(initial_dimension * padding_factor) / np.log(2)
     k_integer = math.ceil(k_coeff)
     padded_size = np.power(2, k_integer)
