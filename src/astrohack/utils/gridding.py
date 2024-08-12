@@ -4,6 +4,7 @@ from graphviper.utils import logger as logger
 from scipy.interpolate import griddata
 from numba import njit
 from numba.core import types
+import math
 
 from astrohack.utils import sig_2_fwhm, find_nearest, calc_coords, find_peak_beam_value, chunked_average
 from astrohack.utils.text import get_str_idx_in_list
@@ -299,6 +300,7 @@ def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axi
         grid_shape = (nchan, npol, l_axis.shape[0], m_axis.shape[0])
     # This type has to be changed to np.complex128 when debugging with jit off
     beam_grid = np.zeros(grid_shape, dtype=types.complex128)
+
     weig_grid = np.zeros(grid_shape)
 
     o_chan = np.arange(visibilities.shape[1])
@@ -354,7 +356,7 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
     """
     oversampling = 100
     smoothing = beam_size
-    support = 6*smoothing
+    support = 4*smoothing
     width = smoothing/sig_2_fwhm
 
     pix_support = support/np.abs(sky_cell_size)
@@ -365,6 +367,10 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
         used_support = 2*pix_support + 1
 
     kernel_size = used_support * oversampling + 1
+    k_coeff = np.log(kernel_size) / np.log(2)
+    k_integer = math.ceil(k_coeff)
+    kernel_size = np.power(2, k_integer)
+
     bias = oversampling / 2 * used_support + 1.0
     u_axis = (np.arange(kernel_size) - bias) / oversampling
     kernel = np.exp(-(u_axis/pix_width)**exponent)
@@ -394,7 +400,7 @@ def _compute_kernel_range(kernel, coor, axis):
     """
     idx = _find_nearest(coor, axis)
     i_min = round(idx - kernel['pix_support'])
-    i_max = round(idx + kernel['pix_support'])
+    i_max = round(idx + kernel['pix_support'])+1
 
     if i_min < 0:
         i_min = 0
