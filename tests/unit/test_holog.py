@@ -149,7 +149,7 @@ class TestHolog():
         image_mds = holog(
             holog_name='data/ea25_cal_small_before_fixed.split.holog.zarr',
             image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
-            padding_factor=50,
+            padding_factor=10,
             overwrite=True,
             parallel=False
         )

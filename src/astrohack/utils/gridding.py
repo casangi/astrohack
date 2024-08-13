@@ -4,6 +4,7 @@ from graphviper.utils import logger as logger
 from scipy.interpolate import griddata
 from numba import njit
 from numba.core import types
+import math
 
 from astrohack.utils import sig_2_fwhm, find_nearest, calc_coords, find_peak_beam_value, chunked_average
 from astrohack.utils.text import get_str_idx_in_list
@@ -26,6 +27,7 @@ def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, te
         The gridded beam, its time centroid, frequency axis, polarization axis, L and M axes and a boolean about the
         necessity of gridding corrections after fourier transform.
     """
+
     n_holog_map = len(ant_ddi_dict.keys())
     map0 = list(ant_ddi_dict.keys())[0]
     freq_axis = ant_ddi_dict[map0].chan.values
@@ -35,13 +37,13 @@ def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, te
 
     reference_scaling_frequency = np.mean(freq_axis)
     if avg_chan:
-        avg_chan_map, avg_freq = _create_average_chan_map(freq_axis, chan_tol_fac)
         n_chan = 1
-        freq_axis = [np.mean(avg_freq)]
+        avg_chan_map, avg_freq_axis = _create_average_chan_map(freq_axis, chan_tol_fac)
+        output_freq_axis = [np.mean(avg_freq_axis)]
     else:
         avg_chan_map = None
-        avg_freq = None
-
+        avg_freq_axis = None
+        output_freq_axis = freq_axis
     l_axis, m_axis, l_grid, m_grid, beam_grid = _create_beam_grid(grid_size, sky_cell_size, n_chan, n_pol, n_holog_map)
     scipy_interp = ['linear', 'nearest', 'cubic']
 
@@ -49,20 +51,28 @@ def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, te
     grid_corr = False
     for holog_map_index, holog_map in enumerate(ant_ddi_dict.keys()):
         ant_xds = ant_ddi_dict[holog_map]
-
         # Grid the data
         vis = ant_xds.VIS.values
         vis[vis == np.nan] = 0.0
         lm = ant_xds.DIRECTIONAL_COSINES.values
         weight = ant_xds.WEIGHT.values
 
+        if avg_chan:
+            vis_avg, weight_sum = chunked_average(vis, weight, avg_chan_map, avg_freq_axis)
+            lm_freq_scaled = lm[:, :, None] * (avg_freq_axis / reference_scaling_frequency)
+        else:
+            vis_avg = vis
+            weight_sum = weight
+            lm_freq_scaled = lm[:, :, None] * np.full_like(freq_axis, 1.0)
+
         if grid_interpolation_mode in scipy_interp:
-            beam_grid[holog_map_index, ...] = _scipy_gridding(vis, weight, lm, l_grid, m_grid, grid_interpolation_mode,
-                                                              avg_chan_map, avg_freq, reference_scaling_frequency)
+            beam_grid[holog_map_index, ...] = _scipy_gridding(vis_avg, lm_freq_scaled, l_grid, m_grid,
+                                                              grid_interpolation_mode, avg_chan)
         elif grid_interpolation_mode == 'gaussian':
             grid_corr = True
-            beam_grid[holog_map_index, ...] = _convolution_gridding(vis, weight, lm, telescope.diam, freq_axis, l_axis,
-                                                                    m_axis, sky_cell_size)
+            beam_grid[holog_map_index, ...] = _convolution_gridding(vis_avg, weight_sum, lm_freq_scaled, telescope.diam,
+                                                                    l_axis, m_axis, sky_cell_size,
+                                                                    reference_scaling_frequency, avg_chan)
         else:
             msg = f'Unknown grid type {grid_interpolation_mode}.'
             logger.error(msg)
@@ -73,7 +83,7 @@ def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, te
 
         beam_grid[holog_map_index, ...] = _normalize_beam(beam_grid[holog_map_index, ...], n_chan, pol_axis)
 
-    return beam_grid, time_centroid, freq_axis, pol_axis, l_axis, m_axis, grid_corr
+    return beam_grid, time_centroid, output_freq_axis, pol_axis, l_axis, m_axis, grid_corr
 
 
 def gridding_correction(aperture, freq, diameter, sky_cell_size, u_axis, v_axis):
@@ -115,41 +125,36 @@ def _create_beam_grid(grid_size, sky_cell_size, n_chan, n_pol, n_map):
     return l_axis, m_axis, l_grid, m_grid, beam_grid
 
 
-def _scipy_gridding(vis, weight, lm, l_grid, m_grid, grid_interpolation_mode, avg_chan_map, avg_freq,
-                    reference_scaling_frequency):
+def _scipy_gridding(vis, lm, l_grid, m_grid, grid_interpolation_mode, avg_chan):
     """
     Grid the visibility data using scipy gridding algorithms.
     Args:
         vis: Visibilities
-        weight: Weights
         lm: Visibilities sky coordinates
         l_grid: 2D mesh of the L axis
         m_grid: 2D mesh of the M axis
         grid_interpolation_mode: linear, nearest, cubic
-        avg_chan_map: Map of channel chunking
-        avg_freq: frequency axis of the data
-        reference_scaling_frequency: reference scaling frequency for sky coordinates
 
     Returns:
         beam data gridded
     """
     logger.info('Interpolating beam onto grid...')
     start = time.time()
-    if avg_freq is not None:
-        vis_avg, weight_sum = chunked_average(vis, weight, avg_chan_map, avg_freq)
-        lm_freq_scaled = lm[:, :, None] * (avg_freq / reference_scaling_frequency)
-        n_pol = vis_avg.shape[2]
-        n_chan = avg_freq.shape[0]
+    n_pol = vis.shape[2]
+    n_chan = vis.shape[1]
+    if avg_chan:
         beam_grid = np.zeros((1, n_pol, l_grid.shape[0], l_grid.shape[1]), dtype=complex)
-        # Unavoidable for loop because lm change over frequency.
-        for i_chan in range(n_chan):
-            # Average scaled beams.
-            gridded_chan = np.moveaxis(griddata(lm_freq_scaled[:, :, i_chan], vis_avg[:, i_chan, :], (l_grid, m_grid),
-                                                method=grid_interpolation_mode, fill_value=0.0), 2, 0)
-            beam_grid[0, :, :, :] += gridded_chan
     else:
-        beam_grid = np.moveaxis(griddata(lm, vis, (l_grid, m_grid), method=grid_interpolation_mode, fill_value=0.0),
-                                (0, 1), (2, 3))
+        beam_grid = np.zeros((n_chan, n_pol, l_grid.shape[0], l_grid.shape[1]), dtype=complex)
+    # Unavoidable for loop because lm change over frequency.
+    for i_chan in range(n_chan):
+        # Average scaled beams.
+        gridded_chan = np.moveaxis(griddata(lm[:, :, i_chan], vis[:, i_chan, :], (l_grid, m_grid),
+                                            method=grid_interpolation_mode, fill_value=0.0), 2, 0)
+        if avg_chan:
+            beam_grid[0, :, :, :] += gridded_chan
+        else:
+            beam_grid[i_chan, :, :, :] = gridded_chan
     duration = time.time()-start
     logger.info(f'Interpolation took {duration:.3} seconds')
     return beam_grid
@@ -239,7 +244,8 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
     return cf_chan_map, pb_freq
 
 
-def _convolution_gridding(visibilities, weights, lmvis, diameter, freq, l_axis, m_axis, sky_cell_size):
+def _convolution_gridding(visibilities, weights, lmvis, diameter, l_axis, m_axis, sky_cell_size,
+                          reference_scaling_frequency, avg_chan):
     """
     Grid the visibility data using a gaussian convolution with a kernel based on primary beam size
     Args:
@@ -247,7 +253,6 @@ def _convolution_gridding(visibilities, weights, lmvis, diameter, freq, l_axis, 
         weights: Weights
         lmvis: Visibilities sky coordinates
         diameter: Telescope diameter
-        freq: Data frequancy axis
         l_axis: L axis
         m_axis: M axis
         sky_cell_size: Size of the beam grid cell in the sky (radians)
@@ -255,23 +260,20 @@ def _convolution_gridding(visibilities, weights, lmvis, diameter, freq, l_axis, 
     Returns:
         beam data gridded
     """
-    beam_size = _compute_beam_size(diameter, freq)
-    nchan = visibilities.shape[1]
-    if nchan > 1:
-        msg = 'Convolution gridding only supported for a single channel currently'
-        logger.error(msg)
-        raise Exception(msg)
+    beam_size = _compute_beam_size(diameter, reference_scaling_frequency)
 
     logger.info('Creating convolved beam...')
     start = time.time()
-    beam, wei = _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axis, m_axis, beam_size)
+    beam, wei = _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axis, m_axis, beam_size,
+                                          avg_chan)
     duration = time.time()-start
     logger.info(f'Convolution took {duration:.3} seconds')
     return beam
 
 
 @njit(cache=False, nogil=True)
-def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axis, m_axis, beam_size):
+def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axis, m_axis, beam_size,
+                              avg_chan):
     """
     Actual Gridding of the visibility data using a gaussian convolution with a kernel based on primary beam size,
     using numba jit for fast code
@@ -292,25 +294,32 @@ def _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axi
     l_kernel = _create_exponential_kernel(beam_size, sky_cell_size[0])
     m_kernel = _create_exponential_kernel(beam_size, sky_cell_size[1])
 
-    grid_shape = (nchan, npol, l_axis.shape[0], m_axis.shape[0])
+    if avg_chan:
+        grid_shape = (1, npol, l_axis.shape[0], m_axis.shape[0])
+    else:
+        grid_shape = (nchan, npol, l_axis.shape[0], m_axis.shape[0])
+    # This type has to be changed to np.complex128 when debugging with jit off
     beam_grid = np.zeros(grid_shape, dtype=types.complex128)
+
     weig_grid = np.zeros(grid_shape)
 
+    o_chan = np.arange(visibilities.shape[1])
+    if avg_chan:
+        o_chan[:] = 0
+
     for i_time in range(ntime):
-
-        lval, mval = lmvis[i_time]
-        i_lmin, i_lmax = _compute_kernel_range(l_kernel, lval, l_axis)
-        i_mmin, i_mmax = _compute_kernel_range(m_kernel, mval, m_axis)
-
         for i_chan in range(nchan):
+            lval, mval = lmvis[i_time, :, i_chan]
+            i_lmin, i_lmax = _compute_kernel_range(l_kernel, lval, l_axis)
+            i_mmin, i_mmax = _compute_kernel_range(m_kernel, mval, m_axis)
             for i_pol in range(npol):
                 for il in range(i_lmin, i_lmax):
                     l_fac = _convolution_factor(l_kernel, l_axis[il] - lval)
                     for im in range(i_mmin, i_mmax):
                         m_fac = _convolution_factor(m_kernel, m_axis[im] - mval)
                         conv_fact = l_fac * m_fac * weights[i_time, i_chan, i_pol]
-                        beam_grid[i_chan, i_pol, il, im] += conv_fact*visibilities[i_time, i_chan, i_pol]
-                        weig_grid[i_chan, i_pol, il, im] += conv_fact
+                        beam_grid[o_chan[i_chan], i_pol, il, im] += conv_fact*visibilities[i_time, i_chan, i_pol]
+                        weig_grid[o_chan[i_chan], i_pol, il, im] += conv_fact
 
     beam_grid /= weig_grid
     beam_grid = np.nan_to_num(beam_grid)
@@ -345,6 +354,7 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
     Returns:
         Adictionary containing the convolution kernel
     """
+    oversampling = 100
     smoothing = beam_size
     support = 4*smoothing
     width = smoothing/sig_2_fwhm
@@ -356,9 +366,13 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
     else:
         used_support = 2*pix_support + 1
 
-    kernel_size = used_support * 100 + 1
-    bias = 50.0 * used_support + 1.0
-    u_axis = (np.arange(kernel_size) - bias) * 0.01
+    kernel_size = used_support * oversampling + 1
+    k_coeff = np.log(kernel_size) / np.log(2)
+    k_integer = math.ceil(k_coeff)
+    kernel_size = np.power(2, k_integer)
+
+    bias = oversampling / 2 * used_support + 1.0
+    u_axis = (np.arange(kernel_size) - bias) / oversampling
     kernel = np.exp(-(u_axis/pix_width)**exponent)
 
     ker_dict = {'bias': bias,
@@ -367,6 +381,7 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
                 'user_support': support,
                 'user_width': width,
                 'pix_support': pix_support,
+                'oversampling': oversampling,
                 'sky_cell_size': sky_cell_size}
     return ker_dict
 
@@ -385,7 +400,7 @@ def _compute_kernel_range(kernel, coor, axis):
     """
     idx = _find_nearest(coor, axis)
     i_min = round(idx - kernel['pix_support'])
-    i_max = round(idx + kernel['pix_support'])
+    i_max = round(idx + kernel['pix_support'])+1
 
     if i_min < 0:
         i_min = 0
@@ -406,7 +421,7 @@ def _convolution_factor(kernel, delta):
         Kernel value at delta
     """
     pix_delta = delta/np.abs(kernel['sky_cell_size'])
-    ikern = round(100.0*pix_delta+kernel['bias'])
+    ikern = round(kernel['oversampling']*pix_delta+kernel['bias'])
     return kernel['kernel'][ikern]
 
 
@@ -426,7 +441,7 @@ def _compute_kernel_correction(kernel, grid_size):
     bias = kernel['bias']
     m_point = grid_size/2 + 1
 
-    kw_coeff = 0.01 * np.pi / m_point
+    kw_coeff = np.pi / m_point / kernel['oversampling']
     for i_kern in range(ker_val.shape[0]):
         if ker_val[i_kern] > 1e-30:
             kx_coeff = kw_coeff*(i_kern-bias)
