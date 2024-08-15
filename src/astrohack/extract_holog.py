@@ -20,7 +20,6 @@ from casacore import tables as ctables
 from rich.console import Console
 from rich.table import Table
 
-
 from astrohack.utils.constants import pol_str
 
 from astrohack.utils.file import overwrite_file
@@ -50,14 +49,28 @@ class HologObsDict(dict):
                       o--> map: [reference, ...]
     """
 
-    def __init__(self, obj: JSON):
-        super().__init__(obj)
+    def __init__(self, obj: JSON = None):
+        if obj is None:
+            super().__init__()
+        else:
+            super().__init__(obj)
 
     def __getitem__(self, key: str):
         return super().__getitem__(key)
 
     def __setitem__(self, key: str, value: Any):
         return super().__setitem__(key, value)
+
+    @classmethod
+    def from_file(cls, filepath):
+        try:
+            with open(filepath, "r") as file:
+                obj = json.load(file)
+
+                return HologObsDict(obj)
+
+        except FileNotFoundError:
+            logger.error(f"File {filepath} not found")
 
     def print(self, style: str = "static"):
         if style == "dynamic":
@@ -817,9 +830,10 @@ def generate_holog_obs_dict(
     )
 
     encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
+    print(encoded_obj)
 
     with open(".holog_obs_dict.json", "w") as outfile:
-        json.dump(encoded_obj, outfile)
+        outfile.write(encoded_obj)
 
     return HologObsDict(json.loads(encoded_obj))
 
