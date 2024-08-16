@@ -719,10 +719,13 @@ class AntennaSurface:
         freq = clight/self.wavelength/1e9
         if freq >= 1:
             frequnit = 'GHz'
-        else:
+        elif freq >= 1e-3:
             frequnit = 'MHz'
             freq *= 1e3
-        outfile += f"# Frequency = {freq:.1f} {frequnit}\n"
+        else:
+            frequnit = 'kHz'
+            freq *= 1e6
+        outfile += f"# Frequency = {freq:.5f} {frequnit}\n"
         outfile += "# Adjustments are in " + unit + 2 * lnbr
         outfile += "# Lower means away from subreflector" + lnbr
         outfile += "# Raise means toward the subreflector" + lnbr
