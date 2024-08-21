@@ -341,6 +341,63 @@
             ]
         }
     },
+    "AstrohackImageFile.get_phase_fit": {
+        "destination": {
+            "nullable": false,
+            "required": true,
+            "type": [
+                "string"
+            ]
+        },
+        "ant": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "str"
+            ],
+            "minlength": 1,
+            "type": [
+                "string",
+                "list"
+            ]
+        },
+        "ddi": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "int"
+            ],
+            "minlength": 1,
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
+        },
+        "angle_unit": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "string"
+            ],
+            "check allowed with": "units.trig"
+        },
+        "length_unit": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "string"
+            ],
+            "check allowed with": "units.length"
+        },
+        "parallel": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "boolean"
+            ]
+        }
+    },
     "AstrohackHologFile.select": {
         "ddi": {
             "nullable": false,

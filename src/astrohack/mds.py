@@ -6,6 +6,7 @@ import graphviper.utils.logger as logger
 
 from graphviper.utils.console import Colorize
 
+from astrohack.utils.phase_fitting import export_phase_fit_chunk
 from astrohack.utils.validation import custom_plots_checker
 from astrohack.utils.validation import custom_unit_checker
 from astrohack.utils.validation import custom_split_checker
@@ -179,7 +180,8 @@ class AstrohackImageFile(dict):
         print_summary_header(self.file)
         print_dict_table(self._input_pars)
         print_data_contents(self, ["Antenna", "DDI"])
-        print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
+        print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures,
+                           self.get_phase_fit_results])
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_split_checker
@@ -385,6 +387,42 @@ class AstrohackImageFile(dict):
 
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+
+    @graphviper.utils.parameter.validate(
+        custom_checker=custom_unit_checker
+    )
+    def get_phase_fit_results(
+            self,
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            angle_unit: str = 'deg',
+            length_unit: str = 'mm',
+            parallel: bool = False
+    ) -> None:
+        """ Get phase fit resutls from the data in an AstrohackImageFIle object to ASCII files.
+
+        :param destination: Name of the destination folder to contain ASCII files
+        :type destination: str
+        :param ant: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+        :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param angle_unit: Unit for results that are angles.
+        :type angle_unit: str, optional
+        :param length_unit: Unit for results that are displacements.
+        :type length_unit: str, optional
+        :param parallel: If True will use an existing astrohack client to produce ASCII files in parallel, default is False
+        :type parallel: bool, optional
+
+        .. _Description:
+
+        Export the results of the phase fitting process in ``astrohack.holog`` for analysis
+        """
+        param_dict = locals()
+
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
+        compute_graph(self, export_phase_fit_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackHologFile(dict):
