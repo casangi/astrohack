@@ -10,7 +10,7 @@ from astrohack.antenna.ring_panel import RingPanel
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.text import add_prefix, bool_to_str
+from astrohack.utils.text import add_prefix, bool_to_str, format_frequency
 from astrohack.visualization.plot_tools import well_positioned_colorbar, create_figure_and_axes, close_figure, \
     get_proper_color_map
 
@@ -716,23 +716,15 @@ class AntennaSurface:
         """
         outfile = f"# Screw adjustments for {self.telescope.name}'s {self.antenna_name} antenna, DDI " \
                   f"{self.ddi.split('_')[1]}, polarization state {self.pol_state}\n"
-        freq = clight/self.wavelength/1e9
-        if freq >= 1:
-            frequnit = 'GHz'
-        elif freq >= 1e-3:
-            frequnit = 'MHz'
-            freq *= 1e3
-        else:
-            frequnit = 'kHz'
-            freq *= 1e6
-        outfile += f"{comment_char} Frequency = {freq:.5f} {frequnit}\n"
-        outfile += f"{comment_char} Adjustments are in {unit}{lnbr}"
-        outfile += comment_char+lnbr
-        outfile += f"{comment_char} Lower means away from subreflector{lnbr}"
-        outfile += f"{comment_char} Raise means toward the subreflector{lnbr}"
-        outfile += f"{comment_char} LOWER the panel if the number is POSITIVE{lnbr}"
-        outfile += f"{comment_char} RAISE the panel if the number is NEGATIVE{lnbr}"
-        outfile += 2*(comment_char+lnbr)
+        freq = clight/self.wavelength
+        out_freq = format_frequency(freq)
+        outfile += f"# Frequency = {out_freq}{lnbr}"
+        outfile += "# Adjustments are in " + unit + 2 * lnbr
+        outfile += "# Lower means away from subreflector" + lnbr
+        outfile += "# Raise means toward the subreflector" + lnbr
+        outfile += "# LOWER the panel if the number is POSITIVE" + lnbr
+        outfile += "# RAISE the panel if the number is NEGATIVE" + lnbr
+        outfile += 2 * lnbr
         spc = ' '
         outfile += f'{comment_char} Panel{2*spc}'
         nscrews = len(self.telescope.screw_description)
