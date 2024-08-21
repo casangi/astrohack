@@ -1,18 +1,65 @@
 import numpy as np
 from numba import njit
+from prettytable import PrettyTable
 
-from astrohack.utils.algorithms import _least_squares_fit_block, least_squares, least_squares_jit
+from astrohack.utils import format_value_error, length_units, trigo_units
+from astrohack.utils.algorithms import _least_squares_fit_block, least_squares_jit
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.constants import clight
-from astrohack.utils.text import get_str_idx_in_list
-from astrohack.visualization.plot_tools import create_figure_and_axes
-from matplotlib import pyplot as plt
+from astrohack.utils.text import get_str_idx_in_list, format_frequency, format_label
 from matplotlib.patches import Circle
-from astrohack.visualization.plot_tools import create_figure_and_axes, well_positioned_colorbar, get_proper_color_map
+from astrohack.visualization.plot_tools import well_positioned_colorbar, get_proper_color_map
 
 import graphviper.utils.logger as logger
 
+aips_par_names = ['phase_offset', 'x_point_offset', 'y_point_offset', 'x_focus_offset', 'y_focus_offset',
+                'z_focus_offset', 'x_subreflector_tilt', 'y_subreflector_tilt', 'x_cassegrain_offset',
+                'y_cassegrain_offset']
 NPAR = 10
+
+def export_phase_fit_chunk(parm_dict):
+    antenna = parm_dict['this_ant']
+    ddi = parm_dict['this_ddi']
+    destination = parm_dict['destination']
+    phase_fit_results = parm_dict['xds_data'].attrs["phase_fitting"]
+    angle_unit = parm_dict['angle_unit']
+    length_unit = parm_dict['length_unit']
+    field_names = ['Parameter', 'Value', 'Unit']
+    outstr = ''
+
+    for mapkey, map_dict in phase_fit_results.items():
+        for freq, freq_dict in map_dict.items():
+            for pol, pol_dict in freq_dict.items():
+                outstr += f'* {mapkey.replace("_", " ")}, Frequency {format_frequency(freq)}, polarization state {pol}:\n\n '
+                table = PrettyTable()
+                table.field_names = field_names
+                table.align['Parameter'] = 'l'
+                table.align['Value'] = 'r'
+                table.align['Unit'] = 'c'
+                for par_name in aips_par_names:
+                    item = pol_dict[par_name]
+                    val = item['value']
+                    err = item['error']
+                    unit = item['unit']
+                    if unit in length_units:
+                        fac = convert_unit(unit, length_unit, 'length')
+                    elif unit in trigo_units:
+                        fac = convert_unit(unit, angle_unit, 'trigonometric')
+                    else:
+                        msg = f'Unknown unit {unit}'
+                        logger.error(msg)
+                        raise Exception(msg)
+
+                    row = [format_label(par_name), format_value_error(fac*val, fac*err, 1.0, 1e-4), unit]
+                    table.add_row(row)
+
+                outstr += table.get_string() + '\n\n'
+
+
+    outname = f'{destination}/image_phase_fit_{antenna}_{ddi}.txt'
+    outfile = open(outname, 'w')
+    outfile.write(outstr)
+    outfile.close()
 
 
 def execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size, phase_fit_parameter,
@@ -72,7 +119,7 @@ def _aips_like_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, u
             raise Exception(msg)
 
     min_wavelength = clight / freq_axis[0]
-    results, errors, phase_corrected_angle, _, in_rms, out_rms = phase_fitting_block(
+    results, errors, phase_corrected_angle, _, in_rms, out_rms = _aips_phase_fitting_block(
         pol_indexes=pol_indexes,
         wavelength=min_wavelength,
         telescope=telescope,
@@ -102,9 +149,7 @@ def _unpack_results(results, errors, pol_axis, freq_axis, pol_indexes):
     Returns:
     A dictionary containing the phase fit results
     """
-    par_name = ['phase_offset', 'x_point_offset', 'y_point_offset', 'x_focus_offset', 'y_focus_offset',
-                'z_focus_offset', 'x_subreflector_tilt', 'y_subreflector_tilt', 'x_cassegrain_offset',
-                'y_cassegrain_offset']
+
     par_unit = ['deg', 'deg', 'deg', 'mm', 'mm', 'mm', 'deg', 'deg', 'mm', 'mm']
 
     res_dict = {}
@@ -120,7 +165,7 @@ def _unpack_results(results, errors, pol_axis, freq_axis, pol_indexes):
                     par_dict = {'value': par_val[i_par],
                                 'error': par_err[i_par],
                                 'unit': par_unit[i_par]}
-                    pol_dict[par_name[i_par]] = par_dict
+                    pol_dict[aips_par_names[i_par]] = par_dict
                 freq_dict[pol_axis[pol_indexes[i_pol]]] = pol_dict
             time_dict[freq_axis[i_freq]] = freq_dict
         res_dict[f'map_{i_time}'] = time_dict
@@ -187,8 +232,8 @@ def create_phase_model(npix, parameters, wavelength, telescope, cellxy):
     return model
 
 
-def phase_fitting_block(pol_indexes, wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
-                        focus_xy_offsets, focus_z_offset, subreflector_tilt, cassegrain_offset):
+def _aips_phase_fitting_block(pol_indexes, wavelength, telescope, cellxy, amplitude_image, phase_image, pointing_offset,
+                              focus_xy_offsets, focus_z_offset, subreflector_tilt, cassegrain_offset):
     """
     Corrects the grading phase for pointing, focus, and feed offset errors using the least squares method, and a model
     incorporating sub-reflector position errors.  Includes reference pointing
