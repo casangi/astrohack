@@ -8,6 +8,11 @@ notavail = 'N/A'
 # Mathematical constants
 sig_2_fwhm = 2*np.sqrt(2*np.log(2))
 
+#frequency units
+freq_units = ['Hz', 'kHz', 'MHz', 'GHz', 'THz']
+# From Hz to unit
+freq_factors = [1, 1e3, 1e6, 1e9, 1e12]
+
 # Length units
 length_units = ['km', 'mi', 'm', 'yd', 'ft', 'in', 'cm', 'mm', 'um', 'mils']
 # From m to unit
@@ -26,13 +31,15 @@ time_factors = [1e-9, 1e-6, 1e-3, 1.0, 60.0, 3600.0, 86400.0]
 unit_dict = {
     'length': length_units,
     'trigonometric': trigo_units,
-    'time': time_units
+    'time': time_units,
+    'frequency': freq_units
 }
 
 fact_dict = {
     'length': length_factors,
     'trigonometric': trigo_factors,
-    'time': time_factors
+    'time': time_factors,
+    'frequency': freq_factors
 }
 
 # Trigonometric unit conversions
