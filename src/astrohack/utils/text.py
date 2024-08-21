@@ -375,6 +375,33 @@ def print_method_list(method_list, alignment='l', print_len=100):
     print()
 
 
+def format_frequency(freq_value, unit='Hz'):
+    if isinstance(freq_value, str):
+        freq_value = float(freq_value)
+    if freq_value >= 1e12:
+        unitout = 'GHz'
+    elif freq_value >= 1e9:
+        unitout = 'GHz'
+    elif freq_value >= 1e6:
+        unitout = 'MHz'
+    elif freq_value >= 1e3:
+        unitout = 'kHz'
+    else:
+        unitout = unit
+    fac = convert_unit(unit, unitout, 'frequency')
+    return f'{fac*freq_value:.4f} {unitout}'
+
+
+def format_label(label, separators=('_', '\n'), new_separator=' '):
+    if isinstance(label, str):
+        out_label = label
+    else:
+        out_label = str(label)
+    for sep in separators:
+        out_label = out_label.replace(sep, new_separator)
+    return out_label.capitalize()
+
+
 def format_value_error(value, error, scaling, tolerance):
     """Format values based and errors based on the significant digits"""
     if np.isfinite(value) and np.isfinite(error):
