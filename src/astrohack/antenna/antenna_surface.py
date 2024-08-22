@@ -45,7 +45,6 @@ class AntennaSurface:
         if not self.reread:
             self.panelmodel = pmodel
             self.panel_margins = panel_margins
-            self.reso = self.telescope.diam / self.npoint
             if crop:
                 self._crop_maps()
 
@@ -139,6 +138,8 @@ class AntennaSurface:
             self.corrections = inputxds['CORRECTIONS'].values
             self.panel_pars = inputxds['PANEL_PARAMETERS'].values
             self.screw_adjustments = inputxds['PANEL_SCREWS'].values
+            self.ingains = [inputxds.attrs['input_gain'], inputxds.attrs['theoretical_gain']]
+            self.ougains = [inputxds.attrs['output_gain'], inputxds.attrs['theoretical_gain']]
             self.panel_labels = inputxds.labels.values
 
     def _read_xds(self, inputxds):
@@ -395,34 +396,13 @@ class AntennaSurface:
         Returns:
         Gains before panel fitting OR Gains before and after panel fitting
         """
-        self.ingains = self._gains_array(self.phase)
-        if self.residuals is None:
+        self.ingains = self.gain_at_wavelength(False, self.wavelength)
+        if not self.solved:
             return self.ingains
 
         else:
-            self.ougains = self._gains_array(self.phase_residuals)
+            self.ougains = self.gain_at_wavelength(True, self.wavelength)
             return self.ingains, self.ougains
-
-    def _gains_array(self, arr):
-        """
-        Worker for gains method, works with the actual arrays to compute the gains
-        This numpy version is significantly faster than the previous version
-        Args:
-            arr: Deviation image over which to compute the gains
-
-        Returns:
-        Actual and theoretical gains
-        """
-        thgain = fourpi * (1000.0 * self.reso / self.wavelength) ** 2
-
-        if (self.mask==False).all():
-            return -np.inf, to_db(thgain)
-
-        gain = \
-            thgain * np.sqrt(np.sum(np.cos(arr[self.mask])) ** 2 + np.sum(np.sin(arr[self.mask])) ** 2) / np.sum(
-                self.mask)
-
-        return to_db(gain), to_db(thgain)
 
     def gain_at_wavelength(self, corrected, wavelength):
         # This is valid for the VLA not sure if valid for anything else...
@@ -432,7 +412,7 @@ class AntennaSurface:
         dish_mask = np.where(self.rad < self.telescope.diam/2, dish_mask, False)
 
         if corrected:
-            if self.solved:
+            if self.fitted:
                 scaled_phase = wavelength_scaling*self.phase_residuals
             else:
                 msg = 'Cannot computed gains for corrected dish if panels are not fitted.'
@@ -441,15 +421,15 @@ class AntennaSurface:
         else:
             scaled_phase = wavelength_scaling*self.phase
 
-        cplx_scaled_aperture = self.amplitude * (np.cos(scaled_phase) + 1j * np.sin(scaled_phase))
-        aper_sum = np.sum(cplx_scaled_aperture[dish_mask])
-        cjg_sum = np.sum(cplx_scaled_aperture[dish_mask]*np.conjugate(cplx_scaled_aperture[dish_mask]))
+        cossum = np.nansum(np.cos(scaled_phase[dish_mask]))
+        sinsum = np.nansum(np.sin(scaled_phase[dish_mask]))
+        real_factor = np.sqrt(cossum**2 + sinsum**2)/np.sum(dish_mask)
 
         u_fact = (self.u_axis[1] - self.u_axis[0]) / wavelength
         v_fact = (self.v_axis[1] - self.v_axis[0]) / wavelength
 
-        theo_gain = 4 * np.pi * u_fact * v_fact
-        real_gain = theo_gain * aper_sum * np.conjugate(aper_sum) / cjg_sum
+        theo_gain = fourpi * np.abs(u_fact * v_fact)
+        real_gain = theo_gain * real_factor
         return to_db(real_gain), to_db(theo_gain)
 
     def get_rms(self, unit='mm'):
