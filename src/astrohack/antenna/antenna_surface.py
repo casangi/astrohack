@@ -424,6 +424,34 @@ class AntennaSurface:
 
         return to_db(gain), to_db(thgain)
 
+    def gain_at_wavelength(self, corrected, wavelength):
+        # This is valid for the VLA not sure if valid for anything else...
+        wavelength_scaling = self.wavelength / wavelength
+
+        dish_mask = np.where(self.rad > self.telescope.inlim, True, False)
+        dish_mask = np.where(self.rad < self.telescope.diam/2, dish_mask, False)
+
+        if corrected:
+            if self.solved:
+                scaled_phase = wavelength_scaling*self.phase_residuals
+            else:
+                msg = 'Cannot computed gains for corrected dish if panels are not fitted.'
+                logger.error(msg)
+                raise Exception(msg)
+        else:
+            scaled_phase = wavelength_scaling*self.phase
+
+        cplx_scaled_aperture = self.amplitude * (np.cos(scaled_phase) + 1j * np.sin(scaled_phase))
+        aper_sum = np.sum(cplx_scaled_aperture[dish_mask])
+        cjg_sum = np.sum(cplx_scaled_aperture[dish_mask]*np.conjugate(cplx_scaled_aperture[dish_mask]))
+
+        u_fact = (self.u_axis[1] - self.u_axis[0]) / wavelength
+        v_fact = (self.v_axis[1] - self.v_axis[0]) / wavelength
+
+        theo_gain = 4 * np.pi * u_fact * v_fact
+        real_gain = theo_gain * aper_sum * np.conjugate(aper_sum) / cjg_sum
+        return to_db(real_gain), to_db(theo_gain)
+
     def get_rms(self, unit='mm'):
         """
         Computes antenna surface RMS before and after panel surface fitting
