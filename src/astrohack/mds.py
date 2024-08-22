@@ -39,6 +39,8 @@ from astrohack.core.extract_locit import plot_source_table
 from astrohack.core.extract_locit import plot_array_configuration
 from astrohack.core.extract_locit import print_array_configuration
 
+from astrohack.core.panel import export_gains_table
+
 from astrohack.utils.fits import export_to_fits_holog_chunk
 
 from astrohack.antenna.antenna_surface import AntennaSurface
@@ -941,8 +943,6 @@ class AstrohackPanelFile(dict):
 
         param_dict = locals()
 
-        param_dict["figuresize"] = figure_size
-
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
@@ -981,6 +981,17 @@ class AstrohackPanelFile(dict):
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
                       parallel=parallel)
+
+    def get_gains_table(
+            self,
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+    ) -> None:
+
+        param_dict = locals()
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
+        export_gains_table(self, param_dict)
 
 
 class AstrohackPointFile(dict):

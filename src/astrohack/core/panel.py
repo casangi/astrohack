@@ -3,6 +3,7 @@ import xarray as xr
 
 from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.antenna.telescope import Telescope
+from astrohack.utils.text import param_to_list
 
 
 def process_panel_chunk(panel_chunk_params):
@@ -23,7 +24,6 @@ def process_panel_chunk(panel_chunk_params):
         inputxds = panel_chunk_params['xds_data']
         logger.info(f'processing {antenna} {ddi}')
         inputxds.attrs['AIPS'] = False
-        #telescope = get_correct_telescope_from_name(inputxds)
         telescope = Telescope.from_xds(inputxds)
 
     surface = AntennaSurface(inputxds, telescope, clip_type=panel_chunk_params['clip_type'],
@@ -38,5 +38,29 @@ def process_panel_chunk(panel_chunk_params):
     xds_name = panel_chunk_params['panel_name'] + f'/{antenna}/{ddi}'
     xds = surface.export_xds()
     xds.to_zarr(xds_name, mode='w')
+
+
+def export_gains_table(data_dict, parm_dict):
+    wavelengths = [0.013, 0.007]
+
+    antenna_sel = param_to_list(parm_dict['ant'], data_dict, 'ant')
+    for ant in antenna_sel:
+        ddi_sel = param_to_list(parm_dict['ddi'], data_dict[ant], 'ddi')
+        for ddi in ddi_sel:
+            xds = data_dict[ant][ddi]
+            telescope = Telescope.from_xds(xds)
+            antenna = AntennaSurface(xds, telescope, reread=True)
+            row = [ant, ddi]
+            wavelengths.append(antenna.wavelength)
+            for wavelength in wavelengths:
+                prior, theo = antenna.gain_at_wavelength(False, wavelength)
+                after, _  = antenna.gain_at_wavelength(True, wavelength)
+                row.extend([prior, after, theo])
+            row.extend(antenna.ingains)
+            for i in range(len(row)):
+                if isinstance(row[i], float):
+                    row[i] = f'{row[i]:.2f}'
+            print(row)
+    return None
 
 
