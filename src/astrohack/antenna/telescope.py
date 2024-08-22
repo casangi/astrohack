@@ -47,7 +47,7 @@ class Telescope:
         if xds.attrs["telescope_name"] == "ALMA":
             telescope_name = "_".join((xds.attrs["telescope_name"], xds.attrs["ant_name"][0:2]))
             return cls(telescope_name)
-        elif xds.attrs["telescope_name"] == "EVLA":
+        elif xds.attrs["telescope_name"] == "EVLA" or xds.attrs["telescope_name"] == "VLA":
             telescope_name = "VLA"
             return cls(telescope_name)
         else:
