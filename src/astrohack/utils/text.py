@@ -375,7 +375,7 @@ def print_method_list(method_list, alignment='l', print_len=100):
     print()
 
 
-def format_frequency(freq_value, unit='Hz'):
+def format_frequency(freq_value, unit='Hz', decimal_places=4):
     if isinstance(freq_value, str):
         freq_value = float(freq_value)
     if freq_value >= 1e12:
@@ -389,9 +389,9 @@ def format_frequency(freq_value, unit='Hz'):
     else:
         unitout = unit
     fac = convert_unit(unit, unitout, 'frequency')
-    return f'{fac*freq_value:.4f} {unitout}'
+    return format_value_unit(fac * freq_value, unitout, decimal_places)
 
-def format_wavelength(wave_value, unit='m'):
+def format_wavelength(wave_value, unit='m', decimal_places=2):
     if isinstance(wave_value, str):
         wave_value = float(wave_value)
     if wave_value >= 1:
@@ -407,7 +407,7 @@ def format_wavelength(wave_value, unit='m'):
     else:
         unitout = unit
     fac = convert_unit(unit, unitout, 'length')
-    return f'{fac*wave_value:.2f} {unitout}'
+    return format_value_unit(fac * wave_value, unitout, decimal_places)
 
 def format_label(label, separators=('_', '\n'), new_separator=' '):
     if isinstance(label, str):
@@ -417,6 +417,10 @@ def format_label(label, separators=('_', '\n'), new_separator=' '):
     for sep in separators:
         out_label = out_label.replace(sep, new_separator)
     return out_label.capitalize()
+
+
+def format_value_unit(value, unit, decimal_places=2):
+    return f'{value:.{decimal_places}f} {unit}'
 
 
 def format_value_error(value, error, scaling, tolerance):
