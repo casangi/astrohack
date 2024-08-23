@@ -3,7 +3,7 @@ from prettytable import PrettyTable
 
 from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import convert_unit, clight, notavail, param_to_list, add_prefix, format_value_error, \
-    rotate_to_gmt, format_frequency, format_wavelength
+    rotate_to_gmt, format_frequency, format_wavelength, format_value_unit
 
 
 def export_locit_fit_results(data_dict, parm_dict):
@@ -127,8 +127,9 @@ def export_screws_chunk(parm_dict):
 
 def export_gains_table_chunk(parm_dict):
     wavelengths = [0.20, 0.13, 0.06, 0.03, 0.02, 0.013, 0.01, 0.007]
+    db = 'dB'
 
-    field_names = ['Frequency', 'Wavelength', 'Before panel (dB)', 'After panel (dB)', 'Theoretical Max. (dB)']
+    field_names = ['Frequency', 'Wavelength', 'Before panel', 'After panel', 'Theoretical Max.']
 
     ant = parm_dict['this_ant']
     ddi = parm_dict['this_ddi']
@@ -147,8 +148,8 @@ def export_gains_table_chunk(parm_dict):
     for wavelength in wavelengths:
         prior, theo = antenna.gain_at_wavelength(False, wavelength)
         after, _  = antenna.gain_at_wavelength(True, wavelength)
-        row = [format_frequency(clight/wavelength), format_wavelength(wavelength), f'{prior:.2f}', f'{after:.2f}',
-        f'{theo:.2f}']
+        row = [format_frequency(clight/wavelength), format_wavelength(wavelength), format_value_unit(prior,db),
+               format_value_unit(after,db), format_value_unit(theo,db)]
         table.add_row(row)
 
     outstr += table.get_string()
