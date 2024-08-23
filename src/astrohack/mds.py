@@ -178,7 +178,7 @@ class AstrohackImageFile(dict):
         print_dict_table(self._input_pars)
         print_data_contents(self, ["Antenna", "DDI"])
         print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures,
-                           self.get_phase_fit_results])
+                           self.export_phase_fit_results])
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_split_checker
@@ -388,7 +388,7 @@ class AstrohackImageFile(dict):
     @graphviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
     )
-    def get_phase_fit_results(
+    def export_phase_fit_results(
             self,
             destination: str,
             ant: Union[str, List[str]] = "all",
@@ -397,7 +397,7 @@ class AstrohackImageFile(dict):
             length_unit: str = 'mm',
             parallel: bool = False
     ) -> None:
-        """ Get phase fit resutls from the data in an AstrohackImageFIle object to ASCII files.
+        """ Export phase fit resutls from the data in an AstrohackImageFIle object to ASCII files.
 
         :param destination: Name of the destination folder to contain ASCII files
         :type destination: str

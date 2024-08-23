@@ -341,7 +341,7 @@
             ]
         }
     },
-    "AstrohackImageFile.get_phase_fit_results": {
+    "AstrohackImageFile.export_phase_fit_results": {
         "destination": {
             "nullable": false,
             "required": true,
@@ -398,6 +398,7 @@
             ]
         }
     },
+
     "AstrohackHologFile.select": {
         "ddi": {
             "nullable": false,
