@@ -772,7 +772,7 @@ class AstrohackPanelFile(dict):
         print_dict_table(self._input_pars)
         print_data_contents(self, ["Antenna", "DDI"])
         print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
-                           self.plot_antennas])
+                           self.plot_antennas, self.export_gains_table])
 
     @graphviper.utils.parameter.validate()
     def get_antenna(
@@ -993,6 +993,44 @@ class AstrohackPanelFile(dict):
             frequency_unit: str = 'GHz',
             parallel: bool = False
     ) -> None:
+        """ Compute estimated antenna gains in dB and saves them to ASCII files.
+
+        :param destination: Name of the destination folder to contain ASCII files
+        :type destination: str
+
+        :param ant: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+
+        :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+
+        :param wavelengths: List of wavelengths at which to compute the gains.
+        :type wavelengths: list or float, optional
+
+        :param wavelength_unit: Unit for the wavelengths being used, default is cm.
+        :type wavelength_unit: str, optional
+
+        :param frequencies: List of frequencies at which to compute the gains.
+        :type frequencies: list or float, optional
+
+        :param frequency_unit: Unit for the frequencies being used, default is GHz.
+        :type frequency_unit: str, optional
+
+        :param parallel: If True will use an existing astrohack client to produce ASCII files in parallel, default is False
+        :type parallel: bool, optional
+
+        .. _Description:
+
+        Export antenna gains in dB from ``astrohack.panel`` for analysis.
+
+        **Additional Information**
+        .. rubric:: Selecting frequencies and wavelengths:
+
+        If neither a frequency list nor a wavelength list is provided, ``export_gains_table`` will try to use a\
+        predefined list set for the telescope associated with the dataset. If both are provided, ``export_gains_table``\
+        will combine both lists.
+        """
+
 
         param_dict = locals()
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
