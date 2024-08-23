@@ -4,6 +4,7 @@ from prettytable import PrettyTable
 from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import convert_unit, clight, notavail, param_to_list, add_prefix, format_value_error, \
     rotate_to_gmt, format_frequency, format_wavelength, format_value_unit
+import graphviper.utils.logger as logger
 
 
 def export_locit_fit_results(data_dict, parm_dict):
@@ -128,10 +129,21 @@ def export_screws_chunk(parm_dict):
 def export_gains_table_chunk(parm_dict):
     in_waves = parm_dict['wavelengths']
     in_freqs = parm_dict['frequencies']
+    ant = parm_dict['this_ant']
+    ddi = parm_dict['this_ddi']
+    xds = parm_dict['xds_data']
+    telescope = Telescope.from_xds(xds)
+    antenna = AntennaSurface(xds, telescope, reread=True)
+    frequency = clight / antenna.wavelength
 
     if in_waves is None and in_freqs is None:
-        # Here we fetch data from the telescope default
-        wavelengths = [0.20, 0.13, 0.06, 0.03, 0.02, 0.013, 0.01, 0.007]
+        try:
+            wavelengths = telescope.gain_wavelengths
+        except AttributeError:
+            msg = f'Telescope {telescope.name} has no predefined list of wavelengths to compute gains'
+            logger.error(msg)
+            logger.info('Please provide one in the arguments')
+            raise Exception(msg)
     else:
         wave_fac = convert_unit(parm_dict['wavelength_unit'], 'm', 'length')
         freq_fac = convert_unit(parm_dict['frequency_unit'], 'Hz', 'frequency')
@@ -150,13 +162,6 @@ def export_gains_table_chunk(parm_dict):
     db = 'dB'
 
     field_names = ['Frequency', 'Wavelength', 'Before panel', 'After panel', 'Theoretical Max.']
-
-    ant = parm_dict['this_ant']
-    ddi = parm_dict['this_ddi']
-    xds = parm_dict['xds_data']
-    telescope = Telescope.from_xds(xds)
-    antenna = AntennaSurface(xds, telescope, reread=True)
-    frequency = clight/antenna.wavelength
 
     outstr = f'# Gain estimates for {telescope.name} antenna {ant.split("_")[1]}\n'
     outstr += f'# Based on a measurement at {format_frequency(frequency)}, {format_wavelength(antenna.wavelength)}'
