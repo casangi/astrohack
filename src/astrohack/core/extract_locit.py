@@ -8,12 +8,9 @@ from casacore import tables as ctables
 from astropy.coordinates import SkyCoord, CIRS
 from astropy.time import Time
 
-from prettytable import PrettyTable
-
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils.text import rad_to_deg_str
 from astrohack.utils.conversion import convert_unit, casa_time_to_mjd
-from astrohack.utils.constants import figsize, twopi, notavail
+from astrohack.utils.constants import figsize, twopi
 from astrohack.utils.data import write_meta_data
 from astrohack.utils.tools import get_telescope_lat_lon_rad
 from astrohack.utils.algorithms import compute_antenna_relative_off
@@ -388,47 +385,3 @@ def plot_array_configuration(ant_dict, telescope_name, parm_dict):
     return
 
 
-def print_array_configuration(params, ant_dict, telescope_name):
-    """ Backend for printing the array configuration onto a table
-
-    Args:
-        params: Parameter dictionary crafted by the calling function
-        ant_dict: Parameter dictionary crafted by the calling function
-        telescope_name: Name of the telescope used in observations
-    """
-    telescope = Telescope(telescope_name)
-    relative = params['relative']
-
-    print(f"\n{telescope_name} antennas, # of antennas {len(ant_dict.keys())}:")
-    table = PrettyTable()
-    table.align = 'c'
-    if relative:
-        nfields = 5
-        table.field_names = ['Name', 'Station', 'East [m]', 'North [m]', 'Elevation [m]', 'Distance [m]']
-        tel_lon, tel_lat, tel_rad = get_telescope_lat_lon_rad(telescope)
-    else:
-        nfields = 4
-        table.field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Radius [m]']
-
-    for ant_name in telescope.ant_list:
-        ant_key = 'ant_' + ant_name
-        if ant_key in ant_dict:
-            antenna = ant_dict[ant_key]
-            if antenna['reference']:
-                ant_name += ' (ref)'
-            row = [ant_name, antenna['station']]
-            if relative:
-                offsets = compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad)
-                row.extend([f'{offsets[0]:.4f}', f'{offsets[1]:.4f}', f'{offsets[2]:.4f}', f'{offsets[3]:.4f}'])
-            else:
-                row.extend([rad_to_deg_str(antenna['longitude']), rad_to_deg_str(antenna['latitude']),
-                            f'{antenna["radius"]:.4f}'])
-            table.add_row(row)
-        else:
-            row = [ant_name]
-            for i_field in range(nfields):
-                row.append(notavail)
-            table.add_row(row)
-
-    print(table)
-    return

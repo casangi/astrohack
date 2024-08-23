@@ -1,12 +1,15 @@
 import numpy as np
+from prettytable import PrettyTable
 
+from astrohack import rad_to_deg_str
 from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import convert_unit, clight, notavail, param_to_list, add_prefix, format_value_error, \
     rotate_to_gmt, format_frequency, format_wavelength, format_value_unit, length_units, trigo_units, format_label, \
-    create_pretty_table, string_to_ascii_file
+    create_pretty_table, string_to_ascii_file, compute_antenna_relative_off
 import graphviper.utils.logger as logger
 
 from astrohack.utils.phase_fitting import aips_par_names
+from astrohack.utils.tools import get_telescope_lat_lon_rad
 
 
 def export_locit_fit_results(data_dict, parm_dict):
@@ -212,3 +215,48 @@ def export_phase_fit_chunk(parm_dict):
                 outstr += table.get_string() + '\n\n'
 
     string_to_ascii_file(outstr, f'{destination}/image_phase_fit_{antenna}_{ddi}.txt')
+
+
+def print_array_configuration(params, ant_dict, telescope_name):
+    """ Backend for printing the array configuration onto a table
+
+    Args:
+        params: Parameter dictionary crafted by the calling function
+        ant_dict: Parameter dictionary crafted by the calling function
+        telescope_name: Name of the telescope used in observations
+    """
+    telescope = Telescope(telescope_name)
+    relative = params['relative']
+
+    print(f"\n{telescope_name} antennas, # of antennas {len(ant_dict.keys())}:")
+    if relative:
+        nfields = 5
+        field_names = ['Name', 'Station', 'East [m]', 'North [m]', 'Elevation [m]', 'Distance [m]']
+        tel_lon, tel_lat, tel_rad = get_telescope_lat_lon_rad(telescope)
+    else:
+        nfields = 4
+        field_names = ['Name', 'Station', 'Longitude', 'Latitude', 'Radius [m]']
+
+    table = create_pretty_table(field_names)
+    for ant_name in telescope.ant_list:
+        ant_key = 'ant_' + ant_name
+        if ant_key in ant_dict:
+            antenna = ant_dict[ant_key]
+            if antenna['reference']:
+                ant_name += ' (ref)'
+            row = [ant_name, antenna['station']]
+            if relative:
+                offsets = compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad)
+                row.extend([f'{offsets[0]:.4f}', f'{offsets[1]:.4f}', f'{offsets[2]:.4f}', f'{offsets[3]:.4f}'])
+            else:
+                row.extend([rad_to_deg_str(antenna['longitude']), rad_to_deg_str(antenna['latitude']),
+                            f'{antenna["radius"]:.4f}'])
+            table.add_row(row)
+        else:
+            row = [ant_name]
+            for i_field in range(nfields):
+                row.append(notavail)
+            table.add_row(row)
+
+    print(table)
+    return
