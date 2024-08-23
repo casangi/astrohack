@@ -9,6 +9,8 @@ from numba import njit
 from numba.core import types
 
 from casacore import tables as ctables
+
+from astrohack.antenna import Telescope
 from astrohack.utils.imaging import calculate_parallactic_angle_chunk
 from astrohack.utils.algorithms import calculate_optimal_grid_parameters, significant_figures_round
 
@@ -115,7 +117,8 @@ def process_extract_holog_chunk(extract_holog_params):
     # function more general use (hopefully). I honestly couldn't see a reason to keep it inside.
     for ant_index in vis_map_dict.keys():
         antenna_name = "_".join(("ant", ant_names[ant_index]))
-        n_pix, cell_size = calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_name, chan_freq)
+        n_pix, cell_size = calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, Telescope(telescope_name).diam,
+                                                             chan_freq)
 
         grid_params[antenna_name] = {
             "n_pix": n_pix,
