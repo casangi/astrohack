@@ -984,6 +984,10 @@ class AstrohackPanelFile(dict):
             destination: str,
             ant: Union[str, List[str]] = "all",
             ddi: Union[int, List[int]] = "all",
+            wavelengths: Union[float, List[float]] = None,
+            wavelength_unit: str = 'cm',
+            frequencies: Union[float, List[float]] = None,
+            frequency_unit: str = 'GHz',
             parallel: bool = False
     ) -> None:
 
