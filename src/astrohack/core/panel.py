@@ -1,9 +1,11 @@
 import graphviper.utils.logger as logger
 import xarray as xr
+from prettytable import PrettyTable
 
 from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils.text import param_to_list
+from astrohack.utils import clight
+from astrohack.utils.text import param_to_list, format_label, format_frequency, format_wavelength
 
 
 def process_panel_chunk(panel_chunk_params):
@@ -41,7 +43,9 @@ def process_panel_chunk(panel_chunk_params):
 
 
 def export_gains_table(data_dict, parm_dict):
-    wavelengths = [0.013, 0.007]
+    wavelengths = [0.20, 0.13, 0.06, 0.03, 0.02, 0.013, 0.01, 0.007]
+
+    field_names = ['Frequency', 'Wavelength', 'Before panel (dB)', 'After panel (dB)', 'Theoretical Max. (dB)']
 
     antenna_sel = param_to_list(parm_dict['ant'], data_dict, 'ant')
     for ant in antenna_sel:
@@ -50,17 +54,28 @@ def export_gains_table(data_dict, parm_dict):
             xds = data_dict[ant][ddi]
             telescope = Telescope.from_xds(xds)
             antenna = AntennaSurface(xds, telescope, reread=True)
-            row = [ant, ddi]
-            wavelengths.append(antenna.wavelength)
+            frequency = clight/antenna.wavelength
+
+            outstr = f'# Gain estimates for {telescope.name} antenna {ant.split("_")[1]}\n'
+            outstr += f'# Based on a measurement at {format_frequency(frequency)}, {format_wavelength(antenna.wavelength)}'
+            outstr += 3*'\n'
+            table = PrettyTable()
+            table.field_names = field_names
+            table.align = 'c'
+
             for wavelength in wavelengths:
                 prior, theo = antenna.gain_at_wavelength(False, wavelength)
                 after, _  = antenna.gain_at_wavelength(True, wavelength)
-                row.extend([prior, after, theo])
-            row.extend(antenna.ingains)
-            for i in range(len(row)):
-                if isinstance(row[i], float):
-                    row[i] = f'{row[i]:.2f}'
-            print(row)
+                row = [format_frequency(clight/wavelength), format_wavelength(wavelength), f'{prior:.2f}', f'{after:.2f}',
+                       f'{theo:.2f}']
+                table.add_row(row)
+
+            outstr += table.get_string()
+            outname = parm_dict['destination'] + f'/panel_gains_{ant}_{ddi}.txt'
+            outfile = open(outname, 'w')
+            outfile.write(outstr + '\n')
+            outfile.close()
+
     return None
 
 
