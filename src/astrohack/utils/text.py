@@ -475,3 +475,28 @@ def bool_to_str(boolean):
         return 'no'
 
 
+def string_to_ascii_file(string, filename):
+    outfile = open(filename, 'w')
+    outfile.write(string + '\n')
+    outfile.close()
+
+
+def create_pretty_table(field_names, alignment='c'):
+    table = PrettyTable()
+    table.field_names = field_names
+    if isinstance(alignment, list) or isinstance(alignment, tuple):
+        if len(field_names) != len(alignment):
+            msg = 'If alignment is not a single string alignment must have the same length of field_names'
+            logger.error(msg)
+            raise Exception(msg)
+        for i_field, field in enumerate(field_names):
+            table.align[field] = alignment[i_field]
+    elif isinstance(alignment, str):
+        if len(alignment) != 1:
+            msg = 'Alignment string must be of length 1'
+            logger.error(msg)
+            raise Exception(msg)
+        table.align = alignment
+    return table
+
+
