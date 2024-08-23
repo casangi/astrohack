@@ -32,13 +32,11 @@ from astrohack.utils.data import read_meta_data
 from astrohack.utils.data import export_to_aips
 from astrohack.visualization.textual_data import export_locit_fit_results, export_screws_chunk, \
     export_gains_table_chunk, export_phase_fit_chunk
-from astrohack.visualization.fits import export_to_fits_panel_chunk
+from astrohack.visualization.fits import export_to_fits_panel_chunk, export_to_fits_holog_chunk
 
 from astrohack.core.extract_locit import plot_source_table
 from astrohack.core.extract_locit import plot_array_configuration
 from astrohack.core.extract_locit import print_array_configuration
-
-from astrohack.utils.fits import export_to_fits_holog_chunk
 
 from astrohack.antenna.antenna_surface import AntennaSurface
 
