@@ -6,6 +6,7 @@ import graphviper.utils.logger as logger
 
 from graphviper.utils.console import Colorize
 
+from astrohack.utils import create_pretty_table
 from astrohack.utils.validation import custom_plots_checker
 from astrohack.utils.validation import custom_unit_checker
 from astrohack.utils.validation import custom_split_checker
@@ -31,12 +32,11 @@ from astrohack.utils.file import load_position_file
 from astrohack.utils.data import read_meta_data
 from astrohack.utils.data import export_to_aips
 from astrohack.visualization.textual_data import export_locit_fit_results, export_screws_chunk, \
-    export_gains_table_chunk, export_phase_fit_chunk
+    export_gains_table_chunk, export_phase_fit_chunk, print_array_configuration
 from astrohack.visualization.fits import export_to_fits_panel_chunk, export_to_fits_holog_chunk
 
 from astrohack.core.extract_locit import plot_source_table
 from astrohack.core.extract_locit import plot_array_configuration
-from astrohack.core.extract_locit import print_array_configuration
 
 from astrohack.antenna.antenna_surface import AntennaSurface
 
@@ -1173,15 +1173,13 @@ class AstrohackLocitFile(dict):
     def print_source_table(self) -> None:
         """ Prints a table with the sources observed for antenna location determination
         """
-        alignment = 'l'
         print("\nSources:")
-        table = PrettyTable()
-        table.field_names = ['Id', 'Name', 'RA FK5', 'DEC FK5', 'RA precessed', 'DEC precessed']
+        field_names = ['Id', 'Name', 'RA FK5', 'DEC FK5', 'RA precessed', 'DEC precessed']
+        table = create_pretty_table(field_names, 'l')
         for source in self['observation_info']['src_dict'].values():
             table.add_row([source['id'], source['name'], rad_to_hour_str(source['fk5'][0]),
                            rad_to_deg_str(source['fk5'][1]), rad_to_hour_str(source['precessed'][0]),
                            rad_to_deg_str(source['precessed'][1])])
-        table.align = alignment
         print(table)
 
     @graphviper.utils.parameter.validate()

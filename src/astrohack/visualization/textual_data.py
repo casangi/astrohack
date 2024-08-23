@@ -1,7 +1,6 @@
 import numpy as np
-from prettytable import PrettyTable
 
-from astrohack import rad_to_deg_str
+from astrohack.utils import rad_to_deg_str
 from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import convert_unit, clight, notavail, param_to_list, add_prefix, format_value_error, \
     rotate_to_gmt, format_frequency, format_wavelength, format_value_unit, length_units, trigo_units, format_label, \
