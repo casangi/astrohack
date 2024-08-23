@@ -209,9 +209,7 @@ def print_data_contents(data_dict, field_names, alignment='l'):
         field_names: Field names in the table
         alignment: Contents of the table to be aligned Left or Right
     """
-    table = PrettyTable()
-    table.field_names = field_names
-    table.align = alignment
+    table = create_pretty_table(field_names, alignment)
     depth = len(field_names)
     if depth == 3:
         for item_l1 in data_dict.keys():
@@ -244,9 +242,7 @@ def print_dict_table(input_parameters, split_key=None, alignment='l', heading="I
 
     """
     print(f"\n{heading}:")
-    table = PrettyTable()
-    table.field_names = ['Parameter', 'Value']
-    table.align = alignment
+    table = create_pretty_table(['Parameter', 'Value'], alignment)
 
     for key, item in input_parameters.items():
         if key == split_key:
@@ -366,9 +362,7 @@ def print_method_list(method_list, alignment='l', print_len=100):
     desc_len = print_len - name_len - 3 - 4  # Separators and padding
 
     print('\nAvailable methods:')
-    table = PrettyTable()
-    table.field_names = ['Methods', 'Description']
-    table.align = alignment
+    table = create_pretty_table(['Methods', 'Description'], alignment)
     for obj_method in method_list:
         table.add_row([obj_method.__name__, textwrap.fill(obj_method.__doc__.splitlines()[0][1:], width=desc_len)])
     print(table)
