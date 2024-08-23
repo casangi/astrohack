@@ -979,7 +979,7 @@ class AstrohackPanelFile(dict):
         compute_graph(self, export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
                       parallel=parallel)
 
-    def get_gains_table(
+    def export_gains_table(
             self,
             destination: str,
             ant: Union[str, List[str]] = "all",
