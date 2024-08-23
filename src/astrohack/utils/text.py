@@ -379,7 +379,7 @@ def format_frequency(freq_value, unit='Hz'):
     if isinstance(freq_value, str):
         freq_value = float(freq_value)
     if freq_value >= 1e12:
-        unitout = 'GHz'
+        unitout = 'THz'
     elif freq_value >= 1e9:
         unitout = 'GHz'
     elif freq_value >= 1e6:
@@ -391,6 +391,23 @@ def format_frequency(freq_value, unit='Hz'):
     fac = convert_unit(unit, unitout, 'frequency')
     return f'{fac*freq_value:.4f} {unitout}'
 
+def format_wavelength(wave_value, unit='m'):
+    if isinstance(wave_value, str):
+        wave_value = float(wave_value)
+    if wave_value >= 1:
+        unitout = 'm'
+    elif wave_value >= 1e-2:
+        unitout = 'cm'
+    elif wave_value >= 1e-3:
+        unitout = 'mm'
+    elif wave_value >= 1e-6:
+        unitout = 'um'
+    elif wave_value >= 1e-9:
+        unitout = 'nm'
+    else:
+        unitout = unit
+    fac = convert_unit(unit, unitout, 'length')
+    return f'{fac*wave_value:.2f} {unitout}'
 
 def format_label(label, separators=('_', '\n'), new_separator=' '):
     if isinstance(label, str):
