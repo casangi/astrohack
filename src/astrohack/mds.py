@@ -39,7 +39,7 @@ from astrohack.core.extract_locit import plot_source_table
 from astrohack.core.extract_locit import plot_array_configuration
 from astrohack.core.extract_locit import print_array_configuration
 
-from astrohack.core.panel import export_gains_table
+from astrohack.utils import export_gains_table
 
 from astrohack.utils.fits import export_to_fits_holog_chunk
 
