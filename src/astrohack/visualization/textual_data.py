@@ -151,12 +151,12 @@ def export_gains_table_chunk(parm_dict):
         freq_fac = convert_unit(parm_dict['frequency_unit'], 'Hz', 'frequency')
         wavelengths = []
         if in_waves is not None:
-            if isinstance(in_waves, float):
+            if isinstance(in_waves, float) or isinstance(in_waves, int):
                 in_waves = [in_waves]
             for in_wave in in_waves:
                 wavelengths.append(wave_fac*in_wave)
         if in_freqs is not None:
-            if isinstance(in_freqs, float):
+            if isinstance(in_freqs, float) or isinstance(in_freqs, int):
                 in_freqs = [in_freqs]
             for in_freq in in_freqs:
                 wavelengths.append(clight/freq_fac/in_freq)

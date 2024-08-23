@@ -979,6 +979,9 @@ class AstrohackPanelFile(dict):
         compute_graph(self, export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
                       parallel=parallel)
 
+    @graphviper.utils.parameter.validate(
+        custom_checker=custom_unit_checker
+    )
     def export_gains_table(
             self,
             destination: str,

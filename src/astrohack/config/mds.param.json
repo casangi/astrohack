@@ -909,6 +909,56 @@
             "type": ["boolean"]
         }
     },
+    "AstrohackPanelFile.export_gains_table":{
+        "destination":{
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "ant":{
+            "nullable": false,
+            "required": false,
+            "struct_type": ["str"],
+            "minlength": 1,
+            "type": ["string", "list"]
+        },
+        "ddi":{
+            "nullable": false,
+            "required": false,
+            "struct_type": ["int"],
+            "minlength": 1,
+            "type": ["int", "list", "string"]
+        },
+        "wavelengths":{
+            "nullable": true,
+            "required": false,
+            "struct_type": ["float", "int"],
+            "type": ["int", "float", "list", "tuple", "ndarray"]
+        },
+        "wavelength_unit":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.length"
+        },
+        "frequencies":{
+            "nullable": true,
+            "required": false,
+            "struct_type": ["float", "int"],
+            "type": ["int", "float", "list", "tuple", "ndarray"]
+        },
+        "frequency_unit":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.frequency"
+        },
+        "parallel":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        }
+    },
 
     "AstrohackLocitFile.print_array_configuration":{
         "relative":{
