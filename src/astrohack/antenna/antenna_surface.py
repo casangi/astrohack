@@ -1,4 +1,3 @@
-import numpy as np
 import xarray as xr
 
 from matplotlib import patches
@@ -7,6 +6,7 @@ import graphviper.utils.logger as logger
 
 from astrohack.antenna.base_panel import PANEL_MODELS, irigid
 from astrohack.antenna.ring_panel import RingPanel
+from astrohack.utils import string_to_ascii_file
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
@@ -750,9 +750,7 @@ class AntennaSurface:
             outfile += (f'{5*spc}{bool_to_str(self.panel_fallback[ipanel]):>3s}{7*spc}{self.panel_model_array[ipanel]}'
                         + lnbr)
 
-        lefile = open(filename, "w")
-        lefile.write(outfile)
-        lefile.close()
+        string_to_ascii_file(outfile, filename)
 
     def export_xds(self):
         """

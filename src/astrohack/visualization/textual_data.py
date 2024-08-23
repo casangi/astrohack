@@ -1,9 +1,9 @@
 import numpy as np
-from prettytable import PrettyTable
 
 from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import convert_unit, clight, notavail, param_to_list, add_prefix, format_value_error, \
-    rotate_to_gmt, format_frequency, format_wavelength, format_value_unit, length_units, trigo_units, format_label
+    rotate_to_gmt, format_frequency, format_wavelength, format_value_unit, length_units, trigo_units, format_label, \
+    create_pretty_table, string_to_ascii_file
 import graphviper.utils.logger as logger
 
 from astrohack.utils.phase_fitting import aips_par_names
@@ -48,9 +48,7 @@ def export_locit_fit_results(data_dict, parm_dict):
         slo_unit = notavail
         slo_fact = 1.0
 
-    table = PrettyTable()
-    table.field_names = field_names
-    table.align = 'c'
+    table = create_pretty_table(field_names)
     full_antenna_list = Telescope(data_dict._meta_data['telescope_name']).ant_list
     selected_antenna_list = param_to_list(parm_dict['ant'], data_dict, 'ant')
 
@@ -74,10 +72,7 @@ def export_locit_fit_results(data_dict, parm_dict):
                             _export_locit_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pos_fact, slo_fact,
                                               kterm_present, rate_present))
 
-    outname = parm_dict['destination'] + f'/position_{specifier}_fit_results.txt'
-    outfile = open(outname, 'w')
-    outfile.write(table.get_string() + '\n')
-    outfile.close()
+    string_to_ascii_file(table.get_string(), parm_dict['destination'] + f'/position_{specifier}_fit_results.txt')
 
 
 def _export_locit_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, rate_present):
@@ -164,13 +159,11 @@ def export_gains_table_chunk(parm_dict):
     db = 'dB'
 
     field_names = ['Frequency', 'Wavelength', 'Before panel', 'After panel', 'Theoretical Max.']
+    table = create_pretty_table(field_names)
 
     outstr = f'# Gain estimates for {telescope.name} antenna {ant.split("_")[1]}\n'
     outstr += f'# Based on a measurement at {format_frequency(frequency)}, {format_wavelength(antenna.wavelength)}'
     outstr += 3*'\n'
-    table = PrettyTable()
-    table.field_names = field_names
-    table.align = 'c'
 
     for wavelength in wavelengths:
         prior, theo = antenna.gain_at_wavelength(False, wavelength)
@@ -180,12 +173,7 @@ def export_gains_table_chunk(parm_dict):
         table.add_row(row)
 
     outstr += table.get_string()
-    outname = parm_dict['destination'] + f'/panel_gains_{ant}_{ddi}.txt'
-    outfile = open(outname, 'w')
-    outfile.write(outstr + '\n')
-    outfile.close()
-
-    return
+    string_to_ascii_file(outstr, parm_dict['destination'] + f'/panel_gains_{ant}_{ddi}.txt')
 
 
 def export_phase_fit_chunk(parm_dict):
@@ -196,17 +184,14 @@ def export_phase_fit_chunk(parm_dict):
     angle_unit = parm_dict['angle_unit']
     length_unit = parm_dict['length_unit']
     field_names = ['Parameter', 'Value', 'Unit']
+    alignment = ['l', 'r', 'c']
     outstr = ''
 
     for mapkey, map_dict in phase_fit_results.items():
         for freq, freq_dict in map_dict.items():
             for pol, pol_dict in freq_dict.items():
                 outstr += f'* {mapkey.replace("_", " ")}, Frequency {format_frequency(freq)}, polarization state {pol}:\n\n '
-                table = PrettyTable()
-                table.field_names = field_names
-                table.align['Parameter'] = 'l'
-                table.align['Value'] = 'r'
-                table.align['Unit'] = 'c'
+                table = create_pretty_table(field_names, alignment)
                 for par_name in aips_par_names:
                     item = pol_dict[par_name]
                     val = item['value']
@@ -226,8 +211,4 @@ def export_phase_fit_chunk(parm_dict):
 
                 outstr += table.get_string() + '\n\n'
 
-
-    outname = f'{destination}/image_phase_fit_{antenna}_{ddi}.txt'
-    outfile = open(outname, 'w')
-    outfile.write(outstr)
-    outfile.close()
+    string_to_ascii_file(outstr, f'{destination}/image_phase_fit_{antenna}_{ddi}.txt')
