@@ -4,9 +4,9 @@ import graphviper.utils.logger as logger
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 
-from astrohack.utils.algorithms import gauss_elimination, least_squares
+from astrohack.utils import gauss_elimination, least_squares
 from astrohack.utils.constants import *
-from astrohack.utils.conversion import convert_unit
+from astrohack.utils import convert_unit
 
 PANEL_MODELS = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
                 "rotated_paraboloid", "full_paraboloid_lst_sq"]
