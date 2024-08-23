@@ -3,8 +3,10 @@ from prettytable import PrettyTable
 
 from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import convert_unit, clight, notavail, param_to_list, add_prefix, format_value_error, \
-    rotate_to_gmt, format_frequency, format_wavelength, format_value_unit
+    rotate_to_gmt, format_frequency, format_wavelength, format_value_unit, length_units, trigo_units, format_label
 import graphviper.utils.logger as logger
+
+from astrohack.utils.phase_fitting import aips_par_names
 
 
 def export_locit_fit_results(data_dict, parm_dict):
@@ -184,3 +186,48 @@ def export_gains_table_chunk(parm_dict):
     outfile.close()
 
     return
+
+
+def export_phase_fit_chunk(parm_dict):
+    antenna = parm_dict['this_ant']
+    ddi = parm_dict['this_ddi']
+    destination = parm_dict['destination']
+    phase_fit_results = parm_dict['xds_data'].attrs["phase_fitting"]
+    angle_unit = parm_dict['angle_unit']
+    length_unit = parm_dict['length_unit']
+    field_names = ['Parameter', 'Value', 'Unit']
+    outstr = ''
+
+    for mapkey, map_dict in phase_fit_results.items():
+        for freq, freq_dict in map_dict.items():
+            for pol, pol_dict in freq_dict.items():
+                outstr += f'* {mapkey.replace("_", " ")}, Frequency {format_frequency(freq)}, polarization state {pol}:\n\n '
+                table = PrettyTable()
+                table.field_names = field_names
+                table.align['Parameter'] = 'l'
+                table.align['Value'] = 'r'
+                table.align['Unit'] = 'c'
+                for par_name in aips_par_names:
+                    item = pol_dict[par_name]
+                    val = item['value']
+                    err = item['error']
+                    unit = item['unit']
+                    if unit in length_units:
+                        fac = convert_unit(unit, length_unit, 'length')
+                    elif unit in trigo_units:
+                        fac = convert_unit(unit, angle_unit, 'trigonometric')
+                    else:
+                        msg = f'Unknown unit {unit}'
+                        logger.error(msg)
+                        raise Exception(msg)
+
+                    row = [format_label(par_name), format_value_error(fac*val, fac*err, 1.0, 1e-4), unit]
+                    table.add_row(row)
+
+                outstr += table.get_string() + '\n\n'
+
+
+    outname = f'{destination}/image_phase_fit_{antenna}_{ddi}.txt'
+    outfile = open(outname, 'w')
+    outfile.write(outstr)
+    outfile.close()

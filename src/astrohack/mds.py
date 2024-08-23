@@ -6,7 +6,6 @@ import graphviper.utils.logger as logger
 
 from graphviper.utils.console import Colorize
 
-from astrohack.utils.phase_fitting import export_phase_fit_chunk
 from astrohack.utils.validation import custom_plots_checker
 from astrohack.utils.validation import custom_unit_checker
 from astrohack.utils.validation import custom_split_checker
@@ -31,7 +30,8 @@ from astrohack.utils.file import load_position_file
 
 from astrohack.utils.data import read_meta_data
 from astrohack.utils.data import export_to_aips
-from astrohack.visualization.textual_data import export_locit_fit_results, export_screws_chunk, export_gains_table_chunk
+from astrohack.visualization.textual_data import export_locit_fit_results, export_screws_chunk, \
+    export_gains_table_chunk, export_phase_fit_chunk
 from astrohack.visualization.fits import export_to_fits_panel_chunk
 
 from astrohack.core.extract_locit import plot_source_table
