@@ -910,7 +910,7 @@
             "type": ["boolean"]
         }
     },
-    "AstrohackPanelFile.export_gains_table":{
+    "AstrohackPanelFile.export_gain_tables":{
         "destination":{
             "nullable": false,
             "required": true,

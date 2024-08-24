@@ -770,7 +770,7 @@ class AstrohackPanelFile(dict):
         print_dict_table(self._input_pars)
         print_data_contents(self, ["Antenna", "DDI"])
         print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
-                           self.plot_antennas, self.export_gains_table])
+                           self.plot_antennas, self.export_gain_tables])
 
     @graphviper.utils.parameter.validate()
     def get_antenna(
@@ -980,7 +980,7 @@ class AstrohackPanelFile(dict):
     @graphviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
     )
-    def export_gains_table(
+    def export_gain_tables(
             self,
             destination: str,
             ant: Union[str, List[str]] = "all",
