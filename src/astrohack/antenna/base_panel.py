@@ -4,13 +4,13 @@ import graphviper.utils.logger as logger
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 
-from astrohack.antenna.panel_fitting import solve_mean, correct_mean
+from astrohack.antenna.panel_fitting import solve_mean, correct_mean, PANEL_MODEL_DICT
 from astrohack.utils.algorithms import gauss_elimination, least_squares
 from astrohack.utils.constants import *
 from astrohack.utils import convert_unit
 
 PANEL_MODELS = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
-                "rotated_paraboloid", "full_paraboloid_lst_sq", "flexible"]
+                "rotated_paraboloid", "full_paraboloid_lst_sq", "flexible", 'old_mean']
 imean = 0
 irigid = 1
 icorscp = 2
@@ -20,6 +20,7 @@ ixypara = 5
 irotpara = 6
 ifulllst = 7
 iflexible = 8
+old_mean = 9
 
 warned = False
 
@@ -114,6 +115,8 @@ class BasePanel:
         if imodel == irigid:
             self._associate_rigid()
         elif imodel == imean:
+            self._associate_with_dict()
+        elif imodel == old_mean:
             self._associate_mean()
         elif imodel == ixypara:
             self._associate_scipy(self._xyaxes_paraboloid, 3)
@@ -129,6 +132,13 @@ class BasePanel:
             self._associate_robust()
         elif imodel == iflexible:
             self._associate_flexible()
+
+    def _associate_with_dict(self):
+        model_dict = PANEL_MODEL_DICT[self.model]
+        self.NPAR = model_dict['npar']
+        self._solve_sub = model_dict['solve']
+        self.corr_point = model_dict['correct']
+
         
     def _warn_experimental_method(self):
         """
@@ -181,7 +191,7 @@ class BasePanel:
         """
         Associate the proper methods to enable fitting by mean determination
         """
-        self.model = PANEL_MODELS[imean]
+        self.model = PANEL_MODELS[old_mean]
         self.NPAR = 1
         self._solve_sub = self._solve_mean
         self.corr_point = self._corr_point_mean
@@ -231,12 +241,17 @@ class BasePanel:
             self._fallback_solve()
             status = False
         else:
-            try:
-                self._solve_sub()
+            if self.model == 'mean':
+                self.par = self._solve_sub(self.samples)
                 status = True
-            except np.linalg.LinAlgError:
-                self._fallback_solve()
-                status = False
+            else:
+                try:
+                    self._solve_sub()
+                    status = True
+                except np.linalg.LinAlgError:
+                    self._fallback_solve()
+                    status = False
+        self.solved = True
         return status
 
     def _fallback_solve(self):
@@ -521,12 +536,18 @@ class BasePanel:
         for isamp in range(len(self.samples)):
             xc, yc = self.samples[isamp][0:2]
             ix, iy = self.samples[isamp][2:4]
-            self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
+            if self.model == 'mean':
+                self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc, self.par)
+            else:
+                self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
             icorr += 1
         for imarg in range(len(self.margins)):
             xc, yc = self.margins[imarg][0:2]
             ix, iy = self.margins[imarg][2:4]
-            self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
+            if self.model == 'mean':
+                self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc, self.par)
+            else:
+                self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
             icorr += 1
         return self.corr
 
@@ -585,7 +606,10 @@ class BasePanel:
         screw_corr = np.zeros(nscrew)
         for iscrew in range(nscrew):
             screw = self.screws[iscrew, :]
-            screw_corr[iscrew] = fac*self.corr_point(*screw)
+            if self.model == "mean":
+                screw_corr[iscrew] = fac*self.corr_point(screw[0], screw[1], self.par)
+            else:
+                screw_corr[iscrew] = fac*self.corr_point(*screw)
         return screw_corr
 
     def plot_label(self, ax, rotate=True):
