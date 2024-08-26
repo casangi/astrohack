@@ -4,7 +4,8 @@ import graphviper.utils.logger as logger
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 
-from astrohack.utils import gauss_elimination, least_squares
+from astrohack.antenna.panel_fitting import solve_mean, correct_mean
+from astrohack.utils.algorithms import gauss_elimination, least_squares
 from astrohack.utils.constants import *
 from astrohack.utils import convert_unit
 
@@ -39,6 +40,16 @@ class BasePanel:
     colors = ['g', 'g', 'r', 'r', 'b']
     linewidth = 0.5
     linecolor = 'black'
+
+    panel_model_dict = {
+        "mean": {
+            'npar': 1,
+            'solve': solve_mean,
+            'correct': correct_mean,
+            'experimental': False
+        }
+
+    }
 
     def __init__(self, model, screws, plot_screw_pos, plot_screw_size, label, center=None, zeta=None, ref_points=None):
         """
