@@ -550,7 +550,7 @@ class BasePanel:
         aduo =     ycoor  * (1.-xcoor/f_lin) / (2.0*y2)
         atre = (y2-ycoor) * (1.+xcoor/f_lin) / (2.0*y2)
         aqua =     ycoor  * (1.+xcoor/f_lin) / (2.0*y2)
-        corr = auno*self.par[0], aduo*self.par[1], atre*self.par[2], aqua*self.par[3]
+        corr = auno*self.par[0] + aduo*self.par[1] + atre*self.par[2] + aqua*self.par[3]
         return corr
 
     def _corr_point_mean(self, xcoor, ycoor):
