@@ -9,7 +9,7 @@ from astrohack.utils.constants import *
 from astrohack.utils import convert_unit
 
 PANEL_MODELS = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
-                "rotated_paraboloid", "full_paraboloid_lst_sq"]
+                "rotated_paraboloid", "full_paraboloid_lst_sq", "flexible"]
 imean = 0
 irigid = 1
 icorscp = 2
@@ -18,6 +18,7 @@ icorrob = 4
 ixypara = 5
 irotpara = 6
 ifulllst = 7
+iflexible = 8
 
 warned = False
 
@@ -111,6 +112,8 @@ class BasePanel:
             self._associate_corotated_lst_sq()
         elif imodel == icorrob:
             self._associate_robust()
+        elif imodel == iflexible:
+            self._associate_flexible()
         
     def _warn_experimental_method(self):
         """
@@ -154,6 +157,11 @@ class BasePanel:
         self._solve_sub = self._solve_rigid
         self.corr_point = self._corr_point_rigid
 
+    def _associate_flexible(self):
+        self.NPAR = 4
+        self._solve_sub = self._solve_flexible
+        self.corr_point = self._corr_point_flexible
+
     def _associate_mean(self):
         """
         Associate the proper methods to enable fitting by mean determination
@@ -179,13 +187,13 @@ class BasePanel:
         self._solve_sub = self._solve_corotated_lst_sq
         self.corr_point = self._corr_point_corotated_lst_sq
 
-    def add_sample(self, value):
+    def add_sample(self, sample):
         """
         Add a point to the panel's list of points to be fitted
         Args:
-            value: tuple/list containing point description [xcoor,ycoor,xidx,yidx,value]
+            sample: tuple/list containing point description [xcoor,ycoor,xidx,yidx,value]
         """
-        self.samples.append(value)
+        self.samples.append(sample)
 
     def add_margin(self, value):
         """
