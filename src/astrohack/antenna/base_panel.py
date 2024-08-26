@@ -4,7 +4,7 @@ import graphviper.utils.logger as logger
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 
-from astrohack.antenna.panel_fitting import solve_mean, correct_mean, PANEL_MODEL_DICT
+from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT, PanelPoint
 from astrohack.utils.algorithms import gauss_elimination, least_squares
 from astrohack.utils.constants import *
 from astrohack.utils import convert_unit
@@ -205,15 +205,21 @@ class BasePanel:
         Args:
             sample: tuple/list containing point description [xcoor,ycoor,xidx,yidx,value]
         """
-        self.samples.append(sample)
+        if self.model in PANEL_MODEL_DICT.keys():
+            self.samples.append(PanelPoint(*sample))
+        else:
+            self.samples.append(sample)
 
-    def add_margin(self, value):
+    def add_margin(self, sample):
         """
         Add a point to the panel's list of points to be corrected, but not fitted
         Args:
-            value: tuple/list containing point description [xcoor,ycoor,xidx,yidx,value]
+            sample: tuple/list containing point description [xcoor,ycoor,xidx,yidx,value]
         """
-        self.margins.append(value)
+        if self.model in PANEL_MODEL_DICT.keys():
+            self.margins.append(PanelPoint(*sample))
+        else:
+            self.margins.append(sample)
 
     def solve(self):
         """
@@ -520,20 +526,20 @@ class BasePanel:
         lencorr = len(self.samples)+len(self.margins)
         self.corr = np.ndarray([lencorr, 3])
         icorr = 0
-        for isamp in range(len(self.samples)):
-            xc, yc = self.samples[isamp][0:2]
-            ix, iy = self.samples[isamp][2:4]
+        for point in self.samples:
             if self.model in PANEL_MODEL_DICT.keys():
-                self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc, self.par)
+                self.corr[icorr, :] = point.ix, point.iy, self.corr_point(point.xc, point.yc, self.par)
             else:
+                xc, yc = point[0:2]
+                ix, iy = point[2:4]
                 self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
             icorr += 1
-        for imarg in range(len(self.margins)):
-            xc, yc = self.margins[imarg][0:2]
-            ix, iy = self.margins[imarg][2:4]
+        for point in self.margins:
             if self.model in PANEL_MODEL_DICT.keys():
-                self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc, self.par)
+                self.corr[icorr, :] = point.ix, point.iy, self.corr_point(point.xc, point.yc, self.par)
             else:
+                xc, yc = point[0:2]
+                ix, iy = point[2:4]
                 self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
             icorr += 1
         return self.corr
@@ -645,4 +651,6 @@ class BasePanel:
             circle = plt.Circle((screw[1], screw[0]), self.plot_screw_size, color=cmap(norm(corr)),
                                 fill=True)
             ax.add_artist(circle)
+
+
 

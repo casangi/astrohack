@@ -22,13 +22,13 @@ def solve_mean(samples, _model_dict):
     """
     Fit panel surface as a simple mean of its points Z deviation
     """
-    if len(samples) > 0:
-        # Solve panel adjustments for rigid vertical shift only panels
-        data = np.array(samples)[:, -1]
-        par = [np.mean(data)]
-    else:
-        par = [0]
-    return par
+    mean = 0
+    nsamp = len(samples)
+    if nsamp > 0:
+        for point in samples:
+            mean += point.value
+        mean /= nsamp
+    return mean
 
 def correct_mean(_xc, _yc, par):
     return par[0]
@@ -44,18 +44,18 @@ def solve_rigid(samples):
     npar = 3
     matrix, vector = build_system(npar)
     for point in samples:
-        matrix[0, 0] += point[0] * point[0]
-        matrix[0, 1] += point[0] * point[1]
-        matrix[0, 2] += point[0]
+        matrix[0, 0] += point.xc * point.xc
+        matrix[0, 1] += point.xc * point.yc
+        matrix[0, 2] += point.xc
         matrix[1, 0] = matrix[0, 1]
-        matrix[1, 1] += point[1] * point[1]
-        matrix[1, 2] += point[1]
+        matrix[1, 1] += point.yc * point.yc
+        matrix[1, 2] += point.yc
         matrix[2, 0] = matrix[0, 2]
         matrix[2, 1] = matrix[1, 2]
         matrix[2, 2] += 1.0
-        vector[0] += point[-1] * point[0]
-        vector[1] += point[-1] * point[1]
-        vector[2] += point[-1]
+        vector[0] += point.value * point.xc
+        vector[1] += point.value * point.yc
+        vector[2] += point.value
 
     return gauss_elimination(matrix, vector)
 
@@ -138,3 +138,13 @@ PANEL_MODEL_DICT = {
     #     'ring_only': False
     # }
 }
+
+
+class PanelPoint:
+
+    def __init__(self, xc, yc, ix, iy, value):
+        self.xc = xc
+        self.yc = yc
+        self.ix = ix
+        self.iy = iy
+        self.value = value
