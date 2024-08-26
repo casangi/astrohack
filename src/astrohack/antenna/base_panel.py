@@ -123,14 +123,14 @@ class BasePanel:
             logger.warning("Experimental model: "+self.model)
             set_warned(True)
 
-    def _associate_scipy(self, fitting_function, NPAR):
+    def _associate_scipy(self, fitting_function, npar):
         """
         Associate the proper methods to enable scipy fitting
         Args:
             fitting_function: The fitting function to be used by scipy
-            NPAR: Number of paramenters in the fitting function
+            npar: Number of paramenters in the fitting function
         """
-        self.NPAR = NPAR
+        self.NPAR = npar
         self._solve_sub = self._solve_scipy
         self.corr_point = self._corr_point_scipy
         self._fitting_function = fitting_function
