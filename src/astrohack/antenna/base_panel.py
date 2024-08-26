@@ -9,8 +9,8 @@ from astrohack.utils.algorithms import gauss_elimination, least_squares
 from astrohack.utils.constants import *
 from astrohack.utils import convert_unit
 
-PANEL_MODELS = ["mean", "rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
-                "rotated_paraboloid", "full_paraboloid_lst_sq", "flexible", 'old_mean']
+PANEL_MODELS = ["old_mean", "old_rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
+                "rotated_paraboloid", "full_paraboloid_lst_sq", "flexible"]
 imean = 0
 irigid = 1
 icorscp = 2
@@ -20,7 +20,6 @@ ixypara = 5
 irotpara = 6
 ifulllst = 7
 iflexible = 8
-old_mean = 9
 
 warned = False
 
@@ -41,16 +40,6 @@ class BasePanel:
     colors = ['g', 'g', 'r', 'r', 'b']
     linewidth = 0.5
     linecolor = 'black'
-
-    panel_model_dict = {
-        "mean": {
-            'npar': 1,
-            'solve': solve_mean,
-            'correct': correct_mean,
-            'experimental': False
-        }
-
-    }
 
     def __init__(self, model, screws, plot_screw_pos, plot_screw_size, label, center=None, zeta=None, ref_points=None):
         """
@@ -104,41 +93,39 @@ class BasePanel:
         """
         Does the fitting method associations according to the model chosen by the user
         """
-
         try:
-            imodel = PANEL_MODELS.index(self.model)
-        except ValueError:
-            logger.error("Unknown panel model: "+self.model)
-            raise ValueError('Panel model not in list')
-        if imodel > icorrob:
-            self._warn_experimental_method()
-        if imodel == irigid:
-            self._associate_rigid()
-        elif imodel == imean:
             self._associate_with_dict()
-        elif imodel == old_mean:
-            self._associate_mean()
-        elif imodel == ixypara:
-            self._associate_scipy(self._xyaxes_paraboloid, 3)
-        elif imodel == irotpara:
-            self._associate_scipy(self._rotated_paraboloid, 4)
-        elif imodel == icorscp:
-            self._associate_scipy(self._corotated_paraboloid, 3)
-        elif imodel == ifulllst:
-            self._associate_least_squares()
-        elif imodel == icorlst:
-            self._associate_corotated_lst_sq()
-        elif imodel == icorrob:
-            self._associate_robust()
-        elif imodel == iflexible:
-            self._associate_flexible()
+        except KeyError:
+            try:
+                imodel = PANEL_MODELS.index(self.model)
+            except ValueError:
+                logger.error("Unknown panel model: "+self.model)
+                raise ValueError('Panel model not in list')
+            if imodel == irigid:
+                self._associate_rigid()
+            elif imodel == imean:
+                self._associate_mean()
+            elif imodel == ixypara:
+                self._associate_scipy(self._xyaxes_paraboloid, 3)
+            elif imodel == irotpara:
+                self._associate_scipy(self._rotated_paraboloid, 4)
+            elif imodel == icorscp:
+                self._associate_scipy(self._corotated_paraboloid, 3)
+            elif imodel == ifulllst:
+                self._associate_least_squares()
+            elif imodel == icorlst:
+                self._associate_corotated_lst_sq()
+            elif imodel == icorrob:
+                self._associate_robust()
+            elif imodel == iflexible:
+                self._associate_flexible()
 
     def _associate_with_dict(self):
-        model_dict = PANEL_MODEL_DICT[self.model]
-        self.NPAR = model_dict['npar']
-        self._solve_sub = model_dict['solve']
-        self.corr_point = model_dict['correct']
-
+        self.model_dict = PANEL_MODEL_DICT[self.model]
+        self._warn_experimental_method()
+        self.NPAR = self.model_dict['npar']
+        self._solve_sub = self.model_dict['solve']
+        self.corr_point = self.model_dict['correct']
         
     def _warn_experimental_method(self):
         """
@@ -148,7 +135,7 @@ class BasePanel:
             return
         else:
 
-            logger.warning("Experimental model: "+self.model)
+            logger.warning("Using new mechanism: "+self.model)
             set_warned(True)
 
     def _associate_scipy(self, fitting_function, npar):
@@ -191,7 +178,7 @@ class BasePanel:
         """
         Associate the proper methods to enable fitting by mean determination
         """
-        self.model = PANEL_MODELS[old_mean]
+        self.model = PANEL_MODELS[imean]
         self.NPAR = 1
         self._solve_sub = self._solve_mean
         self.corr_point = self._corr_point_mean
@@ -241,7 +228,7 @@ class BasePanel:
             self._fallback_solve()
             status = False
         else:
-            if self.model == 'mean':
+            if self.model in PANEL_MODEL_DICT.keys():
                 self.par = self._solve_sub(self.samples)
                 status = True
             else:
@@ -536,7 +523,7 @@ class BasePanel:
         for isamp in range(len(self.samples)):
             xc, yc = self.samples[isamp][0:2]
             ix, iy = self.samples[isamp][2:4]
-            if self.model == 'mean':
+            if self.model in PANEL_MODEL_DICT.keys():
                 self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc, self.par)
             else:
                 self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
@@ -544,7 +531,7 @@ class BasePanel:
         for imarg in range(len(self.margins)):
             xc, yc = self.margins[imarg][0:2]
             ix, iy = self.margins[imarg][2:4]
-            if self.model == 'mean':
+            if self.model in PANEL_MODEL_DICT.keys():
                 self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc, self.par)
             else:
                 self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
@@ -606,7 +593,7 @@ class BasePanel:
         screw_corr = np.zeros(nscrew)
         for iscrew in range(nscrew):
             screw = self.screws[iscrew, :]
-            if self.model == "mean":
+            if self.model in PANEL_MODEL_DICT.keys():
                 screw_corr[iscrew] = fac*self.corr_point(screw[0], screw[1], self.par)
             else:
                 screw_corr[iscrew] = fac*self.corr_point(*screw)
