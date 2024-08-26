@@ -707,7 +707,7 @@ class AntennaSurface:
             self.panel_model_array[ipanel] = self.panels[ipanel].model
             self.panel_fallback[ipanel] = self.panels[ipanel].fall_back_fit
 
-    def export_screws(self, filename, unit="mm"):
+    def export_screws(self, filename, unit="mm", comment_char='#'):
         """
         Export screw adjustments for all panels onto an ASCII file
         Args:
@@ -719,22 +719,26 @@ class AntennaSurface:
         freq = clight/self.wavelength/1e9
         if freq >= 1:
             frequnit = 'GHz'
-        else:
+        elif freq >= 1e-3:
             frequnit = 'MHz'
             freq *= 1e3
-        outfile += f"# Frequency = {freq:.1f} {frequnit}\n"
-        outfile += "# Adjustments are in " + unit + 2 * lnbr
-        outfile += "# Lower means away from subreflector" + lnbr
-        outfile += "# Raise means toward the subreflector" + lnbr
-        outfile += "# LOWER the panel if the number is POSITIVE" + lnbr
-        outfile += "# RAISE the panel if the number is NEGATIVE" + lnbr
-        outfile += 2 * lnbr
+        else:
+            frequnit = 'kHz'
+            freq *= 1e6
+        outfile += f"{comment_char} Frequency = {freq:.5f} {frequnit}\n"
+        outfile += f"{comment_char} Adjustments are in {unit}{lnbr}"
+        outfile += comment_char+lnbr
+        outfile += f"{comment_char} Lower means away from subreflector{lnbr}"
+        outfile += f"{comment_char} Raise means toward the subreflector{lnbr}"
+        outfile += f"{comment_char} LOWER the panel if the number is POSITIVE{lnbr}"
+        outfile += f"{comment_char} RAISE the panel if the number is NEGATIVE{lnbr}"
+        outfile += 2*(comment_char+lnbr)
         spc = ' '
-        outfile += f'Panel{3*spc}'
+        outfile += f'{comment_char} Panel{2*spc}'
         nscrews = len(self.telescope.screw_description)
         for screw in self.telescope.screw_description:
             outfile += f"{4*spc}{screw:2s}{4*spc}"
-        outfile += f'Fallback{4*spc}Model\n'
+        outfile += f'Fallback{4*spc}Model{lnbr}'
         fac = convert_unit('m', unit, 'length')
 
         for ipanel in range(len(self.panel_labels)):

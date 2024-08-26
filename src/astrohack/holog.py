@@ -26,7 +26,7 @@ def holog(
         cell_size: Union[int, Array, List] = None,
         image_name: str = None,
         padding_factor: int = 10,
-        grid_interpolation_mode: str = "linear",
+        grid_interpolation_mode: str = "gaussian",
         chan_average: bool = True,
         chan_tolerance_factor: float = 0.005,
         scan_average: bool = True,
@@ -64,11 +64,13 @@ def holog(
     :param parallel: Run in parallel with Dask or in serial., defaults to False
     :type parallel: bool, optional
 
-    :param grid_interpolation_mode: Method of interpolation used when gridding data. This is done using the \
-    `scipy.interpolate.griddata` method. For more information on the interpolation see `scipy.interpolate \
-    <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html#scipy.interpolate.griddata>`_,\
-     defaults to "linear"
-    :type grid_interpolation_mode: str, optional. Available options: {"linear", "nearest", "cubic"}
+    :param grid_interpolation_mode: Method of interpolation used when gridding data. For modes 'linear', 'nearest' and
+    'cubic' this is done using the `scipy.interpolate.griddata` method. For more information see `scipy.interpolate \
+    <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html#scipy.interpolate.griddata>`_.\
+    The remaining mode 'gaussian' convolves the visibilities with a gaussian kernel with a FWHM equal HPBW for the \
+    primary beam main lobe at the given frequency, this is slower than `scipy.interpolate.griddata` but better at\
+    preserving the small scales variations in the beam. Defaults to "gaussian".
+    :type grid_interpolation_mode: str, optional. Available options: {"gaussian", "linear", "nearest", "cubic"}
 
     :param chan_average: Boolean dictating whether the channel average is computed and written to the output holog \
     file., defaults to True

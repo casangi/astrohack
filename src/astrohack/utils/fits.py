@@ -311,9 +311,8 @@ def export_to_fits_holog_chunk(parm_dict):
                    add_prefix(basename, 'beam_amplitude') + '.fits', 'Normalized', 'image')
         write_fits(beam_header, 'Complex beam phase', np.angle(beam),
                    add_prefix(basename, 'beam_phase') + '.fits', 'Radians', 'image')
-    wavelength = clight / input_xds.chan.values[0]
-    aperture_header = axis_to_fits_header(base_header, input_xds.u.values * wavelength, 1, 'X----LIN', 'm')
-    aperture_header = axis_to_fits_header(aperture_header, input_xds.u.values * wavelength, 2, 'Y----LIN', 'm')
+    aperture_header = axis_to_fits_header(base_header, input_xds.u.values, 1, 'X----LIN', 'm')
+    aperture_header = axis_to_fits_header(aperture_header, input_xds.u.values, 2, 'Y----LIN', 'm')
     aperture_header = resolution_to_fits_header(aperture_header, aperture_resolution)
     aperture = input_xds['APERTURE'].values
     if parm_dict['complex_split'] == 'cartesian':
@@ -327,8 +326,8 @@ def export_to_fits_holog_chunk(parm_dict):
         write_fits(aperture_header, 'Complex aperture phase', np.angle(aperture),
                    add_prefix(basename, 'aperture_phase') + '.fits', 'rad', 'image')
 
-    phase_amp_header = axis_to_fits_header(base_header, input_xds.u_prime.values * wavelength, 1, 'X----LIN', 'm')
-    phase_amp_header = axis_to_fits_header(phase_amp_header, input_xds.v_prime.values * wavelength, 2, 'Y----LIN', 'm')
+    phase_amp_header = axis_to_fits_header(base_header, input_xds.u_prime.values, 1, 'X----LIN', 'm')
+    phase_amp_header = axis_to_fits_header(phase_amp_header, input_xds.v_prime.values, 2, 'Y----LIN', 'm')
     phase_amp_header = resolution_to_fits_header(phase_amp_header, aperture_resolution)
     write_fits(phase_amp_header, 'Cropped aperture corrected phase', input_xds['CORRECTED_PHASE'].values,
                add_prefix(basename, 'corrected_phase') + '.fits', 'rad', 'image')
