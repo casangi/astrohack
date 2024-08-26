@@ -15,10 +15,10 @@ def build_system(size):
 
 
 ###################################
-###  MEAN                       ###
+###  Mean                       ###
 ###################################
 
-def solve_mean(samples, _model_dict):
+def solve_mean(samples, _ref_points):
     """
     Fit panel surface as a simple mean of its points Z deviation
     """
@@ -28,16 +28,16 @@ def solve_mean(samples, _model_dict):
         for point in samples:
             mean += point.value
         mean /= nsamp
-    return mean
+    return [mean]
 
-def correct_mean(_xc, _yc, par):
-    return par[0]
+def correct_mean(_xc, _yc, model_fit, _ref_points):
+    return model_fit[0]
 
 ###################################
-###  RIGID                      ###
+###  Rigid                      ###
 ###################################
 
-def solve_rigid(samples):
+def solve_rigid(samples, _ref_points):
     """
     Fit panel surface using AIPS gaussian elimination model for rigid panels
     """
@@ -59,7 +59,7 @@ def solve_rigid(samples):
 
     return gauss_elimination(matrix, vector)
 
-def correct_rigid(xc, yc, par):
+def correct_rigid(xc, yc, model_fit, _ref_points):
     """
     Computes fitted value for point [xcoor, ycoor] using AIPS gaussian elimination model for rigid panels
     Args:
@@ -69,7 +69,54 @@ def correct_rigid(xc, yc, par):
     Returns:
     Fitted value at xcoor,ycoor
     """
-    return xc * par[0] + yc * par[1] + par[2]
+    return xc * model_fit[0] + yc * model_fit[1] + model_fit[2]
+
+###################################
+###  Flexible                   ###
+###################################
+
+def _flexible_coeffs(xc, yc, ref_points):
+    x1, x2, y2 = ref_points
+    f_lin = x1 + yc*(x2-x1)/y2
+    coeffs = np.ndarray(4)
+    coeffs[0] = (y2-yc) * (1.-xc/f_lin) / (2.0*y2)
+    coeffs[1] =     yc  * (1.-xc/f_lin) / (2.0*y2)
+    coeffs[2] = (y2-yc) * (1.+xc/f_lin) / (2.0*y2)
+    coeffs[3] =     yc  * (1.+xc/f_lin) / (2.0*y2)
+    return coeffs
+
+def solve_flexible(samples, ref_points):
+    # this can only work for ringed panels...
+    system, vector = build_system(4)
+    for point in samples:
+        auno, aduo, atre, aqua = _flexible_coeffs(point.xc, point.yc, ref_points)
+        system[0,0] += auno*auno
+        system[0,1] += auno*aduo
+        system[0,2] += auno*atre
+        system[0,3] += auno*aqua
+        system[1,1] += aduo*aduo
+        system[1,2] += aduo*atre
+        system[1,3] += aduo*aqua
+        system[2,2] += atre*atre
+        system[2,3] += atre*aqua
+        system[3,3] += aqua*aqua
+        vector[0]   += point.value*auno
+        vector[1]   += point.value*aduo
+        vector[2]   += point.value*atre
+        vector[3]   += point.value*aqua
+
+    system[1,0] = system[0,1]
+    system[2,0] = system[0,2]
+    system[2,1] = system[1,2]
+    system[3,0] = system[0,3]
+    system[3,1] = system[1,3]
+    system[3,2] = system[2,3]
+    return gauss_elimination(system, vector)
+
+def correct_flexible(xc, yc, model_fit, ref_points):
+    coeffs = _flexible_coeffs(xc, yc, ref_points)
+    return np.sum(coeffs * np.array(model_fit))
+
 
 
 
@@ -88,13 +135,13 @@ PANEL_MODEL_DICT = {
         'experimental': False,
         'ring_only': False
     },
-    # "flexible": {
-    #     'npar': 1,
-    #     'solve': solve_mean,
-    #     'correct': correct_mean,
-    #     'experimental': False,
-    #     'ring_only': False
-    # },
+    "flexible": {
+        'npar': 4,
+        'solve': solve_flexible,
+        'correct': correct_flexible,
+        'experimental': False,
+        'ring_only': False
+    },
     # "corotated_scipy": {
     #     'npar': 1,
     #     'solve': solve_mean,

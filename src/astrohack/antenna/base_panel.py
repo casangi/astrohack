@@ -10,7 +10,7 @@ from astrohack.utils.constants import *
 from astrohack.utils import convert_unit
 
 PANEL_MODELS = ["old_mean", "old_rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
-                "rotated_paraboloid", "full_paraboloid_lst_sq", "flexible"]
+                "rotated_paraboloid", "full_paraboloid_lst_sq", "old_flexible"]
 imean = 0
 irigid = 1
 icorscp = 2
@@ -235,7 +235,7 @@ class BasePanel:
             status = False
         else:
             if self.model in PANEL_MODEL_DICT.keys():
-                self.par = self._solve_sub(self.samples)
+                self.par = self._solve_sub(self.samples, self.ref_points)
                 status = True
             else:
                 try:
@@ -528,7 +528,7 @@ class BasePanel:
         icorr = 0
         for point in self.samples:
             if self.model in PANEL_MODEL_DICT.keys():
-                self.corr[icorr, :] = point.ix, point.iy, self.corr_point(point.xc, point.yc, self.par)
+                self.corr[icorr, :] = point.ix, point.iy, self.corr_point(point.xc, point.yc, self.par, self.ref_points)
             else:
                 xc, yc = point[0:2]
                 ix, iy = point[2:4]
@@ -536,7 +536,7 @@ class BasePanel:
             icorr += 1
         for point in self.margins:
             if self.model in PANEL_MODEL_DICT.keys():
-                self.corr[icorr, :] = point.ix, point.iy, self.corr_point(point.xc, point.yc, self.par)
+                self.corr[icorr, :] = point.ix, point.iy, self.corr_point(point.xc, point.yc, self.par, self.ref_points)
             else:
                 xc, yc = point[0:2]
                 ix, iy = point[2:4]
@@ -600,7 +600,7 @@ class BasePanel:
         for iscrew in range(nscrew):
             screw = self.screws[iscrew, :]
             if self.model in PANEL_MODEL_DICT.keys():
-                screw_corr[iscrew] = fac*self.corr_point(screw[0], screw[1], self.par)
+                screw_corr[iscrew] = fac*self.corr_point(screw[0], screw[1], self.par, self.ref_points)
             else:
                 screw_corr[iscrew] = fac*self.corr_point(*screw)
         return screw_corr
