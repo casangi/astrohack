@@ -427,6 +427,51 @@ class BasePanel:
         self.solved = True
         return
 
+    def _solve_flexible(self):
+        # this can only work for ringed panels....
+        fi = self.theta2 - self.theta1
+        x1 = self.inrad * np.sin(fi/2.0)
+        x2 = self.ourad * np.sin(fi/2.0)
+        # y1 = self.inrad * np.cos(fi/2.0)
+        y2 = self.ourad * np.cos(fi/2.0)
+
+        system = np.zeros([self.NPAR, self.NPAR])
+        vector = np.zeros(self.NPAR)
+        for sample in self.samples:
+            xc = sample[0]
+            yc = sample[1]
+            value = sample[-1]
+            if value != 0:
+                f_lin = x1 + yc*(x2-x1)/y2
+                auno = (y2-yc) * (1.-xc/f_lin) / (2.0*y2)
+                aduo =     yc  * (1.-xc/f_lin) / (2.0*y2)
+                atre = (y2-yc) * (1.+xc/f_lin) / (2.0*y2)
+                aqua =     yc  * (1.+xc/f_lin) / (2.0*y2)
+                system[0,0] += auno*auno
+                system[0,1] += auno*aduo
+                system[0,2] += auno*atre
+                system[0,3] += auno*aqua
+                system[1,1] += aduo*aduo
+                system[1,2] += aduo*atre
+                system[1,3] += aduo*aqua
+                system[2,2] += atre*atre
+                system[2,3] += atre*aqua
+                system[3,3] += aqua*aqua
+                vector[0]   += value*auno
+                vector[1]   += value*aduo
+                vector[2]   += value*atre
+                vector[3]   += value*aqua
+
+        system[1,0] = system[0,1]
+        system[2,0] = system[0,2]
+        system[2,1] = system[1,2]
+        system[3,0] = system[0,3]
+        system[3,1] = system[1,3]
+        system[3,2] = system[2,3]
+        self.par = gauss_elimination(system, vector)
+        self.solved = True
+        return
+
     def _solve_mean(self):
         """
         Fit panel surface as a simple mean of its points Z deviation
