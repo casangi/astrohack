@@ -95,9 +95,11 @@ class TestClassAntennaSurface:
         """
         Tests gain computations by using a zero array and a random array
         """
-        zgains = self.tant._gains_array(self.zero)
+        self.tant.phase = self.zero
+        zgains = self.tant.gains()
         assert zgains[0] == zgains[1], 'Theoretical gains should be equal to real gains for a perfect antenna'
-        rgains = self.tant._gains_array(self.rand)
+        self.tant.phase = self.rand
+        rgains = self.tant.gains()
         assert rgains[0] < rgains[1], 'Real gains need to be inferior to theoretical gains on a noisy surface'
 
     def test_get_rms(self):
