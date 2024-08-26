@@ -531,6 +531,20 @@ class BasePanel:
         """
         return xcoor * self.par[0] + ycoor * self.par[1] + self.par[2]
 
+    def _corr_point_flexible(self, xcoor, ycoor):
+        fi = self.theta2 - self.theta1
+        x1 = self.inrad * np.sin(fi/2.0)
+        x2 = self.ourad * np.sin(fi/2.0)
+        # y1 = self.inrad * np.cos(fi/2.0)
+        y2 = self.ourad * np.cos(fi/2.0)
+        f_lin = x1 + ycoor*(x2-x1)/y2
+        auno = (y2-ycoor) * (1.-xcoor/f_lin) / (2.0*y2)
+        aduo =     ycoor  * (1.-xcoor/f_lin) / (2.0*y2)
+        atre = (y2-ycoor) * (1.+xcoor/f_lin) / (2.0*y2)
+        aqua =     ycoor  * (1.+xcoor/f_lin) / (2.0*y2)
+        corr = auno*self.par[0], aduo*self.par[1], atre*self.par[2], aqua*self.par[3]
+        return corr
+
     def _corr_point_mean(self, xcoor, ycoor):
         """
         Computes fitted value for point [xcoor, ycoor] using AIPS shift only panels
