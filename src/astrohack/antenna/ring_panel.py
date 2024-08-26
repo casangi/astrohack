@@ -7,7 +7,7 @@ class RingPanel(BasePanel):
     # This class describes and treats panels that are arranged in
     # rings on the Antenna surface
 
-    def __init__(self, kind, angle, ipanel, label, inrad, ourad, margin=0.20, screw_scheme=None, screw_offset=None,
+    def __init__(self, model, angle, ipanel, label, inrad, ourad, margin=0.20, screw_scheme=None, screw_offset=None,
                  plot_screw_size=0.20):
         """
         Initializes a panel that is a section of a ring in a circular antenna
@@ -25,7 +25,7 @@ class RingPanel(BasePanel):
             rotated_paraboloid: fitted using scipy.optimize, bending axes can be rotated by an arbitrary angle
             full_paraboloid_lst_sq: Full 9 parameter paraboloid fitted using least_squares method, heavily overfits
         Args:
-            kind: What kind of surface fitting method to be used
+            model: What kind of surface fitting method to be used
             angle: Azimuthal span of the panel
             ipanel: Panel number clockwise from top
             label: Panel label
@@ -49,8 +49,13 @@ class RingPanel(BasePanel):
         self.center = [rt * np.cos(zeta), rt * np.sin(zeta)]
         screws = self._init_screws(screw_scheme, screw_offset)
         plot_screw_pos = self._init_screws(screw_scheme, 2*plot_screw_size)
+        fi = self.theta2 - self.theta1
+        x1 = self.inrad * np.sin(fi/2.0)
+        x2 = self.ourad * np.sin(fi/2.0)
+        y2 = self.ourad * np.cos(fi/2.0)
         # Now we are ready to initialize the base object
-        super().__init__(kind, screws, plot_screw_pos, plot_screw_size, label, center=self.center, zeta=zeta)
+        super().__init__(model, screws, plot_screw_pos, plot_screw_size, label, center=self.center, zeta=zeta,
+                         ref_points = [x1, x2, y2])
 
     def _init_screws(self, scheme, offset):
         """
@@ -112,7 +117,7 @@ class RingPanel(BasePanel):
         """
         print("########################################")
         print("{0:20s}={1:8s}".format("ipanel", self.label))
-        print("{0:20s}={1:8s}".format("kind", " " + self.kind))
+        print("{0:20s}={1:8s}".format("model", " " + self.model))
         print("{0:20s}={1:8.5f}".format("inrad", self.inrad))
         print("{0:20s}={1:8.5f}".format("ourad", self.ourad))
         print("{0:20s}={1:8.5f}".format("theta1", self.theta1))

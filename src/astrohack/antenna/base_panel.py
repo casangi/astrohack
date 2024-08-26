@@ -40,7 +40,7 @@ class BasePanel:
     linewidth = 0.5
     linecolor = 'black'
 
-    def __init__(self, model, screws, plot_screw_pos, plot_screw_size, label, center=None, zeta=None):
+    def __init__(self, model, screws, plot_screw_pos, plot_screw_size, label, center=None, zeta=None, ref_points=None):
         """
         Initializes the base panel with the appropriated fitting methods and providing basic functionality
         Fitting method models are:
@@ -82,6 +82,10 @@ class BasePanel:
             self.zeta = 0
         else:
             self.zeta = zeta
+        if ref_points is None:
+            self.ref_points = [0, 0, 0]
+        else:
+            self.ref_points = ref_points
         self._associate()
 
     def _associate(self):
@@ -435,13 +439,18 @@ class BasePanel:
         self.solved = True
         return
 
+    def _flexible_coeffs(self, xc, yc):
+        x1, x2, y2 = self.ref_points
+        f_lin = x1 + yc*(x2-x1)/y2
+        coeffs = np.ndarray(self.NPAR)
+        coeffs[0] = (y2-yc) * (1.-xc/f_lin) / (2.0*y2)
+        coeffs[1] =     yc  * (1.-xc/f_lin) / (2.0*y2)
+        coeffs[2] = (y2-yc) * (1.+xc/f_lin) / (2.0*y2)
+        coeffs[3] =     yc  * (1.+xc/f_lin) / (2.0*y2)
+        return coeffs
+
     def _solve_flexible(self):
-        # this can only work for ringed panels....
-        fi = self.theta2 - self.theta1
-        x1 = self.inrad * np.sin(fi/2.0)
-        x2 = self.ourad * np.sin(fi/2.0)
-        # y1 = self.inrad * np.cos(fi/2.0)
-        y2 = self.ourad * np.cos(fi/2.0)
+        # this can only work for ringed panels...
 
         system = np.zeros([self.NPAR, self.NPAR])
         vector = np.zeros(self.NPAR)
@@ -450,11 +459,7 @@ class BasePanel:
             yc = sample[1]
             value = sample[-1]
             if value != 0:
-                f_lin = x1 + yc*(x2-x1)/y2
-                auno = (y2-yc) * (1.-xc/f_lin) / (2.0*y2)
-                aduo =     yc  * (1.-xc/f_lin) / (2.0*y2)
-                atre = (y2-yc) * (1.+xc/f_lin) / (2.0*y2)
-                aqua =     yc  * (1.+xc/f_lin) / (2.0*y2)
+                auno, aduo, atre, aqua = self._flexible_coeffs(xc, yc)
                 system[0,0] += auno*auno
                 system[0,1] += auno*aduo
                 system[0,2] += auno*atre
@@ -540,18 +545,8 @@ class BasePanel:
         return xcoor * self.par[0] + ycoor * self.par[1] + self.par[2]
 
     def _corr_point_flexible(self, xcoor, ycoor):
-        fi = self.theta2 - self.theta1
-        x1 = self.inrad * np.sin(fi/2.0)
-        x2 = self.ourad * np.sin(fi/2.0)
-        # y1 = self.inrad * np.cos(fi/2.0)
-        y2 = self.ourad * np.cos(fi/2.0)
-        f_lin = x1 + ycoor*(x2-x1)/y2
-        auno = (y2-ycoor) * (1.-xcoor/f_lin) / (2.0*y2)
-        aduo =     ycoor  * (1.-xcoor/f_lin) / (2.0*y2)
-        atre = (y2-ycoor) * (1.+xcoor/f_lin) / (2.0*y2)
-        aqua =     ycoor  * (1.+xcoor/f_lin) / (2.0*y2)
-        corr = auno*self.par[0] + aduo*self.par[1] + atre*self.par[2] + aqua*self.par[3]
-        return corr
+        coeffs = self._flexible_coeffs(xcoor, ycoor)
+        return np.sum(coeffs * np.array(self.par))
 
     def _corr_point_mean(self, xcoor, ycoor):
         """
