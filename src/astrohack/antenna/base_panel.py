@@ -64,7 +64,7 @@ class BasePanel:
             center: Panel center
             zeta: panel center angle
         """
-        self.model = model
+        self.model_name = model
         self.solved = False
         self.fall_back_fit = False
         self.label = label
@@ -97,9 +97,9 @@ class BasePanel:
             self._associate_with_dict()
         except KeyError:
             try:
-                imodel = PANEL_MODELS.index(self.model)
+                imodel = PANEL_MODELS.index(self.model_name)
             except ValueError:
-                logger.error("Unknown panel model: "+self.model)
+                logger.error("Unknown panel model: " + self.model_name)
                 raise ValueError('Panel model not in list')
             if imodel == irigid:
                 self._associate_rigid()
@@ -123,7 +123,7 @@ class BasePanel:
             self.get_corrections = self.get_corrections_old
 
     def _associate_with_dict(self):
-        self.model_obj = PanelModel(PANEL_MODEL_DICT[self.model], self.zeta, self.ref_points, self.center)
+        self.model = PanelModel(PANEL_MODEL_DICT[self.model_name], self.zeta, self.ref_points, self.center)
         self._warn_experimental_method()
         self.solve = self.solve_new
         self.get_corrections = self.get_corrections_new
@@ -136,7 +136,7 @@ class BasePanel:
             return
         else:
 
-            logger.warning("Using new mechanism: "+self.model)
+            logger.warning("Using new mechanism: " + self.model_name)
             set_warned(True)
 
     def _associate_scipy(self, fitting_function, npar):
@@ -179,7 +179,7 @@ class BasePanel:
         """
         Associate the proper methods to enable fitting by mean determination
         """
-        self.model = PANEL_MODELS[imean]
+        self.model_name = PANEL_MODELS[imean]
         self.NPAR = 1
         self._solve_sub = self._solve_mean
         self.corr_point = self._corr_point_mean
@@ -206,7 +206,7 @@ class BasePanel:
         Args:
             sample: tuple/list containing point description [xcoor,ycoor,xidx,yidx,value]
         """
-        if self.model in PANEL_MODEL_DICT.keys():
+        if self.model_name in PANEL_MODEL_DICT.keys():
             self.samples.append(PanelPoint(*sample))
         else:
             self.samples.append(sample)
@@ -217,7 +217,7 @@ class BasePanel:
         Args:
             sample: tuple/list containing point description [xcoor,ycoor,xidx,yidx,value]
         """
-        if self.model in PANEL_MODEL_DICT.keys():
+        if self.model_name in PANEL_MODEL_DICT.keys():
             self.margins.append(PanelPoint(*sample))
         else:
             self.margins.append(sample)
@@ -245,12 +245,12 @@ class BasePanel:
         return status
 
     def solve_new(self):
-        if len(self.samples) < self.model_obj.npar:
+        if len(self.samples) < self.model.npar:
             self._fallback_solve()
             status = False
         else:
             try:
-                self.model_obj.solve(self.samples)
+                self.model.solve(self.samples)
                 status = True
             except np.linalg.LinAlgError:
                 self._fallback_solve()
@@ -362,7 +362,7 @@ class BasePanel:
             p0 = [1e2, 1e2, np.mean(devia)]
         else:
             p0 = x0
-        if self.model == PANEL_MODELS[irotpara]:
+        if self.model_name == PANEL_MODELS[irotpara]:
             liminf.append(0.0)
             limsup.append(np.pi)
             p0.append(0)
@@ -553,7 +553,7 @@ class BasePanel:
     def get_corrections_new(self):
         if not self.solved:
             raise Exception("Cannot correct a panel that is not solved")
-        self.corr = self.model_obj.correct(self.samples, self.margins)
+        self.corr = self.model.correct(self.samples, self.margins)
         return self.corr
 
     def _corr_point_scipy(self, xcoor, ycoor):
@@ -611,9 +611,9 @@ class BasePanel:
         screw_corr = np.zeros(nscrew)
         for iscrew in range(nscrew):
             screw = self.screws[iscrew, :]
-            if self.model in PANEL_MODEL_DICT.keys():
+            if self.model_name in PANEL_MODEL_DICT.keys():
                 point = PanelPoint(screw[0], screw[1], 0, 0, 0)
-                screw_corr[iscrew] = fac*self.model_obj.correct_point(point)
+                screw_corr[iscrew] = fac*self.model.correct_point(point)
             else:
                 screw_corr[iscrew] = fac*self.corr_point(*screw)
         return screw_corr

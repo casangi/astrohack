@@ -117,7 +117,7 @@ class RingPanel(BasePanel):
         """
         print("########################################")
         print("{0:20s}={1:8s}".format("ipanel", self.label))
-        print("{0:20s}={1:8s}".format("model", " " + self.model))
+        print("{0:20s}={1:8s}".format("model", " " + self.model_name))
         print("{0:20s}={1:8.5f}".format("inrad", self.inrad))
         print("{0:20s}={1:8.5f}".format("ourad", self.ourad))
         print("{0:20s}={1:8.5f}".format("theta1", self.theta1))

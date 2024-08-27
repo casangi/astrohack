@@ -24,7 +24,7 @@ class TestBasePanel:
         label = 'TEST'
         lepanel = BasePanel(PANEL_MODELS[imean], screws, screws, 0.1, label)
         assert lepanel.label == label, "Internal panel label not what expected"
-        assert lepanel.model == PANEL_MODELS[imean], "Internal model does not match input"
+        assert lepanel.model_name == PANEL_MODELS[imean], "Internal model does not match input"
         assert lepanel.samples == [], 'List of samples should be empty'
         assert lepanel.margins == [], 'list of pixels in the margin should be empty'
         assert lepanel.corr is None, 'List of corrections should be None'

@@ -51,7 +51,7 @@ class PolygonPanel(BasePanel):
         """
         print("########################################")
         print("{0:20s}={1:8d}".format("ipanel", self.ipanel))
-        print("{0:20s}={1:8s}".format("model", " " + self.model))
+        print("{0:20s}={1:8s}".format("model", " " + self.model_name))
         print("{0:20s}={1:8d}".format("nsamp", self.nsamp))
         if verbose:
             for isamp in range(self.nsamp):

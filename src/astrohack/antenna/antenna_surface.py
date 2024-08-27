@@ -701,7 +701,7 @@ class AntennaSurface:
             try:
                 p_npar = panel.NPAR
             except AttributeError:
-                p_npar = panel.model_obj.npar
+                p_npar = panel.model.npar
             if p_npar > max_par:
                 max_par = p_npar
 
@@ -716,11 +716,11 @@ class AntennaSurface:
         for ipanel in range(npanels):
             self.panel_labels[ipanel] = self.panels[ipanel].label
             try:
-                self.panel_pars[ipanel, :] = self.panels[ipanel].model_obj.parameters
+                self.panel_pars[ipanel, :] = self.panels[ipanel].model.parameters
             except AttributeError:
                 self.panel_pars[ipanel, :] = self.panels[ipanel].par
             self.screw_adjustments[ipanel, :] = self.panels[ipanel].export_screws(unit='m')
-            self.panel_model_array[ipanel] = self.panels[ipanel].model
+            self.panel_model_array[ipanel] = self.panels[ipanel].model_name
             self.panel_fallback[ipanel] = self.panels[ipanel].fall_back_fit
 
     def export_screws(self, filename, unit="mm", comment_char='#'):
