@@ -274,13 +274,55 @@ def corotated_paraboloid_scipy(params, ucurv, vcurv, zoff):
     Returns:
     Paraboloid value at X and Y
     """
-    x, y = params[0:2]
-    xc, yc = params[2:4]
+    xc, yc = params[0:2]
+    x0, y0 = params[2:4]
     zeta = params[4]
-    u = (x - xc) * np.cos(zeta) - (y - yc) * np.sin(zeta)
-    v = (x - xc) * np.sin(zeta) + (y - yc) * np.cos(zeta)
+    u = (xc - x0) * np.cos(zeta) - (yc - y0) * np.sin(zeta)
+    v = (xc - x0) * np.sin(zeta) + (yc - y0) * np.cos(zeta)
     return ucurv * u**2 + vcurv * v**2 + zoff
 
+
+def xyaxes_paraboloid_scipy(params, ucurv, vcurv, zoff):
+    """
+    Surface model to be used in fitting with scipy
+    Assumes that the center of the paraboloid is the center of the panel
+    In this model the panel can only bend in the x and y directions
+    Args:
+        coords: [x,y] coordinate pair for point
+        ucurv: curvature in x direction
+        vcurv: curvature in y direction
+        zoff:  Z offset of the paraboloid
+
+    Returns:
+        Paraboloid value at X and Y
+    """
+    xc, yc = params[0:2]
+    x0, y0 = params[2:4]
+    u = xc - x0
+    v = yc - y0
+    return ucurv * u**2 + vcurv * v**2 + zoff
+
+
+def rotated_paraboloid_scipy(params, ucurv, vcurv, zoff, theta):
+    """
+    Surface model to be used in fitting with scipy
+    Assumes that the center of the paraboloid is the center of the panel
+    This model is degenerate in the combinations of theta, ucurv and vcurv
+    Args:
+        coords: [x,y] coordinate pair for point
+        ucurv: curvature in projected u direction
+        vcurv: curvature in projected v direction
+        zoff:  Z offset of the paraboloid
+        theta: Angle between x,y and u,v coordinate systems
+
+    Returns:
+        Paraboloid value at X and Y
+    """
+    xc, yc = params[0:2]
+    x0, y0 = params[2:4]
+    u = (xc - x0) * np.cos(theta) - (yc - y0) * np.sin(theta)
+    v = (xc - x0) * np.sin(theta) + (yc - y0) * np.cos(theta)
+    return ucurv * u**2 + vcurv * v**2 + zoff
 
 
 PANEL_MODEL_DICT = {
@@ -332,20 +374,22 @@ PANEL_MODEL_DICT = {
         'ring_only': False,
         'fitting_function': corotated_paraboloid_scipy
     },
-    # "xy_paraboloid": {
-    #     'npar': 1,
-    #     'solve': solve_mean,
-    #     'correct': correct_mean,
-    #     'experimental': False,
-    #     'ring_only': False
-    # },
-    # "rotated_paraboloid": {
-    #     'npar': 1,
-    #     'solve': solve_mean,
-    #     'correct': correct_mean,
-    #     'experimental': False,
-    #     'ring_only': False
-    # },
+    "xy_paraboloid": {
+        'npar': 3,
+        'solve': solve_scipy,
+        'correct': correct_scipy,
+        'experimental': False,
+        'ring_only': False,
+        'fitting_function': xyaxes_paraboloid_scipy
+    },
+    "rotated_paraboloid": {
+        'npar': 4,
+        'solve': solve_scipy,
+        'correct': correct_scipy,
+        'experimental': False,
+        'ring_only': False,
+        'fitting_function': rotated_paraboloid_scipy
+    },
     "full_paraboloid_lst_sq": {
         'npar': 9,
         'solve': solve_full_paraboloid,
@@ -397,12 +441,6 @@ class PanelModel:
     def correct_point(self, point):
         _, _, correction = self._correct_point(self, point)
         return correction
-
-
-
-#
-
-
 
 
 class PanelPoint:

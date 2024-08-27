@@ -9,8 +9,8 @@ from astrohack.utils.algorithms import gauss_elimination, least_squares
 from astrohack.utils.constants import *
 from astrohack.utils import convert_unit
 
-PANEL_MODELS = ["old_mean", "old_rigid", "old_corotated_scipy", "old_corotated_lst_sq", "old_corotated_robust", "xy_paraboloid",
-                "rotated_paraboloid", "old_full_paraboloid_lst_sq", "old_flexible"]
+PANEL_MODELS = ["old_mean", "old_rigid", "old_corotated_scipy", "old_corotated_lst_sq", "old_corotated_robust",
+                "old_xy_paraboloid", "old_rotated_paraboloid", "old_full_paraboloid_lst_sq", "old_flexible"]
 imean = 0
 irigid = 1
 icorscp = 2
