@@ -10,7 +10,7 @@ from astrohack.utils.constants import *
 from astrohack.utils import convert_unit
 
 PANEL_MODELS = ["old_mean", "old_rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
-                "rotated_paraboloid", "full_paraboloid_lst_sq", "old_flexible"]
+                "rotated_paraboloid", "old_full_paraboloid_lst_sq", "old_flexible"]
 imean = 0
 irigid = 1
 icorscp = 2

@@ -1,6 +1,9 @@
 import numpy as np
+import scipy.optimize as opt
 
-from astrohack.utils import gauss_elimination
+import graphviper.utils.logger as logger
+
+from astrohack.utils import gauss_elimination, least_squares
 
 ###################################
 #  General purpose                #
@@ -113,8 +116,93 @@ def correct_flexible(self, point):
     return point.ix, point.yc, np.sum(coeffs * self.parameters)
 
 ###################################
+# Full 9 parameters paraboloid    #
+###################################
+
+
+def solve_full_paraboloid(self, samples):
+    """
+    Builds the designer matrix for least squares fitting, and calls the _least_squares fitter for a fully fledged
+    9 parameter paraboloid
+    """
+    # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
+    nsamp = len(samples)
+    system = np.full((nsamp, self.npar), 1.0)
+    vector = np.zeros(nsamp)
+    for ipnt, point in enumerate(samples):
+        system[ipnt, 0] = point.xc**2 * point.yc**2
+        system[ipnt, 1] = point.xc**2 * point.yc
+        system[ipnt, 2] = point.yc**2 * point.xc
+        system[ipnt, 3] = point.xc ** 2
+        system[ipnt, 4] = point.yc ** 2
+        system[ipnt, 5] = point.xc * point.yc
+        system[ipnt:, 6] = point.xc
+        system[ipnt:, 7] = point.yc
+        vector[ipnt] = point.value
+
+    params, _, _ = least_squares(system, vector)
+    return params
+
+
+def correct_full_paraboloid(self, point):
+    """
+    Computes the correction from the fitted parameters to the 9 parameter paraboloid at (xcoor, ycoor)
+    Args:
+        xcoor: Coordinate of point in X
+        ycoor: Coordinate of point in Y
+    Returns:
+        The correction at point
+    """
+    # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
+    xsq = point.xc**2
+    ysq = point.yc**2
+    correction = self.parameters[0]*xsq*ysq + self.parameters[1]*xsq*point.yc + self.parameters[2]*ysq*point.xc
+    correction += self.parameters[3]*xsq + self.parameters[4]*ysq + self.parameters[5]*point.xc*point.yc
+    correction += self.parameters[6]*point.xc + self.parameters[7]*point.yc + self.parameters[8]
+    return point.ix, point.iy, correction
+
+###################################
 # Scipy base                      #
 ###################################
+
+
+def solve_scipy(self, samples, verbose=False, x0=None):
+    devia = np.ndarray([len(samples)])
+    coords = np.ndarray([2, len(samples)])
+    for ipoint, point in enumerate(samples):
+        devia[ipoint] = point.value
+        coords[:, ipoint] = point.xc, point.yc
+
+    liminf = [-np.inf, -np.inf, -np.inf]
+    limsup = [np.inf, np.inf, np.inf]
+    if x0 is None:
+        p0 = [1e2, 1e2, np.mean(devia)]
+    else:
+        p0 = x0
+    if self.npar > len(p0):
+        liminf.append(0.0)
+        limsup.append(np.pi)
+        p0.append(0)
+
+    maxfevs = [100000, 1000000, 10000000]
+    for maxfev in maxfevs:
+        try:
+            result = opt.curve_fit(self._fitting_function, coords, devia,
+                                   p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
+        except RuntimeError:
+            if verbose:
+                logger.info("Increasing number of iterations")
+            continue
+        else:
+            params = result[0]
+            if verbose:
+                logger.info("Converged with less than {0:d} iterations".format(maxfev))
+            return params
+
+
+def correct_scipy(self, point):
+    corrval = self._fitting_function([point.xc, point.yc], *self.parameters)
+    return corrval
 
 
 PANEL_MODEL_DICT = {
@@ -137,7 +225,7 @@ PANEL_MODEL_DICT = {
         'solve': solve_flexible,
         'correct': correct_flexible,
         'experimental': False,
-        'ring_only': False
+        'ring_only': True
     },
     # "corotated_scipy": {
     #     'npar': 1,
@@ -174,13 +262,13 @@ PANEL_MODEL_DICT = {
     #     'experimental': False,
     #     'ring_only': False
     # },
-    # "full_paraboloid_lst_sq": {
-    #     'npar': 1,
-    #     'solve': solve_mean,
-    #     'correct': correct_mean,
-    #     'experimental': False,
-    #     'ring_only': False
-    # }
+    "full_paraboloid_lst_sq": {
+        'npar': 9,
+        'solve': solve_full_paraboloid,
+        'correct': correct_full_paraboloid,
+        'experimental': True,
+        'ring_only': False
+    }
 }
 
 
@@ -225,39 +313,7 @@ class PanelModel:
 
 
 
-# def solve_scipy(samples, _ref_points, verbose=False, x0=None):
-#     devia = np.ndarray([len(samples)])
-#     coords = np.ndarray([2, len(samples)])
-#     for ipoint, point in enumerate(samples):
-#         devia[ipoint] = point.value
-#         coords[:, ipoint] = point.xc, point.yc
 #
-#     liminf = [-np.inf, -np.inf, -np.inf]
-#     limsup = [np.inf, np.inf, np.inf]
-#     if x0 is None:
-#         p0 = [1e2, 1e2, np.mean(devia)]
-#     else:
-#         p0 = x0
-#     if model == PANEL_MODELS[irotpara]:
-#         liminf.append(0.0)
-#         limsup.append(np.pi)
-#         p0.append(0)
-#
-#     maxfevs = [100000, 1000000, 10000000]
-#     for maxfev in maxfevs:
-#         try:
-#             result = opt.curve_fit(_fitting_function, coords, devia,
-#                                    p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
-#         except RuntimeError:
-#             if verbose:
-#                 logger.info("Increasing number of iterations")
-#             continue
-#         else:
-#             par = result[0]
-#             solved = True
-#             if verbose:
-#                 logger.info("Converged with less than {0:d} iterations".format(maxfev))
-#             break
 
 
 
