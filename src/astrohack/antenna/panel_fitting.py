@@ -161,6 +161,54 @@ def correct_full_paraboloid(self, point):
     correction += self.parameters[6]*point.xc + self.parameters[7]*point.yc + self.parameters[8]
     return point.ix, point.iy, correction
 
+#######################################
+# Co-rotated paraboloid least squares #
+#######################################
+
+
+def solve_corotated_lst_sq(self, samples):
+    """
+    Builds the designer matrix for least squares fitting, and calls the _least_squares fitter for a corotated
+    paraboloid centered at the center of the panel
+    """
+    # a*u**2 + b*v**2 + c
+    nsamp = len(samples)
+    system = np.full((nsamp, self.npar), 1.0)
+    vector = np.zeros(nsamp)
+    xc, yc = self.center
+    for ipnt, point in enumerate(samples):
+        system[ipnt, 0] = ((point.xc - xc) * np.cos(self.zeta) - (point.yc - yc) * np.sin(self.zeta))**2  # U
+        system[ipnt, 1] = ((point.xc - xc) * np.sin(self.zeta) + (point.yc - yc) * np.cos(self.zeta))**2  # V
+        vector[ipnt] = point.value
+        
+    params, _, _ = least_squares(system, vector)
+    return params
+
+
+def correct_corotated_lst_sq(self, point):
+    """
+    Computes the correction from the least squares fitted parameters to the corotated paraboloid
+    """
+    corrval = corotated_paraboloid_scipy([point.xc, point.yc, self.center[0], self.center[1], self.zeta],
+                                         *self.parameters)
+    # a*u**2 + b*v**2 + c
+    return point.ix, point.iy, corrval
+
+###################################
+# Co-rotated robust               #
+###################################
+
+
+def solve_corotated_robust(self, samples):
+    """
+    Try fitting the Surface of a panel using the corotated least_squares method, if that fails fallback to scipy
+    fitting
+    """
+    try:
+        return solve_corotated_lst_sq(self, samples)
+    except np.linalg.LinAlgError:
+        return solve_scipy(self, samples)
+
 ###################################
 # Scipy base                      #
 ###################################
@@ -168,10 +216,10 @@ def correct_full_paraboloid(self, point):
 
 def solve_scipy(self, samples, verbose=False, x0=None):
     devia = np.ndarray([len(samples)])
-    coords = np.ndarray([2, len(samples)])
+    coords = np.ndarray([5, len(samples)])
     for ipoint, point in enumerate(samples):
         devia[ipoint] = point.value
-        coords[:, ipoint] = point.xc, point.yc
+        coords[:, ipoint] = point.xc, point.yc, self.center[0], self.center[1], self.zeta
 
     liminf = [-np.inf, -np.inf, -np.inf]
     limsup = [np.inf, np.inf, np.inf]
@@ -187,7 +235,7 @@ def solve_scipy(self, samples, verbose=False, x0=None):
     maxfevs = [100000, 1000000, 10000000]
     for maxfev in maxfevs:
         try:
-            result = opt.curve_fit(self._fitting_function, coords, devia,
+            result = opt.curve_fit(self.fitting_function, coords, devia,
                                    p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
         except RuntimeError:
             if verbose:
@@ -201,8 +249,38 @@ def solve_scipy(self, samples, verbose=False, x0=None):
 
 
 def correct_scipy(self, point):
-    corrval = self._fitting_function([point.xc, point.yc], *self.parameters)
-    return corrval
+    corrval = self.fitting_function([point.xc, point.yc,
+                                     self.center[0], self.center[1],
+                                     self.zeta], *self.parameters)
+    return point.ix, point.iy, corrval
+
+###################################
+# Scipy Fitting Functions         #
+###################################
+
+
+def corotated_paraboloid_scipy(params, ucurv, vcurv, zoff):
+    """
+    Surface model to be used in fitting with scipy
+    Same as the rotated paraboloid above, but theta is the panel center angle
+    Not valid for polygon panels
+    Assumes that the center of the paraboloid is the center of the panel
+    Args:
+        coords: [x,y] coordinate pair for point
+        ucurv: curvature in projected u direction
+        vcurv: curvature in projected v direction
+        zoff:  Z offset of the paraboloid
+
+    Returns:
+    Paraboloid value at X and Y
+    """
+    x, y = params[0:2]
+    xc, yc = params[2:4]
+    zeta = params[4]
+    u = (x - xc) * np.cos(zeta) - (y - yc) * np.sin(zeta)
+    v = (x - xc) * np.sin(zeta) + (y - yc) * np.cos(zeta)
+    return ucurv * u**2 + vcurv * v**2 + zoff
+
 
 
 PANEL_MODEL_DICT = {
@@ -211,43 +289,49 @@ PANEL_MODEL_DICT = {
         'solve': solve_mean,
         'correct': correct_mean,
         'experimental': False,
-        'ring_only': False
+        'ring_only': False,
+        'fitting_function': None
     },
     "rigid": {
         'npar': 3,
         'solve': solve_rigid,
         'correct': correct_rigid,
         'experimental': False,
-        'ring_only': False
+        'ring_only': False,
+        'fitting_function': None
     },
     "flexible": {
         'npar': 4,
         'solve': solve_flexible,
         'correct': correct_flexible,
         'experimental': False,
-        'ring_only': True
+        'ring_only': True,
+        'fitting_function': None
     },
-    # "corotated_scipy": {
-    #     'npar': 1,
-    #     'solve': solve_mean,
-    #     'correct': correct_mean,
-    #     'experimental': False,
-    #     'ring_only': False
-    # },
-    # "corotated_lst_sq": {
-    #     'npar': 1,
-    #     'solve': solve_mean,
-    #     'correct': correct_mean,
-    #     'experimental': False,
-    #     'ring_only': False
-    # },
-    # "corotated_robust": {
-    #     'npar': 1,
-    #     'solve': solve_mean,
-    #     'correct': correct_mean,
-    #     'experimental': False,
-    #     'ring_only': False
-    # },
+    "corotated_scipy": {
+        'npar': 3,
+        'solve': solve_scipy,
+        'correct': correct_scipy,
+        'experimental': False,
+        'ring_only': False,
+        'fitting_function': corotated_paraboloid_scipy
+    },
+    "corotated_lst_sq": {
+        'npar': 3,
+        'solve': solve_corotated_lst_sq,
+        'correct': correct_corotated_lst_sq,
+        'experimental': False,
+        'ring_only': False,
+        'fitting_function': None
+    },
+    "corotated_robust": {
+        'npar': 3,
+        'solve': solve_corotated_robust,
+        'correct': correct_corotated_lst_sq,
+        'experimental': False,
+        'ring_only': False,
+        'fitting_function': corotated_paraboloid_scipy
+    },
     # "xy_paraboloid": {
     #     'npar': 1,
     #     'solve': solve_mean,
@@ -267,19 +351,22 @@ PANEL_MODEL_DICT = {
         'solve': solve_full_paraboloid,
         'correct': correct_full_paraboloid,
         'experimental': True,
-        'ring_only': False
+        'ring_only': False,
+        'fitting_function': None
     }
 }
 
 
 class PanelModel:
 
-    def __init__(self, model_dict, zeta, ref_points):
+    def __init__(self, model_dict, zeta, ref_points, center):
         self.zeta = zeta
         self.ref_points = ref_points
+        self.center = center
         self.npar = model_dict['npar']
         self._solve = model_dict['solve']
         self._correct_point = model_dict['correct']
+        self.fitting_function = model_dict['fitting_function']
         self.parameters = None
         self.fitted = False
 

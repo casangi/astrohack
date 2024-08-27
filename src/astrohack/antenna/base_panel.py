@@ -9,7 +9,7 @@ from astrohack.utils.algorithms import gauss_elimination, least_squares
 from astrohack.utils.constants import *
 from astrohack.utils import convert_unit
 
-PANEL_MODELS = ["old_mean", "old_rigid", "corotated_scipy", "corotated_lst_sq", "corotated_robust", "xy_paraboloid",
+PANEL_MODELS = ["old_mean", "old_rigid", "old_corotated_scipy", "old_corotated_lst_sq", "old_corotated_robust", "xy_paraboloid",
                 "rotated_paraboloid", "old_full_paraboloid_lst_sq", "old_flexible"]
 imean = 0
 irigid = 1
@@ -123,7 +123,7 @@ class BasePanel:
             self.get_corrections = self.get_corrections_old
 
     def _associate_with_dict(self):
-        self.model_obj = PanelModel(PANEL_MODEL_DICT[self.model], self.zeta, self.ref_points)
+        self.model_obj = PanelModel(PANEL_MODEL_DICT[self.model], self.zeta, self.ref_points, self.center)
         self._warn_experimental_method()
         self.solve = self.solve_new
         self.get_corrections = self.get_corrections_new
