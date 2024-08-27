@@ -2,23 +2,22 @@ import numpy as np
 
 from astrohack.utils import gauss_elimination
 
+###################################
+#  General purpose                #
+###################################
 
-###################################
-###  General purpose            ###
-###################################
 
 def build_system(size):
     matrix = np.zeros([size, size])
     vector = np.zeros([size])
     return matrix, vector
 
-
-
 ###################################
-###  Mean                       ###
+#  Mean                           #
 ###################################
 
-def solve_mean(samples, _ref_points):
+
+def solve_mean(_self, samples):
     """
     Fit panel surface as a simple mean of its points Z deviation
     """
@@ -30,19 +29,21 @@ def solve_mean(samples, _ref_points):
         mean /= nsamp
     return [mean]
 
-def correct_mean(_xc, _yc, model_fit, _ref_points):
-    return model_fit[0]
+
+def correct_mean(self, point):
+    return point.ix, point.yc, self.parameters[0]
 
 ###################################
-###  Rigid                      ###
+# Rigid                           #
 ###################################
 
-def solve_rigid(samples, _ref_points):
+
+def solve_rigid(self, samples):
     """
     Fit panel surface using AIPS gaussian elimination model for rigid panels
     """
     npar = 3
-    matrix, vector = build_system(npar)
+    matrix, vector = build_system(self.npar)
     for point in samples:
         matrix[0, 0] += point.xc * point.xc
         matrix[0, 1] += point.xc * point.yc
@@ -59,7 +60,8 @@ def solve_rigid(samples, _ref_points):
 
     return gauss_elimination(matrix, vector)
 
-def correct_rigid(xc, yc, model_fit, _ref_points):
+
+def correct_rigid(self, point):
     """
     Computes fitted value for point [xcoor, ycoor] using AIPS gaussian elimination model for rigid panels
     Args:
@@ -69,55 +71,50 @@ def correct_rigid(xc, yc, model_fit, _ref_points):
     Returns:
     Fitted value at xcoor,ycoor
     """
-    return xc * model_fit[0] + yc * model_fit[1] + model_fit[2]
+    corr = point.xc * self.parameters[0] + point.yc * self.parameters[1] + self.parameters[2]
+    return point.ix, point.yc, corr
 
 ###################################
-###  Flexible                   ###
+# Flexible                        #
 ###################################
 
-def _flexible_coeffs(xc, yc, ref_points):
-    x1, x2, y2 = ref_points
-    f_lin = x1 + yc*(x2-x1)/y2
-    coeffs = np.ndarray(4)
-    coeffs[0] = (y2-yc) * (1.-xc/f_lin) / (2.0*y2)
-    coeffs[1] =     yc  * (1.-xc/f_lin) / (2.0*y2)
-    coeffs[2] = (y2-yc) * (1.+xc/f_lin) / (2.0*y2)
-    coeffs[3] =     yc  * (1.+xc/f_lin) / (2.0*y2)
-    return coeffs
 
-def solve_flexible(samples, ref_points):
+def solve_flexible(self, samples):
     # this can only work for ringed panels...
-    system, vector = build_system(4)
+    system, vector = build_system(self.npar)
     for point in samples:
-        auno, aduo, atre, aqua = _flexible_coeffs(point.xc, point.yc, ref_points)
-        system[0,0] += auno*auno
-        system[0,1] += auno*aduo
-        system[0,2] += auno*atre
-        system[0,3] += auno*aqua
-        system[1,1] += aduo*aduo
-        system[1,2] += aduo*atre
-        system[1,3] += aduo*aqua
-        system[2,2] += atre*atre
-        system[2,3] += atre*aqua
-        system[3,3] += aqua*aqua
+        auno, aduo, atre, aqua = self._flexible_coeffs(point)
+        system[0, 0] += auno*auno
+        system[0, 1] += auno*aduo
+        system[0, 2] += auno*atre
+        system[0, 3] += auno*aqua
+        system[1, 1] += aduo*aduo
+        system[1, 2] += aduo*atre
+        system[1, 3] += aduo*aqua
+        system[2, 2] += atre*atre
+        system[2, 3] += atre*aqua
+        system[3, 3] += aqua*aqua
         vector[0]   += point.value*auno
         vector[1]   += point.value*aduo
         vector[2]   += point.value*atre
         vector[3]   += point.value*aqua
 
-    system[1,0] = system[0,1]
-    system[2,0] = system[0,2]
-    system[2,1] = system[1,2]
-    system[3,0] = system[0,3]
-    system[3,1] = system[1,3]
-    system[3,2] = system[2,3]
+    system[1, 0] = system[0, 1]
+    system[2, 0] = system[0, 2]
+    system[2, 1] = system[1, 2]
+    system[3, 0] = system[0, 3]
+    system[3, 1] = system[1, 3]
+    system[3, 2] = system[2, 3]
     return gauss_elimination(system, vector)
 
-def correct_flexible(xc, yc, model_fit, ref_points):
-    coeffs = _flexible_coeffs(xc, yc, ref_points)
-    return np.sum(coeffs * np.array(model_fit))
 
+def correct_flexible(self, point):
+    coeffs = self._flexible_coeffs(point)
+    return point.ix, point.yc, np.sum(coeffs * self.parameters)
 
+###################################
+# Scipy base                      #
+###################################
 
 
 PANEL_MODEL_DICT = {
@@ -130,7 +127,7 @@ PANEL_MODEL_DICT = {
     },
     "rigid": {
         'npar': 3,
-        'solve':solve_rigid,
+        'solve': solve_rigid,
         'correct': correct_rigid,
         'experimental': False,
         'ring_only': False
@@ -185,6 +182,84 @@ PANEL_MODEL_DICT = {
     #     'ring_only': False
     # }
 }
+
+
+class PanelModel:
+
+    def __init__(self, model_dict, zeta, ref_points):
+        self.zeta = zeta
+        self.ref_points = ref_points
+        self.npar = model_dict['npar']
+        self._solve = model_dict['solve']
+        self._correct_point = model_dict['correct']
+        self.parameters = None
+        self.fitted = False
+
+    def _flexible_coeffs(self, point):
+        x1, x2, y2 = self.ref_points
+        f_lin = x1 + point.yc*(x2-x1)/y2
+        coeffs = np.ndarray(4)
+        coeffs[0] = (y2-point.yc) * (1.-point.xc/f_lin) / (2.0*y2)
+        coeffs[1] = point.yc  * (1.-point.xc/f_lin) / (2.0*y2)
+        coeffs[2] = (y2-point.yc) * (1.+point.xc/f_lin) / (2.0*y2)
+        coeffs[3] = point.yc  * (1.+point.xc/f_lin) / (2.0*y2)
+        return coeffs
+
+    def solve(self, samples):
+        self.parameters = self._solve(self, samples)
+        self.fitted = True
+
+    def correct(self, samples, margins):
+        if not self.fitted:
+            raise Exception("Cannot correct using a panel model that is not fitted")
+        corrections = []
+        for point in samples:
+            corrections.append(self._correct_point(self, point))
+        for point in margins:
+            corrections.append(self._correct_point(self, point))
+        return np.array(corrections)
+
+    def correct_point(self, point):
+        _, _, correction = self._correct_point(self, point)
+        return correction
+
+
+
+# def solve_scipy(samples, _ref_points, verbose=False, x0=None):
+#     devia = np.ndarray([len(samples)])
+#     coords = np.ndarray([2, len(samples)])
+#     for ipoint, point in enumerate(samples):
+#         devia[ipoint] = point.value
+#         coords[:, ipoint] = point.xc, point.yc
+#
+#     liminf = [-np.inf, -np.inf, -np.inf]
+#     limsup = [np.inf, np.inf, np.inf]
+#     if x0 is None:
+#         p0 = [1e2, 1e2, np.mean(devia)]
+#     else:
+#         p0 = x0
+#     if model == PANEL_MODELS[irotpara]:
+#         liminf.append(0.0)
+#         limsup.append(np.pi)
+#         p0.append(0)
+#
+#     maxfevs = [100000, 1000000, 10000000]
+#     for maxfev in maxfevs:
+#         try:
+#             result = opt.curve_fit(_fitting_function, coords, devia,
+#                                    p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
+#         except RuntimeError:
+#             if verbose:
+#                 logger.info("Increasing number of iterations")
+#             continue
+#         else:
+#             par = result[0]
+#             solved = True
+#             if verbose:
+#                 logger.info("Converged with less than {0:d} iterations".format(maxfev))
+#             break
+
+
 
 
 class PanelPoint:

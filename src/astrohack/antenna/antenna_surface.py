@@ -698,8 +698,13 @@ class AntennaSurface:
         # First panel might fail hence we need to check npar for all panels
         max_par = 0
         for panel in self.panels:
-            if panel.NPAR > max_par:
-                max_par = panel.NPAR
+            try:
+                p_npar = panel.NPAR
+            except AttributeError:
+                p_npar = panel.model_obj.npar
+            if p_npar > max_par:
+                max_par = p_npar
+
         nscrews = self.panels[0].screws.shape[0]
 
         self.panel_labels = np.ndarray([npanels], dtype=object)
@@ -710,7 +715,10 @@ class AntennaSurface:
 
         for ipanel in range(npanels):
             self.panel_labels[ipanel] = self.panels[ipanel].label
-            self.panel_pars[ipanel, :] = self.panels[ipanel].par
+            try:
+                self.panel_pars[ipanel, :] = self.panels[ipanel].model_obj.parameters
+            except AttributeError:
+                self.panel_pars[ipanel, :] = self.panels[ipanel].par
             self.screw_adjustments[ipanel, :] = self.panels[ipanel].export_screws(unit='m')
             self.panel_model_array[ipanel] = self.panels[ipanel].model
             self.panel_fallback[ipanel] = self.panels[ipanel].fall_back_fit

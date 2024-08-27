@@ -4,7 +4,7 @@ import graphviper.utils.logger as logger
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 
-from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT, PanelPoint
+from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT, PanelPoint, PanelModel
 from astrohack.utils.algorithms import gauss_elimination, least_squares
 from astrohack.utils.constants import *
 from astrohack.utils import convert_unit
@@ -119,14 +119,15 @@ class BasePanel:
                 self._associate_robust()
             elif imodel == iflexible:
                 self._associate_flexible()
+            self.solve = self.solve_old
+            self.get_corrections = self.get_corrections_old
 
     def _associate_with_dict(self):
-        self.model_dict = PANEL_MODEL_DICT[self.model]
+        self.model_obj = PanelModel(PANEL_MODEL_DICT[self.model], self.zeta, self.ref_points)
         self._warn_experimental_method()
-        self.NPAR = self.model_dict['npar']
-        self._solve_sub = self.model_dict['solve']
-        self.corr_point = self.model_dict['correct']
-        
+        self.solve = self.solve_new
+        self.get_corrections = self.get_corrections_new
+
     def _warn_experimental_method(self):
         """
         Raises a warning about experimental methods if a warning has not been raised before
@@ -221,7 +222,7 @@ class BasePanel:
         else:
             self.margins.append(sample)
 
-    def solve(self):
+    def solve_old(self):
         """
         Wrapping method around fitting to allow for a fallback to mean fitting in the case of an impossible fit
 
@@ -234,16 +235,26 @@ class BasePanel:
             self._fallback_solve()
             status = False
         else:
-            if self.model in PANEL_MODEL_DICT.keys():
-                self.par = self._solve_sub(self.samples, self.ref_points)
+            try:
+                self._solve_sub()
                 status = True
-            else:
-                try:
-                    self._solve_sub()
-                    status = True
-                except np.linalg.LinAlgError:
-                    self._fallback_solve()
-                    status = False
+            except np.linalg.LinAlgError:
+                self._fallback_solve()
+                status = False
+        self.solved = True
+        return status
+
+    def solve_new(self):
+        if len(self.samples) < self.model_obj.npar:
+            self._fallback_solve()
+            status = False
+        else:
+            try:
+                self.model_obj.solve(self.samples)
+                status = True
+            except np.linalg.LinAlgError:
+                self._fallback_solve()
+                status = False
         self.solved = True
         return status
 
@@ -517,7 +528,7 @@ class BasePanel:
         self.solved = True
         return
 
-    def get_corrections(self):
+    def get_corrections_old(self):
         """
         Store corrections for the points in the panel
         """
@@ -527,21 +538,22 @@ class BasePanel:
         self.corr = np.ndarray([lencorr, 3])
         icorr = 0
         for point in self.samples:
-            if self.model in PANEL_MODEL_DICT.keys():
-                self.corr[icorr, :] = point.ix, point.iy, self.corr_point(point.xc, point.yc, self.par, self.ref_points)
-            else:
-                xc, yc = point[0:2]
-                ix, iy = point[2:4]
-                self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
+            xc, yc = point[0:2]
+            ix, iy = point[2:4]
+            self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
             icorr += 1
         for point in self.margins:
-            if self.model in PANEL_MODEL_DICT.keys():
-                self.corr[icorr, :] = point.ix, point.iy, self.corr_point(point.xc, point.yc, self.par, self.ref_points)
-            else:
-                xc, yc = point[0:2]
-                ix, iy = point[2:4]
-                self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
+            xc, yc = point[0:2]
+            ix, iy = point[2:4]
+            self.corr[icorr, :] = ix, iy, self.corr_point(xc, yc)
             icorr += 1
+
+        return self.corr
+
+    def get_corrections_new(self):
+        if not self.solved:
+            raise Exception("Cannot correct a panel that is not solved")
+        self.corr = self.model_obj.correct(self.samples, self.margins)
         return self.corr
 
     def _corr_point_scipy(self, xcoor, ycoor):
@@ -600,7 +612,8 @@ class BasePanel:
         for iscrew in range(nscrew):
             screw = self.screws[iscrew, :]
             if self.model in PANEL_MODEL_DICT.keys():
-                screw_corr[iscrew] = fac*self.corr_point(screw[0], screw[1], self.par, self.ref_points)
+                point = PanelPoint(screw[0], screw[1], 0, 0, 0)
+                screw_corr[iscrew] = fac*self.model_obj.correct_point(point)
             else:
                 screw_corr[iscrew] = fac*self.corr_point(*screw)
         return screw_corr
