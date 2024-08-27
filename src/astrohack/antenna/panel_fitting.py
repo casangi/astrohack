@@ -34,7 +34,7 @@ def solve_mean(_self, samples):
 
 
 def correct_mean(self, point):
-    return point.ix, point.yc, self.parameters[0]
+    return point.ix, point.iy, self.parameters[0]
 
 ###################################
 # Rigid                           #
@@ -75,7 +75,7 @@ def correct_rigid(self, point):
     Fitted value at xcoor,ycoor
     """
     corr = point.xc * self.parameters[0] + point.yc * self.parameters[1] + self.parameters[2]
-    return point.ix, point.yc, corr
+    return point.ix, point.iy, corr
 
 ###################################
 # Flexible                        #
@@ -113,7 +113,7 @@ def solve_flexible(self, samples):
 
 def correct_flexible(self, point):
     coeffs = self._flexible_coeffs(point)
-    return point.ix, point.yc, np.sum(coeffs * self.parameters)
+    return point.ix, point.iy, np.sum(coeffs * self.parameters)
 
 ###################################
 # Full 9 parameters paraboloid    #
