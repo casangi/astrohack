@@ -76,7 +76,7 @@ class BasePanel:
         self.corr = None
 
         if center is None:
-            self.center = [0, 0]
+            self.center = PanelPoint(0, 0)
         else:
             self.center = center
         if zeta is None:
@@ -629,7 +629,7 @@ class BasePanel:
             angle = (-self.zeta % pi - pi/2)*convert_unit('rad', 'deg', 'trigonometric')
         else:
             angle = 0
-        ax.text(self.center[1], self.center[0], self.label, fontsize=fontsize, ha='center', va='center',
+        ax.text(self.center.yc, self.center.xc, self.label, fontsize=fontsize, ha='center', va='center',
                 rotation=angle)
 
     def plot_screws(self, ax):

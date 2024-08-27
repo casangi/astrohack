@@ -175,10 +175,11 @@ def solve_corotated_lst_sq(self, samples):
     nsamp = len(samples)
     system = np.full((nsamp, self.npar), 1.0)
     vector = np.zeros(nsamp)
-    xc, yc = self.center
+    x0 = self.center.xc
+    y0 = self.center.yc
     for ipnt, point in enumerate(samples):
-        system[ipnt, 0] = ((point.xc - xc) * np.cos(self.zeta) - (point.yc - yc) * np.sin(self.zeta))**2  # U
-        system[ipnt, 1] = ((point.xc - xc) * np.sin(self.zeta) + (point.yc - yc) * np.cos(self.zeta))**2  # V
+        system[ipnt, 0] = ((point.xc - x0) * np.cos(self.zeta) - (point.yc - y0) * np.sin(self.zeta))**2  # U
+        system[ipnt, 1] = ((point.xc - x0) * np.sin(self.zeta) + (point.yc - y0) * np.cos(self.zeta))**2  # V
         vector[ipnt] = point.value
         
     params, _, _ = least_squares(system, vector)
@@ -189,9 +190,8 @@ def correct_corotated_lst_sq(self, point):
     """
     Computes the correction from the least squares fitted parameters to the corotated paraboloid
     """
-    corrval = corotated_paraboloid_scipy([point.xc, point.yc, self.center[0], self.center[1], self.zeta],
+    corrval = corotated_paraboloid_scipy([point.xc, point.yc, self.center.xc, self.center.yc, self.zeta],
                                          *self.parameters)
-    # a*u**2 + b*v**2 + c
     return point.ix, point.iy, corrval
 
 ###################################
@@ -219,7 +219,7 @@ def solve_scipy(self, samples, verbose=False, x0=None):
     coords = np.ndarray([5, len(samples)])
     for ipoint, point in enumerate(samples):
         devia[ipoint] = point.value
-        coords[:, ipoint] = point.xc, point.yc, self.center[0], self.center[1], self.zeta
+        coords[:, ipoint] = point.xc, point.yc, self.center.xc, self.center.yc, self.zeta
 
     liminf = [-np.inf, -np.inf, -np.inf]
     limsup = [np.inf, np.inf, np.inf]
@@ -250,7 +250,7 @@ def solve_scipy(self, samples, verbose=False, x0=None):
 
 def correct_scipy(self, point):
     corrval = self.fitting_function([point.xc, point.yc,
-                                     self.center[0], self.center[1],
+                                     self.center.xc, self.center.yc,
                                      self.zeta], *self.parameters)
     return point.ix, point.iy, corrval
 
@@ -445,7 +445,7 @@ class PanelModel:
 
 class PanelPoint:
 
-    def __init__(self, xc, yc, ix, iy, value):
+    def __init__(self, xc, yc, ix=None, iy=None, value=None):
         self.xc = xc
         self.yc = yc
         self.ix = ix
