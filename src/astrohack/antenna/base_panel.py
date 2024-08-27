@@ -95,6 +95,7 @@ class BasePanel:
         """
         try:
             self._associate_with_dict()
+            self.new_mod = True
         except KeyError:
             try:
                 imodel = PANEL_MODELS.index(self.model_name)
@@ -121,6 +122,7 @@ class BasePanel:
                 self._associate_flexible()
             self.solve = self.solve_old
             self.get_corrections = self.get_corrections_old
+            self.new_mod = False
 
     def _associate_with_dict(self):
         self.model = PanelModel(PANEL_MODEL_DICT[self.model_name], self.zeta, self.ref_points, self.center)
@@ -263,8 +265,12 @@ class BasePanel:
         Changes the method association to mean surface fitting, and fits the panel with it
         """
         self.fall_back_fit = True
-        self._associate_mean()
-        self._solve_sub()
+        if self.new_mod:
+            self.model = PanelModel(PANEL_MODEL_DICT['mean'], self.zeta, self.ref_points, self.center)
+            self.model.solve(self.samples)
+        else:
+            self._associate_mean()
+            self._solve_sub()
 
     def _solve_least_squares_paraboloid(self):
         """
@@ -609,13 +615,11 @@ class BasePanel:
         fac = convert_unit('m', unit, 'length')
         nscrew = len(self.screws)
         screw_corr = np.zeros(nscrew)
-        for iscrew in range(nscrew):
-            screw = self.screws[iscrew, :]
+        for iscrew, screw in enumerate(self.screws):
             if self.model_name in PANEL_MODEL_DICT.keys():
-                point = PanelPoint(screw[0], screw[1], 0, 0, 0)
-                screw_corr[iscrew] = fac*self.model.correct_point(point)
+                screw_corr[iscrew] = fac*self.model.correct_point(screw)
             else:
-                screw_corr[iscrew] = fac*self.corr_point(*screw)
+                screw_corr[iscrew] = fac*self.corr_point(screw.xc, screw.yc)
         return screw_corr
 
     def plot_label(self, ax, rotate=True):
@@ -638,9 +642,8 @@ class BasePanel:
         Args:
             ax: matplotlib axes instance
         """
-        for iscrew in range(self.screws.shape[0]):
-            screw = self.screws[iscrew, ]
-            ax.scatter(screw[1], screw[0], marker=self.markers[iscrew], lw=self.linewidth, s=markersize,
+        for iscrew, screw in enumerate(self.screws):
+            ax.scatter(screw.yc, screw.xc, marker=self.markers[iscrew], lw=self.linewidth, s=markersize,
                        color=self.colors[iscrew])
 
     def plot_corrections(self, ax, cmap, corrections, threshold, vmin, vmax):
@@ -648,7 +651,7 @@ class BasePanel:
         Plot screw corrections onto an axis
         Args:
             ax: axis for plot
-            cmap: Colormap of the corrections
+            cmap: Colormap of the corrections to be applied to each screw
             corrections: the screw corrections
             threshold: Threshold below which data is considered negligable
             vmin: bottom of the colormap
@@ -656,12 +659,12 @@ class BasePanel:
         """
         norm = Normalize(vmin=vmin, vmax=vmax)
         for iscrew in range(self.plot_screw_pos.shape[0]):
-            screw = self.plot_screw_pos[iscrew, ]
+            screw = self.plot_screw_pos[iscrew]
             if np.abs(corrections[iscrew]) < threshold:
                 corr = 0
             else:
                 corr = corrections[iscrew]
-            circle = plt.Circle((screw[1], screw[0]), self.plot_screw_size, color=cmap(norm(corr)),
+            circle = plt.Circle((screw.yc, screw.xc), self.plot_screw_size, color=cmap(norm(corr)),
                                 fill=True)
             ax.add_artist(circle)
 

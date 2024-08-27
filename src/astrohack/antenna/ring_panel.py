@@ -56,7 +56,7 @@ class RingPanel(BasePanel):
         y2 = self.ourad * np.cos(fi/2.0)
         # Now we are ready to initialize the base object
         super().__init__(model, screws, plot_screw_pos, plot_screw_size, label, center=self.center, zeta=zeta,
-                         ref_points = [x1, x2, y2])
+                         ref_points=[x1, x2, y2])
 
     def _init_screws(self, scheme, offset):
         """
@@ -73,7 +73,7 @@ class RingPanel(BasePanel):
         if offset is None:
             offset = 1e-2  # 1 cm
         nscrews = len(scheme)
-        screws = np.ndarray([nscrews, 2])
+        screws = np.ndarray([nscrews], dtype=np.object_)
 
         for iscrew in range(nscrews):
             if scheme[iscrew] == 'c':
@@ -88,7 +88,7 @@ class RingPanel(BasePanel):
                     theta = self.theta1 + deltatheta
                 else:
                     theta = self.theta2 - deltatheta
-                screws[iscrew] = radius*np.cos(theta), radius*np.sin(theta)
+                screws[iscrew] = PanelPoint(radius*np.cos(theta), radius*np.sin(theta))
         return screws
 
     def is_inside(self, rad, phi):
