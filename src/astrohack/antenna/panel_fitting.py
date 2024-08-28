@@ -3,7 +3,8 @@ import scipy.optimize as opt
 
 import graphviper.utils.logger as logger
 
-from astrohack.utils import gauss_elimination, least_squares
+from astrohack.utils import gauss_elimination, least_squares_jit
+
 
 ###################################
 #  General purpose                #
@@ -140,7 +141,7 @@ def solve_full_paraboloid(self, samples):
         system[ipnt:, 7] = point.yc
         vector[ipnt] = point.value
 
-    params, _, _ = least_squares(system, vector)
+    params, _, _, _ = least_squares_jit(system, vector)
     return params
 
 
@@ -182,7 +183,7 @@ def solve_corotated_lst_sq(self, samples):
         system[ipnt, 1] = ((point.xc - x0) * np.sin(self.zeta) + (point.yc - y0) * np.cos(self.zeta))**2  # V
         vector[ipnt] = point.value
         
-    params, _, _ = least_squares(system, vector)
+    params, _, _, _ = least_squares_jit(system, vector)
     return params
 
 
