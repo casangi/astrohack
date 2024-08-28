@@ -1,6 +1,6 @@
 from astrohack.antenna.antenna_surface import SUPPORTED_POL_STATES
 from astrohack.antenna.base_panel import PANEL_MODELS
-from astrohack.utils import trigo_units, length_units, time_units, possible_splits
+from astrohack.utils import trigo_units, length_units, time_units, possible_splits, freq_units
 from astrohack.visualization.plot_tools import astrohack_cmaps
 
 
@@ -24,6 +24,9 @@ def custom_unit_checker(unit_type):
 
     elif unit_type == "units.time":
         return time_units
+
+    elif unit_type == "units.frequency":
+        return freq_units
 
     else:
         return "Not found"

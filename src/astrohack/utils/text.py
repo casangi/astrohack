@@ -209,9 +209,7 @@ def print_data_contents(data_dict, field_names, alignment='l'):
         field_names: Field names in the table
         alignment: Contents of the table to be aligned Left or Right
     """
-    table = PrettyTable()
-    table.field_names = field_names
-    table.align = alignment
+    table = create_pretty_table(field_names, alignment)
     depth = len(field_names)
     if depth == 3:
         for item_l1 in data_dict.keys():
@@ -244,9 +242,7 @@ def print_dict_table(input_parameters, split_key=None, alignment='l', heading="I
 
     """
     print(f"\n{heading}:")
-    table = PrettyTable()
-    table.field_names = ['Parameter', 'Value']
-    table.align = alignment
+    table = create_pretty_table(['Parameter', 'Value'], alignment)
 
     for key, item in input_parameters.items():
         if key == split_key:
@@ -366,13 +362,59 @@ def print_method_list(method_list, alignment='l', print_len=100):
     desc_len = print_len - name_len - 3 - 4  # Separators and padding
 
     print('\nAvailable methods:')
-    table = PrettyTable()
-    table.field_names = ['Methods', 'Description']
-    table.align = alignment
+    table = create_pretty_table(['Methods', 'Description'], alignment)
     for obj_method in method_list:
         table.add_row([obj_method.__name__, textwrap.fill(obj_method.__doc__.splitlines()[0][1:], width=desc_len)])
     print(table)
     print()
+
+
+def format_frequency(freq_value, unit='Hz', decimal_places=4):
+    if isinstance(freq_value, str):
+        freq_value = float(freq_value)
+    if freq_value >= 1e12:
+        unitout = 'THz'
+    elif freq_value >= 1e9:
+        unitout = 'GHz'
+    elif freq_value >= 1e6:
+        unitout = 'MHz'
+    elif freq_value >= 1e3:
+        unitout = 'kHz'
+    else:
+        unitout = unit
+    fac = convert_unit(unit, unitout, 'frequency')
+    return format_value_unit(fac * freq_value, unitout, decimal_places)
+
+def format_wavelength(wave_value, unit='m', decimal_places=2):
+    if isinstance(wave_value, str):
+        wave_value = float(wave_value)
+    if wave_value >= 1:
+        unitout = 'm'
+    elif wave_value >= 1e-2:
+        unitout = 'cm'
+    elif wave_value >= 1e-3:
+        unitout = 'mm'
+    elif wave_value >= 1e-6:
+        unitout = 'um'
+    elif wave_value >= 1e-9:
+        unitout = 'nm'
+    else:
+        unitout = unit
+    fac = convert_unit(unit, unitout, 'length')
+    return format_value_unit(fac * wave_value, unitout, decimal_places)
+
+def format_label(label, separators=('_', '\n'), new_separator=' '):
+    if isinstance(label, str):
+        out_label = label
+    else:
+        out_label = str(label)
+    for sep in separators:
+        out_label = out_label.replace(sep, new_separator)
+    return out_label.capitalize()
+
+
+def format_value_unit(value, unit, decimal_places=2):
+    return f'{value:.{decimal_places}f} {unit}'
 
 
 def format_value_error(value, error, scaling, tolerance):
@@ -425,5 +467,30 @@ def bool_to_str(boolean):
         return 'yes'
     else:
         return 'no'
+
+
+def string_to_ascii_file(string, filename):
+    outfile = open(filename, 'w')
+    outfile.write(string + '\n')
+    outfile.close()
+
+
+def create_pretty_table(field_names, alignment='c'):
+    table = PrettyTable()
+    table.field_names = field_names
+    if isinstance(alignment, list) or isinstance(alignment, tuple):
+        if len(field_names) != len(alignment):
+            msg = 'If alignment is not a single string alignment must have the same length of field_names'
+            logger.error(msg)
+            raise Exception(msg)
+        for i_field, field in enumerate(field_names):
+            table.align[field] = alignment[i_field]
+    elif isinstance(alignment, str):
+        if len(alignment) != 1:
+            msg = 'Alignment string must be of length 1'
+            logger.error(msg)
+            raise Exception(msg)
+        table.align = alignment
+    return table
 
 

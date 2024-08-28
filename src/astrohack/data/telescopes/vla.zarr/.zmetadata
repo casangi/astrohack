@@ -50,6 +50,16 @@
             "comment": "Data taken from AIPS source code and EVLA memo 212, Screw offset taken from measurements done insitu by VSM on March 14 2023, Array center location from CASA 6.5.5.21",
             "diam": 25.0,
             "focus": 8.8,
+            "gain_wavelengths": [
+                0.20,
+                0.13,
+                0.06,
+                0.03,
+                0.02,
+                0.013,
+                0.01,
+                0.007
+            ],
             "inlim": 2.0,
             "inrad": [
                 1.983,

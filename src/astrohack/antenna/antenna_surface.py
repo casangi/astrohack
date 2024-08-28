@@ -1,4 +1,3 @@
-import numpy as np
 import xarray as xr
 
 from matplotlib import patches
@@ -7,10 +6,11 @@ import graphviper.utils.logger as logger
 
 from astrohack.antenna.base_panel import PANEL_MODELS, irigid
 from astrohack.antenna.ring_panel import RingPanel
+from astrohack.utils import string_to_ascii_file
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.text import add_prefix, bool_to_str
+from astrohack.utils.text import add_prefix, bool_to_str, format_frequency
 from astrohack.visualization.plot_tools import well_positioned_colorbar, create_figure_and_axes, close_figure, \
     get_proper_color_map
 
@@ -45,7 +45,6 @@ class AntennaSurface:
         if not self.reread:
             self.panelmodel = pmodel
             self.panel_margins = panel_margins
-            self.reso = self.telescope.diam / self.npoint
             if crop:
                 self._crop_maps()
 
@@ -139,6 +138,8 @@ class AntennaSurface:
             self.corrections = inputxds['CORRECTIONS'].values
             self.panel_pars = inputxds['PANEL_PARAMETERS'].values
             self.screw_adjustments = inputxds['PANEL_SCREWS'].values
+            self.ingains = [inputxds.attrs['input_gain'], inputxds.attrs['theoretical_gain']]
+            self.ougains = [inputxds.attrs['output_gain'], inputxds.attrs['theoretical_gain']]
             self.panel_labels = inputxds.labels.values
 
     def _read_xds(self, inputxds):
@@ -395,34 +396,41 @@ class AntennaSurface:
         Returns:
         Gains before panel fitting OR Gains before and after panel fitting
         """
-        self.ingains = self._gains_array(self.phase)
-        if self.residuals is None:
+        self.ingains = self.gain_at_wavelength(False, self.wavelength)
+        if not self.solved:
             return self.ingains
 
         else:
-            self.ougains = self._gains_array(self.phase_residuals)
+            self.ougains = self.gain_at_wavelength(True, self.wavelength)
             return self.ingains, self.ougains
 
-    def _gains_array(self, arr):
-        """
-        Worker for gains method, works with the actual arrays to compute the gains
-        This numpy version is significantly faster than the previous version
-        Args:
-            arr: Deviation image over which to compute the gains
+    def gain_at_wavelength(self, corrected, wavelength):
+        # This is valid for the VLA not sure if valid for anything else...
+        wavelength_scaling = self.wavelength / wavelength
 
-        Returns:
-        Actual and theoretical gains
-        """
-        thgain = fourpi * (1000.0 * self.reso / self.wavelength) ** 2
+        dish_mask = np.where(self.rad > self.telescope.inlim, True, False)
+        dish_mask = np.where(self.rad < self.telescope.diam/2, dish_mask, False)
 
-        if (self.mask==False).all():
-            return -np.inf, to_db(thgain)
+        if corrected:
+            if self.fitted:
+                scaled_phase = wavelength_scaling*self.phase_residuals
+            else:
+                msg = 'Cannot computed gains for corrected dish if panels are not fitted.'
+                logger.error(msg)
+                raise Exception(msg)
+        else:
+            scaled_phase = wavelength_scaling*self.phase
 
-        gain = \
-            thgain * np.sqrt(np.sum(np.cos(arr[self.mask])) ** 2 + np.sum(np.sin(arr[self.mask])) ** 2) / np.sum(
-                self.mask)
+        cossum = np.nansum(np.cos(scaled_phase[dish_mask]))
+        sinsum = np.nansum(np.sin(scaled_phase[dish_mask]))
+        real_factor = np.sqrt(cossum**2 + sinsum**2)/np.sum(dish_mask)
 
-        return to_db(gain), to_db(thgain)
+        u_fact = (self.u_axis[1] - self.u_axis[0]) / wavelength
+        v_fact = (self.v_axis[1] - self.v_axis[0]) / wavelength
+
+        theo_gain = fourpi * np.abs(u_fact * v_fact)
+        real_gain = theo_gain * real_factor
+        return to_db(real_gain), to_db(theo_gain)
 
     def get_rms(self, unit='mm'):
         """
@@ -716,23 +724,15 @@ class AntennaSurface:
         """
         outfile = f"# Screw adjustments for {self.telescope.name}'s {self.antenna_name} antenna, DDI " \
                   f"{self.ddi.split('_')[1]}, polarization state {self.pol_state}\n"
-        freq = clight/self.wavelength/1e9
-        if freq >= 1:
-            frequnit = 'GHz'
-        elif freq >= 1e-3:
-            frequnit = 'MHz'
-            freq *= 1e3
-        else:
-            frequnit = 'kHz'
-            freq *= 1e6
-        outfile += f"{comment_char} Frequency = {freq:.5f} {frequnit}\n"
-        outfile += f"{comment_char} Adjustments are in {unit}{lnbr}"
-        outfile += comment_char+lnbr
-        outfile += f"{comment_char} Lower means away from subreflector{lnbr}"
-        outfile += f"{comment_char} Raise means toward the subreflector{lnbr}"
-        outfile += f"{comment_char} LOWER the panel if the number is POSITIVE{lnbr}"
-        outfile += f"{comment_char} RAISE the panel if the number is NEGATIVE{lnbr}"
-        outfile += 2*(comment_char+lnbr)
+        freq = clight/self.wavelength
+        out_freq = format_frequency(freq)
+        outfile += f"# Frequency = {out_freq}{lnbr}"
+        outfile += "# Adjustments are in " + unit + 2 * lnbr
+        outfile += "# Lower means away from subreflector" + lnbr
+        outfile += "# Raise means toward the subreflector" + lnbr
+        outfile += "# LOWER the panel if the number is POSITIVE" + lnbr
+        outfile += "# RAISE the panel if the number is NEGATIVE" + lnbr
+        outfile += 2 * lnbr
         spc = ' '
         outfile += f'{comment_char} Panel{2*spc}'
         nscrews = len(self.telescope.screw_description)
@@ -750,9 +750,7 @@ class AntennaSurface:
             outfile += (f'{5*spc}{bool_to_str(self.panel_fallback[ipanel]):>3s}{7*spc}{self.panel_model_array[ipanel]}'
                         + lnbr)
 
-        lefile = open(filename, "w")
-        lefile.write(outfile)
-        lefile.close()
+        string_to_ascii_file(outfile, filename)
 
     def export_xds(self):
         """
