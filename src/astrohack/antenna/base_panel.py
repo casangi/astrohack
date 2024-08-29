@@ -7,20 +7,6 @@ from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT, PanelPoint, PanelM
 from astrohack.utils.constants import *
 from astrohack.utils import convert_unit
 
-warned = False
-
-
-def set_warned(value: bool):
-    """
-    set the global warned to avoid repeated messages about experimental values
-    Args:
-        value: True or False
-
-    """
-    global warned
-    warned = value
-
-
 class BasePanel:
     markers = ['X', 'o', '*', 'P', 'D']
     colors = ['g', 'g', 'r', 'r', 'b']
@@ -81,16 +67,6 @@ class BasePanel:
             logger.error(msg)
             raise Exception(msg)
         self.model = PanelModel(model_dict, self.zeta, self.ref_points, self.center)
-
-    def _warn_experimental_method(self):
-        """
-        Raises a warning about experimental methods if a warning has not been raised before
-        """
-        if warned:
-            return
-        else:
-            logger.warning("Using new mechanism: " + self.model_name)
-            set_warned(True)
 
     def add_sample(self, sample):
         """
