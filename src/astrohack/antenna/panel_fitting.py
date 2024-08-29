@@ -11,9 +11,9 @@ from astrohack.utils import gauss_elimination, least_squares_jit
 ###################################
 
 
-def build_system(size):
-    matrix = np.zeros([size, size])
-    vector = np.zeros([size])
+def build_system(shape):
+    matrix = np.zeros(shape)
+    vector = np.zeros([shape[0]])
     return matrix, vector
 
 ###################################
@@ -46,8 +46,7 @@ def solve_rigid(self, samples):
     """
     Fit panel surface using AIPS gaussian elimination model for rigid panels
     """
-    npar = 3
-    matrix, vector = build_system(self.npar)
+    matrix, vector = build_system([self.npar, self.npar])
     for point in samples:
         matrix[0, 0] += point.xc * point.xc
         matrix[0, 1] += point.xc * point.yc
@@ -84,32 +83,31 @@ def correct_rigid(self, point):
 
 
 def solve_flexible(self, samples):
-    # this can only work for ringed panels...
-    system, vector = build_system(self.npar)
+    matrix, vector = build_system([self.npar, self.npar])
     for point in samples:
         auno, aduo, atre, aqua = self._flexible_coeffs(point)
-        system[0, 0] += auno*auno
-        system[0, 1] += auno*aduo
-        system[0, 2] += auno*atre
-        system[0, 3] += auno*aqua
-        system[1, 1] += aduo*aduo
-        system[1, 2] += aduo*atre
-        system[1, 3] += aduo*aqua
-        system[2, 2] += atre*atre
-        system[2, 3] += atre*aqua
-        system[3, 3] += aqua*aqua
+        matrix[0, 0] += auno*auno
+        matrix[0, 1] += auno*aduo
+        matrix[0, 2] += auno*atre
+        matrix[0, 3] += auno*aqua
+        matrix[1, 1] += aduo*aduo
+        matrix[1, 2] += aduo*atre
+        matrix[1, 3] += aduo*aqua
+        matrix[2, 2] += atre*atre
+        matrix[2, 3] += atre*aqua
+        matrix[3, 3] += aqua*aqua
         vector[0]   += point.value*auno
         vector[1]   += point.value*aduo
         vector[2]   += point.value*atre
         vector[3]   += point.value*aqua
 
-    system[1, 0] = system[0, 1]
-    system[2, 0] = system[0, 2]
-    system[2, 1] = system[1, 2]
-    system[3, 0] = system[0, 3]
-    system[3, 1] = system[1, 3]
-    system[3, 2] = system[2, 3]
-    return gauss_elimination(system, vector)
+    matrix[1, 0] = matrix[0, 1]
+    matrix[2, 0] = matrix[0, 2]
+    matrix[2, 1] = matrix[1, 2]
+    matrix[3, 0] = matrix[0, 3]
+    matrix[3, 1] = matrix[1, 3]
+    matrix[3, 2] = matrix[2, 3]
+    return gauss_elimination(matrix, vector)
 
 
 def correct_flexible(self, point):
@@ -127,21 +125,19 @@ def solve_full_paraboloid(self, samples):
     9 parameter paraboloid
     """
     # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
-    nsamp = len(samples)
-    system = np.full((nsamp, self.npar), 1.0)
-    vector = np.zeros(nsamp)
+    matrix, vector = build_system((len(samples), self.npar))
     for ipnt, point in enumerate(samples):
-        system[ipnt, 0] = point.xc**2 * point.yc**2
-        system[ipnt, 1] = point.xc**2 * point.yc
-        system[ipnt, 2] = point.yc**2 * point.xc
-        system[ipnt, 3] = point.xc ** 2
-        system[ipnt, 4] = point.yc ** 2
-        system[ipnt, 5] = point.xc * point.yc
-        system[ipnt:, 6] = point.xc
-        system[ipnt:, 7] = point.yc
+        matrix[ipnt, 0] = point.xc**2 * point.yc**2
+        matrix[ipnt, 1] = point.xc**2 * point.yc
+        matrix[ipnt, 2] = point.yc**2 * point.xc
+        matrix[ipnt, 3] = point.xc ** 2
+        matrix[ipnt, 4] = point.yc ** 2
+        matrix[ipnt, 5] = point.xc * point.yc
+        matrix[ipnt:, 6] = point.xc
+        matrix[ipnt:, 7] = point.yc
         vector[ipnt] = point.value
 
-    params, _, _, _ = least_squares_jit(system, vector)
+    params, _, _, _ = least_squares_jit(matrix, vector)
     return params
 
 
@@ -173,17 +169,15 @@ def solve_corotated_lst_sq(self, samples):
     paraboloid centered at the center of the panel
     """
     # a*u**2 + b*v**2 + c
-    nsamp = len(samples)
-    system = np.full((nsamp, self.npar), 1.0)
-    vector = np.zeros(nsamp)
+    matrix, vector = build_system((len(samples), self.npar))
     x0 = self.center.xc
     y0 = self.center.yc
     for ipnt, point in enumerate(samples):
-        system[ipnt, 0] = ((point.xc - x0) * np.cos(self.zeta) - (point.yc - y0) * np.sin(self.zeta))**2  # U
-        system[ipnt, 1] = ((point.xc - x0) * np.sin(self.zeta) + (point.yc - y0) * np.cos(self.zeta))**2  # V
+        matrix[ipnt, 0] = ((point.xc - x0) * np.cos(self.zeta) - (point.yc - y0) * np.sin(self.zeta))**2  # U
+        matrix[ipnt, 1] = ((point.xc - x0) * np.sin(self.zeta) + (point.yc - y0) * np.cos(self.zeta))**2  # V
         vector[ipnt] = point.value
         
-    params, _, _, _ = least_squares_jit(system, vector)
+    params, _, _, _ = least_squares_jit(matrix, vector)
     return params
 
 
