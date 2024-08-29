@@ -12,6 +12,14 @@ from astrohack.utils import gauss_elimination, least_squares_jit
 
 
 def build_system(shape):
+    """
+    Build a matrix and a vector to represent a system of linear equations
+    Args:
+        shape: The shape of the system [nrows, ncolumns]
+
+    Returns:
+        Nrows X ncolumns Matrix and nrows Vector
+    """
     matrix = np.zeros(shape)
     vector = np.zeros([shape[0]])
     return matrix, vector
@@ -23,7 +31,13 @@ def build_system(shape):
 
 def solve_mean(_self, samples):
     """
-    Fit panel surface as a simple mean of its points Z deviation
+    Fit panel surface as a simple mean of its points deviation
+    Args:
+        _self: Parameter is here for consistent interface
+        samples: List of points to be fitted
+
+    Returns:
+        the mean of the deviation in the points
     """
     mean = 0
     nsamp = len(samples)
@@ -35,6 +49,15 @@ def solve_mean(_self, samples):
 
 
 def correct_mean(self, point):
+    """
+    Provides the correction on a point using the mean value of the panel
+    Args:
+        self: The PanelModel object
+        point: Point to be corrected
+
+    Returns:
+        The point indexes and the correction to that point.
+    """
     return point.ix, point.iy, self.parameters[0]
 
 ###################################
@@ -44,7 +67,13 @@ def correct_mean(self, point):
 
 def solve_rigid(self, samples):
     """
-    Fit panel surface using AIPS gaussian elimination model for rigid panels
+    Fit panel surface using AIPS rigid model, an inclined plane.
+    Args:
+        self: The PanelModel object
+        samples: List of points to be fitted
+
+    Returns:
+        The parameters for the fitted inclined plane
     """
     matrix, vector = build_system([self.npar, self.npar])
     for point in samples:
@@ -66,13 +95,13 @@ def solve_rigid(self, samples):
 
 def correct_rigid(self, point):
     """
-    Computes fitted value for point [xcoor, ycoor] using AIPS gaussian elimination model for rigid panels
+    Provides the correction on a point using the fitted inclined plane
     Args:
-        xc: X coordinate of point
-        yc: Y coordinate of point
+        self: The PanelModel object
+        point: Point to be corrected
 
     Returns:
-    Fitted value at xcoor,ycoor
+        The point indexes and the correction to that point.
     """
     corr = point.xc * self.parameters[0] + point.yc * self.parameters[1] + self.parameters[2]
     return point.ix, point.iy, corr
@@ -83,6 +112,15 @@ def correct_rigid(self, point):
 
 
 def solve_flexible(self, samples):
+    """
+    Fit panel surface using AIPS flexible model, WHAT IS THIS MODEL???
+    Args:
+        self: The PanelModel object
+        samples: List of points to be fitted
+
+    Returns:
+        The parameters for the fitted model
+    """
     matrix, vector = build_system([self.npar, self.npar])
     for point in samples:
         auno, aduo, atre, aqua = self._flexible_coeffs(point)
@@ -111,6 +149,15 @@ def solve_flexible(self, samples):
 
 
 def correct_flexible(self, point):
+    """
+    Provides the correction on a point using the fitted model
+    Args:
+        self: The PanelModel object
+        point: Point to be corrected
+
+    Returns:
+        The point indexes and the correction to that point.
+    """
     coeffs = self._flexible_coeffs(point)
     return point.ix, point.iy, np.sum(coeffs * self.parameters)
 
@@ -121,8 +168,14 @@ def correct_flexible(self, point):
 
 def solve_full_paraboloid(self, samples):
     """
-    Builds the designer matrix for least squares fitting, and calls the _least_squares fitter for a fully fledged
+    Builds the designer matrix for least squares fitting, and calls the least_squares fitter for a fully fledged
     9 parameter paraboloid
+    Args:
+        self: The PanelModel object
+        samples: List of points to be fitted
+
+    Returns:
+        The parameters for the fitted model
     """
     # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
     matrix, vector = build_system((len(samples), self.npar))
@@ -143,12 +196,13 @@ def solve_full_paraboloid(self, samples):
 
 def correct_full_paraboloid(self, point):
     """
-    Computes the correction from the fitted parameters to the 9 parameter paraboloid at (xcoor, ycoor)
+    Provides the correction on a point using the fitted model
     Args:
-        xcoor: Coordinate of point in X
-        ycoor: Coordinate of point in Y
+        self: The PanelModel object
+        point: Point to be corrected
+
     Returns:
-        The correction at point
+        The point indexes and the correction to that point.
     """
     # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
     xsq = point.xc**2
@@ -165,8 +219,14 @@ def correct_full_paraboloid(self, point):
 
 def solve_corotated_lst_sq(self, samples):
     """
-    Builds the designer matrix for least squares fitting, and calls the _least_squares fitter for a corotated
+    Builds the designer matrix for least squares fitting, and calls the least_squares fitter for a corotated
     paraboloid centered at the center of the panel
+    Args:
+        self: The PanelModel object
+        samples: List of points to be fitted
+
+    Returns:
+        The parameters for the fitted model
     """
     # a*u**2 + b*v**2 + c
     matrix, vector = build_system((len(samples), self.npar))
@@ -183,7 +243,13 @@ def solve_corotated_lst_sq(self, samples):
 
 def correct_corotated_lst_sq(self, point):
     """
-    Computes the correction from the least squares fitted parameters to the corotated paraboloid
+    Provides the correction on a point using the fitted model
+    Args:
+        self: The PanelModel object
+        point: Point to be corrected
+
+    Returns:
+        The point indexes and the correction to that point.
     """
     corrval = corotated_paraboloid_scipy([point.xc, point.yc, self.center.xc, self.center.yc, self.zeta],
                                          *self.parameters)
@@ -198,6 +264,12 @@ def solve_corotated_robust(self, samples):
     """
     Try fitting the Surface of a panel using the corotated least_squares method, if that fails fallback to scipy
     fitting
+    Args:
+        self: The PanelModel object
+        samples: List of points to be fitted
+
+    Returns:
+        The parameters for the fitted model
     """
     try:
         return solve_corotated_lst_sq(self, samples)
@@ -210,6 +282,18 @@ def solve_corotated_robust(self, samples):
 
 
 def solve_scipy(self, samples, verbose=False, x0=None):
+    """
+    Fit the panel model using scipy optimiza curve_fit. The model is provided by a fitting function in the PanelModel
+    object.
+    Args:
+        self: The PanelModel object
+        samples: List of points to be fitted
+        verbose: Print scipy fitting messages
+        x0: user choice of initial values
+
+    Returns:
+        The parameters for the fitted model
+    """
     devia = np.ndarray([len(samples)])
     coords = np.ndarray([5, len(samples)])
     for ipoint, point in enumerate(samples):
@@ -244,6 +328,15 @@ def solve_scipy(self, samples, verbose=False, x0=None):
 
 
 def correct_scipy(self, point):
+    """
+    Provides the correction on a point using the fitted model's fitting function
+    Args:
+        self: The PanelModel object
+        point: Point to be corrected
+
+    Returns:
+        The point indexes and the correction to that point.
+    """
     corrval = self.fitting_function([point.xc, point.yc,
                                      self.center.xc, self.center.yc,
                                      self.zeta], *self.parameters)
@@ -256,18 +349,15 @@ def correct_scipy(self, point):
 
 def corotated_paraboloid_scipy(params, ucurv, vcurv, zoff):
     """
-    Surface model to be used in fitting with scipy
-    Same as the rotated paraboloid above, but theta is the panel center angle
-    Not valid for polygon panels
-    Assumes that the center of the paraboloid is the center of the panel
+    Fitting function for a corrotated paraboloid to be used with solve_scipy
     Args:
-        coords: [x,y] coordinate pair for point
+        params: [xc, yc, x0, y0, zeta] Coordinates and non-fitted model parameters
         ucurv: curvature in projected u direction
         vcurv: curvature in projected v direction
         zoff:  Z offset of the paraboloid
 
     Returns:
-    Paraboloid value at X and Y
+    Paraboloid value at Xc and Yc
     """
     xc, yc = params[0:2]
     x0, y0 = params[2:4]
@@ -279,17 +369,16 @@ def corotated_paraboloid_scipy(params, ucurv, vcurv, zoff):
 
 def xyaxes_paraboloid_scipy(params, ucurv, vcurv, zoff):
     """
-    Surface model to be used in fitting with scipy
-    Assumes that the center of the paraboloid is the center of the panel
-    In this model the panel can only bend in the x and y directions
+    Fitting function for a simple paraboloid to be used with solve_scipy whose bending axes are parallel to the
+    X and Y directions.
     Args:
-        coords: [x,y] coordinate pair for point
-        ucurv: curvature in x direction
-        vcurv: curvature in y direction
+        params: [xc, yc, x0, y0, zeta] Coordinates and non-fitted model parameters
+        ucurv: curvature in projected u direction
+        vcurv: curvature in projected v direction
         zoff:  Z offset of the paraboloid
 
     Returns:
-        Paraboloid value at X and Y
+    Paraboloid value at Xc and Yc
     """
     xc, yc = params[0:2]
     x0, y0 = params[2:4]
@@ -300,18 +389,17 @@ def xyaxes_paraboloid_scipy(params, ucurv, vcurv, zoff):
 
 def rotated_paraboloid_scipy(params, ucurv, vcurv, zoff, theta):
     """
-    Surface model to be used in fitting with scipy
-    Assumes that the center of the paraboloid is the center of the panel
-    This model is degenerate in the combinations of theta, ucurv and vcurv
+    Fitting function for a simple paraboloid to be used with solve_scipy whose bending axes can be arbitrarily rotated
+    from the X and Y axes
     Args:
-        coords: [x,y] coordinate pair for point
+        params: [xc, yc, x0, y0, zeta] Coordinates and non-fitted model parameters
         ucurv: curvature in projected u direction
         vcurv: curvature in projected v direction
         zoff:  Z offset of the paraboloid
-        theta: Angle between x,y and u,v coordinate systems
+        theta: Paraboloids rotation with respect to the X axis
 
     Returns:
-        Paraboloid value at X and Y
+    Paraboloid value at Xc and Yc
     """
     xc, yc = params[0:2]
     x0, y0 = params[2:4]
@@ -399,6 +487,14 @@ PANEL_MODEL_DICT = {
 class PanelModel:
 
     def __init__(self, model_dict, zeta, ref_points, center):
+        """
+        Initialize a PanelModel object
+        Args:
+            model_dict: The dictionary containing the parameters of the model
+            zeta: The panel angle from the Y axis (only used for some models)
+            ref_points: Reference points for use in the flexible model fitting
+            center: Panel center (only used for some models)
+        """
         self.zeta = zeta
         self.ref_points = ref_points
         self.center = center
@@ -410,6 +506,14 @@ class PanelModel:
         self.fitted = False
 
     def _flexible_coeffs(self, point):
+        """
+        Compute the coefficients used in the flexible fitting
+        Args:
+            point: The point for which to compute coefficients
+
+        Returns:
+            The coefficients
+        """
         x1, x2, y2 = self.ref_points
         f_lin = x1 + point.yc*(x2-x1)/y2
         coeffs = np.ndarray(4)
@@ -420,10 +524,27 @@ class PanelModel:
         return coeffs
 
     def solve(self, samples):
+        """
+        Fits the model to the given samples
+        Args:
+            samples: The list of points to be fitted.
+
+        Returns:
+            Nothing
+        """
         self.parameters = self._solve(self, samples)
         self.fitted = True
 
     def correct(self, samples, margins):
+        """
+        Provides the corrections for all the points in the margins and samples
+        Args:
+            samples: The list of points to be fitted.
+            margins: The list of points to be ignored in fitting but used in corrections.
+
+        Returns:
+            Array of corrections and the indices linking them to the aperture.
+        """
         if not self.fitted:
             raise Exception("Cannot correct using a panel model that is not fitted")
         corrections = []
@@ -434,6 +555,14 @@ class PanelModel:
         return np.array(corrections)
 
     def correct_point(self, point):
+        """
+        Provide corrections for a single PanelPoint
+        Args:
+            point: the point in question
+
+        Returns:
+            The expected correction for that single point.
+        """
         _, _, correction = self._correct_point(self, point)
         return correction
 
@@ -441,6 +570,15 @@ class PanelModel:
 class PanelPoint:
 
     def __init__(self, xc, yc, ix=None, iy=None, value=None):
+        """
+        Initialize a point with its important properties
+        Args:
+            xc: X coordinate
+            yc: Y coordinate
+            ix: x-axis index at the aperture if relevant
+            iy: y-axis index at the aperture if relevant
+            value: point value if relevant
+        """
         self.xc = xc
         self.yc = yc
         self.ix = ix
