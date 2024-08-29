@@ -11,7 +11,7 @@ from astrohack.utils import gauss_elimination, least_squares_jit
 ###################################
 
 
-def build_system(shape):
+def _build_system(shape):
     """
     Build a matrix and a vector to represent a system of linear equations
     Args:
@@ -29,7 +29,7 @@ def build_system(shape):
 ###################################
 
 
-def solve_mean(_self, samples):
+def _solve_mean(_self, samples):
     """
     Fit panel surface as a simple mean of its points deviation
     Args:
@@ -48,7 +48,7 @@ def solve_mean(_self, samples):
     return [mean]
 
 
-def correct_mean(self, point):
+def _correct_mean(self, point):
     """
     Provides the correction on a point using the mean value of the panel
     Args:
@@ -65,7 +65,7 @@ def correct_mean(self, point):
 ###################################
 
 
-def solve_rigid(self, samples):
+def _solve_rigid(self, samples):
     """
     Fit panel surface using AIPS rigid model, an inclined plane.
     Args:
@@ -75,7 +75,7 @@ def solve_rigid(self, samples):
     Returns:
         The parameters for the fitted inclined plane
     """
-    matrix, vector = build_system([self.npar, self.npar])
+    matrix, vector = _build_system([self.npar, self.npar])
     for point in samples:
         matrix[0, 0] += point.xc * point.xc
         matrix[0, 1] += point.xc * point.yc
@@ -93,7 +93,7 @@ def solve_rigid(self, samples):
     return gauss_elimination(matrix, vector)
 
 
-def correct_rigid(self, point):
+def _correct_rigid(self, point):
     """
     Provides the correction on a point using the fitted inclined plane
     Args:
@@ -111,7 +111,7 @@ def correct_rigid(self, point):
 ###################################
 
 
-def solve_flexible(self, samples):
+def _solve_flexible(self, samples):
     """
     Fit panel surface using AIPS flexible model, WHAT IS THIS MODEL???
     Args:
@@ -121,7 +121,7 @@ def solve_flexible(self, samples):
     Returns:
         The parameters for the fitted model
     """
-    matrix, vector = build_system([self.npar, self.npar])
+    matrix, vector = _build_system([self.npar, self.npar])
     for point in samples:
         auno, aduo, atre, aqua = self._flexible_coeffs(point)
         matrix[0, 0] += auno*auno
@@ -148,7 +148,7 @@ def solve_flexible(self, samples):
     return gauss_elimination(matrix, vector)
 
 
-def correct_flexible(self, point):
+def _correct_flexible(self, point):
     """
     Provides the correction on a point using the fitted model
     Args:
@@ -166,7 +166,7 @@ def correct_flexible(self, point):
 ###################################
 
 
-def solve_full_paraboloid(self, samples):
+def _solve_full_paraboloid(self, samples):
     """
     Builds the designer matrix for least squares fitting, and calls the least_squares fitter for a fully fledged
     9 parameter paraboloid
@@ -178,7 +178,7 @@ def solve_full_paraboloid(self, samples):
         The parameters for the fitted model
     """
     # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
-    matrix, vector = build_system((len(samples), self.npar))
+    matrix, vector = _build_system((len(samples), self.npar))
     for ipnt, point in enumerate(samples):
         matrix[ipnt, 0] = point.xc**2 * point.yc**2
         matrix[ipnt, 1] = point.xc**2 * point.yc
@@ -194,7 +194,7 @@ def solve_full_paraboloid(self, samples):
     return params
 
 
-def correct_full_paraboloid(self, point):
+def _correct_full_paraboloid(self, point):
     """
     Provides the correction on a point using the fitted model
     Args:
@@ -217,7 +217,7 @@ def correct_full_paraboloid(self, point):
 #######################################
 
 
-def solve_corotated_lst_sq(self, samples):
+def _solve_corotated_lst_sq(self, samples):
     """
     Builds the designer matrix for least squares fitting, and calls the least_squares fitter for a corotated
     paraboloid centered at the center of the panel
@@ -229,7 +229,7 @@ def solve_corotated_lst_sq(self, samples):
         The parameters for the fitted model
     """
     # a*u**2 + b*v**2 + c
-    matrix, vector = build_system((len(samples), self.npar))
+    matrix, vector = _build_system((len(samples), self.npar))
     x0 = self.center.xc
     y0 = self.center.yc
     for ipnt, point in enumerate(samples):
@@ -241,7 +241,7 @@ def solve_corotated_lst_sq(self, samples):
     return params
 
 
-def correct_corotated_lst_sq(self, point):
+def _correct_corotated_lst_sq(self, point):
     """
     Provides the correction on a point using the fitted model
     Args:
@@ -251,8 +251,8 @@ def correct_corotated_lst_sq(self, point):
     Returns:
         The point indexes and the correction to that point.
     """
-    corrval = corotated_paraboloid_scipy([point.xc, point.yc, self.center.xc, self.center.yc, self.zeta],
-                                         *self.parameters)
+    corrval = _corotated_paraboloid_scipy([point.xc, point.yc, self.center.xc, self.center.yc, self.zeta],
+                                          *self.parameters)
     return point.ix, point.iy, corrval
 
 ###################################
@@ -260,7 +260,7 @@ def correct_corotated_lst_sq(self, point):
 ###################################
 
 
-def solve_corotated_robust(self, samples):
+def _solve_corotated_robust(self, samples):
     """
     Try fitting the Surface of a panel using the corotated least_squares method, if that fails fallback to scipy
     fitting
@@ -272,16 +272,16 @@ def solve_corotated_robust(self, samples):
         The parameters for the fitted model
     """
     try:
-        return solve_corotated_lst_sq(self, samples)
+        return _solve_corotated_lst_sq(self, samples)
     except np.linalg.LinAlgError:
-        return solve_scipy(self, samples)
+        return _solve_scipy(self, samples)
 
 ###################################
 # Scipy base                      #
 ###################################
 
 
-def solve_scipy(self, samples, verbose=False, x0=None):
+def _solve_scipy(self, samples, verbose=False, x0=None):
     """
     Fit the panel model using scipy optimiza curve_fit. The model is provided by a fitting function in the PanelModel
     object.
@@ -314,7 +314,7 @@ def solve_scipy(self, samples, verbose=False, x0=None):
     maxfevs = [100000, 1000000, 10000000]
     for maxfev in maxfevs:
         try:
-            result = opt.curve_fit(self.fitting_function, coords, devia,
+            result = opt.curve_fit(self._fitting_function, coords, devia,
                                    p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
         except RuntimeError:
             if verbose:
@@ -327,7 +327,7 @@ def solve_scipy(self, samples, verbose=False, x0=None):
             return params
 
 
-def correct_scipy(self, point):
+def _correct_scipy(self, point):
     """
     Provides the correction on a point using the fitted model's fitting function
     Args:
@@ -337,9 +337,9 @@ def correct_scipy(self, point):
     Returns:
         The point indexes and the correction to that point.
     """
-    corrval = self.fitting_function([point.xc, point.yc,
-                                     self.center.xc, self.center.yc,
-                                     self.zeta], *self.parameters)
+    corrval = self._fitting_function([point.xc, point.yc,
+                                      self.center.xc, self.center.yc,
+                                      self.zeta], *self.parameters)
     return point.ix, point.iy, corrval
 
 ###################################
@@ -347,7 +347,7 @@ def correct_scipy(self, point):
 ###################################
 
 
-def corotated_paraboloid_scipy(params, ucurv, vcurv, zoff):
+def _corotated_paraboloid_scipy(params, ucurv, vcurv, zoff):
     """
     Fitting function for a corrotated paraboloid to be used with solve_scipy
     Args:
@@ -367,7 +367,7 @@ def corotated_paraboloid_scipy(params, ucurv, vcurv, zoff):
     return ucurv * u**2 + vcurv * v**2 + zoff
 
 
-def xyaxes_paraboloid_scipy(params, ucurv, vcurv, zoff):
+def _xyaxes_paraboloid_scipy(params, ucurv, vcurv, zoff):
     """
     Fitting function for a simple paraboloid to be used with solve_scipy whose bending axes are parallel to the
     X and Y directions.
@@ -387,7 +387,7 @@ def xyaxes_paraboloid_scipy(params, ucurv, vcurv, zoff):
     return ucurv * u**2 + vcurv * v**2 + zoff
 
 
-def rotated_paraboloid_scipy(params, ucurv, vcurv, zoff, theta):
+def _rotated_paraboloid_scipy(params, ucurv, vcurv, zoff, theta):
     """
     Fitting function for a simple paraboloid to be used with solve_scipy whose bending axes can be arbitrarily rotated
     from the X and Y axes
@@ -411,72 +411,72 @@ def rotated_paraboloid_scipy(params, ucurv, vcurv, zoff, theta):
 PANEL_MODEL_DICT = {
     "mean": {
         'npar': 1,
-        'solve': solve_mean,
-        'correct': correct_mean,
+        'solve': _solve_mean,
+        'correct': _correct_mean,
         'experimental': False,
         'ring_only': False,
         'fitting_function': None
     },
     "rigid": {
         'npar': 3,
-        'solve': solve_rigid,
-        'correct': correct_rigid,
+        'solve': _solve_rigid,
+        'correct': _correct_rigid,
         'experimental': False,
         'ring_only': False,
         'fitting_function': None
     },
     "flexible": {
         'npar': 4,
-        'solve': solve_flexible,
-        'correct': correct_flexible,
+        'solve': _solve_flexible,
+        'correct': _correct_flexible,
         'experimental': False,
         'ring_only': True,
         'fitting_function': None
     },
     "corotated_scipy": {
         'npar': 3,
-        'solve': solve_scipy,
-        'correct': correct_scipy,
+        'solve': _solve_scipy,
+        'correct': _correct_scipy,
         'experimental': False,
         'ring_only': False,
-        'fitting_function': corotated_paraboloid_scipy
+        'fitting_function': _corotated_paraboloid_scipy
     },
     "corotated_lst_sq": {
         'npar': 3,
-        'solve': solve_corotated_lst_sq,
-        'correct': correct_corotated_lst_sq,
+        'solve': _solve_corotated_lst_sq,
+        'correct': _correct_corotated_lst_sq,
         'experimental': False,
         'ring_only': False,
         'fitting_function': None
     },
     "corotated_robust": {
         'npar': 3,
-        'solve': solve_corotated_robust,
-        'correct': correct_corotated_lst_sq,
+        'solve': _solve_corotated_robust,
+        'correct': _correct_corotated_lst_sq,
         'experimental': False,
         'ring_only': False,
-        'fitting_function': corotated_paraboloid_scipy
+        'fitting_function': _corotated_paraboloid_scipy
     },
     "xy_paraboloid": {
         'npar': 3,
-        'solve': solve_scipy,
-        'correct': correct_scipy,
+        'solve': _solve_scipy,
+        'correct': _correct_scipy,
         'experimental': False,
         'ring_only': False,
-        'fitting_function': xyaxes_paraboloid_scipy
+        'fitting_function': _xyaxes_paraboloid_scipy
     },
     "rotated_paraboloid": {
         'npar': 4,
-        'solve': solve_scipy,
-        'correct': correct_scipy,
+        'solve': _solve_scipy,
+        'correct': _correct_scipy,
         'experimental': False,
         'ring_only': False,
-        'fitting_function': rotated_paraboloid_scipy
+        'fitting_function': _rotated_paraboloid_scipy
     },
     "full_paraboloid_lst_sq": {
         'npar': 9,
-        'solve': solve_full_paraboloid,
-        'correct': correct_full_paraboloid,
+        'solve': _solve_full_paraboloid,
+        'correct': _correct_full_paraboloid,
         'experimental': True,
         'ring_only': False,
         'fitting_function': None
@@ -501,7 +501,7 @@ class PanelModel:
         self.npar = model_dict['npar']
         self._solve = model_dict['solve']
         self._correct_point = model_dict['correct']
-        self.fitting_function = model_dict['fitting_function']
+        self._fitting_function = model_dict['fitting_function']
         self.parameters = None
         self.fitted = False
 
