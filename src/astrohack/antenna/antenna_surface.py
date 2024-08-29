@@ -4,7 +4,6 @@ from matplotlib import patches
 
 import graphviper.utils.logger as logger
 
-from astrohack.antenna.base_panel import PANEL_MODELS, irigid
 from astrohack.antenna.ring_panel import RingPanel
 from astrohack.utils import string_to_ascii_file
 from astrohack.utils.constants import *
@@ -21,7 +20,7 @@ SUPPORTED_POL_STATES = ['I', 'RR', 'LL', 'XX', 'YY']
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, clip_type='sigma', clip_level=3, pmodel=PANEL_MODELS[irigid], crop=False,
+    def __init__(self, inputxds, telescope, clip_type='sigma', clip_level=3, pmodel='rigid', crop=False,
                  nan_out_of_bounds=True, panel_margins=0.05, reread=False, pol_state='I'):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
