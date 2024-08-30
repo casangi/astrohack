@@ -110,6 +110,7 @@ class BasePanel:
         """
         self.model = PanelModel(PANEL_MODEL_DICT['mean'], self.zeta, self.ref_points, self.center)
         self.model.solve(self.samples)
+        self.fall_back_fit = True
 
     def get_corrections(self):
         if not self.solved:
