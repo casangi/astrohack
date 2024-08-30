@@ -1,6 +1,5 @@
 import pytest
 
-import astrohack.antenna.panel_fitting as panfit
 from astrohack.antenna.panel_fitting import PanelPoint
 from astrohack.utils.algorithms import gauss_elimination
 from astrohack.antenna.base_panel import BasePanel
