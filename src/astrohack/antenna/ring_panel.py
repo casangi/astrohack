@@ -77,7 +77,7 @@ class RingPanel(BasePanel):
 
         for iscrew in range(nscrews):
             if scheme[iscrew] == 'c':
-                screws[iscrew, :] = self.center
+                screws[iscrew] = self.center
             else:
                 if scheme[iscrew][0] == 'i':
                     radius = self.inrad + offset
