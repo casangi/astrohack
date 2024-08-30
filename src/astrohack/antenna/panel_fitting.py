@@ -586,3 +586,13 @@ class PanelPoint:
         self.ix = ix
         self.iy = iy
         self.value = value
+
+    def __eq__(self, other):
+        equal = self.xc == other.xc
+        equal = equal and self.yc == other.yc
+        equal = equal and self.ix == other.ix
+        equal = equal and self.iy == other.iy
+        equal = equal and self.value == other.value
+        return equal
+
+
