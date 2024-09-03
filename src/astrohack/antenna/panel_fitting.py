@@ -10,6 +10,11 @@ from astrohack.utils import gauss_elimination, least_squares_jit, least_squares
 #  General purpose                #
 ###################################
 
+def fetch_sample_values(samples):
+    points = np.ndarray((len(samples), 3))
+    for ipnt, point in enumerate(samples):
+        points[ipnt, :] = point.get_xcycval()
+    return points
 
 def _build_system(shape):
     """
@@ -27,6 +32,22 @@ def _build_system(shape):
 ###################################
 #  Mean                           #
 ###################################
+
+def _solve_mean_opt(_self, samples):
+    """
+    Fit panel surface as a simple mean of its points deviation
+    Args:
+        _self: Parameter is here for consistent interface
+        samples: List of points to be fitted
+
+    Returns:
+        the mean of the deviation in the points
+    """
+    mean = 0
+    if len(samples) > 0:
+        points = fetch_sample_values(samples)
+        mean = np.mean(points[:, 2])
+    return [mean]
 
 
 def _solve_mean(_self, samples):
@@ -63,6 +84,34 @@ def _correct_mean(self, point):
 ###################################
 # Rigid                           #
 ###################################
+
+def _solve_rigid_opt(self, samples):
+    """
+    Fit panel surface using AIPS rigid model, an inclined plane.
+    Args:
+        self: The PanelModel object
+        samples: List of points to be fitted
+
+    Returns:
+        The parameters for the fitted inclined plane
+    """
+    matrix, vector = _build_system([self.npar, self.npar])
+    points = fetch_sample_values(samples)
+    matrix[0, 0] = np.sum(points[:, 0] ** 2)
+    matrix[0, 1] = np.sum(points[:, 0] * points[:, 1])
+    matrix[0, 2] = np.sum(points[:, 0])
+    matrix[1, 0] = matrix[0, 1]
+    matrix[1, 1] = np.sum(points[:, 1] * points[:, 1])
+    matrix[1, 2] = np.sum(points[:, 1])
+    matrix[2, 0] = matrix[0, 2]
+    matrix[2, 1] = matrix[1, 2]
+    matrix[2, 2] = len(samples)
+
+    vector[0] = np.sum(points[:, 2] * points[:, 0])
+    vector[1] = np.sum(points[:, 2] * points[:, 1])
+    vector[2] = np.sum(points[:, 2])
+
+    return gauss_elimination(matrix, vector)
 
 
 def _solve_rigid(self, samples):
@@ -110,6 +159,41 @@ def _correct_rigid(self, point):
 # Flexible                        #
 ###################################
 
+def _solve_flexible_opt(self, samples):
+    """
+    Fit panel surface using AIPS flexible model, WHAT IS THIS MODEL???
+    Args:
+        self: The PanelModel object
+        samples: List of points to be fitted
+
+    Returns:
+        The parameters for the fitted model
+    """
+    matrix, vector = _build_system([self.npar, self.npar])
+    coeffs_val = self._flexible_coeffs_arrays(samples)
+
+    matrix[0, 0] = np.sum(coeffs_val[:, 0]*coeffs_val[:, 0])
+    matrix[0, 1] = np.sum(coeffs_val[:, 0]*coeffs_val[:, 1])
+    matrix[0, 2] = np.sum(coeffs_val[:, 0]*coeffs_val[:, 2])
+    matrix[0, 3] = np.sum(coeffs_val[:, 0]*coeffs_val[:, 3])
+    matrix[1, 1] = np.sum(coeffs_val[:, 1]*coeffs_val[:, 1])
+    matrix[1, 2] = np.sum(coeffs_val[:, 1]*coeffs_val[:, 2])
+    matrix[1, 3] = np.sum(coeffs_val[:, 1]*coeffs_val[:, 3])
+    matrix[2, 2] = np.sum(coeffs_val[:, 2]*coeffs_val[:, 2])
+    matrix[2, 3] = np.sum(coeffs_val[:, 2]*coeffs_val[:, 3])
+    matrix[3, 3] = np.sum(coeffs_val[:, 3]*coeffs_val[:, 3])
+    vector[0]   = np.sum(coeffs_val[:, 4]*coeffs_val[:, 0])
+    vector[1]   = np.sum(coeffs_val[:, 4]*coeffs_val[:, 1])
+    vector[2]   = np.sum(coeffs_val[:, 4]*coeffs_val[:, 2])
+    vector[3]   = np.sum(coeffs_val[:, 4]*coeffs_val[:, 3])
+
+    matrix[1, 0] = matrix[0, 1]
+    matrix[2, 0] = matrix[0, 2]
+    matrix[2, 1] = matrix[1, 2]
+    matrix[3, 0] = matrix[0, 3]
+    matrix[3, 1] = matrix[1, 3]
+    matrix[3, 2] = matrix[2, 3]
+    return gauss_elimination(matrix, vector)
 
 def _solve_flexible(self, samples):
     """
@@ -164,7 +248,36 @@ def _correct_flexible(self, point):
 ###################################
 # Full 9 parameters paraboloid    #
 ###################################
+def _solve_full_paraboloid_opt(self, samples):
+    """
+    Builds the designer matrix for least squares fitting, and calls the least_squares fitter for a fully fledged
+    9 parameter paraboloid
+    Args:
+        self: The PanelModel object
+        samples: List of points to be fitted
 
+    Returns:
+        The parameters for the fitted model
+    """
+    # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
+    matrix, vector = _build_system((len(samples), self.npar))
+    points = np.ndarray((len(samples), 3))
+    for ipnt, point in enumerate(samples):
+        points[ipnt, :] = point.get_xcycval()
+    # for ipnt, point in enumerate(samples):
+    matrix[:, 0] = points[:, 0]**2 * points[:, 1]**2
+    matrix[:, 1] = points[:, 0]**2 * points[:, 1]
+    matrix[:, 2] = points[:, 1]**2 * points[:, 0]
+    matrix[:, 3] = points[:, 0] ** 2
+    matrix[:, 4] = points[:, 1] ** 2
+    matrix[:, 5] = points[:, 0] * points[:, 1]
+    matrix[:, 6] = points[:, 0]
+    matrix[:, 7] = points[:, 1]
+    matrix[:, 8] = 1.0
+    vector[:] = points[:, 2]
+
+    params, _, _, _ = least_squares_jit(matrix, vector)
+    return params
 
 def _solve_full_paraboloid(self, samples):
     """
@@ -216,7 +329,30 @@ def _correct_full_paraboloid(self, point):
 #######################################
 # Co-rotated paraboloid least squares #
 #######################################
+def _solve_corotated_lst_sq_opt(self, samples):
+    """
+    Builds the designer matrix for least squares fitting, and calls the least_squares fitter for a corotated
+    paraboloid centered at the center of the panel
+    Args:
+        self: The PanelModel object
+        samples: List of points to be fitted
 
+    Returns:
+        The parameters for the fitted model
+    """
+    # a*u**2 + b*v**2 + c
+    matrix, vector = _build_system((len(samples), self.npar))
+    points = fetch_sample_values(samples)
+    x0 = self.center.xc
+    y0 = self.center.yc
+
+    matrix[:, 0] = ((points[:, 0] - x0) * np.cos(self.zeta) - (points[:, 1] - y0) * np.sin(self.zeta))**2  # U
+    matrix[:, 1] = ((points[:, 0] - x0) * np.sin(self.zeta) + (points[:, 1] - y0) * np.cos(self.zeta))**2  # V
+    matrix[:, 2] = 1.0
+    vector[:] = points[:, 2]
+
+    params, _, _, _ = least_squares_jit(matrix, vector)
+    return params
 
 def _solve_corotated_lst_sq(self, samples):
     """
@@ -278,9 +414,76 @@ def _solve_corotated_robust(self, samples):
     except np.linalg.LinAlgError:
         return _solve_scipy(self, samples)
 
+def _solve_corotated_robust_opt(self, samples):
+    """
+    Try fitting the Surface of a panel using the corotated least_squares method, if that fails fallback to scipy
+    fitting
+    Args:
+        self: The PanelModel object
+        samples: List of points to be fitted
+
+    Returns:
+        The parameters for the fitted model
+    """
+    try:
+        return _solve_corotated_lst_sq_opt(self, samples)
+    except np.linalg.LinAlgError:
+        return _solve_scipy_opt(self, samples)
+
 ###################################
 # Scipy base                      #
 ###################################
+
+
+def _solve_scipy_opt(self, samples, verbose=False, x0=None):
+    """
+    Fit the panel model using scipy optimiza curve_fit. The model is provided by a fitting function in the PanelModel
+    object.
+    Args:
+        self: The PanelModel object
+        samples: List of points to be fitted
+        verbose: Print scipy fitting messages
+        x0: user choice of initial values
+
+    Returns:
+        The parameters for the fitted model
+    """
+
+    coords = np.ndarray([5, len(samples)])
+    points = fetch_sample_values(samples)
+
+    devia = points[:, 2]
+    coords[0, :] = points[:, 0]
+    coords[1, :] = points[:, 1]
+    coords[2, :] = self.center.xc
+    coords[3, :] = self.center.yc
+    coords[4, :] = self.zeta
+
+    liminf = [-np.inf, -np.inf, -np.inf]
+    limsup = [np.inf, np.inf, np.inf]
+    if x0 is None:
+        p0 = [1e2, 1e2, np.mean(devia)]
+    else:
+        p0 = x0
+    if self.npar > len(p0):
+        liminf.append(0.0)
+        limsup.append(np.pi)
+        p0.append(0)
+
+    maxfevs = [100000, 1000000, 10000000]
+    for maxfev in maxfevs:
+        try:
+            result = opt.curve_fit(self._fitting_function, coords, devia,
+                                   p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
+        except RuntimeError:
+            if verbose:
+                logger.info("Increasing number of iterations")
+            continue
+        else:
+            params = result[0]
+            if verbose:
+                logger.info("Converged with less than {0:d} iterations".format(maxfev))
+            return params
 
 
 def _solve_scipy(self, samples, verbose=False, x0=None):
@@ -298,6 +501,7 @@ def _solve_scipy(self, samples, verbose=False, x0=None):
     """
     devia = np.ndarray([len(samples)])
     coords = np.ndarray([5, len(samples)])
+
     for ipoint, point in enumerate(samples):
         devia[ipoint] = point.value
         coords[:, ipoint] = point.xc, point.yc, self.center.xc, self.center.yc, self.zeta
@@ -413,6 +617,14 @@ def _rotated_paraboloid_scipy(params, ucurv, vcurv, zoff, theta):
 PANEL_MODEL_DICT = {
     "mean": {
         'npar': 1,
+        'solve': _solve_mean_opt,
+        'correct': _correct_mean,
+        'experimental': False,
+        'ring_only': False,
+        'fitting_function': None
+    },
+    "old_mean": {
+        'npar': 1,
         'solve': _solve_mean,
         'correct': _correct_mean,
         'experimental': False,
@@ -420,6 +632,14 @@ PANEL_MODEL_DICT = {
         'fitting_function': None
     },
     "rigid": {
+        'npar': 3,
+        'solve': _solve_rigid_opt,
+        'correct': _correct_rigid,
+        'experimental': False,
+        'ring_only': False,
+        'fitting_function': None
+    },
+    "old_rigid": {
         'npar': 3,
         'solve': _solve_rigid,
         'correct': _correct_rigid,
@@ -429,6 +649,14 @@ PANEL_MODEL_DICT = {
     },
     "flexible": {
         'npar': 4,
+        'solve': _solve_flexible_opt,
+        'correct': _correct_flexible,
+        'experimental': False,
+        'ring_only': True,
+        'fitting_function': None
+    },
+    "old_flexible": {
+        'npar': 4,
         'solve': _solve_flexible,
         'correct': _correct_flexible,
         'experimental': False,
@@ -436,6 +664,14 @@ PANEL_MODEL_DICT = {
         'fitting_function': None
     },
     "corotated_scipy": {
+        'npar': 3,
+        'solve': _solve_scipy_opt,
+        'correct': _correct_scipy,
+        'experimental': False,
+        'ring_only': False,
+        'fitting_function': _corotated_paraboloid_scipy
+    },
+    "old_corotated_scipy": {
         'npar': 3,
         'solve': _solve_scipy,
         'correct': _correct_scipy,
@@ -445,6 +681,14 @@ PANEL_MODEL_DICT = {
     },
     "corotated_lst_sq": {
         'npar': 3,
+        'solve': _solve_corotated_lst_sq_opt,
+        'correct': _correct_corotated_lst_sq,
+        'experimental': False,
+        'ring_only': False,
+        'fitting_function': None
+    },
+    "old_corotated_lst_sq": {
+        'npar': 3,
         'solve': _solve_corotated_lst_sq,
         'correct': _correct_corotated_lst_sq,
         'experimental': False,
@@ -452,6 +696,14 @@ PANEL_MODEL_DICT = {
         'fitting_function': None
     },
     "corotated_robust": {
+        'npar': 3,
+        'solve': _solve_corotated_robust_opt,
+        'correct': _correct_corotated_lst_sq,
+        'experimental': False,
+        'ring_only': False,
+        'fitting_function': _corotated_paraboloid_scipy
+    },
+    "old_corotated_robust": {
         'npar': 3,
         'solve': _solve_corotated_robust,
         'correct': _correct_corotated_lst_sq,
@@ -461,6 +713,14 @@ PANEL_MODEL_DICT = {
     },
     "xy_paraboloid": {
         'npar': 3,
+        'solve': _solve_scipy_opt,
+        'correct': _correct_scipy,
+        'experimental': False,
+        'ring_only': False,
+        'fitting_function': _xyaxes_paraboloid_scipy
+    },
+    "old_xy_paraboloid": {
+        'npar': 3,
         'solve': _solve_scipy,
         'correct': _correct_scipy,
         'experimental': False,
@@ -469,15 +729,31 @@ PANEL_MODEL_DICT = {
     },
     "rotated_paraboloid": {
         'npar': 4,
+        'solve': _solve_scipy_opt,
+        'correct': _correct_scipy,
+        'experimental': False,
+        'ring_only': False,
+        'fitting_function': _rotated_paraboloid_scipy
+    },
+    "old_rotated_paraboloid": {
+        'npar': 4,
         'solve': _solve_scipy,
         'correct': _correct_scipy,
         'experimental': False,
         'ring_only': False,
         'fitting_function': _rotated_paraboloid_scipy
     },
-    "full_paraboloid_lst_sq": {
+    "old_full_paraboloid_lst_sq": {
         'npar': 9,
         'solve': _solve_full_paraboloid,
+        'correct': _correct_full_paraboloid,
+        'experimental': True,
+        'ring_only': False,
+        'fitting_function': None
+    },
+    "full_paraboloid_lst_sq": {
+        'npar': 9,
+        'solve': _solve_full_paraboloid_opt,
         'correct': _correct_full_paraboloid,
         'experimental': True,
         'ring_only': False,
@@ -524,6 +800,20 @@ class PanelModel:
         coeffs[2] = (y2-point.yc) * (1.+point.xc/f_lin) / (2.0*y2)
         coeffs[3] = point.yc  * (1.+point.xc/f_lin) / (2.0*y2)
         return coeffs
+
+    def _flexible_coeffs_arrays(self, samples):
+        points = fetch_sample_values(samples)
+        coeffs_val = np.ndarray((len(samples), 5))
+
+        x1, x2, y2 = self.ref_points
+        f_lin = x1 + points[:, 1]*(x2-x1)/y2
+        coeffs_val[:, 0] = (y2-points[:, 1]) * (1.-points[:, 0]/f_lin) / (2.0*y2)
+        coeffs_val[:, 1] = points[:, 1]  * (1.-points[:, 0]/f_lin) / (2.0*y2)
+        coeffs_val[:, 2] = (y2-points[:, 1]) * (1.+points[:, 0]/f_lin) / (2.0*y2)
+        coeffs_val[:, 3] = points[:, 1]  * (1.+points[:, 0]/f_lin) / (2.0*y2)
+        coeffs_val[:, 4] = points[:, 2]
+
+        return coeffs_val
 
     def solve(self, samples):
         """
@@ -594,5 +884,8 @@ class PanelPoint:
         equal = equal and self.iy == other.iy
         equal = equal and self.value == other.value
         return equal
+
+    def get_xcycval(self):
+        return self.xc, self.yc, self.value
 
 
