@@ -3,7 +3,7 @@ import scipy.optimize as opt
 
 import graphviper.utils.logger as logger
 
-from astrohack.utils import gauss_elimination, least_squares_jit, least_squares
+from astrohack.utils import gauss_elimination, least_squares_jit
 
 
 ###################################
@@ -363,6 +363,29 @@ def _solve_full_paraboloid(self, samples):
     return params
 
 
+def _correct_full_paraboloid_opt(self, points):
+    """
+    Provides the correction on a point using the fitted model
+    Args:
+        self: The PanelModel object
+        point: Point to be corrected
+
+    Returns:
+        The point indexes and the correction to that point.
+    """
+    # ax2y2 + bx2y + cxy2 + dx2 + ey2 + gxy + hx + iy + j
+    coords = _fetch_sample_coords(points)
+
+    xx = coords[:, 0]
+    yy = coords[:, 1]
+    xsq = xx**2
+    ysq = yy**2
+
+    corr1d = (self.parameters[0]*xsq*ysq + self.parameters[1]*xsq*yy + self.parameters[2]*ysq*xx +
+              self.parameters[3]*xsq + self.parameters[4]*ysq + self.parameters[5]*xx*yy + self.parameters[6]*xx +
+              self.parameters[7]*yy + self.parameters[8])
+    return _fuse_idx_and_corrections(coords, corr1d)
+
 def _correct_full_paraboloid(self, point):
     """
     Provides the correction on a point using the fitted model
@@ -433,6 +456,27 @@ def _solve_corotated_lst_sq(self, samples):
     params, _, _, _ = least_squares_jit(matrix, vector)
     return params
 
+
+def _correct_corotated_lst_sq_opt(self, points):
+    """
+    Provides the correction on a point using the fitted model
+    Args:
+        self: The PanelModel object
+        point: Point to be corrected
+
+    Returns:
+        The point indexes and the correction to that point.
+    """
+    coords = _fetch_sample_coords(points)
+    coszeta = np.cos(self.zeta)
+    sinzeta = np.sin(self.zeta)
+    x0 = self.center.xc
+    y0 = self.center.yc
+    corr1d = (((coords[:, 0] - x0) * coszeta - (coords[:, 1] - y0) * sinzeta) ** 2 * self.parameters[0] +
+              ((coords[:, 0] - x0) * sinzeta + (coords[:, 1] - y0) * coszeta) ** 2 * self.parameters[1] +
+              self.parameters[2])
+    corrections = _fuse_idx_and_corrections(coords, corr1d)
+    return corrections
 
 def _correct_corotated_lst_sq(self, point):
     """
@@ -604,18 +648,11 @@ def _correct_scipy(self, point):
     return point.ix, point.iy, corrval
 
 def _correct_scipy_opt(self, points):
-    coords = np.ndarray([5, len(points)])
-    pnt_coords = _fetch_sample_coords(points)
-
-    coords[0, :] = pnt_coords[:, 0]
-    coords[1, :] = pnt_coords[:, 1]
-    coords[2, :] = self.center.xc
-    coords[3, :] = self.center.yc
-    coords[4, :] = self.zeta
-
-    vec_func = np.vectorize(self._fitting_function)
-    corr1d = vec_func(coords, *self.parameters)
-    return _fuse_idx_and_corrections(pnt_coords, corr1d)
+    corrections = np.array([[point.ix, point.iy,
+                             self._fitting_function([point.xc, point.yc, self.center.xc, self.center.yc, self.zeta],
+                                                    *self.parameters)]
+                            for point in points])
+    return corrections
 
 ###################################
 # Scipy Fitting Functions         #
@@ -735,7 +772,7 @@ PANEL_MODEL_DICT = {
     "corotated_scipy": {
         'npar': 3,
         'solve': _solve_scipy_opt,
-        'correct': _correct_scipy_opt,
+        'correct': _correct_corotated_lst_sq_opt,
         'experimental': False,
         'ring_only': False,
         'fitting_function': _corotated_paraboloid_scipy
@@ -751,7 +788,7 @@ PANEL_MODEL_DICT = {
     "corotated_lst_sq": {
         'npar': 3,
         'solve': _solve_corotated_lst_sq_opt,
-        'correct': _correct_corotated_lst_sq,
+        'correct': _correct_corotated_lst_sq_opt,
         'experimental': False,
         'ring_only': False,
         'fitting_function': None
@@ -767,7 +804,7 @@ PANEL_MODEL_DICT = {
     "corotated_robust": {
         'npar': 3,
         'solve': _solve_corotated_robust_opt,
-        'correct': _correct_corotated_lst_sq,
+        'correct': _correct_corotated_lst_sq_opt,
         'experimental': False,
         'ring_only': False,
         'fitting_function': _corotated_paraboloid_scipy
@@ -783,7 +820,7 @@ PANEL_MODEL_DICT = {
     "xy_paraboloid": {
         'npar': 3,
         'solve': _solve_scipy_opt,
-        'correct': _correct_scipy,
+        'correct': _correct_scipy_opt,
         'experimental': False,
         'ring_only': False,
         'fitting_function': _xyaxes_paraboloid_scipy
@@ -799,7 +836,7 @@ PANEL_MODEL_DICT = {
     "rotated_paraboloid": {
         'npar': 4,
         'solve': _solve_scipy_opt,
-        'correct': _correct_scipy,
+        'correct': _correct_scipy_opt,
         'experimental': False,
         'ring_only': False,
         'fitting_function': _rotated_paraboloid_scipy
@@ -812,17 +849,17 @@ PANEL_MODEL_DICT = {
         'ring_only': False,
         'fitting_function': _rotated_paraboloid_scipy
     },
-    "old_full_paraboloid_lst_sq": {
+    "full_paraboloid_lst_sq": {
         'npar': 9,
-        'solve': _solve_full_paraboloid,
-        'correct': _correct_full_paraboloid,
+        'solve': _solve_full_paraboloid_opt,
+        'correct': _correct_full_paraboloid_opt,
         'experimental': True,
         'ring_only': False,
         'fitting_function': None
     },
-    "full_paraboloid_lst_sq": {
+    "old_full_paraboloid_lst_sq": {
         'npar': 9,
-        'solve': _solve_full_paraboloid_opt,
+        'solve': _solve_full_paraboloid,
         'correct': _correct_full_paraboloid,
         'experimental': True,
         'ring_only': False,
