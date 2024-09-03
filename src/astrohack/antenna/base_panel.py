@@ -66,7 +66,8 @@ class BasePanel:
             msg = f'Unknown model {self.model_name}'
             logger.error(msg)
             raise Exception(msg)
-        self.model = PanelModel(model_dict, self.zeta, self.ref_points, self.center)
+
+        self.model = PanelModel(model_dict, self.zeta, self.ref_points, self.center, old='old' in self.model_name)
 
     def add_sample(self, sample):
         """
@@ -109,6 +110,7 @@ class BasePanel:
         Changes the method association to mean surface fitting, and fits the panel with it
         """
         self.model = PanelModel(PANEL_MODEL_DICT['mean'], self.zeta, self.ref_points, self.center)
+        #self.model.old=True
         self.model.solve(self.samples)
         self.fall_back_fit = True
 

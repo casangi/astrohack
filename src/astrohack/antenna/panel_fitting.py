@@ -10,11 +10,25 @@ from astrohack.utils import gauss_elimination, least_squares_jit, least_squares
 #  General purpose                #
 ###################################
 
-def fetch_sample_values(samples):
+def _fetch_sample_values(samples):
     points = np.ndarray((len(samples), 3))
     for ipnt, point in enumerate(samples):
         points[ipnt, :] = point.get_xcycval()
     return points
+
+def _fetch_sample_coords(samples):
+    coords = np.ndarray((len(samples), 4))
+    for ipnt, point in enumerate(samples):
+        coords[ipnt, :] = point.get_coords()
+    return coords
+
+
+def _fuse_idx_and_corrections(coords, corr1d):
+    npnt = corr1d.shape[0]
+    corrections = np.ndarray((npnt, 3))
+    corrections[:, 0:2] = coords[:, 2:4]
+    corrections[:, 2] = corr1d
+    return corrections
 
 def _build_system(shape):
     """
@@ -45,7 +59,7 @@ def _solve_mean_opt(_self, samples):
     """
     mean = 0
     if len(samples) > 0:
-        points = fetch_sample_values(samples)
+        points = _fetch_sample_values(samples)
         mean = np.mean(points[:, 2])
     return [mean]
 
@@ -81,6 +95,18 @@ def _correct_mean(self, point):
     """
     return point.ix, point.iy, self.parameters[0]
 
+def _correct_mean_opt(self, points):
+    """
+    Provides the correction on a point using the mean value of the panel
+    Args:
+        self: The PanelModel object
+        point: Point to be corrected
+
+    Returns:
+        The point indexes and the correction to that point.
+    """
+    return _fuse_idx_and_corrections(_fetch_sample_coords(points), np.full(len(points), self.parameters[0]))
+
 ###################################
 # Rigid                           #
 ###################################
@@ -96,7 +122,7 @@ def _solve_rigid_opt(self, samples):
         The parameters for the fitted inclined plane
     """
     matrix, vector = _build_system([self.npar, self.npar])
-    points = fetch_sample_values(samples)
+    points = _fetch_sample_values(samples)
     matrix[0, 0] = np.sum(points[:, 0] ** 2)
     matrix[0, 1] = np.sum(points[:, 0] * points[:, 1])
     matrix[0, 2] = np.sum(points[:, 0])
@@ -142,6 +168,21 @@ def _solve_rigid(self, samples):
     return gauss_elimination(matrix, vector)
 
 
+def _correct_rigid_opt(self, points):
+    """
+    Provides the correction on a point using the fitted inclined plane
+    Args:
+        self: The PanelModel object
+        point: Point to be corrected
+
+    Returns:
+        The point indexes and the correction to that point.
+    """
+    coords = _fetch_sample_coords(points)
+    corr1d = coords[:, 0] * self.parameters[0] + coords[:, 1] * self.parameters[1] + self.parameters[2]
+    return _fuse_idx_and_corrections(coords, corr1d)
+
+
 def _correct_rigid(self, point):
     """
     Provides the correction on a point using the fitted inclined plane
@@ -154,7 +195,6 @@ def _correct_rigid(self, point):
     """
     corr = point.xc * self.parameters[0] + point.yc * self.parameters[1] + self.parameters[2]
     return point.ix, point.iy, corr
-
 ###################################
 # Flexible                        #
 ###################################
@@ -231,6 +271,21 @@ def _solve_flexible(self, samples):
     matrix[3, 2] = matrix[2, 3]
     return gauss_elimination(matrix, vector)
 
+def _correct_flexible_opt(self, points):
+    """
+    Provides the correction on a point using the fitted model
+    Args:
+        self: The PanelModel object
+        point: Point to be corrected
+
+    Returns:
+        The point indexes and the correction to that point.
+    """
+    coeffs_val = self._flexible_coeffs_arrays(points)
+    coeffs = coeffs_val[:, 0:4]
+    coords = _fetch_sample_coords(points)
+    corr1d = np.sum(coeffs[:, :] * self.parameters[:], axis=1)
+    return _fuse_idx_and_corrections(coords, corr1d)
 
 def _correct_flexible(self, point):
     """
@@ -342,7 +397,7 @@ def _solve_corotated_lst_sq_opt(self, samples):
     """
     # a*u**2 + b*v**2 + c
     matrix, vector = _build_system((len(samples), self.npar))
-    points = fetch_sample_values(samples)
+    points = _fetch_sample_values(samples)
     x0 = self.center.xc
     y0 = self.center.yc
 
@@ -450,7 +505,7 @@ def _solve_scipy_opt(self, samples, verbose=False, x0=None):
     """
 
     coords = np.ndarray([5, len(samples)])
-    points = fetch_sample_values(samples)
+    points = _fetch_sample_values(samples)
 
     devia = points[:, 2]
     coords[0, :] = points[:, 0]
@@ -548,6 +603,20 @@ def _correct_scipy(self, point):
                                       self.zeta], *self.parameters)
     return point.ix, point.iy, corrval
 
+def _correct_scipy_opt(self, points):
+    coords = np.ndarray([5, len(points)])
+    pnt_coords = _fetch_sample_coords(points)
+
+    coords[0, :] = pnt_coords[:, 0]
+    coords[1, :] = pnt_coords[:, 1]
+    coords[2, :] = self.center.xc
+    coords[3, :] = self.center.yc
+    coords[4, :] = self.zeta
+
+    vec_func = np.vectorize(self._fitting_function)
+    corr1d = vec_func(coords, *self.parameters)
+    return _fuse_idx_and_corrections(pnt_coords, corr1d)
+
 ###################################
 # Scipy Fitting Functions         #
 ###################################
@@ -618,7 +687,7 @@ PANEL_MODEL_DICT = {
     "mean": {
         'npar': 1,
         'solve': _solve_mean_opt,
-        'correct': _correct_mean,
+        'correct': _correct_mean_opt,
         'experimental': False,
         'ring_only': False,
         'fitting_function': None
@@ -634,7 +703,7 @@ PANEL_MODEL_DICT = {
     "rigid": {
         'npar': 3,
         'solve': _solve_rigid_opt,
-        'correct': _correct_rigid,
+        'correct': _correct_rigid_opt,
         'experimental': False,
         'ring_only': False,
         'fitting_function': None
@@ -650,7 +719,7 @@ PANEL_MODEL_DICT = {
     "flexible": {
         'npar': 4,
         'solve': _solve_flexible_opt,
-        'correct': _correct_flexible,
+        'correct': _correct_flexible_opt,
         'experimental': False,
         'ring_only': True,
         'fitting_function': None
@@ -666,7 +735,7 @@ PANEL_MODEL_DICT = {
     "corotated_scipy": {
         'npar': 3,
         'solve': _solve_scipy_opt,
-        'correct': _correct_scipy,
+        'correct': _correct_scipy_opt,
         'experimental': False,
         'ring_only': False,
         'fitting_function': _corotated_paraboloid_scipy
@@ -764,7 +833,7 @@ PANEL_MODEL_DICT = {
 
 class PanelModel:
 
-    def __init__(self, model_dict, zeta, ref_points, center):
+    def __init__(self, model_dict, zeta, ref_points, center, old=False):
         """
         Initialize a PanelModel object
         Args:
@@ -773,12 +842,13 @@ class PanelModel:
             ref_points: Reference points for use in the flexible model fitting
             center: Panel center (only used for some models)
         """
+        self.old=old
         self.zeta = zeta
         self.ref_points = ref_points
         self.center = center
         self.npar = model_dict['npar']
         self._solve = model_dict['solve']
-        self._correct_point = model_dict['correct']
+        self._correct_sub = model_dict['correct']
         self._fitting_function = model_dict['fitting_function']
         self.parameters = None
         self.fitted = False
@@ -802,7 +872,7 @@ class PanelModel:
         return coeffs
 
     def _flexible_coeffs_arrays(self, samples):
-        points = fetch_sample_values(samples)
+        points = _fetch_sample_values(samples)
         coeffs_val = np.ndarray((len(samples), 5))
 
         x1, x2, y2 = self.ref_points
@@ -839,12 +909,19 @@ class PanelModel:
         """
         if not self.fitted:
             raise Exception("Cannot correct using a panel model that is not fitted")
-        corrections = []
-        for point in samples:
-            corrections.append(self._correct_point(self, point))
-        for point in margins:
-            corrections.append(self._correct_point(self, point))
-        return np.array(corrections)
+        if self.old:
+            corrections = []
+            for point in samples:
+                corrections.append(self._correct_sub(self, point))
+            for point in margins:
+                corrections.append(self._correct_sub(self, point))
+            return np.array(corrections)
+        else:
+            samp_corr = np.array(self._correct_sub(self, samples))
+            marg_corr = np.array(self._correct_sub(self, margins))
+            return np.concatenate((samp_corr, marg_corr), axis=0)
+
+
 
     def correct_point(self, point):
         """
@@ -855,8 +932,12 @@ class PanelModel:
         Returns:
             The expected correction for that single point.
         """
-        _, _, correction = self._correct_point(self, point)
-        return correction
+        if self.old:
+            _, _, correction = self._correct_sub(self, point)
+            return correction
+        else:
+            correction = self._correct_sub(self, [point])
+            return correction[0, 2]
 
 
 class PanelPoint:
@@ -887,5 +968,8 @@ class PanelPoint:
 
     def get_xcycval(self):
         return self.xc, self.yc, self.value
+
+    def get_coords(self):
+        return self.xc, self.yc, self.ix, self.iy
 
 
