@@ -574,9 +574,21 @@ class PanelModel:
         if not self.fitted:
             raise Exception("Cannot correct using a panel model that is not fitted")
 
-        samp_corr = np.array(self._correct_sub(self, samples))
-        marg_corr = np.array(self._correct_sub(self, margins))
-        return np.concatenate((samp_corr, marg_corr), axis=0)
+        nsamp = len(samples)
+        nmarg = len(margins)
+
+        if nsamp == 0 and nmarg == 0:
+            raise Exception("Nothing to correct")
+        elif nmarg == 0:
+            corrections = np.array(self._correct_sub(self, samples))
+        elif nsamp == 0:
+            corrections = np.array(self._correct_sub(self, margins))
+        else:
+            samp_corr = np.array(self._correct_sub(self, samples))
+            marg_corr = np.array(self._correct_sub(self, margins))
+            corrections = np.concatenate((samp_corr, marg_corr), axis=0)
+
+        return corrections
 
     def correct_point(self, point):
         """
