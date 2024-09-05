@@ -1,6 +1,7 @@
 from astrohack.antenna.antenna_surface import SUPPORTED_POL_STATES
-from astrohack.antenna.base_panel import PANEL_MODELS
-from astrohack.utils import trigo_units, length_units, time_units, possible_splits, freq_units
+from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT
+from astrohack.utils import trigo_units, length_units, time_units, freq_units
+from astrohack.utils import possible_splits
 from astrohack.visualization.plot_tools import astrohack_cmaps
 
 
@@ -41,7 +42,7 @@ def custom_split_checker(split_type):
 
 def custom_panel_checker(check_type):
     if check_type == "panel.models":
-        return PANEL_MODELS
+        return PANEL_MODEL_DICT.keys()
     elif check_type == "panel.pol_states":
         return SUPPORTED_POL_STATES
     else:

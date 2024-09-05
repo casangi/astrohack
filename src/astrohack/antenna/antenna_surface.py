@@ -4,7 +4,6 @@ from matplotlib import patches
 
 import graphviper.utils.logger as logger
 
-from astrohack.antenna.base_panel import PANEL_MODELS, irigid
 from astrohack.antenna.ring_panel import RingPanel
 from astrohack.utils import string_to_ascii_file
 from astrohack.utils.constants import *
@@ -21,7 +20,7 @@ SUPPORTED_POL_STATES = ['I', 'RR', 'LL', 'XX', 'YY']
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, clip_type='sigma', clip_level=3, pmodel=PANEL_MODELS[irigid], crop=False,
+    def __init__(self, inputxds, telescope, clip_type='sigma', clip_level=3, pmodel='rigid', crop=False,
                  nan_out_of_bounds=True, panel_margins=0.05, reread=False, pol_state='I'):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
@@ -351,23 +350,23 @@ class AntennaSurface:
         return
 
     def _compile_panel_points_ringed(self):
-        panels = np.zeros(self.rad.shape)
+        panels = np.full_like(self.rad, -1)
         panelsum = 0
         for iring in range(self.telescope.nrings):
             angle = twopi / self.telescope.npanel[iring]
-            panels = np.where(self.rad >= self.telescope.inrad[iring], np.floor(self.phi / angle) + panelsum, panels)
+            panels = np.where(self.rad >= self.telescope.inrad[iring], np.floor(self.phi / angle) + panelsum,
+                              panels)
             panelsum += self.telescope.npanel[iring]
-        panels = np.where(self.mask, panels, -1).astype("int32")
         for ix in range(self.unpix):
             xc = self.u_axis[ix]
             for iy in range(self.vnpix):
                 ipanel = panels[ix, iy]
                 if ipanel >= 0:
                     yc = self.v_axis[iy]
-                    panel = self.panels[ipanel]
+                    panel = self.panels[int(ipanel)]
                     issample, inpanel = panel.is_inside(self.rad[ix, iy], self.phi[ix, iy])
                     if inpanel:
-                        if issample:
+                        if issample and self.mask[ix, iy]:
                             panel.add_sample([xc, yc, ix, iy, self.deviation[ix, iy]])
                         else:
                             panel.add_margin([xc, yc, ix, iy, self.deviation[ix, iy]])
@@ -698,8 +697,10 @@ class AntennaSurface:
         # First panel might fail hence we need to check npar for all panels
         max_par = 0
         for panel in self.panels:
-            if panel.NPAR > max_par:
-                max_par = panel.NPAR
+            p_npar = panel.model.npar
+            if p_npar > max_par:
+                max_par = p_npar
+
         nscrews = self.panels[0].screws.shape[0]
 
         self.panel_labels = np.ndarray([npanels], dtype=object)
@@ -710,9 +711,9 @@ class AntennaSurface:
 
         for ipanel in range(npanels):
             self.panel_labels[ipanel] = self.panels[ipanel].label
-            self.panel_pars[ipanel, :] = self.panels[ipanel].par
+            self.panel_pars[ipanel, :] = self.panels[ipanel].model.parameters
             self.screw_adjustments[ipanel, :] = self.panels[ipanel].export_screws(unit='m')
-            self.panel_model_array[ipanel] = self.panels[ipanel].model
+            self.panel_model_array[ipanel] = self.panels[ipanel].model_name
             self.panel_fallback[ipanel] = self.panels[ipanel].fall_back_fit
 
     def export_screws(self, filename, unit="mm", comment_char='#'):
