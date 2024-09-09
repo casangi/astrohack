@@ -18,8 +18,7 @@ from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 from typing import Union, List
 
 
-@graphviper.utils.parameter.validate(
-    
+@graphviper.utils.parameter.validate(    
     custom_checker=custom_panel_checker
 )
 def panel(

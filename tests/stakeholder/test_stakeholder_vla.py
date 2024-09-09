@@ -3,6 +3,10 @@ import json
 import graphviper
 import numpy as np
 import pytest
+import astrohack
+
+import numpy as np
+
 from astrohack.dio import open_panel
 from astrohack.extract_holog import extract_holog
 from astrohack.extract_pointing import extract_pointing

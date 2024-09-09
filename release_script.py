@@ -74,7 +74,7 @@ def run_git(bumped_version, push):
     if push:
         print('Pushing...')
         os.system('git push')
-        os.system(f'git push v{bumped_version}')
+        os.system(f'git push origin tag v{bumped_version}')
     else:
         print('Push skipped')
 
