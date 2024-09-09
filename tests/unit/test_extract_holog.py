@@ -45,13 +45,14 @@ class TestExtractHolog():
             parallel=False
         )
 
-        # Generate a holog observations dictionary with a subset of data descirbed by ddi=1
+        # Generate a holog observations dictionary with a subset of data described by ddi=1
         holog_obs_dict = generate_holog_obs_dict(
             ms_name="data/ea25_cal_small_before_fixed.split.ms",
             point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             baseline_average_distance='all',
             baseline_average_nearest='all',
-            parallel=False
+            parallel=False,
+            write=False
         )
 
         holog_obs_dict.select(key="ddi", value=0, inplace=True)
@@ -67,10 +68,10 @@ class TestExtractHolog():
         )
 
         # Get holog_obs_dict created by extract_holog
-        with open(".holog_obs_dict.json") as holog_dict_file:
+        with open("data/ea25_cal_small_before_fixed.split.holog.zarr/holog_obs_dict.json") as holog_dict_file:
             holog_obs_test_dict = json.load(holog_dict_file)
 
-        holog_obs_test_dict = json.loads(holog_obs_test_dict)
+        #holog_obs_test_dict = json.loads(holog_obs_test_dict)
 
         # Check that the holog_obs_dict used in extract_holog matches the input holog_obs_dict
         assert holog_obs_test_dict == holog_obs_dict
