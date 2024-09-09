@@ -63,6 +63,9 @@ class HologObsDict(dict):
 
     @classmethod
     def from_file(cls, filepath):
+        if filepath.endswith(".holog.zarr"):
+            filepath = str(pathlib.Path(filepath).resolve().joinpath("holog_obs_dict.json"))
+
         try:
             with open(filepath, "r") as file:
                 obj = json.load(file)
@@ -483,10 +486,6 @@ def extract_holog(
                     if ddi_id not in ddi:
                         del holog_obs_dict[ddi_key]
 
-    encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
-
-    with open(".holog_obs_dict.json", "w") as outfile:
-        json.dump(encoded_obj, outfile)
 
     ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "STATE"),
@@ -665,6 +664,9 @@ def extract_holog(
         holog_attr_file = "{name}/{ext}".format(name=extract_holog_params['holog_name'], ext=".holog_input")
         write_meta_data(holog_attr_file, input_pars)
 
+        with open(f"{extract_holog_params['holog_name']}/holog_obs_dict.json", "w") as outfile:
+            json.dump(holog_obs_dict, outfile, cls=NumpyEncoder)
+
         holog_mds = AstrohackHologFile(extract_holog_params['holog_name'])
         holog_mds.open()
 
@@ -680,6 +682,7 @@ def generate_holog_obs_dict(
         point_name: str,
         baseline_average_distance: str = 'all',
         baseline_average_nearest: str = 'all',
+        write=True,
         parallel: bool = False
 ) -> HologObsDict:
     """
@@ -700,6 +703,9 @@ def generate_holog_obs_dict(
     baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and
     baseline_average_nearest can not be used together.
     :type baseline_average_nearest: int, optional
+
+    :param write: Write file flag.
+    :type point_name: bool, optional
 
     :param point_name: Name of *<point_name>.point.zarr* file to use. 
     :type point_name: str, optional
@@ -830,10 +836,10 @@ def generate_holog_obs_dict(
     )
 
     encoded_obj = json.dumps(holog_obs_dict, cls=NumpyEncoder)
-    print(encoded_obj)
 
-    with open(".holog_obs_dict.json", "w") as outfile:
-        outfile.write(encoded_obj)
+    if write:
+        with open("holog_obs_dict.json", "w") as outfile:
+            outfile.write(encoded_obj)
 
     return HologObsDict(json.loads(encoded_obj))
 
