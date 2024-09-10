@@ -385,6 +385,7 @@ def format_frequency(freq_value, unit='Hz', decimal_places=4):
     fac = convert_unit(unit, unitout, 'frequency')
     return format_value_unit(fac * freq_value, unitout, decimal_places)
 
+
 def format_wavelength(wave_value, unit='m', decimal_places=2):
     if isinstance(wave_value, str):
         wave_value = float(wave_value)
@@ -402,6 +403,7 @@ def format_wavelength(wave_value, unit='m', decimal_places=2):
         unitout = unit
     fac = convert_unit(unit, unitout, 'length')
     return format_value_unit(fac * wave_value, unitout, decimal_places)
+
 
 def format_label(label, separators=('_', '\n'), new_separator=' '):
     if isinstance(label, str):
@@ -492,5 +494,17 @@ def create_pretty_table(field_names, alignment='c'):
             raise Exception(msg)
         table.align = alignment
     return table
+
+
+def create_dataset_label(ant_id, ddi_id):
+    if 'ant_' in ant_id:
+        ant_name = ant_id.split('_')[1]
+    else:
+        ant_name = ant_id
+    if 'ddi_' in ddi_id:
+        ddi_name = ddi_id.split('_')[1]
+    else:
+        ddi_name = ddi_id
+    return f'{ant_name.upper()}, DDI {ddi_name}'
 
 
