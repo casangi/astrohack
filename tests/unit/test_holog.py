@@ -3,7 +3,7 @@ import pytest
 import os
 import json
 import shutil
-import graphviper
+import toolviper
 
 import numpy as np
 
@@ -21,9 +21,9 @@ class TestHolog():
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
-        graphviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data/")
+        toolviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data/")
 
-        graphviper.utils.data.download(file='holog_numerical_verification.json', folder="data/")
+        toolviper.utils.data.download(file='holog_numerical_verification.json', folder="data/")
 
         extract_pointing(
             ms_name="data/ea25_cal_small_before_fixed.split.ms",

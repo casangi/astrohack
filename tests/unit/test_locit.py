@@ -1,7 +1,7 @@
 import os
 
 import shutil
-import graphviper
+import toolviper
 
 import numpy as np
 
@@ -22,7 +22,7 @@ class TestLocit():
             Setup any state specific to the execution of the given test class
             such as fetching test data
         """
-        graphviper.utils.data.download('locit-input-pha.cal', folder='data')
+        toolviper.utils.data.download('locit-input-pha.cal', folder='data')
 
         locit_mds = extract_locit(
             cal_table="data/locit-input-pha.cal",

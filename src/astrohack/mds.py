@@ -1,10 +1,10 @@
 import pathlib
-import graphviper.utils.parameter
+import toolviper.utils.parameter
 
 import numpy as np
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
-from graphviper.utils.console import Colorize
+from toolviper.utils.console import Colorize
 
 from astrohack.utils import create_pretty_table
 from astrohack.utils.validation import custom_plots_checker
@@ -180,7 +180,7 @@ class AstrohackImageFile(dict):
         print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures,
                            self.export_phase_fit_results])
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_split_checker
     )
     def select(
@@ -215,7 +215,7 @@ class AstrohackImageFile(dict):
             else:
                 return self[ant][ddi]
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_split_checker
     )
     def export_to_fits(
@@ -266,7 +266,7 @@ class AstrohackImageFile(dict):
             parallel=parallel
         )
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
     )
     def plot_apertures(
@@ -333,7 +333,7 @@ class AstrohackImageFile(dict):
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, plot_aperture_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
     )
     def plot_beams(
@@ -385,7 +385,7 @@ class AstrohackImageFile(dict):
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
     )
     def export_phase_fit_results(
@@ -492,7 +492,7 @@ class AstrohackHologFile(dict):
         print_data_contents(self, ["DDI", "Map", "Antenna"])
         print_method_list([self.summary, self.select, self.plot_diagnostics, self.plot_lm_sky_coverage])
 
-    @graphviper.utils.parameter.validate()
+    @toolviper.utils.parameter.validate()
     def select(
             self,
             ddi: int,
@@ -532,7 +532,7 @@ class AstrohackHologFile(dict):
 
         return self._meta_data
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
     )
     def plot_diagnostics(
@@ -591,7 +591,7 @@ class AstrohackHologFile(dict):
         key_order = ["ddi", "map", "ant"]
         compute_graph(self, calibration_plot_chunk, param_dict, key_order, parallel)
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
     )
     def plot_lm_sky_coverage(
@@ -665,7 +665,7 @@ class AstrohackHologFile(dict):
         compute_graph(self, plot_lm_coverage, param_dict, key_order, parallel)
         return
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
     )
     def export_to_aips(
@@ -772,7 +772,7 @@ class AstrohackPanelFile(dict):
         print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
                            self.plot_antennas, self.export_gain_tables])
 
-    @graphviper.utils.parameter.validate()
+    @toolviper.utils.parameter.validate()
     def get_antenna(
             self,
             ant: str,
@@ -794,7 +794,7 @@ class AstrohackPanelFile(dict):
         telescope = Telescope(xds.attrs['telescope_name'])
         return AntennaSurface(xds, telescope, reread=True)
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
     )
     def export_screws(
@@ -845,7 +845,7 @@ class AstrohackPanelFile(dict):
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, export_screws_chunk, param_dict, ['ant', 'ddi'], parallel=False)
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_plots_checker
     )
     def plot_antennas(
@@ -941,7 +941,7 @@ class AstrohackPanelFile(dict):
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
-    @graphviper.utils.parameter.validate()
+    @toolviper.utils.parameter.validate()
     def export_to_fits(
             self,
             destination: str,
@@ -977,7 +977,7 @@ class AstrohackPanelFile(dict):
         compute_graph(self, export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
                       parallel=parallel)
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
     )
     def export_gain_tables(
@@ -1182,7 +1182,7 @@ class AstrohackLocitFile(dict):
                            rad_to_deg_str(source['precessed'][1])])
         print(table)
 
-    @graphviper.utils.parameter.validate()
+    @toolviper.utils.parameter.validate()
     def print_array_configuration(
             self,
             relative: bool = True
@@ -1202,7 +1202,7 @@ class AstrohackLocitFile(dict):
         param_dict = locals()
         print_array_configuration(param_dict, self['antenna_info'], self['observation_info']['telescope_name'])
 
-    @graphviper.utils.parameter.validate()
+    @toolviper.utils.parameter.validate()
     def plot_source_positions(
             self,
             destination: str,
@@ -1266,7 +1266,7 @@ class AstrohackLocitFile(dict):
 
         return
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
     )
     def plot_array_configuration(
@@ -1405,7 +1405,7 @@ class AstrohackPositionFile(dict):
 
         return self._file_is_open
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
     )
     def export_locit_fit_results(
@@ -1447,7 +1447,7 @@ class AstrohackPositionFile(dict):
         param_dict['combined'] = self.combined
         export_locit_fit_results(self, param_dict)
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
     )
     def plot_sky_coverage(
@@ -1512,7 +1512,7 @@ class AstrohackPositionFile(dict):
             compute_graph(self, plot_sky_coverage_chunk, param_dict, ['ant', 'ddi'],
                           parallel=parallel)
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
     )
     def plot_delays(
@@ -1588,7 +1588,7 @@ class AstrohackPositionFile(dict):
             compute_graph(self, plot_delays_chunk, param_dict, ['ant', 'ddi'],
                           parallel=parallel)
 
-    @graphviper.utils.parameter.validate(
+    @toolviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
     )
     def plot_position_corrections(

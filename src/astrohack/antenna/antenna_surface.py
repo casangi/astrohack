@@ -2,7 +2,7 @@ import xarray as xr
 
 from matplotlib import patches
 
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 from astrohack.antenna.ring_panel import RingPanel
 from astrohack.utils import string_to_ascii_file

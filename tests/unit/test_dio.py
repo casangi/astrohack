@@ -1,6 +1,6 @@
 import shutil
 
-import graphviper
+import toolviper
 
 from astrohack import holog
 from astrohack.dio import open_holog
@@ -22,7 +22,7 @@ class TestAstrohackDio():
 
     @classmethod
     def setup_class(cls):
-        graphviper.utils.data.download(
+        toolviper.utils.data.download(
             file="ea25_cal_small_before_fixed.split.ms",
             folder=cls.datafolder
         )

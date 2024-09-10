@@ -1,8 +1,8 @@
 import os
 import pathlib
 import shutil
-import graphviper.utils.logger as logger
-import graphviper.utils.parameter
+import toolviper.utils.logger as logger
+import toolviper.utils.parameter
 
 from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT
 from astrohack.utils.fits import aips_holog_to_xds
@@ -19,7 +19,7 @@ from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 from typing import Union, List
 
 
-@graphviper.utils.parameter.validate(    
+@toolviper.utils.parameter.validate(    
     custom_checker=custom_panel_checker
 )
 def panel(

@@ -6,7 +6,7 @@ import astropy.coordinates as coord
 from numba import njit
 import scipy.fftpack
 
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 from skimage.draw import disk
 from astrohack.utils.algorithms import calc_coords, least_squares

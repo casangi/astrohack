@@ -2,7 +2,7 @@ import os
 import json
 import shutil
 import pytest
-import graphviper
+import toolviper
 
 import numpy as np
 
@@ -21,7 +21,7 @@ class TestPanel:
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
-        graphviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data/")
+        toolviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data/")
 
         extract_pointing(
             ms_name="data/ea25_cal_small_before_fixed.split.ms",
@@ -190,7 +190,7 @@ class TestPanel:
         """
            Set cutoff=0 and compare results to known truth value array.
         """
-        graphviper.utils.data.download(file='panel_cutoff_mask', folder='data')
+        toolviper.utils.data.download(file='panel_cutoff_mask', folder='data')
 
         with open("data/panel_cutoff_mask.npy", "rb") as array:
             reference_array = np.load(array)

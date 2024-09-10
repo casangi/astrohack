@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.optimize as opt
 
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 from astrohack.utils import gauss_elimination, least_squares_jit
 

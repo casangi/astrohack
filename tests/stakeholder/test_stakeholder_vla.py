@@ -1,6 +1,6 @@
 import json
 import pytest
-import graphviper
+import toolviper
 
 import numpy as np
 
@@ -18,12 +18,12 @@ def set_data(tmp_path_factory):
     data_dir = tmp_path_factory.mktemp("data")
 
     # Data files
-    graphviper.utils.data.download(file='ea25_cal_small_before_fixed.split.ms', folder=str(data_dir))
-    graphviper.utils.data.download(file='ea25_cal_small_after_fixed.split.ms', folder=str(data_dir))
+    toolviper.utils.data.download(file='ea25_cal_small_before_fixed.split.ms', folder=str(data_dir))
+    toolviper.utils.data.download(file='ea25_cal_small_after_fixed.split.ms', folder=str(data_dir))
 
     # Verification json information
-    graphviper.utils.data.download(file='extract_holog_verification.json', folder=str(data_dir))
-    graphviper.utils.data.download(file='holog_numerical_verification.json', folder=str(data_dir))
+    toolviper.utils.data.download(file='extract_holog_verification.json', folder=str(data_dir))
+    toolviper.utils.data.download(file='holog_numerical_verification.json', folder=str(data_dir))
 
     return data_dir
 

@@ -1,7 +1,7 @@
 import json
 import dropbox
 import pathlib
-import graphviper
+import toolviper
 
 import pandas as pd
 import numpy as np
@@ -14,7 +14,7 @@ from astrohack.dio import open_panel
 
 from dropbox.exceptions import AuthError
 from astrohack.dio import open_image
-from graphviper.utils import logger
+from toolviper.utils import logger
 
 
 def get_center_pixel(file, antenna, ddi):
@@ -101,7 +101,7 @@ def generate_verification_json(path, antenna, ddi, write=False, generate_files=T
 
 def generate_verification_files():
     for stub in ["before", "after"]:
-        graphviper.utils.data.download(file=f"ea25_cal_small_{stub}_fixed.split.ms", folder="data/")
+        toolviper.utils.data.download(file=f"ea25_cal_small_{stub}_fixed.split.ms", folder="data/")
 
         extract_pointing(
             ms_name=f"data/ea25_cal_small_{stub}_fixed.split.ms",

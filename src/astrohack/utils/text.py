@@ -3,7 +3,7 @@ import inspect
 import textwrap
 
 import numpy as np
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 from prettytable import PrettyTable
 from astrohack.utils.conversion import convert_unit

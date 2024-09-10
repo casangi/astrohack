@@ -1,5 +1,5 @@
 import xarray as xr
-from graphviper.utils import logger as logger
+from toolviper.utils import logger as logger
 
 import astrohack
 import datetime

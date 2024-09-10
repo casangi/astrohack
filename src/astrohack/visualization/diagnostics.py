@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.time import Time
-from graphviper.utils import logger as logger
+from toolviper.utils import logger as logger
 
 from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.antenna.telescope import Telescope

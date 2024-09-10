@@ -14,26 +14,14 @@ from .mds import *
 from .locit import *
 from .extract_locit import *
 
-
-# Set parameter checking system directory.
-if os.path.exists(os.path.dirname(__file__) + "/config/"):
-    if not os.getenv("PARAMETER_CONFIG_PATH"):
-        os.environ["PARAMETER_CONFIG_PATH"] = os.path.dirname(__file__) + "/config/"
-
-    else:
-        if os.path.dirname(__file__) + "/config/" not in os.getenv("PARAMETER_CONFIG_PATH"):
-            os.environ["PARAMETER_CONFIG_PATH"] = ":".join(
-                (os.environ["PARAMETER_CONFIG_PATH"], os.path.dirname(__file__) + "/config/")
-            )
-
 # This installs a slick, informational tracebacks logger
 from rich.traceback import install
-from graphviper.utils.logger import setup_logger
+from toolviper.utils.logger import setup_logger
 
 install(show_locals=False)
 
-if not os.getenv("VIPER_LOGGER_NAME"):
-    os.environ["VIPER_LOGGER_NAME"] = "astrohack"
+if not os.getenv("LOGGER_NAME"):
+    os.environ["LOGGER_NAME"] = "astrohack"
     setup_logger(
         logger_name="astrohack",
         log_to_term=True,

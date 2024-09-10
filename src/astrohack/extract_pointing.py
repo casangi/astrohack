@@ -1,6 +1,6 @@
 import pathlib
-import graphviper.utils.parameter
-import graphviper.utils.logger as logger
+import toolviper.utils.parameter
+import toolviper.utils.logger as logger
 
 from astrohack.utils.text import get_default_file_name
 from astrohack.utils.file import overwrite_file
@@ -12,7 +12,7 @@ from astrohack.mds import AstrohackPointFile
 from typing import List, Union
 
 
-@graphviper.utils.parameter.validate()
+@toolviper.utils.parameter.validate()
 def extract_pointing(
         ms_name: str,
         point_name: str = None,

@@ -3,7 +3,7 @@ import json
 import numpy as np
 import xarray as xr
 import astropy
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 from numba import njit
 from numba.core import types

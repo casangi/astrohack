@@ -3,7 +3,7 @@ import inspect
 import json
 from datetime import date
 
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 import numpy as np
 
 import astrohack

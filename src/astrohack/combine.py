@@ -1,6 +1,6 @@
 import pathlib
-import graphviper.utils.parameter
-import graphviper.utils.logger as logger
+import toolviper.utils.parameter
+import toolviper.utils.logger as logger
 
 from typing import Union, List
 
@@ -14,7 +14,7 @@ from astrohack.utils.text import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
 
-@graphviper.utils.parameter.validate()
+@toolviper.utils.parameter.validate()
 def combine(
         image_name: str,
         combine_name: str = None,

@@ -5,7 +5,7 @@ from astrohack import aips_holog_to_xds
 from astrohack.utils.conversion import convert_unit
 
 import numpy as np
-import graphviper
+import toolviper
 import shutil
 
 
@@ -14,7 +14,7 @@ datafolder = "paneldata/"
 
 def setup():
     # Download relevant panel test files
-    graphviper.utils.data.download(file="panel_test_files", folder=datafolder)
+    toolviper.utils.data.download(file="panel_test_files", folder=datafolder)
 
 
 def cleanup():

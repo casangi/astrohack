@@ -13,7 +13,7 @@ from astrohack.utils.gridding import grid_beam
 from astrohack.utils.imaging import parallactic_derotation
 from astrohack.utils.phase_fitting import execute_phase_fitting
 
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 
 def process_holog_chunk(holog_chunk_params):
