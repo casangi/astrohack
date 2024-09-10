@@ -11,6 +11,7 @@ from numba.core import types
 from casacore import tables as ctables
 
 from astrohack.antenna import Telescope
+from astrohack.utils import create_dataset_label
 from astrohack.utils.imaging import calculate_parallactic_angle_chunk
 from astrohack.utils.algorithms import calculate_optimal_grid_parameters
 
@@ -428,8 +429,8 @@ def _create_holog_file(
 
             holog_file = holog_name
 
-            logger.info(
-                "Writing holog file to {file}".format(file=holog_file)
+            logger.debug(
+                f"Writing {create_dataset_label(ant_names[map_ant_index], ddi)} holog file to {holog_file}"
             )
             xds.to_zarr(
                 os.path.join(
