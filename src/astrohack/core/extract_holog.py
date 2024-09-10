@@ -12,7 +12,7 @@ from casacore import tables as ctables
 
 from astrohack.antenna import Telescope
 from astrohack.utils.imaging import calculate_parallactic_angle_chunk
-from astrohack.utils.algorithms import calculate_optimal_grid_parameters, significant_figures_round
+from astrohack.utils.algorithms import calculate_optimal_grid_parameters
 
 from astrohack.utils.file import load_point_file
 
@@ -118,7 +118,7 @@ def process_extract_holog_chunk(extract_holog_params):
     for ant_index in vis_map_dict.keys():
         antenna_name = "_".join(("ant", ant_names[ant_index]))
         n_pix, cell_size = calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, Telescope(telescope_name).diam,
-                                                             chan_freq)
+                                                             chan_freq, ddi)
 
         grid_params[antenna_name] = {
             "n_pix": n_pix,
@@ -671,7 +671,7 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
                             n_pixs.append(xds.attrs["grid_params"]["n_pix"])
                             telescope_names.append(xds.attrs['telescope_name'])
 
-    cell_sizes_sigfigs = significant_figures_round(cell_sizes, digits=3)
+    # cell_sizes_sigfigs = significant_figures_round(cell_sizes, digits=3)
 
     meta_data = {
         'cell_size': np.min(cell_sizes),

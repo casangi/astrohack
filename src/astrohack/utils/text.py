@@ -6,8 +6,9 @@ import numpy as np
 import toolviper.utils.logger as logger
 
 from prettytable import PrettyTable
+from toolviper.utils import logger as logger
+
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.algorithms import significant_figures_round
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -405,6 +406,22 @@ def format_wavelength(wave_value, unit='m', decimal_places=2):
     return format_value_unit(fac * wave_value, unitout, decimal_places)
 
 
+def format_angular_distance(dist_value, unit='rad', decimal_places=2):
+    one_deg = np.pi/180
+    if dist_value >= np.pi/180:
+        unitout = 'deg'
+    elif dist_value >= one_deg/60:
+        unitout = 'amin'
+    elif dist_value >= one_deg/3.6e3:
+        unitout = 'asec'
+    elif dist_value >= one_deg/3.6e6:
+        unitout = 'masec'
+    else:
+        unitout = 'uasec'
+    fac = convert_unit(unit, unitout, 'trigonometric')
+    return format_value_unit(fac * dist_value, unitout, decimal_places)
+
+
 def format_label(label, separators=('_', '\n'), new_separator=' '):
     if isinstance(label, str):
         out_label = label
@@ -501,10 +518,27 @@ def create_dataset_label(ant_id, ddi_id):
         ant_name = ant_id.split('_')[1]
     else:
         ant_name = ant_id
-    if 'ddi_' in ddi_id:
+    if isinstance(ddi_id, int):
+        ddi_name = str(ddi_id)
+    elif 'ddi_' in ddi_id:
         ddi_name = ddi_id.split('_')[1]
     else:
         ddi_name = ddi_id
     return f'{ant_name.upper()}, DDI {ddi_name}'
 
 
+def significant_figures_round(x, digits):
+    if np.isscalar(x):
+        if x == 0 or not np.isfinite(x):
+            return x
+
+        digits = int(digits - np.ceil(np.log10(abs(x))))
+        return round(x, digits)
+
+    elif isinstance(x, list) or isinstance(x, np.ndarray):
+        return list(map(significant_figures_round, x, [digits] * len(x)))
+
+    else:
+        logger.warning("Unknown data type.")
+
+        return x
