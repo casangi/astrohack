@@ -1,8 +1,9 @@
 import json
-
-import graphviper
-import numpy as np
 import pytest
+import graphviper
+
+import numpy as np
+
 from astrohack.dio import open_panel
 from astrohack.extract_holog import extract_holog
 from astrohack.extract_pointing import extract_pointing
@@ -108,11 +109,11 @@ def verify_center_pixels(file, antenna, ddi, reference_center_pixels, tolerance=
     return real_check and imag_check
 
 
-def verify_holog_obs_dictionary(holog_obs_dict):
-    with open(".holog_obs_dict.json") as json_file:
+def verify_holog_obs_dictionary(after_file, holog_obs_dict):
+    with open(f"{after_file}/holog_obs_dict.json", "r") as json_file:
         holog_obj = json.load(json_file)
 
-    return json.loads(holog_obj) == holog_obs_dict
+    return holog_obj == holog_obs_dict
 
 
 def verify_holog_diagnostics(json_data, truth_json, tolerance=1e-7):
@@ -174,7 +175,7 @@ def test_holography_pipeline(set_data):
         overwrite=True
     )
 
-    assert verify_holog_obs_dictionary(holog_obs_dict["vla"]["after"]), "Verifiy holog obs dictionary"
+    assert verify_holog_obs_dictionary(after_holog, holog_obs_dict["vla"]["after"]), "Verifiy holog obs dictionary"
 
     with open(str(set_data / "holog_numerical_verification.json")) as file:
         reference_dict = json.load(file)

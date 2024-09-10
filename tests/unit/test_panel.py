@@ -16,7 +16,7 @@ def relative_difference(result, expected):
     return 2 * np.abs(result - expected) / (abs(result) + abs(expected))
 
 
-class TestPanel():
+class TestPanel:
     @classmethod
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class

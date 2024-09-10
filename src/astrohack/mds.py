@@ -1153,7 +1153,7 @@ class AstrohackLocitFile(dict):
         :return: True if file is properly opened, else returns False
         :rtype: bool
         """
-        # logger= skriba.logger.get_logger(logger_name="astrohack")
+
 
         if file is None:
             file = self.file

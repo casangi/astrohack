@@ -18,7 +18,6 @@ from .extract_locit import *
 # Set parameter checking system directory.
 if os.path.exists(os.path.dirname(__file__) + "/config/"):
     if not os.getenv("PARAMETER_CONFIG_PATH"):
-
         os.environ["PARAMETER_CONFIG_PATH"] = os.path.dirname(__file__) + "/config/"
 
     else:
