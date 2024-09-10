@@ -5,6 +5,7 @@ import astropy.units as u
 import astropy.coordinates as coord
 from numba import njit
 import scipy.fftpack
+import time
 
 import toolviper.utils.logger as logger
 
@@ -123,7 +124,7 @@ def mask_circular_disk(center, radius, array, mask_value=np.nan):
     return mask
 
 
-def calculate_far_field_aperture(grid, padding_factor, freq, telescope, sky_cell_size, apply_grid_correction):
+def calculate_far_field_aperture(grid, padding_factor, freq, telescope, sky_cell_size, apply_grid_correction, label):
     """ Calculates the aperture illumination pattern from the beam data.
 
     Args:
@@ -138,8 +139,8 @@ def calculate_far_field_aperture(grid, padding_factor, freq, telescope, sky_cell
     Returns:
         aperture grid, u-coordinate array, v-coordinate array, aperture cell size, representative wavelength
     """
-    
-    logger.info("Calculating aperture illumination pattern ...")
+    start = time.time()
+    logger.debug(f"{label}: Calculating far field aperture illumination pattern ...")
     padded_grid = _pad_beam_image(grid, padding_factor)
 
     aperture_grid = _compute_aperture_fft(padded_grid)
@@ -149,12 +150,13 @@ def calculate_far_field_aperture(grid, padding_factor, freq, telescope, sky_cell
 
     if apply_grid_correction:
         aperture_grid = gridding_correction(aperture_grid, freq, telescope.diam, sky_cell_size, u_axis, v_axis)
-
+    duration = time.time() - start
+    logger.debug(f'{label}: Far field aperture took {duration:.3} seconds')
     return aperture_grid, u_axis, v_axis, aperture_cell_size, wavelength
 
 
 def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_factor, focus_offset, telescope,
-                                  apply_grid_correction, apodize=True):
+                                  apply_grid_correction, label, apodize=True):
     """" Calculates the aperture illumination pattern from the near_fiedl beam data.
 
     Args:
@@ -172,6 +174,8 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
     Returns:
         aperture grid, u-coordinate array, v-coordinate array, aperture cell size, representative wavelength
     """
+    logger.debug(f"{label}: Calculating near field aperture illumination pattern ...")
+    start = time.time()
     work_grid = grid.copy()
 
     if apodize:
@@ -205,7 +209,8 @@ def calculate_near_field_aperture(grid, sky_cell_size, distance, freq, padding_f
     # fitted_amp = fit_illumination_pattern(amp, u_axis, v_axis, telescope.diam, blockage)
     # aperture_grid[0, 0, 0, ...] = fitted_amp * (np.cos(phase) + 1j * np.sin(phase))
     aperture_grid[0, 0, 0, ...] = amp * (np.cos(phase) + 1j * np.sin(phase))
-
+    duration = time.time() - start
+    logger.debug(f'{label}: Near field aperture took {duration:.3} seconds')
     return aperture_grid, u_axis, v_axis, aperture_cell_size, wavelength
 
 

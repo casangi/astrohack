@@ -10,7 +10,8 @@ from astrohack.utils import sig_2_fwhm, find_nearest, calc_coords, find_peak_bea
 from astrohack.utils.text import get_str_idx_in_list
 
 
-def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, telescope, grid_interpolation_mode):
+def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, telescope, grid_interpolation_mode,
+              label):
     """
     Grids the visibilities onto a 2D plane based on their Sky coordinates, using scipy griddata or a gaussian
     convolution
@@ -67,12 +68,12 @@ def grid_beam(ant_ddi_dict, grid_size, sky_cell_size, avg_chan, chan_tol_fac, te
 
         if grid_interpolation_mode in scipy_interp:
             beam_grid[holog_map_index, ...] = _scipy_gridding(vis_avg, lm_freq_scaled, l_grid, m_grid,
-                                                              grid_interpolation_mode, avg_chan)
+                                                              grid_interpolation_mode, avg_chan, label)
         elif grid_interpolation_mode == 'gaussian':
             grid_corr = True
             beam_grid[holog_map_index, ...] = _convolution_gridding(vis_avg, weight_sum, lm_freq_scaled, telescope.diam,
                                                                     l_axis, m_axis, sky_cell_size,
-                                                                    reference_scaling_frequency, avg_chan)
+                                                                    reference_scaling_frequency, avg_chan, label)
         else:
             msg = f'Unknown grid type {grid_interpolation_mode}.'
             logger.error(msg)
@@ -125,7 +126,7 @@ def _create_beam_grid(grid_size, sky_cell_size, n_chan, n_pol, n_map):
     return l_axis, m_axis, l_grid, m_grid, beam_grid
 
 
-def _scipy_gridding(vis, lm, l_grid, m_grid, grid_interpolation_mode, avg_chan):
+def _scipy_gridding(vis, lm, l_grid, m_grid, grid_interpolation_mode, avg_chan, label):
     """
     Grid the visibility data using scipy gridding algorithms.
     Args:
@@ -138,7 +139,6 @@ def _scipy_gridding(vis, lm, l_grid, m_grid, grid_interpolation_mode, avg_chan):
     Returns:
         beam data gridded
     """
-    logger.info('Interpolating beam onto grid...')
     start = time.time()
     n_pol = vis.shape[2]
     n_chan = vis.shape[1]
@@ -156,7 +156,7 @@ def _scipy_gridding(vis, lm, l_grid, m_grid, grid_interpolation_mode, avg_chan):
         else:
             beam_grid[i_chan, :, :, :] = gridded_chan
     duration = time.time()-start
-    logger.info(f'Interpolation took {duration:.3} seconds')
+    logger.debug(f'{label}: Interpolation gridding took {duration:.3} seconds')
     return beam_grid
 
 
@@ -245,7 +245,7 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
 
 
 def _convolution_gridding(visibilities, weights, lmvis, diameter, l_axis, m_axis, sky_cell_size,
-                          reference_scaling_frequency, avg_chan):
+                          reference_scaling_frequency, avg_chan, label):
     """
     Grid the visibility data using a gaussian convolution with a kernel based on primary beam size
     Args:
@@ -262,12 +262,11 @@ def _convolution_gridding(visibilities, weights, lmvis, diameter, l_axis, m_axis
     """
     beam_size = _compute_beam_size(diameter, reference_scaling_frequency)
 
-    logger.info('Creating convolved beam...')
     start = time.time()
     beam, wei = _convolution_gridding_jit(visibilities, lmvis, weights, sky_cell_size, l_axis, m_axis, beam_size,
                                           avg_chan)
     duration = time.time()-start
-    logger.info(f'Convolution took {duration:.3} seconds')
+    logger.debug(f'{label}: Gaussian convolution gridding took {duration:.3} seconds')
     return beam
 
 
