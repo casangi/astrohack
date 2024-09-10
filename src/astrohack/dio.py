@@ -408,6 +408,12 @@ def inspect_holog_obs_dict(
             with open(file) as json_file:
                 json_object = json.load(json_file)
 
+        except IsADirectoryError:
+            try:
+                with open(file+'/holog_obs_dict.json') as json_file:
+                    json_object = json.load(json_file)
+            except FileNotFoundError:
+                logger.error("holog observations dictionary not found: {file}".format(file=file))
         except FileNotFoundError:
             logger.error("holog observations dictionary not found: {file}".format(file=file))
 
