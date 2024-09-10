@@ -43,7 +43,7 @@ def file_search(root: str = "/", file_name=None) -> Union[None, str]:
             "File search from root could take some time ..."
         )
 
-    toolviper.utils.logger.info(
+    toolviper.utils.logger.debug(
         "Searching {root} for {file_name}, please wait ...".format(
             root=colorize.blue(root),
             file_name=colorize.blue(file_name)
