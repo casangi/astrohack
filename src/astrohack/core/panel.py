@@ -3,6 +3,7 @@ import xarray as xr
 
 from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.antenna.telescope import Telescope
+from astrohack.utils import create_dataset_label
 
 
 def process_panel_chunk(panel_chunk_params):
@@ -21,7 +22,7 @@ def process_panel_chunk(panel_chunk_params):
         ddi = panel_chunk_params['this_ddi']
         antenna = panel_chunk_params['this_ant']
         inputxds = panel_chunk_params['xds_data']
-        logger.info(f'processing {antenna} {ddi}')
+        logger.info(f'processing {create_dataset_label(antenna, ddi)}')
         inputxds.attrs['AIPS'] = False
         telescope = Telescope.from_xds(inputxds)
 

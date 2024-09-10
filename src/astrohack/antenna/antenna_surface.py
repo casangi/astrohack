@@ -5,7 +5,7 @@ from matplotlib import patches
 import toolviper.utils.logger as logger
 
 from astrohack.antenna.ring_panel import RingPanel
-from astrohack.utils import string_to_ascii_file
+from astrohack.utils import string_to_ascii_file, create_dataset_label
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
@@ -172,6 +172,7 @@ class AntennaSurface:
         self.vnpix = self.v_axis.shape[0]
         self.antenna_name = inputxds.attrs['ant_name']
         self.ddi = inputxds.attrs['ddi']
+        self.label = create_dataset_label(inputxds.attrs['ant_name'], inputxds.attrs['ddi'])
 
     def _measure_ring_clip(self, clip_type, clip_level):
         if clip_type == 'relative':
@@ -461,8 +462,8 @@ class AntennaSurface:
 
         self.fitted = True
         if len(panels) > 0:
-            msg = f'Fit failed with the {self.panelmodel} model and a simple mean has been used instead for the ' \
-                  f'following panels: ' + str([self.antenna_name, self.ddi])
+            msg = (f'{self.label}: Fit failed with the {self.panelmodel} model and a simple mean has been used instead '
+                   f'for the following panels:')
 
             logger.warning(msg)
             msg = str(panels)
@@ -620,7 +621,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.plot(ax, screws=parm_dict['plot_screws'], label=parm_dict['panel_labels'])
 
-        suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}, Pol. state: {self.pol_state}'
+        suptitle = f'{self.label}, Pol. state: {self.pol_state}'
         close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
     def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
@@ -680,7 +681,7 @@ class AntennaSurface:
             self.panels[ipanel].plot(ax, screws=False, label=parm_dict['panel_labels'])
             self.panels[ipanel].plot_corrections(ax, cmap, fac * self.screw_adjustments[ipanel], threshold, vmin, vmax)
 
-        suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}, Pol. state: {self.pol_state}'
+        suptitle = f'{self.label}, Pol. state: {self.pol_state}'
         close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
     def _build_panel_data_arrays(self):
@@ -720,8 +721,7 @@ class AntennaSurface:
             unit: unit for panel screw adjustments ['mm','miliinches']
             comment_char: Character used for comments
         """
-        outfile = f"# Screw adjustments for {self.telescope.name}'s {self.antenna_name} antenna, DDI " \
-                  f"{self.ddi.split('_')[1]}, polarization state {self.pol_state}\n"
+        outfile = f"# Screw adjustments for {self.telescope.name}'s {self.label}, pol. state {self.pol_state}\n"
         freq = clight/self.wavelength
         out_freq = format_frequency(freq)
         outfile += f"# Frequency = {out_freq}{lnbr}"
