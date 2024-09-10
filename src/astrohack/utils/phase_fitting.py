@@ -11,13 +11,13 @@ from astrohack.visualization.plot_tools import well_positioned_colorbar, get_pro
 import toolviper.utils.logger as logger
 
 aips_par_names = ['phase_offset', 'x_point_offset', 'y_point_offset', 'x_focus_offset', 'y_focus_offset',
-                'z_focus_offset', 'x_subreflector_tilt', 'y_subreflector_tilt', 'x_cassegrain_offset',
-                'y_cassegrain_offset']
+                  'z_focus_offset', 'x_subreflector_tilt', 'y_subreflector_tilt', 'x_cassegrain_offset',
+                  'y_cassegrain_offset']
 NPAR = 10
 
 
 def execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size, phase_fit_parameter,
-                          to_stokes, is_near_field, focus_offset, uaxis, vaxis):
+                          to_stokes, is_near_field, focus_offset, uaxis, vaxis, label):
     """
     Executes the phase fitting controls here to declutter core/holog.py
     Args:
@@ -38,9 +38,11 @@ def execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_c
     do_phase_fit, phase_fit_control = _solve_phase_fitting_controls(phase_fit_parameter, telescope.name)
 
     if do_phase_fit:
+        logger.debug(f'{label}: Applying phase correction')
+
         if is_near_field:
             phase_corrected_angle, phase_fit_results = _clic_like_phase_fitting(phase, freq_axis, telescope,
-                                                                                focus_offset, uaxis, vaxis)
+                                                                                focus_offset, uaxis, vaxis, label)
         else:
             phase_corrected_angle, phase_fit_results = _aips_like_phase_fitting(amplitude, phase, pol_axis, freq_axis,
                                                                                 telescope, uv_cell_size,
@@ -48,14 +50,13 @@ def execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_c
     else:
         phase_fit_results = None
         phase_corrected_angle = phase.copy()
-        logger.info('Skipping phase correction')
+        logger.info(f'{label}: Skipping phase correction')
 
     return phase_corrected_angle, phase_fit_results
 
 
 def _aips_like_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size, phase_fit_control,
                              to_stokes):
-    logger.info('Applying phase correction')
     if to_stokes:
         pol_indexes = (0,)
     else:
@@ -253,8 +254,8 @@ def _aips_phase_fitting_block(pol_indexes, wavelength, telescope, cellxy, amplit
     results, variances = _reconstruct_full_results_block(results, variances, ignored)
     #
     # apply the correction.
-    corrected_phase, phase_model = _correct_phase_block(pol_indexes, phase_image, cellxy, results, telescope.magnification,
-                                                        telescope.focus, telescope.surp_slope)
+    corrected_phase, phase_model = _correct_phase_block(pol_indexes, phase_image, cellxy, results,
+                                                        telescope.magnification, telescope.focus, telescope.surp_slope)
     # get RMSes before and after the fit
     in_rms = _compute_phase_rms_block(phase_image)
     out_rms = _compute_phase_rms_block(corrected_phase)
@@ -794,8 +795,8 @@ def _perturbed_fit_jit(matrix, vector, fit_offset):
 @njit(cache=False, nogil=True)
 def _fit_perturbation_loop_jit(start, radius, wave_number, solving_matrix, solving_vector, npar, step=1e-3):
     sigmin = 1e10
-    fit_offset = np.zeros((npar))
-    best_fit = np.full((npar), np.nan)
+    fit_offset = np.zeros(npar)
+    best_fit = np.full(npar, np.nan)
     range3 = [-1, 0, 1]
     range0 = [0]
     if npar > 3:
@@ -809,6 +810,7 @@ def _fit_perturbation_loop_jit(start, radius, wave_number, solving_matrix, solvi
         xrange = range0
         yrange = range0
 
+    sigma, result = None, None
     for ix in xrange:
         fit_offset[4] = (start[0] + ix * step) * wave_number
         for iy in yrange:
@@ -831,7 +833,7 @@ def _clic_full_phase_fitting(npar, frequency, diameter, blockage, focus, defocus
     astangle = np.pi
     wave_number = frequency * 2.*np.pi / clight
     radius = diameter/2
-    start = np.zeros((3))
+    start = np.zeros(3)
 
     full_matrix, full_vector, sel = _build_astigmatism_matrix(phase, uaxis, vaxis, focus, defocus, diameter, blockage,
                                                               npar, astangle)
@@ -871,8 +873,8 @@ def _clic_phase_model(matrix, best_fit):
     return phase_model
 
 
-def _clic_like_phase_fitting(phase, freq_axis, telescope, focus_offset, uaxis, vaxis):
-    logger.info('Going into CLIC code')
+def _clic_like_phase_fitting(phase, freq_axis, telescope, focus_offset, uaxis, vaxis, label):
+    logger.info(f'{label}: Going into CLIC code')
     phase_i = phase[0, 0, 0, ...]
     freq = freq_axis[0]
 

@@ -19,9 +19,10 @@ length_units = ['km', 'mi', 'm', 'yd', 'ft', 'in', 'cm', 'mm', 'um', 'mils']
 length_factors = [1e3, 1609.34, 1.0, 0.9144, 0.3048, 0.0254, 1e-2, 1e-3, 1e-6, 25.4 / 1e6]
 
 # Trigonometric units
-trigo_units = ['rad', 'deg', 'hour', 'asec', 'amin']
+trigo_units = ['rad', 'deg', 'hour', 'asec', 'amin', 'masec', 'uasec']
 # from rad to unit
-trigo_factors = [1.0, constants.pi / 180., constants.pi / 12., constants.pi / 180. / 3600., constants.pi / 180. / 60.]
+trigo_factors = [1.0, constants.pi / 180., constants.pi / 12., constants.pi / 180. / 3.6e3, constants.pi / 180. / 60.,
+                 constants.pi / 180. / 3.6e6, constants.pi / 180. / 3.6e9]
 
 # Time units
 time_units = ['nsec', 'usec', 'msec', 'sec', 'min', 'hour', 'day']

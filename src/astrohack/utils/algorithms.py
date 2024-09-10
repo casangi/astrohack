@@ -7,6 +7,7 @@ from numba import njit
 
 import toolviper.utils.logger as logger
 
+from astrohack.utils.text import format_angular_distance, create_dataset_label
 from astrohack.utils.conversion import convert_unit
 
 
@@ -308,7 +309,7 @@ def _least_squares_fit_block(system, vector):
     return results, variances
 
 
-def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_diameter, chan_freq):
+def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_diameter, chan_freq, ddi):
     reference_frequency = np.median(chan_freq)
     reference_lambda = scipy.constants.speed_of_light / reference_frequency
 
@@ -322,8 +323,10 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_diam
         (pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].max()
          - pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].min())
 
-    logger.info(f"cell_size: {cell_size}")
-    logger.info(f"data_range: {data_range}")
+    logger.info(f'{create_dataset_label(antenna_name, ddi)}: Cell size {format_angular_distance(cell_size)}, '
+                f'FOV: {format_angular_distance(data_range)}')
+    # logger.info(f"cell_size: {cell_size}")
+    # logger.info(f"data_range: {data_range}")
 
     try:
         n_pix = int(np.ceil(data_range / cell_size)) ** 2
@@ -333,23 +336,6 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_diam
         raise ZeroDivisionError
 
     return n_pix, cell_size
-
-
-def significant_figures_round(x, digits):
-    if np.isscalar(x):
-        if x == 0 or not np.isfinite(x):
-            return x
-
-        digits = int(digits - np.ceil(np.log10(abs(x))))
-        return round(x, digits)
-
-    elif isinstance(x, list) or isinstance(x, np.ndarray):
-        return list(map(significant_figures_round, x, [digits] * len(x)))
-
-    else:
-        logger.warning("Unknown data type.")
-
-        return x
 
 
 def compute_average_stokes_visibilities(vis, stokes):

@@ -3,6 +3,7 @@ import numpy as np
 import xarray as xr
 
 from astrohack.antenna.telescope import Telescope
+from astrohack.utils import create_dataset_label
 from astrohack.utils.algorithms import calc_coords
 from astrohack.utils.constants import clight
 from astrohack.utils.data import read_meta_data
@@ -30,7 +31,8 @@ def process_holog_chunk(holog_chunk_params):
         ant_id=holog_chunk_params["this_ant"],
         ddi_id=holog_chunk_params["this_ddi"]
     )
-
+    label = create_dataset_label(holog_chunk_params["this_ant"], holog_chunk_params["this_ddi"])
+    logger.info(f'Processing {label}')
     meta_data = read_meta_data(holog_chunk_params["holog_name"] + '/.holog_attr')
     ddi = holog_chunk_params["this_ddi"]
     to_stokes = holog_chunk_params["to_stokes"]
@@ -49,7 +51,8 @@ def process_holog_chunk(holog_chunk_params):
                                                         chan_tol_fac=holog_chunk_params["chan_tolerance_factor"],
                                                         telescope=telescope,
                                                         grid_interpolation_mode=
-                                                        holog_chunk_params["grid_interpolation_mode"]
+                                                        holog_chunk_params["grid_interpolation_mode"],
+                                                        label=label
                                                         )
 
     if not is_near_field:
@@ -67,7 +70,6 @@ def process_holog_chunk(holog_chunk_params):
         beam_grid = np.mean(beam_grid, axis=0)[None, ...]
         time_centroid = np.mean(np.array(time_centroid))
 
-    logger.info("Calculating aperture pattern ...")
     # Current bottleneck
     if is_near_field:
         distance, focus_offset = telescope.dist_dict[holog_chunk_params["alma_osf_pad"]]
@@ -79,7 +81,8 @@ def process_holog_chunk(holog_chunk_params):
             padding_factor=holog_chunk_params["padding_factor"],
             focus_offset=focus_offset,
             telescope=telescope,
-            apply_grid_correction=grid_corr
+            apply_grid_correction=grid_corr,
+            label=label
         )
     else:
         focus_offset = 0
@@ -89,7 +92,8 @@ def process_holog_chunk(holog_chunk_params):
             freq=freq_axis,
             telescope=telescope,
             sky_cell_size=holog_chunk_params["cell_size"],
-            apply_grid_correction=grid_corr
+            apply_grid_correction=grid_corr,
+            label=label
         )
 
     amplitude, phase, u_prime, v_prime = _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope,
@@ -98,13 +102,15 @@ def process_holog_chunk(holog_chunk_params):
     phase_corrected_angle, phase_fit_results = execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope,
                                                                      uv_cell_size, holog_chunk_params["phase_fit"],
                                                                      to_stokes, is_near_field, focus_offset, u_prime,
-                                                                     v_prime)
+                                                                     v_prime, label)
 
     aperture_resolution = _compute_aperture_resolution(l_axis, m_axis, used_wavelength)
     _export_to_xds(beam_grid, aperture_grid, amplitude, phase_corrected_angle, aperture_resolution,
                    holog_chunk_params["this_ant"], ant_data_dict[ddi]['map_0'].attrs["antenna_name"],
                    meta_data['telescope_name'], time_centroid, ddi, phase_fit_results, pol_axis, freq_axis, l_axis,
                    m_axis, u_axis, v_axis, u_prime, v_prime, holog_chunk_params["image_name"])
+
+    logger.info(f'Finished processing {label}')
 
 
 def _get_correct_telescope(ant_name, telescope_name):

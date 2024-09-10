@@ -5,7 +5,7 @@ from matplotlib import patches
 import toolviper.utils.logger as logger
 
 from astrohack.antenna.ring_panel import RingPanel
-from astrohack.utils import string_to_ascii_file
+from astrohack.utils import string_to_ascii_file, create_dataset_label
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
@@ -36,7 +36,18 @@ class AntennaSurface:
             reread: Read a previously processed holography
         """
         self.reread = reread
-        self._nullify()
+        self.phase = None
+        self.deviation = None
+        self.residuals = None
+        self.corrections = None
+        self.phase_corrections = None
+        self.phase_residuals = None
+        self.solved = False
+        self.ingains = np.nan
+        self.ougains = np.nan
+        self.in_rms = np.nan
+        self.out_rms = np.nan
+        self.fitted = False
         self.pol_state = pol_state
         self._read_xds(inputxds)
         self.telescope = telescope
@@ -161,23 +172,7 @@ class AntennaSurface:
         self.vnpix = self.v_axis.shape[0]
         self.antenna_name = inputxds.attrs['ant_name']
         self.ddi = inputxds.attrs['ddi']
-
-    def _nullify(self):
-        """
-        Part of the initialization process, nullify the data objects to be used later
-        """
-        self.phase = None
-        self.deviation = None
-        self.residuals = None
-        self.corrections = None
-        self.phase_corrections = None
-        self.phase_residuals = None
-        self.solved = False
-        self.ingains = np.nan
-        self.ougains = np.nan
-        self.in_rms = np.nan
-        self.out_rms = np.nan
-        self.fitted = False
+        self.label = create_dataset_label(inputxds.attrs['ant_name'], inputxds.attrs['ddi'])
 
     def _measure_ring_clip(self, clip_type, clip_level):
         if clip_type == 'relative':
@@ -467,8 +462,8 @@ class AntennaSurface:
 
         self.fitted = True
         if len(panels) > 0:
-            msg = f'Fit failed with the {self.panelmodel} model and a simple mean has been used instead for the ' \
-                  f'following panels: ' + str([self.antenna_name, self.ddi])
+            msg = (f'{self.label}: Fit failed with the {self.panelmodel} model and a simple mean has been used instead '
+                   f'for the following panels:')
 
             logger.warning(msg)
             msg = str(panels)
@@ -536,7 +531,8 @@ class AntennaSurface:
         """
         Plot phase map(s)
         Args:
-            basename: basename for the plot(s), the prefix 'phase_{original|corrections|residuals}' will be added to it/them
+            basename: basename for the plot(s), the prefix 'phase_{original|corrections|residuals}' will be added to
+                      it/them
             caller: Which mds called this plotting function
             parm_dict: dictionary with plotting parameters
         """
@@ -565,7 +561,8 @@ class AntennaSurface:
         """
         Plot deviation map(s)
         Args:
-            basename: basename for the plot(s), the prefix 'deviation_{original|corrections|residuals}' will be added to it/them
+            basename: basename for the plot(s), the prefix 'deviation_{original|corrections|residuals}' will be added
+                      to it/them
             caller: Which mds called this plotting function
             parm_dict: dictionary with plotting parameters
         """
@@ -624,7 +621,7 @@ class AntennaSurface:
         for panel in self.panels:
             panel.plot(ax, screws=parm_dict['plot_screws'], label=parm_dict['panel_labels'])
 
-        suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}, Pol. state: {self.pol_state}'
+        suptitle = f'{self.label}, Pol. state: {self.pol_state}'
         close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
     def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
@@ -684,7 +681,7 @@ class AntennaSurface:
             self.panels[ipanel].plot(ax, screws=False, label=parm_dict['panel_labels'])
             self.panels[ipanel].plot_corrections(ax, cmap, fac * self.screw_adjustments[ipanel], threshold, vmin, vmax)
 
-        suptitle = f'Antenna: {self.antenna_name}, DDI: {self.ddi.split("_")[-1]}, Pol. state: {self.pol_state}'
+        suptitle = f'{self.label}, Pol. state: {self.pol_state}'
         close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'])
 
     def _build_panel_data_arrays(self):
@@ -722,9 +719,9 @@ class AntennaSurface:
         Args:
             filename: ASCII file name/path
             unit: unit for panel screw adjustments ['mm','miliinches']
+            comment_char: Character used for comments
         """
-        outfile = f"# Screw adjustments for {self.telescope.name}'s {self.antenna_name} antenna, DDI " \
-                  f"{self.ddi.split('_')[1]}, polarization state {self.pol_state}\n"
+        outfile = f"# Screw adjustments for {self.telescope.name}'s {self.label}, pol. state {self.pol_state}\n"
         freq = clight/self.wavelength
         out_freq = format_frequency(freq)
         outfile += f"# Frequency = {out_freq}{lnbr}"
@@ -814,7 +811,8 @@ class AntennaSurface:
 
     def export_to_fits(self, basename):
         """
-        Data to export: Amplitude, mask, phase, phase_corrections, phase_residuals, deviations, deviation_corrections, deviation_residuals
+        Data to export: Amplitude, mask, phase, phase_corrections, phase_residuals, deviations, deviation_corrections,
+                        deviation_residuals
         conveniently all data are on the same grid!
         Returns:
         """
