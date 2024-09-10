@@ -36,7 +36,18 @@ class AntennaSurface:
             reread: Read a previously processed holography
         """
         self.reread = reread
-        self._nullify()
+        self.phase = None
+        self.deviation = None
+        self.residuals = None
+        self.corrections = None
+        self.phase_corrections = None
+        self.phase_residuals = None
+        self.solved = False
+        self.ingains = np.nan
+        self.ougains = np.nan
+        self.in_rms = np.nan
+        self.out_rms = np.nan
+        self.fitted = False
         self.pol_state = pol_state
         self._read_xds(inputxds)
         self.telescope = telescope
@@ -161,23 +172,6 @@ class AntennaSurface:
         self.vnpix = self.v_axis.shape[0]
         self.antenna_name = inputxds.attrs['ant_name']
         self.ddi = inputxds.attrs['ddi']
-
-    def _nullify(self):
-        """
-        Part of the initialization process, nullify the data objects to be used later
-        """
-        self.phase = None
-        self.deviation = None
-        self.residuals = None
-        self.corrections = None
-        self.phase_corrections = None
-        self.phase_residuals = None
-        self.solved = False
-        self.ingains = np.nan
-        self.ougains = np.nan
-        self.in_rms = np.nan
-        self.out_rms = np.nan
-        self.fitted = False
 
     def _measure_ring_clip(self, clip_type, clip_level):
         if clip_type == 'relative':
@@ -536,7 +530,8 @@ class AntennaSurface:
         """
         Plot phase map(s)
         Args:
-            basename: basename for the plot(s), the prefix 'phase_{original|corrections|residuals}' will be added to it/them
+            basename: basename for the plot(s), the prefix 'phase_{original|corrections|residuals}' will be added to
+                      it/them
             caller: Which mds called this plotting function
             parm_dict: dictionary with plotting parameters
         """
@@ -565,7 +560,8 @@ class AntennaSurface:
         """
         Plot deviation map(s)
         Args:
-            basename: basename for the plot(s), the prefix 'deviation_{original|corrections|residuals}' will be added to it/them
+            basename: basename for the plot(s), the prefix 'deviation_{original|corrections|residuals}' will be added
+                      to it/them
             caller: Which mds called this plotting function
             parm_dict: dictionary with plotting parameters
         """
@@ -722,6 +718,7 @@ class AntennaSurface:
         Args:
             filename: ASCII file name/path
             unit: unit for panel screw adjustments ['mm','miliinches']
+            comment_char: Character used for comments
         """
         outfile = f"# Screw adjustments for {self.telescope.name}'s {self.antenna_name} antenna, DDI " \
                   f"{self.ddi.split('_')[1]}, polarization state {self.pol_state}\n"
@@ -814,7 +811,8 @@ class AntennaSurface:
 
     def export_to_fits(self, basename):
         """
-        Data to export: Amplitude, mask, phase, phase_corrections, phase_residuals, deviations, deviation_corrections, deviation_residuals
+        Data to export: Amplitude, mask, phase, phase_corrections, phase_residuals, deviations, deviation_corrections,
+                        deviation_residuals
         conveniently all data are on the same grid!
         Returns:
         """
