@@ -1,4 +1,5 @@
 from astrohack.antenna.antenna_surface import AntennaSurface
+from astrohack.antenna.panel_fitting import PanelPoint
 from astrohack.antenna.telescope import Telescope
 from astrohack import aips_holog_to_xds
 from astrohack.utils.conversion import convert_unit
@@ -65,8 +66,8 @@ class TestClassAntennaSurface:
         compnsampp0 = 67
         self.tant.compile_panel_points()
         assert len(self.tant.panels[0].samples) == compnsampp0, 'Number of samples in panel is different from reference'
-        assert self.tant.panels[0].samples[0] == compvaluep0, 'Point data in Panel is different from what is ' \
-                                                              'expected'
+        assert self.tant.panels[0].samples[0] == PanelPoint(*compvaluep0), ('Point data in Panel is different from what'
+                                                                            ' is expected')
 
     def test_fit_surface(self):
         """
@@ -75,11 +76,12 @@ class TestClassAntennaSurface:
         solveparsp0 = [0.00024335, 0.00025452, -0.00035676]
         solveparsp30 = [0.00074635, -0.00059127, -0.00185721]
         self.tant.fit_surface()
-        assert len(self.tant.panels[0].par) == len(solveparsp0), 'Fitted results have a different length from reference'
+        assert len(self.tant.panels[0].model.parameters) == len(solveparsp0), ('Fitted results have a different length'
+                                                                               ' from reference')
         for i in range(len(solveparsp30)):
-            assert abs(self.tant.panels[0].par[i] - solveparsp0[i]) < self.tolerance, \
+            assert abs(self.tant.panels[0].model.parameters[i] - solveparsp0[i]) < self.tolerance, \
                 'Fitting results for Panel 0 do not match reference within tolerance'
-            assert abs(self.tant.panels[30].par[i] - solveparsp30[i]) < self.tolerance, \
+            assert abs(self.tant.panels[30].model.parameters[i] - solveparsp30[i]) < self.tolerance, \
                 'Fitting results for Panel 30 do not match reference within tolerance'
 
     def test_correct_surface(self):
@@ -95,9 +97,17 @@ class TestClassAntennaSurface:
         """
         Tests gain computations by using a zero array and a random array
         """
-        zgains = self.tant._gains_array(self.zero)
-        assert zgains[0] == zgains[1], 'Theoretical gains should be equal to real gains for a perfect antenna'
-        rgains = self.tant._gains_array(self.rand)
+        self.tant.phase = self.zero
+        zgains = self.tant.gains()
+        # If the antenna has not been corrected, gains returns a [2] list, if it has been corrected it returns a [2,2]
+        # list containing the corrected gains. This try and except assures that this test works in both situations.
+        try:
+            len(zgains[0])
+            assert zgains[0][0] == zgains[0][1]
+        except TypeError:
+            assert zgains[0] == zgains[1], 'Theoretical gains should be equal to real gains for a perfect antenna'
+        self.tant.phase = self.rand
+        rgains = self.tant.gains()
         assert rgains[0] < rgains[1], 'Real gains need to be inferior to theoretical gains on a noisy surface'
 
     def test_get_rms(self):

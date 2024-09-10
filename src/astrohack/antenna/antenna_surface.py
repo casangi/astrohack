@@ -1,16 +1,15 @@
-import numpy as np
 import xarray as xr
 
 from matplotlib import patches
 
 import graphviper.utils.logger as logger
 
-from astrohack.antenna.base_panel import PANEL_MODELS, irigid
 from astrohack.antenna.ring_panel import RingPanel
+from astrohack.utils import string_to_ascii_file
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.text import add_prefix, bool_to_str
+from astrohack.utils.text import add_prefix, bool_to_str, format_frequency
 from astrohack.visualization.plot_tools import well_positioned_colorbar, create_figure_and_axes, close_figure, \
     get_proper_color_map
 
@@ -21,7 +20,7 @@ SUPPORTED_POL_STATES = ['I', 'RR', 'LL', 'XX', 'YY']
 
 
 class AntennaSurface:
-    def __init__(self, inputxds, telescope, clip_type='sigma', clip_level=3, pmodel=PANEL_MODELS[irigid], crop=False,
+    def __init__(self, inputxds, telescope, clip_type='sigma', clip_level=3, pmodel='rigid', crop=False,
                  nan_out_of_bounds=True, panel_margins=0.05, reread=False, pol_state='I'):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
@@ -45,7 +44,6 @@ class AntennaSurface:
         if not self.reread:
             self.panelmodel = pmodel
             self.panel_margins = panel_margins
-            self.reso = self.telescope.diam / self.npoint
             if crop:
                 self._crop_maps()
 
@@ -139,6 +137,8 @@ class AntennaSurface:
             self.corrections = inputxds['CORRECTIONS'].values
             self.panel_pars = inputxds['PANEL_PARAMETERS'].values
             self.screw_adjustments = inputxds['PANEL_SCREWS'].values
+            self.ingains = [inputxds.attrs['input_gain'], inputxds.attrs['theoretical_gain']]
+            self.ougains = [inputxds.attrs['output_gain'], inputxds.attrs['theoretical_gain']]
             self.panel_labels = inputxds.labels.values
 
     def _read_xds(self, inputxds):
@@ -350,23 +350,23 @@ class AntennaSurface:
         return
 
     def _compile_panel_points_ringed(self):
-        panels = np.zeros(self.rad.shape)
+        panels = np.full_like(self.rad, -1)
         panelsum = 0
         for iring in range(self.telescope.nrings):
             angle = twopi / self.telescope.npanel[iring]
-            panels = np.where(self.rad >= self.telescope.inrad[iring], np.floor(self.phi / angle) + panelsum, panels)
+            panels = np.where(self.rad >= self.telescope.inrad[iring], np.floor(self.phi / angle) + panelsum,
+                              panels)
             panelsum += self.telescope.npanel[iring]
-        panels = np.where(self.mask, panels, -1).astype("int32")
         for ix in range(self.unpix):
             xc = self.u_axis[ix]
             for iy in range(self.vnpix):
                 ipanel = panels[ix, iy]
                 if ipanel >= 0:
                     yc = self.v_axis[iy]
-                    panel = self.panels[ipanel]
+                    panel = self.panels[int(ipanel)]
                     issample, inpanel = panel.is_inside(self.rad[ix, iy], self.phi[ix, iy])
                     if inpanel:
-                        if issample:
+                        if issample and self.mask[ix, iy]:
                             panel.add_sample([xc, yc, ix, iy, self.deviation[ix, iy]])
                         else:
                             panel.add_margin([xc, yc, ix, iy, self.deviation[ix, iy]])
@@ -395,34 +395,41 @@ class AntennaSurface:
         Returns:
         Gains before panel fitting OR Gains before and after panel fitting
         """
-        self.ingains = self._gains_array(self.phase)
-        if self.residuals is None:
+        self.ingains = self.gain_at_wavelength(False, self.wavelength)
+        if not self.solved:
             return self.ingains
 
         else:
-            self.ougains = self._gains_array(self.phase_residuals)
+            self.ougains = self.gain_at_wavelength(True, self.wavelength)
             return self.ingains, self.ougains
 
-    def _gains_array(self, arr):
-        """
-        Worker for gains method, works with the actual arrays to compute the gains
-        This numpy version is significantly faster than the previous version
-        Args:
-            arr: Deviation image over which to compute the gains
+    def gain_at_wavelength(self, corrected, wavelength):
+        # This is valid for the VLA not sure if valid for anything else...
+        wavelength_scaling = self.wavelength / wavelength
 
-        Returns:
-        Actual and theoretical gains
-        """
-        thgain = fourpi * (1000.0 * self.reso / self.wavelength) ** 2
+        dish_mask = np.where(self.rad > self.telescope.inlim, True, False)
+        dish_mask = np.where(self.rad < self.telescope.diam/2, dish_mask, False)
 
-        if (self.mask==False).all():
-            return -np.inf, to_db(thgain)
+        if corrected:
+            if self.fitted:
+                scaled_phase = wavelength_scaling*self.phase_residuals
+            else:
+                msg = 'Cannot computed gains for corrected dish if panels are not fitted.'
+                logger.error(msg)
+                raise Exception(msg)
+        else:
+            scaled_phase = wavelength_scaling*self.phase
 
-        gain = \
-            thgain * np.sqrt(np.sum(np.cos(arr[self.mask])) ** 2 + np.sum(np.sin(arr[self.mask])) ** 2) / np.sum(
-                self.mask)
+        cossum = np.nansum(np.cos(scaled_phase[dish_mask]))
+        sinsum = np.nansum(np.sin(scaled_phase[dish_mask]))
+        real_factor = np.sqrt(cossum**2 + sinsum**2)/np.sum(dish_mask)
 
-        return to_db(gain), to_db(thgain)
+        u_fact = (self.u_axis[1] - self.u_axis[0]) / wavelength
+        v_fact = (self.v_axis[1] - self.v_axis[0]) / wavelength
+
+        theo_gain = fourpi * np.abs(u_fact * v_fact)
+        real_gain = theo_gain * real_factor
+        return to_db(real_gain), to_db(theo_gain)
 
     def get_rms(self, unit='mm'):
         """
@@ -690,8 +697,10 @@ class AntennaSurface:
         # First panel might fail hence we need to check npar for all panels
         max_par = 0
         for panel in self.panels:
-            if panel.NPAR > max_par:
-                max_par = panel.NPAR
+            p_npar = panel.model.npar
+            if p_npar > max_par:
+                max_par = p_npar
+
         nscrews = self.panels[0].screws.shape[0]
 
         self.panel_labels = np.ndarray([npanels], dtype=object)
@@ -702,12 +711,12 @@ class AntennaSurface:
 
         for ipanel in range(npanels):
             self.panel_labels[ipanel] = self.panels[ipanel].label
-            self.panel_pars[ipanel, :] = self.panels[ipanel].par
+            self.panel_pars[ipanel, :] = self.panels[ipanel].model.parameters
             self.screw_adjustments[ipanel, :] = self.panels[ipanel].export_screws(unit='m')
-            self.panel_model_array[ipanel] = self.panels[ipanel].model
+            self.panel_model_array[ipanel] = self.panels[ipanel].model_name
             self.panel_fallback[ipanel] = self.panels[ipanel].fall_back_fit
 
-    def export_screws(self, filename, unit="mm"):
+    def export_screws(self, filename, unit="mm", comment_char='#'):
         """
         Export screw adjustments for all panels onto an ASCII file
         Args:
@@ -716,13 +725,9 @@ class AntennaSurface:
         """
         outfile = f"# Screw adjustments for {self.telescope.name}'s {self.antenna_name} antenna, DDI " \
                   f"{self.ddi.split('_')[1]}, polarization state {self.pol_state}\n"
-        freq = clight/self.wavelength/1e9
-        if freq >= 1:
-            frequnit = 'GHz'
-        else:
-            frequnit = 'MHz'
-            freq *= 1e3
-        outfile += f"# Frequency = {freq:.1f} {frequnit}\n"
+        freq = clight/self.wavelength
+        out_freq = format_frequency(freq)
+        outfile += f"# Frequency = {out_freq}{lnbr}"
         outfile += "# Adjustments are in " + unit + 2 * lnbr
         outfile += "# Lower means away from subreflector" + lnbr
         outfile += "# Raise means toward the subreflector" + lnbr
@@ -730,11 +735,11 @@ class AntennaSurface:
         outfile += "# RAISE the panel if the number is NEGATIVE" + lnbr
         outfile += 2 * lnbr
         spc = ' '
-        outfile += f'Panel{3*spc}'
+        outfile += f'{comment_char} Panel{2*spc}'
         nscrews = len(self.telescope.screw_description)
         for screw in self.telescope.screw_description:
             outfile += f"{4*spc}{screw:2s}{4*spc}"
-        outfile += f'Fallback{4*spc}Model\n'
+        outfile += f'Fallback{4*spc}Model{lnbr}'
         fac = convert_unit('m', unit, 'length')
 
         for ipanel in range(len(self.panel_labels)):
@@ -746,9 +751,7 @@ class AntennaSurface:
             outfile += (f'{5*spc}{bool_to_str(self.panel_fallback[ipanel]):>3s}{7*spc}{self.panel_model_array[ipanel]}'
                         + lnbr)
 
-        lefile = open(filename, "w")
-        lefile.write(outfile)
-        lefile.close()
+        string_to_ascii_file(outfile, filename)
 
     def export_xds(self):
         """

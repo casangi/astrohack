@@ -6,6 +6,7 @@ import graphviper.utils.logger as logger
 
 from graphviper.utils.console import Colorize
 
+from astrohack.utils import create_pretty_table
 from astrohack.utils.validation import custom_plots_checker
 from astrohack.utils.validation import custom_unit_checker
 from astrohack.utils.validation import custom_split_checker
@@ -30,15 +31,12 @@ from astrohack.utils.file import load_position_file
 
 from astrohack.utils.data import read_meta_data
 from astrohack.utils.data import export_to_aips
-from astrohack.utils.data import export_locit_fit_results
-from astrohack.utils.data import export_to_fits_panel_chunk
-from astrohack.utils.data import export_screws_chunk
+from astrohack.visualization.textual_data import export_locit_fit_results, export_screws_chunk, \
+    export_gains_table_chunk, export_phase_fit_chunk, print_array_configuration
+from astrohack.visualization.fits import export_to_fits_panel_chunk, export_to_fits_holog_chunk
 
 from astrohack.core.extract_locit import plot_source_table
 from astrohack.core.extract_locit import plot_array_configuration
-from astrohack.core.extract_locit import print_array_configuration
-
-from astrohack.utils.fits import export_to_fits_holog_chunk
 
 from astrohack.antenna.antenna_surface import AntennaSurface
 
@@ -179,7 +177,8 @@ class AstrohackImageFile(dict):
         print_summary_header(self.file)
         print_dict_table(self._input_pars)
         print_data_contents(self, ["Antenna", "DDI"])
-        print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures])
+        print_method_list([self.summary, self.select, self.export_to_fits, self.plot_beams, self.plot_apertures,
+                           self.export_phase_fit_results])
 
     @graphviper.utils.parameter.validate(
         custom_checker=custom_split_checker
@@ -385,6 +384,42 @@ class AstrohackImageFile(dict):
 
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, plot_beam_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
+
+    @graphviper.utils.parameter.validate(
+        custom_checker=custom_unit_checker
+    )
+    def export_phase_fit_results(
+            self,
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            angle_unit: str = 'deg',
+            length_unit: str = 'mm',
+            parallel: bool = False
+    ) -> None:
+        """ Export phase fit resutls from the data in an AstrohackImageFIle object to ASCII files.
+
+        :param destination: Name of the destination folder to contain ASCII files
+        :type destination: str
+        :param ant: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+        :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param angle_unit: Unit for results that are angles.
+        :type angle_unit: str, optional
+        :param length_unit: Unit for results that are displacements.
+        :type length_unit: str, optional
+        :param parallel: If True will use an existing astrohack client to produce ASCII files in parallel, default is False
+        :type parallel: bool, optional
+
+        .. _Description:
+
+        Export the results of the phase fitting process in ``astrohack.holog`` for analysis
+        """
+        param_dict = locals()
+
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
+        compute_graph(self, export_phase_fit_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
 
 class AstrohackHologFile(dict):
@@ -735,7 +770,7 @@ class AstrohackPanelFile(dict):
         print_dict_table(self._input_pars)
         print_data_contents(self, ["Antenna", "DDI"])
         print_method_list([self.summary, self.get_antenna, self.export_screws, self.export_to_fits,
-                           self.plot_antennas])
+                           self.plot_antennas, self.export_gain_tables])
 
     @graphviper.utils.parameter.validate()
     def get_antenna(
@@ -903,8 +938,6 @@ class AstrohackPanelFile(dict):
 
         param_dict = locals()
 
-        param_dict["figuresize"] = figure_size
-
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, plot_antenna_chunk, param_dict, ['ant', 'ddi'], parallel=parallel)
 
@@ -942,6 +975,64 @@ class AstrohackPanelFile(dict):
 
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, export_to_fits_panel_chunk, param_dict, ['ant', 'ddi'],
+                      parallel=parallel)
+
+    @graphviper.utils.parameter.validate(
+        custom_checker=custom_unit_checker
+    )
+    def export_gain_tables(
+            self,
+            destination: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
+            wavelengths: Union[float, List[float]] = None,
+            wavelength_unit: str = 'cm',
+            frequencies: Union[float, List[float]] = None,
+            frequency_unit: str = 'GHz',
+            parallel: bool = False
+    ) -> None:
+        """ Compute estimated antenna gains in dB and saves them to ASCII files.
+
+        :param destination: Name of the destination folder to contain ASCII files
+        :type destination: str
+
+        :param ant: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+
+        :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+
+        :param wavelengths: List of wavelengths at which to compute the gains.
+        :type wavelengths: list or float, optional
+
+        :param wavelength_unit: Unit for the wavelengths being used, default is cm.
+        :type wavelength_unit: str, optional
+
+        :param frequencies: List of frequencies at which to compute the gains.
+        :type frequencies: list or float, optional
+
+        :param frequency_unit: Unit for the frequencies being used, default is GHz.
+        :type frequency_unit: str, optional
+
+        :param parallel: If True will use an existing astrohack client to produce ASCII files in parallel, default is False
+        :type parallel: bool, optional
+
+        .. _Description:
+
+        Export antenna gains in dB from ``astrohack.panel`` for analysis.
+
+        **Additional Information**
+        .. rubric:: Selecting frequencies and wavelengths:
+
+        If neither a frequency list nor a wavelength list is provided, ``export_gains_table`` will try to use a\
+        predefined list set for the telescope associated with the dataset. If both are provided, ``export_gains_table``\
+        will combine both lists.
+        """
+
+
+        param_dict = locals()
+        pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
+        compute_graph(self, export_gains_table_chunk, param_dict, ['ant', 'ddi'],
                       parallel=parallel)
 
 
@@ -1082,15 +1173,13 @@ class AstrohackLocitFile(dict):
     def print_source_table(self) -> None:
         """ Prints a table with the sources observed for antenna location determination
         """
-        alignment = 'l'
         print("\nSources:")
-        table = PrettyTable()
-        table.field_names = ['Id', 'Name', 'RA FK5', 'DEC FK5', 'RA precessed', 'DEC precessed']
+        field_names = ['Id', 'Name', 'RA FK5', 'DEC FK5', 'RA precessed', 'DEC precessed']
+        table = create_pretty_table(field_names, 'l')
         for source in self['observation_info']['src_dict'].values():
             table.add_row([source['id'], source['name'], rad_to_hour_str(source['fk5'][0]),
                            rad_to_deg_str(source['fk5'][1]), rad_to_hour_str(source['precessed'][0]),
                            rad_to_deg_str(source['precessed'][1])])
-        table.align = alignment
         print(table)
 
     @graphviper.utils.parameter.validate()

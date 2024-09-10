@@ -5,7 +5,6 @@ import scipy.constants
 import xarray as xr
 from numba import njit
 
-from astrohack.antenna.telescope import Telescope
 import graphviper.utils.logger as logger
 
 from astrohack.utils.conversion import convert_unit
@@ -309,16 +308,14 @@ def _least_squares_fit_block(system, vector):
     return results, variances
 
 
-def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_name, chan_freq):
+def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_diameter, chan_freq):
     reference_frequency = np.median(chan_freq)
     reference_lambda = scipy.constants.speed_of_light / reference_frequency
 
-    telescope = Telescope(telescope_name)
-
     # reference_lambda / D is the maximum cell size we should use so reduce is by 85% to get a safer answer.
     # Since this is just an estimate for the situation where the user doesn't specify a values, I am picking
-    # a values according to the developer heuristic, ie. it seems to be good.
-    cell_size = 0.85 * reference_lambda / telescope.diam
+    # a values according to the developer heuristic, i.e. it seems to be good.
+    cell_size = 0.85 * reference_lambda / telescope_diameter
 
     # Get data range
     data_range = \

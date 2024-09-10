@@ -4,6 +4,7 @@ import shutil
 import graphviper.utils.logger as logger
 import graphviper.utils.parameter
 
+from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT
 from astrohack.utils.fits import aips_holog_to_xds
 from astrohack.utils.file import overwrite_file
 
@@ -185,6 +186,9 @@ def panel(
     image_mds.open()
 
     overwrite_file(panel_params['panel_name'], panel_params['overwrite'])
+
+    if PANEL_MODEL_DICT[panel_model]['experimental']:
+        logger.warning(f'Using experimental panel fitting model {panel_model}')
 
     if os.path.exists(panel_params['image_name'] + '/.aips'):
         panel_params['origin'] = 'AIPS'

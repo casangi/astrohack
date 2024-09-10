@@ -28,7 +28,8 @@ class TestRingPanel:
         assert self.panel.margin_theta2 == 2*self.angle - theta_margin
         assert self.panel.margin_inrad == self.inrad + radius_margin
         assert self.panel.margin_ourad == self.ourad - radius_margin
-        assert self.panel.center == [rt * np.cos(zeta), rt * np.sin(zeta)]
+        assert self.panel.center.xc == rt * np.cos(zeta)
+        assert self.panel.center.yc == rt * np.sin(zeta)
         assert not self.panel.first
 
     def test_init_screws(self):
@@ -46,22 +47,28 @@ class TestRingPanel:
         test_screws[0:2, :] *= self.inrad
         test_screws[2:, :] *= self.ourad
         code_screws = self.panel._init_screws(scheme, offset)
-        diffsum = np.abs(np.sum(code_screws-test_screws))
+        diffsum = 0
+        for iscrew, test_screw in enumerate(test_screws):
+            diffsum += code_screws[iscrew].xc - test_screw[0]
+            diffsum += code_screws[iscrew].yc - test_screw[1]
         assert code_screws.shape[0] == nscrews, 'If no scheme is given, there should be 4 screws at the corners'
-        assert diffsum < 1e-15, 'Screws with no offset do not match'
+        assert np.abs(diffsum) < 1e-15, 'Screws with no offset do not match'
         offset = 6e-2  # 6 cm offset from panel edge
         test_screws[0, :] += [offset, offset]
         test_screws[1, :] += [-offset, offset]
         test_screws[2, :] += [offset, -offset]
         test_screws[3, :] += [-offset, -offset]
         code_screws = self.panel._init_screws(scheme, offset)
-        diffsum = np.abs(np.sum(code_screws-test_screws))
-        assert diffsum < 1e-15, 'Screws with an offset do not match'
+        diffsum = 0
+        for iscrew, test_screw in enumerate(test_screws):
+            diffsum += code_screws[iscrew].xc - test_screw[0]
+            diffsum += code_screws[iscrew].yc - test_screw[1]
+        assert np.abs(diffsum) < 1e-15, 'Screws with an offset do not match'
         scheme = ['c']
         code_screws = self.panel._init_screws(scheme, offset)
         assert code_screws.shape[0] == 1, 'If scheme has a single screw, output must have a single screw'
-        diffsum = np.abs(np.sum(code_screws[0]-self.panel.center))
-        assert diffsum < 1e-15, 'A center screw must be at the center of a panel'
+        diffsum = code_screws[0].xc - self.panel.center.xc + code_screws[0].yc - self.panel.center.yc
+        assert np.abs(diffsum) < 1e-15, 'A center screw must be at the center of a panel'
         return
 
     def test_is_inside(self):

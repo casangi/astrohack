@@ -465,6 +465,8 @@ def extract_holog(
 
     # Create holog_obs_dict or modify user supplied holog_obs_dict.
     ddi = extract_holog_params['ddi']
+    if isinstance(ddi, int):
+        ddi = [ddi]
 
     # Create holog_obs_dict if not specified
     if holog_obs_dict is None:
