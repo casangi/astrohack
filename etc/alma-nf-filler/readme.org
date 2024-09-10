@@ -118,7 +118,7 @@ Number of time matched samples: 101029
 Number of filtered samples: 55799
 Combination took 0.66 seconds
 
-[2024-04-16 14:57:54,653]     INFO  graphviper:  Searching /export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack for alma_da.zarr, please wait ... 
+[2024-04-16 14:57:54,653]     INFO  toolviper:  Searching /export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack for alma_da.zarr, please wait ...
 Xarray dataset saved to X3.holog.zarr:
 
 <xarray.Dataset>

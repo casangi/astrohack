@@ -2,8 +2,8 @@ import json
 import pathlib
 import numpy as np
 
-import graphviper.utils.logger as logger
-import graphviper.utils.parameter
+import toolviper.utils.logger as logger
+import toolviper.utils.parameter
 
 from numbers import Number
 from typing import List, Union, NewType
@@ -19,7 +19,7 @@ from astrohack.mds import AstrohackImageFile
 Array = NewType("Array", Union[np.array, List[int], List[float]])
 
 
-@graphviper.utils.parameter.validate()
+@toolviper.utils.parameter.validate()
 def holog(
         holog_name: str,
         grid_size: Union[int, Array, List] = None,

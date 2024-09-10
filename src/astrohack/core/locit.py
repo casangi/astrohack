@@ -2,7 +2,7 @@ from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from scipy import optimize as opt
 
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 import astropy.units as units
 import xarray as xr
 

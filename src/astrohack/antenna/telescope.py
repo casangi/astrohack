@@ -2,7 +2,7 @@ import astrohack
 import pathlib
 
 import xarray as xr
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 import astrohack.utils.tools
 

@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from graphviper.utils import logger as logger
+from toolviper.utils import logger as logger
 from scipy.interpolate import griddata
 from numba import njit
 from numba.core import types

@@ -1,7 +1,7 @@
 import pathlib
 
-import graphviper.utils.parameter
-import graphviper.utils.logger as logger
+import toolviper.utils.parameter
+import toolviper.utils.logger as logger
 
 from astrohack.utils.graph import compute_graph
 from astrohack.utils.file import overwrite_file
@@ -13,7 +13,7 @@ from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 from typing import Union, List
 
 
-@graphviper.utils.parameter.validate()
+@toolviper.utils.parameter.validate()
 def locit(
         locit_name: str,
         position_name: str = None,

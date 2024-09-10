@@ -7,13 +7,13 @@ import shutil
 import math
 import multiprocessing
 
-import graphviper.utils.parameter
+import toolviper.utils.parameter
 import dask
 import astrohack
 import psutil
 
 import numpy as np
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 from astropy.time import Time
 from casacore import tables as ctables
@@ -249,7 +249,7 @@ class HologObsDict(dict):
         return obs_dict
 
 
-@graphviper.utils.parameter.validate(
+@toolviper.utils.parameter.validate(
     add_data_type=HologObsDict
 )
 def extract_holog(
@@ -909,7 +909,7 @@ def model_memory_usage(
     if not pathlib.Path("model").exists():
         os.mkdir("model")
 
-    graphviper.utils.data.download('heuristic_model', folder="model")
+    toolviper.utils.data.download('heuristic_model', folder="model")
 
     with open("model/elastic.model", "rb") as model_file:
         model = pickle.load(model_file)

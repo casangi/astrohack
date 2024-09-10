@@ -5,7 +5,7 @@ import scipy.constants
 import xarray as xr
 from numba import njit
 
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 from astrohack.utils.conversion import convert_unit
 

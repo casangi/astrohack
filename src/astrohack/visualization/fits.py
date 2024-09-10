@@ -1,5 +1,5 @@
 import numpy as np
-from graphviper.utils import logger as logger
+from toolviper.utils import logger as logger
 from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import clight, convert_unit, add_prefix
 from astrohack.utils.fits import axis_to_fits_header, stokes_axis_to_fits_header, write_fits, resolution_to_fits_header

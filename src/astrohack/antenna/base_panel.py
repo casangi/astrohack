@@ -1,4 +1,4 @@
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize

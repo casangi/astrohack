@@ -8,8 +8,8 @@ import pathlib
 import numpy as np
 import xarray as xr
 
-import graphviper.utils.logger as logger
-from graphviper.utils.console import Colorize
+import toolviper.utils.logger as logger
+from toolviper.utils.console import Colorize
 
 from astrohack.utils.data import read_meta_data
 

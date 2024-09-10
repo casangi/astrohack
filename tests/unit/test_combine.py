@@ -1,6 +1,6 @@
 import os
 import shutil
-import graphviper
+import toolviper
 import pytest
 
 from astrohack.holog import holog
@@ -16,7 +16,7 @@ class TestCombine:
     def setup_class(cls):
         """ setup any state specific to the execution of the given test class
         such as fetching test data """
-        graphviper.utils.data.download(
+        toolviper.utils.data.download(
             file="ea25_cal_small_before_fixed.split.ms",
             folder="data"
         )

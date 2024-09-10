@@ -8,7 +8,7 @@ from astrohack.utils.text import get_str_idx_in_list
 from matplotlib.patches import Circle
 from astrohack.visualization.plot_tools import well_positioned_colorbar, get_proper_color_map
 
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 aips_par_names = ['phase_offset', 'x_point_offset', 'y_point_offset', 'x_focus_offset', 'y_focus_offset',
                 'z_focus_offset', 'x_subreflector_tilt', 'y_subreflector_tilt', 'x_cassegrain_offset',

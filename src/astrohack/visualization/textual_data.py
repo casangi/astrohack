@@ -5,7 +5,7 @@ from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import convert_unit, clight, notavail, param_to_list, add_prefix, format_value_error, \
     rotate_to_gmt, format_frequency, format_wavelength, format_value_unit, length_units, trigo_units, format_label, \
     create_pretty_table, string_to_ascii_file, compute_antenna_relative_off
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 from astrohack.utils.phase_fitting import aips_par_names
 from astrohack.utils.tools import get_telescope_lat_lon_rad

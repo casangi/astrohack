@@ -1,7 +1,7 @@
 import os
 import shutil
 
-import graphviper
+import toolviper
 from astrohack.extract_locit import extract_locit
 
 
@@ -16,7 +16,7 @@ class TestExtractLocit():
             such as fetching test data
         """
 
-        graphviper.utils.data.download(file="locit-input-pha.cal", folder="data")
+        toolviper.utils.data.download(file="locit-input-pha.cal", folder="data")
 
     @classmethod
     def teardown_class(cls):

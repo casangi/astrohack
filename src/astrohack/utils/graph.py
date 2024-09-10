@@ -1,6 +1,6 @@
 import dask
 import xarray
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 from astrohack.utils.text import approve_prefix
 from astrohack.utils.text import param_to_list

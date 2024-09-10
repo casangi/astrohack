@@ -1,14 +1,14 @@
 import os
 import glob
-import graphviper
+import toolviper
 import shutil
 import sys
 import numpy as np
-import graphviper.utils.console as console
+import toolviper.utils.console as console
 from contextlib import contextmanager
 
 from casacore import tables
-from graphviper.utils import logger as logger
+from toolviper.utils import logger as logger
 
 from typing import Union
 
@@ -39,11 +39,11 @@ def file_search(root: str = "/", file_name=None) -> Union[None, str]:
     colorize = console.Colorize()
 
     if root == "/":
-        graphviper.utils.logger.warning(
+        toolviper.utils.logger.warning(
             "File search from root could take some time ..."
         )
 
-    graphviper.utils.logger.info(
+    toolviper.utils.logger.info(
         "Searching {root} for {file_name}, please wait ...".format(
             root=colorize.blue(root),
             file_name=colorize.blue(file_name)
