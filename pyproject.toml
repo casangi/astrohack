@@ -4,7 +4,7 @@ version = "0.5.3"
 description = "Holography Antenna Commissioning Kit"
 readme = "README.md"
 requires-python = ">= 3.9, < 3.13"
-dependencies = [ "astropy", "dask", "distributed", "dropbox", "toolviper", "ipywidgets", "matplotlib", "numba>=0.57.0", "numpy", "prettytable", "pycryptodome", "pytest", "pytest-cov", "pytest-html", "scikit_image", "scikit-learn", "scipy", "rich", "xarray", "zarr", "bokeh", "jupyterlab", "python_casacore>=3.6.1; sys_platform != \"darwin\" ",]
+dependencies = [ "astropy", "dask", "distributed", "dropbox", "toolviper", "ipywidgets", "matplotlib", "numba>=0.57.0", "numpy<2.0.0", "prettytable", "pycryptodome", "pytest", "pytest-cov", "pytest-html", "scikit_image", "scikit-learn", "scipy", "rich", "xarray", "zarr", "bokeh", "jupyterlab", "python_casacore>=3.6.1; sys_platform != \"darwin\" ",]
 [[project.authors]]
 name = "Joshua Hoskins"
 email = "jhoskins@nrao.edu"
