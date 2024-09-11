@@ -37,7 +37,7 @@ jobs:
         pytest -v tests/ --html=test-results.html --self-contained-html --cov=astrohack --no-cov-on-fail --cov-report=html --doctest-modules
 
     - name: Upload pytest test results and coverage reports
-      uses: actions/upload-artifact@vmain
+      uses: actions/upload-artifact@main
       with:
         name: pytest-results-${{ matrix.python-version }}
         path: |
