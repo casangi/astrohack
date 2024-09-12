@@ -95,11 +95,11 @@ For a quick reference, the following citation commands can be used:
 # Figures
 
 Figures can be included like this:
-![Panel Holography Pipeline.\label{fig:holo}](holography_pipeline.png){ width=50% } 
+![Panel Holography Pipeline.\label{fig:holo}](holography_pipeline.png){ width=200% } 
 and referenced from text using \autoref{fig:holo}.
 
 Figure sizes can be customized by adding an optional second parameter:
-![Antenna Position Pipeline.\label{fig:ant_pos}](antenna_position_pipeline.png){ width=90% }      <!-- { width=20% } -->
+![Antenna Position Pipeline.\label{fig:ant_pos}](antenna_position_pipeline.png){ width=20% }      <!-- { width=20% } -->
 
 # Acknowledgements
 
