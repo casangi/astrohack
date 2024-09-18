@@ -954,6 +954,12 @@
             "type": ["string"],
             "check allowed with": "units.frequency"
         },
+        "rms_unit":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.length"
+        },
         "parallel":{
             "nullable": false,
             "required": false,

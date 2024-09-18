@@ -989,6 +989,7 @@ class AstrohackPanelFile(dict):
             wavelength_unit: str = 'cm',
             frequencies: Union[float, List[float]] = None,
             frequency_unit: str = 'GHz',
+            rms_unit: str = 'mm',
             parallel: bool = False
     ) -> None:
         """ Compute estimated antenna gains in dB and saves them to ASCII files.
@@ -1013,6 +1014,9 @@ class AstrohackPanelFile(dict):
 
         :param frequency_unit: Unit for the frequencies being used, default is GHz.
         :type frequency_unit: str, optional
+
+        :param rms_unit: Unit for the Antenna surface RMS, default is mm.
+        :type rms_unit: str, optional
 
         :param parallel: If True will use an existing astrohack client to produce ASCII files in parallel, default is False
         :type parallel: bool, optional

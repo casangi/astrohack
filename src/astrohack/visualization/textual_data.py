@@ -159,13 +159,17 @@ def export_gains_table_chunk(parm_dict):
                 wavelengths.append(clight/freq_fac/in_freq)
 
     db = 'dB'
+    rmsunit = parm_dict['rms_unit']
+    rmses = antenna.get_rms(rmsunit)
 
     field_names = ['Frequency', 'Wavelength', 'Before panel', 'After panel', 'Theoretical Max.']
     table = create_pretty_table(field_names)
 
     outstr = f'# Gain estimates for {telescope.name} antenna {ant.split("_")[1]}\n'
-    outstr += f'# Based on a measurement at {format_frequency(frequency)}, {format_wavelength(antenna.wavelength)}'
-    outstr += 3*'\n'
+    outstr += f'# Based on a measurement at {format_frequency(frequency)}, {format_wavelength(antenna.wavelength)}\n'
+    outstr += f'# Antenna surface RMS before adjustment: {format_value_unit(rmses[0], rmsunit)}\n'
+    outstr += f'# Antenna surface RMS after adjustment: {format_value_unit(rmses[1], rmsunit)}\n'
+    outstr += 1*'\n'
 
     for wavelength in wavelengths:
         prior, theo = antenna.gain_at_wavelength(False, wavelength)
