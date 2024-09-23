@@ -9,7 +9,7 @@ from astrohack.utils import string_to_ascii_file, create_dataset_label
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.text import add_prefix, bool_to_str, format_frequency
+from astrohack.utils.text import add_prefix, bool_to_str, format_frequency, format_value_unit
 from astrohack.visualization.plot_tools import well_positioned_colorbar, create_figure_and_axes, close_figure, \
     get_proper_color_map
 
@@ -723,14 +723,16 @@ class AntennaSurface:
         """
         outfile = f"# Screw adjustments for {self.telescope.name}'s {self.label}, pol. state {self.pol_state}\n"
         freq = clight/self.wavelength
-        out_freq = format_frequency(freq)
-        outfile += f"# Frequency = {out_freq}{lnbr}"
-        outfile += "# Adjustments are in " + unit + 2 * lnbr
+        rmses = self.get_rms(unit)
+        outfile += f"# Frequency = {format_frequency(freq)}{lnbr}"
+        outfile += f'# Antenna surface RMS before adjustment: {format_value_unit(rmses[0], unit)}\n'
+        outfile += f'# Antenna surface RMS after adjustment: {format_value_unit(rmses[1], unit)}\n'
         outfile += "# Lower means away from subreflector" + lnbr
         outfile += "# Raise means toward the subreflector" + lnbr
         outfile += "# LOWER the panel if the number is POSITIVE" + lnbr
         outfile += "# RAISE the panel if the number is NEGATIVE" + lnbr
-        outfile += 2 * lnbr
+        outfile += "# Adjustments are in " + unit + lnbr
+        outfile += lnbr
         spc = ' '
         outfile += f'{comment_char} Panel{2*spc}'
         nscrews = len(self.telescope.screw_description)
