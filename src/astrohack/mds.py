@@ -1033,7 +1033,6 @@ class AstrohackPanelFile(dict):
         will combine both lists.
         """
 
-
         param_dict = locals()
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         compute_graph(self, export_gains_table_chunk, param_dict, ['ant', 'ddi'],
