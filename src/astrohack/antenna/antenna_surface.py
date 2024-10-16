@@ -6,7 +6,7 @@ from matplotlib import patches
 import toolviper.utils.logger as logger
 
 from astrohack.antenna.ring_panel import RingPanel
-from astrohack.utils import string_to_ascii_file, create_dataset_label, data_statistics
+from astrohack.utils import string_to_ascii_file, create_dataset_label, data_statistics, statistics_to_text
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
@@ -183,6 +183,7 @@ class AntennaSurface:
 
     def _measure_ring_clip(self, clip_type, clip_level):
         self.amplitude_noise = np.where(self.rad < self.telescope.diam / 2., np.nan, self.amplitude)
+        self.amplitude_noise = np.where(self.rad < self.telescope.inlim, self.amplitude, self.amplitude_noise)
 
         if clip_type == 'relative':
             clip = clip_level * np.nanmax(self.amplitude)
@@ -530,10 +531,14 @@ class AntennaSurface:
         else:
             parm_dict['z_lim'] = parm_dict['amplitude_limits']
 
-        title = "Amplitude, min={0:.5f}, max ={1:.5f} V".format(parm_dict['z_lim'][0], parm_dict['z_lim'][1])
+        amp_stats = data_statistics(np.where(self.mask, self.amplitude, np.nan))
+        noise_stats = data_statistics(self.amplitude_noise)
+        title = ('Amplitude, ' + statistics_to_text(amp_stats) + lnbr +
+                 'Noise, ' + statistics_to_text(noise_stats))
+
         plotname = add_prefix(basename, f'{caller}_amplitude')
         parm_dict['unit'] = self.amp_unit
-        self._plot_map(plotname, self.amplitude, title, parm_dict)
+        self._plot_map(plotname, self.amplitude_noise, title, parm_dict)
 
     def plot_phase(self, basename, caller, parm_dict):
         """
