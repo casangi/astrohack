@@ -1,3 +1,4 @@
+import numpy as np
 import xarray as xr
 
 from matplotlib import patches
@@ -5,7 +6,7 @@ from matplotlib import patches
 import toolviper.utils.logger as logger
 
 from astrohack.antenna.ring_panel import RingPanel
-from astrohack.utils import string_to_ascii_file, create_dataset_label
+from astrohack.utils import string_to_ascii_file, create_dataset_label, data_statistics
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
@@ -132,6 +133,12 @@ class AntennaSurface:
         self.v_axis = inputxds.u.values
         self.panel_distribution = inputxds['PANEL_DISTRIBUTION'].values
         try:
+            self.amplitude_noise = inputxds['AMP_NOISE'].values
+        except KeyError:
+            logger.warning("Input panel file does not have amplitude noise information, noise statistics will be flawed")
+            self.amplitude_noise = np.full_like(self.amplitude, np.nan)
+
+        try:
             self.resolution = inputxds.attrs['aperture_resolution']
         except KeyError:
 
@@ -175,14 +182,15 @@ class AntennaSurface:
         self.label = create_dataset_label(inputxds.attrs['ant_name'], inputxds.attrs['ddi'])
 
     def _measure_ring_clip(self, clip_type, clip_level):
+        self.amplitude_noise = np.where(self.rad < self.telescope.diam / 2., np.nan, self.amplitude)
+
         if clip_type == 'relative':
             clip = clip_level * np.nanmax(self.amplitude)
         elif clip_type == 'absolute':
             clip = clip_level
         elif clip_type == 'sigma':
-            noise = np.where(self.rad < self.telescope.diam / 2., np.nan, self.amplitude)
-            noiserms = np.sqrt(np.nanmean(noise ** 2))
-            clip = clip_level * noiserms
+            noise_stats = data_statistics(self.amplitude_noise)
+            clip = noise_stats['mean'] + clip_level * noise_stats['rms']
         else:
             msg = f'Unrecognized clipping type: {clip_type}'
             raise Exception(msg)
@@ -778,6 +786,7 @@ class AntennaSurface:
         xds['DEVIATION'] = xr.DataArray(self.deviation, dims=["u", "v"])
         xds['MASK'] = xr.DataArray(self.mask, dims=["u", "v"])
         xds['PANEL_DISTRIBUTION'] = xr.DataArray(self.panel_distribution, dims=["u", "v"])
+        xds['AMP_NOISE'] = xr.DataArray(self.amplitude_noise, dims=["u", "v"])
 
         coords = {"u": self.u_axis,
                   "v": self.v_axis}
