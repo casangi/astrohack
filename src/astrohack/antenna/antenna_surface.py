@@ -1,4 +1,3 @@
-import numpy as np
 import xarray as xr
 
 from matplotlib import patches
@@ -538,7 +537,7 @@ class AntennaSurface:
 
         plotname = add_prefix(basename, f'{caller}_amplitude')
         parm_dict['unit'] = self.amp_unit
-        self._plot_map(plotname, self.amplitude_noise, title, parm_dict)
+        self._plot_map(plotname, self.amplitude, title, parm_dict)
 
     def plot_phase(self, basename, caller, parm_dict):
         """
@@ -792,6 +791,7 @@ class AntennaSurface:
         xds['MASK'] = xr.DataArray(self.mask, dims=["u", "v"])
         xds['PANEL_DISTRIBUTION'] = xr.DataArray(self.panel_distribution, dims=["u", "v"])
         xds['AMP_NOISE'] = xr.DataArray(self.amplitude_noise, dims=["u", "v"])
+        xds['RADIUS'] = xr.DataArray(self.rad, dims=["u", "v"])
 
         coords = {"u": self.u_axis,
                   "v": self.v_axis}
