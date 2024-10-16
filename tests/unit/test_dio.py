@@ -14,7 +14,7 @@ from astrohack.extract_pointing import extract_pointing
 from astrohack.panel import panel
 
 
-class TestAstrohackDio():
+class TestAstrohackDio:
     datafolder = 'dioData'
     holog_mds = dict()
     image_mds = dict()
@@ -46,7 +46,6 @@ class TestAstrohackDio():
             holog_name=cls.datafolder + '/ea25_cal_small_before_fixed.split.holog.zarr',
             overwrite=True,
             phase_fit=True,
-            apply_mask=True,
             to_stokes=True,
             parallel=True
         )
