@@ -34,7 +34,6 @@ def holog(
         ant: Union[str, List[str]] = "all",
         ddi: Union[int, List[int]] = "all",
         to_stokes: bool = True,
-        apply_mask: bool = True,
         phase_fit: bool = True,
         overwrite: bool = False,
         parallel: bool = False
@@ -95,10 +94,6 @@ def holog(
 
     :param to_stokes: Dictates whether polarization is computed according to stokes values., defaults to True
     :type to_stokes: bool, optional
-
-    :param apply_mask: If True applies a mask to the aperture setting values outside the aperture to zero., defaults\
-     to True
-    :type apply_mask: bool, optional
 
     :param phase_fit: If a boolean array is given each element controls one aspect of phase fitting. defaults to True.
         

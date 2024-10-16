@@ -96,8 +96,7 @@ def process_holog_chunk(holog_chunk_params):
             label=label
         )
 
-    amplitude, phase, u_prime, v_prime = _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope,
-                                                                  holog_chunk_params['apply_mask'])
+    amplitude, phase, u_prime, v_prime = _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope)
 
     phase_corrected_angle, phase_fit_results = execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope,
                                                                      uv_cell_size, holog_chunk_params["phase_fit"],
@@ -130,8 +129,10 @@ def _get_correct_telescope(ant_name, telescope_name):
     return Telescope(telescope_name)
 
 
-def _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope, apply_mask, scaling=1.1):
-    # Default scaling factor of 1.1: Let's not be too aggressive
+def _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope, scaling=1.5):
+    # Default scaling factor is now 1.5 to allow for better analysis of the noise around the aperture.
+    # This will probably mean no cropping for most apertures, but may be important if dish appears too small in the
+    # aperture.
     max_aperture_radius = (0.5 * telescope.diam)
 
     image_slice = aperture_grid[0, 0, 0, ...]
@@ -143,11 +144,6 @@ def _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope, apply_mas
         radius = radius_v
     else:
         radius = radius_u
-
-    if apply_mask:
-        # Masking Aperture image
-        mask = mask_circular_disk(center=None, radius=radius, array=aperture_grid)
-        aperture_grid = mask * aperture_grid
 
     start_cut = center_pixel - radius
     end_cut = center_pixel + radius
