@@ -49,8 +49,6 @@ from astrohack.utils.text import print_summary_header
 from astrohack.utils.text import rad_to_deg_str
 from astrohack.utils.text import rad_to_hour_str
 
-from prettytable import PrettyTable
-
 from typing import Any, List, Union, Tuple
 
 colorize = Colorize()
@@ -540,7 +538,7 @@ class AstrohackHologFile(dict):
             destination: str,
             delta: float = 0.01,
             ant: Union[str, List[str]] = "all",
-            ddi: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
             map_id: Union[int, List[int]] = "all",
             complex_split: str = 'polar',
             display: bool = False,
@@ -800,8 +798,8 @@ class AstrohackPanelFile(dict):
     def export_screws(
             self,
             destination: str,
-            ant: Union[str, List[str]] = None,
-            ddi: Union[int, List[int]] = None,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
             unit: str = 'mm',
             threshold: float = None,
             panel_labels: bool = True,
@@ -1192,7 +1190,7 @@ class AstrohackLocitFile(dict):
     ) -> None:
         """ Prints a table containing the array configuration
 
-        :param relative: Print relative antenna coordinates or geocentric coordinates, default is True
+        :param relative: Print antenna coordinates relative to array center or in geocentric coordinates, default is True
         :type relative: bool, optional
 
         .. _Description:

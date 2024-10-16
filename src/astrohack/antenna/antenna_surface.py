@@ -5,7 +5,7 @@ from matplotlib import patches
 import toolviper.utils.logger as logger
 
 from astrohack.antenna.ring_panel import RingPanel
-from astrohack.utils import string_to_ascii_file, create_dataset_label
+from astrohack.utils import string_to_ascii_file, create_dataset_label, data_statistics, statistics_to_text
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
@@ -132,6 +132,12 @@ class AntennaSurface:
         self.v_axis = inputxds.u.values
         self.panel_distribution = inputxds['PANEL_DISTRIBUTION'].values
         try:
+            self.amplitude_noise = inputxds['AMP_NOISE'].values
+        except KeyError:
+            logger.warning("Input panel file does not have amplitude noise information, noise statistics will be flawed")
+            self.amplitude_noise = np.full_like(self.amplitude, np.nan)
+
+        try:
             self.resolution = inputxds.attrs['aperture_resolution']
         except KeyError:
 
@@ -175,14 +181,16 @@ class AntennaSurface:
         self.label = create_dataset_label(inputxds.attrs['ant_name'], inputxds.attrs['ddi'])
 
     def _measure_ring_clip(self, clip_type, clip_level):
+        self.amplitude_noise = np.where(self.rad < self.telescope.diam / 2., np.nan, self.amplitude)
+        self.amplitude_noise = np.where(self.rad < self.telescope.inlim, self.amplitude, self.amplitude_noise)
+
         if clip_type == 'relative':
             clip = clip_level * np.nanmax(self.amplitude)
         elif clip_type == 'absolute':
             clip = clip_level
         elif clip_type == 'sigma':
-            noise = np.where(self.rad < self.telescope.diam / 2., np.nan, self.amplitude)
-            noiserms = np.sqrt(np.nanmean(noise ** 2))
-            clip = clip_level * noiserms
+            noise_stats = data_statistics(self.amplitude_noise)
+            clip = noise_stats['mean'] + clip_level * noise_stats['rms']
         else:
             msg = f'Unrecognized clipping type: {clip_type}'
             raise Exception(msg)
@@ -522,7 +530,11 @@ class AntennaSurface:
         else:
             parm_dict['z_lim'] = parm_dict['amplitude_limits']
 
-        title = "Amplitude, min={0:.5f}, max ={1:.5f} V".format(parm_dict['z_lim'][0], parm_dict['z_lim'][1])
+        amp_stats = data_statistics(np.where(self.mask, self.amplitude, np.nan))
+        noise_stats = data_statistics(self.amplitude_noise)
+        title = ('Amplitude, ' + statistics_to_text(amp_stats) + lnbr +
+                 'Noise, ' + statistics_to_text(noise_stats))
+
         plotname = add_prefix(basename, f'{caller}_amplitude')
         parm_dict['unit'] = self.amp_unit
         self._plot_map(plotname, self.amplitude, title, parm_dict)
@@ -778,6 +790,8 @@ class AntennaSurface:
         xds['DEVIATION'] = xr.DataArray(self.deviation, dims=["u", "v"])
         xds['MASK'] = xr.DataArray(self.mask, dims=["u", "v"])
         xds['PANEL_DISTRIBUTION'] = xr.DataArray(self.panel_distribution, dims=["u", "v"])
+        xds['AMP_NOISE'] = xr.DataArray(self.amplitude_noise, dims=["u", "v"])
+        xds['RADIUS'] = xr.DataArray(self.rad, dims=["u", "v"])
 
         coords = {"u": self.u_axis,
                   "v": self.v_axis}

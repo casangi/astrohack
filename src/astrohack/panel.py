@@ -26,7 +26,7 @@ def panel(
         image_name: str,
         panel_name: str = None,
         clip_type: str = 'sigma',
-        clip_level: float = 3.0,
+        clip_level: Union[float, dict[dict[float]]] = 3.0,
         panel_model: str = "rigid",
         panel_margins: float = 0.05,
         polarization_state: str = 'I',
@@ -48,8 +48,9 @@ def panel(
     :param clip_type: Choose the amplitude clipping algorithm: absolute, relative or sigma, default is sigma
     :type clip_type: str, optional
 
-    :param clip_level: Choose level of clipping, default is 3 (appropriate for sigma clipping)
-    :type clip_level: float, optional
+    :param clip_level: Choose level of clipping, can also be specified for specific antenna and DDI combinations by \
+    passing a dictionary, default is 3 (appropriate for sigma clipping)
+    :type clip_level: float, dict, optional
 
     :param panel_model: Model of surface fitting function used to fit panel surfaces, None will default to "rigid". \
     Possible models are listed below.
@@ -129,6 +130,26 @@ def panel(
                     times the RMS noise in amplitude will be clipped.
 
         The default clipping is set to 3 sigma.
+
+        .. rubric:: Passing a dictionary for amplitude clipping:
+
+        The dictionary used for specifying amplitude clippings specific for each antenna and DDI combination must
+        follow the following scheme:
+
+        .. parsed-literal::
+            amp_clip_dict = {
+                ant1_name: {
+                    0: 0.3
+                    1: 0.5
+                }
+                ant2_name: {
+                    0: 0.45
+                    1: 0.21
+                }
+            }
+
+        Where the antenna name is the usual antenna designation e.g. ea24 for the VLA or DV42 for ALMA, and the DDI
+        number must be given as an integer.
 
 
     .. _Description:
