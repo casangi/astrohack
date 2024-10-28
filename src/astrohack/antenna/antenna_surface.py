@@ -427,10 +427,7 @@ class AntennaSurface:
         sinsum = np.nansum(np.sin(scaled_phase[dish_mask]))
         real_factor = np.sqrt(cossum**2 + sinsum**2)/np.sum(dish_mask)
 
-        u_fact = (self.u_axis[1] - self.u_axis[0]) / wavelength
-        v_fact = (self.v_axis[1] - self.v_axis[0]) / wavelength
-
-        theo_gain = fourpi * np.abs(u_fact * v_fact)
+        theo_gain = fourpi * self.telescope.diam/wavelength
         real_gain = theo_gain * real_factor
         return to_db(real_gain), to_db(theo_gain)
 
