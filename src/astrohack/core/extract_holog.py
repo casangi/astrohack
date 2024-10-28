@@ -453,7 +453,7 @@ def create_holog_obs_dict(
         ant_names,
         ant_pos,
         ant_names_main,
-        exclude_reference_antennas=None,
+        exclude_antennas=None,
         write_distance_matrix=False
 ):
     """
@@ -468,14 +468,14 @@ def create_holog_obs_dict(
     map_id = 0
     ant_names_set = set()
 
-    if exclude_reference_antennas is None:
-        exclude_reference_antennas = []
-    elif isinstance(exclude_reference_antennas, str):
-        exclude_reference_antennas = [exclude_reference_antennas]
+    if exclude_antennas is None:
+        exclude_antennas = []
+    elif isinstance(exclude_antennas, str):
+        exclude_antennas = [exclude_antennas]
     else:
         pass
 
-    for ant_name in exclude_reference_antennas:
+    for ant_name in exclude_antennas:
         prefixed = 'ant_'+ant_name
         if prefixed not in pnt_dict.keys():
             logger.warning(f'Bad reference antenna {ant_name} is not present in the data.')
@@ -485,7 +485,7 @@ def create_holog_obs_dict(
     for ant_name, ant_ds in pnt_dict.items():
         if 'ant' in ant_name:
             ant_name = ant_name.replace('ant_', '')
-            if ant_name in exclude_reference_antennas:
+            if ant_name in exclude_antennas:
                 pass
             else:
                 if ant_name in ant_names_main:  # Check if antenna in main table.

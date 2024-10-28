@@ -17,7 +17,7 @@
         "baseline_average_nearest":{
             "type":["int", "str"]
         },
-        "exclude_reference_antennas": {
+        "exclude_antennas": {
             "type":["ndarray", "list", "str"],
             "struct type": ["int"],
             "nullable": true

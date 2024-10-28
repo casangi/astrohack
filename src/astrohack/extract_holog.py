@@ -260,7 +260,7 @@ def extract_holog(
         ddi: Union[int, List[int], str] = 'all',
         baseline_average_distance: Union[float, str] = 'all',
         baseline_average_nearest: Union[float, str] = 'all',
-        exclude_reference_antennas: Union[list[str], str] = None,
+        exclude_antennas: Union[list[str], str] = None,
         data_column: str = "CORRECTED_DATA",
         time_smoothing_interval: float = None,
         parallel: bool = False,
@@ -302,6 +302,11 @@ def extract_holog(
     baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and \
     baseline_average_nearest can not be used together.
     :type baseline_average_nearest: int, optional
+
+    :param exclude_antennas: If an antenna is given for exclusion it will not be processed as a reference or a
+    mapping antenna. This can be used to exclude antennas that have bad data for whatever reason. Default is None,
+    meaning no antenna is excluded.
+    :type exclude_antennas: str | list, optional
 
     :param data_column: Determines the data column to pull from the measurement set. Defaults to "CORRECTED_DATA".
     :type data_column: str, optional, ex. DATA, CORRECTED_DATA
@@ -478,7 +483,7 @@ def extract_holog(
             ant_names,
             ant_pos,
             ant_names_main,
-            exclude_reference_antennas=extract_holog_params['exclude_reference_antennas']
+            exclude_antennas=extract_holog_params['exclude_antennas']
         )
 
         # From the generated holog_obs_dict subselect user supplied ddis.
