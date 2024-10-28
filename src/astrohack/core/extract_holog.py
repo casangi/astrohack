@@ -453,6 +453,7 @@ def create_holog_obs_dict(
         ant_names,
         ant_pos,
         ant_names_main,
+        exclude_reference_antennas=None,
         write_distance_matrix=False
 ):
     """
@@ -467,28 +468,43 @@ def create_holog_obs_dict(
     map_id = 0
     ant_names_set = set()
 
+    if exclude_reference_antennas is None:
+        exclude_reference_antennas = []
+    elif isinstance(exclude_reference_antennas, str):
+        exclude_reference_antennas = [exclude_reference_antennas]
+    else:
+        pass
+
+    for ant_name in exclude_reference_antennas:
+        prefixed = 'ant_'+ant_name
+        if prefixed not in pnt_dict.keys():
+            logger.warning(f'Bad reference antenna {ant_name} is not present in the data.')
+
     # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antennas are added
     # because we first need to populate all mapping antennas.
     for ant_name, ant_ds in pnt_dict.items():
         if 'ant' in ant_name:
             ant_name = ant_name.replace('ant_', '')
-            if ant_name in ant_names_main:  # Check if antenna in main table.
-                ant_names_set.add(ant_name)
-                for ddi, map_dict in ant_ds.attrs['mapping_scans_obs_dict'][0].items():
-                    if ddi not in holog_obs_dict:
-                        holog_obs_dict[ddi] = {}
-                    for ant_map_id, scan_list in map_dict.items():
-                        if scan_list:
-                            map_key = _check_if_array_in_dict(mapping_scans_dict, scan_list)
-                            if not map_key:
-                                map_key = 'map_' + str(map_id)
-                                mapping_scans_dict[map_key] = scan_list
-                                map_id = map_id + 1
+            if ant_name in exclude_reference_antennas:
+                pass
+            else:
+                if ant_name in ant_names_main:  # Check if antenna in main table.
+                    ant_names_set.add(ant_name)
+                    for ddi, map_dict in ant_ds.attrs['mapping_scans_obs_dict'][0].items():
+                        if ddi not in holog_obs_dict:
+                            holog_obs_dict[ddi] = {}
+                        for ant_map_id, scan_list in map_dict.items():
+                            if scan_list:
+                                map_key = _check_if_array_in_dict(mapping_scans_dict, scan_list)
+                                if not map_key:
+                                    map_key = 'map_' + str(map_id)
+                                    mapping_scans_dict[map_key] = scan_list
+                                    map_id = map_id + 1
 
-                            if map_key not in holog_obs_dict[ddi]:
-                                holog_obs_dict[ddi][map_key] = {'scans': np.array(scan_list), 'ant': {}}
+                                if map_key not in holog_obs_dict[ddi]:
+                                    holog_obs_dict[ddi][map_key] = {'scans': np.array(scan_list), 'ant': {}}
 
-                            holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
+                                holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
 
     df = pd.DataFrame(ant_pos, columns=['x', 'y', 'z'], index=ant_names)
     df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
