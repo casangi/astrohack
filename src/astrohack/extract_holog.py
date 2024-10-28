@@ -260,6 +260,7 @@ def extract_holog(
         ddi: Union[int, List[int], str] = 'all',
         baseline_average_distance: Union[float, str] = 'all',
         baseline_average_nearest: Union[float, str] = 'all',
+        exclude_reference_antennas: Union[list[str], str] = None,
         data_column: str = "CORRECTED_DATA",
         time_smoothing_interval: float = None,
         parallel: bool = False,
@@ -476,7 +477,8 @@ def extract_holog(
             extract_holog_params['baseline_average_nearest'],
             ant_names,
             ant_pos,
-            ant_names_main
+            ant_names_main,
+            exclude_reference_antennas=extract_holog_params['exclude_reference_antennas']
         )
 
         # From the generated holog_obs_dict subselect user supplied ddis.
@@ -487,7 +489,6 @@ def extract_holog(
                     ddi_id = int(ddi_key.replace('ddi_', ''))
                     if ddi_id not in ddi:
                         del holog_obs_dict[ddi_key]
-
 
     ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "STATE"),
