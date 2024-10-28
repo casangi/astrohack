@@ -737,8 +737,15 @@ class AntennaSurface:
         freq = clight/self.wavelength
         rmses = self.get_rms(unit)
         outfile += f"# Frequency = {format_frequency(freq)}{lnbr}"
-        outfile += f'# Antenna surface RMS before adjustment: {format_value_unit(rmses[0], unit)}\n'
-        outfile += f'# Antenna surface RMS after adjustment: {format_value_unit(rmses[1], unit)}\n'
+        if unit == 'mm':
+            outfile += f'# Antenna surface RMS before adjustment: {format_value_unit(rmses[0], unit)}\n'
+            outfile += f'# Antenna surface RMS after adjustment: {format_value_unit(rmses[1], unit)}\n'
+        else:
+            mmrms = self.get_rms('mm')
+            outfile += (f'# Antenna surface RMS before adjustment: {format_value_unit(rmses[0], unit)} or '
+                        f'{format_value_unit(mmrms[0], "mm")}\n')
+            outfile += (f'# Antenna surface RMS after adjustment: {format_value_unit(rmses[1], unit)} or '
+                        f'{format_value_unit(mmrms[1], "mm")}\n')
         outfile += "# Lower means away from subreflector" + lnbr
         outfile += "# Raise means toward the subreflector" + lnbr
         outfile += "# LOWER the panel if the number is POSITIVE" + lnbr
