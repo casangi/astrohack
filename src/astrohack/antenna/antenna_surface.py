@@ -134,7 +134,8 @@ class AntennaSurface:
         try:
             self.amplitude_noise = inputxds['AMP_NOISE'].values
         except KeyError:
-            logger.warning("Input panel file does not have amplitude noise information, noise statistics will be flawed")
+            logger.warning("Input panel file does not have amplitude noise information, noise statistics will be "
+                           "flawed")
             self.amplitude_noise = np.full_like(self.amplitude, np.nan)
 
         try:
@@ -191,9 +192,30 @@ class AntennaSurface:
         elif clip_type == 'sigma':
             noise_stats = data_statistics(self.amplitude_noise)
             clip = noise_stats['mean'] + clip_level * noise_stats['rms']
+        elif clip_type == 'noise_threshold':
+            clip = self._compute_noise_threshold_clip(clip_level)
         else:
             msg = f'Unrecognized clipping type: {clip_type}'
             raise Exception(msg)
+        return clip
+
+    def _compute_noise_threshold_clip(self, threshold, step_multiplier=0.95):
+        noise_stats = data_statistics(self.amplitude_noise)
+
+        in_disk = np.where(self.rad < self.telescope.diam / 2., 1.0, np.nan)
+        in_disk = np.where(self.rad < self.telescope.inlim, np.nan, in_disk)
+        n_in_disk = np.nansum(in_disk)
+        in_disk_amp = in_disk * self.amplitude
+
+        fraction_in = 0
+        clip = noise_stats['max']
+        multiplier = 1.0
+        while fraction_in < threshold:
+            clip *= multiplier
+            data_in = np.where(in_disk_amp > clip, 1.0, 0.0)
+            fraction_in = np.sum(data_in) / n_in_disk
+            multiplier *= step_multiplier
+
         return clip
 
     def _init_ringed(self, clip_type, clip_level):
