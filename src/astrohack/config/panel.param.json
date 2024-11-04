@@ -10,7 +10,7 @@
         },
         "clip_type":{
             "type":["str"],
-            "allowed": ["absolute", "sigma", "relative"],
+            "allowed": ["absolute", "sigma", "relative", "noise_threshold"],
             "nullable": false
         },
         "clip_level":{

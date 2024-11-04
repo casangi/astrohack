@@ -17,6 +17,11 @@
         "baseline_average_nearest":{
             "type":["int", "str"]
         },
+        "exclude_antennas": {
+            "type":["ndarray", "list", "str"],
+            "struct type": ["int"],
+            "nullable": true
+        },
         "holog_name":{
             "type":["str"],
             "nullable": true
