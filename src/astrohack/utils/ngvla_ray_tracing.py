@@ -1,5 +1,4 @@
 import numpy as np
-from numpy.linalg import norm as norm
 from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
 import time
@@ -15,15 +14,15 @@ def numpy_size(array):
         iu += 1
     print(f'Image size: {memsize:.2f} {units[iu]}')
 
-def resolution_str(res):
-    if res >= 1:
-        return f"{res} m"
-    elif res >= 0.01:
-        return f"{100*res} cm"
-    elif res >= 0.001:
-        return f"{1000*res} mm"
+def resolution_str(resolution):
+    if resolution >= 1:
+        return f"{resolution} m"
+    elif resolution >= 0.01:
+        return f"{100 * resolution} cm"
+    elif resolution >= 0.001:
+        return f"{1000 * resolution} mm"
     else:
-        return f"{1e6*res} um"
+        return f"{1e6 * resolution} um"
 
 
 
@@ -63,21 +62,21 @@ def grid_grad_jit(zgrid, xaxis, yaxis):
 
 
 
-def print_elapsed(start, label):
+def print_elapsed(starttime, label):
     stop = time.time()
-    elap = stop-start
+    elap = stop - starttime
     print(f'{label}: {elap:.2f} s')
 
 
 class Axis:
-    def __init__(self, array, res):
+    def __init__(self, array, resolution):
         mini, maxi = np.min(array), np.max(array)
-        npnt = int(np.ceil((maxi-mini)/res))
+        npnt = int(np.ceil((maxi-mini) / resolution))
         array = np.arange(npnt+1)
-        array = res*array
-        array += mini+res/2
+        array = resolution * array
+        array += mini + resolution / 2
         self.np = npnt
-        self.res = res
+        self.res = resolution
         self.mini = mini
         self.maxi = maxi
         self.array = array
@@ -95,7 +94,7 @@ class Axis:
             fracs = [frac, 1-frac]
         else:
             idx = [i_idx]
-            frac = [1.0]
+            fracs = [1.0]
 
         if len(idx) > 1:
             if idx[0] < 0:
@@ -130,6 +129,14 @@ class ReflectiveSurface:
     def __init__(self, filename, rtype):
         self.cloud = np.loadtxt(filename, unpack=True)
         self.np = self.cloud.shape[1]
+        self.x_axis = None
+        self.y_axis = None
+        self.zgridded = None
+        self.x_grad = None
+        self.y_grad = None
+        self.vec_shape = None
+        self.norm_vector = None
+        self.reflection = None
         #self.cloud[2] = -self.cloud[2]
         if rtype in self.types:
             self.rtype = rtype
@@ -188,7 +195,7 @@ class ReflectiveSurface:
         rx = np.sin(2*ang_xz)
         ry = -np.sin(2*ang_yz)
         rz = np.cos(2*ang_yz)*np.cos(2*ang_xz)
-        # Reflections along y axis have to be reflected for Y > 0
+        # Reflections along y-axis have to be reflected for Y > 0
         pos_y = self.y_axis.array > 0
         rx[pos_y, :] *= -1
 
@@ -215,7 +222,7 @@ class ReflectiveSurface:
 
     def _plot_reflection_cut(self, icut, cut_dim, nreflec, ax, xaxis, mirror_cut):
         # These plots need to present the projection of the reflection
-        # onto the cut plane other wise representation is misleading.
+        # onto the cut plane otherwise representation is misleading.
 
         ax.plot(xaxis, mirror_cut, color='blue', label='ngVLA primary reflector')
         ax.plot(0, 0, marker='x', color='yellow', label='Focus')
@@ -252,19 +259,19 @@ class ReflectiveSurface:
         ax.set_ylim(-9, 2)
 
 
-    def _plot_proj(self, proj, fig, ax, secondary=None, size=0.03, fsize=5):
+    def _plot_proj(self, proj, fig, ax, secondary_mirror=None, size=0.03, fsize=5):
         i1, i2, i3 = self.idx[proj]
         xax, yax, zax = self.axes[proj]
         minmax = [np.min(self.cloud[i3]), np.max(self.cloud[i3])]
         ax.scatter(self.cloud[i1], self.cloud[i2], c=self.cloud[i3],
                    cmap='viridis', s=size)
-        if secondary is None:
+        if secondary_mirror is None:
             ax.set_title(f'ngVLA {self.rtype} {proj.upper()} projection',
                          size=1.5*fsize)
         else:
-            ax.scatter(secondary.cloud[i1], secondary.cloud[i2],
-                       c=secondary.cloud[i3], cmap='viridis', s=size)
-            sminmax = [np.min(secondary.cloud[i3]), np.max(secondary.cloud[i3])]
+            ax.scatter(secondary_mirror.cloud[i1], secondary_mirror.cloud[i2],
+                       c=secondary_mirror.cloud[i3], cmap='viridis', s=size)
+            sminmax = [np.min(secondary_mirror.cloud[i3]), np.max(secondary_mirror.cloud[i3])]
             ax.set_title(f'ngVLA prototype {proj.upper()} projection',
                          size=1.5*fsize)
             if sminmax[0] < minmax[0]:
@@ -284,23 +291,23 @@ class ReflectiveSurface:
         ax.tick_params(axis='both', which='major', labelsize=fsize)
         ax.legend(fontsize=fsize)
 
-    def plot_2d(self, filename, secondary=None):
+    def plot_2d(self, filename, secondary_mirror=None):
         fig, ax = plt.subplots(2,2)
         for key in self.idx.keys():
             ia1, ia2 = self.keys[key]
-            self._plot_proj(key, fig, ax[ia1, ia2], secondary)
+            self._plot_proj(key, fig, ax[ia1, ia2], secondary_mirror)
         fig.set_tight_layout(True)
         fig.savefig(filename, dpi=300)
 
-    def plot_3d(self, filename, secondary=None, size=0.03):
+    def plot_3d(self, filename, secondary_mirror=None, size=0.03):
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
         i1, i2, i3 = self.idx['xy']
         ax.scatter3D(self.cloud[i1], self.cloud[i2], self.cloud[i3],
                      s=size)
-        if secondary is not None:
-            ax.scatter3D(secondary.cloud[i1], secondary.cloud[i2],
-                         secondary.cloud[i3], s=size)
+        if secondary_mirror is not None:
+            ax.scatter3D(secondary_mirror.cloud[i1], secondary_mirror.cloud[i2],
+                         secondary_mirror.cloud[i3], s=size)
         ax.scatter3D(0,0,0, s=0.3, label='Focus')
         ax.legend()
         fig.savefig(filename, dpi=300)
