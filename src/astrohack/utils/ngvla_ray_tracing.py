@@ -1,7 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
-import time
 from numba import njit
 import random
 
@@ -13,18 +12,6 @@ def numpy_size(array):
         memsize /= 1024
         iu += 1
     print(f'Image size: {memsize:.2f} {units[iu]}')
-
-def resolution_str(resolution):
-    if resolution >= 1:
-        return f"{resolution} m"
-    elif resolution >= 0.01:
-        return f"{100 * resolution} cm"
-    elif resolution >= 0.001:
-        return f"{1000 * resolution} mm"
-    else:
-        return f"{1e6 * resolution} um"
-
-
 
 @njit(cache=False, nogil=True)
 def grad_calc(axis, vals):
@@ -59,13 +46,6 @@ def grid_grad_jit(zgrid, xaxis, yaxis):
                 y_grad[i_x, i_y] = grad_calc(yaxis[i_y-1 : i_y+2],
                                              zgrid[i_x, i_y-1 : i_y+2])
     return x_grad, y_grad
-
-
-
-def print_elapsed(starttime, label):
-    stop = time.time()
-    elap = stop - starttime
-    print(f'{label}: {elap:.2f} s')
 
 
 class Axis:
@@ -326,39 +306,3 @@ class ReflectiveSurface:
 
         fig.set_tight_layout(True)
         fig.savefig(filename, dpi=300)
-
-
-
-
-start = time.time()
-primary = ReflectiveSurface('primary_mirror.dat', 'primary')
-print_elapsed(start, 'Init')
-secondary = ReflectiveSurface('secondary_mirror.dat', 'secondary')
-
-# primary.plot_2d('primary_2d.png')
-# primary.plot_3d('primary_3d.png')
-# primary.plot_3d('both_3d.png', secondary)
-# primary.plot_2d('both_2d.png', secondary)
-# secondary.plot_2d('secondary_2d.png')
-# secondary.plot_3d('secondary_3d.png')
-
-
-resos = [5e-2, 1e-2, 5e-3, 1e-3]
-resos = [1e-2]
-
-for res in resos:
-    start = time.time()
-    primary.grid_points(resolution=res)
-    print_elapsed(start, f'gridding with {resolution_str(res)}')
-    start = time.time()
-    primary.compute_gradients()
-    print_elapsed(start, f'gradients with {resolution_str(res)}')
-    # primary.plot_grid(f'primary_gridded_res_{res:.3f}.png')
-    start = time.time()
-    primary.compute_normal_vector()
-    print_elapsed(start, f'Normal vectors with {resolution_str(res)}')
-    start = time.time()
-    primary.compute_reflected_parallel()
-    print_elapsed(start, f'parallel reflection with {resolution_str(res)}')
-
-    primary.plot_reflection(nreflec=20)
