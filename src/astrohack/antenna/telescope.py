@@ -135,6 +135,11 @@ class Telescope:
         """
         Prints all the parameters defined for the telescope object
         """
+        print(self)
+
+    def __repr__(self):
+        outstr = ''
         ledict = vars(self)
-        for key in ledict:
-            print("{0:15s} = ".format(key) + str(ledict[key]))
+        for key, item in ledict.items():
+            outstr += f"{key:20s} = {str(item)}\n"
+        return outstr
