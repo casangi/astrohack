@@ -750,7 +750,7 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
 
 @njit(cache=False, nogil=True)
 def _get_time_index(data_time, i_time, time_axis, half_int):
-    print(data_time, time_axis[0], time_axis[-1], data_time>time_axis[0], data_time<time_axis[-1])
+    print(i_time, data_time, time_axis[0], time_axis[-1], data_time>time_axis[0], data_time<time_axis[-1])
     if i_time == time_axis.shape[0]:
         return -1
     while data_time > time_axis[i_time] + half_int:
