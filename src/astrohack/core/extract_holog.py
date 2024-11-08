@@ -646,13 +646,14 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
         else:
             i_time = _get_time_index(pnt_time[i_row], i_time, time_vis, half_int)
         if i_time < 0:
-            break
+            continue
         avg_dir[i_time] += dire[i_row]
         avg_dir_cos[i_time] += dir_cos[i_row]
         avg_enc[i_time] += enc[i_row]
         avg_pnt_off[i_time] += pnt_off[i_row]
         avg_tgt[i_time] += tgt[i_row]
         avg_wgt[i_time] += 1
+        break
 
     print('weight for average:', avg_wgt)
     avg_dir /= avg_wgt
@@ -750,7 +751,7 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
 
 @njit(cache=False, nogil=True)
 def _get_time_index(data_time, i_time, time_axis, half_int):
-    print(i_time, data_time, time_axis[0], time_axis[-1], data_time>time_axis[0], data_time<time_axis[-1])
+    print(i_time, data_time, time_axis[0], time_axis[-1], data_time>time_axis[0], data_time<time_axis[-1], half_int)
     if i_time == time_axis.shape[0]:
         return -1
     while data_time > time_axis[i_time] + half_int:
