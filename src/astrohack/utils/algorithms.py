@@ -310,7 +310,7 @@ def _least_squares_fit_block(system, vector):
 
 
 def _nan_statistics(array):
-    nnans = np.count_nonzero(~np.isnan(array))
+    nnans = np.count_nonzero(np.isnan(array))
     print(f'N elements: {array.size}, N NaNs: {nnans}, NaN %: {100*nnans/array.size:.1f}')
 
 
@@ -331,8 +331,7 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_diam
     print(antenna_name, data_range)
     print(pnt_off.shape, np.min(pnt_off[:, 1]), np.max(pnt_off[:, 1]))
     print(pnt_off.shape, np.nanmin(pnt_off[:, 1]), np.nanmax(pnt_off[:, 1]))
-
-    _nan_statistics(pnt_map_dict[antenna_name].POINTING_OFFSET.values)
+    _nan_statistics(pnt_off)
 
     logger.info(f'{create_dataset_label(antenna_name, ddi)}: Cell size {format_angular_distance(cell_size)}, '
                 f'FOV: {format_angular_distance(data_range)}')
