@@ -757,4 +757,5 @@ def _get_time_index(data_time, i_time, time_axis, half_int):
         i_time += 1
         if i_time == time_axis.shape[0]:
             return -1
+    print(i_time)
     return i_time
