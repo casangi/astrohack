@@ -642,7 +642,7 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
     for i_row in range(n_row):
         print(i_row, i_time)
         if pnt_time[i_row] < time_vis[i_time] - half_int:
-            break
+            continue
         else:
             i_time = _get_time_index(pnt_time[i_row], i_time, time_vis, half_int)
         if i_time < 0:
@@ -653,7 +653,6 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
         avg_pnt_off[i_time] += pnt_off[i_row]
         avg_tgt[i_time] += tgt[i_row]
         avg_wgt[i_time] += 1
-        exit()
     exit()
 
     print('weight for average:', avg_wgt)
