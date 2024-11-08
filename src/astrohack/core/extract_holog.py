@@ -610,6 +610,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
 
         print(f'{antenna} after time averaging')
         _nan_statistics(avg_pnt_off)
+        exit()
         new_pnt_xds = xr.Dataset()
         new_pnt_xds.assign_coords(coords)
 
@@ -653,7 +654,6 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
         avg_wgt[i_time] += 1
 
     print('weight for average:', avg_wgt)
-    exit()
     avg_dir /= avg_wgt
     avg_dir_cos /= avg_wgt
     avg_enc /= avg_wgt
