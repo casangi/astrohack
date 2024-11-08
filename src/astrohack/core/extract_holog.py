@@ -608,6 +608,8 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
                                    pnt_xds['TARGET'].values,
                                    )
 
+        print(f'{antenna} after time averaging')
+        _nan_statistics(avg_pnt_off)
         new_pnt_xds = xr.Dataset()
         new_pnt_xds.assign_coords(coords)
 
