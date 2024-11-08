@@ -654,6 +654,7 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
         avg_tgt[i_time] += tgt[i_row]
         avg_wgt[i_time] += 1
         exit()
+    exit()
 
     print('weight for average:', avg_wgt)
     avg_dir /= avg_wgt
