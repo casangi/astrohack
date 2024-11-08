@@ -624,7 +624,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     return pnt_map_dict
 
 
-@njit(cache=False, nogil=True)
+# @njit(cache=False, nogil=True)
 def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt):
     half_int = (time_vis[1] - time_vis[0]) / 2
     n_samples = time_vis.shape[0]
@@ -653,7 +653,7 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
         avg_pnt_off[i_time] += pnt_off[i_row]
         avg_tgt[i_time] += tgt[i_row]
         avg_wgt[i_time] += 1
-        break
+        exit()
 
     print('weight for average:', avg_wgt)
     avg_dir /= avg_wgt
