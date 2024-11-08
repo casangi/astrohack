@@ -638,6 +638,7 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
     avg_tgt = np.zeros(the_shape)
     avg_wgt = np.zeros(the_shape)
 
+    print(pnt_time)
     i_time = 0
     for i_row in range(n_row):
         print(i_row, i_time)
