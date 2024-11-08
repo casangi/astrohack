@@ -338,12 +338,14 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_diam
     # logger.info(f"cell_size: {cell_size}")
     # logger.info(f"data_range: {data_range}")
 
+    n_pix = 1
     try:
         n_pix = int(np.ceil(data_range / cell_size)) ** 2
 
     except ZeroDivisionError:
-        logger.error(f"Zero division error, there was likely a problem calculating the data range.", verbose=True)
-        raise ZeroDivisionError
+        logger.warning(f"{antenna_name} has a zero sized sky cell", verbose=True)
+    except ValueError:
+        logger.warning(f"{antenna_name} has a NaN valued data range", verbose=True)
 
     return n_pix, cell_size
 
