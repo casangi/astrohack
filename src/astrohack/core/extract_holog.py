@@ -640,6 +640,7 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
 
     i_time = 0
     for i_row in range(n_row):
+        print(i_row, i_time)
         if pnt_time[i_row] < time_vis[i_time] - half_int:
             continue
         else:
