@@ -590,11 +590,14 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     Returns:
         dict:  Dictionary of directional cosine data mapped to nearest MAIN table sample times.
     """
+    from astrohack.utils.algorithms import _nan_statistics
 
     pnt_map_dict = {}
     coords = {"time": time_vis}
     for antenna in map_ant_ids:
         pnt_xds = pnt_ant_dict[antenna]
+        print(f'{antenna} before time averaging')
+        _nan_statistics(pnt_xds['POINTING_OFFSET'].values)
         avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = \
             _time_avg_pointing_jit(time_vis,
                                    pnt_xds.time.values,
