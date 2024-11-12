@@ -259,7 +259,7 @@ def extract_holog(
         holog_obs_dict: HologObsDict = None,
         ddi: Union[int, List[int], str] = 'all',
         baseline_average_distance: Union[float, str] = 'all',
-        baseline_average_nearest: Union[float, str] = 'all',
+        baseline_average_nearest: Union[float, str] = 1,
         exclude_antennas: Union[list[str], str] = None,
         data_column: str = "CORRECTED_DATA",
         time_smoothing_interval: float = None,
