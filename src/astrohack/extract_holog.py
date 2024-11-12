@@ -529,11 +529,19 @@ def extract_holog(
     )
 
     telescope_name = obs_ctb.getcol("TELESCOPE_NAME")[0]
-    start_time_unix = obs_ctb.getcol('TIME_RANGE')[0][0] - 3506716800.0
-    time = Time(start_time_unix, format='unix').jyear
+    # start_time_unix = obs_ctb.getcol('TIME_RANGE')[0][0] - 3506716800.0
+    # time = Time(start_time_unix, format='unix').jyear
 
     # If we have an EVLA run from before 2023 the pointing table needs to be fixed.
-    # if telescope_name == "EVLA" and time < 2023:
+    if telescope_name == "EVLA": # and time < 2023:
+        n_mapping = 0
+        for ddi_key, ddi_dict in holog_obs_dict.items():
+            n_map_ddi = 0
+            for map_dict in ddi_dict.values():
+                n_map_ddi += len(map_dict['ant'])
+            print('DDI ', ddi_key, ' has ', n_map_ddi)
+            n_mapping += n_map_ddi
+
 
     #     # Convert from casa epoch to unix time
     #     his_ctb = ctables.table(
