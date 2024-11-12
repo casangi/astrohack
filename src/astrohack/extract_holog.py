@@ -275,7 +275,7 @@ def extract_holog(
     :param point_name: Name of *<point_name>.point.zarr* file to use. This is must be provided.
     :type holog_name: str
 
-    :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with
+    :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with \
     *holog.zarr* extension.
     :type holog_name: str, optional
 
@@ -303,8 +303,8 @@ def extract_holog(
     baseline_average_nearest can not be used together.
     :type baseline_average_nearest: int, optional
 
-    :param exclude_antennas: If an antenna is given for exclusion it will not be processed as a reference or a
-    mapping antenna. This can be used to exclude antennas that have bad data for whatever reason. Default is None,
+    :param exclude_antennas: If an antenna is given for exclusion it will not be processed as a reference or a \
+    mapping antenna. This can be used to exclude antennas that have bad data for whatever reason. Default is None, \
     meaning no antenna is excluded.
     :type exclude_antennas: str | list, optional
 
