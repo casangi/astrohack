@@ -533,24 +533,24 @@ def extract_holog(
     time = Time(start_time_unix, format='unix').jyear
 
     # If we have an EVLA run from before 2023 the pointing table needs to be fixed.
-    if telescope_name == "EVLA" and time < 2023:
+    # if telescope_name == "EVLA" and time < 2023:
 
-        # Convert from casa epoch to unix time
-        his_ctb = ctables.table(
-            os.path.join(extract_holog_params['ms_name'], "HISTORY"),
-            readonly=True,
-            lockoptions={"option": "usernoread"},
-            ack=False,
-        )
+    #     # Convert from casa epoch to unix time
+    #     his_ctb = ctables.table(
+    #         os.path.join(extract_holog_params['ms_name'], "HISTORY"),
+    #         readonly=True,
+    #         lockoptions={"option": "usernoread"},
+    #         ack=False,
+    #     )
 
-        if "pnt_tbl:fixed" not in his_ctb.getcol("MESSAGE"):
-            logger.error(
-                "Pointing table not corrected, users should apply function astrohack.dio.fix_pointing_table() to "
-                "remedy this.")
+    #     if "pnt_tbl:fixed" not in his_ctb.getcol("MESSAGE"):
+    #         logger.error(
+    #             "Pointing table not corrected, users should apply function astrohack.dio.fix_pointing_table() to "
+    #             "remedy this.")
 
-            return None
+    #         return None
 
-        his_ctb.close()
+    #     his_ctb.close()
 
     count = 0
     delayed_list = []
