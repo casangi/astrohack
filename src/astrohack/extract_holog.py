@@ -539,26 +539,14 @@ def extract_holog(
             n_map_ddi = 0
             for map_dict in ddi_dict.values():
                 n_map_ddi += len(map_dict['ant'])
-            print('DDI ', ddi_key, ' has ', n_map_ddi)
+            if n_map_ddi == 0:
+                logger.warning(f'DDI {ddi_key} has 0 mapping antennas')
             n_mapping += n_map_ddi
 
-
-    #     # Convert from casa epoch to unix time
-    #     his_ctb = ctables.table(
-    #         os.path.join(extract_holog_params['ms_name'], "HISTORY"),
-    #         readonly=True,
-    #         lockoptions={"option": "usernoread"},
-    #         ack=False,
-    #     )
-
-    #     if "pnt_tbl:fixed" not in his_ctb.getcol("MESSAGE"):
-    #         logger.error(
-    #             "Pointing table not corrected, users should apply function astrohack.dio.fix_pointing_table() to "
-    #             "remedy this.")
-
-    #         return None
-
-    #     his_ctb.close()
+        if n_mapping == 0:
+            msg = 'No mapping antennas to process, maybe you need to fix the pointing table?'
+            logger.error(msg)
+            raise Exception(msg)
 
     count = 0
     delayed_list = []
