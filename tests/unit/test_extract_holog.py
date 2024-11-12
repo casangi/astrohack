@@ -177,6 +177,7 @@ class TestExtractHolog():
             ms_name="data/ea25_cal_small_before_fixed.split.ms",
             point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             baseline_average_distance=195.1,
+            baseline_average_nearest='all',
             data_column="CORRECTED_DATA",
             parallel=False,
             overwrite=True
@@ -203,6 +204,7 @@ class TestExtractHolog():
             ms_name="data/ea25_cal_small_before_fixed.split.ms",
             point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             baseline_average_nearest=1,
+            baseline_average_distance='all',
             data_column="CORRECTED_DATA",
             parallel=False,
             overwrite=True
