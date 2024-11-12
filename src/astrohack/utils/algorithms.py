@@ -328,10 +328,6 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_diam
         (pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].max()
          - pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].min())
     pnt_off = pnt_map_dict[antenna_name].POINTING_OFFSET.values
-    print(antenna_name, data_range)
-    print(pnt_off.shape, np.min(pnt_off[:, 1]), np.max(pnt_off[:, 1]))
-    print(pnt_off.shape, np.nanmin(pnt_off[:, 1]), np.nanmax(pnt_off[:, 1]))
-    _nan_statistics(pnt_off)
 
     logger.info(f'{create_dataset_label(antenna_name, ddi)}: Cell size {format_angular_distance(cell_size)}, '
                 f'FOV: {format_angular_distance(data_range)}')

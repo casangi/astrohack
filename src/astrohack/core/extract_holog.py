@@ -590,27 +590,35 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     Returns:
         dict:  Dictionary of directional cosine data mapped to nearest MAIN table sample times.
     """
-    from astrohack.utils.algorithms import _nan_statistics
-
     pnt_map_dict = {}
     coords = {"time": time_vis}
     for antenna in map_ant_ids:
         pnt_xds = pnt_ant_dict[antenna]
-        print(f'{antenna} before time averaging')
-        _nan_statistics(pnt_xds['POINTING_OFFSET'].values)
-        avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = \
-            _time_avg_pointing_jit(time_vis,
-                                   pnt_xds.time.values,
-                                   pnt_xds['DIRECTION'].values,
-                                   pnt_xds['DIRECTIONAL_COSINES'].values,
-                                   pnt_xds['ENCODER'].values,
-                                   pnt_xds['POINTING_OFFSET'].values,
-                                   pnt_xds['TARGET'].values,
-                                   )
+        pnt_time = pnt_xds.time.values
+        pnt_int = np.average(np.diff(pnt_time))
+        vis_int = time_vis[1] - time_vis[0]
 
-        print(f'{antenna} after time averaging')
-        _nan_statistics(avg_pnt_off)
-        exit()
+        if pnt_int < vis_int:
+            avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = \
+                _time_avg_pointing_jit(time_vis,
+                                       pnt_xds.time.values,
+                                       pnt_xds['DIRECTION'].values,
+                                       pnt_xds['DIRECTIONAL_COSINES'].values,
+                                       pnt_xds['ENCODER'].values,
+                                       pnt_xds['POINTING_OFFSET'].values,
+                                       pnt_xds['TARGET'].values,
+                )
+        else:
+            avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = \
+                _interpolate_pointing(time_vis,
+                                       pnt_xds.time.values,
+                                       pnt_xds['DIRECTION'].values,
+                                       pnt_xds['DIRECTIONAL_COSINES'].values,
+                                       pnt_xds['ENCODER'].values,
+                                       pnt_xds['POINTING_OFFSET'].values,
+                                       pnt_xds['TARGET'].values,
+                )
+
         new_pnt_xds = xr.Dataset()
         new_pnt_xds.assign_coords(coords)
 
@@ -624,7 +632,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     return pnt_map_dict
 
 
-# @njit(cache=False, nogil=True)
+@njit(cache=False, nogil=True)
 def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt):
     half_int = (time_vis[1] - time_vis[0]) / 2
     n_samples = time_vis.shape[0]
@@ -638,25 +646,22 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
     avg_tgt = np.zeros(the_shape)
     avg_wgt = np.zeros(the_shape)
 
-    print(pnt_time)
     i_time = 0
     for i_row in range(n_row):
-        print(i_row, i_time)
         if pnt_time[i_row] < time_vis[i_time] - half_int:
             continue
         else:
             i_time = _get_time_index(pnt_time[i_row], i_time, time_vis, half_int)
-        if i_time < 0:
-            break
+            if i_time < 0:
+                break
+        
         avg_dir[i_time] += dire[i_row]
         avg_dir_cos[i_time] += dir_cos[i_row]
         avg_enc[i_time] += enc[i_row]
         avg_pnt_off[i_time] += pnt_off[i_row]
         avg_tgt[i_time] += tgt[i_row]
-        avg_wgt[i_time] += 1
-    exit()
-
-    print('weight for average:', avg_wgt)
+        avg_wgt[i_time] += 1            
+            
     avg_dir /= avg_wgt
     avg_dir_cos /= avg_wgt
     avg_enc /= avg_wgt
@@ -665,6 +670,34 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
 
     return avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt
 
+
+@njit(cache=False, nogil=True)
+def _interpolate_pointing(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt):
+    n_samples = time_vis.shape[0]
+    the_shape = (n_samples, 2)
+    n_row = pnt_time.shape[0]
+    pnt_int = np.average(np.diff(pnt_time))
+    half_int = (time_vis[1] - time_vis[0]) / 2
+    
+    avg_dir = np.zeros(the_shape)
+    avg_dir_cos = np.zeros(the_shape)
+    avg_enc = np.zeros(the_shape)
+    avg_pnt_off = np.zeros(the_shape)
+    avg_tgt = np.zeros(the_shape)
+    avg_wgt = np.zeros(the_shape)
+    
+    for i_time in range(n_samples):
+        i_row = int(np.floor((time_vis[i_time]-half_int-pnt_time[0])/pnt_int))
+
+        avg_dir[i_time] += dire[i_row]
+        avg_dir_cos[i_time] += dir_cos[i_row]
+        avg_enc[i_time] += enc[i_row]
+        avg_pnt_off[i_time] += pnt_off[i_row]
+        avg_tgt[i_time] += tgt[i_row]
+        avg_wgt[i_time] += 1         
+
+    return avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt
+    
 
 def create_holog_meta_data(holog_file, holog_dict, input_params):
     """Save holog file meta information to json file with the transformation
@@ -752,12 +785,10 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
 
 @njit(cache=False, nogil=True)
 def _get_time_index(data_time, i_time, time_axis, half_int):
-    print(i_time, data_time, time_axis[0], time_axis[-1], data_time>time_axis[0], data_time<time_axis[-1], half_int)
     if i_time == time_axis.shape[0]:
         return -1
     while data_time > time_axis[i_time] + half_int:
         i_time += 1
         if i_time == time_axis.shape[0]:
             return -1
-    print(i_time)
     return i_time
