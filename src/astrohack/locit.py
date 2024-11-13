@@ -107,11 +107,11 @@ def locit(
     'linear algebra' and a newer more pythonic engine using scipy curve fitting capabilities, which we call
     scipy, more details below.
 
-    * linear algebra: This fitting engine is based on the least square methods for solving linear systems,
-                      this engine is fast, about one order of magnitude faster than scipy,  but may fail to
+    * linear algebra: This fitting engine is based on the least square methods for solving linear systems, \
+                      this engine is fast, about one order of magnitude faster than scipy,  but may fail to \
                       converge, also its uncertainties may be underestimated.
 
-    * scipy: This fitting engine uses the well established scipy.optimize.curve_fit routine. This engine is
+    * scipy: This fitting engine uses the well established scipy.optimize.curve_fit routine. This engine is \
              slower than the linear algebra engine, but it is more robust with better estimated uncertainties.
 
     .. rubric:: Choosing a polarization
@@ -127,18 +127,18 @@ def locit(
     two DDIs by computing the delays from the difference in phases between the two DDIs of different frequencies
     (combine_ddis='difference').
 
-    combine_ddis='simple'     : Generates higher antenna position correction solutions of higher SNR as more data is used
-                                each delay fit.
+    combine_ddis='simple'     : Generates higher antenna position correction solutions of higher SNR as more data is \
+                                used in each delay fit.
     combine_ddis='no'         : Useful for detecting systematic differences between different DDIs.
-    combine_ddis='difference' : This method is useful for cases where phase wrapping may have occurred due to large
+    combine_ddis='difference' : This method is useful for cases where phase wrapping may have occurred due to large \
                                 delays.
 
     **Examples**
 
-    - `position_mds = locit("myphase.locit.zarr", polarization='R', combine_ddis='simple')` -> Fit the phase delays in
+    - `position_mds = locit("myphase.locit.zarr", polarization='R', combine_ddis='simple')` -> Fit the phase delays in \
        "myphase.locit.zarr" for all antennas by combining the delays from all DDIs but using only the 'R' polarization.
 
-    - `position_mds = locit("myphase.locit.zarr", combine_ddis='difference', elevation_limit=30.0)` -> Fit the phase
+    - `position_mds = locit("myphase.locit.zarr", combine_ddis='difference', elevation_limit=30.0)` -> Fit the phase \
        difference delays in "myphase.locit.zarr" for all antennas but only using sources above 30 degrees elevation.
     """
 

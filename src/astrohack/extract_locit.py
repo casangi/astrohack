@@ -67,10 +67,10 @@ def extract_locit(
 
     **Examples**
 
-    - `locit_mds = extract_locit("myphase.cal", locit_name="myphase.locit.zarr")` -> Extract phase calibration data for
+    - `locit_mds = extract_locit("myphase.cal", locit_name="myphase.locit.zarr")` -> Extract phase calibration data for \
        all antennas and all DDIs in "myphase.cal" into a locit file called "myphase.locit.zarr"
-    - `locit_mds = extract_locit("myphase.cal", ant=["ea06", "ea03", "ea25"], DDI=0, overwrite=True) -> Extract phase
-       calibration data for DDI 0 of antennas ea06, ea03 and ea25 in "myphase.cal" into a locit file called
+    - `locit_mds = extract_locit("myphase.cal", ant=["ea06", "ea03", "ea25"], DDI=0, overwrite=True)` -> Extract phase \
+       calibration data for DDI 0 of antennas ea06, ea03 and ea25 in "myphase.cal" into a locit file called \
        "myphase.locit.zarr" that will be overwritten if already present.
     """
     # Doing this here allows it to get captured by locals()
