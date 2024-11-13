@@ -132,6 +132,7 @@ def _delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
 
     freq = ddi_0[3] - ddi_1[3]
     fields = ddi_0[0]
+    print('fields at start:', fields[0].shape, fields[1].shape)
     if freq > 0:
         pos_time, pos_phase = ddi_0[1:3]
         neg_time, neg_phase = ddi_1[1:3]
@@ -143,7 +144,9 @@ def _delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
         msg = f'The two DDIs must have different frequencies'
         logger.error(msg)
         raise Exception(msg)
-
+    print('pos times', pos_time[0].shape, pos_time[1].shape)
+    print('neg times', neg_time[0].shape, neg_time[1].shape)
+    
     if multi_pol:
         time = []
         field_id = []
@@ -210,11 +213,15 @@ def _different_times(pos_time, neg_time, pos_phase, neg_phase, fields, tolerance
     ntimes = out_times.shape[0]
     out_phase = np.ndarray(ntimes)
     out_field = np.ndarray(ntimes, dtype=np.integer)
+    
     for i_time in range(ntimes):
+        i_pos = np.absolute(pos_time - out_times[i_time]).argmin()
         i_t0 = abs(pos_time - out_times[i_time]) < tolerance
+        i_neg = np.absolute(neg_time - out_times[i_time]).argmin()
         i_t1 = abs(neg_time - out_times[i_time]) < tolerance
-        out_phase[i_time] = pos_phase[i_t0][0] - neg_phase[i_t1][0]
-        out_field[i_time] = fields[i_t0][0]
+        out_phase[i_time] = pos_phase[i_pos] - neg_phase[i_neg]
+        out_field[i_time] = fields[i_pos]
+        
     return out_times, out_field, _phase_wrapping(out_phase)
 
 
