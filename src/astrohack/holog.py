@@ -63,7 +63,7 @@ def holog(
     :param parallel: Run in parallel with Dask or in serial., defaults to False
     :type parallel: bool, optional
 
-    :param grid_interpolation_mode: Method of interpolation used when gridding data. For modes 'linear', 'nearest' and
+    :param grid_interpolation_mode: Method of interpolation used when gridding data. For modes 'linear', 'nearest' and \
     'cubic' this is done using the `scipy.interpolate.griddata` method. For more information see `scipy.interpolate \
     <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html#scipy.interpolate.griddata>`_.\
     The remaining mode 'gaussian' convolves the visibilities with a gaussian kernel with a FWHM equal HPBW for the \
@@ -82,7 +82,7 @@ def holog(
     :param scan_average: Boolean dictating whether averaging is done over scan., defaults to True
     :type scan_average: bool, optional
 
-    :param alma_osf_pad: Pad on which the antenna was poitioned at the ALMA OSF (only relevant for ALMA near field
+    :param alma_osf_pad: Pad on which the antenna was poitioned at the ALMA OSF (only relevant for ALMA near field \
     holographies).
     :type alma_osf_pad: str, optional
 
