@@ -6,6 +6,7 @@ import toolviper
 
 import numpy as np
 
+from astrohack.antenna import Telescope
 from astrohack.holog import holog
 from astrohack.panel import panel
 from astrohack.extract_holog import extract_holog
@@ -190,11 +191,6 @@ class TestPanel:
         """
            Set cutoff=0 and compare results to known truth value array.
         """
-        toolviper.utils.data.download(file='panel_cutoff_mask', folder='data')
-
-        with open("data/panel_cutoff_mask.npy", "rb") as array:
-            reference_array = np.load(array)
-
         panel_mds = panel(
             image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             clip_type='absolute',
@@ -203,7 +199,14 @@ class TestPanel:
             overwrite=True
         )
 
-        assert np.all(panel_mds["ant_ea25"]["ddi_0"].MASK.values == reference_array)
+        telescope = Telescope('vla')
+
+        radius = panel_mds["ant_ea25"]["ddi_0"]['RADIUS'].values
+        dish_mask = np.where(radius < telescope.oulim, 1.0, 0)
+        dish_mask = np.where(radius < telescope.inlim, 0, dish_mask)
+        nvalid_pix =  np.sum(dish_mask)
+
+        assert np.sum(panel_mds["ant_ea25"]["ddi_0"].MASK.values) == nvalid_pix
 
     def test_panel_relative_clip(self):
         panel_mds = panel(

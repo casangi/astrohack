@@ -56,12 +56,12 @@ def export_locit_fit_results(data_dict, parm_dict):
 
     for ant_name in full_antenna_list:
         ant_key = add_prefix(ant_name, 'ant')
+        if ant_name == data_dict._meta_data['reference_antenna']:
+            ant_name += ' (ref)'
+
         row = [ant_name]
         if ant_key in selected_antenna_list:
             if ant_key in data_dict.keys():
-                if ant_name == data_dict._meta_data['reference_antenna']:
-                    ant_name += ' (ref)'
-
                 antenna = data_dict[ant_key]
                 if combined:
                     table.add_row(_export_locit_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
@@ -74,6 +74,7 @@ def export_locit_fit_results(data_dict, parm_dict):
                             _export_locit_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pos_fact, slo_fact,
                                               kterm_present, rate_present))
 
+    print(table.get_string())
     string_to_ascii_file(table.get_string(), parm_dict['destination'] + f'/position_{specifier}_fit_results.txt')
 
 
@@ -159,13 +160,17 @@ def export_gains_table_chunk(parm_dict):
                 wavelengths.append(clight/freq_fac/in_freq)
 
     db = 'dB'
+    rmsunit = parm_dict['rms_unit']
+    rmses = antenna.get_rms(rmsunit)
 
     field_names = ['Frequency', 'Wavelength', 'Before panel', 'After panel', 'Theoretical Max.']
     table = create_pretty_table(field_names)
 
     outstr = f'# Gain estimates for {telescope.name} antenna {ant.split("_")[1]}\n'
-    outstr += f'# Based on a measurement at {format_frequency(frequency)}, {format_wavelength(antenna.wavelength)}'
-    outstr += 3*'\n'
+    outstr += f'# Based on a measurement at {format_frequency(frequency)}, {format_wavelength(antenna.wavelength)}\n'
+    outstr += f'# Antenna surface RMS before adjustment: {format_value_unit(rmses[0], rmsunit)}\n'
+    outstr += f'# Antenna surface RMS after adjustment: {format_value_unit(rmses[1], rmsunit)}\n'
+    outstr += 1*'\n'
 
     for wavelength in wavelengths:
         prior, theo = antenna.gain_at_wavelength(False, wavelength)

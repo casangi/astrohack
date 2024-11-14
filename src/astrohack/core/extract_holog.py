@@ -453,6 +453,7 @@ def create_holog_obs_dict(
         ant_names,
         ant_pos,
         ant_names_main,
+        exclude_antennas=None,
         write_distance_matrix=False
 ):
     """
@@ -467,28 +468,43 @@ def create_holog_obs_dict(
     map_id = 0
     ant_names_set = set()
 
+    if exclude_antennas is None:
+        exclude_antennas = []
+    elif isinstance(exclude_antennas, str):
+        exclude_antennas = [exclude_antennas]
+    else:
+        pass
+
+    for ant_name in exclude_antennas:
+        prefixed = 'ant_'+ant_name
+        if prefixed not in pnt_dict.keys():
+            logger.warning(f'Bad reference antenna {ant_name} is not present in the data.')
+
     # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antennas are added
     # because we first need to populate all mapping antennas.
     for ant_name, ant_ds in pnt_dict.items():
         if 'ant' in ant_name:
             ant_name = ant_name.replace('ant_', '')
-            if ant_name in ant_names_main:  # Check if antenna in main table.
-                ant_names_set.add(ant_name)
-                for ddi, map_dict in ant_ds.attrs['mapping_scans_obs_dict'][0].items():
-                    if ddi not in holog_obs_dict:
-                        holog_obs_dict[ddi] = {}
-                    for ant_map_id, scan_list in map_dict.items():
-                        if scan_list:
-                            map_key = _check_if_array_in_dict(mapping_scans_dict, scan_list)
-                            if not map_key:
-                                map_key = 'map_' + str(map_id)
-                                mapping_scans_dict[map_key] = scan_list
-                                map_id = map_id + 1
+            if ant_name in exclude_antennas:
+                pass
+            else:
+                if ant_name in ant_names_main:  # Check if antenna in main table.
+                    ant_names_set.add(ant_name)
+                    for ddi, map_dict in ant_ds.attrs['mapping_scans_obs_dict'][0].items():
+                        if ddi not in holog_obs_dict:
+                            holog_obs_dict[ddi] = {}
+                        for ant_map_id, scan_list in map_dict.items():
+                            if scan_list:
+                                map_key = _check_if_array_in_dict(mapping_scans_dict, scan_list)
+                                if not map_key:
+                                    map_key = 'map_' + str(map_id)
+                                    mapping_scans_dict[map_key] = scan_list
+                                    map_id = map_id + 1
 
-                            if map_key not in holog_obs_dict[ddi]:
-                                holog_obs_dict[ddi][map_key] = {'scans': np.array(scan_list), 'ant': {}}
+                                if map_key not in holog_obs_dict[ddi]:
+                                    holog_obs_dict[ddi][map_key] = {'scans': np.array(scan_list), 'ant': {}}
 
-                            holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
+                                holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
 
     df = pd.DataFrame(ant_pos, columns=['x', 'y', 'z'], index=ant_names)
     df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
@@ -579,15 +595,30 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     coords = {"time": time_vis}
     for antenna in map_ant_ids:
         pnt_xds = pnt_ant_dict[antenna]
-        avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = \
-            _time_avg_pointing_jit(time_vis,
-                                   pnt_xds.time.values,
-                                   pnt_xds['DIRECTION'].values,
-                                   pnt_xds['DIRECTIONAL_COSINES'].values,
-                                   pnt_xds['ENCODER'].values,
-                                   pnt_xds['POINTING_OFFSET'].values,
-                                   pnt_xds['TARGET'].values,
-                                   )
+        pnt_time = pnt_xds.time.values
+        pnt_int = np.average(np.diff(pnt_time))
+        vis_int = time_vis[1] - time_vis[0]
+
+        if pnt_int < vis_int:
+            avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = \
+                _time_avg_pointing_jit(time_vis,
+                                       pnt_xds.time.values,
+                                       pnt_xds['DIRECTION'].values,
+                                       pnt_xds['DIRECTIONAL_COSINES'].values,
+                                       pnt_xds['ENCODER'].values,
+                                       pnt_xds['POINTING_OFFSET'].values,
+                                       pnt_xds['TARGET'].values,
+                )
+        else:
+            avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = \
+                _interpolate_pointing(time_vis,
+                                       pnt_xds.time.values,
+                                       pnt_xds['DIRECTION'].values,
+                                       pnt_xds['DIRECTIONAL_COSINES'].values,
+                                       pnt_xds['ENCODER'].values,
+                                       pnt_xds['POINTING_OFFSET'].values,
+                                       pnt_xds['TARGET'].values,
+                )
 
         new_pnt_xds = xr.Dataset()
         new_pnt_xds.assign_coords(coords)
@@ -622,15 +653,16 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
             continue
         else:
             i_time = _get_time_index(pnt_time[i_row], i_time, time_vis, half_int)
-        if i_time < 0:
-            break
+            if i_time < 0:
+                break
+        
         avg_dir[i_time] += dire[i_row]
         avg_dir_cos[i_time] += dir_cos[i_row]
         avg_enc[i_time] += enc[i_row]
         avg_pnt_off[i_time] += pnt_off[i_row]
         avg_tgt[i_time] += tgt[i_row]
-        avg_wgt[i_time] += 1
-
+        avg_wgt[i_time] += 1            
+            
     avg_dir /= avg_wgt
     avg_dir_cos /= avg_wgt
     avg_enc /= avg_wgt
@@ -639,6 +671,34 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
 
     return avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt
 
+
+@njit(cache=False, nogil=True)
+def _interpolate_pointing(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt):
+    n_samples = time_vis.shape[0]
+    the_shape = (n_samples, 2)
+    n_row = pnt_time.shape[0]
+    pnt_int = np.average(np.diff(pnt_time))
+    half_int = (time_vis[1] - time_vis[0]) / 2
+    
+    avg_dir = np.zeros(the_shape)
+    avg_dir_cos = np.zeros(the_shape)
+    avg_enc = np.zeros(the_shape)
+    avg_pnt_off = np.zeros(the_shape)
+    avg_tgt = np.zeros(the_shape)
+    avg_wgt = np.zeros(the_shape)
+    
+    for i_time in range(n_samples):
+        i_row = int(np.floor((time_vis[i_time]-half_int-pnt_time[0])/pnt_int))
+
+        avg_dir[i_time] += dire[i_row]
+        avg_dir_cos[i_time] += dir_cos[i_row]
+        avg_enc[i_time] += enc[i_row]
+        avg_pnt_off[i_time] += pnt_off[i_row]
+        avg_tgt[i_time] += tgt[i_row]
+        avg_wgt[i_time] += 1         
+
+    return avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt
+    
 
 def create_holog_meta_data(holog_file, holog_dict, input_params):
     """Save holog file meta information to json file with the transformation

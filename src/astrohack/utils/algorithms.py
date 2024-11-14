@@ -443,3 +443,15 @@ def rotate_to_gmt(positions, errors, longitude):
     newerrors[0] = np.sqrt((xerr * cosdelta) ** 2 + (yerr * sindelta) ** 2)
     newerrors[1] = np.sqrt((yerr * cosdelta) ** 2 + (xerr * sindelta) ** 2)
     return newpositions, newerrors
+
+
+def data_statistics(data_array):
+    data_stats = {
+        'mean': np.nanmean(data_array),
+        'median': np.nanmedian(data_array),
+        'rms': np.nanstd(data_array),
+        'min': np.nanmin(data_array),
+        'max': np.nanmax(data_array)
+        }
+    return data_stats
+

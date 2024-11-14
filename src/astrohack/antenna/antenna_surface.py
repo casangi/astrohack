@@ -5,11 +5,11 @@ from matplotlib import patches
 import toolviper.utils.logger as logger
 
 from astrohack.antenna.ring_panel import RingPanel
-from astrohack.utils import string_to_ascii_file, create_dataset_label
+from astrohack.utils import string_to_ascii_file, create_dataset_label, data_statistics, statistics_to_text
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.text import add_prefix, bool_to_str, format_frequency
+from astrohack.utils.text import add_prefix, bool_to_str, format_frequency, format_value_unit
 from astrohack.visualization.plot_tools import well_positioned_colorbar, create_figure_and_axes, close_figure, \
     get_proper_color_map
 
@@ -132,6 +132,13 @@ class AntennaSurface:
         self.v_axis = inputxds.u.values
         self.panel_distribution = inputxds['PANEL_DISTRIBUTION'].values
         try:
+            self.amplitude_noise = inputxds['AMP_NOISE'].values
+        except KeyError:
+            logger.warning("Input panel file does not have amplitude noise information, noise statistics will be "
+                           "flawed")
+            self.amplitude_noise = np.full_like(self.amplitude, np.nan)
+
+        try:
             self.resolution = inputxds.attrs['aperture_resolution']
         except KeyError:
 
@@ -175,17 +182,40 @@ class AntennaSurface:
         self.label = create_dataset_label(inputxds.attrs['ant_name'], inputxds.attrs['ddi'])
 
     def _measure_ring_clip(self, clip_type, clip_level):
+        self.amplitude_noise = np.where(self.rad < self.telescope.diam / 2., np.nan, self.amplitude)
+        self.amplitude_noise = np.where(self.rad < self.telescope.inlim, self.amplitude, self.amplitude_noise)
+
         if clip_type == 'relative':
             clip = clip_level * np.nanmax(self.amplitude)
         elif clip_type == 'absolute':
             clip = clip_level
         elif clip_type == 'sigma':
-            noise = np.where(self.rad < self.telescope.diam / 2., np.nan, self.amplitude)
-            noiserms = np.sqrt(np.nanmean(noise ** 2))
-            clip = clip_level * noiserms
+            noise_stats = data_statistics(self.amplitude_noise)
+            clip = noise_stats['mean'] + clip_level * noise_stats['rms']
+        elif clip_type == 'noise_threshold':
+            clip = self._compute_noise_threshold_clip(clip_level)
         else:
             msg = f'Unrecognized clipping type: {clip_type}'
             raise Exception(msg)
+        return clip
+
+    def _compute_noise_threshold_clip(self, threshold, step_multiplier=0.95):
+        noise_stats = data_statistics(self.amplitude_noise)
+
+        in_disk = np.where(self.rad < self.telescope.diam / 2., 1.0, np.nan)
+        in_disk = np.where(self.rad < self.telescope.inlim, np.nan, in_disk)
+        n_in_disk = np.nansum(in_disk)
+        in_disk_amp = in_disk * self.amplitude
+
+        fraction_in = 0
+        clip = noise_stats['max']
+        multiplier = 1.0
+        while fraction_in < threshold:
+            clip *= multiplier
+            data_in = np.where(in_disk_amp > clip, 1.0, 0.0)
+            fraction_in = np.sum(data_in) / n_in_disk
+            multiplier *= step_multiplier
+
         return clip
 
     def _init_ringed(self, clip_type, clip_level):
@@ -419,10 +449,7 @@ class AntennaSurface:
         sinsum = np.nansum(np.sin(scaled_phase[dish_mask]))
         real_factor = np.sqrt(cossum**2 + sinsum**2)/np.sum(dish_mask)
 
-        u_fact = (self.u_axis[1] - self.u_axis[0]) / wavelength
-        v_fact = (self.v_axis[1] - self.v_axis[0]) / wavelength
-
-        theo_gain = fourpi * np.abs(u_fact * v_fact)
+        theo_gain = fourpi * self.telescope.diam/wavelength
         real_gain = theo_gain * real_factor
         return to_db(real_gain), to_db(theo_gain)
 
@@ -522,7 +549,11 @@ class AntennaSurface:
         else:
             parm_dict['z_lim'] = parm_dict['amplitude_limits']
 
-        title = "Amplitude, min={0:.5f}, max ={1:.5f} V".format(parm_dict['z_lim'][0], parm_dict['z_lim'][1])
+        amp_stats = data_statistics(np.where(self.mask, self.amplitude, np.nan))
+        noise_stats = data_statistics(self.amplitude_noise)
+        title = ('Amplitude, ' + statistics_to_text(amp_stats) + lnbr +
+                 'Noise, ' + statistics_to_text(noise_stats))
+
         plotname = add_prefix(basename, f'{caller}_amplitude')
         parm_dict['unit'] = self.amp_unit
         self._plot_map(plotname, self.amplitude, title, parm_dict)
@@ -723,14 +754,23 @@ class AntennaSurface:
         """
         outfile = f"# Screw adjustments for {self.telescope.name}'s {self.label}, pol. state {self.pol_state}\n"
         freq = clight/self.wavelength
-        out_freq = format_frequency(freq)
-        outfile += f"# Frequency = {out_freq}{lnbr}"
-        outfile += "# Adjustments are in " + unit + 2 * lnbr
+        rmses = self.get_rms(unit)
+        outfile += f"# Frequency = {format_frequency(freq)}{lnbr}"
+        if unit == 'mm':
+            outfile += f'# Antenna surface RMS before adjustment: {format_value_unit(rmses[0], unit)}\n'
+            outfile += f'# Antenna surface RMS after adjustment: {format_value_unit(rmses[1], unit)}\n'
+        else:
+            mmrms = self.get_rms('mm')
+            outfile += (f'# Antenna surface RMS before adjustment: {format_value_unit(rmses[0], unit)} or '
+                        f'{format_value_unit(mmrms[0], "mm")}\n')
+            outfile += (f'# Antenna surface RMS after adjustment: {format_value_unit(rmses[1], unit)} or '
+                        f'{format_value_unit(mmrms[1], "mm")}\n')
         outfile += "# Lower means away from subreflector" + lnbr
         outfile += "# Raise means toward the subreflector" + lnbr
         outfile += "# LOWER the panel if the number is POSITIVE" + lnbr
         outfile += "# RAISE the panel if the number is NEGATIVE" + lnbr
-        outfile += 2 * lnbr
+        outfile += "# Adjustments are in " + unit + lnbr
+        outfile += lnbr
         spc = ' '
         outfile += f'{comment_char} Panel{2*spc}'
         nscrews = len(self.telescope.screw_description)
@@ -776,6 +816,8 @@ class AntennaSurface:
         xds['DEVIATION'] = xr.DataArray(self.deviation, dims=["u", "v"])
         xds['MASK'] = xr.DataArray(self.mask, dims=["u", "v"])
         xds['PANEL_DISTRIBUTION'] = xr.DataArray(self.panel_distribution, dims=["u", "v"])
+        xds['AMP_NOISE'] = xr.DataArray(self.amplitude_noise, dims=["u", "v"])
+        xds['RADIUS'] = xr.DataArray(self.rad, dims=["u", "v"])
 
         coords = {"u": self.u_axis,
                   "v": self.v_axis}

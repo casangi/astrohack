@@ -26,7 +26,7 @@ def panel(
         image_name: str,
         panel_name: str = None,
         clip_type: str = 'sigma',
-        clip_level: float = 3.0,
+        clip_level: Union[float, dict[dict[float]]] = 3.0,
         panel_model: str = "rigid",
         panel_margins: float = 0.05,
         polarization_state: str = 'I',
@@ -45,11 +45,13 @@ def panel(
     *basename* of input file plus holography panel file suffix.
     :type panel_name: str, optional
 
-    :param clip_type: Choose the amplitude clipping algorithm: absolute, relative or sigma, default is sigma
+    :param clip_type: Choose the amplitude clipping algorithm: absolute, relative, sigma or noise_threshold, default \
+    is sigma
     :type clip_type: str, optional
 
-    :param clip_level: Choose level of clipping, default is 3 (appropriate for sigma clipping)
-    :type clip_level: float, optional
+    :param clip_level: Choose level of clipping, can also be specified for specific antenna and DDI combinations by \
+    passing a dictionary, default is 3 (appropriate for sigma clipping)
+    :type clip_level: float, dict, optional
 
     :param panel_model: Model of surface fitting function used to fit panel surfaces, None will default to "rigid". \
     Possible models are listed below.
@@ -118,17 +120,43 @@ def panel(
         secondary mirror support) a mask is defined based on the amplitude of the aperture. There are 3 methods
         (clip_type parameter) available to define at which level (clip_level) the amplitude is clipped:
 
-        * absolute: In this method the clipping value is taken directly from the clip_level parameter, e.g.:
-                    if the user calls `panel(..., clip_type='absolute', clip_level=3.5)` everything below 3.5 in
+        * absolute: In this method the clipping value is taken directly from the clip_level parameter, e.g.: \
+                    if the user calls `panel(..., clip_type='absolute', clip_level=3.5)` everything below 3.5 in \
                     amplitude will be clipped
-        * relative: In this method the clipping value is derived from the amplitude maximum, e.g.: if the user calls
-                    `panel(..., clip_type='relative', clip_level=0.2) everything below 20% of the maximum amplitude will
-                    be clipped
-        * sigma;    In this method the clipping value is computed from the RMS noise in the amplitude outside the
-                    physical dish, e.g.: if the user calls `panel(clip_type='sigma', clip_level=3)` everything below 3
+        * relative: In this method the clipping value is derived from the amplitude maximum, e.g.: if the user calls \
+                    `panel(..., clip_type='relative', clip_level=0.2) everything below 20% of the maximum amplitude \
+                    will be clipped
+        * sigma:    In this method the clipping value is computed from the RMS noise in the amplitude outside the \
+                    physical dish, e.g.: if the user calls `panel(clip_type='sigma', clip_level=3)` everything below 3 \
                     times the RMS noise in amplitude will be clipped.
 
+        * noise_threshold: In this model the cut is first set to the maximum amplitude outside the disk, a proxy for \
+                    the noise maximum in amplitude, if this preserves a fraction of the aperture disk that is larger \
+                    than the clip_level this is the chosen amplitude cutoff, if not, the cutoff is iteratively lonwered \
+                    by 10% until it preservers a fraction of the disk that is larger thatn clip_level. This heuristic \
+                    was created with help from VLA operations.
+
         The default clipping is set to 3 sigma.
+
+        .. rubric:: Passing a dictionary for amplitude clipping:
+
+        The dictionary used for specifying amplitude clippings specific for each antenna and DDI combination must
+        follow the following scheme:
+
+        .. parsed-literal::
+            amp_clip_dict = {
+                ant1_name: {
+                    0: 0.3
+                    1: 0.5
+                }
+                ant2_name: {
+                    0: 0.45
+                    1: 0.21
+                }
+            }
+
+        Where the antenna name is the usual antenna designation e.g. ea24 for the VLA or DV42 for ALMA, and the DDI
+        number must be given as an integer.
 
 
     .. _Description:

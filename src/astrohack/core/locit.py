@@ -131,14 +131,15 @@ def _delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
     """
 
     freq = ddi_0[3] - ddi_1[3]
-    fields = ddi_0[0]
     if freq > 0:
         pos_time, pos_phase = ddi_0[1:3]
         neg_time, neg_phase = ddi_1[1:3]
+        fields = ddi_0[0]
     elif freq < 0:
         pos_time, pos_phase = ddi_1[1:3]
         neg_time, neg_phase = ddi_0[1:3]
         freq *= -1
+        fields = ddi_1[0]
     else:
         msg = f'The two DDIs must have different frequencies'
         logger.error(msg)
@@ -210,11 +211,13 @@ def _different_times(pos_time, neg_time, pos_phase, neg_phase, fields, tolerance
     ntimes = out_times.shape[0]
     out_phase = np.ndarray(ntimes)
     out_field = np.ndarray(ntimes, dtype=np.integer)
+    
     for i_time in range(ntimes):
-        i_t0 = abs(pos_time - out_times[i_time]) < tolerance
-        i_t1 = abs(neg_time - out_times[i_time]) < tolerance
-        out_phase[i_time] = pos_phase[i_t0][0] - neg_phase[i_t1][0]
-        out_field[i_time] = fields[i_t0][0]
+        i_pos = np.absolute(pos_time - out_times[i_time]).argmin()
+        i_neg = np.absolute(neg_time - out_times[i_time]).argmin()
+        out_phase[i_time] = pos_phase[i_pos] - neg_phase[i_neg]
+        out_field[i_time] = fields[i_pos]
+        
     return out_times, out_field, _phase_wrapping(out_phase)
 
 
@@ -260,6 +263,7 @@ def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False, split_po
         phases = xds_data[f'P{i_pol}_PHASE_GAINS'].values
         time = getattr(xds_data, f'p{i_pol}_time').values
         field_id = xds_data[f'P{i_pol}_FIELD_ID'].values
+
     elif pol_selection == 'both':
         phases = [xds_data[f'P0_PHASE_GAINS'].values, xds_data[f'P1_PHASE_GAINS'].values]
         field_id = [xds_data[f'P0_FIELD_ID'].values, xds_data[f'P1_FIELD_ID'].values]
