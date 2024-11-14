@@ -922,15 +922,15 @@ class AstrohackPanelFile(dict):
 
         **Additional Information**
         .. rubric:: Available plot types:
-        - *deviation*: Surface deviation estimated from phase and wavelength, three plots are produced for each antenna
-                       and ddi combination, surface before correction, the corrections applied and the corrected
+        - *deviation*: Surface deviation estimated from phase and wavelength, three plots are produced for each antenna \
+                       and ddi combination, surface before correction, the corrections applied and the corrected \
                        surface, most length units available
-        - *phase*: Phase deviations over the surface, three plots are produced for each antenna and ddi combination,
-                   phase before correction, the corrections applied and the corrected phase, deg and rad available as
+        - *phase*: Phase deviations over the surface, three plots are produced for each antenna and ddi combination, \
+                   phase before correction, the corrections applied and the corrected phase, deg and rad available as \
                    units
-        - *ancillary*: Two ancillary plots with useful information: The mask used to select data to be fitted, the
+        - *ancillary*: Two ancillary plots with useful information: The mask used to select data to be fitted, the \
                        amplitude data used to derive the mask, units are irrelevant for these plots
-        - *all*: All the plots listed above. In this case the unit parameter is taken to mean the deviation unit, the
+        - *all*: All the plots listed above. In this case the unit parameter is taken to mean the deviation unit, the \
                  phase unit is set to degrees
         """
 
@@ -1024,6 +1024,7 @@ class AstrohackPanelFile(dict):
         Export antenna gains in dB from ``astrohack.panel`` for analysis.
 
         **Additional Information**
+        
         .. rubric:: Selecting frequencies and wavelengths:
 
         If neither a frequency list nor a wavelength list is provided, ``export_gains_table`` will try to use a\
