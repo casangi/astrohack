@@ -383,7 +383,7 @@ def plot_delays_chunk(parm_dict):
     delays = xds['DELAYS'].values * delay_fact
 
     elelim, elelines, declim, declines, halim = compute_plot_borders(angle_fact, antenna_info['latitude'],
-                                                              xds.attrs['elevation_limit'])
+                                                                     xds.attrs['elevation_limit'])
     delay_minmax = [np.min(delays), np.max(delays)]
     delay_border = 0.05 * (delay_minmax[1] - delay_minmax[0])
     delaylim = [delay_minmax[0] - delay_border, delay_minmax[1] + delay_border]
@@ -423,9 +423,9 @@ def compute_plot_borders(angle_fact, latitude, elevation_limit):
     elevation_limit *= angle_fact
     right_angle = pi / 2 * angle_fact
     border = 0.05 * right_angle
-    elelim = [-border - right_angle / 2, right_angle + border]
+    elelim = [-border, right_angle + border]
     border *= 2
-    declim = [-border - right_angle, right_angle + border]
+    declim = [-border - right_angle + latitude, right_angle + border]
     border *= 2
     halim = [-border, 4 * right_angle + border]
     elelines = [0, elevation_limit]  # lines at zero and elevation limit
