@@ -29,13 +29,13 @@ def export_locit_fit_results(data_dict, parm_dict):
     combined = parm_dict['combined']
 
     if combined:
-        field_names = ['Antenna', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
+        field_names = ['Antenna', 'Station', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
                        f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
         specifier = 'combined_' + data_dict._meta_data['combine_ddis']
 
     else:
-        field_names = ['Antenna', 'DDI', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
-                       f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
+        field_names = ['Antenna', 'Station', 'DDI', f'RMS [{del_unit}]', f'F. delay [{del_unit}]',
+                       f'X offset [{pos_unit}]', f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
         specifier = 'separated_ddis'
     kterm_present = data_dict._meta_data["fit_kterm"]
     rate_present = data_dict._meta_data['fit_delay_rate']
@@ -59,10 +59,10 @@ def export_locit_fit_results(data_dict, parm_dict):
         if ant_name == data_dict._meta_data['reference_antenna']:
             ant_name += ' (ref)'
 
-        row = [ant_name]
         if ant_key in selected_antenna_list:
             if ant_key in data_dict.keys():
                 antenna = data_dict[ant_key]
+                row = [ant_name, antenna.attrs['antenna_info']['station']]
                 if combined:
                     table.add_row(_export_locit_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
                                                     rate_present))
