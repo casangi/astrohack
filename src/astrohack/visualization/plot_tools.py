@@ -1,3 +1,5 @@
+import numpy as np
+
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -184,7 +186,11 @@ def scatter_plot(
         model_marker='x',
         model_color='blue',
         model_linestyle='',
-        model_label='model'
+        model_label='model',
+        residuals_marker='+',
+        residuals_color='black',
+        residuals_linestyle='',
+        residuals_label='residuals'
 ):
     """
     Do scatter simple scatter plots of data to a plotting axis
@@ -243,5 +249,23 @@ def scatter_plot(
     if model is not None:
         ax.plot(xdata, model, ls=model_linestyle, marker=model_marker, color=model_color, label=model_label)
         ax.legend()
+        divider = make_axes_locatable(ax)
+        ax_res = divider.append_axes("bottom", size='20%', pad=0)
+        ax.figure.add_axes(ax_res)
+        residuals = ydata-model
+        ax.set_xticks([])
+        ax_res.plot(xdata, residuals, ls=residuals_linestyle, marker=residuals_marker, color=residuals_color,
+                    label=residuals_label)
+        if xlim is not None:
+            ax_res.set_xlim(xlim)
+
+        minmax = np.max(np.absolute(residuals))
+        ax_res.set_ylim([-minmax, minmax])
+        if vlines is not None:
+            for vline in vlines:
+                ax_res.axvline(vline, color=hv_color, ls=hv_linestyle)
+
+        ax_res.axhline(0, color=hv_color, ls=hv_linestyle)
+        ax_res.set_ylabel('Residuals')
 
     return
