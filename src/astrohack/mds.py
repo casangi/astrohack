@@ -1417,7 +1417,8 @@ class AstrohackPositionFile(dict):
             ddi: Union[int, List[int]] = "all",
             position_unit: str = 'm',
             time_unit: str = 'hour',
-            delay_unit: str = 'nsec'
+            delay_unit: str = 'nsec',
+            phase_unit: str = 'deg'
     ) -> None:
         """ Export antenna position fit results to a text file.
 
@@ -1436,8 +1437,11 @@ class AstrohackPositionFile(dict):
         :param time_unit: Unit for time in position fit results, defaults to 'hour'
         :type time_unit: str, optional
 
-        :param delay_unit: Unit for delays, defaults to 'ns'
+        :param delay_unit: Unit for delays, defaults to 'nsec'
         :type delay_unit: str, optional
+
+        :param phase_unit: Unit for phasess, defaults to 'deg'
+        :type phase_unit: str, optional
 
         .. _Description:
 

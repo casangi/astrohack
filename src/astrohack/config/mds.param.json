@@ -1098,6 +1098,12 @@
             "required": false,
             "type": ["string"],
             "check allowed with": "units.time"
+        },
+        "phase_unit":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.trig"
         }
     },
     "AstrohackPositionFile.plot_sky_coverage":{

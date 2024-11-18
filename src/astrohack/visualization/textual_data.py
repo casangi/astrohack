@@ -1,6 +1,6 @@
 import numpy as np
 
-from astrohack.utils import rad_to_deg_str
+from astrohack.utils import rad_to_deg_str, twopi
 from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import convert_unit, clight, notavail, param_to_list, add_prefix, format_value_error, \
     rotate_to_gmt, format_frequency, format_wavelength, format_value_unit, length_units, trigo_units, format_label, \
@@ -23,18 +23,19 @@ def export_locit_fit_results(data_dict, parm_dict):
     """
     pos_unit = parm_dict['position_unit']
     del_unit = parm_dict['delay_unit']
+    pha_unit = parm_dict['phase_unit']
     len_fact = convert_unit('m', pos_unit, 'length')
     del_fact = convert_unit('sec', del_unit, kind='time')
+    pha_fact = convert_unit('rad', pha_unit, kind='trigonometric')
     pos_fact = len_fact * clight
     combined = parm_dict['combined']
 
     if combined:
-        field_names = ['Antenna', 'Station', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
-                       f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
+        field_names = ['Antenna', 'Station', f'RMS [{del_unit}]',  f'RMS [{pha_unit}]', f'F. delay [{del_unit}]',
+                       f'X offset [{pos_unit}]', f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
         specifier = 'combined_' + data_dict._meta_data['combine_ddis']
-
     else:
-        field_names = ['Antenna', 'Station', 'DDI', f'RMS [{del_unit}]', f'F. delay [{del_unit}]',
+        field_names = ['Antenna', 'Station', 'DDI', f'RMS [{del_unit}]', f'RMS [{pha_unit}]', f'F. delay [{del_unit}]',
                        f'X offset [{pos_unit}]', f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
         specifier = 'separated_ddis'
     kterm_present = data_dict._meta_data["fit_kterm"]
@@ -64,21 +65,21 @@ def export_locit_fit_results(data_dict, parm_dict):
                 antenna = data_dict[ant_key]
                 row = [ant_name, antenna.attrs['antenna_info']['station']]
                 if combined:
-                    table.add_row(_export_locit_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
-                                                    rate_present))
+                    table.add_row(_export_locit_xds(row, antenna.attrs, del_fact, pha_fact, pos_fact, slo_fact,
+                                                    kterm_present, rate_present))
                 else:
                     ddi_list = param_to_list(parm_dict['ddi'], data_dict[ant_key], 'ddi')
                     for ddi_key in ddi_list:
                         row = [ant_name, ddi_key.split('_')[1]]
                         table.add_row(
-                            _export_locit_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pos_fact, slo_fact,
-                                              kterm_present, rate_present))
+                            _export_locit_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pha_fact, pos_fact,
+                                              slo_fact, kterm_present, rate_present))
 
     print(table.get_string())
     string_to_ascii_file(table.get_string(), parm_dict['destination'] + f'/position_{specifier}_fit_results.txt')
 
 
-def _export_locit_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, rate_present):
+def _export_locit_xds(row, attributes, del_fact, pha_fact, pos_fact, slo_fact, kterm_present, rate_present):
     """
     Export the data from a single X array DataSet attributes to a table row (a list)
     Args:
@@ -95,8 +96,11 @@ def _export_locit_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_prese
     """
     tolerance = 1e-4
 
-    rms = np.sqrt(attributes["chi_squared"]) * del_fact
-    row.append(f'{rms:.2e}')
+    delay_rms = np.sqrt(attributes["chi_squared"])
+    mean_freq = np.nanmean(attributes['frequency'])
+    phase_rms = twopi * mean_freq * delay_rms
+    row.append(f'{delay_rms*del_fact:.2e}')
+    row.append(f'{phase_rms*pha_fact:.2f}')
     row.append(format_value_error(attributes['fixed_delay_fit'], attributes['fixed_delay_error'], del_fact,
                                   tolerance))
     position, poserr = rotate_to_gmt(np.copy(attributes['position_fit']), attributes['position_error'],
