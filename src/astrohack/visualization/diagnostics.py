@@ -10,7 +10,7 @@ from astrohack.utils.constants import fontsize, markersize
 from astrohack.utils.text import param_to_list, add_prefix
 from astrohack.utils.tools import get_telescope_lat_lon_rad
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure, plot_boxes_limits_and_labels, \
-    get_proper_color_map, well_positioned_colorbar
+    get_proper_color_map, well_positioned_colorbar, scatter_plot
 
 
 def _calc_index(n, m):
@@ -187,90 +187,6 @@ def plot_corrections(outerax, innerax, xpos, ypos, xcorr, ycorr, box_size, color
         innerax.arrow(xpos, ypos, xcorr, ycorr, color=color, linewidth=linewidth, head_width=head_size)
 
 
-def scatter_plot(
-        ax,
-        xdata,
-        xlabel,
-        ydata,
-        ylabel,
-        title=None,
-        labels=None,
-        xlim=None,
-        ylim=None,
-        hlines=None,
-        vlines=None,
-        model=None,
-        data_marker='+',
-        data_color='red',
-        data_linestyle='',
-        data_label='data',
-        hv_linestyle='--',
-        hv_color='black',
-        model_marker='x',
-        model_color='blue',
-        model_linestyle='',
-        model_label='model'
-):
-    """
-    Do scatter simple scatter plots of data to a plotting axis
-    Args:
-        ax: The plotting axis
-        xdata: X axis data
-        xlabel: X axis data label
-        ydata: Y axis data
-        ylabel: Y axis datal label
-        title: Plotting axis title
-        labels: labels to be added to data
-        xlim: X axis limits
-        ylim: Y axis limits
-        hlines: Horizontal lines to be drawn
-        vlines: Vertical lines to be drawn
-        model: Model to be overplotted to the data
-        data_marker: Marker for data points
-        data_color: Color of the data marker
-        data_linestyle: Line style for connecting data points
-        data_label: Label for data points when displayed along a model
-        hv_linestyle: Line style for the horizontal or vertical lines displayed in the plot
-        hv_color: Line color for the horizontal or vertical lines displayed in the plot
-        model_marker: Marker for the model points
-        model_color: Color of the model marker
-        model_linestyle: Line style for connecting model points
-        model_label: Label for model points
-    """
-    ax.plot(xdata, ydata, ls=data_linestyle, marker=data_marker, color=data_color, label=data_label)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    if title is not None:
-        ax.set_title(title)
-    if xlim is not None:
-        ax.set_xlim(xlim)
-    if ylim is not None:
-        ax.set_ylim(ylim)
-    if hlines is not None:
-        for hline in hlines:
-            ax.axhline(hline, color=hv_color, ls=hv_linestyle)
-    if vlines is not None:
-        for vline in vlines:
-            ax.axvline(vline, color=hv_color, ls=hv_linestyle)
-    if labels is not None:
-        nlabels = len(labels)
-        for ilabel in range(nlabels):
-            ax.text(
-                xdata[ilabel],
-                ydata[ilabel],
-                labels[ilabel],
-                fontsize=.8 * fontsize,
-                ha='left',
-                va='center',
-                rotation=20
-            )
-
-    if model is not None:
-        ax.plot(xdata, model, ls=model_linestyle, marker=model_marker, color=model_color, label=model_label)
-        ax.legend()
-    return
-
-
 def plot_lm_coverage(param_dict):
     data = param_dict['xds_data']
     angle_fact = convert_unit('rad', param_dict['angle_unit'], 'trigonometric')
@@ -310,17 +226,17 @@ def plot_lm_coverage(param_dict):
 def _plot_lm_coverage_sub(time, real_lm, ideal_lm, param_dict):
     fig, ax = create_figure_and_axes(param_dict['figure_size'], [2, 2])
     scatter_plot(ax[0, 0], time, param_dict['time_label'], real_lm[:, 0], param_dict['l_label'], 'Time vs Real L',
-                  data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'], data_color=
+                 data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'], data_color=
                   param_dict['color'])
     scatter_plot(ax[0, 1], time, param_dict['time_label'], real_lm[:, 1], param_dict['m_label'], 'Time vs Real M',
-                  data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'], data_color=
+                 data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'], data_color=
                   param_dict['color'])
     scatter_plot(ax[1, 0], real_lm[:, 0], param_dict['l_label'], real_lm[:, 1], param_dict['m_label'], 'Real L and M',
-                  data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'], data_color=
+                 data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'], data_color=
                   param_dict['color'])
     scatter_plot(ax[1, 1], ideal_lm[:, 0], param_dict['l_label'], ideal_lm[:, 1], param_dict['m_label'],
                   'Ideal L and M', data_marker=param_dict['marker'], data_linestyle=param_dict['linestyle'],
-                  data_color=param_dict['color'])
+                 data_color=param_dict['color'])
     plotfile = f'{param_dict["destination"]}/holog_directional_cosines_{param_dict["this_map"]}_' \
                f'{param_dict["this_ant"]}_{param_dict["this_ddi"]}.png'
     close_figure(fig, 'Directional Cosines', plotfile, param_dict['dpi'], param_dict['display'])
@@ -354,13 +270,13 @@ def plot_correlation(visi, weights, correlation, pol_axis, time, lm, param_dict)
         for isplit in range(3):
             scatter_plot(ax[isplit, 0], time, param_dict['time_label'], y_data[isplit], y_label[isplit],
                           f'Time vs {correlation} {title[isplit]}', data_marker=param_dict['marker'],
-                          data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
+                         data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
             scatter_plot(ax[isplit, 1], lm[:, 0], param_dict['l_label'], y_data[isplit], y_label[isplit],
                           f'L vs {correlation} {title[isplit]}', data_marker=param_dict['marker'],
-                          data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
+                         data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
             scatter_plot(ax[isplit, 2], lm[:, 1], param_dict['m_label'], y_data[isplit], y_label[isplit],
                           f'M vs {correlation} {title[isplit]}', data_marker=param_dict['marker'],
-                          data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
+                         data_linestyle=param_dict['linestyle'], data_color=param_dict['color'])
 
         plotfile = (f'{param_dict["destination"]}/holog_directional_cosines_{correlation}_{param_dict["this_map"]}_'
                     f'{param_dict["this_ant"]}_{param_dict["this_ddi"]}.png')
@@ -418,11 +334,11 @@ def plot_sky_coverage_chunk(parm_dict):
     halabel = f'Hour Angle [{angle_unit}]'
     declabel = f'Declination [{angle_unit}]'
     scatter_plot(axes[0, 0], time, timelabel, ele, f'Elevation [{angle_unit}]', 'Time vs Elevation', ylim=elelim,
-                  hlines=elelines)
+                 hlines=elelines)
     scatter_plot(axes[0, 1], time, timelabel, ha, halabel, 'Time vs Hour angle', ylim=halim)
     scatter_plot(axes[1, 0], time, timelabel, dec, declabel, 'Time vs Declination', ylim=declim, hlines=declines)
     scatter_plot(axes[1, 1], ha, halabel, dec, declabel, 'Hour angle vs Declination', ylim=declim, xlim=halim,
-                  hlines=declines)
+                 hlines=declines)
 
     close_figure(fig, suptitle, export_name, dpi, display)
     return
@@ -479,14 +395,14 @@ def plot_delays_chunk(parm_dict):
         model = xds['MODEL'].values * delay_fact
     else:
         model = None
-    scatter_plot(axes[0, 0], time, f'Time from observation start [{time_unit}]', delays, ylabel, 'Time vs Delays', ylim=delaylim,
-                  model=model)
+    scatter_plot(axes[0, 0], time, f'Time from observation start [{time_unit}]', delays, ylabel,
+                 'Time vs Delays', ylim=delaylim, model=model)
     scatter_plot(axes[0, 1], ele, f'Elevation [{angle_unit}]', delays, ylabel, 'Elevation vs Delays',
-                  xlim=elelim, vlines=elelines, ylim=delaylim, model=model)
+                 xlim=elelim, vlines=elelines, ylim=delaylim, model=model)
     scatter_plot(axes[1, 0], ha, f'Hour Angle [{angle_unit}]', delays, ylabel, 'Hour Angle vs Delays', xlim=halim,
-                  ylim=delaylim, model=model)
+                 ylim=delaylim, model=model)
     scatter_plot(axes[1, 1], dec, f'Declination [{angle_unit}]', delays, ylabel, 'Declination vs Delays',
-                  xlim=declim, vlines=declines, ylim=delaylim, model=model)
+                 xlim=declim, vlines=declines, ylim=delaylim, model=model)
 
     close_figure(fig, suptitle, export_name, dpi, display)
     return

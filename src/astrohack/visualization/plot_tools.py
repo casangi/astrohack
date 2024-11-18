@@ -3,7 +3,7 @@ from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import colormaps as matplotlib_cmaps
 from matplotlib.colors import ListedColormap
-from astrohack.utils import figsize
+from astrohack.utils import figsize, fontsize
 
 astrohack_cmaps = list(matplotlib_cmaps.keys())
 astrohack_cmaps.append('AIPS')
@@ -160,3 +160,88 @@ def plot_boxes_limits_and_labels(
 
     if fixed_aspect is not None:
         innerax.set_aspect(fixed_aspect)
+
+
+def scatter_plot(
+        ax,
+        xdata,
+        xlabel,
+        ydata,
+        ylabel,
+        title=None,
+        labels=None,
+        xlim=None,
+        ylim=None,
+        hlines=None,
+        vlines=None,
+        model=None,
+        data_marker='+',
+        data_color='red',
+        data_linestyle='',
+        data_label='data',
+        hv_linestyle='--',
+        hv_color='black',
+        model_marker='x',
+        model_color='blue',
+        model_linestyle='',
+        model_label='model'
+):
+    """
+    Do scatter simple scatter plots of data to a plotting axis
+    Args:
+        ax: The plotting axis
+        xdata: X axis data
+        xlabel: X axis data label
+        ydata: Y axis data
+        ylabel: Y axis datal label
+        title: Plotting axis title
+        labels: labels to be added to data
+        xlim: X axis limits
+        ylim: Y axis limits
+        hlines: Horizontal lines to be drawn
+        vlines: Vertical lines to be drawn
+        model: Model to be overplotted to the data
+        data_marker: Marker for data points
+        data_color: Color of the data marker
+        data_linestyle: Line style for connecting data points
+        data_label: Label for data points when displayed along a model
+        hv_linestyle: Line style for the horizontal or vertical lines displayed in the plot
+        hv_color: Line color for the horizontal or vertical lines displayed in the plot
+        model_marker: Marker for the model points
+        model_color: Color of the model marker
+        model_linestyle: Line style for connecting model points
+        model_label: Label for model points
+    """
+    ax.plot(xdata, ydata, ls=data_linestyle, marker=data_marker, color=data_color, label=data_label)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title is not None:
+        ax.set_title(title)
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    if hlines is not None:
+        for hline in hlines:
+            ax.axhline(hline, color=hv_color, ls=hv_linestyle)
+    if vlines is not None:
+        for vline in vlines:
+            ax.axvline(vline, color=hv_color, ls=hv_linestyle)
+    if labels is not None:
+        nlabels = len(labels)
+        for ilabel in range(nlabels):
+            ax.text(
+                xdata[ilabel],
+                ydata[ilabel],
+                labels[ilabel],
+                fontsize=.8 * fontsize,
+                ha='left',
+                va='center',
+                rotation=20
+            )
+
+    if model is not None:
+        ax.plot(xdata, model, ls=model_linestyle, marker=model_marker, color=model_color, label=model_label)
+        ax.legend()
+
+    return
