@@ -1453,6 +1453,7 @@ class AstrohackPositionFile(dict):
         param_dict['combined'] = self.combined
         export_locit_fit_results(self, param_dict)
 
+    @toolviper.utils.parameter.validate()
     def export_results_to_parminator(
             self,
             filename: str,
