@@ -33,7 +33,6 @@ def export_to_parminator(data_dict, parm_dict):
 
                 parmstr += _export_parminator_antenna(antenna.attrs, threshold, kterm_present)
 
-    print(parmstr)
     string_to_ascii_file(parmstr, parm_dict['filename'])
 
 
@@ -109,16 +108,16 @@ def export_locit_fit_results(data_dict, parm_dict):
         if ant_key in selected_antenna_list:
             if ant_key in data_dict.keys():
                 antenna = data_dict[ant_key]
-                row = [ant_name, antenna.attrs['antenna_info']['station']]
                 if combined:
+                    row = [ant_name, antenna.attrs['antenna_info']['station']]
                     table.add_row(_export_locit_xds(row, antenna.attrs, del_fact, pha_fact, pos_fact, slo_fact,
                                                     kterm_present, rate_present))
                 else:
                     ddi_list = param_to_list(parm_dict['ddi'], data_dict[ant_key], 'ddi')
                     for ddi_key in ddi_list:
-                        row = [ant_name, ddi_key.split('_')[1]]
+                        row = [ant_name, antenna[ddi_key].attrs['antenna_info']['station'], ddi_key.split('_')[1]]
                         table.add_row(
-                            _export_locit_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pha_fact, pos_fact,
+                            _export_locit_xds(row, antenna[ddi_key].attrs, del_fact, pha_fact, pos_fact,
                                               slo_fact, kterm_present, rate_present))
 
     print(table.get_string())
