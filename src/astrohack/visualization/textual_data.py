@@ -11,6 +11,52 @@ from astrohack.utils.phase_fitting import aips_par_names
 from astrohack.utils.tools import get_telescope_lat_lon_rad
 
 
+def export_to_parminator(data_dict, parm_dict):
+    combined = parm_dict['combined']
+
+    kterm_present = data_dict._meta_data["fit_kterm"]
+
+    full_antenna_list = Telescope(data_dict._meta_data['telescope_name']).ant_list
+    selected_antenna_list = param_to_list(parm_dict['ant'], data_dict, 'ant')
+    threshold = parm_dict['correction_threshold']
+
+    parmstr = ''
+    for ant_name in full_antenna_list:
+        ant_key = add_prefix(ant_name, 'ant')
+
+        if ant_key in selected_antenna_list:
+            if ant_key in data_dict.keys():
+                if combined:
+                    antenna = data_dict[ant_key]
+                else:
+                    antenna = data_dict[ant_key][f'ddi_{parm_dict["ddi"]}']
+
+                parmstr += _export_parminator_antenna(antenna.attrs, threshold, kterm_present)
+
+    print(parmstr)
+    string_to_ascii_file(parmstr, parm_dict['filename'])
+
+
+def _export_parminator_antenna(attributes, threshold, kterm_present):
+
+    axes = ['X', 'Y', 'Z']
+    delays, _ = rotate_to_gmt(np.copy(attributes['position_fit']), attributes['position_error'],
+                                     attributes['antenna_info']['longitude'])
+    station = attributes['antenna_info']['station']
+
+    outstr = ''
+    for iaxis, delay in enumerate(delays):
+        correction = delay * clight
+        if np.abs(correction) > threshold:
+            outstr += f'{station}, ,{axes[iaxis]},${correction: .4f}\n'
+
+    if kterm_present:
+        correction = attributes['koff_fit']*clight
+        if np.abs(correction) > threshold:
+            outstr += f'{station}, ,K,${correction: .4f}\n'
+    return outstr
+
+
 def export_locit_fit_results(data_dict, parm_dict):
     """
     Export fit results to a txt file listing the different DDIs as different solutions if data is not combined

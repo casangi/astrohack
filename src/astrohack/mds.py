@@ -32,7 +32,7 @@ from astrohack.utils.file import load_position_file
 from astrohack.utils.data import read_meta_data
 from astrohack.utils.data import export_to_aips
 from astrohack.visualization.textual_data import export_locit_fit_results, export_screws_chunk, \
-    export_gains_table_chunk, export_phase_fit_chunk, print_array_configuration
+    export_gains_table_chunk, export_phase_fit_chunk, print_array_configuration, export_to_parminator
 from astrohack.visualization.fits import export_to_fits_panel_chunk, export_to_fits_holog_chunk
 
 from astrohack.core.extract_locit import plot_source_table
@@ -1452,6 +1452,40 @@ class AstrohackPositionFile(dict):
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
         param_dict['combined'] = self.combined
         export_locit_fit_results(self, param_dict)
+
+    def export_results_to_parminator(
+            self,
+            filename: str,
+            ant: Union[str, List[str]] = "all",
+            ddi: int = None,
+            correction_threshold: float = 0.01,
+    ) -> None:
+        """ Export antenna position fit results to a VLA parminator file.
+
+        :param filename: Name of the parminator file to be created
+        :type filename: str
+
+        :param ant: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+
+        :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+
+        :param correction_threshold: Correction threshold in meters to include an antenna position correction in output.
+        :type correction_threshold: float, optional
+
+        .. _Description:
+
+        Produce a VLA parminator compatible text file with the fit results from astrohack.locit.
+        """
+        param_dict = locals()
+        param_dict['combined'] = self.combined
+        if not self.combined:
+            if not isinstance(ddi, int):
+                msg = 'If position file contains multiple DDIs one must be specified.'
+                logger.error(msg)
+                raise Exception(msg)
+        export_to_parminator(self, param_dict)
 
     @toolviper.utils.parameter.validate(
         custom_checker=custom_unit_checker
