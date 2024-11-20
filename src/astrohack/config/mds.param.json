@@ -1098,6 +1098,12 @@
             "required": false,
             "type": ["string"],
             "check allowed with": "units.time"
+        },
+        "phase_unit":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.trig"
         }
     },
     "AstrohackPositionFile.plot_sky_coverage":{
@@ -1285,6 +1291,43 @@
             "type": ["int"],
             "min": 1,
             "max": 1200
+        }
+    },
+    "AstrohackPositionFile.export_results_to_parminator": {
+        "filename": {
+            "nullable": false,
+            "required": true,
+            "type": [
+                "string"
+            ]
+        },
+        "ant": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "str"
+            ],
+            "minlength": 1,
+            "type": [
+                "string",
+                "list"
+            ]
+        },
+        "ddi": {
+            "nullable": true,
+            "required": false,
+            "type": [
+                "int"
+            ]
+        },
+        "correction_threshold": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "int",
+                "float"
+            ],
+            "min": 0
         }
     }
 }
