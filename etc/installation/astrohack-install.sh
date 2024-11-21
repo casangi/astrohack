@@ -5,7 +5,7 @@ echo
 
 location=${HOME}'/.local/python/venvs'
 echo -e 'Default installation in '"${location}"
-read -r -p 'Press <enter> to continue or type desired location for installation.' user_location
+read -r -p 'Press <enter> to continue or type desired location for installation: ' user_location
 if [ -z "${user_location}" ]; then
     echo 'Using '"${location}"' for installation'
 else
@@ -17,7 +17,7 @@ echo
 
 pyexec="$(which python3.11)"
 echo 'Default python executable is '"${pyexec}"
-read -r -p 'Press <enter> to continue or type desired python executable' user_pyexec
+read -r -p 'Press <enter> to continue or type desired python executable: ' user_pyexec
 if [ -z "${user_pyexec}" ]; then
     echo 'Using '"${pyexec}"' as the python executable'
 else
@@ -28,7 +28,7 @@ echo
 
 envname="astrohack-py3.11"
 echo 'Default environment name is '${envname}
-read -r -p 'Press <enter> to continue or type desired environment name' user_envname
+read -r -p 'Press <enter> to continue or type desired environment name: ' user_envname
 if [ -z "${user_envname}" ]; then
     echo 'Using '${envname}' as environment name'
 else
@@ -53,7 +53,8 @@ eval "pip install astrohack 1> /dev/null"
 echo
 
 echo 'Add convenience functions <activate_astrohack> and <get_locit_scripts> to .profile?'
-read -r -p '<y/enter/n>' yesno
+read -r -p '<y/enter/n>: ' yesno
+
 if [ -z "${yesno}" ] || [ "${yesno}" = "y" ]; then
     echo 'Adding convenience functions to .profile'
     reset_shell='yes'
@@ -69,15 +70,14 @@ if [ -z "${yesno}" ] || [ "${yesno}" = "y" ]; then
       echo
       echo 'get_locit_scripts () {'
       echo '    echo Downloading CASA pre locit script...'
-      echo '    wget https://github.com/casangi/astrohack/raw/main/etc/casa/pre-locit-script.py'
+      echo '    wget https://github.com/casangi/astrohack/raw/main/etc/locit/casa/pre-locit-script.py'
       echo '    echo'
       echo '    echo Downloading astrohack locit script...'
-      echo '    echo wget https://github.com/casangi/astrohack/raw/main/etc/casa/pre-locit-script.py'
+      echo '    wget https://github.com/casangi/astrohack/raw/main/etc/locit/exec_locit.py'
       echo '}'
     } >> "${HOME}"/.profile
     
 else
-    echo 'NOPE!'
     reset_shell='no'
 fi
 echo
