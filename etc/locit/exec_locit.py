@@ -3,7 +3,7 @@ from astrohack.locit import locit
 import argparse
 
 desc = "Execute locit with a phase cal table produced by CASA\n\n"
-desc += 'This script executes a subset of locits features, for a more detailed tutorial see:\n'
+desc += "This script executes a subset of locit's features, for a more detailed tutorial see:\n"
 desc += 'https://astrohack.readthedocs.io/en/stable/locit_tutorial.html'
 
 

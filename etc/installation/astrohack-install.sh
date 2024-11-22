@@ -71,9 +71,12 @@ if [ -z "${yesno}" ] || [ "${yesno}" = "y" ]; then
       echo 'get_locit_scripts () {'
       echo '    echo Downloading CASA pre locit script...'
       echo '    wget https://github.com/casangi/astrohack/raw/main/etc/locit/casa/pre-locit-script.py'
-      echo '    echo'
       echo '    echo Downloading astrohack locit script...'
       echo '    wget https://github.com/casangi/astrohack/raw/main/etc/locit/exec_locit.py'
+      echo '    echo'
+      echo '    echo Downloading astrohack export to parminator script...'
+      echo '    wget https://github.com/casangi/astrohack/raw/main/etc/locit/export_to_parminator.py'
+      echo '    echo'
       echo '}'
     } >> "${HOME}"/.profile
     
