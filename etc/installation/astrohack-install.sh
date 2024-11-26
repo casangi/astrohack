@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 echo 'Astrohack environment creation and installation script'
 echo 
