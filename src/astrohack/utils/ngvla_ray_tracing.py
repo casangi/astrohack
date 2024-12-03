@@ -31,6 +31,7 @@ def grad_calc(axis, vals):
     else:
         return grad/npnt
 
+
 @njit(cache=False, nogil=True)
 def grid_grad_jit(zgrid, xaxis, yaxis):
     x_grad = np.full_like(zgrid, np.nan)
@@ -45,6 +46,12 @@ def grid_grad_jit(zgrid, xaxis, yaxis):
                                              zgrid[i_x-1 : i_x+2, i_y])
                 y_grad[i_x, i_y] = grad_calc(yaxis[i_y-1 : i_y+2],
                                              zgrid[i_x, i_y-1 : i_y+2])
+    return x_grad, y_grad
+
+
+def grid_grad_np(zgrid, xaxis, yaxis):
+    x_grad = np.gradient(zgrid, xaxis.res, axis=0)
+    y_grad = np.gradient(zgrid, yaxis.res, axis=1)
     return x_grad, y_grad
 
 
@@ -152,17 +159,21 @@ class ReflectiveSurface:
                                                  self.x_axis.array,
                                                  self.y_axis.array)
 
+    def compute_gradients_np(self):
+        self.x_grad = np.gradient(self.zgridded, self.x_axis.res, axis=0)
+        self.y_grad = np.gradient(self.zgridded, self.y_axis.res, axis=1)
+
     def compute_normal_vector(self):
         self.vec_shape = list(self.x_grad.shape)
         self.vec_shape.append(3)
         self.norm_vector = np.ndarray(self.vec_shape)
         vec_amp = np.sqrt(self.x_grad**2+self.y_grad**2+1)
-        self.norm_vector[:,:,0] = -self.x_grad/vec_amp
-        self.norm_vector[:,:,1] = -self.y_grad/vec_amp
-        self.norm_vector[:,:,2] = 1/vec_amp
+        self.norm_vector[:, :, 0] = -self.x_grad/vec_amp
+        self.norm_vector[:, :, 1] = -self.y_grad/vec_amp
+        self.norm_vector[:, :, 2] = 1/vec_amp
 
 
-    def compute_reflected_parallel(self, light_direction=(0, 0, 1)):
+    def compute_reflected_parallel(self):
         """
         Default light direction is parallel to the Z axis
         Args:
@@ -172,7 +183,6 @@ class ReflectiveSurface:
             the reflections for each elelement are stored in self.reflection
         """
         self.reflection = np.ndarray(self.vec_shape)
-        inf_light = np.array([0,0,1])
         nx = self.norm_vector[:, :, 0]
         ny = self.norm_vector[:, :, 1]
         nz = self.norm_vector[:, :, 2]
@@ -180,12 +190,9 @@ class ReflectiveSurface:
         ang_yz = np.arccos(nz/np.sqrt(ny**2+nz**2))
         # this is a rotation matrix, needs to be generalized for the
         # case of light not coming Z direction
-
         rx = np.sin(2*ang_xz)
         ry = -np.sin(2*ang_yz)
         rz = np.cos(2*ang_yz)*np.cos(2*ang_xz)
-
-
         # Reflections along y-axis have to be reflected for Y > 0
         pos_y = self.y_axis.array > 0
         rx[pos_y, :] *= -1
@@ -195,8 +202,17 @@ class ReflectiveSurface:
         self.reflection[:, :, 1] = ry
         self.reflection[:, :, 2] = rz
 
+    def compute_general_reflection(self, light_direction):
+        # Reflection is: i−2(i·n)n
+        light = np.zeros_like(self.norm_vector)
+        light[:, :] = np.array(light_direction)
+        inner = np.empty_like(light)
+        inner[:, :, 0] = np.sum(light*self.norm_vector, axis=2)
+        inner[:, :, 1] = inner[:, :, 0]
+        inner[:, :, 2] = inner[:, :, 0]
+        self.reflection = light - 2*inner*self.norm_vector
 
-    def plot_reflection(self, nreflec=5):
+    def plot_reflection(self, filename, nreflec=5):
         fig, ax = plt.subplots(1,2)
         ix = self.vec_shape[0]//2
         self._plot_reflection_cut(ix, 1, nreflec, ax[0], self.x_axis.array, self.zgridded[ix, :])
@@ -208,7 +224,7 @@ class ReflectiveSurface:
         plt.legend(by_label.values(), by_label.keys(), fontsize=8)
 
         fig.set_tight_layout(True)
-        plt.savefig('test_reflection.png', dpi=300)
+        plt.savefig(filename, dpi=300)
 
 
     def _plot_reflection_cut(self, icut, cut_dim, nreflec, ax, xaxis, mirror_cut):
@@ -241,13 +257,13 @@ class ReflectiveSurface:
         if cut_dim == 1:
             ax.set_xlabel("Antenna X axis (m)")
             ax.set_title("Cut along main chord")
-            ax.set_xlim([-2, 22])
+            ax.set_xlim([-4, 22])
         else:
             ax.set_xlabel("Antenna Y axis (m)")
             ax.set_title("Cut along X == 0")
             ax.set_xlim([-10, 10])
         ax.set_ylabel("Antenna Z Axis (m)")
-        ax.set_ylim(-9, 2)
+        ax.set_ylim(-10, 2)
 
 
     def _plot_proj(self, proj, fig, ax, secondary_mirror=None, size=0.03, fsize=5):
