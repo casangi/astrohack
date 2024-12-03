@@ -1,6 +1,6 @@
 import numpy as np
 
-from astrohack.utils import rad_to_deg_str
+from astrohack.utils import rad_to_deg_str, twopi, fixed_format_error
 from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import convert_unit, clight, notavail, param_to_list, add_prefix, format_value_error, \
     rotate_to_gmt, format_frequency, format_wavelength, format_value_unit, length_units, trigo_units, format_label, \
@@ -9,6 +9,51 @@ import toolviper.utils.logger as logger
 
 from astrohack.utils.phase_fitting import aips_par_names
 from astrohack.utils.tools import get_telescope_lat_lon_rad
+
+
+def export_to_parminator(data_dict, parm_dict):
+    combined = parm_dict['combined']
+
+    kterm_present = data_dict._meta_data["fit_kterm"]
+
+    full_antenna_list = Telescope(data_dict._meta_data['telescope_name']).ant_list
+    selected_antenna_list = param_to_list(parm_dict['ant'], data_dict, 'ant')
+    threshold = parm_dict['correction_threshold']
+
+    parmstr = ''
+    for ant_name in full_antenna_list:
+        ant_key = add_prefix(ant_name, 'ant')
+
+        if ant_key in selected_antenna_list:
+            if ant_key in data_dict.keys():
+                if combined:
+                    antenna = data_dict[ant_key]
+                else:
+                    antenna = data_dict[ant_key][f'ddi_{parm_dict["ddi"]}']
+
+                parmstr += _export_parminator_antenna(antenna.attrs, threshold, kterm_present)
+
+    string_to_ascii_file(parmstr, parm_dict['filename'])
+
+
+def _export_parminator_antenna(attributes, threshold, kterm_present):
+
+    axes = ['X', 'Y', 'Z']
+    delays, _ = rotate_to_gmt(np.copy(attributes['position_fit']), attributes['position_error'],
+                                     attributes['antenna_info']['longitude'])
+    station = attributes['antenna_info']['station']
+
+    outstr = ''
+    for iaxis, delay in enumerate(delays):
+        correction = delay * clight
+        if np.abs(correction) > threshold:
+            outstr += f'{station}, ,{axes[iaxis]},${correction: .4f}\n'
+
+    if kterm_present:
+        correction = attributes['koff_fit']*clight
+        if np.abs(correction) > threshold:
+            outstr += f'{station}, ,K,${correction: .4f}\n'
+    return outstr
 
 
 def export_locit_fit_results(data_dict, parm_dict):
@@ -23,19 +68,20 @@ def export_locit_fit_results(data_dict, parm_dict):
     """
     pos_unit = parm_dict['position_unit']
     del_unit = parm_dict['delay_unit']
+    pha_unit = parm_dict['phase_unit']
     len_fact = convert_unit('m', pos_unit, 'length')
     del_fact = convert_unit('sec', del_unit, kind='time')
+    pha_fact = convert_unit('rad', pha_unit, kind='trigonometric')
     pos_fact = len_fact * clight
     combined = parm_dict['combined']
 
     if combined:
-        field_names = ['Antenna', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
-                       f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
+        field_names = ['Antenna', 'Station', f'RMS [{del_unit}]',  f'RMS [{pha_unit}]', f'F. delay [{del_unit}]',
+                       f'X offset [{pos_unit}]', f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
         specifier = 'combined_' + data_dict._meta_data['combine_ddis']
-
     else:
-        field_names = ['Antenna', 'DDI', f'RMS [{del_unit}]', f'F. delay [{del_unit}]', f'X offset [{pos_unit}]',
-                       f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
+        field_names = ['Antenna', 'Station', 'DDI', f'RMS [{del_unit}]', f'RMS [{pha_unit}]', f'F. delay [{del_unit}]',
+                       f'X offset [{pos_unit}]', f'Y offset [{pos_unit}]', f'Z offset [{pos_unit}]']
         specifier = 'separated_ddis'
     kterm_present = data_dict._meta_data["fit_kterm"]
     rate_present = data_dict._meta_data['fit_delay_rate']
@@ -59,26 +105,27 @@ def export_locit_fit_results(data_dict, parm_dict):
         if ant_name == data_dict._meta_data['reference_antenna']:
             ant_name += ' (ref)'
 
-        row = [ant_name]
         if ant_key in selected_antenna_list:
             if ant_key in data_dict.keys():
                 antenna = data_dict[ant_key]
                 if combined:
-                    table.add_row(_export_locit_xds(row, antenna.attrs, del_fact, pos_fact, slo_fact, kterm_present,
-                                                    rate_present))
+                    row = [ant_name, antenna.attrs['antenna_info']['station']]
+                    table.add_row(_export_locit_xds(row, antenna.attrs, del_fact, pha_fact, pos_fact, slo_fact,
+                                                    pos_unit, del_unit, kterm_present, rate_present))
                 else:
                     ddi_list = param_to_list(parm_dict['ddi'], data_dict[ant_key], 'ddi')
                     for ddi_key in ddi_list:
-                        row = [ant_name, ddi_key.split('_')[1]]
+                        row = [ant_name, antenna[ddi_key].attrs['antenna_info']['station'], ddi_key.split('_')[1]]
                         table.add_row(
-                            _export_locit_xds(row, data_dict[ant_key][ddi_key].attrs, del_fact, pos_fact, slo_fact,
-                                              kterm_present, rate_present))
+                            _export_locit_xds(row, antenna[ddi_key].attrs, del_fact, pha_fact, pos_fact,
+                                              slo_fact, pos_unit, del_unit, kterm_present, rate_present))
 
     print(table.get_string())
     string_to_ascii_file(table.get_string(), parm_dict['destination'] + f'/position_{specifier}_fit_results.txt')
 
 
-def _export_locit_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_present, rate_present):
+def _export_locit_xds(row, attributes, del_fact, pha_fact, pos_fact, slo_fact, pos_unit, del_unit, kterm_present,
+                      rate_present):
     """
     Export the data from a single X array DataSet attributes to a table row (a list)
     Args:
@@ -93,20 +140,27 @@ def _export_locit_xds(row, attributes, del_fact, pos_fact, slo_fact, kterm_prese
     Returns:
     The filled table row
     """
-    tolerance = 1e-4
 
-    rms = np.sqrt(attributes["chi_squared"]) * del_fact
-    row.append(f'{rms:.2e}')
-    row.append(format_value_error(attributes['fixed_delay_fit'], attributes['fixed_delay_error'], del_fact,
-                                  tolerance))
+    delay_rms = np.sqrt(attributes["chi_squared"])
+    mean_freq = np.nanmean(attributes['frequency'])
+    phase_rms = twopi * mean_freq * delay_rms
+    row.append(f'{delay_rms*del_fact:4.2e}')
+    row.append(f'{phase_rms*pha_fact:5.1f}')
+
+    sig_scale_pos = convert_unit('mm', pos_unit, 'length')
+    sig_scale_del = 1e-3 * convert_unit('nsec', del_unit, 'time')
+
+    row.append(fixed_format_error(attributes['fixed_delay_fit'], attributes['fixed_delay_error'], del_fact,
+                                  sig_scale_del))
     position, poserr = rotate_to_gmt(np.copy(attributes['position_fit']), attributes['position_error'],
                                      attributes['antenna_info']['longitude'])
+
     for i_pos in range(3):
-        row.append(format_value_error(position[i_pos], poserr[i_pos], pos_fact, tolerance))
+        row.append(fixed_format_error(position[i_pos], poserr[i_pos], pos_fact, sig_scale_pos))
     if kterm_present:
-        row.append(format_value_error(attributes['koff_fit'], attributes['koff_error'], pos_fact, tolerance))
+        row.append(fixed_format_error(attributes['koff_fit'], attributes['koff_error'], pos_fact, sig_scale_pos))
     if rate_present:
-        row.append(format_value_error(attributes['rate_fit'], attributes['rate_error'], slo_fact, tolerance))
+        row.append(fixed_format_error(attributes['rate_fit'], attributes['rate_error'], slo_fact, sig_scale_del))
     return row
 
 

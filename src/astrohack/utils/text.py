@@ -474,6 +474,25 @@ def format_value_error(value, error, scaling, tolerance):
         return f'{value} \u00b1 {error}'
 
 
+def fixed_format_error(value, error, scaling, significance_scale):
+    """
+    Format value and error based on a significance scale
+    Args:
+        value: value to be formatted
+        error: error to be formatted
+        scaling: scaling to be applied to value and error
+        significance_scale: scale for which signifcant values are expected
+
+    Returns:
+        formatted string with value +- error
+    """
+    out_val = value*scaling
+    out_err = error*scaling
+    after_comma = int(np.ceil(np.max([0, -np.log10(significance_scale)]) + 1))
+    out_fmt = f' {after_comma+2}.{after_comma}f'
+    return f'{out_val:{out_fmt}} \u00b1 {out_err:{out_fmt}}'
+
+
 def get_str_idx_in_list(target, array):
     for i_tgt, item in enumerate(array):
         if target == item:
