@@ -153,6 +153,11 @@ class ReflectiveSurface:
                                  self.cloud[2], (x_mesh, y_mesh), 'cubic')
         numpy_size(self.zgridded)
 
+    def triangular_gridding(self):
+        x_mesh, y_mesh = np.meshgrid(self.x_axis.array, self.y_axis.array)
+        triang_grid = np.empty_like(x_mesh)
+
+
 
     def compute_gradients(self):
         self.x_grad, self.y_grad = grid_grad_jit(self.zgridded,
@@ -232,7 +237,7 @@ class ReflectiveSurface:
         # onto the cut plane otherwise representation is misleading.
 
         ax.plot(xaxis, mirror_cut, color='blue', label='ngVLA primary reflector')
-        ax.plot(0, 0, marker='x', color='yellow', label='Focus')
+        ax.plot(0, 0, marker='x', color='yellow', label='Focus', ls='')
 
         for irefle in range(nreflec):
             inorm = random.randint(0, self.vec_shape[cut_dim]-1)
