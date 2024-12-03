@@ -162,7 +162,15 @@ class ReflectiveSurface:
         self.norm_vector[:,:,2] = 1/vec_amp
 
 
-    def compute_reflected_parallel(self):
+    def compute_reflected_parallel(self, light_direction=(0, 0, 1)):
+        """
+        Default light direction is parallel to the Z axis
+        Args:
+            light_direction: The unit vector representing light propagation
+
+        Returns:
+            the reflections for each elelement are stored in self.reflection
+        """
         self.reflection = np.ndarray(self.vec_shape)
         inf_light = np.array([0,0,1])
         nx = self.norm_vector[:, :, 0]
@@ -172,9 +180,12 @@ class ReflectiveSurface:
         ang_yz = np.arccos(nz/np.sqrt(ny**2+nz**2))
         # this is a rotation matrix, needs to be generalized for the
         # case of light not coming Z direction
+
         rx = np.sin(2*ang_xz)
         ry = -np.sin(2*ang_yz)
         rz = np.cos(2*ang_yz)*np.cos(2*ang_xz)
+
+
         # Reflections along y-axis have to be reflected for Y > 0
         pos_y = self.y_axis.array > 0
         rx[pos_y, :] *= -1
