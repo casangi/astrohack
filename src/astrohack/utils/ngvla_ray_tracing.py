@@ -81,6 +81,46 @@ def inner_product_2d(vec_a, vec_b, keep_shape=True):
     else:
         return np.sum(vec_a * vec_b, axis=1)
 
+
+@njit(cache=False, nogil=True)
+def inner_product_2d_jit(vec_a, vec_b, keep_shape=True):
+    """
+    This routine expects that vec a and vec b are of the same shape: [n, 3]
+    Args:
+        vec_a: first vector array
+        vec_b: second vector array
+        keep_shape: output has the same shape as inputs (easier for subsequent broadcasting)
+
+    Returns:
+        the inner product of the vectors in the arrays
+    """
+    inner = np.empty_like(vec_a)
+    inner[:, 0] = np.sum(vec_a * vec_b, axis=1)
+    for ipos in range(1, inner.shape[1]):
+        inner[:, ipos] = inner[:, 0]
+    return inner
+
+
+def inner_product_1d_jit(vec_a, vec_b):
+    return np.sum(vec_a * vec_b, axis=1)
+
+
+@njit(cache=False, nogil=True)
+def secondary_reflec_jit(pr_pnt, pr_reflec, sc_pnt, sc_norm):
+    sc_reflec = np.empty_like(pr_reflec)
+    sc_reflec_pnt = np.empty_like(pr_reflec)
+    for it, point, in enumerate(pr_pnt):
+        # print(100*it/pr_pnt.shape[0])
+        pnt_reflec = pr_reflec[it]
+        pnt_diff = point-sc_pnt
+        dist_vec = pnt_diff - inner_product_2d_jit(pnt_diff, pnt_reflec) * pnt_reflec
+        dist_matrix = np.sqrt(np.sum(dist_vec**2, axis=1))
+        isec_loc = np.argmin(dist_matrix)
+        sc_reflec_pnt[it] = sc_pnt[isec_loc]
+        sc_reflec[it] = pnt_reflec - 2*np.sum(pnt_reflec*sc_norm[isec_loc]) * sc_norm[isec_loc]
+
+    return sc_reflec, sc_reflec_pnt
+
 class Axis:
     def __init__(self, array, resolution):
         mini, maxi = np.min(array), np.max(array)
@@ -369,6 +409,9 @@ class NgvlaRayTracer:
         self.sc_pnt, self.sc_norm = read_cloud_with_normals(secondary_cloud)
         self.focus_offset = np.array(focus_location)
 
+        numpy_size(self.pr_pnt)
+        numpy_size(self.sc_pnt)
+
         self.pr_reflec = None
         self.sc_reflec = None
         self.sc_reflec_pnt = None
@@ -404,6 +447,10 @@ class NgvlaRayTracer:
             isec_loc = np.argmin(dist_matrix)
             self.sc_reflec_pnt[it] = self.sc_pnt[isec_loc]
             self.sc_reflec[it] = pnt_reflec - 2*np.inner(pnt_reflec, self.sc_norm[isec_loc]) * self.sc_norm[isec_loc]
+
+    def secondary_reflection_jit(self):
+        self.sc_reflec, self.sc_reflec_pnt = \
+            secondary_reflec_jit(self.pr_pnt, self.pr_reflec, self.sc_pnt, self.sc_norm)
 
 
 
