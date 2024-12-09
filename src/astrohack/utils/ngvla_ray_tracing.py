@@ -55,6 +55,32 @@ def grid_grad_np(zgrid, xaxis, yaxis):
     return x_grad, y_grad
 
 
+def read_cloud_with_normals(cloud_file, comment_char='#'):
+    points = np.loadtxt(cloud_file, usecols=[0, 1, 2], unpack=False, comments=comment_char)
+    normals = np.loadtxt(cloud_file, usecols=[3, 4, 5], unpack=False, comments=comment_char)
+    return points, normals
+
+
+def inner_product_2d(vec_a, vec_b, keep_shape=True):
+    """
+    This routine expects that vec a and vec b are of the same shape: [n, 3]
+    Args:
+        vec_a: first vector array
+        vec_b: second vector array
+        keep_shape: output has the same shape as inputs (easier for subsequent broadcasting)
+
+    Returns:
+        the inner product of the vectors in the arrays
+    """
+    if keep_shape:
+        inner = np.empty_like(vec_a)
+        inner[:, 0] = np.sum(vec_a * vec_b, axis=1)
+        for ipos in range(1, inner.shape[1]):
+            inner[:, ipos] = inner[:, 0]
+        return inner
+    else:
+        return np.sum(vec_a * vec_b, axis=1)
+
 class Axis:
     def __init__(self, array, resolution):
         mini, maxi = np.min(array), np.max(array)
@@ -113,9 +139,9 @@ class ReflectiveSurface:
 
     types = ['primary', 'secondary']
 
-    def __init__(self, filename, rtype):
-        self.cloud = np.loadtxt(filename, unpack=True)
-        self.np = self.cloud.shape[1]
+    def __init__(self, primary_cloud, secondary_cloud):
+        self.primary_cloud = np.loadtxt(primary_cloud, unpack=True)
+        self.secondary_cloud = np.loadtxt(secondary_cloud, unpack=True)
         self.x_axis = None
         self.y_axis = None
         self.zgridded = None
@@ -124,11 +150,6 @@ class ReflectiveSurface:
         self.vec_shape = None
         self.norm_vector = None
         self.reflection = None
-        #self.cloud[2] = -self.cloud[2]
-        if rtype in self.types:
-            self.rtype = rtype
-        else:
-            raise Exception(f'Unknown reflector type {rtype}')
         self._shift_to_focus_origin()
 
     def _shift_to_focus_origin(self):
@@ -140,23 +161,24 @@ class ReflectiveSurface:
         # meters
         for iax, axfocus in enumerate(focus):
             if axfocus != 0:
-                self.cloud[iax] -= axfocus
+                self.primary_cloud[iax] -= axfocus
+                self.secondary_cloud[iax] -= axfocus
 
 
     def grid_points(self, resolution=1e-3):
         # REMEMBER X is 0, Y is 1!!!
-        self.x_axis = Axis(self.cloud[0], resolution)
-        self.y_axis = Axis(self.cloud[1], resolution)
+        self.x_axis = Axis(self.primary_cloud[0], resolution)
+        self.y_axis = Axis(self.primary_cloud[1], resolution)
 
         x_mesh, y_mesh = np.meshgrid(self.x_axis.array, self.y_axis.array)
-        self.zgridded = griddata((self.cloud[0], self.cloud[1]),
-                                 self.cloud[2], (x_mesh, y_mesh), 'cubic')
+        self.zgridded = griddata((self.primary_cloud[0], self.primary_cloud[1]),
+                                 self.primary_cloud[2], (x_mesh, y_mesh), 'cubic')
         numpy_size(self.zgridded)
 
-    def triangular_gridding(self):
-        x_mesh, y_mesh = np.meshgrid(self.x_axis.array, self.y_axis.array)
-        triang_grid = np.empty_like(x_mesh)
-
+    def find_closest_on_secondary(self):
+        for ix in range(self.vec_shape[0]):
+            for iy in range(self.vec_shape[1]):
+                print(ix, iy)
 
 
     def compute_gradients(self):
@@ -274,16 +296,16 @@ class ReflectiveSurface:
     def _plot_proj(self, proj, fig, ax, secondary_mirror=None, size=0.03, fsize=5):
         i1, i2, i3 = self.idx[proj]
         xax, yax, zax = self.axes[proj]
-        minmax = [np.min(self.cloud[i3]), np.max(self.cloud[i3])]
-        ax.scatter(self.cloud[i1], self.cloud[i2], c=self.cloud[i3],
+        minmax = [np.min(self.primary_cloud[i3]), np.max(self.primary_cloud[i3])]
+        ax.scatter(self.primary_cloud[i1], self.primary_cloud[i2], c=self.primary_cloud[i3],
                    cmap='viridis', s=size)
         if secondary_mirror is None:
             ax.set_title(f'ngVLA {self.rtype} {proj.upper()} projection',
                          size=1.5*fsize)
         else:
-            ax.scatter(secondary_mirror.cloud[i1], secondary_mirror.cloud[i2],
-                       c=secondary_mirror.cloud[i3], cmap='viridis', s=size)
-            sminmax = [np.min(secondary_mirror.cloud[i3]), np.max(secondary_mirror.cloud[i3])]
+            ax.scatter(secondary_mirror.primary_cloud[i1], secondary_mirror.primary_cloud[i2],
+                       c=secondary_mirror.primary_cloud[i3], cmap='viridis', s=size)
+            sminmax = [np.min(secondary_mirror.primary_cloud[i3]), np.max(secondary_mirror.primary_cloud[i3])]
             ax.set_title(f'ngVLA prototype {proj.upper()} projection',
                          size=1.5*fsize)
             if sminmax[0] < minmax[0]:
@@ -315,11 +337,11 @@ class ReflectiveSurface:
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
         i1, i2, i3 = self.idx['xy']
-        ax.scatter3D(self.cloud[i1], self.cloud[i2], self.cloud[i3],
+        ax.scatter3D(self.primary_cloud[i1], self.primary_cloud[i2], self.primary_cloud[i3],
                      s=size)
         if secondary_mirror is not None:
-            ax.scatter3D(secondary_mirror.cloud[i1], secondary_mirror.cloud[i2],
-                         secondary_mirror.cloud[i3], s=size)
+            ax.scatter3D(secondary_mirror.primary_cloud[i1], secondary_mirror.primary_cloud[i2],
+                         secondary_mirror.primary_cloud[i3], s=size)
         ax.scatter3D(0,0,0, s=0.3, label='Focus')
         ax.legend()
         fig.savefig(filename, dpi=300)
@@ -338,3 +360,54 @@ class ReflectiveSurface:
 
         fig.set_tight_layout(True)
         fig.savefig(filename, dpi=300)
+
+
+class NgvlaRayTracer:
+
+    def __init__(self, primary_cloud, secondary_cloud, focus_location=(-1.136634465810194, 0, -0.331821128650557)):
+        self.pr_pnt, self.pr_norm = read_cloud_with_normals(primary_cloud)
+        self.sc_pnt, self.sc_norm = read_cloud_with_normals(secondary_cloud)
+        self.focus_offset = np.array(focus_location)
+
+        self.pr_reflec = None
+        self.sc_reflec = None
+        self.sc_reflec_pnt = None
+
+        self._shift_to_focus_origin()
+
+    def _shift_to_focus_origin(self):
+        # Both dishes are in the same coordinates but this is not the
+        # MR reference frame, but its axes are oriented the same
+        # This is the expected coordinate of the focus on the MR.
+        # focus = [-1.136634465810194, 0, -0.331821128650557]
+        # Translation simple shift across the axes as everything is in
+        # meters
+        for iax, axfocus in enumerate(self.focus_offset):
+            if axfocus != 0:
+                self.pr_pnt[iax] -= axfocus
+                self.sc_pnt[iax] -= axfocus
+
+    def primary_reflection(self, incident_light):
+        light = np.zeros_like(self.pr_pnt)
+        light[:] = np.array(incident_light)
+        self.pr_reflec = light - 2*inner_product_2d(light, self.pr_norm) * self.pr_norm
+
+    def secondary_reflection(self):
+        self.sc_reflec = np.empty_like(self.pr_reflec)
+        self.sc_reflec_pnt = np.empty_like(self.pr_reflec)
+        for it, point, in enumerate(self.pr_pnt):
+            print(100*it/self.pr_pnt.shape[0])
+            pnt_reflec = self.pr_reflec[it]
+            pnt_diff = point-self.sc_pnt
+            dist_vec = pnt_diff - inner_product_2d(pnt_diff, pnt_reflec) * pnt_reflec
+            dist_matrix = np.sqrt(inner_product_2d(dist_vec, dist_vec, keep_shape=False))
+            isec_loc = np.argmin(dist_matrix)
+            self.sc_reflec_pnt[it] = self.sc_pnt[isec_loc]
+            self.sc_reflec[it] = pnt_reflec - 2*np.inner(pnt_reflec, self.sc_norm[isec_loc]) * self.sc_norm[isec_loc]
+
+
+
+
+
+
+
