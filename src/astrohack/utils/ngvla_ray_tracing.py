@@ -115,7 +115,7 @@ def secondary_reflec_jit(pr_pnt, pr_reflec, sc_pnt, sc_norm):
     sc_reflec = np.empty_like(pr_reflec)
     sc_reflec_pnt = np.empty_like(pr_reflec)
     for it, point, in enumerate(pr_pnt):
-        # print(100*it/pr_pnt.shape[0])
+        print('\033[F', 100*it/pr_pnt.shape[0], '%\r')
         pnt_reflec = pr_reflec[it]
         pnt_diff = point-sc_pnt
         dist_vec = pnt_diff - inner_product_2d_jit(pnt_diff, pnt_reflec) * pnt_reflec
@@ -126,9 +126,13 @@ def secondary_reflec_jit(pr_pnt, pr_reflec, sc_pnt, sc_norm):
 
     return sc_reflec, sc_reflec_pnt
 
+
 class Axis:
-    def __init__(self, array, resolution):
+    def __init__(self, array, resolution, margin=0.02):
         mini, maxi = np.min(array), np.max(array)
+        data_range = maxi-mini
+        maxi += margin * data_range
+        mini -= margin * data_range
         npnt = int(np.ceil((maxi-mini) / resolution))
         array = np.arange(npnt+1)
         array = resolution * array
@@ -212,8 +216,8 @@ class ReflectiveSurface:
 
     def grid_points(self, resolution=1e-3):
         # REMEMBER X is 0, Y is 1!!!
-        self.x_axis = Axis(self.primary_cloud[0], resolution)
-        self.y_axis = Axis(self.primary_cloud[1], resolution)
+        self.x_axis = Axis(self.primary_cloud[0], resolution, margin=0)
+        self.y_axis = Axis(self.primary_cloud[1], resolution, margin=0)
 
         x_mesh, y_mesh = np.meshgrid(self.x_axis.array, self.y_axis.array)
         self.zgridded = griddata((self.primary_cloud[0], self.primary_cloud[1]),
@@ -443,8 +447,9 @@ class NgvlaRayTracer:
     def secondary_reflection(self):
         self.sc_reflec = np.empty_like(self.pr_reflec)
         self.sc_reflec_pnt = np.empty_like(self.pr_reflec)
+        print()
         for it, point, in enumerate(self.pr_pnt):
-            # print(100*it/self.pr_pnt.shape[0])
+            print(f'\033[F{100*it/self.pr_pnt.shape[0]:.2f}%')
             pnt_reflec = self.pr_reflec[it]
             pnt_diff = point-self.sc_pnt
             dist_vec = pnt_diff - inner_product_2d(pnt_diff, pnt_reflec) * pnt_reflec
@@ -452,10 +457,13 @@ class NgvlaRayTracer:
             isec_loc = np.argmin(dist_matrix)
             self.sc_reflec_pnt[it] = self.sc_pnt[isec_loc]
             self.sc_reflec[it] = pnt_reflec - 2*np.inner(pnt_reflec, self.sc_norm[isec_loc]) * self.sc_norm[isec_loc]
+        print()
 
     def secondary_reflection_jit(self):
+        print()
         self.sc_reflec, self.sc_reflec_pnt = \
             secondary_reflec_jit(self.pr_pnt, self.pr_reflec, self.sc_pnt, self.sc_norm)
+        print()
 
     def _grid_for_plotting(self, data_array, resolution):
         x_pnt = self.pr_pnt[:, 0]
