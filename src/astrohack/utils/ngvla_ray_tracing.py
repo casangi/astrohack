@@ -4,6 +4,11 @@ from scipy.interpolate import griddata
 from numba import njit
 import random
 
+from astrohack.utils import convert_unit
+from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
+    close_figure
+
+
 def numpy_size(array):
     units = ['B', 'kB', 'MB', 'GB']
     memsize = array.itemsize*array.size
@@ -100,7 +105,7 @@ def inner_product_2d_jit(vec_a, vec_b, keep_shape=True):
         inner[:, ipos] = inner[:, 0]
     return inner
 
-
+@njit(cache=False, nogil=True)
 def inner_product_1d_jit(vec_a, vec_b):
     return np.sum(vec_a * vec_b, axis=1)
 
@@ -439,7 +444,7 @@ class NgvlaRayTracer:
         self.sc_reflec = np.empty_like(self.pr_reflec)
         self.sc_reflec_pnt = np.empty_like(self.pr_reflec)
         for it, point, in enumerate(self.pr_pnt):
-            print(100*it/self.pr_pnt.shape[0])
+            # print(100*it/self.pr_pnt.shape[0])
             pnt_reflec = self.pr_reflec[it]
             pnt_diff = point-self.sc_pnt
             dist_vec = pnt_diff - inner_product_2d(pnt_diff, pnt_reflec) * pnt_reflec
@@ -451,6 +456,76 @@ class NgvlaRayTracer:
     def secondary_reflection_jit(self):
         self.sc_reflec, self.sc_reflec_pnt = \
             secondary_reflec_jit(self.pr_pnt, self.pr_reflec, self.sc_pnt, self.sc_norm)
+
+    def _grid_for_plotting(self, data_array, resolution):
+        x_pnt = self.pr_pnt[:, 0]
+        y_pnt = self.pr_pnt[:, 1]
+        x_axis = Axis(x_pnt, resolution)
+        y_axis = Axis(y_pnt, resolution)
+        x_mesh, y_mesh = np.meshgrid(x_axis.array, y_axis.array)
+        gridded_array = griddata((x_pnt, y_pnt),
+                                 data_array, (x_mesh, y_mesh), 'cubic')
+
+        return gridded_array, x_axis, y_axis
+
+    def _plot_map(self, data_array, prog_res, title, filename, colormap, fsize=5):
+        gridded_data, x_axis, y_axis = self._grid_for_plotting(data_array, prog_res)
+        minmax = [np.nanmin(gridded_data), np.nanmax(gridded_data)]
+        #print(minmax)
+
+        fig, ax = create_figure_and_axes([10, 8], [1, 1])
+        cmap = get_proper_color_map(colormap)
+
+        ax.set_title(title,size=1.5*fsize)
+        extent = [np.min(x_axis.array), np.max(x_axis.array), np.min(y_axis.array), np.max(y_axis.array)]
+        im = ax.imshow(gridded_data, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1])
+        well_positioned_colorbar(ax, fig, im, "Z Scale")
+        ax.set_xlabel("X axis [m]")
+        ax.set_ylabel("Y axis [m]")
+
+        close_figure(fig, '', filename, 300, False)
+
+    def plot_simple_2d(self, data_types, rootname, resolution, resolution_unit, colormap='viridis'):
+        prog_res = convert_unit(resolution_unit, 'm', 'length')*resolution
+
+        for data_type in data_types:
+            if data_type == 'x reflec pnt':
+                data_array = self.sc_reflec_pnt[:, 0]
+                title = f'X coordinate of point touched on secondary'
+            elif data_type == 'y reflec pnt':
+                data_array = self.sc_reflec_pnt[:, 1]
+                title = f'Y coordinate of point touched on secondary'
+            elif data_type == 'z reflec pnt':
+                data_array = self.sc_reflec_pnt[:, 2]
+                title = f'Z coordinate of point touched on secondary'
+            elif data_type == 'x reflec dir':
+                data_array = self.sc_reflec[:, 0]
+                title = f'X component of reflection on secondary'
+            elif data_type == 'y reflec dir':
+                data_array = self.sc_reflec[:, 1]
+                title = f'Y component of reflection on secondary'
+            elif data_type == 'z reflec dir':
+                data_array = self.sc_reflec[:, 2]
+                title = f'Z component of reflection on secondary'
+            elif data_type == 'x prim normal':
+                data_array = self.pr_norm[:, 0]
+                title = f'X component of primary mirror normal'
+            elif data_type == 'y prim normal':
+                data_array = self.pr_norm[:, 1]
+                title = f'Y component of primary mirror normal'
+            elif data_type == 'z prim normal':
+                data_array = self.pr_norm[:, 2]
+                title = f'Z component of primary mirror normal'
+            else:
+                raise Exception(f'Unrecognized data type {data_type}')
+
+            filename = f"{rootname}-{data_type.replace(' ', '-')}.png"
+            self._plot_map(data_array, prog_res, title, filename, colormap)
+
+
+
+
+
 
 
 
