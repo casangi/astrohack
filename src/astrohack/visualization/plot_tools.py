@@ -72,6 +72,26 @@ def well_positioned_colorbar(ax, fig, image, label, location='right', size='5%',
     return fig.colorbar(image, label=label, cax=cax)
 
 
+def compute_extent(x_axis, y_axis, margin=0):
+    """
+    Compute extent from the arrays representing the X and Y axes
+    Args:
+        x_axis: X axis np array
+        y_axis: Y axis np array
+        margin: Optional margin to add to plots
+
+    Returns:
+        len=4 list with [xmin, xmax, ymin, ymax]
+    """
+    mins = np.array([np.min(x_axis), np.min(y_axis)])
+    maxs = np.array([np.max(x_axis), np.max(y_axis)])
+    data_range = maxs-mins
+    mins -= margin * data_range
+    maxs += margin * data_range
+    extent = [mins[0], maxs[0], mins[1], maxs[1]]
+    return extent
+
+
 def get_proper_color_map(user_cmap, default_cmap='viridis'):
     if user_cmap is None or user_cmap == 'None':
         return matplotlib_cmaps[default_cmap]
