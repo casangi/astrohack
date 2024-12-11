@@ -3,10 +3,11 @@ from matplotlib import pyplot as plt
 from scipy.interpolate import griddata
 from numba import njit
 import random
+import xarray as xr
 
 from astrohack.utils import convert_unit
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
-    close_figure
+    close_figure, compute_extent
 
 
 def numpy_size(array):
@@ -114,6 +115,7 @@ def inner_product_1d_jit(vec_a, vec_b):
 def secondary_reflec_jit(pr_pnt, pr_reflec, sc_pnt, sc_norm):
     sc_reflec = np.empty_like(pr_reflec)
     sc_reflec_pnt = np.empty_like(pr_reflec)
+    sc_reflec_dist = np.empty(pr_reflec.shape[0])
     for it, point, in enumerate(pr_pnt):
         print('\033[F', 100*it/pr_pnt.shape[0], '%\r')
         pnt_reflec = pr_reflec[it]
@@ -121,18 +123,16 @@ def secondary_reflec_jit(pr_pnt, pr_reflec, sc_pnt, sc_norm):
         dist_vec = pnt_diff - inner_product_2d_jit(pnt_diff, pnt_reflec) * pnt_reflec
         dist_matrix = np.sqrt(np.sum(dist_vec**2, axis=1))
         isec_loc = np.argmin(dist_matrix)
+        sc_reflec_dist[it] = dist_matrix[isec_loc]
         sc_reflec_pnt[it] = sc_pnt[isec_loc]
         sc_reflec[it] = pnt_reflec - 2*np.sum(pnt_reflec*sc_norm[isec_loc]) * sc_norm[isec_loc]
 
-    return sc_reflec, sc_reflec_pnt
+    return sc_reflec, sc_reflec_pnt, sc_reflec_dist
 
 
 class Axis:
-    def __init__(self, array, resolution, margin=0.02):
+    def __init__(self, array, resolution):
         mini, maxi = np.min(array), np.max(array)
-        data_range = maxi-mini
-        maxi += margin * data_range
-        mini -= margin * data_range
         npnt = int(np.ceil((maxi-mini) / resolution))
         array = np.arange(npnt+1)
         array = resolution * array
@@ -424,6 +424,7 @@ class NgvlaRayTracer:
         self.pr_reflec = None
         self.sc_reflec = None
         self.sc_reflec_pnt = None
+        self.sc_reflec_dist = None
 
         self._shift_to_focus_origin()
 
@@ -461,7 +462,7 @@ class NgvlaRayTracer:
 
     def secondary_reflection_jit(self):
         print()
-        self.sc_reflec, self.sc_reflec_pnt = \
+        self.sc_reflec, self.sc_reflec_pnt, self.sc_reflec_dist = \
             secondary_reflec_jit(self.pr_pnt, self.pr_reflec, self.sc_pnt, self.sc_norm)
         print()
 
@@ -476,16 +477,19 @@ class NgvlaRayTracer:
 
         return gridded_array, x_axis, y_axis
 
-    def _plot_map(self, data_array, prog_res, title, filename, colormap, fsize=5):
+    def _plot_map(self, data_array, prog_res, title, filename, colormap, zlim, fsize=5):
         gridded_data, x_axis, y_axis = self._grid_for_plotting(data_array, prog_res)
-        minmax = [np.nanmin(gridded_data), np.nanmax(gridded_data)]
-        #print(minmax)
+
+        if zlim is None:
+            minmax = [np.nanmin(gridded_data), np.nanmax(gridded_data)]
+        else:
+            minmax = zlim
 
         fig, ax = create_figure_and_axes([10, 8], [1, 1])
         cmap = get_proper_color_map(colormap)
 
         ax.set_title(title,size=1.5*fsize)
-        extent = [np.min(x_axis.array), np.max(x_axis.array), np.min(y_axis.array), np.max(y_axis.array)]
+        extent = compute_extent(x_axis.array, y_axis.array, margin=0.02)
         im = ax.imshow(gridded_data, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1])
         well_positioned_colorbar(ax, fig, im, "Z Scale")
         ax.set_xlabel("X axis [m]")
@@ -497,6 +501,7 @@ class NgvlaRayTracer:
         prog_res = convert_unit(resolution_unit, 'm', 'length')*resolution
 
         for data_type in data_types:
+            zlim = None
             if data_type == 'x reflec pnt':
                 data_array = self.sc_reflec_pnt[:, 0]
                 title = f'X coordinate of point touched on secondary'
@@ -524,11 +529,33 @@ class NgvlaRayTracer:
             elif data_type == 'z prim normal':
                 data_array = self.pr_norm[:, 2]
                 title = f'Z component of primary mirror normal'
+            elif data_type == 'reflec dist':
+                data_array = self.sc_reflec_dist
+                title = f'Distance to the point of reflection on the secondary'
+                zlim=[0, 0.05]
             else:
                 raise Exception(f'Unrecognized data type {data_type}')
 
             filename = f"{rootname}-{data_type.replace(' ', '-')}.png"
-            self._plot_map(data_array, prog_res, title, filename, colormap)
+            self._plot_map(data_array, prog_res, title, filename, colormap, zlim)
+
+    def save_to_zarr(self, filename):
+        xds = xr.Dataset()
+
+        for key, item in vars(self):
+            if isinstance(item, np.ndarray):
+                if len(item.shape) == 2:
+                    xds[key] = xr.DataArray(item, dims=['pnt', 'xyz'])
+                elif len(item.shape) == 1:
+                    xds[key] = xr.DataArray(item, dims=['pnt'])
+                else:
+                    raise Exception(f"Don't know what to do with {key}")
+            elif item is None:
+                pass
+            else:
+                xds.attrs[key] = item
+
+        xds.to_zarr(filename, mode='w')
 
 
 
