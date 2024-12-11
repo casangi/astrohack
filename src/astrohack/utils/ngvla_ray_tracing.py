@@ -131,17 +131,17 @@ def secondary_reflec_jit(pr_pnt, pr_reflec, sc_pnt, sc_norm):
 
 
 class Axis:
-    def __init__(self, array, resolution):
-        mini, maxi = np.min(array), np.max(array)
+    def __init__(self, user_array, resolution):
+        mini, maxi = np.min(user_array), np.max(user_array)
         npnt = int(np.ceil((maxi-mini) / resolution))
-        array = np.arange(npnt+1)
-        array = resolution * array
-        array += mini + resolution / 2
+        axis_array = np.arange(npnt + 1)
+        axis_array = resolution * axis_array
+        axis_array = axis_array + mini + resolution / 2
         self.np = npnt
         self.res = resolution
         self.mini = mini
         self.maxi = maxi
-        self.array = array
+        self.array = axis_array
 
     def idx_and_frac(self, coor):
         f_idx = (coor-self.array[0])/self.res
@@ -413,20 +413,14 @@ class ReflectiveSurface:
 
 class NgvlaRayTracer:
 
-    def __init__(self, primary_cloud, secondary_cloud, focus_location=(-1.136634465810194, 0, -0.331821128650557)):
-        self.pr_pnt, self.pr_norm = read_cloud_with_normals(primary_cloud)
-        self.sc_pnt, self.sc_norm = read_cloud_with_normals(secondary_cloud)
+    def __init__(self, focus_location=(-1.136634465810194, 0, -0.331821128650557)):
+        self.pr_pnt = self.pr_norm = None
+        self.sc_pnt = self.sc_norm = None
         self.focus_offset = np.array(focus_location)
-
-        numpy_size(self.pr_pnt)
-        numpy_size(self.sc_pnt)
-
         self.pr_reflec = None
         self.sc_reflec = None
         self.sc_reflec_pnt = None
         self.sc_reflec_dist = None
-
-        self._shift_to_focus_origin()
 
     def _shift_to_focus_origin(self):
         # Both dishes are in the same coordinates but this is not the
@@ -489,7 +483,7 @@ class NgvlaRayTracer:
         cmap = get_proper_color_map(colormap)
 
         ax.set_title(title,size=1.5*fsize)
-        extent = compute_extent(x_axis.array, y_axis.array, margin=0.02)
+        extent = compute_extent(x_axis.array, y_axis.array, margin=0.1)
         im = ax.imshow(gridded_data, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1])
         well_positioned_colorbar(ax, fig, im, "Z Scale")
         ax.set_xlabel("X axis [m]")
@@ -542,12 +536,16 @@ class NgvlaRayTracer:
     def save_to_zarr(self, filename):
         xds = xr.Dataset()
 
-        for key, item in vars(self):
+        for key, item in vars(self).items():
             if isinstance(item, np.ndarray):
-                if len(item.shape) == 2:
-                    xds[key] = xr.DataArray(item, dims=['pnt', 'xyz'])
+                if key in ['sc_pnt', 'sc_norm']:
+                    xds[key] = xr.DataArray(item, dims=['sc_pnt', 'xyz'])
+                elif key == 'focus_offset':
+                    xds[key] = xr.DataArray(item, dims=['xyz'])
+                elif len(item.shape) == 2:
+                    xds[key] = xr.DataArray(item, dims=['pr_pnt', 'xyz'])
                 elif len(item.shape) == 1:
-                    xds[key] = xr.DataArray(item, dims=['pnt'])
+                    xds[key] = xr.DataArray(item, dims=['pr_pnt'])
                 else:
                     raise Exception(f"Don't know what to do with {key}")
             elif item is None:
@@ -557,9 +555,30 @@ class NgvlaRayTracer:
 
         xds.to_zarr(filename, mode='w')
 
+    def from_xds(self, xds_name):
+        xds = xr.open_zarr(xds_name)
+        for key, item in xds.attrs.items():
+            self.__setattr__(key, item)
+        for key, item in xds.items():
+            self.__setattr__(key, item.values)
+        self.pr_pnt = xds.pr_pnt.values
+        self.sc_pnt = xds.sc_pnt.values
 
+    def from_point_cloud(self, primary_pcd, secondary_pcd):
+        self.pr_pnt, self.pr_norm = read_cloud_with_normals(primary_pcd)
+        self.sc_pnt, self.sc_norm = read_cloud_with_normals(secondary_pcd)
+        self._shift_to_focus_origin()
 
+        print('Primary cloud size:')
+        numpy_size(self.pr_pnt)
+        print('Secondary cloud size:')
+        numpy_size(self.sc_pnt)
 
+    def __repr__(self):
+        outstr = 'Ray tracer contents:\n'
+        for key, item in vars(self).items():
+            outstr += f'{key:15s} = {item}\n'
+        return outstr
 
 
 
