@@ -12,30 +12,31 @@ from astrohack.visualization.plot_tools import get_proper_color_map, create_figu
 
 def numpy_size(array):
     units = ['B', 'kB', 'MB', 'GB']
-    memsize = array.itemsize*array.size
+    memsize = array.itemsize * array.size
     iu = 0
     while memsize > 1024:
         memsize /= 1024
         iu += 1
     print(f'Image size: {memsize:.2f} {units[iu]}')
 
+
 @njit(cache=False, nogil=True)
 def grad_calc(axis, vals):
     npnt = 0
     grad = 0
-    for idx in range(len(axis)-1):
-        if np.isnan(vals[idx]) or np.isnan(vals[idx+1]):
+    for idx in range(len(axis) - 1):
+        if np.isnan(vals[idx]) or np.isnan(vals[idx + 1]):
             pass
         else:
-            dx = axis[idx+1] - axis[idx]
-            df = vals[idx+1] - vals[idx]
-            grad += df/dx
+            dx = axis[idx + 1] - axis[idx]
+            df = vals[idx + 1] - vals[idx]
+            grad += df / dx
             npnt += 1
 
     if npnt == 0:
         return np.nan
     else:
-        return grad/npnt
+        return grad / npnt
 
 
 @njit(cache=False, nogil=True)
@@ -48,10 +49,10 @@ def grid_grad_jit(zgrid, xaxis, yaxis):
             if np.isnan(zgrid[i_x, i_y]):
                 pass
             else:
-                x_grad[i_x, i_y] = grad_calc(xaxis[i_x-1 : i_x+2],
-                                             zgrid[i_x-1 : i_x+2, i_y])
-                y_grad[i_x, i_y] = grad_calc(yaxis[i_y-1 : i_y+2],
-                                             zgrid[i_x, i_y-1 : i_y+2])
+                x_grad[i_x, i_y] = grad_calc(xaxis[i_x - 1: i_x + 2],
+                                             zgrid[i_x - 1: i_x + 2, i_y])
+                y_grad[i_x, i_y] = grad_calc(yaxis[i_y - 1: i_y + 2],
+                                             zgrid[i_x, i_y - 1: i_y + 2])
     return x_grad, y_grad
 
 
@@ -106,6 +107,7 @@ def inner_product_2d_jit(vec_a, vec_b, keep_shape=True):
         inner[:, ipos] = inner[:, 0]
     return inner
 
+
 @njit(cache=False, nogil=True)
 def inner_product_1d_jit(vec_a, vec_b):
     return np.sum(vec_a * vec_b, axis=1)
@@ -117,23 +119,43 @@ def secondary_reflec_jit(pr_pnt, pr_reflec, sc_pnt, sc_norm):
     sc_reflec_pnt = np.empty_like(pr_reflec)
     sc_reflec_dist = np.empty(pr_reflec.shape[0])
     for it, point, in enumerate(pr_pnt):
-        print('\033[F', 100*it/pr_pnt.shape[0], '%\r')
+        print('\033[F', 100 * it / pr_pnt.shape[0], '%\r')
         pnt_reflec = pr_reflec[it]
-        pnt_diff = point-sc_pnt
+        pnt_diff = point - sc_pnt
         dist_vec = pnt_diff - inner_product_2d_jit(pnt_diff, pnt_reflec) * pnt_reflec
-        dist_matrix = np.sqrt(np.sum(dist_vec**2, axis=1))
+        dist_matrix = np.sqrt(np.sum(dist_vec ** 2, axis=1))
         isec_loc = np.argmin(dist_matrix)
         sc_reflec_dist[it] = dist_matrix[isec_loc]
         sc_reflec_pnt[it] = sc_pnt[isec_loc]
-        sc_reflec[it] = pnt_reflec - 2*np.sum(pnt_reflec*sc_norm[isec_loc]) * sc_norm[isec_loc]
+        sc_reflec[it] = pnt_reflec - 2 * np.sum(pnt_reflec * sc_norm[isec_loc]) * sc_norm[isec_loc]
 
     return sc_reflec, sc_reflec_pnt, sc_reflec_dist
+
+
+# @njit(cache=False, nogil=True)
+def triangle_intersection(va, vb, vc, t_norm, start_pnt, direction):
+    vba = vb - va
+    vca = vc - va
+    vao = start_pnt - va
+    vcao = np.cross(vao, direction)
+    det = -np.dot(direction, t_norm)
+    uval = np.dot(vca, vcao)/det
+    vval = -np.dot(vba, vcao)/det
+    line_par = np.dot(vao, t_norm) / det
+    intersect_pnt = start_pnt + line_par * direction
+    intersect = det >= 1e-6 and line_par > 0 and uval >= 0 and vval >= 0 and uval+vval <= 1.0
+    return intersect, intersect_pnt
+
+
+# @njit(cache=False, nogil=True)
+def reflect_on_surface(light, normal):
+    return light - 2 * np.dot(light, normal)*normal
 
 
 class Axis:
     def __init__(self, user_array, resolution):
         mini, maxi = np.min(user_array), np.max(user_array)
-        npnt = int(np.ceil((maxi-mini) / resolution))
+        npnt = int(np.ceil((maxi - mini) / resolution))
         axis_array = np.arange(npnt + 1)
         axis_array = resolution * axis_array
         axis_array = axis_array + mini + resolution / 2
@@ -144,16 +166,16 @@ class Axis:
         self.array = axis_array
 
     def idx_and_frac(self, coor):
-        f_idx = (coor-self.array[0])/self.res
+        f_idx = (coor - self.array[0]) / self.res
         i_idx = round(f_idx)
         if i_idx > f_idx:
-            idx = [i_idx-1, i_idx]
-            frac = 1-(i_idx-f_idx)
-            fracs = [frac, 1-frac]
+            idx = [i_idx - 1, i_idx]
+            frac = 1 - (i_idx - f_idx)
+            fracs = [frac, 1 - frac]
         elif i_idx < f_idx:
-            idx = [i_idx, i_idx+1]
-            frac = f_idx-i_idx
-            fracs = [frac, 1-frac]
+            idx = [i_idx, i_idx + 1]
+            frac = f_idx - i_idx
+            fracs = [frac, 1 - frac]
         else:
             idx = [i_idx]
             fracs = [1.0]
@@ -162,7 +184,7 @@ class Axis:
             if idx[0] < 0:
                 idx = idx[1:]
                 fracs = fracs[1:]
-            elif idx[1] > self.np-1:
+            elif idx[1] > self.np - 1:
                 idx = idx[:1]
                 fracs = fracs[:1]
 
@@ -170,16 +192,16 @@ class Axis:
 
 
 class ReflectiveSurface:
-    idx={'xy': [0, 1, 2],
-         'zy': [2, 1, 0],
-         'xz': [0, 2, 1],
-         'yx': [1, 0, 2]
-    }
-    axes={'xy': ['X', 'Y', 'Z'],
-          'zy': ['Z', 'Y', 'X'],
-          'xz': ['X', 'Z', 'Y'],
-          'yx': ['Y', 'X', 'Z']
-    }
+    idx = {'xy': [0, 1, 2],
+           'zy': [2, 1, 0],
+           'xz': [0, 2, 1],
+           'yx': [1, 0, 2]
+           }
+    axes = {'xy': ['X', 'Y', 'Z'],
+            'zy': ['Z', 'Y', 'X'],
+            'xz': ['X', 'Z', 'Y'],
+            'yx': ['Y', 'X', 'Z']
+            }
     keys = {'xy': np.array([0, 0]),
             'zy': [0, 1],
             'xz': [1, 0],
@@ -213,11 +235,10 @@ class ReflectiveSurface:
                 self.primary_cloud[iax] -= axfocus
                 self.secondary_cloud[iax] -= axfocus
 
-
     def grid_points(self, resolution=1e-3):
         # REMEMBER X is 0, Y is 1!!!
-        self.x_axis = Axis(self.primary_cloud[0], resolution, margin=0)
-        self.y_axis = Axis(self.primary_cloud[1], resolution, margin=0)
+        self.x_axis = Axis(self.primary_cloud[0], resolution)
+        self.y_axis = Axis(self.primary_cloud[1], resolution)
 
         x_mesh, y_mesh = np.meshgrid(self.x_axis.array, self.y_axis.array)
         self.zgridded = griddata((self.primary_cloud[0], self.primary_cloud[1]),
@@ -228,7 +249,6 @@ class ReflectiveSurface:
         for ix in range(self.vec_shape[0]):
             for iy in range(self.vec_shape[1]):
                 print(ix, iy)
-
 
     def compute_gradients(self):
         self.x_grad, self.y_grad = grid_grad_jit(self.zgridded,
@@ -243,11 +263,10 @@ class ReflectiveSurface:
         self.vec_shape = list(self.x_grad.shape)
         self.vec_shape.append(3)
         self.norm_vector = np.ndarray(self.vec_shape)
-        vec_amp = np.sqrt(self.x_grad**2+self.y_grad**2+1)
-        self.norm_vector[:, :, 0] = -self.x_grad/vec_amp
-        self.norm_vector[:, :, 1] = -self.y_grad/vec_amp
-        self.norm_vector[:, :, 2] = 1/vec_amp
-
+        vec_amp = np.sqrt(self.x_grad ** 2 + self.y_grad ** 2 + 1)
+        self.norm_vector[:, :, 0] = -self.x_grad / vec_amp
+        self.norm_vector[:, :, 1] = -self.y_grad / vec_amp
+        self.norm_vector[:, :, 2] = 1 / vec_amp
 
     def compute_reflected_parallel(self):
         """
@@ -262,13 +281,13 @@ class ReflectiveSurface:
         nx = self.norm_vector[:, :, 0]
         ny = self.norm_vector[:, :, 1]
         nz = self.norm_vector[:, :, 2]
-        ang_xz = np.arccos(nz/np.sqrt(nx**2+nz**2))
-        ang_yz = np.arccos(nz/np.sqrt(ny**2+nz**2))
+        ang_xz = np.arccos(nz / np.sqrt(nx ** 2 + nz ** 2))
+        ang_yz = np.arccos(nz / np.sqrt(ny ** 2 + nz ** 2))
         # this is a rotation matrix, needs to be generalized for the
         # case of light not coming Z direction
-        rx = np.sin(2*ang_xz)
-        ry = -np.sin(2*ang_yz)
-        rz = np.cos(2*ang_yz)*np.cos(2*ang_xz)
+        rx = np.sin(2 * ang_xz)
+        ry = -np.sin(2 * ang_yz)
+        rz = np.cos(2 * ang_yz) * np.cos(2 * ang_xz)
         # Reflections along y-axis have to be reflected for Y > 0
         pos_y = self.y_axis.array > 0
         rx[pos_y, :] *= -1
@@ -283,16 +302,16 @@ class ReflectiveSurface:
         light = np.zeros_like(self.norm_vector)
         light[:, :] = np.array(light_direction)
         inner = np.empty_like(light)
-        inner[:, :, 0] = np.sum(light*self.norm_vector, axis=2)
+        inner[:, :, 0] = np.sum(light * self.norm_vector, axis=2)
         inner[:, :, 1] = inner[:, :, 0]
         inner[:, :, 2] = inner[:, :, 0]
-        self.reflection = light - 2*inner*self.norm_vector
+        self.reflection = light - 2 * inner * self.norm_vector
 
     def plot_reflection(self, filename, nreflec=5):
-        fig, ax = plt.subplots(1,2)
-        ix = self.vec_shape[0]//2
+        fig, ax = plt.subplots(1, 2)
+        ix = self.vec_shape[0] // 2
         self._plot_reflection_cut(ix, 1, nreflec, ax[0], self.x_axis.array, self.zgridded[ix, :])
-        iy = self.vec_shape[1]//2
+        iy = self.vec_shape[1] // 2
         self._plot_reflection_cut(iy, 0, nreflec, ax[1], self.y_axis.array, self.zgridded[:, iy])
 
         handles, labels = plt.gca().get_legend_handles_labels()
@@ -302,7 +321,6 @@ class ReflectiveSurface:
         fig.set_tight_layout(True)
         plt.savefig(filename, dpi=300)
 
-
     def _plot_reflection_cut(self, icut, cut_dim, nreflec, ax, xaxis, mirror_cut):
         # These plots need to present the projection of the reflection
         # onto the cut plane otherwise representation is misleading.
@@ -311,7 +329,7 @@ class ReflectiveSurface:
         ax.plot(0, 0, marker='x', color='yellow', label='Focus', ls='')
 
         for irefle in range(nreflec):
-            inorm = random.randint(0, self.vec_shape[cut_dim]-1)
+            inorm = random.randint(0, self.vec_shape[cut_dim] - 1)
             if cut_dim == 1:
                 norm_vec = self.norm_vector[icut, inorm]
                 reflect_vec = self.reflection[icut, inorm]
@@ -324,11 +342,11 @@ class ReflectiveSurface:
             incident = np.array([[xp, xp], [2, zp]])
             point = [xp, zp]
             ax.quiver(*point, norm_vec[cut_dim], norm_vec[2], color='black',
-                       label='normal')
+                      label='normal')
 
             ax.plot(incident[0], incident[1], label='incident light', color='red')
             ax.quiver(*point, reflect_vec[cut_dim], reflect_vec[2], color='green',
-                       label='reflected light', scale=1e-5, width=0.005)
+                      label='reflected light', scale=1e-5, width=0.005)
 
         if cut_dim == 1:
             ax.set_xlabel("Antenna X axis (m)")
@@ -341,7 +359,6 @@ class ReflectiveSurface:
         ax.set_ylabel("Antenna Z Axis (m)")
         ax.set_ylim(-10, 2)
 
-
     def _plot_proj(self, proj, fig, ax, secondary_mirror=None, size=0.03, fsize=5):
         i1, i2, i3 = self.idx[proj]
         xax, yax, zax = self.axes[proj]
@@ -350,32 +367,32 @@ class ReflectiveSurface:
                    cmap='viridis', s=size)
         if secondary_mirror is None:
             ax.set_title(f'ngVLA {self.rtype} {proj.upper()} projection',
-                         size=1.5*fsize)
+                         size=1.5 * fsize)
         else:
             ax.scatter(secondary_mirror.primary_cloud[i1], secondary_mirror.primary_cloud[i2],
                        c=secondary_mirror.primary_cloud[i3], cmap='viridis', s=size)
             sminmax = [np.min(secondary_mirror.primary_cloud[i3]), np.max(secondary_mirror.primary_cloud[i3])]
             ax.set_title(f'ngVLA prototype {proj.upper()} projection',
-                         size=1.5*fsize)
+                         size=1.5 * fsize)
             if sminmax[0] < minmax[0]:
                 minmax[0] = sminmax[0]
             if sminmax[1] > minmax[1]:
                 minmax[1] = sminmax[1]
-        ax.scatter(0,0, c='black', s=0.3, label='focus')
+        ax.scatter(0, 0, c='black', s=0.3, label='focus')
         ax.set_xlabel(f'{xax} axis [m]', size=fsize)
         ax.set_ylabel(f'{yax} axis [m]', size=fsize)
 
         norm = plt.Normalize(minmax[0], minmax[1])
         smap = plt.cm.ScalarMappable(cmap='viridis', norm=norm)
         cbar = fig.colorbar(smap, ax=ax, fraction=0.05)
-        cbar.set_label(label=f'{zax} axis [m]',size=fsize)
+        cbar.set_label(label=f'{zax} axis [m]', size=fsize)
         cbar.ax.tick_params(labelsize=fsize)
         ax.axis('equal')
         ax.tick_params(axis='both', which='major', labelsize=fsize)
         ax.legend(fontsize=fsize)
 
     def plot_2d(self, filename, secondary_mirror=None):
-        fig, ax = plt.subplots(2,2)
+        fig, ax = plt.subplots(2, 2)
         for key in self.idx.keys():
             ia1, ia2 = self.keys[key]
             self._plot_proj(key, fig, ax[ia1, ia2], secondary_mirror)
@@ -391,18 +408,18 @@ class ReflectiveSurface:
         if secondary_mirror is not None:
             ax.scatter3D(secondary_mirror.primary_cloud[i1], secondary_mirror.primary_cloud[i2],
                          secondary_mirror.primary_cloud[i3], s=size)
-        ax.scatter3D(0,0,0, s=0.3, label='Focus')
+        ax.scatter3D(0, 0, 0, s=0.3, label='Focus')
         ax.legend()
         fig.savefig(filename, dpi=300)
 
     def plot_grid(self, filename):
-        fig, ax = plt.subplots(2,2)
+        fig, ax = plt.subplots(2, 2)
         labels = ['grid', 'x grad', 'y grad']
         images = [self.zgridded, self.x_grad, self.y_grad]
 
         for i_im in range(len(images)):
-            ix = i_im//2
-            iy = i_im%2
+            ix = i_im // 2
+            iy = i_im % 2
             im = ax[ix, iy].imshow(images[i_im], cmap='viridis')
             ax[ix, iy].set_title(labels[i_im])
             fig.colorbar(im, ax=ax[ix, iy], fraction=0.03)
@@ -421,6 +438,11 @@ class NgvlaRayTracer:
         self.sc_reflec = None
         self.sc_reflec_pnt = None
         self.sc_reflec_dist = None
+        self.sc_reflec_triangle = None
+        self.pr_mesh = None
+        self.pr_mesh_norm = None
+        self.sc_mesh = None
+        self.sc_mesh_norm = None
 
     def _shift_to_focus_origin(self):
         # Both dishes are in the same coordinates but this is not the
@@ -437,21 +459,21 @@ class NgvlaRayTracer:
     def primary_reflection(self, incident_light):
         light = np.zeros_like(self.pr_pnt)
         light[:] = np.array(incident_light)
-        self.pr_reflec = light - 2*inner_product_2d(light, self.pr_norm) * self.pr_norm
+        self.pr_reflec = light - 2 * inner_product_2d(light, self.pr_norm) * self.pr_norm
 
     def secondary_reflection(self):
         self.sc_reflec = np.empty_like(self.pr_reflec)
         self.sc_reflec_pnt = np.empty_like(self.pr_reflec)
         print()
         for it, point, in enumerate(self.pr_pnt):
-            print(f'\033[F{100*it/self.pr_pnt.shape[0]:.2f}%')
+            print(f'\033[F{100 * it / self.pr_pnt.shape[0]:.2f}%')
             pnt_reflec = self.pr_reflec[it]
-            pnt_diff = point-self.sc_pnt
+            pnt_diff = point - self.sc_pnt
             dist_vec = pnt_diff - inner_product_2d(pnt_diff, pnt_reflec) * pnt_reflec
             dist_matrix = np.sqrt(inner_product_2d(dist_vec, dist_vec, keep_shape=False))
             isec_loc = np.argmin(dist_matrix)
             self.sc_reflec_pnt[it] = self.sc_pnt[isec_loc]
-            self.sc_reflec[it] = pnt_reflec - 2*np.inner(pnt_reflec, self.sc_norm[isec_loc]) * self.sc_norm[isec_loc]
+            self.sc_reflec[it] = pnt_reflec - 2 * np.inner(pnt_reflec, self.sc_norm[isec_loc]) * self.sc_norm[isec_loc]
         print()
 
     def secondary_reflection_jit(self):
@@ -482,7 +504,7 @@ class NgvlaRayTracer:
         fig, ax = create_figure_and_axes([10, 8], [1, 1])
         cmap = get_proper_color_map(colormap)
 
-        ax.set_title(title,size=1.5*fsize)
+        ax.set_title(title, size=1.5 * fsize)
         extent = compute_extent(x_axis.array, y_axis.array, margin=0.1)
         im = ax.imshow(gridded_data, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1])
         well_positioned_colorbar(ax, fig, im, "Z Scale")
@@ -492,7 +514,7 @@ class NgvlaRayTracer:
         close_figure(fig, '', filename, 300, False)
 
     def plot_simple_2d(self, data_types, rootname, resolution, resolution_unit, colormap='viridis'):
-        prog_res = convert_unit(resolution_unit, 'm', 'length')*resolution
+        prog_res = convert_unit(resolution_unit, 'm', 'length') * resolution
 
         for data_type in data_types:
             zlim = None
@@ -526,7 +548,10 @@ class NgvlaRayTracer:
             elif data_type == 'reflec dist':
                 data_array = self.sc_reflec_dist
                 title = f'Distance to the point of reflection on the secondary'
-                zlim=[0, 0.05]
+                zlim = [0, 0.05]
+            elif data_type == 'reflec triangle':
+                data_array = self.sc_reflec_triangle
+                title = f'Triangle of reflection on the secondary'
             else:
                 raise Exception(f'Unrecognized data type {data_type}')
 
@@ -555,7 +580,7 @@ class NgvlaRayTracer:
 
         xds.to_zarr(filename, mode='w')
 
-    def from_xds(self, xds_name):
+    def reread(self, xds_name):
         xds = xr.open_zarr(xds_name)
         for key, item in xds.attrs.items():
             self.__setattr__(key, item)
@@ -564,9 +589,18 @@ class NgvlaRayTracer:
         self.pr_pnt = xds.pr_pnt.values
         self.sc_pnt = xds.sc_pnt.values
 
-    def from_point_cloud(self, primary_pcd, secondary_pcd):
-        self.pr_pnt, self.pr_norm = read_cloud_with_normals(primary_pcd)
-        self.sc_pnt, self.sc_norm = read_cloud_with_normals(secondary_pcd)
+    def from_zarr_mesh(self, mesh_file):
+        in_xds = xr.open_zarr(mesh_file)
+        self.pr_pnt = in_xds['primary_point_cloud'].values
+        self.pr_norm = in_xds['primary_pcd_normals'].values
+        self.pr_mesh = in_xds['primary_mesh'].values
+        self.pr_mesh_norm = in_xds['primary_mesh_normals'].values
+
+        self.sc_pnt = in_xds['secondary_point_cloud'].values
+        self.sc_norm = in_xds['secondary_pcd_normals'].values
+        self.sc_mesh = in_xds['secondary_mesh'].values
+        self.sc_mesh_norm = in_xds['secondary_mesh_normals'].values
+
         self._shift_to_focus_origin()
 
         print('Primary cloud size:')
@@ -580,10 +614,34 @@ class NgvlaRayTracer:
             outstr += f'{key:15s} = {item}\n'
         return outstr
 
+    def _find_triangle_on_secondary(self, pr_point, reflection):
+        """
+        This returns the triangle index and the point in the triangle.
+        """
+        for it, triangle in enumerate(self.sc_mesh):
+            va = self.sc_pnt[int(triangle[0])]
+            vb = self.sc_pnt[int(triangle[1])]
+            vc = self.sc_pnt[int(triangle[2])]
+            t_norm = self.sc_mesh_norm[it]
+            crosses_triangle, point = triangle_intersection(va, vb, vc, t_norm, pr_point, reflection)
+            if crosses_triangle:
+                return it, point
 
+        return np.nan, np.full([3], np.nan)
 
-
-
-
-
+    def secondary_reflection_on_mesh(self):
+        self.sc_reflec = np.empty_like(self.pr_reflec)
+        self.sc_reflec_pnt = np.empty_like(self.pr_reflec)
+        self.sc_reflec_triangle = np.empty(self.pr_reflec.shape[0])
+        print()
+        for ipnt, pr_point in enumerate(self.pr_pnt):
+            print(f'\033[FMesh reflections: {100 * ipnt / self.pr_pnt.shape[0]:.2f}%')
+            pr_reflection = self.pr_reflec[ipnt]
+            triangle, sc_point = self._find_triangle_on_secondary(pr_point, pr_reflection)
+            self.sc_reflec_triangle[ipnt] = triangle
+            self.sc_reflec_pnt[ipnt] = sc_point
+            if np.isnan(triangle):
+                self.sc_reflec[ipnt] = reflect_on_surface(pr_reflection, self.sc_mesh_norm[triangle])
+            else:
+                self.sc_reflec[ipnt] = np.full([3], np.nan)
 
