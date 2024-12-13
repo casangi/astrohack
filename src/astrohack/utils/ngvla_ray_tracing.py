@@ -87,19 +87,56 @@ def triangle_intersection(va, vb, vc, t_norm, start_pnt, direction):
     vca = vc - va
     vao = start_pnt - va
     vcao = np.cross(vao, direction)
-    det = -np.dot(direction, t_norm)
-    uval = np.dot(vca, vcao)/det
-    vval = -np.dot(vba, vcao)/det
-    line_par = np.dot(vao, t_norm) / det
+    det = np.dot(direction, t_norm)
+    uval = np.dot(vca, vcao) / det
+    vval = -np.dot(vba, vcao) / det
+    line_par = np.dot(vao, t_norm) / np.dot(direction, t_norm)
+    # line_par = np.dot(vao, t_norm) / det
     intersect_pnt = start_pnt + line_par * direction
-    intersect = det >= 1e-6 and line_par > 0 and uval >= 0 and vval >= 0 and uval+vval <= 1.0
+    intersect = abs(det) >= 1e-6 and line_par > 0 and uval >= 0 and vval >= 0 and uval+vval <= 1.0
+    print(intersect, intersect_pnt, va, vb, vc)
     return intersect, intersect_pnt
 
 
-# @njit(cache=False, nogil=True)
+@njit(cache=False, nogil=True)
+def intersect_line_triangle(start_point, direction, t_norm, p1, p2, p3):
+    def signed_tetra_volume(a, b, c, d):
+        return np.sign(np.dot(np.cross(b-a, c-a), d-a)/6.0)
+
+    point_over_ray = start_point + direction
+    s1 = signed_tetra_volume(start_point, p1, p2, p3)
+    s2 = signed_tetra_volume(point_over_ray, p1, p2, p3)
+
+    if s1 != s2:
+        s3 = signed_tetra_volume(start_point, point_over_ray, p1, p2)
+        s4 = signed_tetra_volume(start_point, point_over_ray, p2, p3)
+        s5 = signed_tetra_volume(start_point, point_over_ray, p3, p1)
+        if s3 == s4 and s4 == s5:
+            line_par = -np.dot(start_point, t_norm) / np.dot(start_point, direction)
+            return True, start_point + line_par * direction
+    return False, np.array([np.nan, np.nan, np.nan])
+
+
+@njit(cache=False, nogil=True)
 def reflect_on_surface(light, normal):
     return light - 2 * np.dot(light, normal)*normal
 
+@njit(cache=False, nogil=True)
+def jitted_trinagle_find(pr_point, reflection, sc_mesh, sc_pnt, sc_mesh_norm):
+    for it, triangle in enumerate(sc_mesh):
+        va = sc_pnt[int(triangle[0])]
+        vb = sc_pnt[int(triangle[1])]
+        vc = sc_pnt[int(triangle[2])]
+        t_norm = sc_mesh_norm[it]
+        # crosses_triangle, point = triangle_intersection(va, vb, vc, t_norm, pr_point, reflection)
+        crosses_triangle, point = intersect_line_triangle(pr_point, reflection, t_norm, va, vb, vc)
+        # triangle_intersection(va, vb, vc, t_norm, pr_point, reflection)
+        if crosses_triangle:
+            print(it, point)
+            print()
+            return it, point
+
+    return np.nan, point
 
 class Axis:
     def __init__(self, user_array, resolution):
@@ -297,7 +334,7 @@ class NgvlaRayTracer:
         for key, item in xds.attrs.items():
             self.__setattr__(key, item)
         for key, item in xds.items():
-            self.__setattr__(key, item.values)
+            self.__setattr__(str(key), item.values)
         self.pr_pnt = xds.pr_pnt.values
         self.sc_pnt = xds.sc_pnt.values
 
@@ -330,30 +367,50 @@ class NgvlaRayTracer:
         """
         This returns the triangle index and the point in the triangle.
         """
-        for it, triangle in enumerate(self.sc_mesh):
-            va = self.sc_pnt[int(triangle[0])]
-            vb = self.sc_pnt[int(triangle[1])]
-            vc = self.sc_pnt[int(triangle[2])]
-            t_norm = self.sc_mesh_norm[it]
-            crosses_triangle, point = triangle_intersection(va, vb, vc, t_norm, pr_point, reflection)
-            if crosses_triangle:
-                return it, point
-
-        return np.nan, np.full([3], np.nan)
+        return jitted_trinagle_find(pr_point, reflection, self.sc_mesh, self.sc_pnt, self.sc_mesh_norm)
+        # for it, triangle in enumerate(self.sc_mesh):
+        #     va = self.sc_pnt[int(triangle[0])]
+        #     vb = self.sc_pnt[int(triangle[1])]
+        #     vc = self.sc_pnt[int(triangle[2])]
+        #     t_norm = self.sc_mesh_norm[it]
+        #     # crosses_triangle, point = triangle_intersection(va, vb, vc, t_norm, pr_point, reflection)
+        #     crosses_triangle, point = intersect_line_triangle(pr_point, reflection, t_norm, va, vb, vc)
+        #     # triangle_intersection(va, vb, vc, t_norm, pr_point, reflection)
+        #     if crosses_triangle:
+        #         print(it, point)
+        #         print()
+        #         return it, point
+        #
+        # return np.nan, np.full([3], np.nan)
 
     def secondary_reflection_on_mesh(self):
         self.sc_reflec = np.empty_like(self.pr_reflec)
         self.sc_reflec_pnt = np.empty_like(self.pr_reflec)
         self.sc_reflec_triangle = np.empty(self.pr_reflec.shape[0])
         print()
+
         for ipnt, pr_point in enumerate(self.pr_pnt):
+        # if True:
+            #ipnt = 0
+            #pr_point = self.pr_pnt[0]
             print(f'\033[FMesh reflections: {100 * ipnt / self.pr_pnt.shape[0]:.2f}%')
             pr_reflection = self.pr_reflec[ipnt]
             triangle, sc_point = self._find_triangle_on_secondary(pr_point, pr_reflection)
             self.sc_reflec_triangle[ipnt] = triangle
             self.sc_reflec_pnt[ipnt] = sc_point
-            if np.isnan(triangle):
-                self.sc_reflec[ipnt] = reflect_on_surface(pr_reflection, self.sc_mesh_norm[triangle])
-            else:
-                self.sc_reflec[ipnt] = np.full([3], np.nan)
 
+            # print(triangle, sc_point)
+            if np.isnan(triangle):
+                self.sc_reflec[ipnt] = np.full([3], np.nan)
+            else:
+                self.sc_reflec[ipnt] = reflect_on_surface(pr_reflection, self.sc_mesh_norm[triangle])
+
+    def triangle_area(self):
+        for it, triangle in enumerate(self.sc_mesh):
+            va = self.sc_pnt[int(triangle[0])]
+            vb = self.sc_pnt[int(triangle[1])]
+            vc = self.sc_pnt[int(triangle[2])]
+            vba = vb-va
+            vbc = vb-vc
+            cross = np.cross(vba, vbc)
+            print(it, '=', np.sqrt(np.inner(cross, cross))/2)
