@@ -84,42 +84,6 @@ def secondary_reflec_jit(pr_pnt, pr_reflec, sc_pnt, sc_norm):
     return sc_reflec, sc_reflec_pnt, sc_reflec_dist
 
 
-# @njit(cache=False, nogil=True)
-def triangle_intersection(va, vb, vc, t_norm, start_pnt, direction):
-    vba = vb - va
-    vca = vc - va
-    vao = start_pnt - va
-    vcao = np.cross(vao, direction)
-    det = np.dot(direction, t_norm)
-    uval = np.dot(vca, vcao) / det
-    vval = -np.dot(vba, vcao) / det
-    line_par = np.dot(vao, t_norm) / np.dot(direction, t_norm)
-    # line_par = np.dot(vao, t_norm) / det
-    intersect_pnt = start_pnt + line_par * direction
-    intersect = abs(det) >= 1e-6 and line_par > 0 and uval >= 0 and vval >= 0 and uval + vval <= 1.0
-    print(intersect, intersect_pnt, va, vb, vc)
-    return intersect, intersect_pnt
-
-
-@njit(cache=False, nogil=True)
-def intersect_line_triangle(start_point, direction, t_norm, p1, p2, p3):
-    def signed_tetra_volume(a, b, c, d):
-        return np.sign(np.dot(np.cross(b - a, c - a), d - a) / 6.0)
-
-    point_over_ray = start_point + direction
-    s1 = signed_tetra_volume(start_point, p1, p2, p3)
-    s2 = signed_tetra_volume(point_over_ray, p1, p2, p3)
-
-    if s1 != s2:
-        s3 = signed_tetra_volume(start_point, point_over_ray, p1, p2)
-        s4 = signed_tetra_volume(start_point, point_over_ray, p2, p3)
-        s5 = signed_tetra_volume(start_point, point_over_ray, p3, p1)
-        if s3 == s4 and s4 == s5:
-            line_par = -np.dot(start_point, t_norm) / np.dot(start_point, direction)
-            return True, start_point + line_par * direction
-    return False, np.array([np.nan, np.nan, np.nan])
-
-
 @njit(cache=False, nogil=True)
 def moller_trumbore_algorithm(ray_origin, ray_vector, pa, pb, pc):
     epsilon = 1e-6
@@ -429,29 +393,23 @@ class NgvlaRayTracer:
         self.sc_reflec_triangle = np.empty(self.pr_reflec.shape[0])
         print()
 
-        # niter = 5000
-        # for ipnt in range(niter):
-        #     pr_point = self.pr_pnt[ipnt]
-        for ipnt, pr_point in enumerate(self.pr_pnt):
-            # print(f'\033[FMesh reflections: {100 * ipnt / self.pr_pnt.shape[0]:.2f}%')
+        niter = 500
+        for ipnt in range(niter):
+            pr_point = self.pr_pnt[ipnt]
+        # for ipnt, pr_point in enumerate(self.pr_pnt):
             pr_reflection = self.pr_reflec[ipnt]
             itriangle, sc_point = self._find_triangle_on_secondary(pr_point, pr_reflection)
             self.sc_reflec_triangle[ipnt] = itriangle
             self.sc_reflec_pnt[ipnt] = sc_point
-            # print(itriangle, sc_point)
-            # print(self.sc_reflec_triangle[ipnt], self.sc_reflec_pnt[ipnt])
-
-            #print(itriangle, sc_point)
             if np.isnan(itriangle):
                 self.sc_reflec[ipnt] = nanvec3d
             else:
                 self.sc_reflec[ipnt] = reflect_on_surface(pr_reflection, self.sc_mesh_norm[itriangle])
-            print(f'\033[FMesh reflections: {100 * ipnt / self.pr_pnt.shape[0]:.2f}%')
-            #print(f'\033[FMesh reflections: {100 * ipnt / niter:.2f}%')
+            # print(f'\033[FMesh reflections: {100 * ipnt / self.pr_pnt.shape[0]:.2f}%')
+            print(f'\033[FMesh reflections: {100 * ipnt / niter:.2f}%')
 
         self.sc_reflec_triangle = np.where(np.abs(self.sc_reflec_triangle-intblankval)<1e-7, np.nan,
                                            self.sc_reflec_triangle)
-        print(self.sc_reflec_triangle[0:niter])
 
 
     def triangle_area(self):
