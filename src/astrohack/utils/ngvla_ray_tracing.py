@@ -318,6 +318,10 @@ class NgvlaRayTracer:
             if isinstance(item, np.ndarray):
                 if key in ['sc_pnt', 'sc_norm']:
                     xds[key] = xr.DataArray(item, dims=['sc_pnt', 'xyz'])
+                elif key in ['pr_mesh', 'pr_mesh_norm']:
+                    xds[key] = xr.DataArray(item, dims=['pr_tri', 'xyz'])
+                elif key in ['sc_mesh', 'sc_mesh_norm']:
+                    xds[key] = xr.DataArray(item, dims=['sc_tri', 'xyz'])
                 elif key == 'focus_offset':
                     xds[key] = xr.DataArray(item, dims=['xyz'])
                 elif len(item.shape) == 2:
@@ -393,10 +397,10 @@ class NgvlaRayTracer:
         self.sc_reflec_triangle = np.empty(self.pr_reflec.shape[0])
         print()
 
-        niter = 500
+        # niter = 100
+        niter = self.pr_pnt.shape[0]
         for ipnt in range(niter):
             pr_point = self.pr_pnt[ipnt]
-        # for ipnt, pr_point in enumerate(self.pr_pnt):
             pr_reflection = self.pr_reflec[ipnt]
             itriangle, sc_point = self._find_triangle_on_secondary(pr_point, pr_reflection)
             self.sc_reflec_triangle[ipnt] = itriangle
@@ -405,12 +409,10 @@ class NgvlaRayTracer:
                 self.sc_reflec[ipnt] = nanvec3d
             else:
                 self.sc_reflec[ipnt] = reflect_on_surface(pr_reflection, self.sc_mesh_norm[itriangle])
-            # print(f'\033[FMesh reflections: {100 * ipnt / self.pr_pnt.shape[0]:.2f}%')
             print(f'\033[FMesh reflections: {100 * ipnt / niter:.2f}%')
 
         self.sc_reflec_triangle = np.where(np.abs(self.sc_reflec_triangle-intblankval)<1e-7, np.nan,
                                            self.sc_reflec_triangle)
-
 
     def triangle_area(self):
         for it, triangle in enumerate(self.sc_mesh):
