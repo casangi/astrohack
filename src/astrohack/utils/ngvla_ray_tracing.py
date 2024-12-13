@@ -7,6 +7,9 @@ from astrohack.utils import convert_unit
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
     close_figure, compute_extent
 
+nanvec3d = np.array([np.nan, np.nan, np.nan])
+intblankval = -1000
+
 
 def numpy_size(array):
     units = ['B', 'kB', 'MB', 'GB']
@@ -93,7 +96,7 @@ def triangle_intersection(va, vb, vc, t_norm, start_pnt, direction):
     line_par = np.dot(vao, t_norm) / np.dot(direction, t_norm)
     # line_par = np.dot(vao, t_norm) / det
     intersect_pnt = start_pnt + line_par * direction
-    intersect = abs(det) >= 1e-6 and line_par > 0 and uval >= 0 and vval >= 0 and uval+vval <= 1.0
+    intersect = abs(det) >= 1e-6 and line_par > 0 and uval >= 0 and vval >= 0 and uval + vval <= 1.0
     print(intersect, intersect_pnt, va, vb, vc)
     return intersect, intersect_pnt
 
@@ -101,7 +104,7 @@ def triangle_intersection(va, vb, vc, t_norm, start_pnt, direction):
 @njit(cache=False, nogil=True)
 def intersect_line_triangle(start_point, direction, t_norm, p1, p2, p3):
     def signed_tetra_volume(a, b, c, d):
-        return np.sign(np.dot(np.cross(b-a, c-a), d-a)/6.0)
+        return np.sign(np.dot(np.cross(b - a, c - a), d - a) / 6.0)
 
     point_over_ray = start_point + direction
     s1 = signed_tetra_volume(start_point, p1, p2, p3)
@@ -118,25 +121,62 @@ def intersect_line_triangle(start_point, direction, t_norm, p1, p2, p3):
 
 
 @njit(cache=False, nogil=True)
-def reflect_on_surface(light, normal):
-    return light - 2 * np.dot(light, normal)*normal
+def moller_trumbore_algorithm(ray_origin, ray_vector, pa, pb, pc):
+    epsilon = 1e-6
+    edge1 = pb - pa
+    edge2 = pc - pa
+
+    ray_cross_edge2 = np.cross(ray_vector, edge2)
+    determinant = np.dot(edge1, ray_cross_edge2)
+
+    if np.abs(determinant) < epsilon:
+        return False, nanvec3d
+
+    inv_det = 1.0 / determinant
+    s = ray_origin - pa
+    u = inv_det * np.dot(s, ray_cross_edge2)
+
+    if (u < 0 and np.abs(u) > epsilon) or (u > 1 and np.abs(u - 1) > epsilon):
+        return False, nanvec3d
+
+    s_cross_e1 = np.cross(s, edge1)
+    v = inv_det * np.dot(ray_vector, s_cross_e1)
+
+    if (v < 0 and np.abs(v) > epsilon) or (u + v > 1 and np.abs(u + v - 1) > epsilon):
+        return False, nanvec3d
+
+    # At this stage we can compute t to find out where the intersection point is on the line.
+    t = inv_det * np.dot(edge2, s_cross_e1)
+
+    if t > epsilon: # ray intersection
+        return True, ray_origin + ray_vector * t
+    else:  # This means that there is a line intersection but not a ray intersection.
+        return False, nanvec3d
+
 
 @njit(cache=False, nogil=True)
-def jitted_trinagle_find(pr_point, reflection, sc_mesh, sc_pnt, sc_mesh_norm):
+def reflect_on_surface(light, normal):
+    return light - 2 * np.dot(light, normal) * normal
+
+
+@njit(cache=False, nogil=True)
+def jitted_triangle_find(pr_point, reflection, sc_mesh, sc_pnt, sc_mesh_norm):
     for it, triangle in enumerate(sc_mesh):
         va = sc_pnt[int(triangle[0])]
         vb = sc_pnt[int(triangle[1])]
         vc = sc_pnt[int(triangle[2])]
         t_norm = sc_mesh_norm[it]
         # crosses_triangle, point = triangle_intersection(va, vb, vc, t_norm, pr_point, reflection)
-        crosses_triangle, point = intersect_line_triangle(pr_point, reflection, t_norm, va, vb, vc)
+        # crosses_triangle, point = intersect_line_triangle(pr_point, reflection, t_norm, va, vb, vc)
+        crosses_triangle, point = moller_trumbore_algorithm(pr_point, reflection, va, vb, vc)
         # triangle_intersection(va, vb, vc, t_norm, pr_point, reflection)
         if crosses_triangle:
-            print(it, point)
-            print()
+            # print(it, point)
+            # print()
             return it, point
 
-    return np.nan, point
+    return intblankval, nanvec3d
+
 
 class Axis:
     def __init__(self, user_array, resolution):
@@ -238,7 +278,7 @@ class NgvlaRayTracer:
         y_axis = Axis(y_pnt, resolution)
         x_mesh, y_mesh = np.meshgrid(x_axis.array, y_axis.array)
         gridded_array = griddata((x_pnt, y_pnt),
-                                 data_array, (x_mesh, y_mesh), 'cubic')
+                                 data_array, (x_mesh, y_mesh), 'nearest')
 
         return gridded_array, x_axis, y_axis
 
@@ -367,7 +407,7 @@ class NgvlaRayTracer:
         """
         This returns the triangle index and the point in the triangle.
         """
-        return jitted_trinagle_find(pr_point, reflection, self.sc_mesh, self.sc_pnt, self.sc_mesh_norm)
+        return jitted_triangle_find(pr_point, reflection, self.sc_mesh, self.sc_pnt, self.sc_mesh_norm)
         # for it, triangle in enumerate(self.sc_mesh):
         #     va = self.sc_pnt[int(triangle[0])]
         #     vb = self.sc_pnt[int(triangle[1])]
@@ -389,28 +429,37 @@ class NgvlaRayTracer:
         self.sc_reflec_triangle = np.empty(self.pr_reflec.shape[0])
         print()
 
+        # niter = 5000
+        # for ipnt in range(niter):
+        #     pr_point = self.pr_pnt[ipnt]
         for ipnt, pr_point in enumerate(self.pr_pnt):
-        # if True:
-            #ipnt = 0
-            #pr_point = self.pr_pnt[0]
-            print(f'\033[FMesh reflections: {100 * ipnt / self.pr_pnt.shape[0]:.2f}%')
+            # print(f'\033[FMesh reflections: {100 * ipnt / self.pr_pnt.shape[0]:.2f}%')
             pr_reflection = self.pr_reflec[ipnt]
-            triangle, sc_point = self._find_triangle_on_secondary(pr_point, pr_reflection)
-            self.sc_reflec_triangle[ipnt] = triangle
+            itriangle, sc_point = self._find_triangle_on_secondary(pr_point, pr_reflection)
+            self.sc_reflec_triangle[ipnt] = itriangle
             self.sc_reflec_pnt[ipnt] = sc_point
+            # print(itriangle, sc_point)
+            # print(self.sc_reflec_triangle[ipnt], self.sc_reflec_pnt[ipnt])
 
-            # print(triangle, sc_point)
-            if np.isnan(triangle):
-                self.sc_reflec[ipnt] = np.full([3], np.nan)
+            #print(itriangle, sc_point)
+            if np.isnan(itriangle):
+                self.sc_reflec[ipnt] = nanvec3d
             else:
-                self.sc_reflec[ipnt] = reflect_on_surface(pr_reflection, self.sc_mesh_norm[triangle])
+                self.sc_reflec[ipnt] = reflect_on_surface(pr_reflection, self.sc_mesh_norm[itriangle])
+            print(f'\033[FMesh reflections: {100 * ipnt / self.pr_pnt.shape[0]:.2f}%')
+            #print(f'\033[FMesh reflections: {100 * ipnt / niter:.2f}%')
+
+        self.sc_reflec_triangle = np.where(np.abs(self.sc_reflec_triangle-intblankval)<1e-7, np.nan,
+                                           self.sc_reflec_triangle)
+        print(self.sc_reflec_triangle[0:niter])
+
 
     def triangle_area(self):
         for it, triangle in enumerate(self.sc_mesh):
             va = self.sc_pnt[int(triangle[0])]
             vb = self.sc_pnt[int(triangle[1])]
             vc = self.sc_pnt[int(triangle[2])]
-            vba = vb-va
-            vbc = vb-vc
+            vba = vb - va
+            vbc = vb - vc
             cross = np.cross(vba, vbc)
-            print(it, '=', np.sqrt(np.inner(cross, cross))/2)
+            print(it, '=', np.sqrt(np.inner(cross, cross)) / 2)
