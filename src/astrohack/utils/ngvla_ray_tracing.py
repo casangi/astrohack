@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib.colors import Normalize
 from scipy.interpolate import griddata
 from numba import njit
 import xarray as xr
@@ -261,54 +262,58 @@ class NgvlaRayTracer:
         extent = compute_extent(x_axis.array, y_axis.array, margin=0.1)
         im = ax.imshow(gridded_data, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1])
         well_positioned_colorbar(ax, fig, im, "Z Scale")
+        ax.set_xlim(extent[:2])
+        ax.set_ylim(extent[2:])
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
 
         close_figure(fig, '', filename, 300, False)
 
+    def _select_data_for_plot(self, data_type):
+        zlim = None
+        if data_type == 'x reflec pnt':
+            data_array = self.sc_reflec_pnt[:, 0]
+            title = f'X coordinate of point touched on secondary'
+        elif data_type == 'y reflec pnt':
+            data_array = self.sc_reflec_pnt[:, 1]
+            title = f'Y coordinate of point touched on secondary'
+        elif data_type == 'z reflec pnt':
+            data_array = self.sc_reflec_pnt[:, 2]
+            title = f'Z coordinate of point touched on secondary'
+        elif data_type == 'x reflec dir':
+            data_array = self.sc_reflec[:, 0]
+            title = f'X component of reflection on secondary'
+        elif data_type == 'y reflec dir':
+            data_array = self.sc_reflec[:, 1]
+            title = f'Y component of reflection on secondary'
+        elif data_type == 'z reflec dir':
+            data_array = self.sc_reflec[:, 2]
+            title = f'Z component of reflection on secondary'
+        elif data_type == 'x prim normal':
+            data_array = self.pr_norm[:, 0]
+            title = f'X component of primary mirror normal'
+        elif data_type == 'y prim normal':
+            data_array = self.pr_norm[:, 1]
+            title = f'Y component of primary mirror normal'
+        elif data_type == 'z prim normal':
+            data_array = self.pr_norm[:, 2]
+            title = f'Z component of primary mirror normal'
+        elif data_type == 'reflec dist':
+            data_array = self.sc_reflec_dist
+            title = f'Distance to the point of reflection on the secondary'
+            zlim = [0, 0.05]
+        elif data_type == 'reflec triangle':
+            data_array = self.sc_reflec_triangle
+            title = f'Triangle of reflection on the secondary'
+        else:
+            raise Exception(f'Unrecognized data type {data_type}')
+        return data_array, title, zlim
+
     def plot_simple_2d(self, data_types, rootname, resolution, resolution_unit, colormap='viridis'):
         prog_res = convert_unit(resolution_unit, 'm', 'length') * resolution
-
         for data_type in data_types:
-            zlim = None
-            if data_type == 'x reflec pnt':
-                data_array = self.sc_reflec_pnt[:, 0]
-                title = f'X coordinate of point touched on secondary'
-            elif data_type == 'y reflec pnt':
-                data_array = self.sc_reflec_pnt[:, 1]
-                title = f'Y coordinate of point touched on secondary'
-            elif data_type == 'z reflec pnt':
-                data_array = self.sc_reflec_pnt[:, 2]
-                title = f'Z coordinate of point touched on secondary'
-            elif data_type == 'x reflec dir':
-                data_array = self.sc_reflec[:, 0]
-                title = f'X component of reflection on secondary'
-            elif data_type == 'y reflec dir':
-                data_array = self.sc_reflec[:, 1]
-                title = f'Y component of reflection on secondary'
-            elif data_type == 'z reflec dir':
-                data_array = self.sc_reflec[:, 2]
-                title = f'Z component of reflection on secondary'
-            elif data_type == 'x prim normal':
-                data_array = self.pr_norm[:, 0]
-                title = f'X component of primary mirror normal'
-            elif data_type == 'y prim normal':
-                data_array = self.pr_norm[:, 1]
-                title = f'Y component of primary mirror normal'
-            elif data_type == 'z prim normal':
-                data_array = self.pr_norm[:, 2]
-                title = f'Z component of primary mirror normal'
-            elif data_type == 'reflec dist':
-                data_array = self.sc_reflec_dist
-                title = f'Distance to the point of reflection on the secondary'
-                zlim = [0, 0.05]
-            elif data_type == 'reflec triangle':
-                data_array = self.sc_reflec_triangle
-                title = f'Triangle of reflection on the secondary'
-            else:
-                raise Exception(f'Unrecognized data type {data_type}')
-
-            filename = f"{rootname}-{data_type.replace(' ', '-')}.png"
+            data_array, title, zlim = self._select_data_for_plot(data_type)
+            filename = f"{rootname}-gridded-{data_type.replace(' ', '-')}.png"
             self._plot_map(data_array, prog_res, title, filename, colormap, zlim)
 
     def save_to_zarr(self, filename):
@@ -423,3 +428,39 @@ class NgvlaRayTracer:
             vbc = vb - vc
             cross = np.cross(vba, vbc)
             print(it, '=', np.sqrt(np.inner(cross, cross)) / 2)
+
+    def _plot_no_gridding(self, data_array, title, filename, zlim, colormap='viridis', resolution=0.1):
+        cmap = get_proper_color_map(colormap)
+        fig, ax = create_figure_and_axes([10, 8], [1, 1])
+        x_pnt = self.pr_pnt[:, 0]
+        y_pnt = self.pr_pnt[:, 1]
+        x_axis = Axis(x_pnt, resolution)
+        y_axis = Axis(y_pnt, resolution)
+        extent = compute_extent(x_axis.array, y_axis.array, margin=0.1)
+
+        if zlim is None:
+            vmin = np.nanmin(data_array)
+            vmax = np.nanmax(data_array)
+        else:
+            vmin = zlim[0]
+            vmax = zlim[1]
+        norm = Normalize(vmin=vmin, vmax=vmax)
+
+        notnan = ~ np.isnan(data_array)
+        colors = cmap(norm(data_array[notnan]))
+        ax.scatter(x_pnt[notnan], y_pnt[notnan], color=colors, s=resolution)
+
+        ax.set_title(title)
+        ax.set_xlim(extent[:2])
+        ax.set_ylim(extent[2:])
+        well_positioned_colorbar(ax, fig, cmap, "Z Scale")
+        close_figure(fig, '', filename, 300, False)
+
+    def plot_no_grid(self, data_types, rootname, colormap='viridis'):
+        for data_type in data_types:
+            data_array, title, zlim = self._select_data_for_plot(data_type)
+            filename = f"{rootname}-no-grid-{data_type.replace(' ', '-')}.png"
+            self._plot_no_gridding(data_array, title, filename, colormap, zlim)
+
+
+
