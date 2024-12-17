@@ -1,3 +1,4 @@
+import matplotlib.image
 import numpy as np
 
 from matplotlib import pyplot as plt
@@ -52,13 +53,13 @@ def close_figure(figure, title, filename, dpi, display, tight_layout=True):
     return
 
 
-def well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
+def well_positioned_colorbar(ax, fig, mappable, label, location='right', size='5%', pad=0.05):
     """
     Adds a well positioned colorbar to a plot
     Args:
         ax: Axes instance to add the colorbar
         fig: Figure in which the axes are embedded
-        image: The plt.imshow instance associated to the colorbar
+        mappable: The plt.imshow or colormap instance associated to the colorbar
         label: Colorbar label
         location: Colorbar location
         size: Colorbar size
@@ -69,7 +70,13 @@ def well_positioned_colorbar(ax, fig, image, label, location='right', size='5%',
     """
     divider = make_axes_locatable(ax)
     cax = divider.append_axes(location, size=size, pad=pad)
-    return fig.colorbar(image, label=label, cax=cax)
+
+    if isinstance(mappable, matplotlib.image.AxesImage):
+        return fig.colorbar(mappable, label=label, cax=cax)
+    else:  # mappable is a colormap
+        sm = plt.cm.ScalarMappable(cmap=mappable)
+        sm.set_array([])
+        return fig.colorbar(sm, label=label, cax=cax)
 
 
 def compute_extent(x_axis, y_axis, margin=0):
