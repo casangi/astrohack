@@ -7,6 +7,7 @@ from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT, PanelPoint, PanelM
 from astrohack.utils.constants import *
 from astrohack.utils import convert_unit
 
+
 class BasePanel:
     markers = ['X', 'o', '*', 'P', 'D']
     colors = ['g', 'g', 'r', 'r', 'b']
@@ -182,6 +183,3 @@ class BasePanel:
             circle = plt.Circle((screw.yc, screw.xc), self.plot_screw_size, color=cmap(norm(corr)),
                                 fill=True)
             ax.add_artist(circle)
-
-
-
