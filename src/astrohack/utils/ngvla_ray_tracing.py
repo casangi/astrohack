@@ -1,8 +1,13 @@
+from copyreg import pickle
+
 import numpy as np
 from matplotlib.colors import Normalize
+from numba.core import types
 from scipy.interpolate import griddata
 from numba import njit
 import xarray as xr
+import h5py
+import pickle
 
 from astrohack.utils import convert_unit
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
@@ -10,6 +15,7 @@ from astrohack.visualization.plot_tools import get_proper_color_map, create_figu
 
 nanvec3d = np.array([np.nan, np.nan, np.nan])
 intblankval = -1000
+return_line = '\033[F'
 
 
 def numpy_size(array):
@@ -143,6 +149,48 @@ def jitted_triangle_find(pr_point, reflection, sc_mesh, sc_pnt, sc_mesh_norm):
     return intblankval, nanvec3d
 
 
+@njit(cache=False, nogil=True)
+def crop_secondary_mesh(pr_pnt, sc_reflec_pnt, max_distances, sc_pnt, sc_mesh):
+    sc_cropped_mesh = []
+    print()
+    for ipnt in range(pr_pnt.shape[0]):
+        if not np.isfinite(max_distances[ipnt]):
+            empty_list = [np.int32(x) for x in range(0)]
+            sc_cropped_mesh.append([empty_list])
+            continue
+
+        print(return_line, 'Cropping: ', 100*ipnt/pr_pnt.shape[0], '%      ')
+        sc_point = sc_reflec_pnt[ipnt]
+        max_dist = max_distances[ipnt]
+        
+        pnt_distances = np.sqrt(np.sum((sc_pnt - sc_point)**2, axis=1))
+        isc_pnt = np.arange(pnt_distances.shape[0])
+
+        print('distancias feitas')
+        sel_dist = pnt_distances <= max_dist
+
+        multiplier = 1.1
+        while np.sum(sel_dist) < 3:
+            max_dist *= multiplier
+            sel_dist = pnt_distances <= max_dist
+            print(max_dist)
+
+        print('selecao dos pontos feita')
+        selected_triangles = []
+        # for triangle in sc_mesh:
+        #     for point in isc_pnt[sel_dist]:
+        #         if point in triangle:
+        #             selected_triangles.append(triangle)
+        for point in isc_pnt[sel_dist]:
+            for ix in range(3):
+                selec = sc_mesh[:, ix] == point
+                selected_triangles.extend(sc_mesh[selec])
+        print('selecao dos triangulos')
+
+        sc_cropped_mesh.append(selected_triangles)
+    return sc_cropped_mesh
+
+
 class Axis:
     def __init__(self, user_array, resolution):
         mini, maxi = np.min(user_array), np.max(user_array)
@@ -197,6 +245,7 @@ class NgvlaRayTracer:
         self.pr_mesh_norm = None
         self.sc_mesh = None
         self.sc_mesh_norm = None
+        self.sc_cropped_mesh = None
 
     def _shift_to_focus_origin(self):
         # Both dishes are in the same coordinates but this is not the
@@ -460,7 +509,64 @@ class NgvlaRayTracer:
         for data_type in data_types:
             data_array, title, zlim = self._select_data_for_plot(data_type)
             filename = f"{rootname}-no-grid-{data_type.replace(' ', '-')}.png"
-            self._plot_no_gridding(data_array, title, filename, colormap, zlim)
+            self._plot_no_gridding(data_array, title, filename, zlim)
+
+    def crop_secondary_mesh(self, max_distances):
+        sc_cropped_mesh = []
+        max_length = 0
+        imax = 0
+        for ipnt in range(self.pr_pnt.shape[0]):
+        # for ipnt in range(1000):
+        #     ipnt = np.random.randint(0, self.pr_pnt.shape[0])
+
+            if not np.isfinite(max_distances[ipnt]):
+                sc_cropped_mesh.append([])
+                continue
+
+            print(f'{return_line}Cropping: {100*ipnt/self.pr_pnt.shape[0]:.2f}%      ')
+            sc_point = self.sc_reflec_pnt[ipnt]
+            max_dist = max_distances[ipnt]
+
+            pnt_distances = np.sqrt(np.sum((self.sc_pnt - sc_point)**2, axis=1))
+            isc_pnt = np.arange(pnt_distances.shape[0])
+
+            sel_dist = pnt_distances <= max_dist
+            multiplier = 1.1
+            while np.sum(sel_dist) < 3:
+                max_dist *= multiplier
+                sel_dist = pnt_distances <= max_dist
+
+            selected_triangles = []
+            for point in isc_pnt[sel_dist]:
+                for ix in range(3):
+                    selec = self.sc_mesh[:, ix] == point
+                    selected_triangles.extend(self.sc_mesh[selec])
+
+            orig_tri = self.sc_reflec_triangle[ipnt]
+            # print(orig_tri)
+            # print(selected_triangles)
+
+            if len(selected_triangles) > max_length:
+                max_length = len(selected_triangles)
+                imax = ipnt
+            sc_cropped_mesh.append(np.array(selected_triangles))
+
+        print(f'Max lenght is {max_length} Triangles at {ipnt}')
+        #self.sc_cropped_mesh = np.asarray(sc_cropped_mesh)
+
+        with open("cropped_list.pkl", "wb") as f:
+            pickle.dump(sc_cropped_mesh, f)
+        # np.save('cropped_mesh_selection.npy', self.sc_cropped_mesh)
+
+
+    def crop_secondary_mesh_jit(self, max_distances):
+        sc_cropped_mesh = crop_secondary_mesh(self.pr_pnt,
+                                              self.sc_reflec_pnt,
+                                              max_distances,
+                                              self.sc_pnt,
+                                              self.sc_mesh)
+        self.sc_cropped_mesh = np.asarray(sc_cropped_mesh)
+        np.save('cropped_mesh_selection.npy', self.sc_cropped_mesh)
 
 
 
