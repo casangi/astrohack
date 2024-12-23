@@ -6,6 +6,7 @@ import toolviper.utils.logger as logger
 import astropy.units as units
 import xarray as xr
 
+from astrohack.utils import get_data_name
 from astrohack.utils.conversion import convert_unit, hadec_to_elevation
 from astrohack.utils.algorithms import least_squares
 from astrohack.utils.constants import *
@@ -23,15 +24,15 @@ def locit_separated_chunk(locit_parms):
     xds_data = locit_parms['xds_data']
     field_id, time, delays, freq = _get_data_from_locit_xds(xds_data, locit_parms['polarization'])
 
-    if _has_valid_data(field_id, time, delays, locit_parms["this_ant"].split('_')[1],
-                       ddi=locit_parms["this_ddi"].split('_')[1]):
-        coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
+    if _has_valid_data(field_id, time, delays, locit_parms["this_ant"], ddi=locit_parms["this_ddi"]):
 
-        fit, variance = _fit_data(coordinates, delays, locit_parms)
-        model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_delay_rate'])
-        _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
-                           elevation_limit)
+        coordinates, delays, lst, elevation_limit, nin = _build_filtered_arrays(field_id, time, delays, locit_parms)
+        if _elevation_ok(nin, locit_parms["this_ant"]):
+            fit, variance = _fit_data(coordinates, delays, locit_parms)
+            model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                                      locit_parms['fit_delay_rate'])
+            _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
+                               elevation_limit)
 
 
 def locit_combined_chunk(locit_parms):
@@ -61,13 +62,14 @@ def locit_combined_chunk(locit_parms):
     time = np.concatenate(time_list)
     field_id = np.concatenate(field_list)
 
-    if _has_valid_data(field_id, time, delays, locit_parms["this_ant"].split('_')[1]):
-        coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
-        fit, variance = _fit_data(coordinates, delays, locit_parms)
-        model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                                  locit_parms['fit_delay_rate'])
-        _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq_list,
-                           elevation_limit)
+    if _has_valid_data(field_id, time, delays, locit_parms["this_ant"]):
+        coordinates, delays, lst, elevation_limit, nin = _build_filtered_arrays(field_id, time, delays, locit_parms)
+        if _elevation_ok(nin, locit_parms["this_ant"]):
+            fit, variance = _fit_data(coordinates, delays, locit_parms)
+            model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                                      locit_parms['fit_delay_rate'])
+            _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq_list,
+                               elevation_limit)
 
 
 def locit_difference_chunk(locit_parms):
@@ -93,13 +95,14 @@ def locit_difference_chunk(locit_parms):
     ddi_1 = _get_data_from_locit_xds(data[ddi_list[1]], locit_parms['polarization'], get_phases=True, split_pols=True)
 
     time, field_id, delays, freq = _delays_from_phase_differences(ddi_0, ddi_1)
-    if _has_valid_data(field_id, time, delays, locit_parms["this_ant"].split('_')[1]):
-        coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
-        fit, variance = _fit_data(coordinates, delays, locit_parms)
-        model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                                  locit_parms['fit_delay_rate'])
-        _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
-                           elevation_limit)
+    if _has_valid_data(field_id, time, delays, locit_parms["this_ant"]):
+        coordinates, delays, lst, elevation_limit, nin = _build_filtered_arrays(field_id, time, delays, locit_parms)
+        if _elevation_ok(nin, locit_parms["this_ant"]):
+            fit, variance = _fit_data(coordinates, delays, locit_parms)
+            model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                                      locit_parms['fit_delay_rate'])
+            _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
+                               elevation_limit)
 
 
 def _delays_from_phase_differences(ddi_0, ddi_1):
@@ -204,16 +207,29 @@ def _different_times(pos_time, neg_time, pos_phase, neg_phase, fields, tolerance
         
     return out_times, out_field, _phase_wrapping(out_phase)
 
+
 def _has_valid_data(field_id, time, delays, antenna, ddi=None):
-    msg = f'Antenna {antenna} '
+    msg = f'Antenna {get_data_name(antenna)} '
     if ddi is not None:
-        msg += f'DDI {ddi} '
+        msg += f'DDI {get_data_name(ddi)} '
     msg += 'has no valid data'
     if len(field_id) == 0 or len(time) == 0 or len(delays) == 0:
         logger.warning(msg)
         return False
     else:
         return True
+
+
+def _elevation_ok(nin, antenna, ddi=None):
+    msg = f'Antenna {get_data_name(antenna)} '
+    if ddi is not None:
+        msg += f'DDI {get_data_name(ddi)} '
+    msg += 'has no valid data, try decreasing the elevation limit.'
+    if nin > 0:
+        return True
+    else:
+        logger.warning(msg)
+        return False
 
 
 def _phase_wrapping(phase):
@@ -443,8 +459,9 @@ def _build_filtered_arrays(field_id, time, delays, locit_parms):
     delays = delays[selection]
     coordinates = coordinates[:, selection]
     lst = lst[selection]
+    nin = np.sum(selection)
 
-    return coordinates, delays, lst, elevation_limit
+    return coordinates, delays, lst, elevation_limit, nin
 
 
 def _geometrical_coeffs(coordinates):
