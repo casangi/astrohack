@@ -149,24 +149,13 @@ class TestLocit():
             Run locit with elevation_limit=90 and expect locit to fail because there is no available data.
         """
 
-        failed = False
-
-        try:
-            locit(
+        assert locit(
                 locit_name="data/locit-input-pha.locit.zarr",
                 position_name="data/locit-input-pha.position.zarr",
                 elevation_limit=90.0,
                 parallel=False,
                 overwrite=True
-            )
-
-            failed = True
-
-        except KeyError:
-            pass
-
-        finally:
-            assert failed == False
+            ) is None
 
     def test_locit_polarization(self):
         """
