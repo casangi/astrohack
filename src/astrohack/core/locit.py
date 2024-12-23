@@ -111,7 +111,6 @@ def _delays_from_phase_differences(ddi_0, ddi_1):
     Args:
         ddi_0: First DDI
         ddi_1: Second DDI
-        multi_pol: is the DDI data split by polarization?
 
     Returns:
     Matched times, matched field ids, matched phase difference delays, difference in frequency
@@ -602,9 +601,12 @@ def _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_rate, ve
     limsup = np.full(npar, +np.inf)
 
     maxfevs = [100000, 1000000, 10000000]
+    covar = None
+    fit = None
     for maxfev in maxfevs:
         try:
-            fit, covar = opt.curve_fit(fit_function, coordinates, delays, p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
+            results = opt.curve_fit(fit_function, coordinates, delays, p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
+            fit, covar = results[0:2]
         except RuntimeError:
             if verbose:
                 logger.info("Increasing number of iterations")
