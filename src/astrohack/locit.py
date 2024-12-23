@@ -178,18 +178,21 @@ def locit(
         key_order = ['ant', 'ddi']
 
     if compute_graph(locit_mds, function, locit_params, key_order, parallel=parallel):
-        logger.info("Finished processing")
+        if pathlib.Path(locit_params['position_name']).exists():
+            logger.info("Finished processing")
 
-        output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_attr")
-        write_meta_data(output_attr_file, attributes)
+            output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_attr")
+            write_meta_data(output_attr_file, attributes)
 
-        output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_input")
-        write_meta_data(output_attr_file, input_params)
+            output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_input")
+            write_meta_data(output_attr_file, input_params)
 
-        position_mds = AstrohackPositionFile(locit_params['position_name'])
-        position_mds.open()
-
-        return position_mds
+            position_mds = AstrohackPositionFile(locit_params['position_name'])
+            position_mds.open()
+            return position_mds
+        else:
+            logger.warning("No data to process")
+            return None
 
     else:
         logger.warning("No data to process")

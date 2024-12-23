@@ -6,6 +6,7 @@ import toolviper.utils.logger as logger
 import astropy.units as units
 import xarray as xr
 
+from astrohack.utils import get_data_name
 from astrohack.utils.conversion import convert_unit, hadec_to_elevation
 from astrohack.utils.algorithms import least_squares
 from astrohack.utils.constants import *
@@ -23,18 +24,15 @@ def locit_separated_chunk(locit_parms):
     xds_data = locit_parms['xds_data']
     field_id, time, delays, freq = _get_data_from_locit_xds(xds_data, locit_parms['polarization'])
 
-    coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
+    if _has_valid_data(field_id, time, delays, locit_parms["this_ant"], ddi=locit_parms["this_ddi"]):
 
-    if len(delays) == 0:
-        msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
-        logger.warning(msg)
-        return
-
-    fit, variance = _fit_data(coordinates, delays, locit_parms)
-    model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_delay_rate'])
-    _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq, elevation_limit)
-    return
+        coordinates, delays, lst, elevation_limit, nin = _build_filtered_arrays(field_id, time, delays, locit_parms)
+        if _elevation_ok(nin, locit_parms["this_ant"]):
+            fit, variance = _fit_data(coordinates, delays, locit_parms)
+            model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                                      locit_parms['fit_delay_rate'])
+            _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
+                               elevation_limit)
 
 
 def locit_combined_chunk(locit_parms):
@@ -64,19 +62,14 @@ def locit_combined_chunk(locit_parms):
     time = np.concatenate(time_list)
     field_id = np.concatenate(field_list)
 
-    coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
-
-    if len(delays) == 0:
-        msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
-        logger.warning(msg)
-        return
-
-    fit, variance = _fit_data(coordinates, delays, locit_parms)
-    model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_delay_rate'])
-    _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq_list,
-                       elevation_limit)
-    return
+    if _has_valid_data(field_id, time, delays, locit_parms["this_ant"]):
+        coordinates, delays, lst, elevation_limit, nin = _build_filtered_arrays(field_id, time, delays, locit_parms)
+        if _elevation_ok(nin, locit_parms["this_ant"]):
+            fit, variance = _fit_data(coordinates, delays, locit_parms)
+            model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                                      locit_parms['fit_delay_rate'])
+            _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq_list,
+                               elevation_limit)
 
 
 def locit_difference_chunk(locit_parms):
@@ -101,30 +94,23 @@ def locit_difference_chunk(locit_parms):
     ddi_0 = _get_data_from_locit_xds(data[ddi_list[0]], locit_parms['polarization'], get_phases=True, split_pols=True)
     ddi_1 = _get_data_from_locit_xds(data[ddi_list[1]], locit_parms['polarization'], get_phases=True, split_pols=True)
 
-    time, field_id, delays, freq = _delays_from_phase_differences(ddi_0, ddi_1,
-                                                                  multi_pol=locit_parms['polarization'] == 'both')
-
-    coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
-
-    if len(delays) == 0:
-        msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
-        logger.warning(msg)
-        return
-    fit, variance = _fit_data(coordinates, delays, locit_parms)
-    model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_delay_rate'])
-    _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
-                       elevation_limit)
-    return
+    time, field_id, delays, freq = _delays_from_phase_differences(ddi_0, ddi_1)
+    if _has_valid_data(field_id, time, delays, locit_parms["this_ant"]):
+        coordinates, delays, lst, elevation_limit, nin = _build_filtered_arrays(field_id, time, delays, locit_parms)
+        if _elevation_ok(nin, locit_parms["this_ant"]):
+            fit, variance = _fit_data(coordinates, delays, locit_parms)
+            model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                                      locit_parms['fit_delay_rate'])
+            _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
+                               elevation_limit)
 
 
-def _delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
+def _delays_from_phase_differences(ddi_0, ddi_1):
     """
     Compute delays from the difference in phase between two DDIs of different frequencies
     Args:
         ddi_0: First DDI
         ddi_1: Second DDI
-        multi_pol: is the DDI data split by polarization?
 
     Returns:
     Matched times, matched field ids, matched phase difference delays, difference in frequency
@@ -145,11 +131,11 @@ def _delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
         logger.error(msg)
         raise Exception(msg)
 
-    if multi_pol:
+    if isinstance(fields, list):
         time = []
         field_id = []
         phase = []
-        for i_pol in range(2):
+        for i_pol in range(len(fields)):
             this_time, this_field_id, this_phase = _match_times_and_phase_difference(pos_time[i_pol], neg_time[i_pol],
                                                                                      pos_phase[i_pol], neg_phase[i_pol],
                                                                                      fields[i_pol])
@@ -221,6 +207,30 @@ def _different_times(pos_time, neg_time, pos_phase, neg_phase, fields, tolerance
     return out_times, out_field, _phase_wrapping(out_phase)
 
 
+def _has_valid_data(field_id, time, delays, antenna, ddi=None):
+    msg = f'Antenna {get_data_name(antenna)} '
+    if ddi is not None:
+        msg += f'DDI {get_data_name(ddi)} '
+    msg += 'has no valid data'
+    if len(field_id) == 0 or len(time) == 0 or len(delays) == 0:
+        logger.warning(msg)
+        return False
+    else:
+        return True
+
+
+def _elevation_ok(nin, antenna, ddi=None):
+    msg = f'Antenna {get_data_name(antenna)} '
+    if ddi is not None:
+        msg += f'DDI {get_data_name(ddi)} '
+    msg += 'has no valid data, try decreasing the elevation limit.'
+    if nin > 0:
+        return True
+    else:
+        logger.warning(msg)
+        return False
+
+
 def _phase_wrapping(phase):
     """
     Wraps phase to the -pi to pi interval
@@ -258,12 +268,6 @@ def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False, split_po
         msg = f'Polarization scheme {pol} is not what is expected for antenna based gains'
         logger.error(msg)
         raise Exception(msg)
-    if pol_selection in pol:
-        i_pol = np.where(np.array(pol) == pol_selection)[0][0]
-        phases = xds_data[f'P{i_pol}_PHASE_GAINS'].values
-        time = getattr(xds_data, f'p{i_pol}_time').values
-        field_id = xds_data[f'P{i_pol}_FIELD_ID'].values
-
     elif pol_selection == 'both':
         phases = [xds_data[f'P0_PHASE_GAINS'].values, xds_data[f'P1_PHASE_GAINS'].values]
         field_id = [xds_data[f'P0_FIELD_ID'].values, xds_data[f'P1_FIELD_ID'].values]
@@ -273,9 +277,30 @@ def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False, split_po
             field_id = np.concatenate(field_id)
             time = np.concatenate(time)
     else:
-        msg = f'Polarization {pol_selection} is not found in data'
-        logger.error(msg)
-        raise Exception(msg)
+        sel_pol_list = [*pol_selection]
+        phases = []
+        time = []
+        field_id = []
+        for pol_item in sel_pol_list:
+            if pol_item in pol:
+                i_pol = np.where(np.array(pol) == pol_item)[0][0]
+                phases.append(xds_data[f'P{i_pol}_PHASE_GAINS'].values)
+                time.append(xds_data[f'p{i_pol}_time'].values)
+                field_id.append(xds_data[f'P{i_pol}_FIELD_ID'].values)
+            else:
+                msg = f'Polarization {pol_selection} is not found in data'
+                logger.warning(msg)
+
+        if len(phases) == 0:
+            msg = f'No valid data found for polarization selection {pol_selection}'
+            logger.error(msg)
+            raise Exception(msg)
+
+        if not split_pols:
+            phases = np.concatenate(phases)
+            field_id = np.concatenate(field_id)
+            time = np.concatenate(time)
+
     if get_phases:
         return field_id, time, phases, freq  # field_id, time, phases, frequency
     else:
@@ -433,8 +458,9 @@ def _build_filtered_arrays(field_id, time, delays, locit_parms):
     delays = delays[selection]
     coordinates = coordinates[:, selection]
     lst = lst[selection]
+    nin = np.sum(selection)
 
-    return coordinates, delays, lst, elevation_limit
+    return coordinates, delays, lst, elevation_limit, nin
 
 
 def _geometrical_coeffs(coordinates):
@@ -575,9 +601,12 @@ def _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_rate, ve
     limsup = np.full(npar, +np.inf)
 
     maxfevs = [100000, 1000000, 10000000]
+    covar = None
+    fit = None
     for maxfev in maxfevs:
         try:
-            fit, covar = opt.curve_fit(fit_function, coordinates, delays, p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
+            results = opt.curve_fit(fit_function, coordinates, delays, p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
+            fit, covar = results[0:2]
         except RuntimeError:
             if verbose:
                 logger.info("Increasing number of iterations")
