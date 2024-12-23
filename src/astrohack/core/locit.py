@@ -23,18 +23,15 @@ def locit_separated_chunk(locit_parms):
     xds_data = locit_parms['xds_data']
     field_id, time, delays, freq = _get_data_from_locit_xds(xds_data, locit_parms['polarization'])
 
-    coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
+    if _has_valid_data(field_id, time, delays, locit_parms["this_ant"].split('_')[1],
+                       ddi=locit_parms["this_ddi"].split('_')[1]):
+        coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
 
-    if len(delays) == 0:
-        msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
-        logger.warning(msg)
-        return
-
-    fit, variance = _fit_data(coordinates, delays, locit_parms)
-    model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+        fit, variance = _fit_data(coordinates, delays, locit_parms)
+        model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
                                               locit_parms['fit_delay_rate'])
-    _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq, elevation_limit)
-    return
+        _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
+                           elevation_limit)
 
 
 def locit_combined_chunk(locit_parms):
@@ -64,19 +61,13 @@ def locit_combined_chunk(locit_parms):
     time = np.concatenate(time_list)
     field_id = np.concatenate(field_list)
 
-    coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
-
-    if len(delays) == 0:
-        msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
-        logger.warning(msg)
-        return
-
-    fit, variance = _fit_data(coordinates, delays, locit_parms)
-    model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_delay_rate'])
-    _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq_list,
-                       elevation_limit)
-    return
+    if _has_valid_data(field_id, time, delays, locit_parms["this_ant"].split('_')[1]):
+        coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
+        fit, variance = _fit_data(coordinates, delays, locit_parms)
+        model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                                  locit_parms['fit_delay_rate'])
+        _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq_list,
+                           elevation_limit)
 
 
 def locit_difference_chunk(locit_parms):
@@ -103,19 +94,13 @@ def locit_difference_chunk(locit_parms):
 
     time, field_id, delays, freq = _delays_from_phase_differences(ddi_0, ddi_1,
                                                                   multi_pol=locit_parms['polarization'] == 'both')
-
-    coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
-
-    if len(delays) == 0:
-        msg = f'{locit_parms["this_ant"]} {locit_parms["this_ddi"]} has no valid data, skipping'
-        logger.warning(msg)
-        return
-    fit, variance = _fit_data(coordinates, delays, locit_parms)
-    model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                              locit_parms['fit_delay_rate'])
-    _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
-                       elevation_limit)
-    return
+    if _has_valid_data(field_id, time, delays, locit_parms["this_ant"].split('_')[1]):
+        coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
+        fit, variance = _fit_data(coordinates, delays, locit_parms)
+        model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                                  locit_parms['fit_delay_rate'])
+        _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
+                           elevation_limit)
 
 
 def _delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
@@ -219,6 +204,17 @@ def _different_times(pos_time, neg_time, pos_phase, neg_phase, fields, tolerance
         out_field[i_time] = fields[i_pos]
         
     return out_times, out_field, _phase_wrapping(out_phase)
+
+def _has_valid_data(field_id, time, delays, antenna, ddi=None):
+    msg = f'Antenna {antenna} '
+    if ddi is not None:
+        msg += f'DDI {ddi} '
+    msg += 'has no valid data'
+    if len(field_id) == 0 or len(time) == 0 or len(delays) == 0:
+        logger.warning(msg)
+        return False
+    else:
+        return True
 
 
 def _phase_wrapping(phase):
