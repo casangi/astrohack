@@ -535,17 +535,20 @@ def create_pretty_table(field_names, alignment='c'):
 
 def create_dataset_label(ant_id, ddi_id):
     if 'ant_' in ant_id:
-        ant_name = ant_id.split('_')[1]
+        ant_name = get_data_name(ant_id)
     else:
         ant_name = ant_id
     if isinstance(ddi_id, int):
         ddi_name = str(ddi_id)
     elif 'ddi_' in ddi_id:
-        ddi_name = ddi_id.split('_')[1]
+        ddi_name = get_data_name(ddi_id)
     else:
         ddi_name = ddi_id
     return f'{ant_name.upper()}, DDI {ddi_name}'
 
+
+def get_data_name(data_id):
+    return data_id.split('_')[1]
 
 def significant_figures_round(x, digits):
     if np.isscalar(x):
