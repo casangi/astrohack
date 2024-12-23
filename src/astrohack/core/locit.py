@@ -92,8 +92,7 @@ def locit_difference_chunk(locit_parms):
     ddi_0 = _get_data_from_locit_xds(data[ddi_list[0]], locit_parms['polarization'], get_phases=True, split_pols=True)
     ddi_1 = _get_data_from_locit_xds(data[ddi_list[1]], locit_parms['polarization'], get_phases=True, split_pols=True)
 
-    time, field_id, delays, freq = _delays_from_phase_differences(ddi_0, ddi_1,
-                                                                  multi_pol=locit_parms['polarization'] == 'both')
+    time, field_id, delays, freq = _delays_from_phase_differences(ddi_0, ddi_1)
     if _has_valid_data(field_id, time, delays, locit_parms["this_ant"].split('_')[1]):
         coordinates, delays, lst, elevation_limit = _build_filtered_arrays(field_id, time, delays, locit_parms)
         fit, variance = _fit_data(coordinates, delays, locit_parms)
@@ -103,7 +102,7 @@ def locit_difference_chunk(locit_parms):
                            elevation_limit)
 
 
-def _delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
+def _delays_from_phase_differences(ddi_0, ddi_1):
     """
     Compute delays from the difference in phase between two DDIs of different frequencies
     Args:
@@ -130,11 +129,11 @@ def _delays_from_phase_differences(ddi_0, ddi_1, multi_pol=False):
         logger.error(msg)
         raise Exception(msg)
 
-    if multi_pol:
+    if isinstance(fields, list):
         time = []
         field_id = []
         phase = []
-        for i_pol in range(2):
+        for i_pol in range(len(fields)):
             this_time, this_field_id, this_phase = _match_times_and_phase_difference(pos_time[i_pol], neg_time[i_pol],
                                                                                      pos_phase[i_pol], neg_phase[i_pol],
                                                                                      fields[i_pol])
@@ -254,12 +253,6 @@ def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False, split_po
         msg = f'Polarization scheme {pol} is not what is expected for antenna based gains'
         logger.error(msg)
         raise Exception(msg)
-    if pol_selection in pol:
-        i_pol = np.where(np.array(pol) == pol_selection)[0][0]
-        phases = xds_data[f'P{i_pol}_PHASE_GAINS'].values
-        time = getattr(xds_data, f'p{i_pol}_time').values
-        field_id = xds_data[f'P{i_pol}_FIELD_ID'].values
-
     elif pol_selection == 'both':
         phases = [xds_data[f'P0_PHASE_GAINS'].values, xds_data[f'P1_PHASE_GAINS'].values]
         field_id = [xds_data[f'P0_FIELD_ID'].values, xds_data[f'P1_FIELD_ID'].values]
@@ -269,9 +262,30 @@ def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False, split_po
             field_id = np.concatenate(field_id)
             time = np.concatenate(time)
     else:
-        msg = f'Polarization {pol_selection} is not found in data'
-        logger.error(msg)
-        raise Exception(msg)
+        sel_pol_list = [*pol_selection]
+        phases = []
+        time = []
+        field_id = []
+        for pol_item in sel_pol_list:
+            if pol_item in pol:
+                i_pol = np.where(np.array(pol) == pol_item)[0][0]
+                phases.append(xds_data[f'P{i_pol}_PHASE_GAINS'].values)
+                time.append(xds_data[f'p{i_pol}_time'].values)
+                field_id.append(xds_data[f'P{i_pol}_FIELD_ID'].values)
+            else:
+                msg = f'Polarization {pol_selection} is not found in data'
+                logger.warning(msg)
+
+        if len(phases) == 0:
+            msg = f'No valid data found for polarization selection {pol_selection}'
+            logger.error(msg)
+            raise Exception(msg)
+
+        if not split_pols:
+            phases = np.concatenate(phases)
+            field_id = np.concatenate(field_id)
+            time = np.concatenate(time)
+
     if get_phases:
         return field_id, time, phases, freq  # field_id, time, phases, frequency
     else:
