@@ -3,7 +3,6 @@ import inspect
 import textwrap
 
 import numpy as np
-import toolviper.utils.logger as logger
 
 from prettytable import PrettyTable
 from toolviper.utils import logger as logger
@@ -239,6 +238,8 @@ def print_dict_table(input_parameters, split_key=None, alignment='l', heading="I
     Args:
         input_parameters: Dictionary containing metadata attributes
         split_key: key to be sqrt and displayed as nx X ny
+        alignment: Column alignment
+        heading: a small heading for the table
 
     Returns:
 
