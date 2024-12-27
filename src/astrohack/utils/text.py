@@ -3,7 +3,6 @@ import inspect
 import textwrap
 
 import numpy as np
-import toolviper.utils.logger as logger
 
 from prettytable import PrettyTable
 from toolviper.utils import logger as logger
@@ -239,6 +238,8 @@ def print_dict_table(input_parameters, split_key=None, alignment='l', heading="I
     Args:
         input_parameters: Dictionary containing metadata attributes
         split_key: key to be sqrt and displayed as nx X ny
+        alignment: Column alignment
+        heading: a small heading for the table
 
     Returns:
 
@@ -535,17 +536,20 @@ def create_pretty_table(field_names, alignment='c'):
 
 def create_dataset_label(ant_id, ddi_id):
     if 'ant_' in ant_id:
-        ant_name = ant_id.split('_')[1]
+        ant_name = get_data_name(ant_id)
     else:
         ant_name = ant_id
     if isinstance(ddi_id, int):
         ddi_name = str(ddi_id)
     elif 'ddi_' in ddi_id:
-        ddi_name = ddi_id.split('_')[1]
+        ddi_name = get_data_name(ddi_id)
     else:
         ddi_name = ddi_id
     return f'{ant_name.upper()}, DDI {ddi_name}'
 
+
+def get_data_name(data_id):
+    return data_id.split('_')[1]
 
 def significant_figures_round(x, digits):
     if np.isscalar(x):
