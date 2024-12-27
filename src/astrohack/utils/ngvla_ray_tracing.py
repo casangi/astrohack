@@ -2,14 +2,12 @@ from copyreg import pickle
 
 import numpy as np
 from matplotlib.colors import Normalize
-from numba.core import types
 from scipy.interpolate import griddata
 from numba import njit
 import xarray as xr
-import h5py
 import pickle
 
-from astrohack.utils import convert_unit
+from astrohack.utils import convert_unit, data_statistics
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
     close_figure, compute_extent
 
@@ -246,6 +244,8 @@ class NgvlaRayTracer:
         self.sc_mesh = None
         self.sc_mesh_norm = None
         self.sc_cropped_mesh = None
+        self.sc_cropped_mesh_norm = None
+        self.sc_n_triangles = None
 
     def _shift_to_focus_origin(self):
         # Both dishes are in the same coordinates but this is not the
@@ -373,22 +373,26 @@ class NgvlaRayTracer:
                 if key in ['sc_pnt', 'sc_norm']:
                     xds[key] = xr.DataArray(item, dims=['sc_pnt', 'xyz'])
                 elif key in ['pr_mesh', 'pr_mesh_norm']:
-                    xds[key] = xr.DataArray(item, dims=['pr_tri', 'xyz'])
+                    xds[key] = xr.DataArray(item, dims=['pr_tri', 'tri_corners'])
                 elif key in ['sc_mesh', 'sc_mesh_norm']:
-                    xds[key] = xr.DataArray(item, dims=['sc_tri', 'xyz'])
+                    xds[key] = xr.DataArray(item, dims=['sc_tri', 'tri_corners'])
                 elif key == 'focus_offset':
                     xds[key] = xr.DataArray(item, dims=['xyz'])
                 elif len(item.shape) == 2:
                     xds[key] = xr.DataArray(item, dims=['pr_pnt', 'xyz'])
                 elif len(item.shape) == 1:
                     xds[key] = xr.DataArray(item, dims=['pr_pnt'])
+                elif key in ['sc_cropped_mesh']:
+                    xds[key] = xr.DataArray(item, dims=['pr_pnt', 'crop_tri', 'tri_corners'])
+                elif key in ['sc_cropped_mesh_norm']:
+                    xds[key] = xr.DataArray(item, dims=['pr_pnt', 'crop_tri', 'xyz'])
                 else:
                     raise Exception(f"Don't know what to do with {key}")
             elif item is None:
                 pass
             else:
                 xds.attrs[key] = item
-
+        print(xds)
         xds.to_zarr(filename, mode='w')
 
     def reread(self, xds_name):
@@ -445,6 +449,9 @@ class NgvlaRayTracer:
         #
         # return np.nan, np.full([3], np.nan)
 
+    def _find_triangle_on_cropped_mesh(self, pr_point, reflection, mesh_section, mesh_section_norm):
+        return jitted_triangle_find(pr_point, reflection, mesh_section, self.sc_pnt, mesh_section_norm)
+
     def secondary_reflection_on_mesh(self):
         self.sc_reflec = np.empty_like(self.pr_reflec)
         self.sc_reflec_pnt = np.empty_like(self.pr_reflec)
@@ -467,6 +474,36 @@ class NgvlaRayTracer:
 
         self.sc_reflec_triangle = np.where(np.abs(self.sc_reflec_triangle-intblankval)<1e-7, np.nan,
                                            self.sc_reflec_triangle)
+
+    def secondary_reflection_on_cropped_mesh(self):
+        self.sc_reflec = np.empty_like(self.pr_reflec)
+        self.sc_reflec_pnt = np.empty_like(self.pr_reflec)
+        self.sc_reflec_triangle = np.empty(self.pr_reflec.shape[0])
+        print()
+
+        # niter = 100
+        niter = self.pr_pnt.shape[0]
+        for ipnt in range(niter):
+            n_tri = self.sc_n_triangles[ipnt]
+            if n_tri == 0:
+                self.sc_reflec[ipnt] = nanvec3d
+                self.sc_reflec_pnt[ipnt] = nanvec3d
+                self.sc_reflec_triangle[ipnt] = np.nan
+            else:
+                pr_point = self.pr_pnt[ipnt]
+                pr_reflection = self.pr_reflec[ipnt]
+                mesh_section = self.sc_cropped_mesh[ipnt]
+                mesh_section_norm = self.sc_cropped_mesh_norm[ipnt]
+                itriangle, sc_point = self._find_triangle_on_cropped_mesh(pr_point, pr_reflection,
+                                                                          mesh_section, mesh_section_norm)
+
+                self.sc_reflec_triangle[ipnt] = itriangle
+                self.sc_reflec_pnt[ipnt] = sc_point
+                self.sc_reflec[ipnt] = reflect_on_surface(pr_reflection, self.sc_mesh_norm[itriangle])
+            #print(f'\033[FMesh reflections: {100 * ipnt / niter:.2f}%')
+
+        # self.sc_reflec_triangle = np.where(np.abs(self.sc_reflec_triangle-intblankval)<1e-7, np.nan,
+        #                                    self.sc_reflec_triangle)
 
     def triangle_area(self):
         for it, triangle in enumerate(self.sc_mesh):
@@ -511,19 +548,31 @@ class NgvlaRayTracer:
             filename = f"{rootname}-no-grid-{data_type.replace(' ', '-')}.png"
             self._plot_no_gridding(data_array, title, filename, zlim)
 
-    def crop_secondary_mesh(self, max_distances):
+    def crop_secondary_mesh(self, max_distances, i_sel=None):
         sc_cropped_mesh = []
-        max_length = 0
-        imax = 0
-        for ipnt in range(self.pr_pnt.shape[0]):
-        # for ipnt in range(1000):
-        #     ipnt = np.random.randint(0, self.pr_pnt.shape[0])
+        sc_cropped_mesh_norm = []
+        n_pnt = self.pr_pnt.shape[0]
+        sc_n_triang = np.full(n_pnt, 0, dtype=int)
+
+        if i_sel is None:
+            loop_list = range(n_pnt)
+        else:
+            if isinstance(i_sel, list):
+                loop_list = i_sel
+            else:
+                loop_list = [i_sel]
+
+        selec_dist = 0.1
+        sel_large_dists = max_distances>selec_dist
+
+        for ipnt in loop_list:
 
             if not np.isfinite(max_distances[ipnt]):
+                sc_n_triang[ipnt] = 0
                 sc_cropped_mesh.append([])
+                sc_cropped_mesh_norm.append([])
                 continue
 
-            print(f'{return_line}Cropping: {100*ipnt/self.pr_pnt.shape[0]:.2f}%      ')
             sc_point = self.sc_reflec_pnt[ipnt]
             max_dist = max_distances[ipnt]
 
@@ -532,31 +581,45 @@ class NgvlaRayTracer:
 
             sel_dist = pnt_distances <= max_dist
             multiplier = 1.1
+
             while np.sum(sel_dist) < 3:
+                # if i_sel is not None:
+                #     print(ipnt, np.sum(sel_dist), max_dist)
+                #     print()
                 max_dist *= multiplier
                 sel_dist = pnt_distances <= max_dist
 
             selected_triangles = []
+            triangle_normals = []
             for point in isc_pnt[sel_dist]:
                 for ix in range(3):
                     selec = self.sc_mesh[:, ix] == point
                     selected_triangles.extend(self.sc_mesh[selec])
+                    triangle_normals.extend(self.sc_mesh_norm[selec])
 
-            orig_tri = self.sc_reflec_triangle[ipnt]
-            # print(orig_tri)
-            # print(selected_triangles)
-
-            if len(selected_triangles) > max_length:
-                max_length = len(selected_triangles)
-                imax = ipnt
+            sc_n_triang[ipnt] = len(selected_triangles)
+            # print('triangulitos', sc_n_triang[ipnt], len(triangle_normals))
+            # print()
             sc_cropped_mesh.append(np.array(selected_triangles))
+            sc_cropped_mesh_norm.append(np.array(triangle_normals))
 
-        print(f'Max lenght is {max_length} Triangles at {ipnt}')
-        #self.sc_cropped_mesh = np.asarray(sc_cropped_mesh)
+            print(f'{return_line}Cropping: {100 * ipnt / self.pr_pnt.shape[0]:.2f}%      ')
 
-        with open("cropped_list.pkl", "wb") as f:
-            pickle.dump(sc_cropped_mesh, f)
-        # np.save('cropped_mesh_selection.npy', self.sc_cropped_mesh)
+        max_length = np.max(sc_n_triang)
+        imax = np.argmax(sc_n_triang)
+        print(f'Max lenght is {max_length} Triangles at {imax} {sc_n_triang[imax]}')
+
+        self.sc_n_triangles = sc_n_triang
+        cropped_shape = [n_pnt, max_length, 3]
+        self.sc_cropped_mesh = np.full(cropped_shape, np.nan)
+        self.sc_cropped_mesh_norm = np.full(cropped_shape, np.nan)
+        for ipnt in range(n_pnt):
+            n_triang = sc_n_triang[ipnt]
+            if n_triang > 0:
+                self.sc_cropped_mesh[ipnt, 0:n_triang] = sc_cropped_mesh[ipnt]
+                self.sc_cropped_mesh_norm[ipnt, 0:n_triang] = sc_cropped_mesh_norm[ipnt]
+
+        numpy_size(self.sc_cropped_mesh)
 
 
     def crop_secondary_mesh_jit(self, max_distances):
