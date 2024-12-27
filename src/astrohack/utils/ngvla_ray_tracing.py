@@ -120,12 +120,12 @@ def moller_trumbore_algorithm(ray_origin, ray_vector, pa, pb, pc):
         return False, nanvec3d
 
 
-@njit(cache=False, nogil=True)
+@njit(cache=True, nogil=True)
 def reflect_on_surface(light, normal):
     return light - 2 * np.dot(light, normal) * normal
 
 
-@njit(cache=False, nogil=True)
+@njit(cache=True, nogil=True)
 def jitted_triangle_find(pr_point, reflection, sc_mesh, sc_pnt):
     for it, triangle in enumerate(sc_mesh):
         va = sc_pnt[int(triangle[0])]
@@ -179,7 +179,7 @@ def crop_secondary_mesh(pr_pnt, sc_reflec_pnt, max_distances, sc_pnt, sc_mesh):
         sc_cropped_mesh.append(selected_triangles)
     return sc_cropped_mesh
 
-@njit(cache=False, nogil=True)
+@njit(cache=True, nogil=True)
 def cropped_secondary_mesh(pr_reflec, pr_pnt, sc_pnt, sc_cropped_mesh, sc_cropped_mesh_norm, sc_n_triangles):
     sc_reflec = np.empty_like(pr_reflec)
     sc_reflec_pnt = np.empty_like(pr_reflec)
@@ -458,7 +458,7 @@ class NgvlaRayTracer:
     def _find_triangle_on_cropped_mesh(self, pr_point, reflection, mesh_section):
         return jitted_triangle_find(pr_point, reflection, mesh_section, self.sc_pnt)
 
-    def secondary_reflection_on_mesh(self):
+    def secondary_reflection_on_mesh_brute_force(self):
         self.sc_reflec = np.empty_like(self.pr_reflec)
         self.sc_reflec_pnt = np.empty_like(self.pr_reflec)
         self.sc_reflec_triangle = np.empty(self.pr_reflec.shape[0])
