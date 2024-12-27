@@ -1,13 +1,10 @@
-from copyreg import pickle
-
 import numpy as np
 from matplotlib.colors import Normalize
 from scipy.interpolate import griddata
 from numba import njit
 import xarray as xr
-import pickle
 
-from astrohack.utils import convert_unit, data_statistics
+from astrohack.utils import convert_unit
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
     close_figure, compute_extent
 
@@ -129,19 +126,13 @@ def reflect_on_surface(light, normal):
 
 
 @njit(cache=False, nogil=True)
-def jitted_triangle_find(pr_point, reflection, sc_mesh, sc_pnt, sc_mesh_norm):
+def jitted_triangle_find(pr_point, reflection, sc_mesh, sc_pnt):
     for it, triangle in enumerate(sc_mesh):
         va = sc_pnt[int(triangle[0])]
         vb = sc_pnt[int(triangle[1])]
         vc = sc_pnt[int(triangle[2])]
-        t_norm = sc_mesh_norm[it]
-        # crosses_triangle, point = triangle_intersection(va, vb, vc, t_norm, pr_point, reflection)
-        # crosses_triangle, point = intersect_line_triangle(pr_point, reflection, t_norm, va, vb, vc)
         crosses_triangle, point = moller_trumbore_algorithm(pr_point, reflection, va, vb, vc)
-        # triangle_intersection(va, vb, vc, t_norm, pr_point, reflection)
         if crosses_triangle:
-            # print(it, point)
-            # print()
             return it, point
 
     return intblankval, nanvec3d
@@ -187,6 +178,35 @@ def crop_secondary_mesh(pr_pnt, sc_reflec_pnt, max_distances, sc_pnt, sc_mesh):
 
         sc_cropped_mesh.append(selected_triangles)
     return sc_cropped_mesh
+
+@njit(cache=False, nogil=True)
+def cropped_secondary_mesh(pr_reflec, pr_pnt, sc_pnt, sc_cropped_mesh, sc_cropped_mesh_norm, sc_n_triangles):
+    sc_reflec = np.empty_like(pr_reflec)
+    sc_reflec_pnt = np.empty_like(pr_reflec)
+    sc_reflec_triangle = np.empty(pr_reflec.shape[0])
+
+    niter = pr_pnt.shape[0]
+    for ipnt in range(niter):
+        n_tri = sc_n_triangles[ipnt]
+        if n_tri == 0:
+            sc_reflec[ipnt] = nanvec3d
+            sc_reflec_pnt[ipnt] = nanvec3d
+            sc_reflec_triangle[ipnt] = np.nan
+        else:
+            pr_point = pr_pnt[ipnt]
+            pr_reflection = pr_reflec[ipnt]
+            mesh_section = sc_cropped_mesh[ipnt, 0:n_tri]
+            itriangle, sc_point = jitted_triangle_find(pr_point, pr_reflection, mesh_section, sc_pnt)
+            if itriangle == intblankval:
+                sc_reflec[ipnt] = nanvec3d
+                sc_reflec_pnt[ipnt] = nanvec3d
+                sc_reflec_triangle[ipnt] = np.nan
+            else:
+                sc_reflec_triangle[ipnt] = itriangle
+                sc_reflec_pnt[ipnt] = sc_point
+                sc_reflec[ipnt] = reflect_on_surface(pr_reflection, sc_cropped_mesh_norm[ipnt, itriangle])
+
+    return sc_reflec, sc_reflec_pnt, sc_reflec_triangle
 
 
 class Axis:
@@ -433,24 +453,10 @@ class NgvlaRayTracer:
         """
         This returns the triangle index and the point in the triangle.
         """
-        return jitted_triangle_find(pr_point, reflection, self.sc_mesh, self.sc_pnt, self.sc_mesh_norm)
-        # for it, triangle in enumerate(self.sc_mesh):
-        #     va = self.sc_pnt[int(triangle[0])]
-        #     vb = self.sc_pnt[int(triangle[1])]
-        #     vc = self.sc_pnt[int(triangle[2])]
-        #     t_norm = self.sc_mesh_norm[it]
-        #     # crosses_triangle, point = triangle_intersection(va, vb, vc, t_norm, pr_point, reflection)
-        #     crosses_triangle, point = intersect_line_triangle(pr_point, reflection, t_norm, va, vb, vc)
-        #     # triangle_intersection(va, vb, vc, t_norm, pr_point, reflection)
-        #     if crosses_triangle:
-        #         print(it, point)
-        #         print()
-        #         return it, point
-        #
-        # return np.nan, np.full([3], np.nan)
+        return jitted_triangle_find(pr_point, reflection, self.sc_mesh, self.sc_pnt)
 
-    def _find_triangle_on_cropped_mesh(self, pr_point, reflection, mesh_section, mesh_section_norm):
-        return jitted_triangle_find(pr_point, reflection, mesh_section, self.sc_pnt, mesh_section_norm)
+    def _find_triangle_on_cropped_mesh(self, pr_point, reflection, mesh_section):
+        return jitted_triangle_find(pr_point, reflection, mesh_section, self.sc_pnt)
 
     def secondary_reflection_on_mesh(self):
         self.sc_reflec = np.empty_like(self.pr_reflec)
@@ -493,17 +499,25 @@ class NgvlaRayTracer:
                 pr_point = self.pr_pnt[ipnt]
                 pr_reflection = self.pr_reflec[ipnt]
                 mesh_section = self.sc_cropped_mesh[ipnt]
-                mesh_section_norm = self.sc_cropped_mesh_norm[ipnt]
                 itriangle, sc_point = self._find_triangle_on_cropped_mesh(pr_point, pr_reflection,
-                                                                          mesh_section, mesh_section_norm)
-
-                self.sc_reflec_triangle[ipnt] = itriangle
-                self.sc_reflec_pnt[ipnt] = sc_point
-                self.sc_reflec[ipnt] = reflect_on_surface(pr_reflection, self.sc_mesh_norm[itriangle])
+                                                                          mesh_section)
+                if itriangle == intblankval:
+                    self.sc_reflec[ipnt] = nanvec3d
+                    self.sc_reflec_pnt[ipnt] = nanvec3d
+                    self.sc_reflec_triangle[ipnt] = np.nan
+                else:
+                    self.sc_reflec_triangle[ipnt] = itriangle
+                    self.sc_reflec_pnt[ipnt] = sc_point
+                    self.sc_reflec[ipnt] = reflect_on_surface(pr_reflection, self.sc_cropped_mesh_norm[ipnt, itriangle])
             #print(f'\033[FMesh reflections: {100 * ipnt / niter:.2f}%')
 
         # self.sc_reflec_triangle = np.where(np.abs(self.sc_reflec_triangle-intblankval)<1e-7, np.nan,
         #                                    self.sc_reflec_triangle)
+        
+    def cropped_reflec_jit(self):
+        self.sc_reflec, self.sc_reflec_pnt, self.sc_reflec_triangle = \
+            cropped_secondary_mesh(self.pr_reflec, self.pr_pnt, self.sc_pnt, self.sc_cropped_mesh,
+                                   self.sc_cropped_mesh_norm, self.sc_n_triangles)
 
     def triangle_area(self):
         for it, triangle in enumerate(self.sc_mesh):
