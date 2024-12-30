@@ -198,9 +198,9 @@ class Axis:
 
 class NgvlaRayTracer:
 
-    def __init__(self, wavelength=0.007, incident_light=(0,0,1),
+    def __init__(self, wavelength=0.007, incident_light=(0,0,-1),
                  focus_location=(-1.136634465810194, 0, -0.331821128650557),
-                 horn_orientation=(0, 0, 1), horn_length=10, horn_diameter=5, horn_position=(0,0,0),
+                 horn_orientation=(0, 0, 1), horn_length=0, horn_diameter=1000, horn_position=(0,0,0),
                  horn_dimension_unit='cm'):
         """
 
@@ -339,9 +339,13 @@ class NgvlaRayTracer:
             data_array = self.sc_reflec_dist
             title = f'Distance to the point of reflection on the secondary'
             zlim = [0, 0.05]
-        elif data_type == 'reflec triangle':
+        elif data_type == 'light path':
+            data_array = self.full_light_path
+            title = f'Full light path'
+        elif data_type == 'phase':
             data_array = self.sc_reflec_triangle
-            title = f'Triangle of reflection on the secondary'
+            title = f'Phase at detection'
+            zlim=[-np.pi, np.pi]
         else:
             raise Exception(f'Unrecognized data type {data_type}')
         return data_array, title, zlim
@@ -471,7 +475,7 @@ class NgvlaRayTracer:
         pr_z_max = np.max(pr_z_val)
         light_z = self.incident_light[2]
         # From the plane defined by the leading edge of the primary reflector to primary reflector point along light ray
-        zeroth_distance = (pr_z_max - pr_z_val) / light_z
+        zeroth_distance = (pr_z_val - pr_z_max) / light_z
         # From point in the primary to point in the secondary along light ray
         first_distance = compute_distances(self.pr_pnt, self.sc_reflec_pnt)
         # From point in the secondary to horn mouth
@@ -481,7 +485,9 @@ class NgvlaRayTracer:
 
         self.full_light_path = zeroth_distance + first_distance + second_distance + third_distance
         self.phase = (self.full_light_path % self.wavelength) * twopi - np.pi
+
         return
+
 
     def triangle_area(self):
         for it, triangle in enumerate(self.sc_mesh):
