@@ -4,7 +4,7 @@ from scipy.interpolate import griddata
 from numba import njit
 import xarray as xr
 
-from astrohack.utils import convert_unit
+from astrohack.utils import convert_unit, twopi
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
     close_figure, compute_extent
 
@@ -149,6 +149,14 @@ def cropped_secondary_mesh(pr_reflec, pr_pnt, sc_pnt, sc_cropped_mesh, sc_croppe
     return sc_reflec, sc_reflec_pnt, sc_reflec_triangle
 
 
+# @njit(cache=True, nogil=True)
+def compute_distances(array_of_vectors, point):
+    # assumes that at least array_of_vectors is of shape [:, 3]
+    # Point can be an array or a single point
+    diff = array_of_vectors-point
+    return np.sqrt(np.sum(diff**2, axis=1))
+
+
 class Axis:
     def __init__(self, user_array, resolution):
         mini, maxi = np.min(user_array), np.max(user_array)
@@ -190,10 +198,33 @@ class Axis:
 
 class NgvlaRayTracer:
 
-    def __init__(self, focus_location=(-1.136634465810194, 0, -0.331821128650557)):
+    def __init__(self, wavelength=0.007, incident_light=(0,0,1),
+                 focus_location=(-1.136634465810194, 0, -0.331821128650557),
+                 horn_orientation=(0, 0, 1), horn_length=10, horn_diameter=5, horn_position=(0,0,0),
+                 horn_dimension_unit='cm'):
+        """
+
+        Args:
+            wavelength: Light wavelength in meters
+            incident_light: Unitary vector describing incident light direction
+            focus_location: Focus location relative in mesh coordinate system
+            horn_orientation: Unitary vector describing horn orientation
+            horn_length: Length of the horn in horn_dimension_unit
+            horn_diameter: Diameter of the horn in horn_dimension_unit
+            horn_position: Position of the horn relative to focus
+            horn_dimension_unit: Unit of horn diameter and length
+        """
         self.pr_pnt = self.pr_norm = None
         self.sc_pnt = self.sc_norm = None
         self.focus_offset = np.array(focus_location)
+        conv_fac = convert_unit(horn_dimension_unit, 'm', 'length')
+        self.horn_orientation = np.array(horn_orientation)
+        self.horn_diameter = horn_diameter * conv_fac
+        self.horn_length = horn_length * conv_fac
+        self.horn_position = np.array(horn_position)
+        self.incident_light = np.array(incident_light)
+        self.wavelength = wavelength
+
         self.pr_reflec = None
         self.sc_reflec = None
         self.sc_reflec_pnt = None
@@ -207,6 +238,8 @@ class NgvlaRayTracer:
         self.sc_cropped_mesh_norm = None
         self.sc_n_triangles = None
         self.horn_intersect = None
+        self.full_light_path = None
+        self.phase = None
 
     def _shift_to_focus_origin(self):
         # Both dishes are in the same coordinates but this is not the
@@ -220,12 +253,12 @@ class NgvlaRayTracer:
                 self.pr_pnt[iax] -= axfocus
                 self.sc_pnt[iax] -= axfocus
 
-    def primary_reflection(self, incident_light):
+    def primary_reflection(self):
         light = np.zeros_like(self.pr_pnt)
-        light[:] = np.array(incident_light)
+        light[:] = np.array(self.incident_light)
         self.pr_reflec = light - 2 * inner_product_2d(light, self.pr_norm) * self.pr_norm
 
-    def secondary_reflection(self):
+    def secondary_reflection_obsolete(self):
         self.sc_reflec = np.empty_like(self.pr_reflec)
         self.sc_reflec_pnt = np.empty_like(self.pr_reflec)
         print()
@@ -421,24 +454,34 @@ class NgvlaRayTracer:
             cropped_secondary_mesh(self.pr_reflec, self.pr_pnt, self.sc_pnt, self.sc_cropped_mesh,
                                    self.sc_cropped_mesh_norm, self.sc_n_triangles)
 
-    def secondary_to_horn(self, horn_orientation=(0, 0, 1), horn_length=10, horn_diameter=5, length_unit='cm',
-                          epsilon=1e-7):
+    def secondary_to_horn(self, epsilon=1e-7):
         # Horn orientation must be unitary
-        conv_fac = convert_unit(length_unit, 'm', 'length')
-        horn_diameter *= conv_fac
-        horn_length *= conv_fac
-        horn_orientation = np.array(horn_orientation)
-        horn_mouth_center = horn_length * horn_orientation
+        horn_mouth_center = self.horn_length * self.horn_orientation
         sec_to_horn = horn_mouth_center - self.sc_reflec_pnt
-        dot_horn_plane = np.dot(sec_to_horn, horn_orientation)
-        line_par = np.where(np.abs(dot_horn_plane) < epsilon, np.nan, dot_horn_plane/np.dot(self.sc_reflec, horn_orientation))
+        dot_horn_plane = np.dot(sec_to_horn, self.horn_orientation)
+        line_par = np.where(np.abs(dot_horn_plane) < epsilon, np.nan,
+                            dot_horn_plane/np.dot(self.sc_reflec, self.horn_orientation))
         intersect_point = self.sc_reflec_pnt + line_par[:,np.newaxis]*self.sc_reflec
-        dist_horn_mouth = np.sqrt(np.sum((intersect_point-horn_mouth_center)**2, axis=1))
-        self.horn_intersect = np.where(dist_horn_mouth[:,np.newaxis] <= horn_diameter, intersect_point, np.nan)
+        dist_horn_mouth = compute_distances(intersect_point, horn_mouth_center)
+        self.horn_intersect = np.where(dist_horn_mouth[:,np.newaxis] <= self.horn_diameter, intersect_point, np.nan)
         return
 
     def compute_full_light_path(self):
-        return self
+        pr_z_val = self.pr_pnt[:, 2]
+        pr_z_max = np.max(pr_z_val)
+        light_z = self.incident_light[2]
+        # From the plane defined by the leading edge of the primary reflector to primary reflector point along light ray
+        zeroth_distance = (pr_z_max - pr_z_val) / light_z
+        # From point in the primary to point in the secondary along light ray
+        first_distance = compute_distances(self.pr_pnt, self.sc_reflec_pnt)
+        # From point in the secondary to horn mouth
+        second_distance = compute_distances(self.sc_reflec_pnt, self.horn_intersect)
+        # from horn mouth to receptor inside horn
+        third_distance = compute_distances(self.horn_intersect, self.horn_position)
+
+        self.full_light_path = zeroth_distance + first_distance + second_distance + third_distance
+        self.phase = (self.full_light_path % self.wavelength) * twopi - np.pi
+        return
 
     def triangle_area(self):
         for it, triangle in enumerate(self.sc_mesh):
