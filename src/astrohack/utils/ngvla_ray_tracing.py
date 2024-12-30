@@ -67,26 +67,7 @@ def inner_product_1d_jit(vec_a, vec_b):
     return np.sum(vec_a * vec_b, axis=1)
 
 
-@njit(cache=False, nogil=True)
-def secondary_reflec_jit(pr_pnt, pr_reflec, sc_pnt, sc_norm):
-    sc_reflec = np.empty_like(pr_reflec)
-    sc_reflec_pnt = np.empty_like(pr_reflec)
-    sc_reflec_dist = np.empty(pr_reflec.shape[0])
-    for it, point, in enumerate(pr_pnt):
-        print('\033[F', 100 * it / pr_pnt.shape[0], '%          ')
-        pnt_reflec = pr_reflec[it]
-        pnt_diff = point - sc_pnt
-        dist_vec = pnt_diff - inner_product_2d_jit(pnt_diff, pnt_reflec) * pnt_reflec
-        dist_matrix = np.sqrt(np.sum(dist_vec ** 2, axis=1))
-        isec_loc = np.argmin(dist_matrix)
-        sc_reflec_dist[it] = dist_matrix[isec_loc]
-        sc_reflec_pnt[it] = sc_pnt[isec_loc]
-        sc_reflec[it] = pnt_reflec - 2 * np.sum(pnt_reflec * sc_norm[isec_loc]) * sc_norm[isec_loc]
-
-    return sc_reflec, sc_reflec_pnt, sc_reflec_dist
-
-
-@njit(cache=False, nogil=True)
+@njit(cache=True, nogil=True)
 def moller_trumbore_algorithm(ray_origin, ray_vector, pa, pb, pc):
     epsilon = 1e-6
     edge1 = pb - pa
@@ -137,47 +118,6 @@ def jitted_triangle_find(pr_point, reflection, sc_mesh, sc_pnt):
 
     return intblankval, nanvec3d
 
-
-@njit(cache=False, nogil=True)
-def crop_secondary_mesh(pr_pnt, sc_reflec_pnt, max_distances, sc_pnt, sc_mesh):
-    sc_cropped_mesh = []
-    print()
-    for ipnt in range(pr_pnt.shape[0]):
-        if not np.isfinite(max_distances[ipnt]):
-            empty_list = [np.int32(x) for x in range(0)]
-            sc_cropped_mesh.append([empty_list])
-            continue
-
-        print(return_line, 'Cropping: ', 100*ipnt/pr_pnt.shape[0], '%      ')
-        sc_point = sc_reflec_pnt[ipnt]
-        max_dist = max_distances[ipnt]
-        
-        pnt_distances = np.sqrt(np.sum((sc_pnt - sc_point)**2, axis=1))
-        isc_pnt = np.arange(pnt_distances.shape[0])
-
-        print('distancias feitas')
-        sel_dist = pnt_distances <= max_dist
-
-        multiplier = 1.1
-        while np.sum(sel_dist) < 3:
-            max_dist *= multiplier
-            sel_dist = pnt_distances <= max_dist
-            print(max_dist)
-
-        print('selecao dos pontos feita')
-        selected_triangles = []
-        # for triangle in sc_mesh:
-        #     for point in isc_pnt[sel_dist]:
-        #         if point in triangle:
-        #             selected_triangles.append(triangle)
-        for point in isc_pnt[sel_dist]:
-            for ix in range(3):
-                selec = sc_mesh[:, ix] == point
-                selected_triangles.extend(sc_mesh[selec])
-        print('selecao dos triangulos')
-
-        sc_cropped_mesh.append(selected_triangles)
-    return sc_cropped_mesh
 
 @njit(cache=True, nogil=True)
 def cropped_secondary_mesh(pr_reflec, pr_pnt, sc_pnt, sc_cropped_mesh, sc_cropped_mesh_norm, sc_n_triangles):
@@ -300,12 +240,6 @@ class NgvlaRayTracer:
             self.sc_reflec[it] = pnt_reflec - 2 * np.inner(pnt_reflec, self.sc_norm[isec_loc]) * self.sc_norm[isec_loc]
         print()
 
-    def secondary_reflection_jit(self):
-        print()
-        self.sc_reflec, self.sc_reflec_pnt, self.sc_reflec_dist = \
-            secondary_reflec_jit(self.pr_pnt, self.pr_reflec, self.sc_pnt, self.sc_norm)
-        print()
-
     def _grid_for_plotting(self, data_array, resolution):
         x_pnt = self.pr_pnt[:, 0]
         y_pnt = self.pr_pnt[:, 1]
@@ -425,7 +359,7 @@ class NgvlaRayTracer:
         self.pr_pnt = xds.pr_pnt.values
         self.sc_pnt = xds.sc_pnt.values
 
-    def from_zarr_mesh(self, mesh_file):
+    def read_from_zarr_mesh(self, mesh_file):
         in_xds = xr.open_zarr(mesh_file)
         self.pr_pnt = in_xds['primary_point_cloud'].values
         self.pr_norm = in_xds['primary_pcd_normals'].values
@@ -482,39 +416,6 @@ class NgvlaRayTracer:
         self.sc_reflec_triangle = np.where(np.abs(self.sc_reflec_triangle-intblankval)<1e-7, np.nan,
                                            self.sc_reflec_triangle)
 
-    def secondary_reflection_on_cropped_mesh(self):
-        self.sc_reflec = np.empty_like(self.pr_reflec)
-        self.sc_reflec_pnt = np.empty_like(self.pr_reflec)
-        self.sc_reflec_triangle = np.empty(self.pr_reflec.shape[0])
-        print()
-
-        # niter = 100
-        niter = self.pr_pnt.shape[0]
-        for ipnt in range(niter):
-            n_tri = self.sc_n_triangles[ipnt]
-            if n_tri == 0:
-                self.sc_reflec[ipnt] = nanvec3d
-                self.sc_reflec_pnt[ipnt] = nanvec3d
-                self.sc_reflec_triangle[ipnt] = np.nan
-            else:
-                pr_point = self.pr_pnt[ipnt]
-                pr_reflection = self.pr_reflec[ipnt]
-                mesh_section = self.sc_cropped_mesh[ipnt]
-                itriangle, sc_point = self._find_triangle_on_cropped_mesh(pr_point, pr_reflection,
-                                                                          mesh_section)
-                if itriangle == intblankval:
-                    self.sc_reflec[ipnt] = nanvec3d
-                    self.sc_reflec_pnt[ipnt] = nanvec3d
-                    self.sc_reflec_triangle[ipnt] = np.nan
-                else:
-                    self.sc_reflec_triangle[ipnt] = itriangle
-                    self.sc_reflec_pnt[ipnt] = sc_point
-                    self.sc_reflec[ipnt] = reflect_on_surface(pr_reflection, self.sc_cropped_mesh_norm[ipnt, itriangle])
-            #print(f'\033[FMesh reflections: {100 * ipnt / niter:.2f}%')
-
-        # self.sc_reflec_triangle = np.where(np.abs(self.sc_reflec_triangle-intblankval)<1e-7, np.nan,
-        #                                    self.sc_reflec_triangle)
-        
     def cropped_reflec_jit(self):
         self.sc_reflec, self.sc_reflec_pnt, self.sc_reflec_triangle = \
             cropped_secondary_mesh(self.pr_reflec, self.pr_pnt, self.sc_pnt, self.sc_cropped_mesh,
@@ -532,11 +433,12 @@ class NgvlaRayTracer:
         dot_horn_plane = np.dot(sec_to_horn, horn_orientation)
         line_par = np.where(np.abs(dot_horn_plane) < epsilon, np.nan, dot_horn_plane/np.dot(self.sc_reflec, horn_orientation))
         intersect_point = self.sc_reflec_pnt + line_par[:,np.newaxis]*self.sc_reflec
-        dist_horn_mouth = np.sqrt(np.sum((intersect_point-horn_mouth_center)**2))
+        dist_horn_mouth = np.sqrt(np.sum((intersect_point-horn_mouth_center)**2, axis=1))
+        self.horn_intersect = np.where(dist_horn_mouth[:,np.newaxis] <= horn_diameter, intersect_point, np.nan)
+        return
 
-        self.horn_intersect = np.where(dist_horn_mouth <= horn_diameter, intersect_point, np.nan)
-
-
+    def compute_full_light_path(self):
+        return self
 
     def triangle_area(self):
         for it, triangle in enumerate(self.sc_mesh):
@@ -653,16 +555,6 @@ class NgvlaRayTracer:
                 self.sc_cropped_mesh_norm[ipnt, 0:n_triang] = sc_cropped_mesh_norm[ipnt]
 
         numpy_size(self.sc_cropped_mesh)
-
-
-    def crop_secondary_mesh_jit(self, max_distances):
-        sc_cropped_mesh = crop_secondary_mesh(self.pr_pnt,
-                                              self.sc_reflec_pnt,
-                                              max_distances,
-                                              self.sc_pnt,
-                                              self.sc_mesh)
-        self.sc_cropped_mesh = np.asarray(sc_cropped_mesh)
-        np.save('cropped_mesh_selection.npy', self.sc_cropped_mesh)
 
 
 
