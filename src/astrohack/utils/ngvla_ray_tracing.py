@@ -266,6 +266,7 @@ class NgvlaRayTracer:
         self.sc_cropped_mesh = None
         self.sc_cropped_mesh_norm = None
         self.sc_n_triangles = None
+        self.horn_intersect = None
 
     def _shift_to_focus_origin(self):
         # Both dishes are in the same coordinates but this is not the
@@ -518,6 +519,24 @@ class NgvlaRayTracer:
         self.sc_reflec, self.sc_reflec_pnt, self.sc_reflec_triangle = \
             cropped_secondary_mesh(self.pr_reflec, self.pr_pnt, self.sc_pnt, self.sc_cropped_mesh,
                                    self.sc_cropped_mesh_norm, self.sc_n_triangles)
+
+    def secondary_to_horn(self, horn_orientation=(0, 0, 1), horn_length=10, horn_diameter=5, length_unit='cm',
+                          epsilon=1e-7):
+        # Horn orientation must be unitary
+        conv_fac = convert_unit(length_unit, 'm', 'length')
+        horn_diameter *= conv_fac
+        horn_length *= conv_fac
+        horn_orientation = np.array(horn_orientation)
+        horn_mouth_center = horn_length * horn_orientation
+        sec_to_horn = horn_mouth_center - self.sc_reflec_pnt
+        dot_horn_plane = np.dot(sec_to_horn, horn_orientation)
+        line_par = np.where(np.abs(dot_horn_plane) < epsilon, np.nan, dot_horn_plane/np.dot(self.sc_reflec, horn_orientation))
+        intersect_point = self.sc_reflec_pnt + line_par[:,np.newaxis]*self.sc_reflec
+        dist_horn_mouth = np.sqrt(np.sum((intersect_point-horn_mouth_center)**2))
+
+        self.horn_intersect = np.where(dist_horn_mouth <= horn_diameter, intersect_point, np.nan)
+
+
 
     def triangle_area(self):
         for it, triangle in enumerate(self.sc_mesh):
