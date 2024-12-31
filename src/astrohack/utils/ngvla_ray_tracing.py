@@ -3,8 +3,9 @@ from matplotlib.colors import Normalize
 from scipy.interpolate import griddata
 from numba import njit
 import xarray as xr
+import toolviper.utils.logger as logger
 
-from astrohack.utils import convert_unit, twopi
+from astrohack.utils import convert_unit, twopi, data_statistics, gauss_elimination
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
     close_figure, compute_extent
 
@@ -156,7 +157,6 @@ def compute_distances(array_of_vectors, point):
     diff = array_of_vectors-point
     return np.sqrt(np.sum(diff**2, axis=1))
 
-
 class Axis:
     def __init__(self, user_array, resolution):
         mini, maxi = np.min(user_array), np.max(user_array)
@@ -201,7 +201,7 @@ class NgvlaRayTracer:
     def __init__(self, wavelength=0.007, incident_light=(0,0,-1),
                  focus_location=(-1.136634465810194, 0, -0.331821128650557),
                  horn_orientation=(0, 0, 1), horn_length=0, horn_diameter=1000, horn_position=(0,0,0),
-                 horn_dimension_unit='cm'):
+                 phase_offset=0.0):
         """
 
         Args:
@@ -209,21 +209,21 @@ class NgvlaRayTracer:
             incident_light: Unitary vector describing incident light direction
             focus_location: Focus location relative in mesh coordinate system
             horn_orientation: Unitary vector describing horn orientation
-            horn_length: Length of the horn in horn_dimension_unit
-            horn_diameter: Diameter of the horn in horn_dimension_unit
-            horn_position: Position of the horn relative to focus
-            horn_dimension_unit: Unit of horn diameter and length
+            horn_length: Length of the horn in meters
+            horn_diameter: Diameter of the horn in meters
+            horn_position: Position of the horn relative to focus in meters
+            phase_offset: Phase offset in radians
         """
         self.pr_pnt = self.pr_norm = None
         self.sc_pnt = self.sc_norm = None
         self.focus_offset = np.array(focus_location)
-        conv_fac = convert_unit(horn_dimension_unit, 'm', 'length')
         self.horn_orientation = np.array(horn_orientation)
-        self.horn_diameter = horn_diameter * conv_fac
-        self.horn_length = horn_length * conv_fac
+        self.horn_diameter = horn_diameter
+        self.horn_length = horn_length
         self.horn_position = np.array(horn_position)
         self.incident_light = np.array(incident_light)
         self.wavelength = wavelength
+        self.phase_offset = phase_offset
 
         self.pr_reflec = None
         self.sc_reflec = None
@@ -240,6 +240,7 @@ class NgvlaRayTracer:
         self.horn_intersect = None
         self.full_light_path = None
         self.phase = None
+        self.horn_distance = None
 
     def _shift_to_focus_origin(self):
         # Both dishes are in the same coordinates but this is not the
@@ -273,19 +274,28 @@ class NgvlaRayTracer:
             self.sc_reflec[it] = pnt_reflec - 2 * np.inner(pnt_reflec, self.sc_norm[isec_loc]) * self.sc_norm[isec_loc]
         print()
 
-    def _grid_for_plotting(self, data_array, resolution):
+    def _grid_for_plotting(self, data_array, resolution, label):
         x_pnt = self.pr_pnt[:, 0]
         y_pnt = self.pr_pnt[:, 1]
         x_axis = Axis(x_pnt, resolution)
         y_axis = Axis(y_pnt, resolution)
         x_mesh, y_mesh = np.meshgrid(x_axis.array, y_axis.array)
-        gridded_array = griddata((x_pnt, y_pnt),
-                                 data_array, (x_mesh, y_mesh), 'nearest')
+        selection = np.isfinite(data_array)
+        if np.sum(selection) == 0:
+            logger.warning(f'No data to display for {label}')
+            return None
+        gridded_array = griddata((x_pnt[selection], y_pnt[selection]),
+                                 data_array[selection], (x_mesh, y_mesh), 'linear')
 
         return gridded_array, x_axis, y_axis
 
     def _plot_map(self, data_array, prog_res, title, filename, colormap, zlim, fsize=5):
-        gridded_data, x_axis, y_axis = self._grid_for_plotting(data_array, prog_res)
+        grid = self._grid_for_plotting(data_array, prog_res, title)
+
+        if grid is None:
+            return
+        else:
+            gridded_data, x_axis, y_axis = grid
 
         if zlim is None:
             minmax = [np.nanmin(gridded_data), np.nanmax(gridded_data)]
@@ -343,9 +353,13 @@ class NgvlaRayTracer:
             data_array = self.full_light_path
             title = f'Full light path'
         elif data_type == 'phase':
-            data_array = self.sc_reflec_triangle
+            data_array = self.phase
             title = f'Phase at detection'
-            zlim=[-np.pi, np.pi]
+            zlim = [-np.pi, np.pi]
+        elif data_type == 'horn distance':
+            data_array = self.horn_distance
+            title = f'Distance to horn center'
+            zlim = [1, 2]
         else:
             raise Exception(f'Unrecognized data type {data_type}')
         return data_array, title, zlim
@@ -467,10 +481,11 @@ class NgvlaRayTracer:
                             dot_horn_plane/np.dot(self.sc_reflec, self.horn_orientation))
         intersect_point = self.sc_reflec_pnt + line_par[:,np.newaxis]*self.sc_reflec
         dist_horn_mouth = compute_distances(intersect_point, horn_mouth_center)
+        self.horn_distance = dist_horn_mouth
         self.horn_intersect = np.where(dist_horn_mouth[:,np.newaxis] <= self.horn_diameter, intersect_point, np.nan)
         return
 
-    def compute_full_light_path(self):
+    def compute_full_light_path(self, show_stats=False):
         pr_z_val = self.pr_pnt[:, 2]
         pr_z_max = np.max(pr_z_val)
         light_z = self.incident_light[2]
@@ -485,6 +500,21 @@ class NgvlaRayTracer:
 
         self.full_light_path = zeroth_distance + first_distance + second_distance + third_distance
         self.phase = (self.full_light_path % self.wavelength) * twopi - np.pi
+        self.phase += self.phase_offset
+        print(show_stats)
+        if show_stats:
+            print('first')
+            print(data_statistics(first_distance))
+            print('second')
+            print(data_statistics(second_distance))
+            print('third')
+            print(data_statistics(third_distance))
+            print('full light path')
+            print(data_statistics(self.full_light_path))
+            print('phase')
+            print(data_statistics(self.phase))
+            print('horn distance')
+            print(data_statistics(self.horn_distance))
 
         return
 
@@ -604,6 +634,48 @@ class NgvlaRayTracer:
                 self.sc_cropped_mesh_norm[ipnt, 0:n_triang] = sc_cropped_mesh_norm[ipnt]
 
         numpy_size(self.sc_cropped_mesh)
+
+    def find_focus(self, ipnt):
+        p0x, p0y = self.sc_reflec_pnt[ipnt, 0:2]
+        l0x, l0y = self.sc_reflec[ipnt, 0:2]
+
+        matrix = np.ndarray([2, 2])
+        vector = np.ndarray(2)
+
+        crossings = np.empty_like(self.sc_reflec_pnt)
+
+        for jpnt in range(self.pr_pnt.shape[0]):
+            if jpnt == ipnt:
+                crossings[jpnt] = nanvec3d
+            elif np.all(np.isfinite(self.sc_reflec[jpnt])):
+                lpntx, lpnty = self.sc_reflec_pnt[jpnt, 0:2]
+                ppntx, ppnty = self.sc_reflec[jpnt, 0:2]
+                matrix[0, :] = [l0x, -lpntx]
+                matrix[1, :] = [l0y, -lpnty]
+                vector[:] = [ppntx-p0x, ppnty-p0y]
+
+                try:
+                    solution = gauss_elimination(matrix, vector)
+                    crossings[jpnt] = self.sc_reflec_pnt[ipnt] + solution[0]*self.sc_reflec[jpnt]
+                except KeyError:
+                    crossings[jpnt] = nanvec3d
+            else:
+                crossings[jpnt] = nanvec3d
+
+        # Selecting crossings within 2 meters of the origin which is supposed to be the focus
+        selection_min = self.horn_distance < 1.6
+        selection_max = self.horn_distance > 1.0
+        selection = selection_min & selection_max
+        crossings = crossings[selection]
+
+        print('x coord')
+        print(data_statistics(crossings[:, 0]))
+        print('y coord')
+        print(data_statistics(crossings[:, 1]))
+        print('z coord')
+        print(data_statistics(crossings[:, 2]))
+
+
 
 
 
