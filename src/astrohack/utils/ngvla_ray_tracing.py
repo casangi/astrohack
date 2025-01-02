@@ -424,11 +424,6 @@ class NgvlaRayTracer:
 
         self._shift_to_focus_origin()
 
-        print('Primary cloud size:')
-        numpy_size(self.pr_pnt)
-        print('Secondary cloud size:')
-        numpy_size(self.sc_pnt)
-
     def __repr__(self):
         outstr = 'Ray tracer contents:\n'
         for key, item in vars(self).items():
