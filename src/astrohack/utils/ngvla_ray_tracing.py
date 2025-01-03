@@ -731,7 +731,7 @@ class NgvlaRayTracer:
         print('z coord')
         print(data_statistics(crossings[:, 2]))
 
-
-
-
+    def grid_phase_image(self, resolution):
+        griddata_phase, x_axis, y_axis = self._grid_with_griddata(self.phase, resolution, 'phase')
+        return griddata_phase, x_axis, y_axis
 
