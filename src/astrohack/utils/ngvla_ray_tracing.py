@@ -314,7 +314,6 @@ class NgvlaRayTracer:
         gridded_array = interp(x_mesh, y_mesh)
         return gridded_array, x_axis, y_axis
 
-
     def _plot_map(self, data_array, prog_res, title, filename, colormap, zlim, fsize=5):
         grid = self._grid_with_griddata(data_array, prog_res, title)
 
@@ -376,7 +375,6 @@ class NgvlaRayTracer:
         imshow_plot(ax[1], fig, 'LNDI phase map', x_axis, y_axis, lndi_phase*phase_fac, cmap, minmax, fsize=10)
         imshow_plot(ax[2], fig, 'Difference phase map', x_axis, y_axis, diff*phase_fac, cmap, minmax, fsize=10)
         close_figure(fig, 'Phase gridding comparison', f'phase_comparison_{resolution:.2}.png', 300, False)
-
 
     def _select_data_for_plot(self, data_type):
         zlim = None
@@ -574,7 +572,6 @@ class NgvlaRayTracer:
 
         return
 
-
     def triangle_area(self):
         for it, triangle in enumerate(self.sc_mesh):
             va = self.sc_pnt[int(triangle[0])]
@@ -734,4 +731,20 @@ class NgvlaRayTracer:
     def grid_phase_image(self, resolution):
         griddata_phase, x_axis, y_axis = self._grid_with_griddata(self.phase, resolution, 'phase')
         return griddata_phase, x_axis, y_axis
+
+def ngvla_rt_pipeline(cropped_mesh_zarr_file, wavelength=0.007, incident_light=(0,0,-1),
+                      focus_location=(-1.136634465810194, 0, -0.331821128650557),
+                      horn_orientation=(0, 0, 1), horn_length=0, horn_diameter=1000, horn_position=(0,0,0),
+                      phase_offset=0.0, resolution=0.1):
+
+    rtobj = NgvlaRayTracer(wavelength=wavelength, incident_light=incident_light, focus_location=focus_location,
+                           horn_orientation=horn_orientation, horn_length=horn_length, horn_diameter=horn_diameter,
+                           horn_position=horn_position, phase_offset=phase_offset)
+    rtobj.reread(cropped_mesh_zarr_file)
+    rtobj.primary_reflection()
+    rtobj.cropped_reflec_jit()
+    rtobj.secondary_to_horn()
+    rtobj.compute_full_light_path(show_stats=False)
+
+    return rtobj.grid_phase_image(resolution)
 
