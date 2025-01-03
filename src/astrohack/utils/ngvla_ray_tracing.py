@@ -1,9 +1,10 @@
 import numpy as np
 from matplotlib.colors import Normalize
-from scipy.interpolate import griddata
+from scipy.interpolate import griddata, LinearNDInterpolator
 from numba import njit
 import xarray as xr
 import toolviper.utils.logger as logger
+import time
 
 from astrohack.utils import convert_unit, twopi, data_statistics, gauss_elimination
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
@@ -22,6 +23,16 @@ def numpy_size(array):
         memsize /= 1024
         iu += 1
     print(f'Image size: {memsize:.2f} {units[iu]}')
+
+def imshow_plot(ax, fig, title, x_axis, y_axis, gridded_data, cmap, minmax, fsize=5):
+    ax.set_title(title, size=1.5 * fsize)
+    extent = compute_extent(x_axis.array, y_axis.array, margin=0.1)
+    im = ax.imshow(gridded_data, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1])
+    well_positioned_colorbar(ax, fig, im, "Phase [deg?]")
+    ax.set_xlim(extent[:2])
+    ax.set_ylim(extent[2:])
+    ax.set_xlabel("X axis [m]")
+    ax.set_ylabel("Y axis [m]")
 
 
 def inner_product_2d(vec_a, vec_b, keep_shape=True):
@@ -274,7 +285,7 @@ class NgvlaRayTracer:
             self.sc_reflec[it] = pnt_reflec - 2 * np.inner(pnt_reflec, self.sc_norm[isec_loc]) * self.sc_norm[isec_loc]
         print()
 
-    def _grid_for_plotting(self, data_array, resolution, label):
+    def _grid_with_griddata(self, data_array, resolution, label):
         x_pnt = self.pr_pnt[:, 0]
         y_pnt = self.pr_pnt[:, 1]
         x_axis = Axis(x_pnt, resolution)
@@ -289,8 +300,23 @@ class NgvlaRayTracer:
 
         return gridded_array, x_axis, y_axis
 
+    def _grid_with_lndi(self, data_array, resolution, label):
+        x_pnt = self.pr_pnt[:, 0]
+        y_pnt = self.pr_pnt[:, 1]
+        x_axis = Axis(x_pnt, resolution)
+        y_axis = Axis(y_pnt, resolution)
+        x_mesh, y_mesh = np.meshgrid(x_axis.array, y_axis.array)
+        selection = np.isfinite(data_array)
+        if np.sum(selection) == 0:
+            logger.warning(f'No data to display for {label}')
+            return None
+        interp = LinearNDInterpolator(list(zip(x_pnt, y_pnt)), data_array)
+        gridded_array = interp(x_mesh, y_mesh)
+        return gridded_array, x_axis, y_axis
+
+
     def _plot_map(self, data_array, prog_res, title, filename, colormap, zlim, fsize=5):
-        grid = self._grid_for_plotting(data_array, prog_res, title)
+        grid = self._grid_with_griddata(data_array, prog_res, title)
 
         if grid is None:
             return
@@ -315,6 +341,42 @@ class NgvlaRayTracer:
         ax.set_ylabel("Y axis [m]")
 
         close_figure(fig, '', filename, 300, False)
+
+    def compare_phase_gridding(self, phase_unit='deg', resolution=5, length_unit='cm', colormap='RdBu_r', zlim=None):
+        if self.phase is None:
+            raise Exception("Can't plot phase if phase is not present...")
+        resolution *= convert_unit(length_unit, 'm', 'length')
+        phase_fac = convert_unit('rad', phase_unit, 'trigonometric')
+
+        start = time.time()
+        griddata_phase, x_axis, y_axis = self._grid_with_griddata(self.phase, resolution, 'phase')
+        stop = time.time()
+        print(f'Gridding with griddata took {stop - start} seconds')
+
+        start = time.time()
+        lndi_phase, x_axis, y_axis = self._grid_with_lndi(self.phase, resolution, 'phase')
+        stop = time.time()
+        print(f'Gridding with LNDI took {stop - start} seconds')
+
+        diff = lndi_phase - griddata_phase
+        print('Statistics of the difference')
+        print(data_statistics(diff))
+
+        if zlim is None:
+            minmax = [-np.pi * phase_fac, np.pi * phase_fac]
+        elif zlim == 'minmax':
+            minmax = [np.nanmin(griddata_phase), np.nanmax(griddata_phase)]
+        else:
+            minmax = zlim
+
+
+        fig, ax = create_figure_and_axes([16, 8], [1, 3])
+        cmap = get_proper_color_map(colormap)
+        imshow_plot(ax[0], fig, 'Griddata phase map', x_axis, y_axis, griddata_phase*phase_fac, cmap, minmax, fsize=10)
+        imshow_plot(ax[1], fig, 'LNDI phase map', x_axis, y_axis, lndi_phase*phase_fac, cmap, minmax, fsize=10)
+        imshow_plot(ax[2], fig, 'Difference phase map', x_axis, y_axis, diff*phase_fac, cmap, minmax, fsize=10)
+        close_figure(fig, 'Phase gridding comparison', f'phase_comparison_{resolution:.2}.png', 300, False)
+
 
     def _select_data_for_plot(self, data_type):
         zlim = None
@@ -496,7 +558,6 @@ class NgvlaRayTracer:
         self.full_light_path = zeroth_distance + first_distance + second_distance + third_distance
         self.phase = (self.full_light_path % self.wavelength) * twopi - np.pi
         self.phase += self.phase_offset
-        print(show_stats)
         if show_stats:
             print('first')
             print(data_statistics(first_distance))
