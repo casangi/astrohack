@@ -252,6 +252,7 @@ class NgvlaRayTracer:
         self.full_light_path = None
         self.phase = None
         self.horn_distance = None
+        self.n_wavelength = None
 
     def _shift_to_focus_origin(self):
         # Both dishes are in the same coordinates but this is not the
@@ -435,29 +436,33 @@ class NgvlaRayTracer:
         xds = xr.Dataset()
 
         for key, item in vars(self).items():
-            if isinstance(item, np.ndarray):
-                if key in ['sc_pnt', 'sc_norm']:
-                    xds[key] = xr.DataArray(item, dims=['sc_pnt', 'xyz'])
-                elif key in ['pr_mesh', 'pr_mesh_norm']:
-                    xds[key] = xr.DataArray(item, dims=['pr_tri', 'tri_corners'])
-                elif key in ['sc_mesh', 'sc_mesh_norm']:
-                    xds[key] = xr.DataArray(item, dims=['sc_tri', 'tri_corners'])
-                elif key == 'focus_offset':
-                    xds[key] = xr.DataArray(item, dims=['xyz'])
-                elif len(item.shape) == 2:
-                    xds[key] = xr.DataArray(item, dims=['pr_pnt', 'xyz'])
-                elif len(item.shape) == 1:
-                    xds[key] = xr.DataArray(item, dims=['pr_pnt'])
-                elif key in ['sc_cropped_mesh']:
-                    xds[key] = xr.DataArray(item, dims=['pr_pnt', 'crop_tri', 'tri_corners'])
-                elif key in ['sc_cropped_mesh_norm']:
-                    xds[key] = xr.DataArray(item, dims=['pr_pnt', 'crop_tri', 'xyz'])
+            try:
+                if isinstance(item, np.ndarray):
+                    if key in ['sc_pnt', 'sc_norm']:
+                        xds[key] = xr.DataArray(item, dims=['sc_pnt', 'xyz'])
+                    elif key in ['pr_mesh', 'pr_mesh_norm']:
+                        xds[key] = xr.DataArray(item, dims=['pr_tri', 'tri_corners'])
+                    elif key in ['sc_mesh', 'sc_mesh_norm']:
+                        xds[key] = xr.DataArray(item, dims=['sc_tri', 'tri_corners'])
+                    elif key in ['focus_offset', 'horn_orientation', 'horn_position', 'incident_light']:
+                        xds[key] = xr.DataArray(item, dims=['xyz'])
+                    elif len(item.shape) == 2:
+                        xds[key] = xr.DataArray(item, dims=['pr_pnt', 'xyz'])
+                    elif len(item.shape) == 1:
+                        xds[key] = xr.DataArray(item, dims=['pr_pnt'])
+                    elif key in ['sc_cropped_mesh']:
+                        xds[key] = xr.DataArray(item, dims=['pr_pnt', 'crop_tri', 'tri_corners'])
+                    elif key in ['sc_cropped_mesh_norm']:
+                        xds[key] = xr.DataArray(item, dims=['pr_pnt', 'crop_tri', 'xyz'])
+                    else:
+                        raise Exception(f"Don't know what to do with {key}")
+                elif item is None:
+                    pass
                 else:
-                    raise Exception(f"Don't know what to do with {key}")
-            elif item is None:
-                pass
-            else:
-                xds.attrs[key] = item
+                    xds.attrs[key] = item
+            except ValueError:
+                msg = f'{key} => {item.shape}'
+                raise Exception(msg)
         print(xds)
         xds.to_zarr(filename, mode='w')
 
@@ -499,14 +504,16 @@ class NgvlaRayTracer:
     def _find_triangle_on_cropped_mesh(self, pr_point, reflection, mesh_section):
         return jitted_triangle_find(pr_point, reflection, mesh_section, self.sc_pnt)
 
-    def secondary_reflection_on_mesh_brute_force(self):
+    def secondary_reflection_on_mesh_brute_force(self, short_circuit=False):
         self.sc_reflec = np.empty_like(self.pr_reflec)
         self.sc_reflec_pnt = np.empty_like(self.pr_reflec)
         self.sc_reflec_triangle = np.empty(self.pr_reflec.shape[0])
         print()
 
-        # niter = 100
-        niter = self.pr_pnt.shape[0]
+        if short_circuit:
+            niter = 100
+        else:
+            niter = self.pr_pnt.shape[0]
         for ipnt in range(niter):
             pr_point = self.pr_pnt[ipnt]
             pr_reflection = self.pr_reflec[ipnt]
@@ -554,8 +561,11 @@ class NgvlaRayTracer:
         third_distance = compute_distances(self.horn_intersect, self.horn_position)
 
         self.full_light_path = zeroth_distance + first_distance + second_distance + third_distance
-        self.phase = (self.full_light_path % self.wavelength) * twopi - np.pi
+        self.n_wavelength = self.full_light_path/self.wavelength
+        floor_n_wave = np.floor(self.n_wavelength)
+        self.phase = floor_n_wave * twopi - np.pi
         self.phase += self.phase_offset
+
         if show_stats:
             print('first')
             print(data_statistics(first_distance))
@@ -731,6 +741,7 @@ class NgvlaRayTracer:
     def grid_phase_image(self, resolution):
         griddata_phase, x_axis, y_axis = self._grid_with_griddata(self.phase, resolution, 'phase')
         return griddata_phase, x_axis, y_axis
+
 
 def ngvla_rt_pipeline(cropped_mesh_zarr_file, wavelength=0.007, incident_light=(0,0,-1),
                       focus_location=(-1.136634465810194, 0, -0.331821128650557),
