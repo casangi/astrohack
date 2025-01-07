@@ -236,6 +236,7 @@ class NgvlaRayTracer:
         self.wavelength = wavelength
         self.phase_offset = phase_offset
 
+        print(self.incident_light, self.incident_light[2], self.incident_light.dtype)
         self.pr_reflec = None
         self.sc_reflec = None
         self.sc_reflec_pnt = None
@@ -267,6 +268,7 @@ class NgvlaRayTracer:
                 self.sc_pnt[iax] -= axfocus
 
     def primary_reflection(self):
+        print(self.incident_light)
         light = np.zeros_like(self.pr_pnt)
         light[:] = np.array(self.incident_light)
         self.pr_reflec = light - 2 * inner_product_2d(light, self.pr_norm) * self.pr_norm
@@ -445,7 +447,7 @@ class NgvlaRayTracer:
                     elif key in ['sc_mesh', 'sc_mesh_norm']:
                         xds[key] = xr.DataArray(item, dims=['sc_tri', 'tri_corners'])
                     elif key in ['focus_offset', 'horn_orientation', 'horn_position', 'incident_light']:
-                        xds[key] = xr.DataArray(item, dims=['xyz'])
+                        xds.attrs[key] = item
                     elif len(item.shape) == 2:
                         xds[key] = xr.DataArray(item, dims=['pr_pnt', 'xyz'])
                     elif len(item.shape) == 1:
@@ -466,14 +468,13 @@ class NgvlaRayTracer:
         print(xds)
         xds.to_zarr(filename, mode='w')
 
-    def reread(self, xds_name):
+    def reread(self, xds_name, fetch_attributes=False):
         xds = xr.open_zarr(xds_name)
-        for key, item in xds.attrs.items():
-            self.__setattr__(key, item)
+        if fetch_attributes:
+            for key, item in xds.attrs.items():
+                self.__setattr__(key, item)
         for key, item in xds.items():
             self.__setattr__(str(key), item.values)
-        self.pr_pnt = xds.pr_pnt.values
-        self.sc_pnt = xds.sc_pnt.values
 
     def read_from_zarr_mesh(self, mesh_file):
         in_xds = xr.open_zarr(mesh_file)
@@ -563,8 +564,10 @@ class NgvlaRayTracer:
         self.full_light_path = zeroth_distance + first_distance + second_distance + third_distance
         self.n_wavelength = self.full_light_path/self.wavelength
         floor_n_wave = np.floor(self.n_wavelength)
-        self.phase = floor_n_wave * twopi - np.pi
+        self.phase = (self.n_wavelength-floor_n_wave) * twopi - np.pi
         self.phase += self.phase_offset
+
+        print(self.phase_offset)
 
         if show_stats:
             print('first')
