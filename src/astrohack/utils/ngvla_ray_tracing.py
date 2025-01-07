@@ -270,6 +270,7 @@ class NgvlaRayTracer:
     def primary_reflection(self):
         print(self.incident_light)
         light = np.zeros_like(self.pr_pnt)
+        print(light.shape, self.pr_pnt)
         light[:] = np.array(self.incident_light)
         self.pr_reflec = light - 2 * inner_product_2d(light, self.pr_norm) * self.pr_norm
 
@@ -474,7 +475,10 @@ class NgvlaRayTracer:
             for key, item in xds.attrs.items():
                 self.__setattr__(key, item)
         for key, item in xds.items():
+            print(key)
             self.__setattr__(str(key), item.values)
+        self.pr_pnt = xds.pr_pnt.values
+        self.sc_pnt = xds.sc_pnt.values
 
     def read_from_zarr_mesh(self, mesh_file):
         in_xds = xr.open_zarr(mesh_file)
@@ -761,4 +765,77 @@ def ngvla_rt_pipeline(cropped_mesh_zarr_file, wavelength=0.007, incident_light=(
     rtobj.compute_full_light_path(show_stats=False)
 
     return rtobj.grid_phase_image(resolution)
+
+
+def full_proc_pipeline(cropped_mesh_zarr_file, wavelength=0.007, incident_light=(0, 0, -1),
+                       focus_location=(-1.136634465810194, 0, -0.331821128650557),
+                       horn_orientation=(0, 0, 1), horn_length=0, horn_diameter=1000, horn_position=(0, 0, 0),
+                       phase_offset=0.0, resolution=0.1, epsilon=1e-7):
+
+    # Converting List/Tuples to np arrays
+    incident_light = np.array(incident_light)
+    horn_orientation = np.array(horn_orientation)
+    horn_position = np.array(horn_position)
+
+    # Opening XDS
+    in_xds = xr.open_zarr(cropped_mesh_zarr_file)
+
+    # Primary reflections
+    pr_pnt = in_xds['pr_pnt'].values
+    pr_norm = in_xds['pr_norm'].values
+    light = np.zeros_like(pr_pnt)
+    light[:] = incident_light
+    pr_reflec = light - 2 * inner_product_2d(light, pr_norm) * pr_norm
+
+    # Secondary reflections
+    sc_pnt = in_xds['sc_pnt'].values
+    sc_cropped_mesh = in_xds['sc_cropped_mesh'].values
+    sc_cropped_mesh_norm = in_xds['sc_cropped_mesh_norm'].values
+    sc_n_triangles = in_xds['sc_n_triangles'].values
+    sc_reflec, sc_reflec_pnt, sc_reflec_triangle = cropped_secondary_mesh(pr_reflec, pr_pnt, sc_pnt, sc_cropped_mesh,
+                                                                          sc_cropped_mesh_norm, sc_n_triangles)
+
+    # Secondary to horn
+    horn_mouth_center = horn_length * horn_orientation
+    print(horn_mouth_center)
+    sec_to_horn = horn_mouth_center - sc_reflec_pnt
+    dot_horn_plane = np.dot(sec_to_horn, horn_orientation)
+    line_par = np.where(np.abs(dot_horn_plane) < epsilon, np.nan, dot_horn_plane/np.dot(sc_reflec, horn_orientation))
+    intersect_point = sc_reflec_pnt + line_par[:, np.newaxis]*sc_reflec
+    dist_horn_mouth = compute_distances(intersect_point, horn_mouth_center)
+    horn_intersect = np.where(dist_horn_mouth[:, np.newaxis] <= horn_diameter, intersect_point, np.nan)
+
+    # Compute Full light path
+    pr_z_val = pr_pnt[:, 2]
+    pr_z_max = np.max(pr_z_val)
+    light_z = incident_light[2]
+    # From the plane defined by the leading edge of the primary reflector to primary reflector point along light ray
+    zeroth_distance = (pr_z_val - pr_z_max) / light_z
+    # From point in the primary to point in the secondary along light ray
+    first_distance = compute_distances(pr_pnt, sc_reflec_pnt)
+    # From point in the secondary to horn mouth
+    second_distance = compute_distances(sc_reflec_pnt, horn_intersect)
+    # from horn mouth to receptor inside horn
+    third_distance = compute_distances(horn_intersect, horn_position)
+    full_light_path = zeroth_distance + first_distance + second_distance + third_distance
+
+    # Compute phase from light path
+    n_wavelength = full_light_path/wavelength
+    floor_n_wave = np.floor(n_wavelength)
+    phase = (n_wavelength-floor_n_wave) * twopi - np.pi
+    phase += phase_offset
+
+    # Grid Phase
+    x_pnt = pr_pnt[:, 0]
+    y_pnt = pr_pnt[:, 1]
+    x_axis = Axis(x_pnt, resolution)
+    y_axis = Axis(y_pnt, resolution)
+    x_mesh, y_mesh = np.meshgrid(x_axis.array, y_axis.array)
+    selection = np.isfinite(phase)
+    if np.sum(selection) == 0:
+        logger.warning(f'Phase is empty')
+        return None
+    gridded_phase = griddata((x_pnt[selection], y_pnt[selection]), phase[selection], (x_mesh, y_mesh), 'linear')
+
+    return gridded_phase, x_axis, y_axis
 
