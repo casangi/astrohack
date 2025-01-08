@@ -255,7 +255,6 @@ class NgvlaRayTracer:
         self.wavelength = wavelength
         self.phase_offset = phase_offset
 
-        print(self.incident_light, self.incident_light[2], self.incident_light.dtype)
         self.pr_reflec = None
         self.sc_reflec = None
         self.sc_reflec_pnt = None
@@ -812,7 +811,6 @@ def full_proc_pipeline(cropped_mesh_zarr_file, wavelength=0.007, incident_light=
 
     # Secondary to horn
     horn_mouth_center = horn_length * horn_orientation
-    print(horn_mouth_center)
     sec_to_horn = horn_mouth_center - sc_reflec_pnt
     dot_horn_plane = np.dot(sec_to_horn, horn_orientation)
     line_par = np.where(np.abs(dot_horn_plane) < epsilon, np.nan, dot_horn_plane/np.dot(sc_reflec, horn_orientation))
