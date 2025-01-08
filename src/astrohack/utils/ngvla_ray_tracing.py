@@ -26,7 +26,7 @@ def numpy_size(array):
 
 def imshow_plot(ax, fig, title, x_axis, y_axis, gridded_data, cmap, minmax, fsize=5):
     ax.set_title(title, size=1.5 * fsize)
-    extent = compute_extent(x_axis.array, y_axis.array, margin=0.1)
+    extent = compute_extent(x_axis, y_axis, margin=0.1)
     im = ax.imshow(gridded_data, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1])
     well_positioned_colorbar(ax, fig, im, "Phase [deg?]")
     ax.set_xlim(extent[:2])
@@ -391,9 +391,9 @@ class NgvlaRayTracer:
 
         fig, ax = create_figure_and_axes([16, 8], [1, 3])
         cmap = get_proper_color_map(colormap)
-        imshow_plot(ax[0], fig, 'Griddata phase map', x_axis, y_axis, griddata_phase*phase_fac, cmap, minmax, fsize=10)
-        imshow_plot(ax[1], fig, 'LNDI phase map', x_axis, y_axis, lndi_phase*phase_fac, cmap, minmax, fsize=10)
-        imshow_plot(ax[2], fig, 'Difference phase map', x_axis, y_axis, diff*phase_fac, cmap, minmax, fsize=10)
+        imshow_plot(ax[0], fig, 'Griddata phase map', x_axis.array, y_axis.array, griddata_phase*phase_fac, cmap, minmax, fsize=10)
+        imshow_plot(ax[1], fig, 'LNDI phase map', x_axis.array, y_axis.array, lndi_phase*phase_fac, cmap, minmax, fsize=10)
+        imshow_plot(ax[2], fig, 'Difference phase map', x_axis.array, y_axis.array, diff*phase_fac, cmap, minmax, fsize=10)
         close_figure(fig, 'Phase gridding comparison', f'phase_comparison_{resolution:.2}.png', 300, False)
 
     def _select_data_for_plot(self, data_type):
@@ -873,7 +873,7 @@ def pipeline_full_jit(cropped_mesh_zarr_file, wavelength=0.007, incident_light=(
     sc_n_triangles = in_xds['sc_n_triangles'].values
 
     phase = actual_jitted_pipeline(wavelength, incident_light, horn_orientation, horn_length, horn_diameter,
-                                   horn_position, phase_offset, resolution, epsilon, pr_pnt, pr_norm, sc_pnt,
+                                   horn_position, phase_offset, epsilon, pr_pnt, pr_norm, sc_pnt,
                                    sc_cropped_mesh, sc_cropped_mesh_norm, sc_n_triangles)
 
     # Grid Phase
@@ -894,7 +894,7 @@ def pipeline_full_jit(cropped_mesh_zarr_file, wavelength=0.007, incident_light=(
 
 @njit(cache=True, nogil=True)
 def actual_jitted_pipeline(wavelength, incident_light, horn_orientation, horn_length, horn_diameter, horn_position,
-                           phase_offset, resolution, epsilon, pr_pnt, pr_norm, sc_pnt, sc_cropped_mesh,
+                           phase_offset, epsilon, pr_pnt, pr_norm, sc_pnt, sc_cropped_mesh,
                            sc_cropped_mesh_norm, sc_n_triangles):
     # Primary reflections
     light = np.zeros_like(pr_pnt)
@@ -938,3 +938,72 @@ def actual_jitted_pipeline(wavelength, incident_light, horn_orientation, horn_le
     phase += phase_offset
 
     return phase
+
+
+@njit(cache=True, nogil=True)
+def actual_gridding(x_axis, y_axis, nx, ny, distance_limit, pr_pcd, pr_mesh, pr_mesh_norm, pr_pnt, pr_norm):
+
+    pcd_2d = pr_pcd[:, 0:2]
+    ray_origin = np.array([0.0, 0.0, 0.0])
+    ray_vector = np.array([0.0, 0.0, -1.0])
+
+    print()
+    ntot = nx * ny
+    for ix in range(nx):
+        ray_origin[0] = x_axis[ix]
+        for iy in range(ny):
+            ray_origin[1] = y_axis[iy]
+            distances = np.sqrt(np.sum((pcd_2d - ray_origin[0:2]) ** 2, axis=1))
+            nearest_pnt_idx = np.argmin(distances)
+            if distances[nearest_pnt_idx] < distance_limit:
+                for itriangle, triangle in enumerate(pr_mesh):
+                    if nearest_pnt_idx in triangle:
+                        inside, intersect_pnt = moller_trumbore_algorithm(ray_origin, ray_vector,
+                                                                          pr_pcd[triangle[0]], pr_pcd[triangle[1]],
+                                                                          pr_pcd[triangle[2]])
+                        if inside:
+                            pr_pnt[ix, iy, :] = intersect_pnt
+                            pr_norm[ix, iy, :] = pr_mesh_norm[itriangle]
+                            break
+
+            itot = ix * ny + iy +1
+            print(f'{return_line}{itot}/{ntot}             ')
+
+    return pr_pnt, pr_norm
+
+
+
+def create_gridded_primary_dish(cropped_mesh_zarr_file, x_axis, y_axis, debug=None, distance_limit=0.2, plot=False):
+    # Opening XDS
+    in_xds = xr.open_zarr(cropped_mesh_zarr_file)
+    pr_mesh = in_xds['pr_mesh'].values
+    pr_mesh_norm = in_xds['pr_mesh_norm'].values
+    pr_pcd = in_xds['pr_pnt'].values
+
+    # This needs to be tested
+    # del in_xds
+
+    # Grid Normals and points
+    nx, ny = x_axis.shape[0], y_axis.shape[0]
+    tri_shape = np.array([nx, ny, 3])
+    pr_norm = np.full(tri_shape, np.nan)
+    pr_pnt = np.full(tri_shape, np.nan)
+    # pr_pnt, pr_norm =
+    print(f'Gridding {nx} by {ny} points')
+    actual_gridding(x_axis, y_axis, nx, ny, distance_limit, pr_pcd, pr_mesh, pr_mesh_norm, pr_norm, pr_pnt)
+
+    if plot:
+        axes = ['x', 'y', 'z']
+        fig, ax = create_figure_and_axes([18, 8], [1, 3])
+        for iax in range(3):
+            imshow_plot(ax[iax], fig, f'{axes[iax]} coord', x_axis, y_axis, pr_pnt[:, :, iax], 'viridis', [-5, 5],
+                        fsize=5)
+        close_figure(fig, 'Coord of gridded primary', 'gridded_pnt.png', 300, False, tight_layout=True)
+
+        fig, ax = create_figure_and_axes([18, 8], [1, 3])
+        for iax in range(3):
+            imshow_plot(ax[iax], fig, f'{axes[iax]} normal', x_axis, y_axis, pr_norm[:, :, iax], 'viridis', [-1, 1],
+                    fsize=5)
+        close_figure(fig, 'Normal of gridded primary', 'gridded_norm.png', 300, False, tight_layout=True)
+
+    return pr_pnt, pr_norm
