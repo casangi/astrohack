@@ -287,9 +287,7 @@ class NgvlaRayTracer:
                 self.sc_pnt[iax] -= axfocus
 
     def primary_reflection(self):
-        print(self.incident_light)
         light = np.zeros_like(self.pr_pnt)
-        print(light.shape, self.pr_pnt)
         light[:] = np.array(self.incident_light)
         self.pr_reflec = light - 2 * inner_product_2d(light, self.pr_norm) * self.pr_norm
 
@@ -494,7 +492,6 @@ class NgvlaRayTracer:
             for key, item in xds.attrs.items():
                 self.__setattr__(key, item)
         for key, item in xds.items():
-            print(key)
             self.__setattr__(str(key), item.values)
         self.pr_pnt = xds.pr_pnt.values
         self.sc_pnt = xds.sc_pnt.values
@@ -590,7 +587,6 @@ class NgvlaRayTracer:
         self.phase = (self.n_wavelength-floor_n_wave) * twopi - np.pi
         self.phase += self.phase_offset
 
-        print(self.phase_offset)
 
         if show_stats:
             print('first')
