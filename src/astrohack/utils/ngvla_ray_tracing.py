@@ -8,7 +8,7 @@ import time
 
 from astrohack.utils import convert_unit, twopi, data_statistics, gauss_elimination
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
-    close_figure, compute_extent
+    close_figure, compute_extent, scatter_plot
 
 nanvec3d = np.array([np.nan, np.nan, np.nan])
 intblankval = -1000
@@ -24,10 +24,16 @@ def numpy_size(array):
         iu += 1
     print(f'Image size: {memsize:.2f} {units[iu]}')
 
-def imshow_plot(ax, fig, title, x_axis, y_axis, gridded_data, cmap, minmax, fsize=5):
+def imshow_plot(ax, fig, title, x_axis, y_axis, gridded_data, cmap, minmax, fsize=5, flipxy=True):
+    if flipxy:
+        plotting_data = np.transpose(gridded_data)
+    else:
+        plotting_data = gridded_data
+
     ax.set_title(title, size=1.5 * fsize)
     extent = compute_extent(x_axis, y_axis, margin=0.1)
-    im = ax.imshow(gridded_data, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1])
+    im = ax.imshow(plotting_data, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1],
+                   origin='lower')
     well_positioned_colorbar(ax, fig, im, "Phase [deg?]")
     ax.set_xlim(extent[:2])
     ax.set_ylim(extent[2:])
@@ -81,7 +87,7 @@ def inner_product_1d_jit(vec_a, vec_b):
 
 @njit(cache=True, nogil=True)
 def moller_trumbore_algorithm(ray_origin, ray_vector, pa, pb, pc):
-    epsilon = 1e-6
+    epsilon = 1e-10
     edge1 = pb - pa
     edge2 = pc - pa
 
@@ -178,8 +184,14 @@ def compute_distances2(array_of_vectors, point):
 
 
 @njit(cache=True, nogil=True)
-def simple_axis(user_array, resolution):
+def simple_axis(user_array, resolution, margin=0.05):
     mini, maxi = np.min(user_array), np.max(user_array)
+    ax_range = maxi-mini
+    pad = margin*ax_range
+    if pad < np.abs(resolution):
+        pad = np.abs(resolution)
+    mini -= pad
+    maxi += pad
     npnt = int(np.ceil((maxi - mini) / resolution))
     axis_array = np.arange(npnt + 1)
     axis_array = resolution * axis_array
@@ -941,9 +953,9 @@ def actual_jitted_pipeline(wavelength, incident_light, horn_orientation, horn_le
 
 
 @njit(cache=True, nogil=True)
-def actual_gridding(x_axis, y_axis, nx, ny, distance_limit, pr_pcd, pr_mesh, pr_mesh_norm, pr_pnt, pr_norm):
+def actual_gridding(x_axis, y_axis, nx, ny, pr_pcd, pr_mesh, pr_mesh_norm, pr_pnt, pr_norm):
 
-    pcd_2d = pr_pcd[:, 0:2]
+    #pcd_2d = pr_pcd[:, 0:2]
     ray_origin = np.array([0.0, 0.0, 0.0])
     ray_vector = np.array([0.0, 0.0, -1.0])
 
@@ -953,18 +965,28 @@ def actual_gridding(x_axis, y_axis, nx, ny, distance_limit, pr_pcd, pr_mesh, pr_
         ray_origin[0] = x_axis[ix]
         for iy in range(ny):
             ray_origin[1] = y_axis[iy]
-            distances = np.sqrt(np.sum((pcd_2d - ray_origin[0:2]) ** 2, axis=1))
-            nearest_pnt_idx = np.argmin(distances)
-            if distances[nearest_pnt_idx] < distance_limit:
-                for itriangle, triangle in enumerate(pr_mesh):
-                    if nearest_pnt_idx in triangle:
-                        inside, intersect_pnt = moller_trumbore_algorithm(ray_origin, ray_vector,
-                                                                          pr_pcd[triangle[0]], pr_pcd[triangle[1]],
-                                                                          pr_pcd[triangle[2]])
-                        if inside:
-                            pr_pnt[ix, iy, :] = intersect_pnt
-                            pr_norm[ix, iy, :] = pr_mesh_norm[itriangle]
-                            break
+
+            for itriangle, triangle in enumerate(pr_mesh):
+                inside, intersect_pnt = moller_trumbore_algorithm(ray_origin, ray_vector, pr_pcd[triangle[0]],
+                                                                  pr_pcd[triangle[1]], pr_pcd[triangle[2]])
+                if inside:
+                    pr_pnt[ix, iy, :] = intersect_pnt
+                    pr_norm[ix, iy, :] = pr_mesh_norm[itriangle]
+                    break
+
+            # distances = np.sqrt(np.sum((pcd_2d - ray_origin[0:2]) ** 2, axis=1))
+            # nearest_pnt_idx = np.argmin(distances)
+            # if distances[nearest_pnt_idx] < distance_limit:
+            #     for itriangle, triangle in enumerate(pr_mesh):
+            #         if nearest_pnt_idx in triangle:
+            #             inside, intersect_pnt = moller_trumbore_algorithm(ray_origin, ray_vector,
+            #                                                               pr_pcd[triangle[0]], pr_pcd[triangle[1]],
+            #                                                               pr_pcd[triangle[2]])
+            #             if inside:
+            #                 pr_pnt[ix, iy, :] = intersect_pnt
+            #                 pr_norm[ix, iy, :] = pr_mesh_norm[itriangle]
+            #                 break
+
 
             itot = ix * ny + iy +1
             print(f'{return_line}{itot}/{ntot}             ')
@@ -973,15 +995,24 @@ def actual_gridding(x_axis, y_axis, nx, ny, distance_limit, pr_pcd, pr_mesh, pr_
 
 
 
-def create_gridded_primary_dish(cropped_mesh_zarr_file, x_axis, y_axis, debug=None, distance_limit=0.2, plot=False):
+def create_gridded_primary_dish(mesh_zarr_file, resolution, plot=False, raw_mesh=True):
     # Opening XDS
-    in_xds = xr.open_zarr(cropped_mesh_zarr_file)
-    pr_mesh = in_xds['pr_mesh'].values
-    pr_mesh_norm = in_xds['pr_mesh_norm'].values
-    pr_pcd = in_xds['pr_pnt'].values
+    in_xds = xr.open_zarr(mesh_zarr_file)
+    if raw_mesh:
+        pr_mesh = in_xds['primary_mesh'].values
+        pr_mesh_norm = in_xds['primary_mesh_normals'].values
+        pr_pcd = in_xds['primary_point_cloud'].values
+    else:
+        pr_mesh = in_xds['pr_mesh'].values
+        pr_mesh_norm = in_xds['pr_mesh_norm'].values
+        pr_pcd = in_xds['pr_pnt'].values
 
     # This needs to be tested
     # del in_xds
+
+    x_axis = simple_axis(pr_pcd[:, 0], resolution)
+    y_axis = simple_axis(pr_pcd[:, 1], resolution)
+
 
     # Grid Normals and points
     nx, ny = x_axis.shape[0], y_axis.shape[0]
@@ -990,20 +1021,43 @@ def create_gridded_primary_dish(cropped_mesh_zarr_file, x_axis, y_axis, debug=No
     pr_pnt = np.full(tri_shape, np.nan)
     # pr_pnt, pr_norm =
     print(f'Gridding {nx} by {ny} points')
-    actual_gridding(x_axis, y_axis, nx, ny, distance_limit, pr_pcd, pr_mesh, pr_mesh_norm, pr_norm, pr_pnt)
+    actual_gridding(x_axis, y_axis, nx, ny, pr_pcd, pr_mesh, pr_mesh_norm, pr_pnt, pr_norm)
+
+
+    x_pnt = pr_pcd[:, 0]
+    y_pnt = pr_pcd[:, 1]
+    z_pnt = pr_pcd[:, 2]
+    x_mesh, y_mesh = np.meshgrid(x_axis, y_axis)
+    gridded_z = griddata((x_pnt, y_pnt), z_pnt, (x_mesh, y_mesh), 'linear')
+
+
 
     if plot:
         axes = ['x', 'y', 'z']
-        fig, ax = create_figure_and_axes([18, 8], [1, 3])
+        fig, ax = create_figure_and_axes([24, 8], [1, 3])
         for iax in range(3):
-            imshow_plot(ax[iax], fig, f'{axes[iax]} coord', x_axis, y_axis, pr_pnt[:, :, iax], 'viridis', [-5, 5],
+            title = f'{axes[iax]} coord'
+            print(title)
+            print(data_statistics(pr_pnt[:, :, iax]))
+            imshow_plot(ax[iax], fig, title, x_axis, y_axis, pr_pnt[:, :, iax], 'viridis', [-20, 20],
                         fsize=5)
         close_figure(fig, 'Coord of gridded primary', 'gridded_pnt.png', 300, False, tight_layout=True)
 
-        fig, ax = create_figure_and_axes([18, 8], [1, 3])
+        fig, ax = create_figure_and_axes([24, 8], [1, 3])
         for iax in range(3):
-            imshow_plot(ax[iax], fig, f'{axes[iax]} normal', x_axis, y_axis, pr_norm[:, :, iax], 'viridis', [-1, 1],
+            title = f'{axes[iax]} normal'
+            print(title)
+            print(data_statistics(pr_norm[:, :, iax]))
+            imshow_plot(ax[iax], fig, title, x_axis, y_axis, pr_norm[:, :, iax], 'viridis', [-1, 1],
                     fsize=5)
         close_figure(fig, 'Normal of gridded primary', 'gridded_norm.png', 300, False, tight_layout=True)
+
+        fig, ax = create_figure_and_axes([10, 8], [1, 1])
+        imshow_plot(ax, fig, 'Z gridded griddata', x_axis, y_axis, pr_norm[:, :, iax], 'viridis', [-20, 20], fsize=5)
+        close_figure(fig, 'Z gridded griddata', 'z_griddata.png', 300, False, tight_layout=True)
+
+        fig, ax = create_figure_and_axes([10, 8], [1, 1])
+        scatter_plot(ax, x_pnt, 'X axis (m)', y_pnt, 'Y axis (m)')
+        close_figure(fig, 'Ungrided X & Y', 'xy_ungridded.png', 300, False, tight_layout=True)
 
     return pr_pnt, pr_norm
