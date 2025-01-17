@@ -994,14 +994,15 @@ def actual_gridding(x_axis, y_axis, nx, ny, pr_pcd, pr_mesh, pr_mesh_norm, pr_pn
     return pr_pnt, pr_norm
 
 
-
 def create_gridded_primary_dish(mesh_zarr_file, resolution, plot=False, raw_mesh=True):
     # Opening XDS
+    focus_location = np.array((-1.136634465810194, 0, -0.331821128650557))
     in_xds = xr.open_zarr(mesh_zarr_file)
     if raw_mesh:
         pr_mesh = in_xds['primary_mesh'].values
         pr_mesh_norm = in_xds['primary_mesh_normals'].values
         pr_pcd = in_xds['primary_point_cloud'].values
+        pr_pcd -= focus_location
     else:
         pr_mesh = in_xds['pr_mesh'].values
         pr_mesh_norm = in_xds['pr_mesh_norm'].values
