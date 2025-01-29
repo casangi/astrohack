@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, newton, bisect
 
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
     close_figure, compute_extent, scatter_plot
@@ -86,14 +86,21 @@ def reflect_off_primary(primary_normals, incident_light):
     reflection = light - 2 * np.sum(light * primary_normals, axis=2)[..., np.newaxis] * primary_normals
     return reflection
 
+def find_primary_focus(primary_gridded, primary_reflection):
+    return
 
-def reflect_off_analytical_secondary(primary_grided, x_axis, y_axis, primary_reflections, offset, focal_length=9.0,
+
+def reflect_off_analytical_secondary(primary_grided, x_axis, y_axis, primary_reflections, method, focal_length=9.0,
                                      z_intercept=3.140, foci_half_distance=3.662):
+    lowerbound = 0
+    upperbound = 50 # 2 times VLA diameter
+    initial_guess = 10
 
     def fit_func(tval, fargs):
         pnt, ref, acoef, fcoef, ccoeff = fargs
         newpnt = pnt+tval*ref
-        value = fcoef - ccoeff + acoef*np.sqrt(1 + (newpnt[0]**2+newpnt[1]**2)/(ccoeff**2-acoef**2)) - newpnt[2]
+        rad2 = newpnt[0]**2 + newpnt[1]**2
+        value = fcoef - ccoeff + acoef*np.sqrt(1 + rad2/(ccoeff**2-acoef**2)) - newpnt[2]
         return value
 
     solved_t = np.empty_like(primary_grided)
@@ -107,15 +114,33 @@ def reflect_off_analytical_secondary(primary_grided, x_axis, y_axis, primary_ref
                 solved_t[ix, iy] = np.nan
             else:
                 args = [[px, py, pz], primary_reflections[ix, iy], z_intercept, focal_length, foci_half_distance]
-                # using scipy fsolve
-                # val, _, ier, _ = fsolve(fit_func, 1, args=args, maxfev=100, full_output=True, xtol=1e-6)
-                # if ier == 1:
-                #     solved_t[ix, iy] = val
-                # else:
-                #     solved_t[ix, iy] = np.nan
-                solved_t[ix, iy] = solve_bisection(fit_func, 0, 1e3, args, tol=1e-6, maxit=100)
+                if method == 'fsolve':
+                    # using scipy fsolve
+                    val, _, ier, _ = fsolve(fit_func, initial_guess, args=args, maxfev=100, full_output=True, xtol=1e-8)
+                    if ier == 1:
+                        solved_t[ix, iy] = val
+                    else:
+                        solved_t[ix, iy] = np.nan
+                elif method == 'mybisect':
+                    solved_t[ix, iy] = solve_bisection(fit_func, lowerbound, upperbound, args, tol=1e-6, maxit=100)
+                elif method == 'newton':
+                    val, _, converged, _ = newton(fit_func, 1, full_output=True, args=[args], maxiter=100)
+                    if converged:
+                        solved_t[ix, iy] = val
+                    else:
+                        solved_t[ix, iy] = np.nan
+                else:
+                    val, res = bisect(fit_func, lowerbound, upperbound, args=args, full_output=True)
+                    if res.converged:
+                        solved_t[ix, iy] = val
+                    else:
+                        solved_t[ix, iy] = np.nan
+
 
     return solved_t
+
+
+
 
 
 def solve_bisection(func, minbound, maxbound, args, tol=1e-8, maxit=100):
