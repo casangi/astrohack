@@ -26,20 +26,13 @@ def normalize_vector_map(vector_map):
 
 
 def create_radial_mask(radius, inner_rad, outer_rad):
-    mask = np.full_like(radius, 1.0)
-    mask = np.where(radius > outer_rad, np.nan, mask)
-    mask = np.where(radius < inner_rad, np.nan, mask)
-    return mask
-
-
-def create_radial_mask_1d(radius, inner_rad, outer_rad):
     mask = np.full_like(radius, True, dtype=bool)
     mask = np.where(radius > outer_rad, False, mask)
     mask = np.where(radius < inner_rad, False, mask)
     return mask
 
 
-def make_gridded_vla_primary_1d(grid_size, resolution, antena_radius=12.5, inner_radius=2, focal_length=9.0):
+def make_gridded_vla_primary(grid_size, resolution, antena_radius=12.5, inner_radius=2, focal_length=9.0):
     grid_minmax = [-grid_size/2, grid_size/2]
     axis = simple_axis(grid_minmax, resolution, margin=0.0)
     image_size = axis.shape[0]
@@ -49,7 +42,7 @@ def make_gridded_vla_primary_1d(grid_size, resolution, antena_radius=12.5, inner
     x_mesh, y_mesh = np.meshgrid(axis, axis,indexing='ij')
     x_idx_mesh, y_idx_mesh = np.meshgrid(axis_idx, axis_idx, indexing='ij')
     img_radius = np.sqrt(x_mesh**2+y_mesh**2)
-    radial_mask = create_radial_mask_1d(img_radius, inner_radius, antena_radius)
+    radial_mask = create_radial_mask(img_radius, inner_radius, antena_radius)
     img_radius = img_radius[radial_mask]
     npnt_1d = img_radius.shape[0]
     idx_1d = np.empty([npnt_1d, 2], dtype=int)
@@ -85,52 +78,6 @@ def make_gridded_vla_primary_1d(grid_size, resolution, antena_radius=12.5, inner
     return ray_tracing_dict
 
 
-def make_gridded_vla_primary(grid_size, resolution, antena_radius=12.5, inner_radius=2, focal_length=9.0):
-    grid_minmax = [-grid_size/2, grid_size/2]
-    x_axis = simple_axis(grid_minmax, resolution, margin=0.0)
-    y_axis = np.copy(x_axis)
-    npnt = x_axis.shape[0]
-    vec_shape = [npnt, npnt, 3]
-
-    # It is imperative to put indexing='ij' so that the x and Y axes are not flipped in this step.
-    x_mesh, y_mesh = np.meshgrid(x_axis, y_axis,indexing='ij')
-    img_radius = np.sqrt(x_mesh**2+y_mesh**2)
-    radial_mask = create_radial_mask(img_radius, inner_radius, antena_radius)
-    img_radius *= radial_mask
-    # Parabola formula = (x**2 + y**2)/4/focal_length
-    gridded_primary = img_radius**2/4/focal_length
-    x_grad = np.zeros(vec_shape)
-    y_grad = np.zeros(vec_shape)
-    x_grad[:, :, 0] = 1.0
-    x_grad[:, :, 2] = 2 * x_mesh / 4 / focal_length
-    y_grad[:, :, 1] = 1.0
-    y_grad[:, :, 2] = 2 * y_mesh / 4 / focal_length
-
-    primary_normals = np.cross(x_grad, y_grad)
-    primary_normals *= radial_mask[..., np.newaxis]
-    primary_normals = normalize_vector_map(primary_normals)
-    return gridded_primary, primary_normals, x_axis, y_axis
-
-
-
-def simple_im_plot(title, gridded_array, x_axis, y_axis, filename, colormap='viridis'):
-    fig, ax = create_figure_and_axes([10, 8], [1, 1])
-    cmap = get_proper_color_map(colormap)
-    minmax = [np.nanmin(gridded_array), np.nanmax(gridded_array)]
-    fsize = 10
-    ax.set_title(title, size=1.5 * fsize)
-    extent = compute_extent(x_axis, y_axis, margin=0.0)
-    im = ax.imshow(gridded_array.T, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1],
-                   origin='lower')
-    well_positioned_colorbar(ax, fig, im, "Z Scale")
-    ax.set_xlim(extent[:2])
-    ax.set_ylim(extent[2:])
-    ax.set_xlabel("X axis [m]")
-    ax.set_ylabel("Y axis [m]")
-
-    close_figure(fig, '', filename, 300, False)
-
-
 def make_2d(npnt, data, indexes):
     gridded_2d = np.full([npnt, npnt], np.nan)
     npnt_1d = data.shape[0]
@@ -162,15 +109,7 @@ def plot_rt_dict(rt_dict, key, title, filename, coord=None, colormap='viridis'):
     close_figure(fig, '', filename, 300, False)
 
 
-def reflect_off_primary(primary_normals, incident_light):
-    incident_light = normalize_vector_map(incident_light)
-    light = np.zeros_like(primary_normals)
-    light[:] = np.array(incident_light)
-    # np.sum in axis 2 is another way of expressing the dot product
-    reflection = light - 2 * np.sum(light * primary_normals, axis=2)[..., np.newaxis] * primary_normals
-    return reflection
-
-def reflect_off_primary_1d(rt_dict, incident_light):
+def reflect_off_primary(rt_dict, incident_light):
     incident_light = normalize_vector_map(incident_light)
     primary_normals = rt_dict['pr_norm']
     light = np.zeros_like(primary_normals)
@@ -179,8 +118,6 @@ def reflect_off_primary_1d(rt_dict, incident_light):
     rt_dict['reflection'] = reflection
     return rt_dict
 
-def find_primary_focus(primary_gridded, primary_reflection):
-    return
 
 def secondary_hyperboloid_root_func(tval, fargs):
     pnt, ray, acoef, fcoef, ccoef = fargs
