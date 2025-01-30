@@ -56,7 +56,7 @@ def make_gridded_vla_primary(grid_size, resolution, telescope_pars):
     x_mesh, y_mesh = np.meshgrid(axis, axis,indexing='ij')
     x_idx_mesh, y_idx_mesh = np.meshgrid(axis_idx, axis_idx, indexing='ij')
     img_radius = np.sqrt(x_mesh**2+y_mesh**2)
-    radial_mask = create_radial_mask(img_radius, telescope_pars['inner_radius'], telescope_pars['primary diameter'])
+    radial_mask = create_radial_mask(img_radius, telescope_pars['inner_radius'], telescope_pars['primary_diameter']/2)
     img_radius = img_radius[radial_mask]
     npnt_1d = img_radius.shape[0]
     idx_1d = np.empty([npnt_1d, 2], dtype=int)
@@ -88,7 +88,8 @@ def make_gridded_vla_primary(grid_size, resolution, telescope_pars):
         'pr_idx': idx_1d,
         'image_size': image_size,
         'axis': axis,
-        'radius': img_radius
+        'radius': img_radius,
+        'npnt_1d': npnt_1d,
     }
     return ray_tracing_dict
 
@@ -183,57 +184,47 @@ def vla_2d_plot(pntzs, x_axis, y_axis, rays, primary_diameter=25, secondary_diam
     close_figure(fig, '', f'vla-analytical-model.png', 300, False)
 
 
-def reflect_off_analytical_secondary(rt_dict, focal_length=9.0, z_intercept=3.140, foci_half_distance=3.662):
-    lowerbound = focal_length
-    upperbound = 100 # 2 times VLA diameter
-    initial_guess = 1
+def reflect_off_analytical_secondary(rt_dict, telescope_pars):
+    pr_points = rt_dict['pr_pnt']
+    pr_refle = rt_dict['pr_ref']
 
-    solved_t = np.empty_like(primary_grided)
-    npnt = primary_grided.shape[0]
-    for ix in range(npnt):
-        px = x_axis[ix]
-        for iy in range(npnt):
-            py = y_axis[iy]
-            pz = primary_grided[ix, iy]
-            if np.isnan(pz):
-                solved_t[ix, iy] = np.nan
-            else:
-                lowerbound = focal_length+pz/2
-                upperbound = 2*lowerbound # 2 times VLA diameter
-                initial_guess = focal_length+pz
-                args = [[px, py, pz], primary_reflections[ix, iy], z_intercept, focal_length, foci_half_distance]
-                # print(lowerbound, upperbound)
-                # print(secondary_hyperboloid_root_func(lowerbound, args), secondary_hyperboloid_root_func(upperbound, args))
-                val, _, ier, _ = fsolve(secondary_hyperboloid_root_func, initial_guess, args=args, maxfev=100, full_output=True, xtol=1e-8)
-                if ier == 1:
-                    solved_t[ix, iy] = val
-                else:
-                    solved_t[ix, iy] = np.nan
-                # if method == 'fsolve':
-                #     # using scipy fsolve
-                #     val, _, ier, _ = fsolve(secondary_hyperboloid_root_func, initial_guess, args=args, maxfev=100, full_output=True, xtol=1e-8)
-                #     if ier == 1:
-                #         solved_t[ix, iy] = val
-                #     else:
-                #         solved_t[ix, iy] = np.nan
-                # elif method == 'mybisect':
-                #     solved_t[ix, iy] = solve_bisection(secondary_hyperboloid_root_func, lowerbound, upperbound, args, tol=1e-6, maxit=100)
-                # elif method == 'newton':
-                #     val, _, converged, _ = newton(secondary_hyperboloid_root_func, initial_guess, full_output=True, args=[args], maxiter=100, tol=1e-6, rtol=1e-6)
-                #     if converged:
-                #         solved_t[ix, iy] = val
-                #     else:
-                #         solved_t[ix, iy] = np.nan
-                # else:
-                #     val, res = bisect(secondary_hyperboloid_root_func, lowerbound, upperbound, args=args, full_output=True)
-                #     if res.converged:
-                #         solved_t[ix, iy] = val
-                #     else:
-                #         solved_t[ix, iy] = np.nan
+    # this is simply 1D
+    distance_to_secondary = np.empty_like(pr_points[:, 0])
 
+    fargs = [None, None, telescope_pars['z_intercept'], telescope_pars['focal_length'],
+             telescope_pars['foci_half_distance']]
 
-    return solved_t
+    for ipnt in range(rt_dict['npnt_1d']):
+        fargs[0] = pr_points[ipnt]
+        fargs[1] = pr_refle[ipnt]
+        # Focal length plus the height of departing point (distance from point to primary focus)
+        initial_guess = telescope_pars['focal_length'] + pr_points[ipnt][2]
+        val, _, ier, _ = fsolve(secondary_hyperboloid_root_func, initial_guess, args=fargs, maxfev=100, full_output=True, xtol=1e-8)
+        if ier == 1:
+            distance_to_secondary[ipnt] = val
+        else:
+            distance_to_secondary[ipnt] = np.nan
 
+    secondary_pnt = pr_points + distance_to_secondary[..., np.newaxis] * pr_refle
+    # Compute Gradients to compute normals at touched points
+    x_grad = np.zeros_like(pr_points)
+    y_grad = np.zeros_like(pr_points)
+    dcoeff = telescope_pars['foci_half_distance']**2 - telescope_pars['z_intercept']**2
+    px, py = secondary_pnt[:, 0], secondary_pnt[:, 1]
+    root_term = telescope_pars['z_intercept'] /(dcoeff *  np.sqrt(1 + (px**2 + py**2)/dcoeff))
+    x_grad[:, 0] = 1.0
+    y_grad[:, 1] = 1.0
+    x_grad[:, 2] = px * root_term
+    y_grad[:, 2] = py * root_term
+    secondary_normals = np.cross(x_grad, y_grad)
+    secondary_reflections = reflect_light(pr_refle, secondary_normals)
+
+    rt_dict['dist_pr_sc'] = distance_to_secondary
+    rt_dict['sc_pnt'] = secondary_pnt
+    rt_dict['sc_norm'] = secondary_normals
+    rt_dict['sc_ref'] = secondary_reflections
+
+    return rt_dict
 
 
 
