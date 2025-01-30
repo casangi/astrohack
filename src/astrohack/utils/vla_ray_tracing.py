@@ -5,6 +5,8 @@ from astrohack.visualization.plot_tools import get_proper_color_map, create_figu
     close_figure, compute_extent, scatter_plot
 
 
+vla_secondary = 2.5146
+
 def simple_axis(minmax, resolution, margin=0.05):
     mini, maxi = minmax
     ax_range = maxi-mini
@@ -86,6 +88,7 @@ def make_2d(npnt, data, indexes):
         gridded_2d[ix, iy] = data[ipnt]
     return gridded_2d
 
+
 def plot_rt_dict(rt_dict, key, title, filename, coord=None, colormap='viridis'):
     if coord is None:
         data = rt_dict[key]
@@ -121,39 +124,12 @@ def reflect_off_primary(rt_dict, incident_light):
 
 def secondary_hyperboloid_root_func(tval, fargs):
     pnt, ray, acoef, fcoef, ccoef = fargs
-    acoef2 = acoef ** 2
-    cminusa2 = ccoef ** 2 - acoef2
     newpnt = pnt + tval * ray
     rad2 = newpnt[0] ** 2 + newpnt[1] ** 2
-    pz2 = newpnt[2] ** 2
     pntz = newpnt[2]
-    dcoef = fcoef - ccoef
-    # if rad2 > 2.5146 ** 2:  # i.e the Radius is larger than the VLA secondary
-    #     return -1e300
-    # else:
-        # This is hard to find the root
     value = fcoef - ccoef + acoef*np.sqrt(1 + rad2/(ccoef**2-acoef**2)) - pntz
-        # This is a polynomial rearragement of the previous equation that should be easier to solve for
-        # value = cminusa2 * ((pz2 + 2 * dcoef * pntz + dcoef ** 2) / acoef2 - 1) - rad2
     return value
 
-def secondary_hyperboloid_root_func_arr(tval, fargs):
-    pnt, ray, acoef, fcoef, ccoef = fargs
-    acoef2 = acoef ** 2
-    cminusa2 = ccoef ** 2 - acoef2
-    newpnt = pnt[np.newaxis, ...] + tval[..., np.newaxis] * ray[np.newaxis, ...]
-    rad2 = newpnt[:, 0] ** 2 + newpnt[:, 1] ** 2
-    pz2 = newpnt[:, 2] ** 2
-    pntz = newpnt[:, 2]
-    dcoef = fcoef - ccoef
-    # if rad2 > 2.5146 ** 2:  # i.e the Radius is larger than the VLA secondary
-    #     return 1e300
-    # else:
-        # This is hard to find the root
-    #value = fcoef - ccoef + acoef*np.sqrt(1 + rad2/(ccoef**2-acoef**2)) - pntz
-        # This is a polynomial rearragement of the previous equation that should be easier to solve for
-    value = cminusa2 * ((pz2 + 2 * dcoef * pntz + dcoef ** 2) / acoef2 - 1) - rad2
-    return value
 
 def vla_2d_plot(pntzs, x_axis, y_axis, rays, primary_diameter=25, secondary_diameter=2.5146, focal_length=9.0, z_intercept=3.140, foci_half_distance=3.662, nrays=20):
     pr_rad = primary_diameter/2
@@ -192,20 +168,6 @@ def vla_2d_plot(pntzs, x_axis, y_axis, rays, primary_diameter=25, secondary_diam
     # scatter_plot(ax, radarr, 'Radius', primary, 'Height', model=secondary, data_label='Primary', model_label='Secondary', plot_residuals=False)
     ax.set_aspect('equal')
     close_figure(fig, '', f'vla-analytical-model.png', 300, False)
-
-def plot_root_func(ix, iy, primary_grided, x_axis, y_axis, primary_reflections, focal_length=9.0,
-                                     z_intercept=3.140, foci_half_distance=3.662, maxt=100, npnt=1e3):
-    step = maxt/npnt
-    tarr = np.arange(0, maxt, step)
-    pnt = np.array([x_axis[ix], y_axis[iy], primary_grided[ix,iy]])
-    ray = primary_reflections[ix, iy]
-    fargs = [pnt, ray, z_intercept, focal_length, foci_half_distance]
-    fvalarr = secondary_hyperboloid_root_func_arr(tarr, fargs)
-    fig, ax = create_figure_and_axes([10, 8], [1, 1])
-    scatter_plot(ax, tarr, 't Parameter', fvalarr, 'Function value')
-    close_figure(fig, '', f'tpar-{ix}-{iy}.png', 300, False)
-
-
 
 
 def reflect_off_analytical_secondary(primary_grided, x_axis, y_axis, primary_reflections, method, focal_length=9.0,
