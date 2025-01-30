@@ -94,6 +94,24 @@ def secondary_hyperboloid_root_func(tval, fargs):
     pnt, ray, acoef, fcoef, ccoef = fargs
     acoef2 = acoef ** 2
     cminusa2 = ccoef ** 2 - acoef2
+    newpnt = pnt + tval * ray
+    rad2 = newpnt[0] ** 2 + newpnt[1] ** 2
+    pz2 = newpnt[2] ** 2
+    pntz = newpnt[2]
+    dcoef = fcoef - ccoef
+    # if rad2 > 2.5146 ** 2:  # i.e the Radius is larger than the VLA secondary
+    #     return -1e300
+    # else:
+        # This is hard to find the root
+    value = fcoef - ccoef + acoef*np.sqrt(1 + rad2/(ccoef**2-acoef**2)) - pntz
+        # This is a polynomial rearragement of the previous equation that should be easier to solve for
+        # value = cminusa2 * ((pz2 + 2 * dcoef * pntz + dcoef ** 2) / acoef2 - 1) - rad2
+    return value
+
+def secondary_hyperboloid_root_func_arr(tval, fargs):
+    pnt, ray, acoef, fcoef, ccoef = fargs
+    acoef2 = acoef ** 2
+    cminusa2 = ccoef ** 2 - acoef2
     newpnt = pnt[np.newaxis, ...] + tval[..., np.newaxis] * ray[np.newaxis, ...]
     rad2 = newpnt[:, 0] ** 2 + newpnt[:, 1] ** 2
     pz2 = newpnt[:, 2] ** 2
@@ -103,9 +121,9 @@ def secondary_hyperboloid_root_func(tval, fargs):
     #     return 1e300
     # else:
         # This is hard to find the root
-    value = fcoef - ccoef + acoef*np.sqrt(1 + rad2/(ccoef**2-acoef**2)) - pntz
+    #value = fcoef - ccoef + acoef*np.sqrt(1 + rad2/(ccoef**2-acoef**2)) - pntz
         # This is a polynomial rearragement of the previous equation that should be easier to solve for
-    #value = cminusa2 * ((pz2 + 2 * dcoef * pntz + dcoef ** 2) / acoef2 - 1) - rad2
+    value = cminusa2 * ((pz2 + 2 * dcoef * pntz + dcoef ** 2) / acoef2 - 1) - rad2
     return value
 
 def vla_2d_plot(pntzs, x_axis, y_axis, rays, primary_diameter=25, secondary_diameter=2.5146, focal_length=9.0, z_intercept=3.140, foci_half_distance=3.662, nrays=20):
@@ -126,7 +144,6 @@ def vla_2d_plot(pntzs, x_axis, y_axis, rays, primary_diameter=25, secondary_diam
     npnt = pntzs.shape[0]
     ipnt = 0
     iy = npnt//2
-    print(y_axis[iy])
     while ipnt < nrays:
         ix = np.random.randint(0, high=npnt)
         if np.isnan(pntzs[ix, iy]):
@@ -138,7 +155,6 @@ def vla_2d_plot(pntzs, x_axis, y_axis, rays, primary_diameter=25, secondary_diam
             tracer = point + tparr[:, np.newaxis]*ray
             ax.plot(tracer[:,0], tracer[:,1], color='green', label='Rays')
             ipnt += 1
-            print(ray)
 
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
@@ -155,8 +171,7 @@ def plot_root_func(ix, iy, primary_grided, x_axis, y_axis, primary_reflections, 
     pnt = np.array([x_axis[ix], y_axis[iy], primary_grided[ix,iy]])
     ray = primary_reflections[ix, iy]
     fargs = [pnt, ray, z_intercept, focal_length, foci_half_distance]
-    fvalarr = secondary_hyperboloid_root_func(tarr, fargs)
-    print(fvalarr.shape, tarr.shape)
+    fvalarr = secondary_hyperboloid_root_func_arr(tarr, fargs)
     fig, ax = create_figure_and_axes([10, 8], [1, 1])
     scatter_plot(ax, tarr, 't Parameter', fvalarr, 'Function value')
     close_figure(fig, '', f'tpar-{ix}-{iy}.png', 300, False)
@@ -166,8 +181,8 @@ def plot_root_func(ix, iy, primary_grided, x_axis, y_axis, primary_reflections, 
 
 def reflect_off_analytical_secondary(primary_grided, x_axis, y_axis, primary_reflections, method, focal_length=9.0,
                                      z_intercept=3.140, foci_half_distance=3.662):
-    lowerbound = 1
-    upperbound = 50 # 2 times VLA diameter
+    lowerbound = focal_length
+    upperbound = 100 # 2 times VLA diameter
     initial_guess = 1
 
     solved_t = np.empty_like(primary_grided)
@@ -180,28 +195,38 @@ def reflect_off_analytical_secondary(primary_grided, x_axis, y_axis, primary_ref
             if np.isnan(pz):
                 solved_t[ix, iy] = np.nan
             else:
+                lowerbound = focal_length+pz/2
+                upperbound = 2*lowerbound # 2 times VLA diameter
+                initial_guess = focal_length+pz
                 args = [[px, py, pz], primary_reflections[ix, iy], z_intercept, focal_length, foci_half_distance]
-                if method == 'fsolve':
-                    # using scipy fsolve
-                    val, _, ier, _ = fsolve(secondary_hyperboloid_root_func, initial_guess, args=args, maxfev=100, full_output=True, xtol=1e-8)
-                    if ier == 1:
-                        solved_t[ix, iy] = val
-                    else:
-                        solved_t[ix, iy] = np.nan
-                elif method == 'mybisect':
-                    solved_t[ix, iy] = solve_bisection(secondary_hyperboloid_root_func, lowerbound, upperbound, args, tol=1e-6, maxit=100)
-                elif method == 'newton':
-                    val, _, converged, _ = newton(secondary_hyperboloid_root_func, initial_guess, full_output=True, args=[args], maxiter=100, tol=1e-6, rtol=1e-6)
-                    if converged:
-                        solved_t[ix, iy] = val
-                    else:
-                        solved_t[ix, iy] = np.nan
+                # print(lowerbound, upperbound)
+                # print(secondary_hyperboloid_root_func(lowerbound, args), secondary_hyperboloid_root_func(upperbound, args))
+                val, _, ier, _ = fsolve(secondary_hyperboloid_root_func, initial_guess, args=args, maxfev=100, full_output=True, xtol=1e-8)
+                if ier == 1:
+                    solved_t[ix, iy] = val
                 else:
-                    val, res = bisect(secondary_hyperboloid_root_func, lowerbound, upperbound, args=args, full_output=True)
-                    if res.converged:
-                        solved_t[ix, iy] = val
-                    else:
-                        solved_t[ix, iy] = np.nan
+                    solved_t[ix, iy] = np.nan
+                # if method == 'fsolve':
+                #     # using scipy fsolve
+                #     val, _, ier, _ = fsolve(secondary_hyperboloid_root_func, initial_guess, args=args, maxfev=100, full_output=True, xtol=1e-8)
+                #     if ier == 1:
+                #         solved_t[ix, iy] = val
+                #     else:
+                #         solved_t[ix, iy] = np.nan
+                # elif method == 'mybisect':
+                #     solved_t[ix, iy] = solve_bisection(secondary_hyperboloid_root_func, lowerbound, upperbound, args, tol=1e-6, maxit=100)
+                # elif method == 'newton':
+                #     val, _, converged, _ = newton(secondary_hyperboloid_root_func, initial_guess, full_output=True, args=[args], maxiter=100, tol=1e-6, rtol=1e-6)
+                #     if converged:
+                #         solved_t[ix, iy] = val
+                #     else:
+                #         solved_t[ix, iy] = np.nan
+                # else:
+                #     val, res = bisect(secondary_hyperboloid_root_func, lowerbound, upperbound, args=args, full_output=True)
+                #     if res.converged:
+                #         solved_t[ix, iy] = val
+                #     else:
+                #         solved_t[ix, iy] = np.nan
 
 
     return solved_t
