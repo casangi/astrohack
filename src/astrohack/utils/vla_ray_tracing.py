@@ -4,6 +4,14 @@ from scipy.optimize import fsolve, newton, bisect
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
     close_figure, compute_extent, scatter_plot
 
+vla_pars = {
+    'primary_diameter': 25.0,
+    'secondary_diameter': 2.5146,
+    'focal_length': 9.0,
+    'z_intercept':3.140,
+    'foci_half_distance':3.662,
+    'inner_radius': 2.0
+}
 
 vla_secondary = 2.5146
 
@@ -27,6 +35,10 @@ def normalize_vector_map(vector_map):
     return vector_map / normalization[..., np.newaxis]
 
 
+def reflect_light(light, normals):
+    return light - 2 * np.sum(light * normals, axis=-1)[..., np.newaxis] * normals
+
+
 def create_radial_mask(radius, inner_rad, outer_rad):
     mask = np.full_like(radius, True, dtype=bool)
     mask = np.where(radius > outer_rad, False, mask)
@@ -34,7 +46,7 @@ def create_radial_mask(radius, inner_rad, outer_rad):
     return mask
 
 
-def make_gridded_vla_primary(grid_size, resolution, antena_radius=12.5, inner_radius=2, focal_length=9.0):
+def make_gridded_vla_primary(grid_size, resolution, telescope_pars):
     grid_minmax = [-grid_size/2, grid_size/2]
     axis = simple_axis(grid_minmax, resolution, margin=0.0)
     image_size = axis.shape[0]
@@ -44,7 +56,7 @@ def make_gridded_vla_primary(grid_size, resolution, antena_radius=12.5, inner_ra
     x_mesh, y_mesh = np.meshgrid(axis, axis,indexing='ij')
     x_idx_mesh, y_idx_mesh = np.meshgrid(axis_idx, axis_idx, indexing='ij')
     img_radius = np.sqrt(x_mesh**2+y_mesh**2)
-    radial_mask = create_radial_mask(img_radius, inner_radius, antena_radius)
+    radial_mask = create_radial_mask(img_radius, telescope_pars['inner_radius'], telescope_pars['primary diameter'])
     img_radius = img_radius[radial_mask]
     npnt_1d = img_radius.shape[0]
     idx_1d = np.empty([npnt_1d, 2], dtype=int)
@@ -54,6 +66,7 @@ def make_gridded_vla_primary(grid_size, resolution, antena_radius=12.5, inner_ra
     y_mesh_1d = y_mesh[radial_mask]
 
     vec_shape = [npnt_1d, 3]
+    focal_length = telescope_pars['focal_length']
     # Parabola formula = (x**2 + y**2)/4/focal_length
     gridded_primary = img_radius**2/4/focal_length
     x_grad = np.zeros(vec_shape)
@@ -117,8 +130,8 @@ def reflect_off_primary(rt_dict, incident_light):
     primary_normals = rt_dict['pr_norm']
     light = np.zeros_like(primary_normals)
     light[:] = incident_light
-    reflection = light - 2 * np.sum(light * primary_normals, axis=-1)[..., np.newaxis] * primary_normals
-    rt_dict['reflection'] = reflection
+    reflection = reflect_light(light, primary_normals)
+    rt_dict['pr_ref'] = reflection
     return rt_dict
 
 
@@ -170,8 +183,7 @@ def vla_2d_plot(pntzs, x_axis, y_axis, rays, primary_diameter=25, secondary_diam
     close_figure(fig, '', f'vla-analytical-model.png', 300, False)
 
 
-def reflect_off_analytical_secondary(primary_grided, x_axis, y_axis, primary_reflections, method, focal_length=9.0,
-                                     z_intercept=3.140, foci_half_distance=3.662):
+def reflect_off_analytical_secondary(rt_dict, focal_length=9.0, z_intercept=3.140, foci_half_distance=3.662):
     lowerbound = focal_length
     upperbound = 100 # 2 times VLA diameter
     initial_guess = 1
