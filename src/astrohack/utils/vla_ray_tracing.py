@@ -2,6 +2,8 @@ import numpy as np
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 
+from astrohack.utils import twopi
+from astrohack.utils.algorithms import phase_wrapping
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
     close_figure, compute_extent
 
@@ -118,7 +120,7 @@ def make_2d(npnt, data, indexes):
     return gridded_2d
 
 
-def plot_rt_dict(rt_dict, key, telescope_pars, title, filename, coord=None, colormap='viridis'):
+def plot_rt_dict(rt_dict, key, telescope_pars, title, filename, coord=None, colormap='viridis', zlim=None):
     if coord is None:
         data = rt_dict[key]
     else:
@@ -126,7 +128,10 @@ def plot_rt_dict(rt_dict, key, telescope_pars, title, filename, coord=None, colo
     gridded_array = make_2d(rt_dict['image_size'], data, rt_dict['pr_idx'])
     fig, ax = create_figure_and_axes([10, 8], [1, 1])
     cmap = get_proper_color_map(colormap)
-    minmax = [np.nanmin(gridded_array), np.nanmax(gridded_array)]
+    if zlim is None:
+        minmax = [np.nanmin(gridded_array), np.nanmax(gridded_array)]
+    else:
+        minmax = zlim
     fsize = 10
     ax.set_title(title, size=1.5 * fsize)
     extent = compute_extent(rt_dict['axis'], rt_dict['axis'], margin=0.0)
@@ -309,6 +314,26 @@ def detect_light(rt_dict, telescope_pars):
 
     rt_dict['dist_sc_horn'] = distance_secondary_to_horn
     rt_dict['horn_intercept'] = horn_intercept
+    return rt_dict
+
+
+def compute_phase(rt_dict, wavelength, phase_offset):
+    incident_light = rt_dict['light']
+    pr_pntz = rt_dict['pr_pnt'][:, 2]
+    distance_pr_horn = rt_dict['dist_sc_horn'] + rt_dict['dist_pr_sc']
+    maxheight = np.max(pr_pntz)
+    boresight = np.empty_like(incident_light)
+    boresight[:] = [0, 0, -1] # strictly vertical
+    cosbeta = generalized_dot(boresight, incident_light)
+    path_diff_before_dish = (maxheight-pr_pntz)/cosbeta
+    total_path = np.where(np.isnan(rt_dict['horn_intercept'][:, 0]), np.nan, distance_pr_horn + path_diff_before_dish)
+
+
+    wavenumber = total_path/wavelength
+    phase = phase_wrapping(twopi * wavenumber + phase_offset)
+
+    rt_dict['total_path'] = total_path
+    rt_dict['phase'] = phase
     return rt_dict
 
 
