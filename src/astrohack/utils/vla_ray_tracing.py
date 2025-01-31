@@ -147,6 +147,7 @@ def reflect_off_primary(rt_dict, incident_light):
     light[:] = incident_light
     reflection = reflect_light(light, primary_normals)
     rt_dict['pr_ref'] = reflection
+    rt_dict['light'] = light
     return rt_dict
 
 
@@ -159,7 +160,18 @@ def secondary_hyperboloid_root_func(tval, fargs):
     return value
 
 
-def vla_2d_plot(pntzs, x_axis, y_axis, rays, primary_diameter=25, secondary_diameter=2.5146, focal_length=9.0, z_intercept=3.140, foci_half_distance=3.662, nrays=20):
+def add_rz_ray_to_plot(ax, origin, destiny, color, label, sign):
+    radcoord = [sign*generalized_norm(origin[0:2]), sign*generalized_norm(destiny[0:2])]
+    zcoord = [origin[2], destiny[2]]
+    ax.plot(radcoord, zcoord, color=color, label=label)
+
+
+def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
+    primary_diameter = telescope_pars['primary_diameter']
+    secondary_diameter = telescope_pars['secondary_diameter']
+    focal_length = telescope_pars['focal_length']
+    foci_half_distance = telescope_pars['foci_half_distance']
+    z_intercept = telescope_pars['z_intercept']
     pr_rad = primary_diameter/2
     sc_rad = secondary_diameter/2
     radarr = np.arange(-pr_rad, pr_rad, primary_diameter/1e3)
@@ -172,22 +184,43 @@ def vla_2d_plot(pntzs, x_axis, y_axis, rays, primary_diameter=25, secondary_diam
     ax.scatter([0], [focal_length], color='black', label='Primary focus')
     ax.scatter([0], [focal_length-2*foci_half_distance], color='red', label='Secondary focus')
 
+    pr_pnts = rt_dict['pr_pnt']
+    sc_pnts = rt_dict['sc_pnt']
+    horn_inters = rt_dict['horn_intercept']
 
-    tparr = np.arange(0, 20, 0.1)
-    npnt = pntzs.shape[0]
-    ipnt = 0
-    iy = npnt//2
-    while ipnt < nrays:
-        ix = np.random.randint(0, high=npnt)
-        if np.isnan(pntzs[ix, iy]):
-            ipnt -= 1
-            continue
-        else:
-            point = [x_axis[ix], pntzs[ix, iy]]
-            ray = [rays[ix, iy, 0], rays[ix, iy, 2]]
-            tracer = point + tparr[:, np.newaxis]*ray
-            ax.plot(tracer[:,0], tracer[:,1], color='green', label='Rays')
-            ipnt += 1
+    npnt = pr_pnts.shape[0]
+    sign = -1
+    for isamp in range(nrays):
+        sign *= -1
+        ipnt = np.random.randint(0, high=npnt)
+
+        # Data Selection
+        sc_pnt = sc_pnts[ipnt]
+        pr_pnt = pr_pnts[ipnt]
+        horn_inter = horn_inters[ipnt]
+
+        # Plot primary reflection
+        add_rz_ray_to_plot(ax, pr_pnt, sc_pnt, 'green', 'Pr->Sc', sign)
+
+        # Plot secondary reflection
+        add_rz_ray_to_plot(ax, sc_pnt, horn_inter,'yellow', 'Sc->Horn', sign)
+
+
+    # tparr = np.arange(0, 20, 0.1)
+    # npnt = pntzs.shape[0]
+    # ipnt = 0
+    # iy = npnt//2
+    # while ipnt < nrays:
+    #     ix = np.random.randint(0, high=npnt)
+    #     if np.isnan(pntzs[ix, iy]):
+    #         ipnt -= 1
+    #         continue
+    #     else:
+    #         point = [x_axis[ix], pntzs[ix, iy]]
+    #         ray = [rays[ix, iy, 0], rays[ix, iy, 2]]
+    #         tracer = point + tparr[:, np.newaxis]*ray
+    #         ax.plot(tracer[:,0], tracer[:,1], color='green', label='Rays')
+    #         ipnt += 1
 
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
@@ -230,7 +263,7 @@ def reflect_off_analytical_secondary(rt_dict, telescope_pars):
     y_grad[:, 1] = 1.0
     x_grad[:, 2] = px * root_term
     y_grad[:, 2] = py * root_term
-    secondary_normals = np.cross(x_grad, y_grad)
+    secondary_normals = normalize_vector_map(np.cross(x_grad, y_grad))
     secondary_reflections = reflect_light(pr_refle, secondary_normals)
 
     rt_dict['dist_pr_sc'] = distance_to_secondary
