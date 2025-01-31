@@ -10,10 +10,16 @@ vla_pars = {
     'focal_length': 9.0,
     'z_intercept':3.140,
     'foci_half_distance':3.662,
-    'inner_radius': 2.0
+    'inner_radius': 2.0,
+    # Assuming a 10 cm Horn for now
+    'horn_diameter': 0.1,
+    # Assumed to be at the Secondary focus i.e.: f - 2c
+    'horn_position': np.array([0, 0, 9.0 - 2 * 3.662]),
+    # Horn looks straight up
+    'horn_orientation': np.array([0, 0, 1])
 }
 
-vla_secondary = 2.5146
+nanvec3d = np.full([3], np.nan)
 
 def simple_axis(minmax, resolution, margin=0.05):
     mini, maxi = minmax
@@ -30,13 +36,21 @@ def simple_axis(minmax, resolution, margin=0.05):
     return axis_array
 
 
+def generalized_dot(vec_map_a, vec_map_b):
+    return np.sum(vec_map_a * vec_map_b, axis=-1)
+
+
+def generalized_norm(vecmap):
+    return np.sqrt(generalized_dot(vecmap, vecmap))
+
+
 def normalize_vector_map(vector_map):
     normalization = np.linalg.norm(vector_map, axis=-1)
     return vector_map / normalization[..., np.newaxis]
 
 
 def reflect_light(light, normals):
-    return light - 2 * np.sum(light * normals, axis=-1)[..., np.newaxis] * normals
+    return light - 2 * generalized_dot(light, normals)[..., np.newaxis] * normals
 
 
 def create_radial_mask(radius, inner_rad, outer_rad):
@@ -226,6 +240,30 @@ def reflect_off_analytical_secondary(rt_dict, telescope_pars):
 
     return rt_dict
 
+
+def detect_light(rt_dict, telescope_pars):
+    sc_reflec = rt_dict['sc_ref']
+    sc_pnt = rt_dict['sc_pnt']
+    horn_orientation = np.empty_like(sc_reflec)
+    horn_position = np.empty_like(sc_reflec)
+    horn_orientation[:] = telescope_pars['horn_orientation']
+    horn_position[:] = telescope_pars['horn_position']
+    horn_diameter = telescope_pars['horn_diameter']
+
+
+    distance_secondary_to_horn = (generalized_dot((horn_position - sc_pnt), horn_orientation) /
+                                  generalized_dot(sc_reflec, horn_orientation))
+    horn_intercept = sc_pnt + distance_secondary_to_horn[..., np.newaxis] * sc_reflec
+    distance_to_horn_center = generalized_norm(horn_intercept-horn_position)
+
+
+    selection = distance_to_horn_center > horn_diameter
+    horn_intercept[selection, :] = nanvec3d
+
+
+    rt_dict['dist_sc_horn'] = distance_secondary_to_horn
+    rt_dict['horn_intercept'] = horn_intercept
+    return rt_dict
 
 
 
