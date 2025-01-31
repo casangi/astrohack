@@ -166,10 +166,10 @@ def secondary_hyperboloid_root_func(tval, fargs):
     return value
 
 
-def add_rz_ray_to_plot(ax, origin, destiny, color, label, sign):
+def add_rz_ray_to_plot(ax, origin, destiny, color, ls, label, sign):
     radcoord = [sign*generalized_norm(origin[0:2]), sign*generalized_norm(destiny[0:2])]
     zcoord = [origin[2], destiny[2]]
-    ax.plot(radcoord, zcoord, color=color, label=label)
+    ax.plot(radcoord, zcoord, color=color, label=label, ls=ls)
 
 
 def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
@@ -185,15 +185,17 @@ def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
     secondary = focal_length - foci_half_distance + z_intercept*np.sqrt(1+radarr**2/(foci_half_distance**2-z_intercept**2))
     secondary = np.where(np.abs(radarr)<sc_rad, secondary, np.nan)
     fig, ax = create_figure_and_axes([10, 8], [1, 1])
-    ax.plot(radarr, primary, color='red', label='primary')
-    ax.plot(radarr, secondary, color='blue', label='secondary')
-    ax.scatter([0], [focal_length], color='black', label='Primary focus')
-    ax.scatter([0], [focal_length-2*foci_half_distance], color='red', label='Secondary focus')
+    ax.plot(radarr, primary, color='black', label='Pr mirror')
+    ax.plot(radarr, secondary, color='blue', label='Sc mirror')
+    ax.scatter([0], [focal_length], color='black', label='Pr focus')
+    ax.scatter([0], [focal_length-2*foci_half_distance], color='blue', label='Sc focus')
 
     pr_pnts = rt_dict['pr_pnt']
     sc_pnts = rt_dict['sc_pnt']
     horn_inters = rt_dict['horn_intercept']
     incomings = rt_dict['light']
+    sc_refs = rt_dict['sc_ref']
+    pr_refs = rt_dict['pr_ref']
 
     npnt = pr_pnts.shape[0]
     sign = -1
@@ -205,18 +207,28 @@ def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
         # Data Selection
         sc_pnt = sc_pnts[ipnt]
         pr_pnt = pr_pnts[ipnt]
+        pr_ref = pr_refs[ipnt]
+        sc_ref = sc_refs[ipnt]
         horn_inter = horn_inters[ipnt]
         incoming = incomings[ipnt]
 
         # Plot incident light
         origin = pr_pnt -inf*incoming
-        add_rz_ray_to_plot(ax, origin, pr_pnt, 'orange', '$\infty$->Pr', sign)
+        add_rz_ray_to_plot(ax, origin, pr_pnt, 'yellow','-',  '$\infty$->Pr', sign)
 
         # Plot primary reflection
-        add_rz_ray_to_plot(ax, pr_pnt, sc_pnt, 'green', 'Pr->Sc', sign)
+        if np.all(np.isnan(sc_pnt)): # Ray does not touch secondary
+            dest = pr_pnt + inf*pr_ref
+            add_rz_ray_to_plot(ax, pr_pnt, dest, 'red', '--', 'Pr->$\infty$', sign)
+        else:
+            add_rz_ray_to_plot(ax, pr_pnt, sc_pnt, 'yellow', '--', 'Pr->Sc', sign)
 
-        # Plot secondary reflection
-        add_rz_ray_to_plot(ax, sc_pnt, horn_inter,'yellow', 'Sc->Horn', sign)
+            # Plot secondary reflection
+            if np.all(np.isnan(horn_inter)): # Ray does not touch horn
+                dest = sc_pnt + inf*sc_ref
+                add_rz_ray_to_plot(ax, sc_pnt, dest, 'red', '-.', 'sc->$\infty$', sign)
+            else:
+                add_rz_ray_to_plot(ax, sc_pnt, horn_inter,'yellow', '-.', 'Sc->Horn', sign)
 
 
 
@@ -228,6 +240,7 @@ def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
     ax.set_xlabel('Radius [m]')
     ax.set_ylabel('Height [m]')
     ax.set_ylim([-0.5, 9.5])
+    ax.set_xlim([-13, 13])
     close_figure(fig, '', f'vla-analytical-model.png', 300, False)
 
 
