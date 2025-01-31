@@ -2,7 +2,8 @@ import numpy as np
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 
-from astrohack.utils import twopi
+from astrohack.utils.constants import twopi
+from astrohack.utils.conversion import convert_unit
 from astrohack.utils.algorithms import phase_wrapping
 from astrohack.utils.ray_tracing_general import generalized_dot, generalized_norm, normalize_vector_map, reflect_light
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
@@ -327,3 +328,39 @@ def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
     ax.set_ylim([-0.5, 9.5])
     ax.set_xlim([-13, 13])
     close_figure(fig, '', f'vla-analytical-model.png', 300, False)
+
+######################################
+# Master routine for the ray Tracing #
+######################################
+def vla_ray_tracing_pipeline(telescope_parameters, grid_size, grid_resolution, grid_unit,
+                             x_pnt_off, y_pnt_off, pnt_off_unit, x_focus_off, y_focus_off, z_focus_off, focus_off_unit,
+                             phase_offset, phase_unit, observing_wavelength, wavelength_unit):
+
+    # Convert user units and build proper RT inputs
+    grid_fac = convert_unit(grid_unit, 'm', 'length')
+    grid_size *= grid_fac
+    grid_resolution *= grid_fac
+
+    focus_fac = convert_unit(focus_off_unit, 'm', 'length')
+    focus_offset = focus_fac * np.array([x_focus_off, y_focus_off, z_focus_off])
+
+    pnt_fac = convert_unit(pnt_off_unit, 'rad', 'trigonometric')
+    x_pnt_off *= pnt_fac
+    y_pnt_off *= pnt_fac
+    # Using small angles approximation here
+    pnt_off = np.sqrt(x_pnt_off**2 + y_pnt_off**2)
+    incident_light = np.array([np.sin(x_pnt_off), np.sin(y_pnt_off), -np.cos(pnt_off)])
+    print(incident_light, generalized_norm(incident_light))
+
+
+    # Actual Ray Tracing starts here
+    rt_dict = make_gridded_vla_primary(grid_size, grid_resolution, telescope_parameters)
+    rt_dict = reflect_off_primary(rt_dict, incident_light)
+    rt_dict = reflect_off_analytical_secondary(rt_dict, vla_pars, focus_offset)
+    rt_dict = detect_light(rt_dict, vla_pars)
+    rt_dict = compute_phase(rt_dict, observing_wavelength*convert_unit(wavelength_unit, 'm', 'length'),
+                            phase_offset*convert_unit(phase_unit, 'rad', 'trigonometric'))
+
+    return rt_dict
+
+
