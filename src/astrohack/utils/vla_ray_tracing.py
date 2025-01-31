@@ -16,7 +16,7 @@ vla_pars = {
     'foci_half_distance':3.662,
     'inner_radius': 2.0,
     # Assuming a 10 cm Horn for now
-    'horn_diameter': 0.1,
+    'horn_diameter': 0.2,
     # Assumed to be at the Secondary focus i.e.: f - 2c
     'horn_position': np.array([0, 0, 9.0 - 2 * 3.662]),
     # Horn looks straight up
@@ -99,8 +99,9 @@ def make_gridded_vla_primary(grid_size, resolution, telescope_pars):
 
 
 def secondary_hyperboloid_root_func(tval, fargs):
-    pnt, ray, acoef, fcoef, ccoef = fargs
-    newpnt = pnt + tval * ray
+    pnt, ray, acoef, fcoef, ccoef, offsets = fargs
+    # The offset is a simple displacement of the secondary
+    newpnt = (pnt + tval * ray) - offsets
     rad2 = newpnt[0] ** 2 + newpnt[1] ** 2
     pntz = newpnt[2]
     value = fcoef - ccoef + acoef*np.sqrt(1 + rad2/(ccoef**2-acoef**2)) - pntz
@@ -120,7 +121,7 @@ def reflect_off_primary(rt_dict, incident_light):
     return rt_dict
 
 
-def reflect_off_analytical_secondary(rt_dict, telescope_pars):
+def reflect_off_analytical_secondary(rt_dict, telescope_pars, offset=np.array((0, 0, 0))):
     pr_points = rt_dict['pr_pnt']
     pr_refle = rt_dict['pr_ref']
 
@@ -128,7 +129,7 @@ def reflect_off_analytical_secondary(rt_dict, telescope_pars):
     distance_to_secondary = np.empty_like(pr_points[:, 0])
 
     fargs = [None, None, telescope_pars['z_intercept'], telescope_pars['focal_length'],
-             telescope_pars['foci_half_distance']]
+             telescope_pars['foci_half_distance'], offset]
 
     for ipnt in range(rt_dict['npnt_1d']):
         fargs[0] = pr_points[ipnt]
