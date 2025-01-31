@@ -455,3 +455,14 @@ def data_statistics(data_array):
         }
     return data_stats
 
+
+def phase_wrapping(phase):
+    """
+    Wraps phase to the -pi to pi interval
+    Args:
+        phase: phase to be wrapped
+
+    Returns:
+    Phase wrapped to the -pi to pi interval
+    """
+    return (phase + np.pi) % (2 * np.pi) - np.pi
