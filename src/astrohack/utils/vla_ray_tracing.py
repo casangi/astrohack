@@ -1,8 +1,9 @@
 import numpy as np
-from scipy.optimize import fsolve, newton, bisect
+from scipy.optimize import fsolve
+import matplotlib.pyplot as plt
 
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
-    close_figure, compute_extent, scatter_plot
+    close_figure, compute_extent
 
 vla_pars = {
     'primary_diameter': 25.0,
@@ -117,7 +118,7 @@ def make_2d(npnt, data, indexes):
     return gridded_2d
 
 
-def plot_rt_dict(rt_dict, key, title, filename, coord=None, colormap='viridis'):
+def plot_rt_dict(rt_dict, key, telescope_pars, title, filename, coord=None, colormap='viridis'):
     if coord is None:
         data = rt_dict[key]
     else:
@@ -136,6 +137,11 @@ def plot_rt_dict(rt_dict, key, title, filename, coord=None, colormap='viridis'):
     ax.set_ylim(extent[2:])
     ax.set_xlabel("X axis [m]")
     ax.set_ylabel("Y axis [m]")
+
+    innerring = plt.Circle((0, 0), telescope_pars['inner_radius'], color='black', fill=None)
+    outerring = plt.Circle((0, 0), telescope_pars['primary_diameter']/2, color='black', fill=None)
+    ax.add_patch(outerring)
+    ax.add_patch(innerring)
 
     close_figure(fig, '', filename, 300, False)
 
@@ -187,9 +193,11 @@ def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
     pr_pnts = rt_dict['pr_pnt']
     sc_pnts = rt_dict['sc_pnt']
     horn_inters = rt_dict['horn_intercept']
+    incomings = rt_dict['light']
 
     npnt = pr_pnts.shape[0]
     sign = -1
+    inf = 1e3
     for isamp in range(nrays):
         sign *= -1
         ipnt = np.random.randint(0, high=npnt)
@@ -198,6 +206,11 @@ def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
         sc_pnt = sc_pnts[ipnt]
         pr_pnt = pr_pnts[ipnt]
         horn_inter = horn_inters[ipnt]
+        incoming = incomings[ipnt]
+
+        # Plot incident light
+        origin = pr_pnt -inf*incoming
+        add_rz_ray_to_plot(ax, origin, pr_pnt, 'orange', '$\infty$->Pr', sign)
 
         # Plot primary reflection
         add_rz_ray_to_plot(ax, pr_pnt, sc_pnt, 'green', 'Pr->Sc', sign)
@@ -206,28 +219,15 @@ def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
         add_rz_ray_to_plot(ax, sc_pnt, horn_inter,'yellow', 'Sc->Horn', sign)
 
 
-    # tparr = np.arange(0, 20, 0.1)
-    # npnt = pntzs.shape[0]
-    # ipnt = 0
-    # iy = npnt//2
-    # while ipnt < nrays:
-    #     ix = np.random.randint(0, high=npnt)
-    #     if np.isnan(pntzs[ix, iy]):
-    #         ipnt -= 1
-    #         continue
-    #     else:
-    #         point = [x_axis[ix], pntzs[ix, iy]]
-    #         ray = [rays[ix, iy, 0], rays[ix, iy, 2]]
-    #         tracer = point + tparr[:, np.newaxis]*ray
-    #         ax.plot(tracer[:,0], tracer[:,1], color='green', label='Rays')
-    #         ipnt += 1
 
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
+
     ax.legend(by_label.values(), by_label.keys())
-    #ax.legend()
-    # scatter_plot(ax, radarr, 'Radius', primary, 'Height', model=secondary, data_label='Primary', model_label='Secondary', plot_residuals=False)
     ax.set_aspect('equal')
+    ax.set_xlabel('Radius [m]')
+    ax.set_ylabel('Height [m]')
+    ax.set_ylim([-0.5, 9.5])
     close_figure(fig, '', f'vla-analytical-model.png', 300, False)
 
 
