@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 from astrohack.utils import twopi
 from astrohack.utils.algorithms import phase_wrapping
+from astrohack.utils.ray_tracing_general import generalized_dot, generalized_norm, normalize_vector_map, reflect_light
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
     close_figure, compute_extent
 
@@ -24,6 +25,7 @@ vla_pars = {
 
 nanvec3d = np.full([3], np.nan)
 
+
 def simple_axis(minmax, resolution, margin=0.05):
     mini, maxi = minmax
     ax_range = maxi-mini
@@ -37,23 +39,6 @@ def simple_axis(minmax, resolution, margin=0.05):
     axis_array = resolution * axis_array
     axis_array = axis_array + mini + resolution / 2
     return axis_array
-
-
-def generalized_dot(vec_map_a, vec_map_b):
-    return np.sum(vec_map_a * vec_map_b, axis=-1)
-
-
-def generalized_norm(vecmap):
-    return np.sqrt(generalized_dot(vecmap, vecmap))
-
-
-def normalize_vector_map(vector_map):
-    normalization = np.linalg.norm(vector_map, axis=-1)
-    return vector_map / normalization[..., np.newaxis]
-
-
-def reflect_light(light, normals):
-    return light - 2 * generalized_dot(light, normals)[..., np.newaxis] * normals
 
 
 def create_radial_mask(radius, inner_rad, outer_rad):
@@ -172,7 +157,7 @@ def secondary_hyperboloid_root_func(tval, fargs):
 
 
 def add_rz_ray_to_plot(ax, origin, destiny, color, ls, label, sign):
-    radcoord = [sign*generalized_norm(origin[0:2]), sign*generalized_norm(destiny[0:2])]
+    radcoord = [sign * generalized_norm(origin[0:2]), sign * generalized_norm(destiny[0:2])]
     zcoord = [origin[2], destiny[2]]
     ax.plot(radcoord, zcoord, color=color, label=label, ls=ls)
 
@@ -305,7 +290,7 @@ def detect_light(rt_dict, telescope_pars):
     distance_secondary_to_horn = (generalized_dot((horn_position - sc_pnt), horn_orientation) /
                                   generalized_dot(sc_reflec, horn_orientation))
     horn_intercept = sc_pnt + distance_secondary_to_horn[..., np.newaxis] * sc_reflec
-    distance_to_horn_center = generalized_norm(horn_intercept-horn_position)
+    distance_to_horn_center = generalized_norm(horn_intercept - horn_position)
 
 
     selection = distance_to_horn_center > horn_diameter
