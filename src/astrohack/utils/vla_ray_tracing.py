@@ -221,7 +221,7 @@ def make_2d(npnt, data, indexes):
     return gridded_2d
 
 
-def plot_rt_dict(rt_dict, key, telescope_pars, title, filename, coord=None, colormap='viridis', zlim=None):
+def plot_rt_dict(rt_dict, key, telescope_pars, title, filename, coord=None, colormap='viridis', zlim=None, zlabel=None):
     if coord is None:
         data = rt_dict[key]
     else:
@@ -238,7 +238,11 @@ def plot_rt_dict(rt_dict, key, telescope_pars, title, filename, coord=None, colo
     extent = compute_extent(rt_dict['axis'], rt_dict['axis'], margin=0.0)
     im = ax.imshow(gridded_array.T, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1],
                    origin='lower')
-    well_positioned_colorbar(ax, fig, im, "Z Scale")
+
+    if zlabel is None:
+        well_positioned_colorbar(ax, fig, im, "Z Scale")
+    else:
+        well_positioned_colorbar(ax, fig, im, zlabel)
     ax.set_xlim(extent[:2])
     ax.set_ylim(extent[2:])
     ax.set_xlabel("X axis [m]")
@@ -258,7 +262,7 @@ def add_rz_ray_to_plot(ax, origin, destiny, color, ls, label, sign):
     ax.plot(radcoord, zcoord, color=color, label=label, ls=ls)
 
 
-def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
+def vla_2d_plot(rt_dict, telescope_pars, filename, nrays=20):
     primary_diameter = telescope_pars['primary_diameter']
     secondary_diameter = telescope_pars['secondary_diameter']
     focal_length = telescope_pars['focal_length']
@@ -327,7 +331,7 @@ def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
     ax.set_ylabel('Height [m]')
     ax.set_ylim([-0.5, 9.5])
     ax.set_xlim([-13, 13])
-    close_figure(fig, '', f'vla-analytical-model.png', 300, False)
+    close_figure(fig, 'VLA Ray tracing 2D Schematic', filename, 300, False)
 
 ######################################
 # Master routine for the ray Tracing #
@@ -350,8 +354,6 @@ def vla_ray_tracing_pipeline(telescope_parameters, grid_size, grid_resolution, g
     # Using small angles approximation here
     pnt_off = np.sqrt(x_pnt_off**2 + y_pnt_off**2)
     incident_light = np.array([np.sin(x_pnt_off), np.sin(y_pnt_off), -np.cos(pnt_off)])
-    print(incident_light, generalized_norm(incident_light))
-
 
     # Actual Ray Tracing starts here
     rt_dict = make_gridded_vla_primary(grid_size, grid_resolution, telescope_parameters)
