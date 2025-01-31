@@ -25,7 +25,9 @@ vla_pars = {
 
 nanvec3d = np.full([3], np.nan)
 
-
+######################################################################
+# Setup routines and Mathematical description of the secondary shape #
+######################################################################
 def simple_axis(minmax, resolution, margin=0.05):
     mini, maxi = minmax
     ax_range = maxi-mini
@@ -96,46 +98,17 @@ def make_gridded_vla_primary(grid_size, resolution, telescope_pars):
     return ray_tracing_dict
 
 
-def make_2d(npnt, data, indexes):
-    gridded_2d = np.full([npnt, npnt], np.nan)
-    npnt_1d = data.shape[0]
-    for ipnt in range(npnt_1d):
-        ix, iy = indexes[ipnt]
-        gridded_2d[ix, iy] = data[ipnt]
-    return gridded_2d
+def secondary_hyperboloid_root_func(tval, fargs):
+    pnt, ray, acoef, fcoef, ccoef = fargs
+    newpnt = pnt + tval * ray
+    rad2 = newpnt[0] ** 2 + newpnt[1] ** 2
+    pntz = newpnt[2]
+    value = fcoef - ccoef + acoef*np.sqrt(1 + rad2/(ccoef**2-acoef**2)) - pntz
+    return value
 
-
-def plot_rt_dict(rt_dict, key, telescope_pars, title, filename, coord=None, colormap='viridis', zlim=None):
-    if coord is None:
-        data = rt_dict[key]
-    else:
-        data = rt_dict[key][:, coord]
-    gridded_array = make_2d(rt_dict['image_size'], data, rt_dict['pr_idx'])
-    fig, ax = create_figure_and_axes([10, 8], [1, 1])
-    cmap = get_proper_color_map(colormap)
-    if zlim is None:
-        minmax = [np.nanmin(gridded_array), np.nanmax(gridded_array)]
-    else:
-        minmax = zlim
-    fsize = 10
-    ax.set_title(title, size=1.5 * fsize)
-    extent = compute_extent(rt_dict['axis'], rt_dict['axis'], margin=0.0)
-    im = ax.imshow(gridded_array.T, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1],
-                   origin='lower')
-    well_positioned_colorbar(ax, fig, im, "Z Scale")
-    ax.set_xlim(extent[:2])
-    ax.set_ylim(extent[2:])
-    ax.set_xlabel("X axis [m]")
-    ax.set_ylabel("Y axis [m]")
-
-    innerring = plt.Circle((0, 0), telescope_pars['inner_radius'], color='black', fill=None)
-    outerring = plt.Circle((0, 0), telescope_pars['primary_diameter']/2, color='black', fill=None)
-    ax.add_patch(outerring)
-    ax.add_patch(innerring)
-
-    close_figure(fig, '', filename, 300, False)
-
-
+##########################################################
+# Actual ray tracing steps in order of light propagation #
+##########################################################
 def reflect_off_primary(rt_dict, incident_light):
     incident_light = normalize_vector_map(incident_light)
     primary_normals = rt_dict['pr_norm']
@@ -145,93 +118,6 @@ def reflect_off_primary(rt_dict, incident_light):
     rt_dict['pr_ref'] = reflection
     rt_dict['light'] = light
     return rt_dict
-
-
-def secondary_hyperboloid_root_func(tval, fargs):
-    pnt, ray, acoef, fcoef, ccoef = fargs
-    newpnt = pnt + tval * ray
-    rad2 = newpnt[0] ** 2 + newpnt[1] ** 2
-    pntz = newpnt[2]
-    value = fcoef - ccoef + acoef*np.sqrt(1 + rad2/(ccoef**2-acoef**2)) - pntz
-    return value
-
-
-def add_rz_ray_to_plot(ax, origin, destiny, color, ls, label, sign):
-    radcoord = [sign * generalized_norm(origin[0:2]), sign * generalized_norm(destiny[0:2])]
-    zcoord = [origin[2], destiny[2]]
-    ax.plot(radcoord, zcoord, color=color, label=label, ls=ls)
-
-
-def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
-    primary_diameter = telescope_pars['primary_diameter']
-    secondary_diameter = telescope_pars['secondary_diameter']
-    focal_length = telescope_pars['focal_length']
-    foci_half_distance = telescope_pars['foci_half_distance']
-    z_intercept = telescope_pars['z_intercept']
-    pr_rad = primary_diameter/2
-    sc_rad = secondary_diameter/2
-    radarr = np.arange(-pr_rad, pr_rad, primary_diameter/1e3)
-    primary = radarr**2/4/focal_length
-    secondary = focal_length - foci_half_distance + z_intercept*np.sqrt(1+radarr**2/(foci_half_distance**2-z_intercept**2))
-    secondary = np.where(np.abs(radarr)<sc_rad, secondary, np.nan)
-    fig, ax = create_figure_and_axes([10, 8], [1, 1])
-    ax.plot(radarr, primary, color='black', label='Pr mirror')
-    ax.plot(radarr, secondary, color='blue', label='Sc mirror')
-    ax.scatter([0], [focal_length], color='black', label='Pr focus')
-    ax.scatter([0], [focal_length-2*foci_half_distance], color='blue', label='Sc focus')
-
-    pr_pnts = rt_dict['pr_pnt']
-    sc_pnts = rt_dict['sc_pnt']
-    horn_inters = rt_dict['horn_intercept']
-    incomings = rt_dict['light']
-    sc_refs = rt_dict['sc_ref']
-    pr_refs = rt_dict['pr_ref']
-
-    npnt = pr_pnts.shape[0]
-    sign = -1
-    inf = 1e3
-    for isamp in range(nrays):
-        sign *= -1
-        ipnt = np.random.randint(0, high=npnt)
-
-        # Data Selection
-        sc_pnt = sc_pnts[ipnt]
-        pr_pnt = pr_pnts[ipnt]
-        pr_ref = pr_refs[ipnt]
-        sc_ref = sc_refs[ipnt]
-        horn_inter = horn_inters[ipnt]
-        incoming = incomings[ipnt]
-
-        # Plot incident light
-        origin = pr_pnt -inf*incoming
-        add_rz_ray_to_plot(ax, origin, pr_pnt, 'yellow','-',  '$\infty$->Pr', sign)
-
-        # Plot primary reflection
-        if np.all(np.isnan(sc_pnt)): # Ray does not touch secondary
-            dest = pr_pnt + inf*pr_ref
-            add_rz_ray_to_plot(ax, pr_pnt, dest, 'red', '--', 'Pr->$\infty$', sign)
-        else:
-            add_rz_ray_to_plot(ax, pr_pnt, sc_pnt, 'yellow', '--', 'Pr->Sc', sign)
-
-            # Plot secondary reflection
-            if np.all(np.isnan(horn_inter)): # Ray does not touch horn
-                dest = sc_pnt + inf*sc_ref
-                add_rz_ray_to_plot(ax, sc_pnt, dest, 'red', '-.', 'sc->$\infty$', sign)
-            else:
-                add_rz_ray_to_plot(ax, sc_pnt, horn_inter,'yellow', '-.', 'Sc->Horn', sign)
-
-
-
-    handles, labels = ax.get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-
-    ax.legend(by_label.values(), by_label.keys())
-    ax.set_aspect('equal')
-    ax.set_xlabel('Radius [m]')
-    ax.set_ylabel('Height [m]')
-    ax.set_ylim([-0.5, 9.5])
-    ax.set_xlim([-13, 13])
-    close_figure(fig, '', f'vla-analytical-model.png', 300, False)
 
 
 def reflect_off_analytical_secondary(rt_dict, telescope_pars):
@@ -321,37 +207,122 @@ def compute_phase(rt_dict, wavelength, phase_offset):
     rt_dict['phase'] = phase
     return rt_dict
 
+###########################################################
+# Plotting routines and plotting aids, such as regridding #
+###########################################################
+def make_2d(npnt, data, indexes):
+    gridded_2d = np.full([npnt, npnt], np.nan)
+    npnt_1d = data.shape[0]
+    for ipnt in range(npnt_1d):
+        ix, iy = indexes[ipnt]
+        gridded_2d[ix, iy] = data[ipnt]
+    return gridded_2d
 
 
-def solve_bisection(func, minbound, maxbound, args, tol=1e-8, maxit=100):
-    searching = True
-    vminbound = func(minbound, args)
-    vmaxbound = func(maxbound, args)
-    nit = 0
-    # solution is within bounds
-    if vmaxbound*vminbound < 0:
-        while searching:
-            newguess = (maxbound + minbound) / 2
-            func_val = func(newguess, args)
-            if abs(func_val) < tol:
-                #print(newguess)
-                return newguess
-            elif vmaxbound*func_val < 0:
-                minbound = newguess
-            else:
-                maxbound = newguess
-            nit += 1
-            if nit > maxit:
-                return np.nan
+def plot_rt_dict(rt_dict, key, telescope_pars, title, filename, coord=None, colormap='viridis', zlim=None):
+    if coord is None:
+        data = rt_dict[key]
     else:
-        return np.nan
+        data = rt_dict[key][:, coord]
+    gridded_array = make_2d(rt_dict['image_size'], data, rt_dict['pr_idx'])
+    fig, ax = create_figure_and_axes([10, 8], [1, 1])
+    cmap = get_proper_color_map(colormap)
+    if zlim is None:
+        minmax = [np.nanmin(gridded_array), np.nanmax(gridded_array)]
+    else:
+        minmax = zlim
+    fsize = 10
+    ax.set_title(title, size=1.5 * fsize)
+    extent = compute_extent(rt_dict['axis'], rt_dict['axis'], margin=0.0)
+    im = ax.imshow(gridded_array.T, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1],
+                   origin='lower')
+    well_positioned_colorbar(ax, fig, im, "Z Scale")
+    ax.set_xlim(extent[:2])
+    ax.set_ylim(extent[2:])
+    ax.set_xlabel("X axis [m]")
+    ax.set_ylabel("Y axis [m]")
+
+    innerring = plt.Circle((0, 0), telescope_pars['inner_radius'], color='black', fill=None)
+    outerring = plt.Circle((0, 0), telescope_pars['primary_diameter']/2, color='black', fill=None)
+    ax.add_patch(outerring)
+    ax.add_patch(innerring)
+
+    close_figure(fig, '', filename, 300, False)
+
+
+def add_rz_ray_to_plot(ax, origin, destiny, color, ls, label, sign):
+    radcoord = [sign * generalized_norm(origin[0:2]), sign * generalized_norm(destiny[0:2])]
+    zcoord = [origin[2], destiny[2]]
+    ax.plot(radcoord, zcoord, color=color, label=label, ls=ls)
+
+
+def vla_2d_plot(rt_dict, telescope_pars, nrays=20):
+    primary_diameter = telescope_pars['primary_diameter']
+    secondary_diameter = telescope_pars['secondary_diameter']
+    focal_length = telescope_pars['focal_length']
+    foci_half_distance = telescope_pars['foci_half_distance']
+    z_intercept = telescope_pars['z_intercept']
+    pr_rad = primary_diameter/2
+    sc_rad = secondary_diameter/2
+    radarr = np.arange(-pr_rad, pr_rad, primary_diameter/1e3)
+    primary = radarr**2/4/focal_length
+    secondary = focal_length - foci_half_distance + z_intercept*np.sqrt(1+radarr**2/(foci_half_distance**2-z_intercept**2))
+    secondary = np.where(np.abs(radarr)<sc_rad, secondary, np.nan)
+    fig, ax = create_figure_and_axes([10, 8], [1, 1])
+    ax.plot(radarr, primary, color='black', label='Pr mirror')
+    ax.plot(radarr, secondary, color='blue', label='Sc mirror')
+    ax.scatter([0], [focal_length], color='black', label='Pr focus')
+    ax.scatter([0], [focal_length-2*foci_half_distance], color='blue', label='Sc focus')
+
+    pr_pnts = rt_dict['pr_pnt']
+    sc_pnts = rt_dict['sc_pnt']
+    horn_inters = rt_dict['horn_intercept']
+    incomings = rt_dict['light']
+    sc_refs = rt_dict['sc_ref']
+    pr_refs = rt_dict['pr_ref']
+
+    npnt = pr_pnts.shape[0]
+    sign = -1
+    inf = 1e3
+    for isamp in range(nrays):
+        sign *= -1
+        ipnt = np.random.randint(0, high=npnt)
+
+        # Data Selection
+        sc_pnt = sc_pnts[ipnt]
+        pr_pnt = pr_pnts[ipnt]
+        pr_ref = pr_refs[ipnt]
+        sc_ref = sc_refs[ipnt]
+        horn_inter = horn_inters[ipnt]
+        incoming = incomings[ipnt]
+
+        # Plot incident light
+        origin = pr_pnt -inf*incoming
+        add_rz_ray_to_plot(ax, origin, pr_pnt, 'yellow','-',  '$\infty$->Pr', sign)
+
+        # Plot primary reflection
+        if np.all(np.isnan(sc_pnt)): # Ray does not touch secondary
+            dest = pr_pnt + inf*pr_ref
+            add_rz_ray_to_plot(ax, pr_pnt, dest, 'red', '--', 'Pr->$\infty$', sign)
+        else:
+            add_rz_ray_to_plot(ax, pr_pnt, sc_pnt, 'yellow', '--', 'Pr->Sc', sign)
+
+            # Plot secondary reflection
+            if np.all(np.isnan(horn_inter)): # Ray does not touch horn
+                dest = sc_pnt + inf*sc_ref
+                add_rz_ray_to_plot(ax, sc_pnt, dest, 'red', '-.', 'sc->$\infty$', sign)
+            else:
+                add_rz_ray_to_plot(ax, sc_pnt, horn_inter,'yellow', '-.', 'Sc->Horn', sign)
 
 
 
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
 
-
-
-
-
-
-
+    ax.legend(by_label.values(), by_label.keys())
+    ax.set_aspect('equal')
+    ax.set_xlabel('Radius [m]')
+    ax.set_ylabel('Height [m]')
+    ax.set_ylim([-0.5, 9.5])
+    ax.set_xlim([-13, 13])
+    close_figure(fig, '', f'vla-analytical-model.png', 300, False)
