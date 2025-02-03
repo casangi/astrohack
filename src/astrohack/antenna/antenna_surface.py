@@ -5,7 +5,8 @@ from matplotlib import patches
 import toolviper.utils.logger as logger
 
 from astrohack.antenna.ring_panel import RingPanel
-from astrohack.utils import string_to_ascii_file, create_dataset_label, data_statistics, statistics_to_text
+from astrohack.utils import string_to_ascii_file, create_dataset_label, data_statistics, statistics_to_text, \
+    phase_wrapping
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
@@ -21,7 +22,7 @@ SUPPORTED_POL_STATES = ['I', 'RR', 'LL', 'XX', 'YY']
 
 class AntennaSurface:
     def __init__(self, inputxds, telescope, clip_type='sigma', clip_level=3, pmodel='rigid', crop=False,
-                 nan_out_of_bounds=True, panel_margins=0.05, reread=False, pol_state='I'):
+                 nan_out_of_bounds=True, panel_margins=0.05, reread=False, pol_state='I', patch_phase=False):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -34,6 +35,8 @@ class AntennaSurface:
             nan_out_of_bounds: Should the region outside the dish be replaced with NaNs?
             panel_margins: Margin to be ignored at edges of panels when fitting, defaults to 20% if None
             reread: Read a previously processed holography
+            pol_state: Polarization state to select
+            patch_phase: Phase data from inputxds needs to be wrapped to -pi to pi interval
         """
         self.reread = reread
         self.phase = None
@@ -51,6 +54,9 @@ class AntennaSurface:
         self.pol_state = pol_state
         self._read_xds(inputxds)
         self.telescope = telescope
+
+        if patch_phase:
+            self.phase = phase_wrapping(self.phase)
 
         if not self.reread:
             self.panelmodel = pmodel
@@ -84,6 +90,7 @@ class AntennaSurface:
         self.resolution = None
 
     def _read_holog_xds(self, inputxds):
+        print(inputxds.attrs)
         if 'chan' in inputxds.dims:
             if inputxds.sizes['chan'] != 1:
                 raise Exception("Only single channel holographies supported")
