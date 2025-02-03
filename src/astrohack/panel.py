@@ -224,6 +224,7 @@ def panel(
 
     else:
         panel_params['origin'] = 'astrohack'
+        panel_params['version'] = image_mds._input_pars['version']
         if compute_graph(image_mds, process_panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
             logger.info("Finished processing")
             output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_input")
