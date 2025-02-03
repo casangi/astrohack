@@ -90,7 +90,6 @@ class AntennaSurface:
         self.resolution = None
 
     def _read_holog_xds(self, inputxds):
-        print(inputxds.attrs)
         if 'chan' in inputxds.dims:
             if inputxds.sizes['chan'] != 1:
                 raise Exception("Only single channel holographies supported")
