@@ -11,6 +11,52 @@ from astrohack.utils.text import format_angular_distance, create_dataset_label
 from astrohack.utils.conversion import convert_unit
 
 
+def tokenize_version_number(version_number):
+    """
+    Tokenize a version number into an array of integers
+    Args:
+        version_number: The astrohack number version to be tokenized
+
+    Returns:
+        Tokenized version number in 3 element numpy array of integers
+    """
+    if not isinstance(version_number, str):
+        raise Exception(f'Version number: {version_number} is not a string')
+    split = version_number.split('.')
+    if len(split) != 3:
+        raise Exception(f'Version number: {version_number} is badly formated')
+    tokenized = np.ndarray([3], dtype=int)
+
+    for itoken in range(len(split)):
+        try:
+            tokenized[itoken] = int(split[itoken])
+        except ValueError:
+            raise Exception(f'Version number: {version_number} is not composed of integers')
+    return tokenized
+
+
+def data_from_version_needs_patch(version_to_check, patched_version):
+    """
+    Check if data from a version needs to be patched according to a reference patch version
+    Args:
+        version_to_check: The version that is being tested
+        patched_version: Reference version at which the patch is no longer needed
+
+    Returns:
+        True if the checked version is from before the patch False elsewise
+    """
+    check = tokenize_version_number(version_to_check)
+    patched = tokenize_version_number(patched_version)
+    for itoken in range(3):
+        if check[itoken] < patched[itoken]:
+            return True
+        elif check[itoken] > patched[itoken]:
+            return False
+        else:
+            continue
+    return False
+
+
 def calculate_suggested_grid_parameter(parameter, quantile=0.005):
     import scipy
 
