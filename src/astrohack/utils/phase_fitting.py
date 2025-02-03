@@ -704,7 +704,7 @@ def _correct_phase_block(pols, phase_image, cellxy, parameters, magnification, f
                             corr += x_focus_off * x_focus + y_focus_off * y_focus + z_focus_off * z_focus
                             corr += x_subref_tilt * x_tilt + y_subref_tilt * y_tilt + x_cass_off * x_cass
                             corr += y_cass_off * y_cass
-                            corrected_phase[time, chan, pol, ix, iy] = phase_wrapping(phase - corr)
+                            corrected_phase[time, chan, pol, ix, iy] = phase_wrapping_jit(phase - corr)
                             phase_model[time, chan, pol, ix, iy] = corr
                 ipol += 1
     return corrected_phase, phase_model
@@ -900,3 +900,16 @@ def plot_map_simple(data, fig, ax, title, u_axis, v_axis):
     ax.add_patch(circ)
     ax.set_title(title)
     well_positioned_colorbar(ax, fig, im, title)
+
+
+@njit(cache=False, nogil=True)
+def phase_wrapping_jit(phase):
+    """
+    Wraps phase to the -pi to pi interval
+    Args:
+        phase: phase to be wrapped
+
+    Returns:
+    Phase wrapped to the -pi to pi interval
+    """
+    return (phase + np.pi) % (2 * np.pi) - np.pi
