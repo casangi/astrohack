@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit
 
-from astrohack.utils.algorithms import _least_squares_fit_block, least_squares_jit
+from astrohack.utils.algorithms import _least_squares_fit_block, least_squares_jit, phase_wrapping
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.constants import clight
 from astrohack.utils.text import get_str_idx_in_list
@@ -704,7 +704,7 @@ def _correct_phase_block(pols, phase_image, cellxy, parameters, magnification, f
                             corr += x_focus_off * x_focus + y_focus_off * y_focus + z_focus_off * z_focus
                             corr += x_subref_tilt * x_tilt + y_subref_tilt * y_tilt + x_cass_off * x_cass
                             corr += y_cass_off * y_cass
-                            corrected_phase[time, chan, pol, ix, iy] = phase - corr
+                            corrected_phase[time, chan, pol, ix, iy] = phase_wrapping_jit(phase - corr)
                             phase_model[time, chan, pol, ix, iy] = corr
                 ipol += 1
     return corrected_phase, phase_model
@@ -880,7 +880,7 @@ def _clic_like_phase_fitting(phase, freq_axis, telescope, focus_offset, uaxis, v
 
     best_fit, phase_model = _clic_full_phase_fitting(8, freq, telescope.diam, telescope.inlim, telescope.focus,
                                                      focus_offset, phase_i, uaxis, vaxis)
-    phase[0, 0, 0, ...] -= phase_model
+    phase[0, 0, 0, ...] = phase_wrapping(phase[0, 0, 0, ...] - phase_model)
 
     # fig, axes = create_figure_and_axes(None, [1, 2])
     # plot_map_simple(phase[0, 0, 0, ...], fig, axes[0], 'observed', uaxis, vaxis)
@@ -900,3 +900,16 @@ def plot_map_simple(data, fig, ax, title, u_axis, v_axis):
     ax.add_patch(circ)
     ax.set_title(title)
     well_positioned_colorbar(ax, fig, im, title)
+
+
+@njit(cache=False, nogil=True)
+def phase_wrapping_jit(phase):
+    """
+    Wraps phase to the -pi to pi interval
+    Args:
+        phase: phase to be wrapped
+
+    Returns:
+    Phase wrapped to the -pi to pi interval
+    """
+    return (phase + np.pi) % (2 * np.pi) - np.pi

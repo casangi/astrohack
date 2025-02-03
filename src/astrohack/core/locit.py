@@ -8,7 +8,7 @@ import xarray as xr
 
 from astrohack.utils import get_data_name
 from astrohack.utils.conversion import convert_unit, hadec_to_elevation
-from astrohack.utils.algorithms import least_squares
+from astrohack.utils.algorithms import least_squares, phase_wrapping
 from astrohack.utils.constants import *
 
 
@@ -171,7 +171,7 @@ def _match_times_and_phase_difference(pos_time, neg_time, pos_phase, neg_phase, 
     n_pos_time, n_neg_time = len(pos_time), len(neg_time)
     if n_pos_time == n_neg_time:
         if np.all(np.isclose(pos_time, neg_time, tolerance)):  # this the simplest case times are already matched!
-            return pos_time, fields, _phase_wrapping(pos_phase - neg_phase)
+            return pos_time, fields, phase_wrapping(pos_phase - neg_phase)
         else:
             return _different_times(pos_time, neg_time, pos_phase, neg_phase, fields, tolerance)
     else:
@@ -204,7 +204,7 @@ def _different_times(pos_time, neg_time, pos_phase, neg_phase, fields, tolerance
         out_phase[i_time] = pos_phase[i_pos] - neg_phase[i_neg]
         out_field[i_time] = fields[i_pos]
         
-    return out_times, out_field, _phase_wrapping(out_phase)
+    return out_times, out_field, phase_wrapping(out_phase)
 
 
 def _has_valid_data(field_id, time, delays, antenna, ddi=None):
@@ -229,18 +229,6 @@ def _elevation_ok(nin, antenna, ddi=None):
     else:
         logger.warning(msg)
         return False
-
-
-def _phase_wrapping(phase):
-    """
-    Wraps phase to the -pi to pi interval
-    Args:
-        phase: phase to be wrapped
-
-    Returns:
-    Phase wrapped to the -pi to pi interval
-    """
-    return (phase + pi) % (2 * pi) - pi
 
 
 def _get_data_from_locit_xds(xds_data, pol_selection, get_phases=False, split_pols=False):

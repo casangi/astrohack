@@ -3,7 +3,7 @@ import xarray as xr
 
 from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils import create_dataset_label
+from astrohack.utils import create_dataset_label, data_from_version_needs_patch
 
 
 def process_panel_chunk(panel_chunk_params):
@@ -36,10 +36,12 @@ def process_panel_chunk(panel_chunk_params):
                 logger.error(msg)
                 raise Exception(msg)
 
+    needs_phase_wrapping_patch = data_from_version_needs_patch(panel_chunk_params['version'], '0.5.10')
+
     surface = AntennaSurface(inputxds, telescope, clip_type=panel_chunk_params['clip_type'],
                              pol_state=panel_chunk_params['polarization_state'],
                              clip_level=clip_level, pmodel=panel_chunk_params['panel_model'],
-                             panel_margins=panel_chunk_params['panel_margins'])
+                             panel_margins=panel_chunk_params['panel_margins'], patch_phase=needs_phase_wrapping_patch)
 
     surface.compile_panel_points()
     surface.fit_surface()
