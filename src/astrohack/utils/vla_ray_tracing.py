@@ -3,6 +3,7 @@ from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 import xarray as xr
 
+from astrohack.utils import data_statistics
 from astrohack.utils.constants import twopi
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.algorithms import phase_wrapping
@@ -46,6 +47,13 @@ def simple_axis(minmax, resolution, margin=0.05):
     return axis_array
 
 
+def create_coordinate_images(x_axis, y_axis):
+    x_mesh, y_mesh = np.meshgrid(x_axis, y_axis, indexing='ij')
+    img_radius = np.sqrt(x_mesh ** 2 + y_mesh ** 2)
+    return x_mesh, y_mesh, img_radius
+
+
+
 def create_radial_mask(radius, inner_rad, outer_rad):
     mask = np.full_like(radius, True, dtype=bool)
     mask = np.where(radius > outer_rad, False, mask)
@@ -60,9 +68,8 @@ def make_gridded_vla_primary(grid_size, resolution, telescope_pars):
     axis_idx = np.arange(image_size, dtype=int)
 
     # It is imperative to put indexing='ij' so that the x and Y axes are not flipped in this step.
-    x_mesh, y_mesh = np.meshgrid(axis, axis, indexing='ij')
+    x_mesh, y_mesh, img_radius =  create_coordinate_images(axis, axis)
     x_idx_mesh, y_idx_mesh = np.meshgrid(axis_idx, axis_idx, indexing='ij')
-    img_radius = np.sqrt(x_mesh ** 2 + y_mesh ** 2)
     radial_mask = create_radial_mask(img_radius, telescope_pars['inner_radius'], telescope_pars['primary_diameter'] / 2)
     img_radius = img_radius[radial_mask]
     npnt_1d = img_radius.shape[0]
@@ -430,3 +437,28 @@ def vla_ray_tracing_pipeline(telescope_parameters, grid_size, grid_resolution, g
 
     rt_xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
     return rt_xds
+
+
+############################
+# VLA Phase fitting plugin #
+############################
+def apply_vla_phase_fitting_to_xds(rt_xds, ntime=1, npol=1, nfreq=1):
+    npnt = rt_xds.attrs['image_size']
+    telescope_pars = rt_xds.attrs['telescope_parameters']
+    x_axis = rt_xds['x_axis'].values
+    y_axis = rt_xds['y_axis'].values
+
+    shape_5d = [ntime, npol, nfreq, npnt, npnt]
+    amplitude_5d = np.empty(shape_5d)
+    phase_2d = regrid_data_onto_2d_grid(npnt, rt_xds['phase'].values, rt_xds['image_indexes'].values)
+    phase_5d = np.empty_like(amplitude_5d)
+    phase_5d[..., :, :] = phase_2d
+    _, _, radius = create_coordinate_images(x_axis, y_axis)
+    radial_mask = create_radial_mask(radius, telescope_pars['inner_radius'], telescope_pars['primary_diameter'] / 2)
+    amplitude_5d[..., :, :] = np.where(radial_mask, 1.0, np.nan)
+
+
+    # execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size, phase_fit_parameter,
+    #                       to_stokes, is_near_field, focus_offset, uaxis, vaxis, label)
+    print(data_statistics(phase_2d))
+    print(data_statistics(phase_5d))
