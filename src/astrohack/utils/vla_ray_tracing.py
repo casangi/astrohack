@@ -3,13 +3,17 @@ from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 import xarray as xr
 
-from astrohack.utils import data_statistics
+from astrohack.antenna.telescope import Telescope
+from astrohack.utils import data_statistics, clight
 from astrohack.utils.constants import twopi
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.algorithms import phase_wrapping
 from astrohack.utils.ray_tracing_general import generalized_dot, generalized_norm, normalize_vector_map, reflect_light
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
     close_figure, compute_extent
+from astrohack.utils.phase_fitting import execute_phase_fitting
+from astrohack.visualization.textual_data import create_pretty_table
+from astrohack.utils.text import format_value_error, format_label
 
 vla_pars = {
     'primary_diameter': 25.0,
@@ -443,22 +447,97 @@ def vla_ray_tracing_pipeline(telescope_parameters, grid_size, grid_resolution, g
 # VLA Phase fitting plugin #
 ############################
 def apply_vla_phase_fitting_to_xds(rt_xds, ntime=1, npol=1, nfreq=1):
+    # Pull data from rt xds
     npnt = rt_xds.attrs['image_size']
     telescope_pars = rt_xds.attrs['telescope_parameters']
-    x_axis = rt_xds['x_axis'].values
-    y_axis = rt_xds['y_axis'].values
+    input_pars = rt_xds.attrs['input_parameters']
+    u_axis = rt_xds['x_axis'].values
+    v_axis = rt_xds['y_axis'].values
+    wavelength = input_pars['observing_wavelength']*convert_unit(input_pars['wavelength_unit'], 'm', 'length')
 
+    # Create Amplitude and phase images on the shape expected by phase fitting engine.
     shape_5d = [ntime, npol, nfreq, npnt, npnt]
     amplitude_5d = np.empty(shape_5d)
     phase_2d = regrid_data_onto_2d_grid(npnt, rt_xds['phase'].values, rt_xds['image_indexes'].values)
     phase_5d = np.empty_like(amplitude_5d)
     phase_5d[..., :, :] = phase_2d
-    _, _, radius = create_coordinate_images(x_axis, y_axis)
+    _, _, radius = create_coordinate_images(u_axis, v_axis)
     radial_mask = create_radial_mask(radius, telescope_pars['inner_radius'], telescope_pars['primary_diameter'] / 2)
     amplitude_5d[..., :, :] = np.where(radial_mask, 1.0, np.nan)
 
+    # Create frequency and polarization axes
+    freq_axis = np.array([clight/wavelength])
+    pol_axis = np.array(['I'])
 
-    # execute_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size, phase_fit_parameter,
-    #                       to_stokes, is_near_field, focus_offset, uaxis, vaxis, label)
-    print(data_statistics(phase_2d))
-    print(data_statistics(phase_5d))
+    # Misc Parameters
+    focus_offset = 0.0 # Only relevant for Near Field data
+    label = 'VLA-RT-Model' # Relevant only for logger messages
+    uv_cell_size = np.array([u_axis[1]-u_axis[0], v_axis[1]-v_axis[0]]) # This should be computed from the axis we are passing the engine...
+
+    # Initiate Control toggles
+    is_stokes = True
+    is_near_field = False
+    phase_fit_parameter=[True,  # Pointing Offset (Supported)
+                         True,  # X&Y Focus Offset (Supported)
+                         True,  # Z Focus Offset (Supported)
+                         False, # Sub-reflector Tilt (not supported)
+                         False  # Cassegrain offset (not supported)
+                         ]
+
+    # Manipulate VLA telescope object so that it has compatible parameters to the ones in the RT model.
+    telescope = Telescope('VLA')
+    telescope.focus = telescope_pars['focal_length']
+    c_fact = telescope_pars['foci_half_distance']
+    a_fact = telescope_pars['z_intercept']
+    telescope.magnification = (c_fact+a_fact)/(c_fact-a_fact)
+    telescope.secondary_dist = c_fact-a_fact
+    # Disable secondary slope
+    telescope.surp_slope = 0
+
+    phase_corrected_angle, phase_fit_results = execute_phase_fitting(amplitude_5d, phase_5d, pol_axis, freq_axis,
+                                                                     telescope, uv_cell_size, phase_fit_parameter,
+                                                                     is_stokes, is_near_field, focus_offset, u_axis,
+                                                                     v_axis, label)
+
+    compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle)
+    # print(phase_fit_results)
+    # print(data_statistics(phase_corrected_angle))
+
+
+def compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle):
+    xds_inp = rt_xds.attrs['input_parameters']
+    angle_unit = xds_inp['pnt_off_unit']
+    print(angle_unit)
+    length_unit = xds_inp['focus_off_unit']
+    field_names = ['Parameter', 'Value', 'Reference', 'Difference', 'unit']
+    alignment = 'c'
+    outstr = ''
+    wavelength = xds_inp['observing_wavelength']*convert_unit(xds_inp['wavelength_unit'], 'm', 'length')
+    valid_pars = ['phase_offset', 'x_point_offset', 'y_point_offset', 'x_focus_offset', 'y_focus_offset', 'z_focus_offset']
+    unit_types = ['trigonometric', 'trigonometric', 'trigonometric', 'length', 'length', 'length']
+    units = ['deg', angle_unit, angle_unit, length_unit, length_unit, length_unit]
+    reference_values = [0.0, xds_inp['x_pnt_off'], xds_inp['y_pnt_off'],
+                        xds_inp['x_focus_off'], xds_inp['y_focus_off'], xds_inp['z_focus_off']]
+
+    outstr += ''
+    freq= clight/wavelength
+    cropped_dict = phase_fit_results['map_0'][freq]['I']
+    table = create_pretty_table(field_names, alignment)
+    for ip, par_name in enumerate(valid_pars):
+        item = cropped_dict[par_name]
+        val = item['value']
+        err = item['error']
+        unitin = item['unit']
+        ref = reference_values[ip]
+        fac = convert_unit(unitin, units[ip], unit_types[ip])
+        val *= fac
+        err *= fac
+        diff = val-ref
+        row = [format_label(par_name), format_value_error(val, err, 1.0, 1e-4), f'{ref}', f'{diff}', units[ip]]
+        table.add_row(row)
+
+    outstr += table.get_string() + '\n\n'
+
+
+
+    print(outstr)
