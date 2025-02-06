@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import xarray as xr
 
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils import data_statistics, clight
+from astrohack.utils import data_statistics, clight, statistics_to_text
 from astrohack.utils.constants import twopi
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.algorithms import phase_wrapping
@@ -446,7 +446,11 @@ def vla_ray_tracing_pipeline(telescope_parameters, grid_size, grid_resolution, g
 ############################
 # VLA Phase fitting plugin #
 ############################
-def apply_vla_phase_fitting_to_xds(rt_xds, ntime=1, npol=1, nfreq=1):
+def apply_vla_phase_fitting_to_xds(rt_xds, filename, do_pnt_offset=True, do_secondary_offset=True,
+                                   do_focus_off=True):
+    ntime = 1
+    npol = 1
+    nfreq = 1
     # Pull data from rt xds
     npnt = rt_xds.attrs['image_size']
     telescope_pars = rt_xds.attrs['telescope_parameters']
@@ -477,12 +481,12 @@ def apply_vla_phase_fitting_to_xds(rt_xds, ntime=1, npol=1, nfreq=1):
     # Initiate Control toggles
     is_stokes = True
     is_near_field = False
-    phase_fit_parameter=[True,  # Pointing Offset (Supported)
-                         True,  # X&Y Focus Offset (Supported)
-                         True,  # Z Focus Offset (Supported)
-                         False, # Sub-reflector Tilt (not supported)
-                         False  # Cassegrain offset (not supported)
-                         ]
+    phase_fit_parameter = [do_pnt_offset,        # Pointing Offset (Supported)
+                           do_secondary_offset,  # X&Y Focus Offset (Supported)
+                           do_focus_off,         # Z Focus Offset (Supported)
+                           False,                # Sub-reflector Tilt (not supported)
+                           False                 # Cassegrain offset (not supported)
+                           ]
 
     # Manipulate VLA telescope object so that it has compatible parameters to the ones in the RT model.
     telescope = Telescope('VLA')
@@ -499,28 +503,26 @@ def apply_vla_phase_fitting_to_xds(rt_xds, ntime=1, npol=1, nfreq=1):
                                                                      is_stokes, is_near_field, focus_offset, u_axis,
                                                                      v_axis, label)
 
-    compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle)
-    # print(phase_fit_results)
-    # print(data_statistics(phase_corrected_angle))
+    compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle, filename)
 
 
-def compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle):
+def compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle, filename):
     xds_inp = rt_xds.attrs['input_parameters']
     angle_unit = xds_inp['pnt_off_unit']
-    print(angle_unit)
     length_unit = xds_inp['focus_off_unit']
     field_names = ['Parameter', 'Value', 'Reference', 'Difference', 'unit']
     alignment = 'c'
     outstr = ''
     wavelength = xds_inp['observing_wavelength']*convert_unit(xds_inp['wavelength_unit'], 'm', 'length')
-    valid_pars = ['phase_offset', 'x_point_offset', 'y_point_offset', 'x_focus_offset', 'y_focus_offset', 'z_focus_offset']
+    valid_pars = ['phase_offset', 'x_point_offset', 'y_point_offset', 'x_focus_offset', 'y_focus_offset',
+                  'z_focus_offset']
     unit_types = ['trigonometric', 'trigonometric', 'trigonometric', 'length', 'length', 'length']
     units = ['deg', angle_unit, angle_unit, length_unit, length_unit, length_unit]
     reference_values = [0.0, xds_inp['x_pnt_off'], xds_inp['y_pnt_off'],
                         xds_inp['x_focus_off'], xds_inp['y_focus_off'], xds_inp['z_focus_off']]
 
     outstr += ''
-    freq= clight/wavelength
+    freq = clight/wavelength
     cropped_dict = phase_fit_results['map_0'][freq]['I']
     table = create_pretty_table(field_names, alignment)
     for ip, par_name in enumerate(valid_pars):
@@ -537,7 +539,26 @@ def compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d
         table.add_row(row)
 
     outstr += table.get_string() + '\n\n'
-
-
-
     print(outstr)
+
+    phase_2d = phase_5d[0, 0, 0]
+    residuals_2d = phase_corrected_angle[0, 0, 0]
+    correction = residuals_2d - phase_2d
+
+    axis = rt_xds['x_axis'].values
+    extent = compute_extent(axis, axis, margin=0.0)
+    telescope_parameters = rt_xds.attrs['telescope_parameters']
+    inner_radius = telescope_parameters['inner_radius']
+    outer_radius = telescope_parameters['primary_diameter'] / 2
+    fac = convert_unit('rad', 'deg', 'trigonometric')
+    zlim = [-180, 180]
+
+    fig, ax = create_figure_and_axes([18, 8], [1, 3])
+
+    imshow_2d_map(ax[0], fig, fac*phase_2d, f'RT phase model\n{statistics_to_text(data_statistics(fac*phase_2d))}',
+                  extent, 'Phase [deg]', 'viridis', inner_radius, outer_radius, zlim)
+    imshow_2d_map(ax[1], fig, fac*correction, f'Fitted correction', extent, 'Phase [deg]', 'viridis',
+                  inner_radius, outer_radius, zlim)
+    imshow_2d_map(ax[2], fig, fac*residuals_2d, f'Residuals\n{statistics_to_text(data_statistics(fac*residuals_2d))}',
+                  extent, 'Phase [deg]', 'viridis', inner_radius, outer_radius, zlim)
+    close_figure(fig, 'RT model fitting results', filename, 300, False)
