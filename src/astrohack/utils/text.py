@@ -551,6 +551,7 @@ def create_dataset_label(ant_id, ddi_id):
 def get_data_name(data_id):
     return data_id.split('_')[1]
 
+
 def significant_figures_round(x, digits):
     if np.isscalar(x):
         if x == 0 or not np.isfinite(x):
@@ -570,5 +571,5 @@ def significant_figures_round(x, digits):
 
 def statistics_to_text(data_statistics):
     outstr = (f'min={data_statistics["min"]:.2e}, max={data_statistics["max"]:.2f}, mean={data_statistics["mean"]:.2f},'
-              f' median={data_statistics["median"]:.2f}, rms={data_statistics["rms"]:.2f}')
+              f' med={data_statistics["median"]:.2f}, rms={data_statistics["rms"]:.2f}')
     return outstr
