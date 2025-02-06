@@ -6,7 +6,7 @@ import toolviper.utils.logger as logger
 import astropy.units as units
 import xarray as xr
 
-from astrohack.utils import get_data_name
+from astrohack.utils import get_data_name, create_dataset_label
 from astrohack.utils.conversion import convert_unit, hadec_to_elevation
 from astrohack.utils.algorithms import least_squares, phase_wrapping
 from astrohack.utils.constants import *
@@ -28,11 +28,12 @@ def locit_separated_chunk(locit_parms):
 
         coordinates, delays, lst, elevation_limit, nin = _build_filtered_arrays(field_id, time, delays, locit_parms)
         if _elevation_ok(nin, locit_parms["this_ant"]):
-            fit, variance = _fit_data(coordinates, delays, locit_parms)
-            model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                                      locit_parms['fit_delay_rate'])
-            _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
-                               elevation_limit)
+            fit, variance, converged = _fit_data(coordinates, delays, locit_parms)
+            if converged:
+                model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                                          locit_parms['fit_delay_rate'])
+                _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
+                                   elevation_limit)
 
 
 def locit_combined_chunk(locit_parms):
@@ -65,11 +66,12 @@ def locit_combined_chunk(locit_parms):
     if _has_valid_data(field_id, time, delays, locit_parms["this_ant"]):
         coordinates, delays, lst, elevation_limit, nin = _build_filtered_arrays(field_id, time, delays, locit_parms)
         if _elevation_ok(nin, locit_parms["this_ant"]):
-            fit, variance = _fit_data(coordinates, delays, locit_parms)
-            model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                                      locit_parms['fit_delay_rate'])
-            _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq_list,
-                               elevation_limit)
+            fit, variance, converged = _fit_data(coordinates, delays, locit_parms)
+            if converged:
+                model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                                          locit_parms['fit_delay_rate'])
+                _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq_list,
+                                   elevation_limit)
 
 
 def locit_difference_chunk(locit_parms):
@@ -98,11 +100,12 @@ def locit_difference_chunk(locit_parms):
     if _has_valid_data(field_id, time, delays, locit_parms["this_ant"]):
         coordinates, delays, lst, elevation_limit, nin = _build_filtered_arrays(field_id, time, delays, locit_parms)
         if _elevation_ok(nin, locit_parms["this_ant"]):
-            fit, variance = _fit_data(coordinates, delays, locit_parms)
-            model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
-                                                      locit_parms['fit_delay_rate'])
-            _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
-                               elevation_limit)
+            fit, variance, converged = _fit_data(coordinates, delays, locit_parms)
+            if converged:
+                model, chi_squared = _compute_chi_squared(delays, fit, coordinates, locit_parms['fit_kterm'],
+                                                          locit_parms['fit_delay_rate'])
+                _create_output_xds(coordinates, lst, delays, fit, variance, chi_squared, model, locit_parms, freq,
+                                   elevation_limit)
 
 
 def _delays_from_phase_differences(ddi_0, ddi_1):
@@ -370,21 +373,36 @@ def _fit_data(coordinates, delays, locit_parms):
     fit: the fit results
     variance: the diagonal of the covariance matrix
     """
+    try:
+        ddi_id = locit_parms['this_ddi']
+    except KeyError:
+        ddi_id = None
+    label = create_dataset_label(locit_parms['this_ant'], ddi_id)
 
     fit_kterm = locit_parms['fit_kterm']
     fit_rate = locit_parms['fit_delay_rate']
+    fit_engine = locit_parms['fit_engine']
 
-    linalg = locit_parms['fit_engine'] == 'linear algebra'
-    if linalg:
-        fit, variance = _solve_linear_algebra(coordinates, delays, fit_kterm, fit_rate)
-    else:
-        if locit_parms['fit_engine'] == 'scipy':
+    if fit_engine == 'linear algebra':
+        try:
+            fit, variance = _solve_linear_algebra(coordinates, delays, fit_kterm, fit_rate)
+            return fit, variance, True
+        except np.linalg.LinAlgError:
+            logger.warning(f'Fitting failed for {label}, please try another fitting engine or DDI combination')
+            return np.nan, np.nan, False
+
+    elif fit_engine == 'scipy':
+        try:
             fit, variance = _solve_scipy_optimize_curve_fit(coordinates, delays, fit_kterm, fit_rate, verbose=True)
-        else:
-            msg = f'Unrecognized fitting engine: {locit_parms["fit_engine"]}'
-            logger.error(msg)
-            raise Exception(msg)
-    return fit, variance
+            return fit, variance, True
+        except TypeError:
+            logger.warning(f'Fitting failed for {label}, please try another fitting engine or DDI combination')
+            return np.nan, np.nan, False
+
+    else:
+        msg = f'Unrecognized fitting engine: {locit_parms["fit_engine"]}'
+        logger.error(msg)
+        return np.nan, np.nan, False
 
 
 def _compute_chi_squared(delays, fit, coordinates, fit_kterm, fit_rate):
