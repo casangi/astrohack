@@ -232,11 +232,11 @@ def plot_2d_maps_from_rt_xds(
     if isinstance(keys, str):
         keys = [keys]
 
-    suptitle = title_from_input_parameters(rt_xds.attrs['input_parameters'])
+    suptitle = 'Cassegrain Ray tracing model for:\n'+title_from_input_parameters(rt_xds.attrs['input_parameters'])
     for key in keys:
         filename = f'{rootname}_{key}.png'
 
-        zlabel = key.capitalize()
+        zlabel = key.capitalize().replace('_', ' ')
         if key == 'phase':
             fac = convert_unit('rad', phase_unit, 'trigonometric')
             zlabel += f' [{phase_unit}]'
@@ -364,7 +364,7 @@ def apply_holog_phase_fitting_to_rt_xds(
         fit_focus_off: bool = True,
         phase_unit: str = 'deg',
         colormap: str = 'viridis',
-        display: bool = False,
+        display: bool = True,
         dpi: int = 300
 ):
     """Feed phase image from ray tracing Xarray dataset to Astrohak's default phase fitting tool for VLA data.

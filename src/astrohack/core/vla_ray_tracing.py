@@ -232,12 +232,12 @@ def regrid_data_onto_2d_grid(npnt, data, indexes):
 
 def title_from_input_parameters(inpt_dict):
     title = ''
-    title += (f'pnt off = ({inpt_dict["x_pnt_off"]}, {inpt_dict["y_pnt_off"]}) '
-              f'{inpt_dict["pnt_off_unit"]}, ')
+    title += (f'Pointing offset = ({inpt_dict["x_pnt_off"]}, {inpt_dict["y_pnt_off"]}) '
+              f'[{inpt_dict["pnt_off_unit"]}], ')
     title += (f'Focus offset = ({inpt_dict["x_focus_off"]}, {inpt_dict["y_focus_off"]}, '
-              f'{inpt_dict["z_focus_off"]}) {inpt_dict["focus_off_unit"]}, ')
-    title += f'Phase offset = {inpt_dict["phase_offset"]} {inpt_dict["phase_unit"]}, '
-    title += f'$\lambda$ = {inpt_dict["observing_wavelength"]} {inpt_dict["wavelength_unit"]}'
+              f'{inpt_dict["z_focus_off"]}) [{inpt_dict["focus_off_unit"]}], ')
+    title += f'Phase offset = {inpt_dict["phase_offset"]} [{inpt_dict["phase_unit"]}], '
+    title += f'$\lambda$ = {inpt_dict["observing_wavelength"]} [{inpt_dict["wavelength_unit"]}]'
     return title
 
 
@@ -276,7 +276,7 @@ def plot_2d_map(gridded_array, axis, telescope_parameters, suptitle, filename, z
     extent = compute_extent(axis, axis, margin=0.0)
 
     if len(gridded_array.shape) == 3:  # XYZ Plots
-        fig, ax = create_figure_and_axes([18, 8], [1, 3])
+        fig, ax = create_figure_and_axes([20, 8], [1, 3])
         for iax in range(3):
             _imshow_2d_map(ax[iax], fig, gridded_array[..., iax], f'{axes[iax]} Component', extent, zlabel, colormap,
                            inner_radius, outer_radius, zlim)
