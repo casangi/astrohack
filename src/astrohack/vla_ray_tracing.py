@@ -5,7 +5,7 @@ from astrohack.core.vla_ray_tracing import  create_radial_mask, \
 from astrohack.utils import convert_unit, clight
 from astrohack.utils.phase_fitting import execute_phase_fitting
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
-from typing import Union, List
+from typing import Union
 
 
 def create_ray_tracing_telescope_parameter_dict(primary_diameter: Union[float,int] = 25,
@@ -15,17 +15,38 @@ def create_ray_tracing_telescope_parameter_dict(primary_diameter: Union[float,in
                                                 foci_half_distance: Union[float,int] = 3.662,
                                                 inner_radius: Union[float,int] = 2.0,
                                                 horn_diameter: Union[float,int] = 0.2):
-    """Analyze holography images to derive panel adjustments
-    Args:
-        primary_diameter:
-        secondary_diameter:
-        focal_length:
-        z_intercept:
-        foci_half_distance:
-        inner_radius:
-        horn_diameter:
 
-    Returns:
+    """Create a dictionary with a cassegrain telescope parameters
+
+    :param primary_diameter: Diameter of the primary mirror in meters.
+    :type primary_diameter: float, int, optional
+
+    :param secondary_diameter: Diameter of the secondary mirror in meters.
+    :type secondary_diameter: float, int, optional
+
+    :param focal_length: Focal length of the primary mirror in meters.
+    :type focal_length: float, int, optional
+
+    :param z_intercept: Distance between the Z intercept of the secondary and the mid-point between the primary and \
+    secondary focus, usually refered to as 'a'.
+    :type z_intercept: float, int, optional
+
+    :param foci_half_distance: Half-distance between the primary and secondary foci, usually refered to as 'c'.
+    :type foci_half_distance: float, int, optional
+
+    :param inner_radius: Inner valid surface radius of the primary reflector, usually refered to as Blockage.
+    :type inner_radius: float, int, optional
+
+    :param horn_diameter: Diameter of the horn detecting the signals, used to determine if rays are detected or lost.
+    :type horn_diameter: float, int, optional
+
+    :return: A dictionary filled with the user inputs and also the horn position and orientation.
+    :rtype: dict
+
+    .. _Description:
+
+        Create a basic description of a Cassegrain radio telescope from user inputs. This function assumes that the\
+         horn is positioned at the secondary focus and is pointed directly upwards, i.e. an axi-symmetric design.
 
     """
     telescope_parameters = locals()
