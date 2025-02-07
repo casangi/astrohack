@@ -1,9 +1,7 @@
 from astrohack import Telescope
 from astrohack.core.vla_ray_tracing import *
-from astrohack.core.vla_ray_tracing import _title_from_input_parameters, _regrid_data_onto_2d_grid, _plot_2d_map, \
-    _add_rz_ray_to_plot, _make_gridded_vla_primary, _reflect_off_primary, _reflect_off_analytical_secondary, \
-    _detect_light, _compute_phase, _create_coordinate_images, _create_radial_mask, \
-    _compare_ray_tracing_to_phase_fit_results
+from astrohack.core.vla_ray_tracing import  create_radial_mask, \
+    compare_ray_tracing_to_phase_fit_results
 from astrohack.utils import convert_unit, clight
 from astrohack.utils.phase_fitting import execute_phase_fitting
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
@@ -11,7 +9,7 @@ from astrohack.visualization.plot_tools import create_figure_and_axes, close_fig
 
 def plot_2d_maps_from_rt_xds(rt_xds, keys, rootname, phase_unit='deg', length_unit='m', colormap='viridis',
                              display=False, dpi=300):
-    suptitle = _title_from_input_parameters(rt_xds.attrs['input_parameters'])
+    suptitle = title_from_input_parameters(rt_xds.attrs['input_parameters'])
     for key in keys:
         filename = f'{rootname}_{key}.png'
 
@@ -25,11 +23,11 @@ def plot_2d_maps_from_rt_xds(rt_xds, keys, rootname, phase_unit='deg', length_un
             zlabel += f' [{length_unit}]'
             zlim = None
 
-        gridded_array = fac * _regrid_data_onto_2d_grid(rt_xds.attrs['image_size'], rt_xds[key].values,
-                                                        rt_xds['image_indexes'].values)
+        gridded_array = fac * regrid_data_onto_2d_grid(rt_xds.attrs['image_size'], rt_xds[key].values,
+                                                       rt_xds['image_indexes'].values)
 
-        _plot_2d_map(gridded_array, rt_xds["x_axis"].values, rt_xds.attrs['telescope_parameters'], suptitle, filename,
-                     zlabel, colormap, zlim, display=display, dpi=dpi)
+        plot_2d_map(gridded_array, rt_xds["x_axis"].values, rt_xds.attrs['telescope_parameters'], suptitle, filename,
+                    zlabel, colormap, zlim, display=display, dpi=dpi)
     return
 
 
@@ -78,21 +76,21 @@ def plot_radial_projection_from_rt_xds(rt_xds, plot_filename, nrays=20, display=
 
         # Plot incident light
         origin = pr_pnt - inf * incoming
-        _add_rz_ray_to_plot(ax, origin, pr_pnt, 'yellow', '-', '$\infty$->Pr', sign)
+        add_rz_ray_to_plot(ax, origin, pr_pnt, 'yellow', '-', '$\infty$->Pr', sign)
 
         # Plot primary reflection
         if np.all(np.isnan(sc_pnt)):  # Ray does not touch secondary
             dest = pr_pnt + inf * pr_ref
-            _add_rz_ray_to_plot(ax, pr_pnt, dest, 'red', '--', 'Pr->$\infty$', sign)
+            add_rz_ray_to_plot(ax, pr_pnt, dest, 'red', '--', 'Pr->$\infty$', sign)
         else:
-            _add_rz_ray_to_plot(ax, pr_pnt, sc_pnt, 'yellow', '--', 'Pr->Sc', sign)
+            add_rz_ray_to_plot(ax, pr_pnt, sc_pnt, 'yellow', '--', 'Pr->Sc', sign)
 
             # Plot secondary reflection
             if np.all(np.isnan(horn_inter)):  # Ray does not touch horn
                 dest = sc_pnt + inf * sc_ref
-                _add_rz_ray_to_plot(ax, sc_pnt, dest, 'red', '-.', 'sc->$\infty$', sign)
+                add_rz_ray_to_plot(ax, sc_pnt, dest, 'red', '-.', 'sc->$\infty$', sign)
             else:
-                _add_rz_ray_to_plot(ax, sc_pnt, horn_inter, 'yellow', '-.', 'Sc->Horn', sign)
+                add_rz_ray_to_plot(ax, sc_pnt, horn_inter, 'yellow', '-.', 'Sc->Horn', sign)
 
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
@@ -104,7 +102,7 @@ def plot_radial_projection_from_rt_xds(rt_xds, plot_filename, nrays=20, display=
     ax.set_ylim([-0.5, 9.5])
     ax.set_xlim([-13, 13])
     ax.set_title('VLA Ray tracing 2D Schematic')
-    close_figure(fig, _title_from_input_parameters(rt_xds.attrs['input_parameters']), plot_filename, dpi, display)
+    close_figure(fig, title_from_input_parameters(rt_xds.attrs['input_parameters']), plot_filename, dpi, display)
 
 
 def vla_ray_tracing_pipeline(telescope_parameters, grid_size, grid_resolution, grid_unit,
@@ -129,11 +127,11 @@ def vla_ray_tracing_pipeline(telescope_parameters, grid_size, grid_resolution, g
     incident_light = np.array([-np.sin(x_pnt_off), -np.sin(y_pnt_off), -np.cos(pnt_off)])
 
     # Actual Ray Tracing starts here
-    rt_xds = _make_gridded_vla_primary(grid_size, grid_resolution, telescope_parameters)
-    rt_xds = _reflect_off_primary(rt_xds, incident_light)
-    rt_xds = _reflect_off_analytical_secondary(rt_xds, focus_offset)
-    rt_xds = _detect_light(rt_xds)
-    rt_xds = _compute_phase(rt_xds, observing_wavelength * convert_unit(wavelength_unit, 'm', 'length'),
+    rt_xds = make_gridded_vla_primary(grid_size, grid_resolution, telescope_parameters)
+    rt_xds = reflect_off_primary(rt_xds, incident_light)
+    rt_xds = reflect_off_analytical_secondary(rt_xds, focus_offset)
+    rt_xds = detect_light(rt_xds)
+    rt_xds = compute_phase(rt_xds, observing_wavelength * convert_unit(wavelength_unit, 'm', 'length'),
                             phase_offset * convert_unit(phase_unit, 'rad', 'trigonometric'))
 
     rt_xds.attrs['input_parameters'] = input_pars
@@ -158,11 +156,11 @@ def apply_vla_phase_fitting_to_xds(rt_xds, phase_plot_filename, fit_pointing_off
     # Create Amplitude and phase images on the shape expected by phase fitting engine.
     shape_5d = [ntime, npol, nfreq, npnt, npnt]
     amplitude_5d = np.empty(shape_5d)
-    phase_2d = _regrid_data_onto_2d_grid(npnt, rt_xds['phase'].values, rt_xds['image_indexes'].values)
+    phase_2d = regrid_data_onto_2d_grid(npnt, rt_xds['phase'].values, rt_xds['image_indexes'].values)
     phase_5d = np.empty_like(amplitude_5d)
     phase_5d[..., :, :] = phase_2d
-    _, _, radius = _create_coordinate_images(u_axis, v_axis)
-    radial_mask = _create_radial_mask(radius, telescope_pars['inner_radius'], telescope_pars['primary_diameter'] / 2)
+    _, _, radius = create_coordinate_images(u_axis, v_axis)
+    radial_mask = create_radial_mask(radius, telescope_pars['inner_radius'], telescope_pars['primary_diameter'] / 2)
     amplitude_5d[..., :, :] = np.where(radial_mask, 1.0, np.nan)
 
     # Create frequency and polarization axes
@@ -199,6 +197,6 @@ def apply_vla_phase_fitting_to_xds(rt_xds, phase_plot_filename, fit_pointing_off
                                                                      is_stokes, is_near_field, focus_offset, u_axis,
                                                                      v_axis, label)
 
-    _compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle,
-                                              phase_plot_filename, phase_unit=phase_unit, colormap=colormap,
-                                              display=display, dpi=dpi)
+    compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle,
+                                             phase_plot_filename, phase_unit=phase_unit, colormap=colormap,
+                                             display=display, dpi=dpi)

@@ -49,29 +49,29 @@ def _simple_axis(minmax, resolution, margin=0.05):
     return axis_array
 
 
-def _create_coordinate_images(x_axis, y_axis):
+def create_coordinate_images(x_axis, y_axis):
     x_mesh, y_mesh = np.meshgrid(x_axis, y_axis, indexing='ij')
     img_radius = np.sqrt(x_mesh ** 2 + y_mesh ** 2)
     return x_mesh, y_mesh, img_radius
 
 
-def _create_radial_mask(radius, inner_rad, outer_rad):
+def create_radial_mask(radius, inner_rad, outer_rad):
     mask = np.full_like(radius, True, dtype=bool)
     mask = np.where(radius > outer_rad, False, mask)
     mask = np.where(radius < inner_rad, False, mask)
     return mask
 
 
-def _make_gridded_vla_primary(grid_size, resolution, telescope_pars):
+def make_gridded_vla_primary(grid_size, resolution, telescope_pars):
     grid_minmax = [-grid_size / 2, grid_size / 2]
     axis = _simple_axis(grid_minmax, resolution, margin=0.0)
     image_size = axis.shape[0]
     axis_idx = np.arange(image_size, dtype=int)
 
     # It is imperative to put indexing='ij' so that the x and Y axes are not flipped in this step.
-    x_mesh, y_mesh, img_radius = _create_coordinate_images(axis, axis)
+    x_mesh, y_mesh, img_radius = create_coordinate_images(axis, axis)
     x_idx_mesh, y_idx_mesh = np.meshgrid(axis_idx, axis_idx, indexing='ij')
-    radial_mask = _create_radial_mask(img_radius, telescope_pars['inner_radius'], telescope_pars['primary_diameter'] / 2)
+    radial_mask = create_radial_mask(img_radius, telescope_pars['inner_radius'], telescope_pars['primary_diameter'] / 2)
     img_radius = img_radius[radial_mask]
     npnt_1d = img_radius.shape[0]
     idx_1d = np.empty([npnt_1d, 2], dtype=int)
@@ -126,7 +126,7 @@ def _secondary_hyperboloid_root_func(tval, fargs):
 ##########################################################
 # Actual ray tracing steps in order of light propagation #
 ##########################################################
-def _reflect_off_primary(rt_xds, incident_light):
+def reflect_off_primary(rt_xds, incident_light):
     incident_light = normalize_vector_map(incident_light)
     primary_normals = rt_xds['primary_normals'].values
     light = np.zeros_like(primary_normals)
@@ -137,7 +137,7 @@ def _reflect_off_primary(rt_xds, incident_light):
     return rt_xds
 
 
-def _reflect_off_analytical_secondary(rt_xds, offset=np.array((0, 0, 0))):
+def reflect_off_analytical_secondary(rt_xds, offset=np.array((0, 0, 0))):
     primary_points = rt_xds['primary_points'].values
     primary_reflections = rt_xds['primary_reflections'].values
     telescope_pars = rt_xds.attrs['telescope_parameters']
@@ -182,7 +182,7 @@ def _reflect_off_analytical_secondary(rt_xds, offset=np.array((0, 0, 0))):
     return rt_xds
 
 
-def _detect_light(rt_xds):
+def detect_light(rt_xds):
     secondary_reflections = rt_xds['secondary_reflections'].values
     secondary_points = rt_xds['secondary_points'].values
     telescope_pars = rt_xds.attrs['telescope_parameters']
@@ -206,7 +206,7 @@ def _detect_light(rt_xds):
     return rt_xds
 
 
-def _compute_phase(rt_xds, wavelength, phase_offset):
+def compute_phase(rt_xds, wavelength, phase_offset):
     incident_light = rt_xds['light']
     primary_points_z = rt_xds['primary_points'].values[:, 2]
     distance_pr_horn = rt_xds['distance_secondary_to_horn'].values + rt_xds['distance_primary_to_secundary'].values
@@ -230,7 +230,7 @@ def _compute_phase(rt_xds, wavelength, phase_offset):
 ###########################################################
 # Plotting routines and plotting aids, such as regridding #
 ###########################################################
-def _regrid_data_onto_2d_grid(npnt, data, indexes):
+def regrid_data_onto_2d_grid(npnt, data, indexes):
     npnt_1d = data.shape[0]
     if len(data.shape) == 2:
         gridded_2d = np.full([npnt, npnt, data.shape[1]], np.nan)
@@ -245,7 +245,7 @@ def _regrid_data_onto_2d_grid(npnt, data, indexes):
     return gridded_2d
 
 
-def _title_from_input_parameters(inpt_dict):
+def title_from_input_parameters(inpt_dict):
     title = 'VLA ray Tracing model for:\n'
     title += (f'pnt off = ({inpt_dict["x_pnt_off"]}, {inpt_dict["y_pnt_off"]}) '
               f'{inpt_dict["pnt_off_unit"]}, ')
@@ -284,7 +284,7 @@ def _imshow_2d_map(ax, fig, gridded_array, title, extent, zlabel, colormap, inne
     ax.add_patch(innercircle)
 
 
-def _plot_2d_map(gridded_array, axis, telescope_parameters, suptitle, filename, zlabel, colormap, zlim, display, dpi):
+def plot_2d_map(gridded_array, axis, telescope_parameters, suptitle, filename, zlabel, colormap, zlim, display, dpi):
     inner_radius = telescope_parameters['inner_radius']
     outer_radius = telescope_parameters['primary_diameter'] / 2
     axes = ['X', 'Y', 'Z']
@@ -302,14 +302,14 @@ def _plot_2d_map(gridded_array, axis, telescope_parameters, suptitle, filename, 
     close_figure(fig, suptitle, filename, dpi, display)
 
 
-def _add_rz_ray_to_plot(ax, origin, destiny, color, ls, label, sign):
+def add_rz_ray_to_plot(ax, origin, destiny, color, ls, label, sign):
     radcoord = [sign * generalized_norm(origin[0:2]), sign * generalized_norm(destiny[0:2])]
     zcoord = [origin[2], destiny[2]]
     ax.plot(radcoord, zcoord, color=color, label=label, ls=ls)
 
 
-def _compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle, filename,
-                                              phase_unit='deg', colormap='viridis', display=False, dpi=300):
+def compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle, filename,
+                                             phase_unit='deg', colormap='viridis', display=False, dpi=300):
     xds_inp = rt_xds.attrs['input_parameters']
     angle_unit = xds_inp['pnt_off_unit']
     length_unit = xds_inp['focus_off_unit']
