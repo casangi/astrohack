@@ -9,13 +9,15 @@ from typing import Union
 import xarray as xr
 
 
-def create_ray_tracing_telescope_parameter_dict(primary_diameter: Union[float,int] = 25,
-                                                secondary_diameter: Union[float,int] = 2.5146,
-                                                focal_length: Union[float,int] = 9.0,
-                                                z_intercept: Union[float,int] = 3.140,
-                                                foci_half_distance: Union[float,int] = 3.662,
-                                                inner_radius: Union[float,int] = 2.0,
-                                                horn_diameter: Union[float,int] = 0.2):
+def create_ray_tracing_telescope_parameter_dict(
+        primary_diameter: Union[float,int] = 25,
+        secondary_diameter: Union[float,int] = 2.5146,
+        focal_length: Union[float,int] = 9.0,
+        z_intercept: Union[float,int] = 3.140,
+        foci_half_distance: Union[float,int] = 3.662,
+        inner_radius: Union[float,int] = 2.0,
+        horn_diameter: Union[float,int] = 0.2
+):
 
     """Create a dictionary with a cassegrain telescope parameters
 
@@ -91,7 +93,7 @@ def cassegrain_ray_tracing_pipeline(
     :param grid_resolution: Resolution of the grid onto which to compute phase effects in grid_unit.
     :type grid_resolution: float, int, optional
 
-    :param grid_unit: Length unit for grid_size and grid_resolution, default is m.
+    :param grid_unit: Length unit for grid_size and grid_resolution, default is "m".
     :type grid_unit: str, optional
 
     :param x_pointing_offset: X Pointing offset in pointing_offset_unit.
@@ -100,7 +102,7 @@ def cassegrain_ray_tracing_pipeline(
     :param y_pointing_offset: Y Pointing offset in pointing_offset_unit.
     :type y_pointing_offset: float, int, optional
     
-    :param pointing_offset_unit: Angle unit for pointing offsets, default is asec.
+    :param pointing_offset_unit: Angle unit for pointing offsets, default is "asec".
     :type pointing_offset_unit: str, optional
     
     :param x_focus_offset: X offset of the secondary in focus_offset_unit.
@@ -112,19 +114,19 @@ def cassegrain_ray_tracing_pipeline(
     :param z_focus_offset: Z offset of the secondary in focus_offset_unit, what is usually refered to as simply focus.
     :type z_focus_offset: float, int, optional
     
-    :param focus_offset_unit: Length unit for focus offsets, default is mm.
+    :param focus_offset_unit: Length unit for focus offsets, default is "mm".
     :type focus_offset_unit: str, optional
 
     :param phase_offset: A phase offset to be applied to the phase image.
     :type phase_offset: float, int, optional
 
-    :param phase_unit: Angle unit for the phase offset, default is deg.
+    :param phase_unit: Angle unit for the phase offset, default is "deg".
     :type phase_unit: str, optional
 
     :param observing_wavelength: Wavelength of the rays to be simulated in wavelength unit.
     :type observing_wavelength: float, int, optional
 
-    :param wavelength_unit: Length unit for the observing wavelength, default is cm.
+    :param wavelength_unit: Length unit for the observing wavelength, default is "cm".
     :type wavelength_unit: str, optional
 
     :return: X array dataset object with the results from the ray tracing.
@@ -185,8 +187,51 @@ def cassegrain_ray_tracing_pipeline(
     return rt_xds
 
 
-def plot_2d_maps_from_rt_xds(rt_xds, keys, rootname, phase_unit='deg', length_unit='m', colormap='viridis',
-                             display=False, dpi=300):
+def plot_2d_maps_from_rt_xds(
+        rt_xds:xr.Dataset,
+        keys: Union[str, list],
+        rootname: str,
+        phase_unit: str = 'deg',
+        length_unit: str = 'm',
+        colormap: str = 'viridis',
+        display: bool = False,
+        dpi: int = 300
+):
+    """Plot 2D maps of keys in the ray tracing Xarray Dataset
+
+    :param rt_xds: Xarray dataset containing the results of the Ray tracing pipeline
+    :type rt_xds: xr.Dataset
+
+    :param keys: Key or keys in rt_xds to be plotted.
+    :type keys: str, list
+
+    :param rootname: Root name for the plots to be created.
+    :type rootname: str
+
+    :param phase_unit: Unit for the phase plot, default is "deg".
+    :type phase_unit: str, optional
+
+    :param length_unit: Unit for the plots of keys other than phase, default is "m".
+    :type length_unit: str, optional
+
+    :param colormap: Colormap to be used for plots, default is "viridis".
+    :type colormap: str, optional
+
+    :param display: Display plots inline or suppress, defaults to True
+    :type display: bool, optional
+
+    :param dpi: dots per inch to be used in plots, default is 300
+    :type dpi: int, optional
+
+    .. _Description:
+
+        Produce plots from the Xarray dataset containing ray tracing results for analysis. All Xarray dataset data \
+        variables except for the x and y axes can be plotted.
+    """
+
+    if isinstance(keys, str):
+        keys = [keys]
+
     suptitle = title_from_input_parameters(rt_xds.attrs['input_parameters'])
     for key in keys:
         filename = f'{rootname}_{key}.png'
