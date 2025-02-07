@@ -258,23 +258,27 @@ def _title_from_input_parameters(inpt_dict):
     return title
 
 
-def plot_2d_maps_from_rt_xds(rt_xds, keys, rootname, colormap='viridis'):
+def plot_2d_maps_from_rt_xds(rt_xds, keys, rootname, phase_unit='deg', length_unit='m', colormap='viridis',
+                             display=False, dpi=300):
     suptitle = _title_from_input_parameters(rt_xds.attrs['input_parameters'])
     for key in keys:
         filename = f'{rootname}_{key}.png'
-        gridded_array = _regrid_data_onto_2d_grid(rt_xds.attrs['image_size'], rt_xds[key].values,
-                                                  rt_xds['image_indexes'].values)
 
         zlabel = key.capitalize()
         if key == 'phase':
-            zlabel += ' [rad]'
-            zlim = [-np.pi, np.pi]
+            fac = convert_unit('rad', phase_unit, 'trigonometric')
+            zlabel += f' [{phase_unit}]'
+            zlim = [fac*-np.pi, fac*np.pi]
         else:
-            zlabel += ' [m]'
+            fac = convert_unit('m', length_unit, 'length')
+            zlabel += f' [{length_unit}]'
             zlim = None
 
+        gridded_array = fac * _regrid_data_onto_2d_grid(rt_xds.attrs['image_size'], rt_xds[key].values,
+                                                        rt_xds['image_indexes'].values)
+
         _plot_2d_map(gridded_array, rt_xds["x_axis"].values, rt_xds.attrs['telescope_parameters'], suptitle, filename,
-                     zlabel, colormap, zlim)
+                     zlabel, colormap, zlim, display=display, dpi=dpi)
     return
 
 
@@ -306,7 +310,7 @@ def _imshow_2d_map(ax, fig, gridded_array, title, extent, zlabel, colormap, inne
     ax.add_patch(innercircle)
 
 
-def _plot_2d_map(gridded_array, axis, telescope_parameters, suptitle, filename, zlabel, colormap, zlim):
+def _plot_2d_map(gridded_array, axis, telescope_parameters, suptitle, filename, zlabel, colormap, zlim, display, dpi):
     inner_radius = telescope_parameters['inner_radius']
     outer_radius = telescope_parameters['primary_diameter'] / 2
     axes = ['X', 'Y', 'Z']
@@ -321,7 +325,7 @@ def _plot_2d_map(gridded_array, axis, telescope_parameters, suptitle, filename, 
         fig, ax = create_figure_and_axes([10, 8], [1, 1])
         _imshow_2d_map(ax, fig, gridded_array, None, extent, zlabel, colormap, inner_radius, outer_radius, zlim)
 
-    close_figure(fig, suptitle, filename, 300, False)
+    close_figure(fig, suptitle, filename, dpi, display)
 
 
 def _add_rz_ray_to_plot(ax, origin, destiny, color, ls, label, sign):
@@ -330,7 +334,7 @@ def _add_rz_ray_to_plot(ax, origin, destiny, color, ls, label, sign):
     ax.plot(radcoord, zcoord, color=color, label=label, ls=ls)
 
 
-def plot_radial_projection_from_rt_xds(rt_xds, filename, nrays=20):
+def plot_radial_projection_from_rt_xds(rt_xds, plot_filename, nrays=20, display=False, dpi=300):
     telescope_pararameters = rt_xds.attrs['telescope_parameters']
     primary_diameter = telescope_pararameters['primary_diameter']
     secondary_diameter = telescope_pararameters['secondary_diameter']
@@ -401,7 +405,7 @@ def plot_radial_projection_from_rt_xds(rt_xds, filename, nrays=20):
     ax.set_ylim([-0.5, 9.5])
     ax.set_xlim([-13, 13])
     ax.set_title('VLA Ray tracing 2D Schematic')
-    close_figure(fig, _title_from_input_parameters(rt_xds.attrs['input_parameters']), filename, 300, False)
+    close_figure(fig, _title_from_input_parameters(rt_xds.attrs['input_parameters']), plot_filename, dpi, display)
 
 
 ######################################
@@ -445,8 +449,8 @@ def vla_ray_tracing_pipeline(telescope_parameters, grid_size, grid_resolution, g
 ############################
 # VLA Phase fitting plugin #
 ############################
-def apply_vla_phase_fitting_to_xds(rt_xds, filename, do_pnt_offset=True, do_secondary_offset=True,
-                                   do_focus_off=True):
+def apply_vla_phase_fitting_to_xds(rt_xds, phase_plot_filename, fit_pointing_offset=True, fit_xy_secondary_offset=True,
+                                   fit_focus_off=True, phase_unit='deg', colormap='viridis', display=False, dpi=300):
     ntime = 1
     npol = 1
     nfreq = 1
@@ -480,11 +484,11 @@ def apply_vla_phase_fitting_to_xds(rt_xds, filename, do_pnt_offset=True, do_seco
     # Initiate Control toggles
     is_stokes = True
     is_near_field = False
-    phase_fit_parameter = [do_pnt_offset,        # Pointing Offset (Supported)
-                           do_secondary_offset,  # X&Y Focus Offset (Supported)
-                           do_focus_off,         # Z Focus Offset (Supported)
-                           False,                # Sub-reflector Tilt (not supported)
-                           False                 # Cassegrain offset (not supported)
+    phase_fit_parameter = [fit_pointing_offset,  # Pointing Offset (Supported)
+                           fit_xy_secondary_offset,  # X&Y Focus Offset (Supported)
+                           fit_focus_off,  # Z Focus Offset (Supported)
+                           False,  # Sub-reflector Tilt (not supported)
+                           False  # Cassegrain offset (not supported)
                            ]
 
     # Manipulate VLA telescope object so that it has compatible parameters to the ones in the RT model.
@@ -502,10 +506,13 @@ def apply_vla_phase_fitting_to_xds(rt_xds, filename, do_pnt_offset=True, do_seco
                                                                      is_stokes, is_near_field, focus_offset, u_axis,
                                                                      v_axis, label)
 
-    _compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle, filename)
+    _compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle,
+                                              phase_plot_filename, phase_unit=phase_unit, colormap=colormap,
+                                              display=display, dpi=dpi)
 
 
-def _compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle, filename):
+def _compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle, filename,
+                                              phase_unit='deg', colormap='viridis', display=False, dpi=300):
     xds_inp = rt_xds.attrs['input_parameters']
     angle_unit = xds_inp['pnt_off_unit']
     length_unit = xds_inp['focus_off_unit']
@@ -549,15 +556,15 @@ def _compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5
     telescope_parameters = rt_xds.attrs['telescope_parameters']
     inner_radius = telescope_parameters['inner_radius']
     outer_radius = telescope_parameters['primary_diameter'] / 2
-    fac = convert_unit('rad', 'deg', 'trigonometric')
-    zlim = [-180, 180]
+    fac = convert_unit('rad', phase_unit, 'trigonometric')
+    zlim = [-np.pi*fac, np.pi*fac]
 
     fig, ax = create_figure_and_axes([18, 8], [1, 3])
 
     _imshow_2d_map(ax[0], fig, fac * phase_2d, f'RT phase model\n{statistics_to_text(data_statistics(fac * phase_2d))}',
-                   extent, 'Phase [deg]', 'viridis', inner_radius, outer_radius, zlim)
-    _imshow_2d_map(ax[1], fig, fac * correction, f'Fitted correction', extent, 'Phase [deg]', 'viridis',
+                   extent, f'Phase [{phase_unit}]', colormap, inner_radius, outer_radius, zlim)
+    _imshow_2d_map(ax[1], fig, fac * correction, f'Fitted correction', extent, f'Phase [{phase_unit}]', colormap,
                    inner_radius, outer_radius, zlim)
     _imshow_2d_map(ax[2], fig, fac * residuals_2d, f'Residuals\n{statistics_to_text(data_statistics(fac * residuals_2d))}',
-                   extent, 'Phase [deg]', 'viridis', inner_radius, outer_radius, zlim)
-    close_figure(fig, 'RT model fitting results', filename, 300, False)
+                   extent, f'Phase [{phase_unit}]', colormap, inner_radius, outer_radius, zlim)
+    close_figure(fig, 'RT model fitting results', filename, dpi, display)
