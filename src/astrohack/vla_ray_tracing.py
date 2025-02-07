@@ -356,8 +356,58 @@ def plot_radial_projection_from_rt_xds(
     close_figure(fig, title_from_input_parameters(rt_xds.attrs['input_parameters']), plot_filename, dpi, display)
 
 
-def apply_vla_phase_fitting_to_xds(rt_xds, phase_plot_filename, fit_pointing_offset=True, fit_xy_secondary_offset=True,
-                                   fit_focus_off=True, phase_unit='deg', colormap='viridis', display=False, dpi=300):
+def apply_holog_phase_fitting_to_rt_xds(
+        rt_xds: xr.Dataset,
+        phase_plot_filename: str,
+        fit_pointing_offset: bool = True,
+        fit_xy_secondary_offset: bool = True,
+        fit_focus_off: bool = True,
+        phase_unit: str = 'deg',
+        colormap: str = 'viridis',
+        display: bool = False,
+        dpi: int = 300
+):
+    """Feed phase image from ray tracing Xarray dataset to Astrohak's default phase fitting tool for VLA data.
+
+    :param rt_xds: Xarray dataset containing the results of the Ray tracing pipeline
+    :type rt_xds: xr.Dataset
+
+    :param phase_plot_filename: filename for the plot containing the RT phase image the fitted phase effects and the \
+    residuals
+    :type phase_plot_filename: str
+
+    :param fit_pointing_offset: Toggle to determine if pointing offsets are to be fitted, default is True.
+    :type fit_pointing_offset: bool, optional
+
+    :param fit_xy_secondary_offset: Toggle to determine if lateral displacements of the secondary are to be fitted,
+    default is True.
+    :type fit_xy_secondary_offset: bool, optional
+
+    :param fit_focus_off: Toggle to determine if vertical displacements of the secondary are to be fitted, default is \
+    True.
+    :type fit_focus_off: bool, optional
+
+    :param phase_unit: Unit for the phase plot, default is "deg".
+    :type phase_unit: str, optional
+
+    :param colormap: Colormap to be used for plots, default is "viridis".
+    :type colormap: str, optional
+
+    :param display: Display plots inline or suppress, defaults to True
+    :type display: bool, optional
+
+    :param dpi: dots per inch to be used in plots, default is 300
+    :type dpi: int, optional
+
+    .. _Description:
+
+        Apply the phase fitting engine used in ``astrohack.holog.holog`` to the phase image computed by the ray \
+        tracing pipeline. At the end of the fitting produces a table so that fitting results can be compared to the \
+        inputs given for the ray tracing pipeline. Along with the table a plot is produced containing the ray tracing \
+        modelled phases, the correction derived from the phase fitting tool and the residuals of the fitting. For \
+        easier comparison simple statistics of each image are provided.
+
+    """
     ntime = 1
     npol = 1
     nfreq = 1
