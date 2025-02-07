@@ -6,6 +6,7 @@ from astrohack.utils import convert_unit, clight
 from astrohack.utils.phase_fitting import execute_phase_fitting
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
 from typing import Union
+import xarray as xr
 
 
 def create_ray_tracing_telescope_parameter_dict(primary_diameter: Union[float,int] = 25,
@@ -46,7 +47,8 @@ def create_ray_tracing_telescope_parameter_dict(primary_diameter: Union[float,in
     .. _Description:
 
         Create a basic description of a Cassegrain radio telescope from user inputs. This function assumes that the\
-         horn is positioned at the secondary focus and is pointed directly upwards, i.e. an axi-symmetric design.
+         horn is positioned at the secondary focus and is pointed directly upwards, i.e. an axi-symmetric design.\
+        Default values reflect the values for the VLA available in EVLA memo 211.
 
     """
     telescope_parameters = locals()
@@ -55,6 +57,133 @@ def create_ray_tracing_telescope_parameter_dict(primary_diameter: Union[float,in
     # Horn looks straight up
     telescope_parameters['horn_orientation'] = [0, 0, 1]
     return telescope_parameters
+
+
+def cassegrain_ray_tracing_pipeline(
+        output_xds_filename: str,
+        telescope_parameters: dict,
+        grid_size: Union[float,int] = 28,
+        grid_resolution: Union[float,int] = 0.1,
+        grid_unit: str = 'm',
+        x_pointing_offset: Union[float,int] = 0,
+        y_pointing_offset: Union[float,int] = 0,
+        pointing_offset_unit: str = 'asec',
+        x_focus_offset: Union[float,int] = 0,
+        y_focus_offset: Union[float,int] = 0,
+        z_focus_offset: Union[float,int] = 0,
+        focus_offset_unit: str = 'mm',
+        phase_offset: Union[float,int] = 0,
+        phase_unit: str = 'deg',
+        observing_wavelength: Union[float,int] = 1,
+        wavelength_unit: str = 'cm'
+):
+    """Execute the cassegrain ray tracing pipeline to determine phase effects caused by optical mis-alignments.
+
+    :param output_xds_filename: Filename for the output Xarray dataset on disk using a Zarr container.
+    :type output_xds_filename: str
+
+    :param telescope_parameters: Dictionary containing the parameters of the cassegrain telescope in use.
+    :type telescope_parameters: dict
+
+    :param grid_size: Size of the grid onto which to compute phase effects in grid_unit.
+    :type grid_size: float, int, optional
+
+    :param grid_resolution: Resolution of the grid onto which to compute phase effects in grid_unit.
+    :type grid_resolution: float, int, optional
+
+    :param grid_unit: Length unit for grid_size and grid_resolution, default is m.
+    :type grid_unit: str, optional
+
+    :param x_pointing_offset: X Pointing offset in pointing_offset_unit.
+    :type x_pointing_offset: float, int, optional
+    
+    :param y_pointing_offset: Y Pointing offset in pointing_offset_unit.
+    :type y_pointing_offset: float, int, optional
+    
+    :param pointing_offset_unit: Angle unit for pointing offsets, default is asec.
+    :type pointing_offset_unit: str, optional
+    
+    :param x_focus_offset: X offset of the secondary in focus_offset_unit.
+    :type x_focus_offset: float, int, optional
+    
+    :param y_focus_offset: Y offset of the secondary in focus_offset_unit.
+    :type y_focus_offset: float, int, optional
+    
+    :param z_focus_offset: Z offset of the secondary in focus_offset_unit, what is usually refered to as simply focus.
+    :type z_focus_offset: float, int, optional
+    
+    :param focus_offset_unit: Length unit for focus offsets, default is mm.
+    :type focus_offset_unit: str, optional
+
+    :param phase_offset: A phase offset to be applied to the phase image.
+    :type phase_offset: float, int, optional
+
+    :param phase_unit: Angle unit for the phase offset, default is deg.
+    :type phase_unit: str, optional
+
+    :param observing_wavelength: Wavelength of the rays to be simulated in wavelength unit.
+    :type observing_wavelength: float, int, optional
+
+    :param wavelength_unit: Length unit for the observing wavelength, default is cm.
+    :type wavelength_unit: str, optional
+
+    :return: X array dataset object with the results from the ray tracing.
+    :rtype: xr.Dataset
+
+    .. _Description:
+        Calculate the total path for rays from the moment they pass the rim of the primary dish until they are detected\
+         at the horn and computes the resulting phase.
+
+        .. rubric:: Code Outline
+        - A Gridded representation of the primary dish and the normal to its surface are created and stored in an XDS.
+        - The reflection between the incident light and the primary mirror is computed for each of the gridded points.
+        - The reflected rays from the primary are progated and the intercept between them and the secondary is calculated.
+        - Compute the reflection at the secondary for each ray reflected at the primary that touches it.
+        - Check which rays from the secondary intercept the mouth of the horn.
+        - Compute the total path from the rim of the primary up to horn for detected rays.
+        - Compute the phase for each ray based on the total path.
+
+        .. rubric:: Limitations
+        - This ray tracing code only aims at estimating aperture phases, not its amplitude.
+        - Detection from sidelobes is not estimated.
+        - Beam shape estimations cannot be computed from the results as amplitudes are not modeled.
+        - This model is axi-symmetric, i.e. it cannot be used to estimate the full range of phase effects present in \
+        VLA apertures.
+        - If large pointing or focus offsets are chosen the rays may stop intercepting the horn and hence produce \
+        partially or fully blank phase images.
+
+    """
+    input_pars = locals()
+    del input_pars['telescope_parameters']
+
+    # Convert user units and build proper RT inputs
+    grid_fac = convert_unit(grid_unit, 'm', 'length')
+    grid_size *= grid_fac
+    grid_resolution *= grid_fac
+
+    focus_fac = convert_unit(focus_offset_unit, 'm', 'length')
+    focus_offset = focus_fac * np.array([x_focus_offset, y_focus_offset, z_focus_offset])
+
+    pnt_fac = convert_unit(pointing_offset_unit, 'rad', 'trigonometric')
+    x_pointing_offset *= pnt_fac
+    y_pointing_offset *= pnt_fac
+    # Using small angles approximation here
+    pnt_off = np.sqrt(x_pointing_offset ** 2 + y_pointing_offset ** 2)
+    incident_light = np.array([-np.sin(x_pointing_offset), -np.sin(y_pointing_offset), -np.cos(pnt_off)])
+
+    # Actual Ray Tracing starts here
+    rt_xds = make_gridded_vla_primary(grid_size, grid_resolution, telescope_parameters)
+    rt_xds = reflect_off_primary(rt_xds, incident_light)
+    rt_xds = reflect_off_analytical_secondary(rt_xds, focus_offset)
+    rt_xds = detect_light(rt_xds)
+    rt_xds = compute_phase(rt_xds, observing_wavelength * convert_unit(wavelength_unit, 'm', 'length'),
+                            phase_offset * convert_unit(phase_unit, 'rad', 'trigonometric'))
+
+    rt_xds.attrs['input_parameters'] = input_pars
+
+    rt_xds.to_zarr(output_xds_filename, mode="w", compute=True, consolidated=True)
+    return rt_xds
+
 
 def plot_2d_maps_from_rt_xds(rt_xds, keys, rootname, phase_unit='deg', length_unit='m', colormap='viridis',
                              display=False, dpi=300):
@@ -154,39 +283,6 @@ def plot_radial_projection_from_rt_xds(rt_xds, plot_filename, nrays=20, display=
     close_figure(fig, title_from_input_parameters(rt_xds.attrs['input_parameters']), plot_filename, dpi, display)
 
 
-def vla_ray_tracing_pipeline(telescope_parameters, grid_size, grid_resolution, grid_unit,
-                             x_pnt_off, y_pnt_off, pnt_off_unit, x_focus_off, y_focus_off, z_focus_off, focus_off_unit,
-                             phase_offset, phase_unit, observing_wavelength, wavelength_unit, filename):
-    input_pars = locals()
-    del input_pars['telescope_parameters']
-
-    # Convert user units and build proper RT inputs
-    grid_fac = convert_unit(grid_unit, 'm', 'length')
-    grid_size *= grid_fac
-    grid_resolution *= grid_fac
-
-    focus_fac = convert_unit(focus_off_unit, 'm', 'length')
-    focus_offset = focus_fac * np.array([x_focus_off, y_focus_off, z_focus_off])
-
-    pnt_fac = convert_unit(pnt_off_unit, 'rad', 'trigonometric')
-    x_pnt_off *= pnt_fac
-    y_pnt_off *= pnt_fac
-    # Using small angles approximation here
-    pnt_off = np.sqrt(x_pnt_off ** 2 + y_pnt_off ** 2)
-    incident_light = np.array([-np.sin(x_pnt_off), -np.sin(y_pnt_off), -np.cos(pnt_off)])
-
-    # Actual Ray Tracing starts here
-    rt_xds = make_gridded_vla_primary(grid_size, grid_resolution, telescope_parameters)
-    rt_xds = reflect_off_primary(rt_xds, incident_light)
-    rt_xds = reflect_off_analytical_secondary(rt_xds, focus_offset)
-    rt_xds = detect_light(rt_xds)
-    rt_xds = compute_phase(rt_xds, observing_wavelength * convert_unit(wavelength_unit, 'm', 'length'),
-                            phase_offset * convert_unit(phase_unit, 'rad', 'trigonometric'))
-
-    rt_xds.attrs['input_parameters'] = input_pars
-
-    rt_xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
-    return rt_xds
 
 
 def apply_vla_phase_fitting_to_xds(rt_xds, phase_plot_filename, fit_pointing_offset=True, fit_xy_secondary_offset=True,
