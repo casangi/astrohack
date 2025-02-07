@@ -5,11 +5,29 @@ from astrohack.core.vla_ray_tracing import  create_radial_mask, \
 from astrohack.utils import convert_unit, clight
 from astrohack.utils.phase_fitting import execute_phase_fitting
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
+from typing import Union, List
 
 
-def create_ray_tracing_telescope_parameter_dict(primary_diameter=25, secondary_diameter=2.5146, focal_length=9.0,
-                                                z_intercept=3.140, foci_half_distance=3.662, inner_radius=2.0,
-                                                horn_diameter=0.2):
+def create_ray_tracing_telescope_parameter_dict(primary_diameter: Union[float,int] = 25,
+                                                secondary_diameter: Union[float,int] = 2.5146,
+                                                focal_length: Union[float,int] = 9.0,
+                                                z_intercept: Union[float,int] = 3.140,
+                                                foci_half_distance: Union[float,int] = 3.662,
+                                                inner_radius: Union[float,int] = 2.0,
+                                                horn_diameter: Union[float,int] = 0.2):
+    """Analyze holography images to derive panel adjustments
+    Args:
+        primary_diameter:
+        secondary_diameter:
+        focal_length:
+        z_intercept:
+        foci_half_distance:
+        inner_radius:
+        horn_diameter:
+
+    Returns:
+
+    """
     telescope_parameters = locals()
     # Assumed to be at the Secondary focus i.e.: f - 2c
     telescope_parameters['horn_position'] = [0, 0, focal_length - 2 * foci_half_distance]
