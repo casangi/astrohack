@@ -188,13 +188,13 @@ def cassegrain_ray_tracing_pipeline(
 
 
 def plot_2d_maps_from_rt_xds(
-        rt_xds:xr.Dataset,
+        rt_xds: xr.Dataset,
         keys: Union[str, list],
         rootname: str,
         phase_unit: str = 'deg',
         length_unit: str = 'm',
         colormap: str = 'viridis',
-        display: bool = False,
+        display: bool = True,
         dpi: int = 300
 ):
     """Plot 2D maps of keys in the ray tracing Xarray Dataset
@@ -254,7 +254,35 @@ def plot_2d_maps_from_rt_xds(
     return
 
 
-def plot_radial_projection_from_rt_xds(rt_xds, plot_filename, nrays=20, display=False, dpi=300):
+def plot_radial_projection_from_rt_xds(
+        rt_xds: xr.Dataset,
+        plot_filename: str,
+        nrays: int = 20,
+        display: bool = True,
+        dpi: int = 300
+):
+    """Plot a radial projection of some of the rays simulated in the ray tracing Xarray Dataset.
+
+    :param rt_xds: Xarray dataset containing the results of the Ray tracing pipeline
+    :type rt_xds: xr.Dataset
+
+    :param plot_filename: Name of the file to contain the plot.
+    :type plot_filename: str
+
+    :param nrays: Number of random rays to be plotted, default is 20.
+    :type nrays: int, optional
+
+    :param display: Display plot inline or suppress, default is True
+    :type display: bool, optional
+
+    :param dpi: dots per inch to be used in plots, default is 300
+    :type dpi: int, optional
+
+    .. _Description:
+
+        Produce a plot of a random selection of nrays that are present on the input Xarray dataset.
+
+    """
     telescope_pararameters = rt_xds.attrs['telescope_parameters']
     primary_diameter = telescope_pararameters['primary_diameter']
     secondary_diameter = telescope_pararameters['secondary_diameter']
@@ -326,8 +354,6 @@ def plot_radial_projection_from_rt_xds(rt_xds, plot_filename, nrays=20, display=
     ax.set_xlim([-13, 13])
     ax.set_title('VLA Ray tracing 2D Schematic')
     close_figure(fig, title_from_input_parameters(rt_xds.attrs['input_parameters']), plot_filename, dpi, display)
-
-
 
 
 def apply_vla_phase_fitting_to_xds(rt_xds, phase_plot_filename, fit_pointing_offset=True, fit_xy_secondary_offset=True,
