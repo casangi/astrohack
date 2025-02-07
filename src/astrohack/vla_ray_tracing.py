@@ -7,6 +7,16 @@ from astrohack.utils.phase_fitting import execute_phase_fitting
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
 
 
+def create_ray_tracing_telescope_parameter_dict(primary_diameter=25, secondary_diameter=2.5146, focal_length=9.0,
+                                                z_intercept=3.140, foci_half_distance=3.662, inner_radius=2.0,
+                                                horn_diameter=0.2):
+    telescope_parameters = locals()
+    # Assumed to be at the Secondary focus i.e.: f - 2c
+    telescope_parameters['horn_position'] = [0, 0, focal_length - 2 * foci_half_distance]
+    # Horn looks straight up
+    telescope_parameters['horn_orientation'] = [0, 0, 1]
+    return telescope_parameters
+
 def plot_2d_maps_from_rt_xds(rt_xds, keys, rootname, phase_unit='deg', length_unit='m', colormap='viridis',
                              display=False, dpi=300):
     suptitle = title_from_input_parameters(rt_xds.attrs['input_parameters'])

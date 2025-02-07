@@ -13,21 +13,6 @@ from astrohack.visualization.plot_tools import get_proper_color_map, create_figu
 from astrohack.visualization.textual_data import create_pretty_table
 from astrohack.utils.text import format_value_error, format_label
 
-vla_parameters_for_rt_model = {
-    'primary_diameter': 25.0,
-    'secondary_diameter': 2.5146,
-    'focal_length': 9.0,
-    'z_intercept': 3.140,
-    'foci_half_distance': 3.662,
-    'inner_radius': 2.0,
-    # Assuming a 10 cm Horn for now
-    'horn_diameter': 0.2,
-    # Assumed to be at the Secondary focus i.e.: f - 2c
-    'horn_position': [0, 0, 9.0 - 2 * 3.662],
-    # Horn looks straight up
-    'horn_orientation': [0, 0, 1],
-}
-
 nanvec3d = np.full([3], np.nan)
 
 
