@@ -426,7 +426,7 @@ def vla_ray_tracing_pipeline(telescope_parameters, grid_size, grid_resolution, g
     y_pnt_off *= pnt_fac
     # Using small angles approximation here
     pnt_off = np.sqrt(x_pnt_off ** 2 + y_pnt_off ** 2)
-    incident_light = np.array([np.sin(x_pnt_off), np.sin(y_pnt_off), -np.cos(pnt_off)])
+    incident_light = np.array([-np.sin(x_pnt_off), -np.sin(y_pnt_off), -np.cos(pnt_off)])
 
     # Actual Ray Tracing starts here
     rt_xds = _make_gridded_vla_primary(grid_size, grid_resolution, telescope_parameters)
