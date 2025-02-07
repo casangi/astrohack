@@ -231,7 +231,7 @@ def regrid_data_onto_2d_grid(npnt, data, indexes):
 
 
 def title_from_input_parameters(inpt_dict):
-    title = 'VLA ray Tracing model for:\n'
+    title = ''
     title += (f'pnt off = ({inpt_dict["x_pnt_off"]}, {inpt_dict["y_pnt_off"]}) '
               f'{inpt_dict["pnt_off_unit"]}, ')
     title += (f'Focus offset = ({inpt_dict["x_focus_off"]}, {inpt_dict["y_focus_off"]}, '
@@ -341,12 +341,14 @@ def compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d
     fac = convert_unit('rad', phase_unit, 'trigonometric')
     zlim = [-np.pi*fac, np.pi*fac]
 
-    fig, ax = create_figure_and_axes([18, 8], [1, 3])
+    fig, ax = create_figure_and_axes([20, 8], [1, 3])
+    statkeys = ['mean', 'median', 'rms']
 
-    _imshow_2d_map(ax[0], fig, fac * phase_2d, f'RT phase model\n{statistics_to_text(data_statistics(fac * phase_2d))}',
+    _imshow_2d_map(ax[0], fig, fac * phase_2d, f'RT phase model\n{statistics_to_text(data_statistics(fac * phase_2d), statkeys)}',
                    extent, f'Phase [{phase_unit}]', colormap, inner_radius, outer_radius, zlim)
     _imshow_2d_map(ax[1], fig, fac * correction, f'Fitted correction', extent, f'Phase [{phase_unit}]', colormap,
                    inner_radius, outer_radius, zlim)
-    _imshow_2d_map(ax[2], fig, fac * residuals_2d, f'Residuals\n{statistics_to_text(data_statistics(fac * residuals_2d))}',
+    _imshow_2d_map(ax[2], fig, fac * residuals_2d, f'Residuals\n{statistics_to_text(data_statistics(fac * residuals_2d), statkeys)}',
                    extent, f'Phase [{phase_unit}]', colormap, inner_radius, outer_radius, zlim)
-    close_figure(fig, 'RT model fitting results', filename, dpi, display)
+    close_figure(fig, 'Cassegrain RT model fitting for \n'+title_from_input_parameters(rt_xds.attrs['input_parameters']),
+                 filename, dpi, display)
