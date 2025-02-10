@@ -162,9 +162,9 @@
         }
     },
     "plot_radial_projection_from_rt_xds":{
-        "rt_xds":{
+        "rt_xds_filename":{
             "required": true,
-            "type": ["xr.Dataset"]
+            "type": ["string"]
         },
         "plot_filename":{
             "required": true,
@@ -173,7 +173,7 @@
         "nrays":{
             "required": false,
             "type": ["int"],
-            "min": 1,
+            "min": 0,
             "max": 1e3
         },
         "display":{

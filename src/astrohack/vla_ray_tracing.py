@@ -283,6 +283,7 @@ def plot_2d_maps_from_rt_xds(
     return
 
 
+@toolviper.utils.parameter.validate()
 def plot_radial_projection_from_rt_xds(
         rt_xds_filename: str,
         plot_filename: str,
@@ -344,6 +345,12 @@ def plot_radial_projection_from_rt_xds(
     npnt = primary_points.shape[0]
     sign = -1
     inf = 1e3
+    if nrays > npnt:
+        logger.warning('Requested number of plotted rays is larger than the number of available rays.')
+        nrays = npnt
+    elif nrays == 0:
+        logger.warning('No rays requested, plot will be a simple Radial projection of the optical system.')
+
     for isamp in range(nrays):
         sign *= -1
         ipnt = np.random.randint(0, high=npnt)
