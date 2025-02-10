@@ -314,8 +314,8 @@ def add_rz_ray_to_plot(ax, origin, destiny, color, ls, label, sign):
 def compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle, filename,
                                              phase_unit='deg', colormap='viridis', display=False, dpi=300):
     xds_inp = rt_xds.attrs['input_parameters']
-    angle_unit = xds_inp['pnt_off_unit']
-    length_unit = xds_inp['focus_off_unit']
+    angle_unit = xds_inp['pointing_offset_unit']
+    length_unit = xds_inp['focus_offset_unit']
     field_names = ['Parameter', 'Value', 'Reference', 'Difference', 'unit']
     alignment = 'c'
     outstr = ''
@@ -324,10 +324,10 @@ def compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d
                   'z_focus_offset']
     unit_types = ['trigonometric', 'trigonometric', 'trigonometric', 'length', 'length', 'length']
     units = ['deg', angle_unit, angle_unit, length_unit, length_unit, length_unit]
-    reference_values = [0.0, xds_inp['x_pnt_off'], xds_inp['y_pnt_off'],
-                        xds_inp['x_focus_off'], xds_inp['y_focus_off'], xds_inp['z_focus_off']]
+    reference_values = [0.0, xds_inp['x_pointing_offset'], xds_inp['y_pointing_offset'],
+                        xds_inp['x_focus_offset'], xds_inp['y_focus_offset'], xds_inp['z_focus_offset']]
 
-    outstr += ''
+    outstr += 'Comparison between input and fitted values'
     freq = clight/wavelength
     cropped_dict = phase_fit_results['map_0'][freq]['I']
     table = create_pretty_table(field_names, alignment)
