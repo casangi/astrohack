@@ -15,7 +15,8 @@ args = parser.parse_args()
 toml_file_name = 'pyproject.toml'
 notebooks = ['tutorial_vla.ipynb',
              'visualization_tutorial.ipynb',
-             'locit_tutorial.ipynb']
+             'locit_tutorial.ipynb',
+             'cassegrain_ray_tracing_tutorial.ipynb']
 
 
 def print_section_header(header):
