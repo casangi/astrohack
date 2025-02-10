@@ -255,7 +255,8 @@ def plot_2d_maps_from_rt_xds(
         Produce plots from the Xarray dataset containing ray tracing results for analysis. All Xarray dataset data \
         variables except for the x and y axes can be plotted.
     """
-    rt_xds = xr.open_zarr(rt_xds_filename)
+
+    rt_xds = open_rt_zarr(rt_xds_filename)
 
     if isinstance(keys, str):
         keys = [keys]
@@ -283,7 +284,7 @@ def plot_2d_maps_from_rt_xds(
 
 
 def plot_radial_projection_from_rt_xds(
-        rt_xds: xr.Dataset,
+        rt_xds_filename: str,
         plot_filename: str,
         nrays: int = 20,
         display: bool = True,
@@ -291,8 +292,8 @@ def plot_radial_projection_from_rt_xds(
 ):
     """Plot a radial projection of some of the rays simulated in the ray tracing Xarray Dataset.
 
-    :param rt_xds: Xarray dataset containing the results of the Ray tracing pipeline
-    :type rt_xds: xr.Dataset
+    :param rt_xds_filename: Name on disk of the Xarray dataset containing the results of the Ray tracing pipeline
+    :type rt_xds_filename: xr.Dataset
 
     :param plot_filename: Name of the file to contain the plot.
     :type plot_filename: str
@@ -311,6 +312,8 @@ def plot_radial_projection_from_rt_xds(
         Produce a plot of a random selection of nrays that are present on the input Xarray dataset.
 
     """
+    rt_xds = open_rt_zarr(rt_xds_filename)
+
     telescope_pararameters = rt_xds.attrs['telescope_parameters']
     primary_diameter = telescope_pararameters['primary_diameter']
     secondary_diameter = telescope_pararameters['secondary_diameter']
@@ -385,7 +388,7 @@ def plot_radial_projection_from_rt_xds(
 
 
 def apply_holog_phase_fitting_to_rt_xds(
-        rt_xds: xr.Dataset,
+        rt_xds_filename: str,
         phase_plot_filename: str,
         fit_pointing_offset: bool = True,
         fit_xy_secondary_offset: bool = True,
@@ -397,8 +400,8 @@ def apply_holog_phase_fitting_to_rt_xds(
 ):
     """Feed phase image from ray tracing Xarray dataset to Astrohak's default phase fitting tool for VLA data.
 
-    :param rt_xds: Xarray dataset containing the results of the Ray tracing pipeline
-    :type rt_xds: xr.Dataset
+    :param rt_xds_filename: Name on disk of the Xarray dataset containing the results of the Ray tracing pipeline
+    :type rt_xds_filename: xr.Dataset
 
     :param phase_plot_filename: filename for the plot containing the RT phase image the fitted phase effects and the \
     residuals
@@ -436,6 +439,8 @@ def apply_holog_phase_fitting_to_rt_xds(
         easier comparison simple statistics of each image are provided.
 
     """
+    rt_xds = open_rt_zarr(rt_xds_filename)
+
     ntime = 1
     npol = 1
     nfreq = 1
