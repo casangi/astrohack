@@ -113,6 +113,11 @@
             "required": false,
             "type": ["string"],
             "check allowed with":  "units.length"
+        },
+        "overwrite": {
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
         }
     },
     "plot_2d_maps_from_rt_xds":{

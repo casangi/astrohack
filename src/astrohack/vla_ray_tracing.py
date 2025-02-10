@@ -96,7 +96,8 @@ def cassegrain_ray_tracing_pipeline(
         phase_offset: Union[float, int] = 0,
         phase_unit: str = 'deg',
         observing_wavelength: Union[float, int] = 1,
-        wavelength_unit: str = 'cm'
+        wavelength_unit: str = 'cm',
+        overwrite: bool = False
 ):
     """Execute the cassegrain ray tracing pipeline to determine phase effects caused by optical mis-alignments.
 
@@ -147,6 +148,9 @@ def cassegrain_ray_tracing_pipeline(
 
     :param wavelength_unit: Length unit for the observing wavelength, default is "cm".
     :type wavelength_unit: str, optional
+
+    :param overwrite: Overwrite rt_xds file on disk, default is False.
+    :type overwrite: bool, optional
 
     :return: X array dataset object with the results from the ray tracing.
     :rtype: xr.Dataset
@@ -203,7 +207,7 @@ def cassegrain_ray_tracing_pipeline(
 
     rt_xds.attrs['input_parameters'] = input_pars
 
-    rt_xds.to_zarr(output_xds_filename, mode="w", compute=True, consolidated=True)
+    write_rt_xds_to_zarr(rt_xds, output_xds_filename, overwrite)
     return rt_xds
 
 
