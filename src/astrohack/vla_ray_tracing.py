@@ -1,13 +1,13 @@
 import toolviper
+import xarray as xr
 
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils.validation import custom_unit_checker
+from astrohack.utils.validation import custom_unit_checker, custom_plots_checker
 from astrohack.core.vla_ray_tracing import *
 from astrohack.utils import convert_unit, clight
 from astrohack.utils.phase_fitting import execute_phase_fitting
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
 from typing import Union
-import xarray as xr
 
 
 @toolviper.utils.parameter.validate(
@@ -207,8 +207,11 @@ def cassegrain_ray_tracing_pipeline(
     return rt_xds
 
 
+@toolviper.utils.parameter.validate(
+    custom_checker=custom_plots_checker
+)
 def plot_2d_maps_from_rt_xds(
-        rt_xds: xr.Dataset,
+        rt_xds_filename: str,
         keys: Union[str, list],
         rootname: str,
         phase_unit: str = 'deg',
@@ -219,8 +222,8 @@ def plot_2d_maps_from_rt_xds(
 ):
     """Plot 2D maps of keys in the ray tracing Xarray Dataset
 
-    :param rt_xds: Xarray dataset containing the results of the Ray tracing pipeline
-    :type rt_xds: xr.Dataset
+    :param rt_xds_filename: Name on disk of the Xarray dataset containing the results of the Ray tracing pipeline
+    :type rt_xds_filename: str
 
     :param keys: Key or keys in rt_xds to be plotted.
     :type keys: str, list
@@ -248,6 +251,7 @@ def plot_2d_maps_from_rt_xds(
         Produce plots from the Xarray dataset containing ray tracing results for analysis. All Xarray dataset data \
         variables except for the x and y axes can be plotted.
     """
+    rt_xds = xr.open_zarr(rt_xds_filename)
 
     if isinstance(keys, str):
         keys = [keys]
