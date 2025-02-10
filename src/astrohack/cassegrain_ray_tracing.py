@@ -3,7 +3,7 @@ import xarray as xr
 
 from astrohack.antenna.telescope import Telescope
 from astrohack.utils.validation import custom_unit_checker, custom_plots_checker
-from astrohack.core.vla_ray_tracing import *
+from astrohack.core.cassegrain_ray_tracing import *
 from astrohack.utils import convert_unit, clight, add_caller_and_version_to_dict
 from astrohack.utils.phase_fitting import execute_phase_fitting
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
@@ -391,7 +391,7 @@ def plot_radial_projection_from_rt_xds(
     ax.set_ylabel('Height [m]')
     ax.set_ylim([-0.5, 9.5])
     ax.set_xlim([-13, 13])
-    ax.set_title('VLA Ray tracing 2D Schematic')
+    ax.set_title('Cassegrain Ray tracing 2D Schematic')
     close_figure(fig, title_from_input_parameters(rt_xds.attrs['input_parameters']), plot_filename, dpi, display)
 
 
@@ -479,7 +479,7 @@ def apply_holog_phase_fitting_to_rt_xds(
 
     # Misc Parameters
     focus_offset = 0.0  # Only relevant for Near Field data
-    label = 'VLA-RT-Model'  # Relevant only for logger messages
+    label = 'Cassegrain-RT-Model'  # Relevant only for logger messages
     uv_cell_size = np.array([u_axis[1] - u_axis[0], v_axis[1] - v_axis[
         0]])  # This should be computed from the axis we are passing the engine...
 
