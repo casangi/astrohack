@@ -188,5 +188,48 @@
             "min": 1,
             "max": 1200
         }
+    },
+    "apply_holog_phase_fitting_to_rt_xds":{
+        "rt_xds_filename":{
+            "required": true,
+            "type": ["string"]
+        },
+        "phase_plot_filename":{
+            "required": true,
+            "type": ["string"]
+        },
+        "fit_pointing_offset":{
+            "required": false,
+            "type": ["boolean"]
+        },
+        "fit_xy_secondary_offset":{
+            "required": false,
+            "type": ["boolean"]
+        },
+        "fit_focus_offset":{
+            "required": false,
+            "type": ["boolean"]
+        },
+        "phase_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.trig"
+        },
+        "colormap":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "colormaps"
+        },
+        "display":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "dpi":{
+            "required": false,
+            "type": ["int"],
+            "min": 1,
+            "max": 1200
+        }
     }
 }

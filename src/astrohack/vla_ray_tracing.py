@@ -394,12 +394,15 @@ def plot_radial_projection_from_rt_xds(
     close_figure(fig, title_from_input_parameters(rt_xds.attrs['input_parameters']), plot_filename, dpi, display)
 
 
+@toolviper.utils.parameter.validate(
+    custom_checker=custom_plots_checker
+)
 def apply_holog_phase_fitting_to_rt_xds(
         rt_xds_filename: str,
         phase_plot_filename: str,
         fit_pointing_offset: bool = True,
         fit_xy_secondary_offset: bool = True,
-        fit_focus_off: bool = True,
+        fit_focus_offset: bool = True,
         phase_unit: str = 'deg',
         colormap: str = 'viridis',
         display: bool = True,
@@ -421,9 +424,9 @@ def apply_holog_phase_fitting_to_rt_xds(
     default is True.
     :type fit_xy_secondary_offset: bool, optional
 
-    :param fit_focus_off: Toggle to determine if vertical displacements of the secondary are to be fitted, default is \
-    True.
-    :type fit_focus_off: bool, optional
+    :param fit_focus_offset: Toggle to determine if vertical displacements of the secondary are to be fitted, \
+    default is True.
+    :type fit_focus_offset: bool, optional
 
     :param phase_unit: Unit for the phase plot, default is "deg".
     :type phase_unit: str, optional
@@ -484,7 +487,7 @@ def apply_holog_phase_fitting_to_rt_xds(
     is_near_field = False
     phase_fit_parameter = [fit_pointing_offset,  # Pointing Offset (Supported)
                            fit_xy_secondary_offset,  # X&Y Focus Offset (Supported)
-                           fit_focus_off,  # Z Focus Offset (Supported)
+                           fit_focus_offset,  # Z Focus Offset (Supported)
                            False,  # Sub-reflector Tilt (not supported)
                            False  # Cassegrain offset (not supported)
                            ]
