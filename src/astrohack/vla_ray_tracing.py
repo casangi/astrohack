@@ -1,3 +1,5 @@
+import toolviper
+
 from astrohack import Telescope
 from astrohack.core.vla_ray_tracing import *
 from astrohack.core.vla_ray_tracing import  create_radial_mask, \
@@ -10,24 +12,25 @@ import xarray as xr
 
 
 def create_ray_tracing_telescope_parameter_dict(
-        primary_diameter: Union[float,int] = 25,
-        secondary_diameter: Union[float,int] = 2.5146,
-        focal_length: Union[float,int] = 9.0,
-        z_intercept: Union[float,int] = 3.140,
-        foci_half_distance: Union[float,int] = 3.662,
-        inner_radius: Union[float,int] = 2.0,
-        horn_diameter: Union[float,int] = 0.2
+        primary_diameter: Union[float, int] = 25,
+        secondary_diameter: Union[float, int] = 2.5146,
+        focal_length: Union[float, int] = 9.0,
+        z_intercept: Union[float, int] = 3.140,
+        foci_half_distance: Union[float, int] = 3.662,
+        inner_radius: Union[float, int] = 2.0,
+        horn_diameter: Union[float, int] = 0.2,
+        length_unit: str = 'm'
 ):
 
     """Create a dictionary with a cassegrain telescope parameters
 
-    :param primary_diameter: Diameter of the primary mirror in meters.
+    :param primary_diameter: Diameter of the primary mirror.
     :type primary_diameter: float, int, optional
 
-    :param secondary_diameter: Diameter of the secondary mirror in meters.
+    :param secondary_diameter: Diameter of the secondary mirror.
     :type secondary_diameter: float, int, optional
 
-    :param focal_length: Focal length of the primary mirror in meters.
+    :param focal_length: Focal length of the primary mirror.
     :type focal_length: float, int, optional
 
     :param z_intercept: Distance between the Z intercept of the secondary and the mid-point between the primary and \
@@ -43,6 +46,9 @@ def create_ray_tracing_telescope_parameter_dict(
     :param horn_diameter: Diameter of the horn detecting the signals, used to determine if rays are detected or lost.
     :type horn_diameter: float, int, optional
 
+    :param length_unit: Unit for the telescope dimensions, default is "m".
+    :type length_unit: str, optional
+
     :return: A dictionary filled with the user inputs and also the horn position and orientation.
     :rtype: dict
 
@@ -54,6 +60,12 @@ def create_ray_tracing_telescope_parameter_dict(
 
     """
     telescope_parameters = locals()
+
+    # Convert dimensions from user unit to meters
+    fac = convert_unit(length_unit, 'm', 'length')
+    for key, item in telescope_parameters.items():
+        telescope_parameters[key] = item*fac
+
     # Assumed to be at the Secondary focus i.e.: f - 2c
     telescope_parameters['horn_position'] = [0, 0, focal_length - 2 * foci_half_distance]
     # Horn looks straight up
