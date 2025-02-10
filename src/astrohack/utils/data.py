@@ -33,6 +33,13 @@ def read_meta_data(file_name):
     return json_dict
 
 
+def add_caller_and_version_to_dict(in_dict):
+    in_dict.update({
+        'version': astrohack.__version__,
+        'origin': inspect.stack()[1].function
+    })
+
+
 def write_meta_data(file_name, input_dict):
     """
         Creates a metadata dictionary that is compatible with JSON and writes it to a file
@@ -45,10 +52,7 @@ def write_meta_data(file_name, input_dict):
 
     meta_data = copy.deepcopy(input_dict)
 
-    meta_data.update({
-        'version': astrohack.__version__,
-        'origin': inspect.stack()[calling_function].function
-    })
+    add_caller_and_version_to_dict(meta_data)
 
     try:
         with open(file_name, "w") as json_file:
