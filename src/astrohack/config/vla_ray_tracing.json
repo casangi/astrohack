@@ -1,0 +1,328 @@
+{
+    "create_ray_tracing_telescope_parameter_dict":{
+        "primary_diameter":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "secondary_diameter":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "focal_length":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "z_intercept":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "foci_half_distance":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "inner_radius":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "horn_diameter":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "length_unit":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["string"]
+        },
+    },
+    "cassegrain_ray_tracing_pipeline":{
+        "output_xds_filename":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": true,
+            "type": ["string"]
+        },
+        "telescope_parameters":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": true,
+            "type": ["dict"]
+        },
+        "grid_size":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "grid_resolution":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "grid_unit":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["string"]
+        },
+        "x_pointing_offset":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "y_pointing_offset":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "pointing_offset_unit":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["string"]
+        },
+        "x_focus_offset":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "y_focus_offset":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "z_focus_offset":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "focus_offset_unit":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["string"]
+        },
+        "phase_offset":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "phase_unit":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["string"]
+        },
+        "observing_wavelength":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["float", "int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "wavelength_unit":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["string"]
+        },
+    },
+    "plot_2d_maps_from_rt_xds":{
+        "rt_xds":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": true,
+            "type": ["xr.Dataset"]
+        },
+        "keys":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": true,
+            "type": ["string", "lis"]
+        },
+        "rootname":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": true,
+            "type": ["string"]
+        },
+        "phase_unit":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["string"]
+        },
+        "length_unit":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["string"]
+        },
+        "colormap":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["string"]
+        },
+        "display":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["boolean"]
+        },
+        "dpi":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+    },
+    "plot_radial_projection_from_rt_xds":{
+        "rt_xds":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": true,
+            "type": ["xr.Dataset"]
+        },
+        "plot_filename":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": true,
+            "type": ["string"]
+        },
+        "nrays":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+        "display":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["boolean"]
+        },
+        "dpi":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+    },
+    "apply_holog_phase_fitting_to_rt_xds":{
+        "rt_xds":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": true,
+            "type": ["xr.Dataset"]
+        },
+        "phase_plot_filename":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": true,
+            "type": ["string"]
+        },
+        "fit_pointing_offset":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["boolean"]
+        },
+        "fit_xy_secondary_offset":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["boolean"]
+        },
+        "fit_focus_off":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["boolean"]
+        },
+        "phase_unit":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["string"]
+        },
+        "colormap":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["string"]
+        },
+        "display":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["boolean"]
+        },
+        "dpi":{
+            "allowed": "_###MISSING###_",
+            "nullable": "_###MISSING###_",
+            "required": false,
+            "type": ["int"],
+            "min": "_###MISSING###_",
+            "max": "_###MISSING###_"
+        },
+    },
+}
