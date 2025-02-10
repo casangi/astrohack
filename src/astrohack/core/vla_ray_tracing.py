@@ -22,6 +22,14 @@ nanvec3d = np.full([3], np.nan)
 # Data IO routines #
 ####################
 def open_rt_zarr(zarr_filename):
+    """
+    Open a Zarr file containing the results of a run of the Ray Tracing pipeline
+    Args:
+        zarr_filename: Name of the Zarr file containing the RT data
+
+    Returns:
+        The Xarray dataset containing the results of a run of the Ray Tracing pipeline
+    """
     try:
         rt_xds = xr.open_zarr(zarr_filename)
         return rt_xds
@@ -30,6 +38,13 @@ def open_rt_zarr(zarr_filename):
 
 
 def write_rt_xds_to_zarr(rt_xds, zarr_filename, overwrite):
+    """
+    Write a Xarray dataset containing the results of a run of the Ray Tracing pipeline to disk
+    Args:
+        rt_xds: Xarray dataset containing the results of a run of the Ray Tracing pipeline
+        zarr_filename: Name of the Zarr file containing the RT data
+        overwrite: Overwrite file if it already exists?
+    """
     overwrite_file(zarr_filename, overwrite)
     rt_xds.to_zarr(zarr_filename, mode="w", compute=True, consolidated=True)
 
@@ -38,6 +53,16 @@ def write_rt_xds_to_zarr(rt_xds, zarr_filename, overwrite):
 # Setup routines and Mathematical description of the secondary shape #
 ######################################################################
 def _simple_axis(minmax, resolution, margin=0.05):
+    """
+    Creates an array spaning from min to max (may go over max if resolution is not an integer division) spaced by \
+    resolution
+    Args:
+        minmax: the minimum and maximum of the axis
+        resolution: The spacing between array elements
+        margin: Add a margin at the edge of the array beyonf min and max
+    Returns:
+        A numpy array representation of a linear axis.
+    """
     mini, maxi = minmax
     ax_range = maxi - mini
     pad = margin * ax_range
@@ -53,19 +78,49 @@ def _simple_axis(minmax, resolution, margin=0.05):
 
 
 def create_coordinate_images(x_axis, y_axis):
+    """
+    Takes two axes and creates 3 2D representation of the image coordinates
+    Args:
+        x_axis: X axis
+        y_axis: Y axis
+
+    Returns:
+        X_mesh (image of X coordinates), y_mesh (image of y coordinates), img_radius sqrt(x**2+y**2)
+    """
     x_mesh, y_mesh = np.meshgrid(x_axis, y_axis, indexing='ij')
     img_radius = np.sqrt(x_mesh ** 2 + y_mesh ** 2)
     return x_mesh, y_mesh, img_radius
 
 
 def create_radial_mask(radius, inner_rad, outer_rad):
+    """
+    Creates a radial mask of points based on the image of radius coordinates and inner and outer limits
+    Args:
+        radius: image of the radius
+        inner_rad: The innermost valid radius
+        outer_rad: The outermost valid radius
+
+    Returns:
+        A 2d boolean mask of the valid regions in the data.
+    """
     mask = np.full_like(radius, True, dtype=bool)
     mask = np.where(radius > outer_rad, False, mask)
     mask = np.where(radius < inner_rad, False, mask)
     return mask
 
 
-def make_gridded_vla_primary(grid_size, resolution, telescope_pars):
+def make_gridded_cassegrain_primary(grid_size, resolution, telescope_pars):
+    """
+    Create a 1D representation of the primary and the normals to its surface based on a radial mask
+    Args:
+        grid_size: The span of the grid to used
+        resolution: The spacing between points in the grid
+        telescope_pars: The optical parameters of the telescope in question
+
+    Returns:
+        An Xarray dataset containing the basics for regridding the 1D data, the primary points and normals plus
+        the x and y axes
+    """
     grid_minmax = [-grid_size / 2, grid_size / 2]
     axis = _simple_axis(grid_minmax, resolution, margin=0.0)
     image_size = axis.shape[0]
@@ -117,6 +172,15 @@ def make_gridded_vla_primary(grid_size, resolution, telescope_pars):
 
 
 def _secondary_hyperboloid_root_func(tval, fargs):
+    """
+    Simple function whose root is the point at which a ray and a hyperboloid cross each other
+    Args:
+        tval: Distance along ray
+        fargs: optical parameters and ray origin and direction
+
+    Returns:
+        The value of the function hyperboloid-pnt
+    """
     pnt, ray, acoef, fcoef, ccoef, offsets = fargs
     # The offset is a simple displacement of the secondary
     newpnt = (pnt + tval * ray) - offsets
@@ -130,6 +194,15 @@ def _secondary_hyperboloid_root_func(tval, fargs):
 # Actual ray tracing steps in order of light propagation #
 ##########################################################
 def reflect_off_primary(rt_xds, incident_light):
+    """
+    Reflect incident light onto primary surface
+    Args:
+        rt_xds: Ray tracing Xarray dataset with primary normals and points
+        incident_light: 3D vector with the direction of incident light
+
+    Returns:
+        Ray tracing XDS enriched with the incident light and the reflections of the primary mirror
+    """
     incident_light = normalize_vector_map(incident_light)
     primary_normals = rt_xds['primary_normals'].values
     light = np.zeros_like(primary_normals)
@@ -141,6 +214,16 @@ def reflect_off_primary(rt_xds, incident_light):
 
 
 def reflect_off_analytical_secondary(rt_xds, offset=np.array((0, 0, 0))):
+    """
+    Compute reflections off of the secundary using an analutical description of the secondary
+    Args:
+        rt_xds: Ray tracing XDS containing primary points and their reflections
+        offset: An offset in meters to be applied to the position of the secondary mirror
+
+    Returns:
+        Ray tracing XDS enriched with the distance along the rays to the secondary, the points touched in the secondary,
+         the normals at these points and the reflections at each of these points.
+    """
     primary_points = rt_xds['primary_points'].values
     primary_reflections = rt_xds['primary_reflections'].values
     telescope_pars = rt_xds.attrs['telescope_parameters']
@@ -177,7 +260,7 @@ def reflect_off_analytical_secondary(rt_xds, offset=np.array((0, 0, 0))):
     secondary_normals = normalize_vector_map(np.cross(x_grad, y_grad))
     secondary_reflections = reflect_light(primary_reflections, secondary_normals)
 
-    rt_xds['distance_primary_to_secundary'] = xr.DataArray(distance_to_secondary, dims=['points'])
+    rt_xds['distance_primary_to_secondary'] = xr.DataArray(distance_to_secondary, dims=['points'])
     rt_xds['secondary_points'] = xr.DataArray(secondary_points, dims=['points', 'xyz'])
     rt_xds['secondary_normals'] = xr.DataArray(secondary_normals, dims=['points', 'vxyz'])
     rt_xds['secondary_reflections'] = xr.DataArray(secondary_reflections, dims=['points', 'vxyz'])
@@ -186,6 +269,16 @@ def reflect_off_analytical_secondary(rt_xds, offset=np.array((0, 0, 0))):
 
 
 def detect_light(rt_xds):
+    """
+    Determines which rays touch the mouth of the horn
+    Args:
+        rt_xds: The ray tracing XDS containing the description of the rays from the primary up to their reflection
+         from the secondary
+
+    Returns:
+        Ray tracing XDS enriched with the distance along the rays to the horn and the point at which they intercept
+        the horn mouth
+    """
     secondary_reflections = rt_xds['secondary_reflections'].values
     secondary_points = rt_xds['secondary_points'].values
     telescope_pars = rt_xds.attrs['telescope_parameters']
@@ -210,9 +303,20 @@ def detect_light(rt_xds):
 
 
 def compute_phase(rt_xds, wavelength, phase_offset):
+    """
+    Uses the distances along the ray from the rim of the primary all the way to the horn to compute the phase of
+    each ray
+    Args:
+        rt_xds: Ray tracing XDS with the distances from the primary to the esconday and secondary to horn.
+        wavelength: The light wavelength
+        phase_offset: A phase offset to be added to the phases (i.e. light may not arrive with phase=0)
+
+    Returns:
+        RT XDS enriched with the rays' total_path and their phases
+    """
     incident_light = rt_xds['light']
     primary_points_z = rt_xds['primary_points'].values[:, 2]
-    distance_pr_horn = rt_xds['distance_secondary_to_horn'].values + rt_xds['distance_primary_to_secundary'].values
+    distance_pr_horn = rt_xds['distance_secondary_to_horn'].values + rt_xds['distance_primary_to_secondary'].values
 
     maxheight = np.max(primary_points_z)
     boresight = np.empty_like(incident_light)
@@ -234,6 +338,16 @@ def compute_phase(rt_xds, wavelength, phase_offset):
 # Plotting routines and plotting aids, such as regridding #
 ###########################################################
 def regrid_data_onto_2d_grid(npnt, data, indexes):
+    """
+    Use index information to get 1D data back onto a 2D grid.
+    Args:
+        npnt: Number of points on the 2d grid (assumed to be a square)
+        data: 1D data to be regridded
+        indexes: 1D array of 2D indexes
+
+    Returns:
+        Data regridded onto a 2D array
+    """
     npnt_1d = data.shape[0]
     if len(data.shape) == 2:
         gridded_2d = np.full([npnt, npnt, data.shape[1]], np.nan)
@@ -249,6 +363,14 @@ def regrid_data_onto_2d_grid(npnt, data, indexes):
 
 
 def title_from_input_parameters(inpt_dict):
+    """
+    Create a string with all the descriptive user inputs for the results of the ray tracing.
+    Args:
+        inpt_dict: Dinctionary of user inputs given by the user to the RT pipeline
+
+    Returns:
+        A string formatted to display the information in a matplotlib plot.
+    """
     title = ''
     title += (f'Pointing offset = ({inpt_dict["x_pointing_offset"]}, {inpt_dict["y_pointing_offset"]}) '
               f'[{inpt_dict["pointing_offset_unit"]}], ')
@@ -260,6 +382,23 @@ def title_from_input_parameters(inpt_dict):
 
 
 def _imshow_2d_map(ax, fig, gridded_array, title, extent, zlabel, colormap, inner_radius, outer_radius, zlim):
+    """
+    Simple wrap function around pyplot.imshow which allows for some customization while also making the plots standard.
+    Args:
+        ax: Axes object onto which to plot
+        fig: The figure in which the plot is inbedded
+        gridded_array: The 2D representation of the data to be plotted
+        title: Title to be shown on top of plot
+        extent: The span of the image in the X and Y directions
+        zlabel: The label to be attached to the colorbar
+        colormap: The colormap to be used in the plot
+        inner_radius: The inner radius over witch to draw a circle
+        outer_radius: The outer radius over witch to draw a circle
+        zlim: Limits of the colorbar
+
+    Returns:
+        None
+    """
     cmap = get_proper_color_map(colormap)
     if zlim is None:
         minmax = [np.nanmin(gridded_array), np.nanmax(gridded_array)]
@@ -288,6 +427,23 @@ def _imshow_2d_map(ax, fig, gridded_array, title, extent, zlabel, colormap, inne
 
 
 def plot_2d_map(gridded_array, axis, telescope_parameters, suptitle, filename, zlabel, colormap, zlim, display, dpi):
+    """
+    Receive 2D gridded scalar or Vectorial data and plot accordingly
+    Args:
+        gridded_array: 2D gridded scalar or vectorial data
+        axis: An axis that represents both X and Y axes
+        telescope_parameters: Optical parameters of the telescope used in the Ray tracing
+        suptitle: Overhanging title to be shown on top of figure
+        filename: Name for the file containing the plot(s)
+        zlabel: Label to be attached to the colorbar
+        colormap: The colormap to be used in the plot
+        zlim: Limits of the colorbar
+        display: Display plots?
+        dpi: Plot resolution on png file
+
+    Returns:
+        None
+    """
     inner_radius = telescope_parameters['inner_radius']
     outer_radius = telescope_parameters['primary_diameter'] / 2
     axes = ['X', 'Y', 'Z']
@@ -306,6 +462,20 @@ def plot_2d_map(gridded_array, axis, telescope_parameters, suptitle, filename, z
 
 
 def add_rz_ray_to_plot(ax, origin, destiny, color, ls, label, sign):
+    """
+    Adds a finite ray to a radial projection plot
+    Args:
+        ax: Axes object onto which to plot
+        origin: Ray origin
+        destiny: Ray destiny
+        color: Ray color to be plotted
+        ls: Ray line style
+        label: Ray's label
+        sign: is the ray to be shown on the negative or positive side?
+
+    Returns:
+        None
+    """
     radcoord = [sign * generalized_norm(origin[0:2]), sign * generalized_norm(destiny[0:2])]
     zcoord = [origin[2], destiny[2]]
     ax.plot(radcoord, zcoord, color=color, label=label, ls=ls)
@@ -313,6 +483,22 @@ def add_rz_ray_to_plot(ax, origin, destiny, color, ls, label, sign):
 
 def compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d, phase_corrected_angle, filename,
                                              phase_unit='deg', colormap='viridis', display=False, dpi=300):
+    """
+    Compare phase fitting results to ray tracing simulation inputs
+    Args:
+        rt_xds: ray tracing XDS object
+        phase_fit_results: Phase fitting array results.
+        phase_5d: RT phase simulation inbedded in a 5D array for phase fitting comparison
+        phase_corrected_angle: The 5D residuals of the phase fitting
+        filename: Name of the png file onto which to save phase comparison plots.
+        phase_unit: Unit to use for phase displays
+        colormap: The colormap to be used in the plot
+        display: Display plots?
+        dpi: Plot resolution on png file
+
+    Returns:
+        None
+    """
     xds_inp = rt_xds.attrs['input_parameters']
     angle_unit = xds_inp['pointing_offset_unit']
     length_unit = xds_inp['focus_offset_unit']
@@ -362,11 +548,13 @@ def compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d
     fig, ax = create_figure_and_axes([20, 8], [1, 3])
     statkeys = ['mean', 'median', 'rms']
 
-    _imshow_2d_map(ax[0], fig, fac * phase_2d, f'RT phase model\n{statistics_to_text(data_statistics(fac * phase_2d), statkeys)}',
+    _imshow_2d_map(ax[0], fig, fac * phase_2d,
+                   f'RT phase model\n{statistics_to_text(data_statistics(fac * phase_2d), statkeys)}',
                    extent, f'Phase [{phase_unit}]', colormap, inner_radius, outer_radius, zlim)
-    _imshow_2d_map(ax[1], fig, fac * correction, f'Fitted correction', extent, f'Phase [{phase_unit}]', colormap,
-                   inner_radius, outer_radius, zlim)
-    _imshow_2d_map(ax[2], fig, fac * residuals_2d, f'Residuals\n{statistics_to_text(data_statistics(fac * residuals_2d), statkeys)}',
-                   extent, f'Phase [{phase_unit}]', colormap, inner_radius, outer_radius, zlim)
-    close_figure(fig, 'Cassegrain RT model fitting for \n'+title_from_input_parameters(rt_xds.attrs['input_parameters']),
-                 filename, dpi, display)
+    _imshow_2d_map(ax[1], fig, fac * correction, f'Fitted correction', extent, f'Phase [{phase_unit}]',
+                   colormap, inner_radius, outer_radius, zlim)
+    _imshow_2d_map(ax[2], fig, fac * residuals_2d,
+                   f'Residuals\n{statistics_to_text(data_statistics(fac * residuals_2d), statkeys)}', extent,
+                   f'Phase [{phase_unit}]', colormap, inner_radius, outer_radius, zlim)
+    close_figure(fig, 'Cassegrain RT model fitting for \n'+title_from_input_parameters(
+        rt_xds.attrs['input_parameters']), filename, dpi, display)

@@ -199,7 +199,7 @@ def cassegrain_ray_tracing_pipeline(
     incident_light = np.array([-np.sin(x_pointing_offset), -np.sin(y_pointing_offset), -np.cos(pnt_off)])
 
     # Actual Ray Tracing starts here
-    rt_xds = make_gridded_vla_primary(grid_size, grid_resolution, telescope_parameters)
+    rt_xds = make_gridded_cassegrain_primary(grid_size, grid_resolution, telescope_parameters)
     rt_xds = reflect_off_primary(rt_xds, incident_light)
     rt_xds = reflect_off_analytical_secondary(rt_xds, focus_offset)
     rt_xds = detect_light(rt_xds)
