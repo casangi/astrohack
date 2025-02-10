@@ -232,10 +232,10 @@ def regrid_data_onto_2d_grid(npnt, data, indexes):
 
 def title_from_input_parameters(inpt_dict):
     title = ''
-    title += (f'Pointing offset = ({inpt_dict["x_pnt_off"]}, {inpt_dict["y_pnt_off"]}) '
-              f'[{inpt_dict["pnt_off_unit"]}], ')
-    title += (f'Focus offset = ({inpt_dict["x_focus_off"]}, {inpt_dict["y_focus_off"]}, '
-              f'{inpt_dict["z_focus_off"]}) [{inpt_dict["focus_off_unit"]}], ')
+    title += (f'Pointing offset = ({inpt_dict["x_pointing_offset"]}, {inpt_dict["y_pointing_offset"]}) '
+              f'[{inpt_dict["pointing_offset_unit"]}], ')
+    title += (f'Focus offset = ({inpt_dict["x_focus_offset"]}, {inpt_dict["y_focus_offset"]}, '
+              f'{inpt_dict["z_focus_offset"]}) [{inpt_dict["focus_offset_unit"]}], ')
     title += f'Phase offset = {inpt_dict["phase_offset"]} [{inpt_dict["phase_unit"]}], '
     title += f'$\lambda$ = {inpt_dict["observing_wavelength"]} [{inpt_dict["wavelength_unit"]}]'
     return title
