@@ -1,9 +1,8 @@
 import toolviper
 
-from astrohack import Telescope
+from astrohack.antenna.telescope import Telescope
+from astrohack.utils.validation import custom_unit_checker
 from astrohack.core.vla_ray_tracing import *
-from astrohack.core.vla_ray_tracing import create_radial_mask, \
-    compare_ray_tracing_to_phase_fit_results
 from astrohack.utils import convert_unit, clight
 from astrohack.utils.phase_fitting import execute_phase_fitting
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
@@ -11,6 +10,9 @@ from typing import Union
 import xarray as xr
 
 
+@toolviper.utils.parameter.validate(
+    custom_checker=custom_unit_checker
+)
 def create_ray_tracing_telescope_parameter_dict(
         primary_diameter: Union[float, int] = 25,
         secondary_diameter: Union[float, int] = 2.5146,
@@ -58,15 +60,18 @@ def create_ray_tracing_telescope_parameter_dict(
         Default values reflect the values for the VLA available in EVLA memo 211.
 
     """
-    telescope_parameters = locals()
+    local_vars = locals()
 
     # Convert dimensions from user unit to meters
     fac = convert_unit(length_unit, 'm', 'length')
-    for key, item in telescope_parameters.items():
-        telescope_parameters[key] = item * fac
+    telescope_parameters = {}
+    for key, item in local_vars.items():
+        if key != 'length_unit':
+            telescope_parameters[key] = item * fac
 
     # Assumed to be at the Secondary focus i.e.: f - 2c
-    telescope_parameters['horn_position'] = [0, 0, focal_length - 2 * foci_half_distance]
+    telescope_parameters['horn_position'] = [0, 0, telescope_parameters['focal_length'] -
+                                             2 * telescope_parameters['foci_half_distance']]
     # Horn looks straight up
     telescope_parameters['horn_orientation'] = [0, 0, 1]
     return telescope_parameters
