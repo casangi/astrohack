@@ -513,7 +513,7 @@ def compare_ray_tracing_to_phase_fit_results(rt_xds, phase_fit_results, phase_5d
     reference_values = [0.0, xds_inp['x_pointing_offset'], xds_inp['y_pointing_offset'],
                         xds_inp['x_focus_offset'], xds_inp['y_focus_offset'], xds_inp['z_focus_offset']]
 
-    outstr += 'Comparison between input and fitted values'
+    outstr += 'Comparison between input and fitted values\n'
     freq = clight/wavelength
     cropped_dict = phase_fit_results['map_0'][freq]['I']
     table = create_pretty_table(field_names, alignment)
