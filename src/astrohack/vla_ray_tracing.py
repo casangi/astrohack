@@ -2,7 +2,7 @@ import toolviper
 
 from astrohack import Telescope
 from astrohack.core.vla_ray_tracing import *
-from astrohack.core.vla_ray_tracing import  create_radial_mask, \
+from astrohack.core.vla_ray_tracing import create_radial_mask, \
     compare_ray_tracing_to_phase_fit_results
 from astrohack.utils import convert_unit, clight
 from astrohack.utils.phase_fitting import execute_phase_fitting
@@ -21,7 +21,6 @@ def create_ray_tracing_telescope_parameter_dict(
         horn_diameter: Union[float, int] = 0.2,
         length_unit: str = 'm'
 ):
-
     """Create a dictionary with a cassegrain telescope parameters
 
     :param primary_diameter: Diameter of the primary mirror.
@@ -64,7 +63,7 @@ def create_ray_tracing_telescope_parameter_dict(
     # Convert dimensions from user unit to meters
     fac = convert_unit(length_unit, 'm', 'length')
     for key, item in telescope_parameters.items():
-        telescope_parameters[key] = item*fac
+        telescope_parameters[key] = item * fac
 
     # Assumed to be at the Secondary focus i.e.: f - 2c
     telescope_parameters['horn_position'] = [0, 0, focal_length - 2 * foci_half_distance]
@@ -76,19 +75,19 @@ def create_ray_tracing_telescope_parameter_dict(
 def cassegrain_ray_tracing_pipeline(
         output_xds_filename: str,
         telescope_parameters: dict,
-        grid_size: Union[float,int] = 28,
-        grid_resolution: Union[float,int] = 0.1,
+        grid_size: Union[float, int] = 28,
+        grid_resolution: Union[float, int] = 0.1,
         grid_unit: str = 'm',
-        x_pointing_offset: Union[float,int] = 0,
-        y_pointing_offset: Union[float,int] = 0,
+        x_pointing_offset: Union[float, int] = 0,
+        y_pointing_offset: Union[float, int] = 0,
         pointing_offset_unit: str = 'asec',
-        x_focus_offset: Union[float,int] = 0,
-        y_focus_offset: Union[float,int] = 0,
-        z_focus_offset: Union[float,int] = 0,
+        x_focus_offset: Union[float, int] = 0,
+        y_focus_offset: Union[float, int] = 0,
+        z_focus_offset: Union[float, int] = 0,
         focus_offset_unit: str = 'mm',
-        phase_offset: Union[float,int] = 0,
+        phase_offset: Union[float, int] = 0,
         phase_unit: str = 'deg',
-        observing_wavelength: Union[float,int] = 1,
+        observing_wavelength: Union[float, int] = 1,
         wavelength_unit: str = 'cm'
 ):
     """Execute the cassegrain ray tracing pipeline to determine phase effects caused by optical mis-alignments.
@@ -151,7 +150,8 @@ def cassegrain_ray_tracing_pipeline(
         .. rubric:: Code Outline
         - A Gridded representation of the primary dish and the normal to its surface are created and stored in an XDS.
         - The reflection between the incident light and the primary mirror is computed for each of the gridded points.
-        - The reflected rays from the primary are progated and the intercept between them and the secondary is calculated.
+        - The reflected rays from the primary are progated and the intercept between them and the secondary is \
+        calculated.
         - Compute the reflection at the secondary for each ray reflected at the primary that touches it.
         - Check which rays from the secondary intercept the mouth of the horn.
         - Compute the total path from the rim of the primary up to horn for detected rays.
@@ -191,7 +191,7 @@ def cassegrain_ray_tracing_pipeline(
     rt_xds = reflect_off_analytical_secondary(rt_xds, focus_offset)
     rt_xds = detect_light(rt_xds)
     rt_xds = compute_phase(rt_xds, observing_wavelength * convert_unit(wavelength_unit, 'm', 'length'),
-                            phase_offset * convert_unit(phase_unit, 'rad', 'trigonometric'))
+                           phase_offset * convert_unit(phase_unit, 'rad', 'trigonometric'))
 
     rt_xds.attrs['input_parameters'] = input_pars
 
@@ -244,7 +244,7 @@ def plot_2d_maps_from_rt_xds(
     if isinstance(keys, str):
         keys = [keys]
 
-    suptitle = 'Cassegrain Ray tracing model for:\n'+title_from_input_parameters(rt_xds.attrs['input_parameters'])
+    suptitle = 'Cassegrain Ray tracing model for:\n' + title_from_input_parameters(rt_xds.attrs['input_parameters'])
     for key in keys:
         filename = f'{rootname}_{key}.png'
 
@@ -252,7 +252,7 @@ def plot_2d_maps_from_rt_xds(
         if key == 'phase':
             fac = convert_unit('rad', phase_unit, 'trigonometric')
             zlabel += f' [{phase_unit}]'
-            zlim = [fac*-np.pi, fac*np.pi]
+            zlim = [fac * -np.pi, fac * np.pi]
         else:
             fac = convert_unit('m', length_unit, 'length')
             zlabel += f' [{length_unit}]'
@@ -429,7 +429,7 @@ def apply_holog_phase_fitting_to_rt_xds(
     input_pars = rt_xds.attrs['input_parameters']
     u_axis = rt_xds['x_axis'].values
     v_axis = rt_xds['y_axis'].values
-    wavelength = input_pars['observing_wavelength']*convert_unit(input_pars['wavelength_unit'], 'm', 'length')
+    wavelength = input_pars['observing_wavelength'] * convert_unit(input_pars['wavelength_unit'], 'm', 'length')
 
     # Create Amplitude and phase images on the shape expected by phase fitting engine.
     shape_5d = [ntime, npol, nfreq, npnt, npnt]
@@ -442,13 +442,14 @@ def apply_holog_phase_fitting_to_rt_xds(
     amplitude_5d[..., :, :] = np.where(radial_mask, 1.0, np.nan)
 
     # Create frequency and polarization axes
-    freq_axis = np.array([clight/wavelength])
+    freq_axis = np.array([clight / wavelength])
     pol_axis = np.array(['I'])
 
     # Misc Parameters
-    focus_offset = 0.0 # Only relevant for Near Field data
-    label = 'VLA-RT-Model' # Relevant only for logger messages
-    uv_cell_size = np.array([u_axis[1]-u_axis[0], v_axis[1]-v_axis[0]]) # This should be computed from the axis we are passing the engine...
+    focus_offset = 0.0  # Only relevant for Near Field data
+    label = 'VLA-RT-Model'  # Relevant only for logger messages
+    uv_cell_size = np.array([u_axis[1] - u_axis[0], v_axis[1] - v_axis[
+        0]])  # This should be computed from the axis we are passing the engine...
 
     # Initiate Control toggles
     is_stokes = True
@@ -465,8 +466,8 @@ def apply_holog_phase_fitting_to_rt_xds(
     telescope.focus = telescope_pars['focal_length']
     c_fact = telescope_pars['foci_half_distance']
     a_fact = telescope_pars['z_intercept']
-    telescope.magnification = (c_fact+a_fact)/(c_fact-a_fact)
-    telescope.secondary_dist = c_fact-a_fact
+    telescope.magnification = (c_fact + a_fact) / (c_fact - a_fact)
+    telescope.secondary_dist = c_fact - a_fact
     # Disable secondary slope
     telescope.surp_slope = 0
 
