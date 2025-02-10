@@ -4,7 +4,7 @@ import xarray as xr
 from astrohack.antenna.telescope import Telescope
 from astrohack.utils.validation import custom_unit_checker, custom_plots_checker
 from astrohack.core.vla_ray_tracing import *
-from astrohack.utils import convert_unit, clight
+from astrohack.utils import convert_unit, clight, add_caller_and_version_to_dict
 from astrohack.utils.phase_fitting import execute_phase_fitting
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
 from typing import Union
@@ -181,6 +181,7 @@ def cassegrain_ray_tracing_pipeline(
     """
     input_pars = locals()
     del input_pars['telescope_parameters']
+    add_caller_and_version_to_dict(input_pars)
 
     # Convert user units and build proper RT inputs
     grid_fac = convert_unit(grid_unit, 'm', 'length')
