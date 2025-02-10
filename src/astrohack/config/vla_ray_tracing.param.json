@@ -40,5 +40,79 @@
             "type": ["string"],
             "check allowed with": "units.length"
         }
+    },
+    "cassegrain_ray_tracing_pipeline":{
+        "output_xds_filename":{
+            "required": true,
+            "type": ["string"]
+        },
+        "telescope_parameters":{
+            "required": true,
+            "type": ["dict"]
+        },
+        "grid_size":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 0
+        },
+        "grid_resolution":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 1e-8
+        },
+        "grid_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.length"
+        },
+        "x_pointing_offset":{
+            "required": false,
+            "type": ["float", "int"]
+        },
+        "y_pointing_offset":{
+            "required": false,
+            "type": ["float", "int"]
+        },
+        "pointing_offset_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.trig"
+        },
+        "x_focus_offset":{
+            "required": false,
+            "type": ["float", "int"]
+        },
+        "y_focus_offset":{
+            "required": false,
+            "type": ["float", "int"]
+        },
+        "z_focus_offset":{
+            "required": false,
+            "type": ["float", "int"]
+        },
+        "focus_offset_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.length"
+        },
+        "phase_offset":{
+            "required": false,
+            "type": ["float", "int"]
+        },
+        "phase_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.trig"
+        },
+        "observing_wavelength":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 1e-8
+        },
+        "wavelength_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.length"
+        }
     }
 }

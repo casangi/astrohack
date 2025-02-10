@@ -77,6 +77,9 @@ def create_ray_tracing_telescope_parameter_dict(
     return telescope_parameters
 
 
+@toolviper.utils.parameter.validate(
+    custom_checker=custom_unit_checker
+)
 def cassegrain_ray_tracing_pipeline(
         output_xds_filename: str,
         telescope_parameters: dict,
