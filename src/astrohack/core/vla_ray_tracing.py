@@ -2,7 +2,9 @@ import numpy as np
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 import xarray as xr
+import toolviper.utils.logger as logger
 
+from astrohack import overwrite_file
 from astrohack.utils import data_statistics, clight, statistics_to_text
 from astrohack.utils.constants import twopi
 from astrohack.utils.conversion import convert_unit
@@ -14,6 +16,22 @@ from astrohack.visualization.textual_data import create_pretty_table
 from astrohack.utils.text import format_value_error, format_label
 
 nanvec3d = np.full([3], np.nan)
+
+
+####################
+# Data IO routines #
+####################
+def open_rt_zarr(zarr_filename):
+    try:
+        rt_xds = xr.open_zarr(zarr_filename)
+        return rt_xds
+    except Exception as error:
+        logger.error(f"There was an exception opening {zarr_filename}: {error}")
+
+
+def write_rt_xds_to_zarr(rt_xds, zarr_filename, overwrite):
+    overwrite_file(zarr_filename, overwrite)
+    rt_xds.to_zarr(zarr_filename, mode="w", compute=True, consolidated=True)
 
 
 ######################################################################
