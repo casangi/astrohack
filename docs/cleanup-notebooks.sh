@@ -10,6 +10,6 @@ rm -r position_mds_exports
 rm -r exports
 rm LOGGER*.log
 rm -r model
-rm vla-rt-data
+rm -r vla-rt-data
 rm ant_pos_cor_24-10-14.PAR
 
