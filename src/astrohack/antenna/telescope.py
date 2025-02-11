@@ -16,12 +16,13 @@ class Telescope:
             path: Path in which to look for telescope configuration files, defaults to the astrohack package
             data directory if None
         """
-
         self.onaxisoptics = None
         self.ourad = None
         self.inrad = None
         self.nrings = None
         self.ringed = None
+        self.diam = None
+        self.focus = None
 
         self.ant_list = []
 
@@ -64,7 +65,9 @@ class Telescope:
         appropriate telescope object
         """
         name = name.lower()
-        if 'vla' in name:
+        if 'ngvla' in name:
+            name = 'ngVLA_prototype'
+        elif 'vla' in name:
             name = 'VLA'
         elif 'alma' in name:
             if 'dv' in name:
@@ -97,9 +100,9 @@ class Telescope:
 
     def _general_consistency(self):
         """
-        For the moment simply raises an Exception since only ringed telescopes are supported at the moment
+        For the moment does nothing as a general consistency test is not yet available
         """
-        raise Exception("General layout telescopes not yet supported")
+        pass
 
     def write(self, filename):
         """
@@ -132,6 +135,11 @@ class Telescope:
         """
         Prints all the parameters defined for the telescope object
         """
+        print(self)
+
+    def __repr__(self):
+        outstr = ''
         ledict = vars(self)
-        for key in ledict:
-            print("{0:15s} = ".format(key) + str(ledict[key]))
+        for key, item in ledict.items():
+            outstr += f"{key:20s} = {str(item)}\n"
+        return outstr

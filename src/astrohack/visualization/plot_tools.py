@@ -1,3 +1,4 @@
+import matplotlib.image
 import numpy as np
 
 from matplotlib import pyplot as plt
@@ -52,13 +53,13 @@ def close_figure(figure, title, filename, dpi, display, tight_layout=True):
     return
 
 
-def well_positioned_colorbar(ax, fig, image, label, location='right', size='5%', pad=0.05):
+def well_positioned_colorbar(ax, fig, mappable, label, location='right', size='5%', pad=0.05):
     """
     Adds a well positioned colorbar to a plot
     Args:
         ax: Axes instance to add the colorbar
         fig: Figure in which the axes are embedded
-        image: The plt.imshow instance associated to the colorbar
+        mappable: The plt.imshow or colormap instance associated to the colorbar
         label: Colorbar label
         location: Colorbar location
         size: Colorbar size
@@ -69,7 +70,33 @@ def well_positioned_colorbar(ax, fig, image, label, location='right', size='5%',
     """
     divider = make_axes_locatable(ax)
     cax = divider.append_axes(location, size=size, pad=pad)
-    return fig.colorbar(image, label=label, cax=cax)
+
+    if isinstance(mappable, matplotlib.image.AxesImage):
+        return fig.colorbar(mappable, label=label, cax=cax)
+    else:  # mappable is a colormap
+        sm = plt.cm.ScalarMappable(cmap=mappable)
+        sm.set_array([])
+        return fig.colorbar(sm, label=label, cax=cax)
+
+
+def compute_extent(x_axis, y_axis, margin=0):
+    """
+    Compute extent from the arrays representing the X and Y axes
+    Args:
+        x_axis: X axis np array
+        y_axis: Y axis np array
+        margin: Optional margin to add to plots
+
+    Returns:
+        len=4 list with [xmin, xmax, ymin, ymax]
+    """
+    mins = np.array([np.min(x_axis), np.min(y_axis)])
+    maxs = np.array([np.max(x_axis), np.max(y_axis)])
+    data_range = maxs-mins
+    mins -= margin * data_range
+    maxs += margin * data_range
+    extent = [mins[0], maxs[0], mins[1], maxs[1]]
+    return extent
 
 
 def get_proper_color_map(user_cmap, default_cmap='viridis'):
@@ -187,6 +214,7 @@ def scatter_plot(
         model_color='blue',
         model_linestyle='',
         model_label='model',
+        plot_residuals=True,
         residuals_marker='+',
         residuals_color='black',
         residuals_linestyle='',
@@ -249,23 +277,24 @@ def scatter_plot(
     if model is not None:
         ax.plot(xdata, model, ls=model_linestyle, marker=model_marker, color=model_color, label=model_label)
         ax.legend()
-        divider = make_axes_locatable(ax)
-        ax_res = divider.append_axes("bottom", size='20%', pad=0)
-        ax.figure.add_axes(ax_res)
-        residuals = ydata-model
-        ax.set_xticks([])
-        ax_res.plot(xdata, residuals, ls=residuals_linestyle, marker=residuals_marker, color=residuals_color,
-                    label=residuals_label)
-        if xlim is not None:
-            ax_res.set_xlim(xlim)
+        if plot_residuals:
+            divider = make_axes_locatable(ax)
+            ax_res = divider.append_axes("bottom", size='20%', pad=0)
+            ax.figure.add_axes(ax_res)
+            residuals = ydata-model
+            ax.set_xticks([])
+            ax_res.plot(xdata, residuals, ls=residuals_linestyle, marker=residuals_marker, color=residuals_color,
+                        label=residuals_label)
+            if xlim is not None:
+                ax_res.set_xlim(xlim)
 
-        minmax = np.max(np.absolute(residuals))
-        ax_res.set_ylim([-minmax, minmax])
-        if vlines is not None:
-            for vline in vlines:
-                ax_res.axvline(vline, color=hv_color, ls=hv_linestyle)
+            minmax = np.nanmax(np.absolute(residuals))
+            ax_res.set_ylim([-minmax, minmax])
+            if vlines is not None:
+                for vline in vlines:
+                    ax_res.axvline(vline, color=hv_color, ls=hv_linestyle)
 
-        ax_res.axhline(0, color=hv_color, ls=hv_linestyle)
-        ax_res.set_ylabel('Residuals')
+            ax_res.axhline(0, color=hv_color, ls=hv_linestyle)
+            ax_res.set_ylabel('Residuals')
 
     return
