@@ -19,6 +19,10 @@
             "nullable": false,
             "struct type": ["dict"]
         },
+        "exclude_shadows": {
+            "type":["boolean"],
+            "nullable": false
+        },
         "panel_model":{
             "type":["str"],
             "check allowed with": "panel.models"

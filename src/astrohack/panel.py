@@ -27,6 +27,7 @@ def panel(
         panel_name: str = None,
         clip_type: str = 'sigma',
         clip_level: Union[float, dict[dict[float]]] = 3.0,
+        exclude_shadows: bool = True,
         panel_model: str = "rigid",
         panel_margins: float = 0.05,
         polarization_state: str = 'I',
@@ -52,6 +53,10 @@ def panel(
     :param clip_level: Choose level of clipping, can also be specified for specific antenna and DDI combinations by \
     passing a dictionary, default is 3 (appropriate for sigma clipping)
     :type clip_level: float, dict, optional
+
+    :param exclude_shadows: Exclude regions with significant shadowing from analysis, e.g. secondary supporting arms,
+    default is True.
+    :type exclude_shadows: bool, optional
 
     :param panel_model: Model of surface fitting function used to fit panel surfaces, None will default to "rigid". \
     Possible models are listed below.
