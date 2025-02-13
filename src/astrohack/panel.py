@@ -1,11 +1,9 @@
 import os
 import pathlib
-import shutil
 import toolviper.utils.logger as logger
 import toolviper.utils.parameter
 
 from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT
-from astrohack.utils.fits import aips_holog_to_xds
 from astrohack.utils.file import overwrite_file
 
 from astrohack.utils.data import write_meta_data
@@ -46,8 +44,8 @@ def panel(
     *basename* of input file plus holography panel file suffix.
     :type panel_name: str, optional
 
-    :param clip_type: Choose the amplitude clipping algorithm: absolute, relative, sigma or noise_threshold, default \
-    is sigma
+    :param clip_type: Choose the amplitude clipping algorithm: none, absolute, relative, sigma or noise_threshold, \
+    default is sigma
     :type clip_type: str, optional
 
     :param clip_level: Choose level of clipping, can also be specified for specific antenna and DDI combinations by \
@@ -122,8 +120,10 @@ def panel(
         .. rubric:: Amplitude clipping:
 
         In order to produce results of good quality parts of the aperture with low signal (e.g. the shadow of the
-        secondary mirror support) a mask is defined based on the amplitude of the aperture. There are 3 methods
+        secondary mirror support) a mask is defined based on the amplitude of the aperture. There are 5 methods
         (clip_type parameter) available to define at which level (clip_level) the amplitude is clipped:
+
+        * none: In this method no amplitude clip is performed, i.e. the clipping value is set to -infinity.
 
         * absolute: In this method the clipping value is taken directly from the clip_level parameter, e.g.: \
                     if the user calls `panel(..., clip_type='absolute', clip_level=3.5)` everything below 3.5 in \
@@ -137,7 +137,7 @@ def panel(
 
         * noise_threshold: In this model the cut is first set to the maximum amplitude outside the disk, a proxy for \
                     the noise maximum in amplitude, if this preserves a fraction of the aperture disk that is larger \
-                    than the clip_level this is the chosen amplitude cutoff, if not, the cutoff is iteratively lonwered \
+                    than the clip_level this is the chosen amplitude cutoff, if not, the cutoff is iteratively lowered \
                     by 10% until it preservers a fraction of the disk that is larger thatn clip_level. This heuristic \
                     was created with help from VLA operations.
 

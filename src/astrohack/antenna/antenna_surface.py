@@ -1,4 +1,3 @@
-import numpy as np
 import xarray as xr
 
 from matplotlib import patches
@@ -155,7 +154,7 @@ class AntennaSurface:
 
     def _read_xds(self, inputxds):
         """
-        Read input XDS, the reading function depending if it is a reread or a new processing
+        Read input XDS, the reading function depending on if it is a reread or a new processing
         Args:
             inputxds: X array dataset
         """
@@ -172,7 +171,9 @@ class AntennaSurface:
 
     def _define_amp_clip(self, clip_type, clip_level):
         self.amplitude_noise = np.where(self.base_mask, np.nan, self.amplitude)
-        if clip_type == 'relative':
+        if clip_type is None or clip_type == 'none':
+            clip = -np.inf
+        elif clip_type == 'relative':
             clip = clip_level * np.nanmax(self.amplitude)
         elif clip_type == 'absolute':
             clip = clip_level

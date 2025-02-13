@@ -10,8 +10,8 @@
         },
         "clip_type":{
             "type":["str"],
-            "allowed": ["absolute", "sigma", "relative", "noise_threshold"],
-            "nullable": false
+            "allowed": ["absolute", "sigma", "relative", "noise_threshold", "none"],
+            "nullable": true
         },
         "clip_level":{
             "type":["float", "int", "dict"],
