@@ -77,18 +77,6 @@ class AntennaSurface:
         else:
             raise Exception('Non ringed telescopes not yet supported...')
 
-    def _read_aips_xds(self, inputxds):
-        self.amplitude = np.flipud(inputxds["AMPLITUDE"].values)
-        self.deviation = np.flipud(inputxds["DEVIATION"].values)
-        self.npoint = inputxds.attrs['npoint']
-        self.wavelength = inputxds.attrs['wavelength']
-        self.amp_unit = inputxds.attrs['amp_unit']
-        self.u_axis = inputxds.u.values
-        self.v_axis = inputxds.v.values
-        self.computephase = True
-        self.processed = False
-        self.resolution = None
-
     def _read_holog_xds(self, inputxds):
         if 'chan' in inputxds.dims:
             if inputxds.sizes['chan'] != 1:
@@ -167,7 +155,7 @@ class AntennaSurface:
 
     def _read_xds(self, inputxds):
         """
-        Read input XDS, distinguishing what is derived from AIPS data and what was created by astrohack.holog
+        Read input XDS, the reading function depending if it is a reread or a new processing
         Args:
             inputxds: X array dataset
         """
@@ -175,14 +163,9 @@ class AntennaSurface:
         if self.reread:
             self._read_panel_xds(inputxds)
         else:
-            if inputxds.attrs['AIPS']:
-                self._read_aips_xds(inputxds)
-            else:
-                self._read_holog_xds(inputxds)
+            self._read_holog_xds(inputxds)
 
         # Common elements
-        self.unpix = self.u_axis.shape[0]
-        self.vnpix = self.v_axis.shape[0]
         self.antenna_name = inputxds.attrs['ant_name']
         self.ddi = inputxds.attrs['ddi']
         self.label = create_dataset_label(inputxds.attrs['ant_name'], inputxds.attrs['ddi'])
@@ -281,15 +264,10 @@ class AntennaSurface:
         iumax = np.argmax(self.u_axis > edge)
         ivmin = np.argmax(self.v_axis > -edge)
         ivmax = np.argmax(self.v_axis > edge)
-        self.unpix = iumax - iumin
-        self.vnpix = ivmax - ivmin
         self.u_axis = self.u_axis[iumin:iumax]
         self.v_axis = self.v_axis[ivmin:ivmax]
         self.amplitude = self.amplitude[iumin:iumax, ivmin:ivmax]
-        if self.phase is not None:
-            self.phase = self.phase[iumin:iumax, ivmin:ivmax]
-        if self.deviation is not None:
-            self.deviation = self.deviation[iumin:iumax, ivmin:ivmax]
+        self.phase = self.phase[iumin:iumax, ivmin:ivmax]
 
     def _phase_to_deviation(self):
         """
@@ -402,12 +380,10 @@ class AntennaSurface:
             panels = np.where(self.rad >= self.telescope.inrad[iring], np.floor(self.phi / angle) + panelsum,
                               panels)
             panelsum += self.telescope.npanel[iring]
-        for ix in range(self.unpix):
-            xc = self.u_axis[ix]
-            for iy in range(self.vnpix):
+        for ix, xc in enumerate(self.u_axis):
+            for iy, yc in enumerate(self.v_axis):
                 ipanel = panels[ix, iy]
                 if ipanel >= 0:
-                    yc = self.v_axis[iy]
                     panel = self.panels[int(ipanel)]
                     issample, inpanel = panel.is_inside(self.rad[ix, iy], self.phi[ix, iy])
                     if inpanel:
