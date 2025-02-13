@@ -6,7 +6,7 @@ import toolviper.utils.logger as logger
 
 from astrohack.antenna.ring_panel import RingPanel
 from astrohack.utils import string_to_ascii_file, create_dataset_label, data_statistics, statistics_to_text, \
-    phase_wrapping
+    phase_wrapping, create_coordinate_images
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
@@ -22,7 +22,8 @@ SUPPORTED_POL_STATES = ['I', 'RR', 'LL', 'XX', 'YY']
 
 class AntennaSurface:
     def __init__(self, inputxds, telescope, clip_type='sigma', clip_level=3, pmodel='rigid', crop=False,
-                 nan_out_of_bounds=True, panel_margins=0.05, reread=False, pol_state='I', patch_phase=False):
+                 nan_out_of_bounds=True, panel_margins=0.05, reread=False, pol_state='I', patch_phase=False,
+                 exclude_shadows=True):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
@@ -37,6 +38,7 @@ class AntennaSurface:
             reread: Read a previously processed holography
             pol_state: Polarization state to select
             patch_phase: Phase data from inputxds needs to be wrapped to -pi to pi interval
+            exclude_shadows: Excluded shadowed regions from analysis
         """
         self.reread = reread
         self.phase = None
@@ -54,6 +56,7 @@ class AntennaSurface:
         self.pol_state = pol_state
         self._read_xds(inputxds)
         self.telescope = telescope
+        self.exclude_shadows = exclude_shadows
 
         if patch_phase:
             self.phase = phase_wrapping(self.phase)
@@ -351,11 +354,13 @@ class AntennaSurface:
         """
         Build polar coordinate grid, specific for circular antennas with panels arranged in rings
         """
-        u2d = self.u_axis.reshape(self.unpix, 1)
-        v2d = self.v_axis.reshape(1, self.vnpix)
-        self.rad = np.sqrt(u2d ** 2 + v2d ** 2)
-        self.phi = np.arctan2(u2d, -v2d) - pi / 2
-        self.phi = np.where(self.phi < 0, self.phi + twopi, self.phi)
+        self.u_mesh, self.v_mesh, self.rad, self.phi = create_coordinate_images(self.u_axis, self.v_axis,
+                                                                                create_polar_coordinates=True)
+        # u2d = self.u_axis.reshape(self.unpix, 1)
+        # v2d = self.v_axis.reshape(1, self.vnpix)
+        # self.rad = np.sqrt(u2d ** 2 + v2d ** 2)
+        # self.phi = np.arctan2(u2d, -v2d) - pi / 2
+        # self.phi = np.where(self.phi < 0, self.phi + twopi, self.phi)
 
     def _build_ring_panels(self):
         """

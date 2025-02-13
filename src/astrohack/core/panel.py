@@ -41,7 +41,9 @@ def process_panel_chunk(panel_chunk_params):
     surface = AntennaSurface(inputxds, telescope, clip_type=panel_chunk_params['clip_type'],
                              pol_state=panel_chunk_params['polarization_state'],
                              clip_level=clip_level, pmodel=panel_chunk_params['panel_model'],
-                             panel_margins=panel_chunk_params['panel_margins'], patch_phase=needs_phase_wrapping_patch)
+                             panel_margins=panel_chunk_params['panel_margins'],
+                             patch_phase=needs_phase_wrapping_patch,
+                             exclude_shadows=panel_chunk_params['exclude_shadows'])
 
     surface.compile_panel_points()
     surface.fit_surface()
