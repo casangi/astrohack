@@ -31,6 +31,8 @@
                 "ea27",
                 "ea28"
             ],
+            "arm_shadow_rotation": 0.0,
+            "arm_shadow_width": 1.5,
             "array_center": {
                 "m0": {
                     "unit": "rad",
@@ -49,9 +51,11 @@
             },
             "comment": "Data taken from AIPS source code and EVLA memo 212, Screw offset taken from measurements done insitu by VSM on March 14 2023, Array center location from CASA 6.5.5.21",
             "diam": 25.0,
+            "filename": "vla.zarr",
+            "filepath": "/export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack/data/telescopes",
             "focus": 8.8,
             "gain_wavelengths": [
-                0.20,
+                0.2,
                 0.13,
                 0.06,
                 0.03,
