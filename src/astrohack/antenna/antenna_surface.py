@@ -1,3 +1,4 @@
+import numpy as np
 import xarray as xr
 
 from matplotlib import patches
@@ -6,7 +7,7 @@ import toolviper.utils.logger as logger
 
 from astrohack.antenna.ring_panel import RingPanel
 from astrohack.utils import string_to_ascii_file, create_dataset_label, data_statistics, statistics_to_text, \
-    phase_wrapping, create_coordinate_images
+    phase_wrapping, create_aperture_mask, create_coordinate_images
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
 from astrohack.utils.conversion import convert_unit
@@ -67,18 +68,25 @@ class AntennaSurface:
             if crop:
                 self._crop_maps()
 
+        self._create_aperture_mask(clip_type, clip_level, exclude_shadows)
+        if nan_out_of_bounds:
+            self._nan_out_of_bounds2()
+        self.deviation = self._phase_to_deviation(self.phase)
+
         if self.telescope.ringed:
             self._init_ringed(clip_type, clip_level)
-        if not self.reread:
-            if self.computephase:
-                self.phase = self._deviation_to_phase(self.deviation)
-            else:
-                self.deviation = self._phase_to_deviation(self.phase)
 
-            if nan_out_of_bounds:
-                self.phase = self._nan_out_of_bounds(self.phase)
-                self.amplitude = self._nan_out_of_bounds(self.amplitude)
-                self.deviation = self._nan_out_of_bounds(self.deviation)
+
+        # if not self.reread:
+        #     if self.computephase:
+        #         self.phase = self._deviation_to_phase(self.deviation)
+        #     else:
+        #         self.deviation = self._phase_to_deviation(self.phase)
+        #
+        #     if nan_out_of_bounds:
+        #         self.phase = self._nan_out_of_bounds(self.phase)
+        #         self.amplitude = self._nan_out_of_bounds(self.amplitude)
+        #         self.deviation = self._nan_out_of_bounds(self.deviation)
 
     def _read_aips_xds(self, inputxds):
         self.amplitude = np.flipud(inputxds["AMPLITUDE"].values)
@@ -190,10 +198,9 @@ class AntennaSurface:
         self.ddi = inputxds.attrs['ddi']
         self.label = create_dataset_label(inputxds.attrs['ant_name'], inputxds.attrs['ddi'])
 
-    def _measure_ring_clip(self, clip_type, clip_level):
-        self.amplitude_noise = np.where(self.rad < self.telescope.diam / 2., np.nan, self.amplitude)
-        self.amplitude_noise = np.where(self.rad < self.telescope.inlim, self.amplitude, self.amplitude_noise)
+    def _define_amp_clip(self, clip_type, clip_level):
 
+        self.amplitude_noise = np.where(self.base_mask, np.nan, self.amplitude)
         if clip_type == 'relative':
             clip = clip_level * np.nanmax(self.amplitude)
         elif clip_type == 'absolute':
@@ -237,11 +244,13 @@ class AntennaSurface:
             self._panel_label = self._alma_panel_labeling
         else:
             raise Exception("Unknown panel labeling: " + self.telescope.panel_numbering)
-        self._build_polar()
-        if not self.reread:
-            self.clip = self._measure_ring_clip(clip_type, clip_level)
+
+        # self._create_aperture_mask(clip_type, clip_level, False, False)
+
+        # if not self.reread:
+        #     self.clip = self._define_amp_clip(clip_type, clip_level)
         self._build_ring_panels()
-        self._build_ring_mask()
+        # self._build_ring_mask()
         self.fetch_panel = self._fetch_panel_ringed
         self.compile_panel_points = self._compile_panel_points_ringed
         self._nan_out_of_bounds = self._nan_out_of_bounds_ringed
@@ -326,6 +335,27 @@ class AntennaSurface:
         bcoeff = 4 * self.telescope.focus ** 2
         return deviation / (acoeff * np.sqrt(self.rad ** 2 + bcoeff))
 
+    def _create_aperture_mask(self, clip_type, clip_level, exclude_shadows):
+        if exclude_shadows:
+            arm_width = self.telescope.arm_shadow_width
+            arm_angle = self.telescope.arm_shadow_rotation
+        else:
+            arm_width = None
+            arm_angle = 0.0
+
+        self.base_mask, self.rad, self.phi = create_aperture_mask(self.u_axis, self.v_axis, self.telescope.inlim,
+                                                                  self.telescope.diam/2,
+                                                                  arm_width=arm_width,
+                                                                  arm_angle=arm_angle,
+                                                                  return_polar_meshes=True)
+
+        if self.reread:
+            pass
+        else:
+            self.clip = self._define_amp_clip(clip_type, clip_level)
+            self.mask = np.where(self.amplitude < self.clip, False, self.base_mask)
+            self.mask = np.where(~np.isfinite(self.phase), False, self.mask)
+
     def _build_ring_mask(self):
         """
         Builds the mask on regions to be included in panel surface masks, specific to circular antennas as there is an
@@ -350,17 +380,16 @@ class AntennaSurface:
         inradius = np.where(self.rad < self.telescope.inlim, np.nan, ouradius)
         return inradius
 
+    def _nan_out_of_bounds2(self):
+        self.phase = np.where(self.base_mask, self.phase, np.nan)
+        self.amplitude = np.where(self.base_mask, self.amplitude, np.nan)
+
     def _build_polar(self):
         """
         Build polar coordinate grid, specific for circular antennas with panels arranged in rings
         """
         self.u_mesh, self.v_mesh, self.rad, self.phi = create_coordinate_images(self.u_axis, self.v_axis,
                                                                                 create_polar_coordinates=True)
-        # u2d = self.u_axis.reshape(self.unpix, 1)
-        # v2d = self.v_axis.reshape(1, self.vnpix)
-        # self.rad = np.sqrt(u2d ** 2 + v2d ** 2)
-        # self.phi = np.arctan2(u2d, -v2d) - pi / 2
-        # self.phi = np.where(self.phi < 0, self.phi + twopi, self.phi)
 
     def _build_ring_panels(self):
         """
