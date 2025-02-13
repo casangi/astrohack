@@ -5,7 +5,7 @@ import xarray as xr
 import toolviper.utils.logger as logger
 
 from astrohack import overwrite_file
-from astrohack.utils import data_statistics, clight, statistics_to_text
+from astrohack.utils import data_statistics, clight, statistics_to_text, create_aperture_mask
 from astrohack.utils.constants import twopi
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.algorithms import phase_wrapping, create_coordinate_images
@@ -77,23 +77,6 @@ def _simple_axis(minmax, resolution, margin=0.05):
     return axis_array
 
 
-def create_radial_mask(radius, inner_rad, outer_rad):
-    """
-    Creates a radial mask of points based on the image of radius coordinates and inner and outer limits
-    Args:
-        radius: image of the radius
-        inner_rad: The innermost valid radius
-        outer_rad: The outermost valid radius
-
-    Returns:
-        A 2d boolean mask of the valid regions in the data.
-    """
-    mask = np.full_like(radius, True, dtype=bool)
-    mask = np.where(radius > outer_rad, False, mask)
-    mask = np.where(radius < inner_rad, False, mask)
-    return mask
-
-
 def make_gridded_cassegrain_primary(grid_size, resolution, telescope_pars):
     """
     Create a 1D representation of the primary and the normals to its surface based on a radial mask
@@ -114,7 +97,7 @@ def make_gridded_cassegrain_primary(grid_size, resolution, telescope_pars):
     # It is imperative to put indexing='ij' so that the x and Y axes are not flipped in this step.
     x_mesh, y_mesh, img_radius, _ = create_coordinate_images(axis, axis, create_polar_coordinates=True)
     x_idx_mesh, y_idx_mesh = np.meshgrid(axis_idx, axis_idx, indexing='ij')
-    radial_mask = create_radial_mask(img_radius, telescope_pars['inner_radius'], telescope_pars['primary_diameter'] / 2)
+    radial_mask = create_aperture_mask(axis, axis, telescope_pars['inner_radius'], telescope_pars['primary_diameter']/2)
     img_radius = img_radius[radial_mask]
     npnt_1d = img_radius.shape[0]
     idx_1d = np.empty([npnt_1d, 2], dtype=int)

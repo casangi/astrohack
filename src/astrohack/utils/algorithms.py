@@ -535,3 +535,33 @@ def create_coordinate_images(x_axis, y_axis, create_polar_coordinates=False):
     else:
         return x_mesh, y_mesh
 
+
+def create_aperture_mask(x_axis, y_axis, inner_rad, outer_rad, arm_width=None, arm_angle=0, return_polar_meshes=False):
+    """
+    """
+    x_mesh, y_mesh, radius_mesh, polar_angle_mesh = \
+        create_coordinate_images(x_axis, y_axis, create_polar_coordinates=True)
+    mask = np.full_like(radius_mesh, True, dtype=bool)
+    mask = np.where(radius_mesh > outer_rad, False, mask)
+    mask = np.where(radius_mesh < inner_rad, False, mask)
+
+    if arm_width is None:
+        pass
+    else:
+        if arm_angle % pi/2 == 0:
+            mask = np.where(np.abs(x_mesh) < arm_width/2., False, mask)
+            mask = np.where(np.abs(y_mesh) < arm_width/2., False, mask)
+        else:
+            # first shadow
+            coeff = np.tan(arm_angle % pi)
+            distance = np.abs((coeff*x_mesh-y_mesh)/np.sqrt(coeff**2+1))
+            mask = np.where(distance < arm_width/2., False, mask)
+            # second shadow
+            coeff = np.tan(arm_angle % pi + pi/2)
+            distance = np.abs((coeff*x_mesh-y_mesh)/np.sqrt(coeff**2+1))
+            mask = np.where(distance < arm_width/2., False, mask)
+
+    if return_polar_meshes:
+        return mask, radius_mesh, polar_angle_mesh
+    else:
+        return mask
