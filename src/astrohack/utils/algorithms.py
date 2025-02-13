@@ -9,6 +9,7 @@ import toolviper.utils.logger as logger
 
 from astrohack.utils.text import format_angular_distance, create_dataset_label
 from astrohack.utils.conversion import convert_unit
+from astrohack.utils.constants import pi, twopi
 
 
 def tokenize_version_number(version_number):
@@ -511,4 +512,26 @@ def phase_wrapping(phase):
     Returns:
     Phase wrapped to the -pi to pi interval
     """
-    return (phase + np.pi) % (2 * np.pi) - np.pi
+    return (phase + pi) % twopi - pi
+
+
+def create_coordinate_images(x_axis, y_axis, create_polar_coordinates=False):
+    """
+    Takes two axes and creates 2D representation of the image coordinates
+    Args:
+        x_axis: X axis
+        y_axis: Y axis
+        create_polar_coordinates: Also create polar coordinates images?
+
+    Returns:
+        x_mesh and y_mesh, plus radius_mesh and polar_angle_mesh if create_polar_coordinates
+    """
+    x_mesh, y_mesh = np.meshgrid(x_axis, y_axis, indexing='ij')
+    if create_polar_coordinates:
+        radius_mesh = np.sqrt(x_mesh ** 2 + y_mesh ** 2)
+        polar_angle_mesh = np.arctan2(x_mesh, -y_mesh) - np.pi / 2
+        polar_angle_mesh = np.where(polar_angle_mesh < 0, polar_angle_mesh + twopi, polar_angle_mesh)
+        return x_mesh, y_mesh, radius_mesh, polar_angle_mesh
+    else:
+        return x_mesh, y_mesh
+
