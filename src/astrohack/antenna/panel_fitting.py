@@ -641,3 +641,6 @@ class PanelPoint:
 
     def get_coords(self):
         return self.xc, self.yc, self.ix, self.iy
+
+    def __repr__(self):
+        return f'{self.xc}, {self.yc}, {self.ix}, {self.iy}, {self.value}'
