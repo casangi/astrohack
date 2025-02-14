@@ -230,14 +230,16 @@ def test_holography_pipeline(set_data):
         image_name=before_image,
         panel_model='rigid',
         parallel=False,
-        overwrite=True
+        overwrite=True,
+        exclude_shadows=False
     )
 
     after_panel = panel(
         image_name=after_image,
         panel_model='rigid',
         parallel=False,
-        overwrite=True
+        overwrite=True,
+        exclude_shadows=False
     )
 
     assert verify_panel_shifts(data_dir=str(set_data), ref_mean_shift=reference_dict["vla"]["offsets"]), "Verify panel shifts"

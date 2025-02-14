@@ -10,14 +10,18 @@
         },
         "clip_type":{
             "type":["str"],
-            "allowed": ["absolute", "sigma", "relative", "noise_threshold"],
-            "nullable": false
+            "allowed": ["absolute", "sigma", "relative", "noise_threshold", "none"],
+            "nullable": true
         },
         "clip_level":{
             "type":["float", "int", "dict"],
             "min": 0,
             "nullable": false,
             "struct type": ["dict"]
+        },
+        "exclude_shadows": {
+            "type":["boolean"],
+            "nullable": false
         },
         "panel_model":{
             "type":["str"],

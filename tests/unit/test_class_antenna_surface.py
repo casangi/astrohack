@@ -1,12 +1,13 @@
 from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.antenna.panel_fitting import PanelPoint
 from astrohack.antenna.telescope import Telescope
-from astrohack import aips_holog_to_xds
+from astrohack import extract_holog, extract_pointing, holog
 from astrohack.utils.conversion import convert_unit
 
 import numpy as np
 import toolviper
 import shutil
+import xarray as xr
 
 
 datafolder = "paneldata/"
@@ -14,7 +15,34 @@ datafolder = "paneldata/"
 
 def setup():
     # Download relevant panel test files
-    toolviper.utils.data.download(file="panel_test_files", folder=datafolder)
+    toolviper.utils.data.download(file="ea25_cal_small_after_fixed.split.ms", folder=datafolder)
+
+    extract_pointing(
+        ms_name=f"{datafolder}/ea25_cal_small_after_fixed.split.ms",
+        point_name=f"{datafolder}/ea25_cal_small_after_fixed.split.point.zarr",
+        overwrite=True,
+        parallel=False
+    )
+
+    # Extract holography data using holog_obd_dict
+
+    extract_holog(
+        ms_name=f"{datafolder}/ea25_cal_small_after_fixed.split.ms",
+        point_name=f"{datafolder}/ea25_cal_small_after_fixed.split.point.zarr",
+        holog_name=f'{datafolder}/ea25_cal_small_after_fixed.split.holog.zarr',
+        data_column='CORRECTED_DATA',
+        ddi=0,
+        parallel=False,
+        overwrite=True
+    )
+
+    holog(
+        holog_name=f'{datafolder}/ea25_cal_small_after_fixed.split.holog.zarr',
+        image_name=f'{datafolder}/ea25_cal_small_after_fixed.split.image.zarr',
+        ant='ea25',
+        overwrite=True,
+        parallel=False
+    )
 
 
 def cleanup():
@@ -25,12 +53,12 @@ class TestClassAntennaSurface:
     setup()
     ampfits = datafolder+'amp.fits'
     devfits = datafolder+'dev.fits'
-    inputxds = aips_holog_to_xds(ampfits, devfits)
+    inputxds = xr.open_zarr(f'{datafolder}/ea25_cal_small_after_fixed.split.image.zarr/ant_ea25/ddi_0')
     inputxds.attrs['ant_name'] = 'test'
     inputxds.attrs['ddi'] = 'test'
     tel = Telescope('vla')
-    datashape = (256, 256)
-    middlepix = 128
+    datashape = (510, 510)
+    middlepix = 255
     tant = AntennaSurface(inputxds, tel, panel_margins=0.2)
     tolerance = 1e-6
     sigma = 20
@@ -62,8 +90,8 @@ class TestClassAntennaSurface:
         """
         Tests that a point falls into the correct panel and that this panel has the correct number of samples
         """
-        compvaluep0 = [2.2265625, 0.703125, 147, 135, 0.0003463581378952494]
-        compnsampp0 = 67
+        compvaluep0 = [3.2456341911764706, 0.7755055147058822, 198, 268, 0.00045656206805518506]
+        compnsampp0 = 120
         self.tant.compile_panel_points()
         assert len(self.tant.panels[0].samples) == compnsampp0, 'Number of samples in panel is different from reference'
         assert self.tant.panels[0].samples[0] == PanelPoint(*compvaluep0), ('Point data in Panel is different from what'
@@ -73,8 +101,8 @@ class TestClassAntennaSurface:
         """
         Tests that fitting results for two panels match the reference
         """
-        solveparsp0 = [0.00024335, 0.00025452, -0.00035676]
-        solveparsp30 = [0.00074635, -0.00059127, -0.00185721]
+        solveparsp0 = [0.00035746,  0.00020089, -0.0008455 ]
+        solveparsp30 = [ 0.00039911, -0.00041468, -0.0007079]
         self.tant.fit_surface()
         assert len(self.tant.panels[0].model.parameters) == len(solveparsp0), ('Fitted results have a different length'
                                                                                ' from reference')

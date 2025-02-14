@@ -186,7 +186,6 @@ class TestPanel:
 
         assert mean_rms < default_rms
 
-    #@pytest.mark.skip(reason="There is an error that makes no sense related to the downloaded file.")
     def test_panel_absolute_clip(self):
         """
            Set cutoff=0 and compare results to known truth value array.
@@ -195,6 +194,7 @@ class TestPanel:
             image_name='data/ea25_cal_small_before_fixed.split.image.zarr',
             clip_type='absolute',
             clip_level=0.0,
+            exclude_shadows=False,
             parallel=False,
             overwrite=True
         )
@@ -202,9 +202,9 @@ class TestPanel:
         telescope = Telescope('vla')
 
         radius = panel_mds["ant_ea25"]["ddi_0"]['RADIUS'].values
-        dish_mask = np.where(radius < telescope.oulim, 1.0, 0)
+        dish_mask = np.where(radius < telescope.diam/2, 1.0, 0)
         dish_mask = np.where(radius < telescope.inlim, 0, dish_mask)
-        nvalid_pix =  np.sum(dish_mask)
+        nvalid_pix = np.sum(dish_mask)
 
         assert np.sum(panel_mds["ant_ea25"]["ddi_0"].MASK.values) == nvalid_pix
 

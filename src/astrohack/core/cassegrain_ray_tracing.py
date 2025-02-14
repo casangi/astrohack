@@ -5,10 +5,10 @@ import xarray as xr
 import toolviper.utils.logger as logger
 
 from astrohack import overwrite_file
-from astrohack.utils import data_statistics, clight, statistics_to_text
+from astrohack.utils import data_statistics, clight, statistics_to_text, create_aperture_mask
 from astrohack.utils.constants import twopi
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.algorithms import phase_wrapping
+from astrohack.utils.algorithms import phase_wrapping, create_coordinate_images
 from astrohack.utils.ray_tracing_general import generalized_dot, generalized_norm, normalize_vector_map, reflect_light
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
     close_figure, compute_extent
@@ -77,38 +77,6 @@ def _simple_axis(minmax, resolution, margin=0.05):
     return axis_array
 
 
-def create_coordinate_images(x_axis, y_axis):
-    """
-    Takes two axes and creates 3 2D representation of the image coordinates
-    Args:
-        x_axis: X axis
-        y_axis: Y axis
-
-    Returns:
-        X_mesh (image of X coordinates), y_mesh (image of y coordinates), img_radius sqrt(x**2+y**2)
-    """
-    x_mesh, y_mesh = np.meshgrid(x_axis, y_axis, indexing='ij')
-    img_radius = np.sqrt(x_mesh ** 2 + y_mesh ** 2)
-    return x_mesh, y_mesh, img_radius
-
-
-def create_radial_mask(radius, inner_rad, outer_rad):
-    """
-    Creates a radial mask of points based on the image of radius coordinates and inner and outer limits
-    Args:
-        radius: image of the radius
-        inner_rad: The innermost valid radius
-        outer_rad: The outermost valid radius
-
-    Returns:
-        A 2d boolean mask of the valid regions in the data.
-    """
-    mask = np.full_like(radius, True, dtype=bool)
-    mask = np.where(radius > outer_rad, False, mask)
-    mask = np.where(radius < inner_rad, False, mask)
-    return mask
-
-
 def make_gridded_cassegrain_primary(grid_size, resolution, telescope_pars):
     """
     Create a 1D representation of the primary and the normals to its surface based on a radial mask
@@ -127,9 +95,9 @@ def make_gridded_cassegrain_primary(grid_size, resolution, telescope_pars):
     axis_idx = np.arange(image_size, dtype=int)
 
     # It is imperative to put indexing='ij' so that the x and Y axes are not flipped in this step.
-    x_mesh, y_mesh, img_radius = create_coordinate_images(axis, axis)
+    x_mesh, y_mesh, img_radius, _ = create_coordinate_images(axis, axis, create_polar_coordinates=True)
     x_idx_mesh, y_idx_mesh = np.meshgrid(axis_idx, axis_idx, indexing='ij')
-    radial_mask = create_radial_mask(img_radius, telescope_pars['inner_radius'], telescope_pars['primary_diameter'] / 2)
+    radial_mask = create_aperture_mask(axis, axis, telescope_pars['inner_radius'], telescope_pars['primary_diameter']/2)
     img_radius = img_radius[radial_mask]
     npnt_1d = img_radius.shape[0]
     idx_1d = np.empty([npnt_1d, 2], dtype=int)

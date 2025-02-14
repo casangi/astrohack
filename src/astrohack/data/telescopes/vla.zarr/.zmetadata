@@ -31,6 +31,8 @@
                 "ea27",
                 "ea28"
             ],
+            "arm_shadow_rotation": 0.0,
+            "arm_shadow_width": 1.5,
             "array_center": {
                 "m0": {
                     "unit": "rad",
@@ -51,7 +53,7 @@
             "diam": 25.0,
             "focus": 8.8,
             "gain_wavelengths": [
-                0.20,
+                0.2,
                 0.13,
                 0.06,
                 0.03,
