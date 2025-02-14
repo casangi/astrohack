@@ -51,8 +51,6 @@
             },
             "comment": "Data taken from AIPS source code and EVLA memo 212, Screw offset taken from measurements done insitu by VSM on March 14 2023, Array center location from CASA 6.5.5.21",
             "diam": 25.0,
-            "filename": "vla.zarr",
-            "filepath": "/export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack/data/telescopes",
             "focus": 8.8,
             "gain_wavelengths": [
                 0.2,
