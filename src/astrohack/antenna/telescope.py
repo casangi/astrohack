@@ -110,9 +110,19 @@ class Telescope:
         Args:
             filename: Name of the output file
         """
-        ledict = vars(self)
+        obj_dict = vars(self)
         xds = xr.Dataset()
-        xds.attrs = ledict
+        xds.attrs = obj_dict
+        xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
+        return
+
+    def _save_to_dist(self):
+        obj_dict = vars(self)
+        filename = f'{self.filepath}/{self.filename}'
+        obj_dict.pop('filepath', None)
+        obj_dict.pop('filename', None)
+        xds = xr.Dataset()
+        xds.attrs = obj_dict
         xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
         return
 
@@ -139,7 +149,7 @@ class Telescope:
 
     def __repr__(self):
         outstr = ''
-        ledict = vars(self)
-        for key, item in ledict.items():
+        obj_dict = vars(self)
+        for key, item in obj_dict.items():
             outstr += f"{key:20s} = {str(item)}\n"
         return outstr
