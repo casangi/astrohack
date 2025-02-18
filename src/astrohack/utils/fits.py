@@ -103,6 +103,8 @@ def axis_to_fits_header(header: dict, axis, iaxis, axistype, unit, iswcs=True):
         axis: The axis to be described in the header
         iaxis: The position of the axis in the data
         axistype: Axis type to be displayed in the fits header
+        unit: Axis unit
+        iswcs: Is the axis a part of World Coordinate System for the image?
 
     Returns: The augmented header
 
