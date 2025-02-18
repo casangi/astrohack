@@ -547,21 +547,35 @@ def create_aperture_mask(x_axis, y_axis, inner_rad, outer_rad, arm_width=None, a
 
     if arm_width is None:
         pass
+    elif isinstance(arm_width, (float, int)):
+        mask = _arm_shadow_masking(mask, x_mesh, y_mesh, radius_mesh, inner_rad, outer_rad, arm_width, arm_angle)
+    elif isinstance(arm_width, list):
+        for section in arm_width:
+            minradius, maxradius, width = section
+            mask = _arm_shadow_masking(mask, x_mesh, y_mesh, radius_mesh, minradius, maxradius, width, arm_angle)
+
     else:
-        if arm_angle % pi/2 == 0:
-            mask = np.where(np.abs(x_mesh) < arm_width/2., False, mask)
-            mask = np.where(np.abs(y_mesh) < arm_width/2., False, mask)
-        else:
-            # first shadow
-            coeff = np.tan(arm_angle % pi)
-            distance = np.abs((coeff*x_mesh-y_mesh)/np.sqrt(coeff**2+1))
-            mask = np.where(distance < arm_width/2., False, mask)
-            # second shadow
-            coeff = np.tan(arm_angle % pi + pi/2)
-            distance = np.abs((coeff*x_mesh-y_mesh)/np.sqrt(coeff**2+1))
-            mask = np.where(distance < arm_width/2., False, mask)
+        raise Exception(f"Don't know how to handle an arm width of class {type(arm_width)}")
 
     if return_polar_meshes:
         return mask, radius_mesh, polar_angle_mesh
     else:
         return mask
+
+
+def _arm_shadow_masking(inmask, x_mesh, y_mesh, radius_mesh, minradius, maxradius, width, angle):
+    radial_mask = np.where(radius_mesh < minradius, False, inmask)
+    radial_mask = np.where(radius_mesh >= maxradius, False, radial_mask)
+    if angle % pi/2 == 0:
+        oumask = np.where(np.bitwise_and(np.abs(x_mesh) < width/2., radial_mask), False, inmask)
+        oumask = np.where(np.bitwise_and(np.abs(y_mesh) < width/2., radial_mask), False, oumask)
+    else:
+        # first shadow
+        coeff = np.tan(angle % pi)
+        distance = np.abs((coeff*x_mesh-y_mesh)/np.sqrt(coeff**2+1))
+        oumask = np.where(np.bitwise_and(distance < width/2., radial_mask), False, inmask)
+        # second shadow
+        coeff = np.tan(angle % pi + pi/2)
+        distance = np.abs((coeff*x_mesh-y_mesh)/np.sqrt(coeff**2+1))
+        oumask = np.where(np.bitwise_and(distance < width/2., radial_mask), False, oumask)
+    return oumask
