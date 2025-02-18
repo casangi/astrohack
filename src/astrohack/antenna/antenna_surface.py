@@ -303,7 +303,7 @@ class AntennaSurface:
             arm_angle = 0.0
 
         self.base_mask, self.rad, self.phi = create_aperture_mask(self.u_axis, self.v_axis, self.telescope.inlim,
-                                                                  self.telescope.diam/2,
+                                                                  self.telescope.oulim,
                                                                   arm_width=arm_width,
                                                                   arm_angle=arm_angle,
                                                                   return_polar_meshes=True)
