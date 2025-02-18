@@ -2,105 +2,52 @@ from astropy.io import fits
 import numpy as np
 from scipy.interpolate import griddata
 from matplotlib import pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-import argparse
 from astrohack.visualization.plot_tools import well_positioned_colorbar
 from astrohack.visualization.plot_tools import close_figure, get_proper_color_map
+from astrohack.utils.fits import read_fits, axis_to_fits_header, write_fits
 import datetime
 
-parser = argparse.ArgumentParser(description="Compare aperture FTIS maps produced by AIPS and AstroHACK\n"
-                                 "Beam maps are not supported")
-parser.add_argument('first', type=str, help='first aperture FITS (usually AIPS)')
-parser.add_argument('second', type=str,
-                    help='Second aperture FITS (usually AstroHACK)')
-parser.add_argument('-n', '--noise-map', action='store_true',
-                    default=False, help='Save noise images')
-parser.add_argument('-c', '--noise-clip', type=float, default=1,
-                    help='Noise clipping level (in sigmas)')
-parser.add_argument('-q', '--quiet', action='store_true', default=False,
-                    help='Do not print value to screen')
-parser.add_argument('-d', '--diameter', type=float, default=25.0,
-                    help='Dish diameter')
-parser.add_argument('-b', '--blocage', type=float, default=2.0,
-                    help='Dish inner blocage radius')
-parser.add_argument('-m', '--colormap', type=str, default='viridis',
-                    help='Colormap for non residual maps')
-parser.add_argument('-p', '--no-division', action='store_true', default=False,
-                    help='Do not perform division, i.e. factor assumed to be 1')
-parser.add_argument('-s', '--shadow-width', type=float, default=1.5,
-                    help='Arm shadow width in meters')
-parser.add_argument('-r', '--shadow-rotation', type=float, default=0,
-                     help='Arm shadow rotation in degrees,(e.g. 45 degress for some ALMA antennas)')
-parser.add_argument('-z', '--first-zscale', type=float, nargs=2, default=[None, None],
-                    help='Z scale for first image (min max)')
-parser.add_argument('-y', '--second-zscale', type=float, nargs=2, default=[None, None],
-                    help='Z scale for second image (min max)')
-parser.add_argument('-f', '--fits', action='store_true',
-                    default=False, help='Save products as FITS images')
-
-args = parser.parse_args()
+# parser = argparse.ArgumentParser(description="Compare aperture FTIS maps produced by AIPS and AstroHACK\n"
+#                                  "Beam maps are not supported")
+# parser.add_argument('first', type=str, help='first aperture FITS (usually AIPS)')
+# parser.add_argument('second', type=str,
+#                     help='Second aperture FITS (usually AstroHACK)')
+# parser.add_argument('-n', '--noise-map', action='store_true',
+#                     default=False, help='Save noise images')
+# parser.add_argument('-c', '--noise-clip', type=float, default=1,
+#                     help='Noise clipping level (in sigmas)')
+# parser.add_argument('-q', '--quiet', action='store_true', default=False,
+#                     help='Do not print value to screen')
+# parser.add_argument('-d', '--diameter', type=float, default=25.0,
+#                     help='Dish diameter')
+# parser.add_argument('-b', '--blocage', type=float, default=2.0,
+#                     help='Dish inner blocage radius')
+# parser.add_argument('-m', '--colormap', type=str, default='viridis',
+#                     help='Colormap for non residual maps')
+# parser.add_argument('-p', '--no-division', action='store_true', default=False,
+#                     help='Do not perform division, i.e. factor assumed to be 1')
+# parser.add_argument('-s', '--shadow-width', type=float, default=1.5,
+#                     help='Arm shadow width in meters')
+# parser.add_argument('-r', '--shadow-rotation', type=float, default=0,
+#                      help='Arm shadow rotation in degrees,(e.g. 45 degress for some ALMA antennas)')
+# parser.add_argument('-z', '--first-zscale', type=float, nargs=2, default=[None, None],
+#                     help='Z scale for first image (min max)')
+# parser.add_argument('-y', '--second-zscale', type=float, nargs=2, default=[None, None],
+#                     help='Z scale for second image (min max)')
+# parser.add_argument('-f', '--fits', action='store_true',
+#                     default=False, help='Save products as FITS images')
+#
+# args = parser.parse_args()
 
 def get_axis_from_header(header, iaxis):
     n_elem = header[f'NAXIS{iaxis}']
     ref = header[f'CRPIX{iaxis}']
     val = header[f'CRVAL{iaxis}']
     inc = header[f'CDELT{iaxis}']
-    axis = np.ndarray((n_elem))
+    axis = np.ndarray(n_elem)
     for i_elem in range(n_elem):
         axis[i_elem] = val+(ref-i_elem)*inc
     return axis
-
-
-def put_axis_in_header(axis, unit, iaxis, header):
-    n_elem = len(axis)
-    ref = n_elem//2
-    val = axis[ref]
-    inc = axis[1]-axis[0]
-    header[f'NAXIS{iaxis}'] = n_elem
-    header[f'CRPIX{iaxis}'] = ref
-    header[f'CRVAL{iaxis}'] = val
-    header[f'CDELT{iaxis}'] = inc
-    header[f'CUNIT{iaxis}'] = unit
-
-
-def create_fits(header, data, filename):
-    hdu = fits.PrimaryHDU(data)
-    for key, value in header.items():
-        if isinstance(value, str):
-            if '/' in value:
-                wrds = value.split('/')
-                hdu.header.set(key, wrds[0], wrds[1])
-        else:
-            hdu.header.set(key, value)
-    hdu.header.set('ORIGIN', f'Image comparison code')
-    hdu.header.set('DATE', datetime.datetime.now().strftime('%b %d %Y, %H:%M:%S'))
-    hdu.writeto(filename, overwrite=True)
-
-
-def vers_comp_recursive(ref, cur):
-    if ref[0] > cur[0]:
-        return -1
-    elif ref[0] < cur[0]:
-        return 1
-    else:
-        if len(ref) == 1:
-            return 0
-        else:
-            return vers_comp_recursive(ref[1:], cur[1:])
-
-
-def test_version(reference, current):
-    ref_num = get_numbers_from_version(reference)
-    cur_num = get_numbers_from_version(current)
-    return vers_comp_recursive(ref_num, cur_num)
-
-
-def get_numbers_from_version(version):
-    numbers = version[1:].split('.')
-    revision = int(numbers[0])
-    major = int(numbers[1])
-    minor = int(numbers[2])
-    return [revision, major,  minor]
 
 
 class image:
@@ -159,38 +106,6 @@ class image:
             self._astrohack_specific_init(header)
         else:
             raise Exception(f'Unrecognized origin:\n{header["origin"]}')
-
-
-    def _mask_image(self):
-        x_mesh, y_mesh = np.meshgrid(self.x_axis, self.y_axis)
-        self.radius = np.sqrt(x_mesh**2 + y_mesh**2)
-        mask = np.where(self.radius > self.oulim, np.nan, 1.0)
-        mask = np.where(self.radius < self.inlim, np.nan, mask)
-
-        # Arm masking
-        if self.arm_angle%np.pi == 0:
-            mask = np.where(np.abs(x_mesh) < self.arm_width/2., np.nan, mask)
-            mask = np.where(np.abs(y_mesh) < self.arm_width/2., np.nan, mask)
-        else:
-            # first shadow
-            coeff = np.tan(self.arm_angle%np.pi)
-            distance = np.abs((coeff*x_mesh-y_mesh)/np.sqrt(coeff**2+1))
-            mask = np.where(distance < self.arm_width/2., np.nan, mask)
-            # second shadow
-            coeff = np.tan(self.arm_angle%np.pi+np.pi/2)
-            distance = np.abs((coeff*x_mesh-y_mesh)/np.sqrt(coeff**2+1))
-            mask = np.where(distance < self.arm_width/2., np.nan, mask)
-
-
-        if self.no_division:
-            self.noise = None
-            self.rms = None
-        else:
-            self.noise, self.rms = self._noise_filter()
-            mask = np.where(self.data<self.noise_level*self.rms, np.nan, mask)
-
-        self.mask = mask
-        self.masked = self.data*mask
 
 
     def resample(self, ref_image):
