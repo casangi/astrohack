@@ -538,6 +538,18 @@ def create_coordinate_images(x_axis, y_axis, create_polar_coordinates=False):
 
 def create_aperture_mask(x_axis, y_axis, inner_rad, outer_rad, arm_width=None, arm_angle=0, return_polar_meshes=False):
     """
+    Create a basic aperture mask with support for feed supporting arms shadows
+    Args:
+        x_axis: The X axis of the Aperture
+        y_axis: The Y axis of the Aperture
+        inner_rad: The innermost radius for valid data in aperture
+        outer_rad: The outermost radius for valid data in aperture
+        arm_width: The width of the feed arm shadows, can be a list with limiting radii or a single value.
+        arm_angle: The angle between the arm shadows and the X axis
+        return_polar_meshes: Return the radial and polar meshes to avoid duplicate computations.
+
+    Returns:
+
     """
     x_mesh, y_mesh, radius_mesh, polar_angle_mesh = \
         create_coordinate_images(x_axis, y_axis, create_polar_coordinates=True)
