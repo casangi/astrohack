@@ -35,6 +35,27 @@ def read_fits(filename):
     return head, data
 
 
+def get_axis_from_fits_header(header, iaxis):
+    """
+    Pull axis information from FITS file and store it in a numpy array, ignores rotation in axes.
+    Args:
+        header: FITS header
+        iaxis: Which axis is to be fetched from the header.
+
+    Returns:
+        numpy array representation of axis, axis type and axis unit
+    """
+    n_elem = header[f'NAXIS{iaxis}']
+    ref = header[f'CRPIX{iaxis}']
+    inc = header[f'CDELT{iaxis}']
+    val = header[f'CRVAL{iaxis}'] + inc # This makes this routine symmetrical to the put routine.
+    axis = np.arange(n_elem)
+    axis = val + (ref-axis)*inc
+    axis_unit = header[f'CUNIT{iaxis}']
+    axis_type = header[f'CTYPE{iaxis}']
+    return axis, axis_type, axis_unit
+
+
 def write_fits(header, imagetype, data, filename, unit, origin):
     """
     Write a dictionary and a dataset to a FITS file

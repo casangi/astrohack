@@ -39,16 +39,6 @@ import datetime
 #
 # args = parser.parse_args()
 
-def get_axis_from_header(header, iaxis):
-    n_elem = header[f'NAXIS{iaxis}']
-    ref = header[f'CRPIX{iaxis}']
-    val = header[f'CRVAL{iaxis}']
-    inc = header[f'CDELT{iaxis}']
-    axis = np.ndarray(n_elem)
-    for i_elem in range(n_elem):
-        axis[i_elem] = val+(ref-i_elem)*inc
-    return axis
-
 
 class image:
 
