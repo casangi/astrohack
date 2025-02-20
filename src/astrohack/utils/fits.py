@@ -21,7 +21,7 @@ def read_fits(filename):
     """
     hdul = fits.open(filename)
     head = hdul[0].header
-    data = hdul[0].data[0, 0, :, :]
+    data = hdul[0].data
     hdul.close()
     if head["NAXIS"] != 1:
         if head["NAXIS"] < 1:
@@ -56,7 +56,7 @@ def get_axis_from_fits_header(header, iaxis):
     return axis, axis_type, axis_unit
 
 
-def write_fits(header, imagetype, data, filename, unit, origin):
+def write_fits(header, imagetype, data, filename, unit, origin, reorder_axis=True):
     """
     Write a dictionary and a dataset to a FITS file
     Args:
@@ -73,7 +73,10 @@ def write_fits(header, imagetype, data, filename, unit, origin):
     header['ORIGIN'] = f'Astrohack v{astrohack.__version__}: {origin}'
     header['DATE'] = datetime.datetime.now().strftime('%b %d %Y, %H:%M:%S')
 
-    hdu = fits.PrimaryHDU(_reorder_axes_for_fits(data))
+    if reorder_axis:
+        hdu = fits.PrimaryHDU(_reorder_axes_for_fits(data))
+    else:
+        hdu = fits.PrimaryHDU(data)
     for key in header.keys():
         hdu.header.set(key, header[key])
     hdu.writeto(add_prefix(filename, origin), overwrite=True)
