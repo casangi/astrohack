@@ -172,7 +172,7 @@ class AntennaSurface:
     def _define_amp_clip(self, clip_type, clip_level):
         self.amplitude_noise = np.where(self.base_mask, np.nan, self.amplitude)
         if clip_type is None or clip_type == 'none':
-            clip = -np.inf
+            clip = np.nanmin(self.amplitude)
         elif clip_type == 'relative':
             clip = clip_level * np.nanmax(self.amplitude)
         elif clip_type == 'absolute':
