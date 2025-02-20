@@ -22,8 +22,7 @@ class FITSImage:
 
     def __init__(self, filename, telescope_obj):
         self.telescope = telescope_obj
-        self.header, data = read_fits(filename)
-        self.data = data[0, 0, :, :]
+        self.header, self.data = read_fits(filename)
 
         self.x_axis, _, self.x_unit = get_axis_from_fits_header(self.header, 1)
         self.y_axis, _, self.y_unit = get_axis_from_fits_header(self.header, 2)
@@ -177,27 +176,27 @@ class FITSImage:
 
 
 # instatiation
-first_image = image(args.first, args.noise_clip, args.blocage,
-                   args.diameter/2, args.no_division, args.shadow_width,
-                   args.shadow_rotation)
-second_image = image(args.second, args.noise_clip, args.blocage,
-                        args.diameter/2, args.no_division, args.shadow_width,
-                        args.shadow_rotation)
-
-# Data manipulation
-second_image.resample(first_image)
-first_image.make_comparison(second_image)
-
-# Plotting
-first_image.plot(args.noise_map, args.colormap, args.first_zscale)
-second_image.plot(args.noise_map, args.colormap, args.second_zscale)
-
-if args.fits:
-    first_image.to_fits()
-    second_image.to_fits()
-
-if not args.quiet:
-    first_image.print_stats()
+# first_image = image(args.first, args.noise_clip, args.blocage,
+#                    args.diameter/2, args.no_division, args.shadow_width,
+#                    args.shadow_rotation)
+# second_image = image(args.second, args.noise_clip, args.blocage,
+#                         args.diameter/2, args.no_division, args.shadow_width,
+#                         args.shadow_rotation)
+#
+# # Data manipulation
+# second_image.resample(first_image)
+# first_image.make_comparison(second_image)
+#
+# # Plotting
+# first_image.plot(args.noise_map, args.colormap, args.first_zscale)
+# second_image.plot(args.noise_map, args.colormap, args.second_zscale)
+#
+# if args.fits:
+#     first_image.to_fits()
+#     second_image.to_fits()
+#
+# if not args.quiet:
+#     first_image.print_stats()
 
 
 
