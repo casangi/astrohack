@@ -4,7 +4,7 @@ from scipy.interpolate import griddata
 from matplotlib import pyplot as plt
 from astrohack.visualization.plot_tools import well_positioned_colorbar
 from astrohack.visualization.plot_tools import close_figure, get_proper_color_map
-from astrohack.utils.fits import read_fits, axis_to_fits_header, write_fits
+from astrohack.utils.fits import read_fits, put_axis_in_fits_header, write_fits
 import datetime
 
 # parser = argparse.ArgumentParser(description="Compare aperture FTIS maps produced by AIPS and AstroHACK\n"

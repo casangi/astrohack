@@ -73,7 +73,7 @@ def _reorder_axes_for_fits(data: np.ndarray):
         return np.flipud(data)
 
 
-def resolution_to_fits_header(header, resolution):
+def put_resolution_in_fits_header(header, resolution):
     """
     Adds resolution information to standard header keywords: BMAJ, BMIN and BPA
     Args:
@@ -95,7 +95,7 @@ def resolution_to_fits_header(header, resolution):
     return header
 
 
-def axis_to_fits_header(header: dict, axis, iaxis, axistype, unit, iswcs=True):
+def put_axis_in_fits_header(header: dict, axis, iaxis, axistype, unit, iswcs=True):
     """
     Process an axis to create a FITS compatible linear axis description
     Args:
@@ -144,7 +144,7 @@ def axis_to_fits_header(header: dict, axis, iaxis, axistype, unit, iswcs=True):
     return outheader
 
 
-def stokes_axis_to_fits_header(header, iaxis):
+def put_stokes_axis_in_fits_header(header, iaxis):
     """
     Inserts a dedicated stokes axis in the header at iaxis
     Args:

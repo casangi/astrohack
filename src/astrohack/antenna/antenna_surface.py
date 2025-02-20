@@ -14,7 +14,7 @@ from astrohack.utils.text import add_prefix, bool_to_str, format_frequency, form
 from astrohack.visualization.plot_tools import well_positioned_colorbar, create_figure_and_axes, close_figure, \
     get_proper_color_map
 
-from astrohack.utils.fits import write_fits, resolution_to_fits_header, axis_to_fits_header
+from astrohack.utils.fits import write_fits, put_resolution_in_fits_header, put_axis_in_fits_header
 
 lnbr = "\n"
 SUPPORTED_POL_STATES = ['I', 'RR', 'LL', 'XX', 'YY']
@@ -865,9 +865,9 @@ class AntennaSurface:
             'WAVELENG': self.wavelength,
             'FREQUENC': clight / self.wavelength,
         }
-        head = axis_to_fits_header(head, self.u_axis, 1, 'X----LIN', 'm')
-        head = axis_to_fits_header(head, self.v_axis, 2, 'Y----LIN', 'm')
-        head = resolution_to_fits_header(head, self.resolution)
+        head = put_axis_in_fits_header(head, self.u_axis, 1, 'X----LIN', 'm')
+        head = put_axis_in_fits_header(head, self.v_axis, 2, 'Y----LIN', 'm')
+        head = put_resolution_in_fits_header(head, self.resolution)
 
         write_fits(head, 'Amplitude', self.amplitude, add_prefix(basename, 'amplitude') + '.fits', self.amp_unit,
                    'panel')
