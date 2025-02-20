@@ -591,3 +591,9 @@ def _arm_shadow_masking(inmask, x_mesh, y_mesh, radius_mesh, minradius, maxradiu
         distance = np.abs((coeff*x_mesh-y_mesh)/np.sqrt(coeff**2+1))
         oumask = np.where(np.bitwise_and(distance < width/2., radial_mask), False, oumask)
     return oumask
+
+
+def are_axes_equal(axis_a, axis_b):
+    if axis_a.shape[0] != axis_b.shape[0]:
+        return False
+    return np.all(axis_a == axis_b)
