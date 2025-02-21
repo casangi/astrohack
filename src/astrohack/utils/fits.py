@@ -44,7 +44,7 @@ def safe_keyword_fetch(header_dict, keyword):
         return None
 
 
-def read_fits(filename):
+def read_fits(filename, header_as_dict=True):
     """
     Reads a square FITS file and do sanity checks on its dimensionality
     Args:
@@ -66,7 +66,14 @@ def read_fits(filename):
                     raise Exception(filename + " is not bi-dimensional")
     if head["NAXIS1"] != head["NAXIS2"]:
         raise Exception(filename + " does not have the same amount of pixels in the x and y axes")
-    return head, data
+
+    if header_as_dict:
+        header_dict = {}
+        for key, value in head.items():
+            header_dict[key] = value
+        return header_dict, data
+    else:
+        return head, data
 
 
 def get_axis_from_fits_header(header, iaxis, pixel_offset=True):
