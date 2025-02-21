@@ -10,6 +10,24 @@ from astropy.io import fits
 from astrohack.utils.text import add_prefix
 
 
+def get_stokes_axis_iaxis(header):
+    """
+    Get which of the axis in the header is the stokes axis
+    Args:
+        header: FITS header
+
+    Returns:
+        None if no stokes axis is found, iaxis if stokes axis is found
+    """
+    naxis = header['NAXIS']
+    for iaxis in range(naxis):
+        axis_type = safe_keyword_fetch(header, f'CTYPE{iaxis+1}')
+        if 'STOKES' in axis_type:
+            return iaxis + 1
+    return None
+
+
+
 def safe_keyword_fetch(header_dict, keyword):
     """
     Tries to fetch a keyword from a FITS header / dictionary
