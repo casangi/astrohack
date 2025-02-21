@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.interpolate import griddata
 from matplotlib import pyplot as plt
+import xarray as xr
 
 from astrohack import compute_extent, data_statistics, statistics_to_text
 from astrohack.utils import are_axes_equal
@@ -159,6 +160,30 @@ class FITSImage:
             data_stats = data_statistics(data)
             ax.set_title(statistics_to_text(data_stats))
         close_figure(fig, title, filename, dpi, display)
+
+    def export_as_xds(self):
+        xds = xr.Dataset()
+        obj_dict = vars(self)
+
+        coords = {'x': self.x_axis, 'y': self.y_axis}
+        for key, value in obj_dict.items():
+            failed = False
+            if isinstance(value, np.ndarray):
+                if len(value.shape) == 2:
+                    xds[key] = xr.DataArray(value, dims=['x', 'y'])
+                elif len(value.shape) == 1:
+                    pass # Axes
+                else:
+                    failed = True
+            else:
+                xds.attrs[key] = value
+
+            if failed:
+                raise Exception(f"Don't know what to do with: {key}")
+        xds.assign_coords(coords)
+        return xds
+
+
 
     # def to_fits(self):
     #     fits = '.fits'
