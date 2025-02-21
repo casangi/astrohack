@@ -10,6 +10,22 @@ from astropy.io import fits
 from astrohack.utils.text import add_prefix
 
 
+def safe_keyword_fetch(header_dict, keyword):
+    """
+    Tries to fetch a keyword from a FITS header / dictionary
+    Args:
+        header_dict: FITS header / Dictionary
+        keyword: The intended keyword to fetch
+
+    Returns:
+        Keyword value if prensent, None if not present.
+    """
+    try:
+        return header_dict[keyword]
+    except KeyError:
+        return None
+
+
 def read_fits(filename):
     """
     Reads a square FITS file and do sanity checks on its dimensionality
@@ -51,8 +67,8 @@ def get_axis_from_fits_header(header, iaxis):
     val = header[f'CRVAL{iaxis}'] + inc # This makes this routine symmetrical to the put routine.
     axis = np.arange(n_elem)
     axis = val + (ref-axis)*inc
-    axis_unit = header[f'CUNIT{iaxis}']
-    axis_type = header[f'CTYPE{iaxis}']
+    axis_unit = safe_keyword_fetch(header, f'CUNIT{iaxis}')
+    axis_type = safe_keyword_fetch(header, f'CTYPE{iaxis}')
     return axis, axis_type, axis_unit
 
 
