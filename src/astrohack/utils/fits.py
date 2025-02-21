@@ -69,12 +69,13 @@ def read_fits(filename):
     return head, data
 
 
-def get_axis_from_fits_header(header, iaxis):
+def get_axis_from_fits_header(header, iaxis, pixel_offset=True):
     """
     Pull axis information from FITS file and store it in a numpy array, ignores rotation in axes.
     Args:
         header: FITS header
         iaxis: Which axis is to be fetched from the header.
+        pixel_offset: apply one pixel offset
 
     Returns:
         numpy array representation of axis, axis type and axis unit
@@ -82,7 +83,10 @@ def get_axis_from_fits_header(header, iaxis):
     n_elem = header[f'NAXIS{iaxis}']
     ref = header[f'CRPIX{iaxis}']
     inc = header[f'CDELT{iaxis}']
-    val = header[f'CRVAL{iaxis}'] + inc # This makes this routine symmetrical to the put routine.
+    if pixel_offset:
+        val = header[f'CRVAL{iaxis}'] + inc # This makes this routine symmetrical to the put routine.
+    else:
+        val = header[f'CRVAL{iaxis}']
     axis = np.arange(n_elem)
     axis = val + (ref-axis)*inc
     axis_unit = safe_keyword_fetch(header, f'CUNIT{iaxis}')
