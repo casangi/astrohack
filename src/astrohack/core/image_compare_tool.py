@@ -25,9 +25,6 @@ class FITSImage:
         self.telescope = telescope_obj
         self.header, self.data = read_fits(filename)
 
-        self.x_axis, _, self.x_unit = get_axis_from_fits_header(self.header, 1)
-        self.y_axis, _, self.y_unit = get_axis_from_fits_header(self.header, 2)
-
         stokes_iaxis = get_stokes_axis_iaxis(self.header)
 
         self.unit = self.header['BUNIT']
@@ -44,10 +41,16 @@ class FITSImage:
             raise Exception(f'FITS image has an unsupported shape: {self.data.shape}')
 
         if 'AIPS' in self.header['ORIGIN']:
+            self.x_axis, _, self.x_unit = get_axis_from_fits_header(self.header, 1, pixel_offset=False)
+            self.y_axis, _, self.y_unit = get_axis_from_fits_header(self.header, 2, pixel_offset=False)
+
             self.x_unit = 'm'
             self.y_unit = 'm'
         elif 'Astrohack' in self.header['ORIGIN']:
-            self.data = self.data.T
+            self.x_axis, _, self.x_unit = get_axis_from_fits_header(self.header, 1)
+            self.y_axis, _, self.y_unit = get_axis_from_fits_header(self.header, 2)
+
+            self.data = np.fliplr(self.data)
         else:
             raise Exception(f'Unrecognized origin:\n{self.header["origin"]}')
 
@@ -102,8 +105,8 @@ class FITSImage:
     def _mask_array(self, image_array):
         return np.where(self.base_mask, image_array, np.nan)
 
-    def plot_results(self, destination, plot_residuals=True, plot_data=False, plot_percentuals=False,
-                     plot_divided_image=False, colormap='viridis', dpi=300, display=False):
+    def plot_images(self, destination, plot_residuals=True, plot_data=False, plot_percentuals=False,
+                    plot_divided_image=False, colormap='viridis', dpi=300, display=False):
 
         extent = compute_extent(self.x_axis, self.y_axis, 0.0)
         cmap = get_proper_color_map(colormap)
@@ -117,7 +120,7 @@ class FITSImage:
                            add_statistics=True)
 
         if plot_data:
-            self._plot_map(self._mask_array(self.residuals), 'Original Data', f'Data [{self.unit}]',
+            self._plot_map(self._mask_array(self.data), 'Original Data', f'Data [{self.unit}]',
                            f'{base_name}data.png', cmap, extent, [None, None], dpi, display,
                            add_statistics=False)
 
