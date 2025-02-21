@@ -3,14 +3,12 @@ from scipy.interpolate import griddata
 from matplotlib import pyplot as plt
 import xarray as xr
 
-from astrohack import compute_extent, data_statistics, statistics_to_text
-from astrohack.utils import are_axes_equal
-from astrohack.utils.algorithms import create_aperture_mask
-from astrohack.visualization.plot_tools import well_positioned_colorbar
+from astrohack.antenna.telescope import Telescope
+from astrohack.utils.text import statistics_to_text
+from astrohack.utils.algorithms import create_aperture_mask, data_statistics, are_axes_equal
+from astrohack.visualization.plot_tools import well_positioned_colorbar, compute_extent
 from astrohack.visualization.plot_tools import close_figure, get_proper_color_map
-from astrohack.utils.fits import read_fits, put_axis_in_fits_header, write_fits, get_axis_from_fits_header, \
-    get_stokes_axis_iaxis
-import datetime
+from astrohack.utils.fits import read_fits, get_axis_from_fits_header, get_stokes_axis_iaxis
 
 
 def test_image(fits_image):
@@ -22,10 +20,38 @@ def test_image(fits_image):
 
 class FITSImage:
 
-    def __init__(self, filename, telescope_obj, istokes=0, ichan=0):
-        self.telescope = telescope_obj
-        self.header, self.data = read_fits(filename)
+    def __init__(self, filename: str, telescope_name: str):
+        # Initialization from parameters
+        self.filename = filename
+        self.telescope_name = telescope_name
+        self.rootname = '.'.join(filename.split('.')[:-1])+'.'
 
+        # Blank slate initialization
+        self.header = None
+        self.data = None
+        self.factor = 1.0
+        self.residuals = None
+        self.residuals_percent = None
+        self.divided_image = None
+        self.reference_name = None
+        self.resampled = False
+        self.x_axis = None
+        self.y_axis = None
+        self.x_unit = None
+        self.y_unit = None
+        self.unit = None
+        self.fits_name = None
+
+        if '.FITS' in filename.upper():
+            self._init_as_fits(0, 0)
+        elif '.zarr' in filename:
+            self._init_as_xds()
+        else:
+            raise Exception(f"Don't know how to read {filename}")
+
+    def _init_as_fits(self, istokes, ichan):
+        self.header, self.data = read_fits(self.filename, header_as_dict=True)
+        self.fits_name = self.filename
         stokes_iaxis = get_stokes_axis_iaxis(self.header)
 
         self.unit = self.header['BUNIT']
@@ -44,26 +70,32 @@ class FITSImage:
         if 'AIPS' in self.header['ORIGIN']:
             self.x_axis, _, self.x_unit = get_axis_from_fits_header(self.header, 1, pixel_offset=False)
             self.y_axis, _, self.y_unit = get_axis_from_fits_header(self.header, 2, pixel_offset=False)
-
             self.x_unit = 'm'
             self.y_unit = 'm'
         elif 'Astrohack' in self.header['ORIGIN']:
             self.x_axis, _, self.x_unit = get_axis_from_fits_header(self.header, 1)
             self.y_axis, _, self.y_unit = get_axis_from_fits_header(self.header, 2)
-
             self.data = np.fliplr(self.data)
         else:
             raise Exception(f'Unrecognized origin:\n{self.header["origin"]}')
+        self._create_base_mask()
 
-        self.base_mask = create_aperture_mask(self.x_axis, self.y_axis, self.telescope.inlim, self.telescope.oulim,
-                                              arm_width=self.telescope.arm_shadow_width,
-                                              arm_angle=self.telescope.arm_shadow_rotation)
-        self.rootname = '.'.join(filename.split('.')[:-1])+'.'
-        self.factor = 1.0
-        self.residuals = None
-        self.residuals_percent = None
-        self.divided_image = None
-        self.reference_name = None
+    def _init_as_xds(self):
+        xds = xr.open_zarr(self.filename)
+        for key in xds.attrs:
+            setattr(self, key, xds.attrs[key])
+
+        self.x_axis = xds.x.values
+        self.y_axis = xds.y.values
+
+        for key, value in xds.items():
+            setattr(self, key, xds[key].values)
+
+    def _create_base_mask(self):
+        telescope_obj = Telescope(self.telescope_name)
+        self.base_mask = create_aperture_mask(self.x_axis, self.y_axis, telescope_obj.inlim, telescope_obj.oulim,
+                                              arm_width=telescope_obj.arm_shadow_width,
+                                              arm_angle=telescope_obj.arm_shadow_rotation)
 
     def resample(self, ref_image):
         test_image(ref_image)
@@ -76,9 +108,8 @@ class FITSImage:
         self.x_axis = ref_image.x_axis
         self.y_axis = ref_image.y_axis
         self.data = resamp.reshape(size)
-        self.base_mask = create_aperture_mask(self.x_axis, self.y_axis, self.telescope.inlim, self.telescope.oulim,
-                                              arm_width=self.telescope.arm_shadow_width,
-                                              arm_angle=self.telescope.arm_shadow_rotation)
+        self._create_base_mask()
+        self.resampled = True
 
     def compare_difference(self, ref_image):
         test_image(ref_image)
@@ -180,10 +211,26 @@ class FITSImage:
 
             if failed:
                 raise Exception(f"Don't know what to do with: {key}")
-        xds.assign_coords(coords)
+
+        xds = xds.assign_coords(coords)
         return xds
 
+    def to_zarr(self, zarr_filename):
+        xds = self.export_as_xds()
+        xds.to_zarr(zarr_filename, mode="w", compute=True, consolidated=True)
 
+    def __repr__(self):
+        obj_dict = vars(self)
+        outstr = ''
+        for key, value in obj_dict.items():
+            if isinstance(value, np.ndarray):
+                outstr += f'{key:17s} -> {value.shape}'
+            elif isinstance(value, dict):
+                outstr += f'{key:17s} -> dict()'
+            else:
+                outstr += f'{key:17s} =  {value}'
+            outstr += '\n'
+        return outstr
 
     # def to_fits(self):
     #     fits = '.fits'
@@ -210,13 +257,13 @@ class FITSImage:
     #         create_fits(header, self.noise, f'{filename}.noise{fits}')
 
 
-    def print_stats(self):
-        print(80*'*')
-        print()
-        print(f'Mean scaling factor = {self.factor:.3}')
-        print(f'Mean Residual = {self.res_mean:.3}%')
-        print(f'Residuals RMS = {self.res_rms:.3}%')
-        print()
+    # def print_stats(self):
+    #     print(80*'*')
+    #     print()
+    #     print(f'Mean scaling factor = {self.factor:.3}')
+    #     print(f'Mean Residual = {self.res_mean:.3}%')
+    #     print(f'Residuals RMS = {self.res_rms:.3}%')
+    #     print()
 
 
 # instatiation
