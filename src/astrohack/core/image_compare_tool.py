@@ -7,7 +7,8 @@ from astrohack.utils import are_axes_equal
 from astrohack.utils.algorithms import create_aperture_mask
 from astrohack.visualization.plot_tools import well_positioned_colorbar
 from astrohack.visualization.plot_tools import close_figure, get_proper_color_map
-from astrohack.utils.fits import read_fits, put_axis_in_fits_header, write_fits, get_axis_from_fits_header
+from astrohack.utils.fits import read_fits, put_axis_in_fits_header, write_fits, get_axis_from_fits_header, \
+    get_stokes_axis_iaxis
 import datetime
 
 
@@ -20,14 +21,27 @@ def test_image(fits_image):
 
 class FITSImage:
 
-    def __init__(self, filename, telescope_obj):
+    def __init__(self, filename, telescope_obj, istokes=0, ichan=0):
         self.telescope = telescope_obj
         self.header, self.data = read_fits(filename)
 
         self.x_axis, _, self.x_unit = get_axis_from_fits_header(self.header, 1)
         self.y_axis, _, self.y_unit = get_axis_from_fits_header(self.header, 2)
 
+        stokes_iaxis = get_stokes_axis_iaxis(self.header)
+
         self.unit = self.header['BUNIT']
+
+        if len(self.data.shape) == 4:
+            if stokes_iaxis == 4:
+                self.data = self.data[istokes, ichan, ...]
+            else:
+                self.data = self.data[ichan, istokes, ...]
+
+        elif len(self.data.shape) == 2:
+            pass # image is already as expected
+        else:
+            raise Exception(f'FITS image has an unsupported shape: {self.data.shape}')
 
         if 'AIPS' in self.header['ORIGIN']:
             self.x_unit = 'm'
@@ -40,7 +54,7 @@ class FITSImage:
         self.base_mask = create_aperture_mask(self.x_axis, self.y_axis, self.telescope.inlim, self.telescope.oulim,
                                               arm_width=self.telescope.arm_shadow_width,
                                               arm_angle=self.telescope.arm_shadow_rotation)
-        self.rootname = '.'.join(filename.split('.')[:-1])
+        self.rootname = '.'.join(filename.split('.')[:-1])+'.'
         self.factor = 1.0
         self.residuals = None
         self.residuals_percent = None
@@ -88,19 +102,19 @@ class FITSImage:
     def _mask_array(self, image_array):
         return np.where(self.base_mask, image_array, np.nan)
 
-    def plot_results(self, destination, plot_data=False, plot_percentuals=False, plot_divided_image=False,
-                     colormap='viridis', dpi=300, display=False):
+    def plot_results(self, destination, plot_residuals=True, plot_data=False, plot_percentuals=False,
+                     plot_divided_image=False, colormap='viridis', dpi=300, display=False):
 
         extent = compute_extent(self.x_axis, self.y_axis, 0.0)
         cmap = get_proper_color_map(colormap)
         base_name = f'{destination}/{self.rootname}'
 
-        if self.residuals is None:
-            raise Exception("Cannot plot results as they don't exist yet.")
-
-        self._plot_map(self._mask_array(self.residuals), 'Residuals', f'Residuals [{self.unit}]',
-                       f'{base_name}residuals.png', cmap, extent, 'Symmetrical', dpi, display,
-                       add_statistics=True)
+        if plot_residuals:
+            if self.residuals is None:
+                raise Exception("Cannot plot results as they don't exist yet.")
+            self._plot_map(self._mask_array(self.residuals), 'Residuals', f'Residuals [{self.unit}]',
+                           f'{base_name}residuals.png', cmap, extent, 'symmetrical', dpi, display,
+                           add_statistics=True)
 
         if plot_data:
             self._plot_map(self._mask_array(self.residuals), 'Original Data', f'Data [{self.unit}]',
@@ -108,8 +122,10 @@ class FITSImage:
                            add_statistics=False)
 
         if plot_percentuals:
+            if self.residuals is None:
+                raise Exception("Cannot plot results as they don't exist yet.")
             self._plot_map(self._mask_array(self.residuals_percent), 'Residuals in %', f'Residuals [%]',
-                           f'{base_name}residuals_percent.png', cmap, extent, 'Symmetrical', dpi, display,
+                           f'{base_name}residuals_percent.png', cmap, extent, 'symmetrical', dpi, display,
                            add_statistics=True)
 
         if plot_divided_image:
