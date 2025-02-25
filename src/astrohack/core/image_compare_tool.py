@@ -48,13 +48,13 @@ class FITSImage:
         self.original_data = None
 
         if '.FITS' in filename.upper():
-            self._init_as_fits(0, 0)
+            self._init_as_fits()
         elif '.zarr' in filename:
             self._init_as_xds()
         else:
             raise Exception(f"Don't know how to read {filename}")
 
-    def _init_as_fits(self, istokes, ichan):
+    def _init_as_fits(self, istokes=0, ichan=0):
         self.header, self.data = read_fits(self.filename, header_as_dict=True)
         self.original_data = np.copy(self.data)
         self.fits_name = self.filename
@@ -273,40 +273,3 @@ class FITSImage:
                             unit = self.unit
                         filename = f'{destination}/{self.rootname}{key}{ext_fits}'
                         write_fits(out_header, key, np.fliplr(value.astype(float)), filename, unit, reorder_axis=False)
-
-    # def print_stats(self):
-    #     print(80*'*')
-    #     print()
-    #     print(f'Mean scaling factor = {self.factor:.3}')
-    #     print(f'Mean Residual = {self.res_mean:.3}%')
-    #     print(f'Residuals RMS = {self.res_rms:.3}%')
-    #     print()
-
-
-# instatiation
-# first_image = image(args.first, args.noise_clip, args.blocage,
-#                    args.diameter/2, args.no_division, args.shadow_width,
-#                    args.shadow_rotation)
-# second_image = image(args.second, args.noise_clip, args.blocage,
-#                         args.diameter/2, args.no_division, args.shadow_width,
-#                         args.shadow_rotation)
-#
-# # Data manipulation
-# second_image.resample(first_image)
-# first_image.make_comparison(second_image)
-#
-# # Plotting
-# first_image.plot(args.noise_map, args.colormap, args.first_zscale)
-# second_image.plot(args.noise_map, args.colormap, args.second_zscale)
-#
-# if args.fits:
-#     first_image.to_fits()
-#     second_image.to_fits()
-#
-# if not args.quiet:
-#     first_image.print_stats()
-
-
-
-
-
