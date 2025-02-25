@@ -2,13 +2,15 @@ import numpy as np
 from scipy.interpolate import griddata
 from matplotlib import pyplot as plt
 import xarray as xr
+import pathlib
 
 from astrohack.antenna.telescope import Telescope
 from astrohack.utils.text import statistics_to_text
 from astrohack.utils.algorithms import create_aperture_mask, data_statistics, are_axes_equal
 from astrohack.visualization.plot_tools import well_positioned_colorbar, compute_extent
 from astrohack.visualization.plot_tools import close_figure, get_proper_color_map
-from astrohack.utils.fits import read_fits, get_axis_from_fits_header, get_stokes_axis_iaxis
+from astrohack.utils.fits import read_fits, get_axis_from_fits_header, get_stokes_axis_iaxis, put_axis_in_fits_header, \
+    write_fits
 
 
 def test_image(fits_image):
@@ -247,30 +249,30 @@ class FITSImage:
             outstr += '\n'
         return outstr
 
-    # def to_fits(self):
-    #     fits = '.fits'
-    #     header = self.header.copy()
-    #     put_axis_in_header(self.x_axis, self.x_unit, 1, header)
-    #     put_axis_in_header(self.y_axis, self.y_unit, 2, header)
-    #
-    #     if self.resampled:
-    #         filename = f'comp_{self.rootname}.resampled'
-    #     else:
-    #         filename = f'comp_{self.rootname}'
-    #
-    #     create_fits(header, self.masked, f'{filename}.masked{fits}')
-    #     create_fits(header, self.mask, f'{filename}.mask{fits}')
-    #
-    #     if self.division is not None:
-    #         create_fits(header, self.division, f'{filename}.division{fits}')
-    #
-    #     if self.residuals is not None:
-    #         create_fits(header, self.residuals, f'{filename}.residual{fits}')
-    #
-    #
-    #     if self.noise is not None:
-    #         create_fits(header, self.noise, f'{filename}.noise{fits}')
+    def export_to_fits(self, destination):
+        pathlib.Path(destination).mkdir(exist_ok=True)
+        ext_fits = '.fits'
+        out_header = self.header.copy()
 
+        put_axis_in_fits_header(out_header, self.x_axis, 1, '', self.x_unit)
+        put_axis_in_fits_header(out_header, self.y_axis, 2, '', self.y_unit)
+
+        obj_dict = vars(self)
+        for key, value in obj_dict.items():
+            if isinstance(value, np.ndarray):
+                if len(value.shape) == 2:
+                    if 'original' in key:
+                        pass
+                    else:
+                        if key == 'base_mask' or key == 'divided_image':
+                            unit = ''
+
+                        elif key == 'residuals_percent':
+                            unit = '%'
+                        else:
+                            unit = self.unit
+                        filename = f'{destination}/{self.rootname}{key}{ext_fits}'
+                        write_fits(out_header, key, np.fliplr(value.astype(float)), filename, unit, reorder_axis=False)
 
     # def print_stats(self):
     #     print(80*'*')
