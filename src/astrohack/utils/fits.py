@@ -101,7 +101,7 @@ def get_axis_from_fits_header(header, iaxis, pixel_offset=True):
     return axis, axis_type, axis_unit
 
 
-def write_fits(header, imagetype, data, filename, unit, origin, reorder_axis=True):
+def write_fits(header, imagetype, data, filename, unit, origin=None, reorder_axis=True):
     """
     Write a dictionary and a dataset to a FITS file
     Args:
@@ -111,6 +111,7 @@ def write_fits(header, imagetype, data, filename, unit, origin, reorder_axis=Tru
         filename: The name of the output file
         unit: to be set to bunit
         origin: Which astrohack mds has created the FITS being written
+        reorder_axis: Reorder data axes so that they are compatible with regular FITS ordering
     """
 
     header['BUNIT'] = unit
@@ -118,13 +119,20 @@ def write_fits(header, imagetype, data, filename, unit, origin, reorder_axis=Tru
     header['ORIGIN'] = f'Astrohack v{astrohack.__version__}: {origin}'
     header['DATE'] = datetime.datetime.now().strftime('%b %d %Y, %H:%M:%S')
 
+    if origin is None:
+        header['ORIGIN'] = f'Astrohack v{astrohack.__version__}'
+        outfile = filename
+    else:
+        header['ORIGIN'] = f'Astrohack v{astrohack.__version__}: {origin}'
+        outfile = add_prefix(filename, origin)
+
     if reorder_axis:
         hdu = fits.PrimaryHDU(_reorder_axes_for_fits(data))
     else:
         hdu = fits.PrimaryHDU(data)
     for key in header.keys():
         hdu.header.set(key, header[key])
-    hdu.writeto(add_prefix(filename, origin), overwrite=True)
+    hdu.writeto(outfile, overwrite=True)
 
     return
 
