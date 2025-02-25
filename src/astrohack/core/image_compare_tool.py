@@ -37,10 +37,13 @@ class FITSImage:
         self.resampled = False
         self.x_axis = None
         self.y_axis = None
+        self.original_x_axis = None
+        self.original_y_axis = None
         self.x_unit = None
         self.y_unit = None
         self.unit = None
         self.fits_name = None
+        self.original_data = None
 
         if '.FITS' in filename.upper():
             self._init_as_fits(0, 0)
@@ -51,6 +54,7 @@ class FITSImage:
 
     def _init_as_fits(self, istokes, ichan):
         self.header, self.data = read_fits(self.filename, header_as_dict=True)
+        self.original_data = np.copy(self.data)
         self.fits_name = self.filename
         stokes_iaxis = get_stokes_axis_iaxis(self.header)
 
@@ -63,7 +67,7 @@ class FITSImage:
                 self.data = self.data[ichan, istokes, ...]
 
         elif len(self.data.shape) == 2:
-            pass # image is already as expected
+            pass  # image is already as expected
         else:
             raise Exception(f'FITS image has an unsupported shape: {self.data.shape}')
 
@@ -79,6 +83,8 @@ class FITSImage:
         else:
             raise Exception(f'Unrecognized origin:\n{self.header["origin"]}')
         self._create_base_mask()
+        self.original_x_axis = np.copy(self.x_axis)
+        self.original_y_axis = np.copy(self.y_axis)
 
     def _init_as_xds(self):
         filename = self.filename
@@ -88,6 +94,8 @@ class FITSImage:
 
         self.x_axis = xds.x.values
         self.y_axis = xds.y.values
+        self.original_x_axis = xds.original_x.values
+        self.original_y_axis = xds.original_y.values
 
         for key, value in xds.items():
             setattr(self, key, xds[key].values)
@@ -199,12 +207,16 @@ class FITSImage:
         xds = xr.Dataset()
         obj_dict = vars(self)
 
-        coords = {'x': self.x_axis, 'y': self.y_axis}
+        coords = {'x': self.x_axis, 'y': self.y_axis,
+                  'original_x': self.original_x_axis, 'original_y': self.original_y_axis}
         for key, value in obj_dict.items():
             failed = False
             if isinstance(value, np.ndarray):
                 if len(value.shape) == 2:
-                    xds[key] = xr.DataArray(value, dims=['x', 'y'])
+                    if 'original' in key:
+                        xds[key] = xr.DataArray(value, dims=['original_x', 'original_y'])
+                    else:
+                        xds[key] = xr.DataArray(value, dims=['x', 'y'])
                 elif len(value.shape) == 1:
                     pass # Axes
                 else:
