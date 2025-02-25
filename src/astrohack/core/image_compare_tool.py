@@ -81,6 +81,7 @@ class FITSImage:
         self._create_base_mask()
 
     def _init_as_xds(self):
+        filename = self.filename
         xds = xr.open_zarr(self.filename)
         for key in xds.attrs:
             setattr(self, key, xds.attrs[key])
@@ -90,6 +91,8 @@ class FITSImage:
 
         for key, value in xds.items():
             setattr(self, key, xds[key].values)
+
+        self.filename = filename
 
     def _create_base_mask(self):
         telescope_obj = Telescope(self.telescope_name)
