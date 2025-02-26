@@ -1,5 +1,6 @@
 import matplotlib.image
 import numpy as np
+from scipy.stats import linregress
 
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle
@@ -218,7 +219,10 @@ def scatter_plot(
         residuals_marker='+',
         residuals_color='black',
         residuals_linestyle='',
-        residuals_label='residuals'
+        residuals_label='residuals',
+        add_regression=False,
+        regression_linestyle='-',
+        regression_color='black'
 ):
     """
     Do scatter simple scatter plots of data to a plotting axis
@@ -245,12 +249,19 @@ def scatter_plot(
         model_color: Color of the model marker
         model_linestyle: Line style for connecting model points
         model_label: Label for model points
+        plot_residuals: Add a residuals subplot at the bottom when a model is provided
+        residuals_marker: Marker for residuals
+        residuals_color: Color for residual markers
+        residuals_linestyle: Line style for residuals
+        residuals_label: Label for residuals
+        add_regression: Add a linear regression between X and y data
+        regression_linestyle: Line style for the regression plot
+        regression_color: Color for the regression plot
     """
     ax.plot(xdata, ydata, ls=data_linestyle, marker=data_marker, color=data_color, label=data_label)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    if title is not None:
-        ax.set_title(title)
+
     if xlim is not None:
         ax.set_xlim(xlim)
     if ylim is not None:
@@ -274,6 +285,13 @@ def scatter_plot(
                 rotation=20
             )
 
+    if add_regression:
+        slope, intercept, _, _, _ = linregress(xdata, ydata)
+        regression_label = f'y = {slope:.4f}*x + {intercept:.4f}'
+        yregress = slope*xdata + intercept
+        ax.plot(xdata, yregress, ls=regression_linestyle, color=regression_color, label=regression_label, lw=2)
+        ax.legend()
+
     if model is not None:
         ax.plot(xdata, model, ls=model_linestyle, marker=model_marker, color=model_color, label=model_label)
         ax.legend()
@@ -296,5 +314,8 @@ def scatter_plot(
 
             ax_res.axhline(0, color=hv_color, ls=hv_linestyle)
             ax_res.set_ylabel('Residuals')
+
+    if title is not None:
+        ax.set_title(title)
 
     return
