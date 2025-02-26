@@ -89,3 +89,36 @@ def compute_graph(looping_dict, chunk_function, param_dict, key_order, parallel=
         if parallel:
             dask.compute(delayed_list)
         return True
+
+
+def compute_graph_from_lists(param_dict, chunk_function, looping_key_list, parallel=False):
+    """
+    Creates and executes a graph based on entries in a parameter dictionary that are lists
+    Args:
+        param_dict: The parameter dictionary
+        chunk_function: The function for the operation chunk
+        looping_key_list: The keys that are lists in the parameter dictionaries over which to loop over
+        parallel: execute graph in parallel?
+
+    Returns:
+        A list containing the returns of the calls to the chunk function.
+    """
+    niter = len(param_dict[looping_key_list[0]])
+
+    delayed_list = []
+    result_list = []
+    for i_iter in range(niter):
+        this_param = param_dict.copy()
+        for key in looping_key_list:
+            this_param[f'this_{key}'] = param_dict[key][i_iter]
+
+        if parallel:
+            delayed_list.append(dask.delayed(chunk_function)(dask.delayed(this_param)))
+        else:
+            delayed_list.append(0)
+            result_list.append(chunk_function(this_param))
+
+    if parallel:
+        result_list = dask.compute(delayed_list)
+
+    return result_list
