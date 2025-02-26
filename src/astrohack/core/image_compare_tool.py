@@ -296,3 +296,35 @@ class FITSImage:
                      ydata, f'{self.filename} [{self.unit}]', add_regression=True)
         close_figure(fig, 'Scatter plot against reference image', f'{destination}/{self.rootname}scatter.png',
                      dpi, display)
+
+
+def image_comparison_chunk(compare_params):
+
+    image = FITSImage(compare_params['this_image'], compare_params['telescope_name'])
+    ref_image = FITSImage(compare_params['this_reference'], compare_params['telescope_name'])
+    plot_data = compare_params['plot_data']
+    plot_percentuals = compare_params['plot_percentuals']
+    plot_divided = compare_params['plot_divided_image']
+    destination = compare_params['destination']
+    colormap = compare_params['colormap']
+    dpi = compare_params['dpi']
+    display = compare_params['display']
+
+    if compare_params['comparison'] == 'direct':
+        image.compare_difference(ref_image)
+        image.plot_images(destination, plot_data, plot_percentuals, False, colormap=colormap, dpi=dpi,
+                          display=display)
+    elif compare_params['comparison'] == 'scaled':
+        image.compare_scaled_difference(ref_image)
+        image.plot_images(destination, plot_data, plot_percentuals, plot_divided, colormap=colormap, dpi=dpi,
+                          display=display)
+    else:
+        raise Exception(f'Unknown comparison type {compare_params["comparison"]}')
+
+    if compare_params['export_to_fits']:
+        image.export_to_fits(destination)
+
+    reference_node = xr.DataTree(name=ref_image.filename, data=ref_image.export_as_xds())
+    tree_node = xr.DataTree(name=image.filename, data=image.export_as_xds(), children={'Reference': reference_node})
+
+    return tree_node
