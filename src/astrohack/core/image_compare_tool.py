@@ -8,7 +8,7 @@ from astrohack.antenna.telescope import Telescope
 from astrohack.utils.text import statistics_to_text
 from astrohack.utils.algorithms import create_aperture_mask, data_statistics, are_axes_equal
 from astrohack.visualization.plot_tools import well_positioned_colorbar, compute_extent
-from astrohack.visualization.plot_tools import close_figure, get_proper_color_map
+from astrohack.visualization.plot_tools import close_figure, get_proper_color_map, scatter_plot
 from astrohack.utils.fits import read_fits, get_axis_from_fits_header, get_stokes_axis_iaxis, put_axis_in_fits_header, \
     write_fits
 
@@ -280,3 +280,16 @@ class FITSImage:
                             unit = self.unit
                         filename = f'{destination}/{self.rootname}{key}{ext_fits}'
                         write_fits(out_header, key, np.fliplr(value.astype(float)), filename, unit, reorder_axis=False)
+
+    def scatter_plot(self, ref_image, dpi=300, display=False):
+        test_image(ref_image)
+        if not self.image_has_same_sampling(ref_image):
+            self.resample(ref_image)
+
+        fig, ax = plt.subplots(1, 1, figsize=[10, 8])
+        ydata = self.data[self.base_mask]
+        xdata = ref_image.data[self.base_mask]
+        scatter_plot(ax, xdata, f'Reference image {ref_image.filename} [{ref_image.unit}]',
+                     ydata, f'{self.filename} [{self.unit}]')
+        close_figure(fig, 'Scatter plot against reference image', f'{self.rootname}scatter.png', dpi, display)
+
