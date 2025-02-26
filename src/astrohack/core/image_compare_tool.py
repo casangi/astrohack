@@ -63,7 +63,6 @@ class FITSImage:
 
     def _init_as_fits(self, istokes=0, ichan=0):
         self.header, self.data = read_fits(self.filename, header_as_dict=True)
-        self.original_data = np.copy(self.data)
         self.fits_name = self.filename
         stokes_iaxis = get_stokes_axis_iaxis(self.header)
 
@@ -74,11 +73,12 @@ class FITSImage:
                 self.data = self.data[istokes, ichan, ...]
             else:
                 self.data = self.data[ichan, istokes, ...]
-
         elif len(self.data.shape) == 2:
             pass  # image is already as expected
         else:
             raise Exception(f'FITS image has an unsupported shape: {self.data.shape}')
+
+        self.original_data = np.copy(self.data)
 
         if 'AIPS' in self.header['ORIGIN']:
             self.x_axis, _, self.x_unit = get_axis_from_fits_header(self.header, 1, pixel_offset=False)
@@ -301,7 +301,7 @@ class FITSImage:
 def image_comparison_chunk(compare_params):
 
     image = FITSImage(compare_params['this_image'], compare_params['telescope_name'])
-    ref_image = FITSImage(compare_params['this_reference'], compare_params['telescope_name'])
+    ref_image = FITSImage(compare_params['this_reference_image'], compare_params['telescope_name'])
     plot_data = compare_params['plot_data']
     plot_percentuals = compare_params['plot_percentuals']
     plot_divided = compare_params['plot_divided_image']
@@ -324,7 +324,11 @@ def image_comparison_chunk(compare_params):
     if compare_params['export_to_fits']:
         image.export_to_fits(destination)
 
-    reference_node = xr.DataTree(name=ref_image.filename, data=ref_image.export_as_xds())
-    tree_node = xr.DataTree(name=image.filename, data=image.export_as_xds(), children={'Reference': reference_node})
+    if compare_params['plot_scatter']:
+        image.scatter_plot(destination, ref_image, dpi=dpi, display=display)
+
+    img_node = xr.DataTree(name=image.filename, dataset=image.export_as_xds())
+    ref_node = xr.DataTree(name=ref_image.filename, dataset=ref_image.export_as_xds())
+    tree_node = xr.DataTree(name=image.rootname[:-1], children={'Reference': ref_node, 'Image': img_node})
 
     return tree_node
