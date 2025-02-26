@@ -107,7 +107,7 @@ class FITSImage:
         self.original_y_axis = xds.original_y.values
 
         for key, value in xds.items():
-            setattr(self, key, xds[key].values)
+            setattr(self, str(key), xds[key].values)
 
         self.filename = filename
 
@@ -226,7 +226,7 @@ class FITSImage:
                     else:
                         xds[key] = xr.DataArray(value, dims=['x', 'y'])
                 elif len(value.shape) == 1:
-                    pass # Axes
+                    pass  # Axes
                 else:
                     failed = True
             else:
