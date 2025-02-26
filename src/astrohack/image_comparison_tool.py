@@ -5,6 +5,7 @@ import pathlib
 import toolviper.utils.logger as logger
 
 from astrohack.core.image_compare_tool import image_comparison_chunk
+from astrohack.utils.graph import compute_graph_from_lists
 
 
 def compare_fits_image(
@@ -13,6 +14,7 @@ def compare_fits_image(
         telescope_name: str,
         destination: str,
         comparison: str = 'direct',
+        zarr_container_name: str = None,
         plot_data: bool = False,
         plot_percentuals: bool = False,
         plot_divided_image: bool = False,
@@ -20,7 +22,8 @@ def compare_fits_image(
         export_to_fits: bool = False,
         colormap: str = 'viridis',
         dpi: int = 300,
-        display: bool = False
+        display: bool = False,
+        parallel: bool = False
 ):
 
     if isinstance(image, str):
@@ -34,7 +37,13 @@ def compare_fits_image(
 
     param_dict = locals()
     pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
-    for i_img in range(len(image)):
-        param_dict['this_image'] = image[i_img]
-        param_dict['this_reference_image'] = reference_image[i_img]
-        image_comparison_chunk(param_dict)
+
+    result_list = compute_graph_from_lists(param_dict, image_comparison_chunk, ['image', 'reference_image'], parallel)
+
+    if zarr_container_name is not None:
+        root = xr.DataTree(name='Root')
+        for item in result_list:
+            tree_node = item[0]
+            root = root.assign({tree_node.name: tree_node})
+
+        root.to_zarr(zarr_container_name, mode='w', consolidated=True)
