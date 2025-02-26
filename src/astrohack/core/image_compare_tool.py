@@ -23,6 +23,13 @@ def test_image(fits_image):
 class FITSImage:
 
     def __init__(self, filename: str, telescope_name: str):
+        """
+        Initializes the FITSImage object from a file on disk
+        Args:
+            filename: Name of the file on disk, may be .FITS file or a .zarr xds with a disk representation of a \
+            FITSImage object
+            telescope_name: Name of the telescope used on the images so that masking can be properly applied.
+        """
         # Initialization from parameters
         self.filename = filename
         self.telescope_name = telescope_name
