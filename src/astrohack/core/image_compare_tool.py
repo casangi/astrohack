@@ -138,7 +138,7 @@ class FITSImage:
 
         self.residuals = ref_image.data - (self.data * self.factor)
         self.residuals_percent = 100 * self.residuals/ref_image.data
-        self.reference_name = ref_image.rootname
+        self.reference_name = ref_image.filename
 
     def compare_scaled_difference(self, ref_image, rejection=10):
         test_image(ref_image)
@@ -157,19 +157,18 @@ class FITSImage:
     def _mask_array(self, image_array):
         return np.where(self.base_mask, image_array, np.nan)
 
-    def plot_images(self, destination, plot_residuals=True, plot_data=False, plot_percentuals=False,
+    def plot_images(self, destination, plot_data=False, plot_percentuals=False,
                     plot_divided_image=False, colormap='viridis', dpi=300, display=False):
 
         extent = compute_extent(self.x_axis, self.y_axis, 0.0)
         cmap = get_proper_color_map(colormap)
         base_name = f'{destination}/{self.rootname}'
 
-        if plot_residuals:
-            if self.residuals is None:
-                raise Exception("Cannot plot results as they don't exist yet.")
-            self._plot_map(self._mask_array(self.residuals), 'Residuals', f'Residuals [{self.unit}]',
-                           f'{base_name}residuals.png', cmap, extent, 'symmetrical', dpi, display,
-                           add_statistics=True)
+        if self.residuals is None:
+            raise Exception("Cannot plot results as they don't exist yet.")
+        self._plot_map(self._mask_array(self.residuals), f'Residuals, ref={self.reference_name}',
+                       f'Residuals [{self.unit}]', f'{base_name}residuals.png', cmap, extent,
+                       'symmetrical', dpi, display, add_statistics=True)
 
         if plot_data:
             self._plot_map(self._mask_array(self.data), 'Original Data', f'Data [{self.unit}]',
@@ -179,16 +178,16 @@ class FITSImage:
         if plot_percentuals:
             if self.residuals is None:
                 raise Exception("Cannot plot results as they don't exist yet.")
-            self._plot_map(self._mask_array(self.residuals_percent), 'Residuals in %', f'Residuals [%]',
-                           f'{base_name}residuals_percent.png', cmap, extent, 'symmetrical', dpi, display,
-                           add_statistics=True)
+            self._plot_map(self._mask_array(self.residuals_percent), f'Residuals in %, ref={self.reference_name}',
+                           f'Residuals [%]', f'{base_name}residuals_percent.png', cmap, extent,
+                           'symmetrical', dpi, display, add_statistics=True)
 
         if plot_divided_image:
             if self.divided_image is None:
                 raise Exception("Cannot plot a divided image that does not exist.")
-            self._plot_map(self._mask_array(self.divided_image), 'Divided image', f'Division [ ]',
-                           f'{base_name}divided.png', cmap, extent, [None, None], dpi, display,
-                           add_statistics=True)
+            self._plot_map(self._mask_array(self.divided_image), f'Divided image, ref={self.reference_name}',
+                           f'Division [ ]', f'{base_name}divided.png', cmap, extent, [None, None],
+                           dpi, display, add_statistics=True)
 
     def _plot_map(self, data, title, zlabel, filename, cmap, extent, zscale, dpi, display, add_statistics=False):
         fig, ax = plt.subplots(1, 1, figsize=[10, 8])
@@ -281,15 +280,19 @@ class FITSImage:
                         filename = f'{destination}/{self.rootname}{key}{ext_fits}'
                         write_fits(out_header, key, np.fliplr(value.astype(float)), filename, unit, reorder_axis=False)
 
-    def scatter_plot(self, ref_image, dpi=300, display=False):
+    def scatter_plot(self, destination, ref_image, dpi=300, display=False):
         test_image(ref_image)
         if not self.image_has_same_sampling(ref_image):
             self.resample(ref_image)
 
         fig, ax = plt.subplots(1, 1, figsize=[10, 8])
-        ydata = self.data[self.base_mask]
-        xdata = ref_image.data[self.base_mask]
-        scatter_plot(ax, xdata, f'Reference image {ref_image.filename} [{ref_image.unit}]',
-                     ydata, f'{self.filename} [{self.unit}]')
-        close_figure(fig, 'Scatter plot against reference image', f'{self.rootname}scatter.png', dpi, display)
 
+        scatter_mask = np.isfinite(ref_image.data)
+        scatter_mask = np.where(np.isfinite(self.data), scatter_mask, False)
+        ydata = self.data[scatter_mask]
+        xdata = ref_image.data[scatter_mask]
+
+        scatter_plot(ax, xdata, f'Reference image {ref_image.filename} [{ref_image.unit}]',
+                     ydata, f'{self.filename} [{self.unit}]', add_regression=True)
+        close_figure(fig, 'Scatter plot against reference image', f'{destination}/{self.rootname}scatter.png',
+                     dpi, display)
