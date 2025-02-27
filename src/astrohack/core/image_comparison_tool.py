@@ -53,17 +53,60 @@ class FITSImage:
 
     @classmethod
     def from_xds(cls, xds):
+        """
+        Initialize a FITSImage object using as a base a Xarray dataset
+        Args:
+            xds: Xarray dataset
+
+        Returns:
+            FITSImage object initialized from a xds
+        """
         return_obj = cls()
         return_obj._init_as_xds(xds)
         return return_obj
 
     @classmethod
     def from_fits_file(cls, fits_filename, telescope_name):
+        """
+        Initialize a FITSImage object using as a base a FITS file.
+        Args:
+            fits_filename: FITS file on disk
+            telescope_name: Name of the telescope used
+
+        Returns:
+            FITSImage object initialized from a FITS file
+        """
         return_obj = cls()
         return_obj._init_as_fits(fits_filename, telescope_name)
         return return_obj
 
+    @classmethod
+    def from_zarr(cls, zarr_filename):
+        """
+        Initialize a FITSImage object using as a base a Xarray dataset store on disk in a zarr container
+        Args:
+            zarr_filename: Xarray dataset on disk as a zarr container
+
+        Returns:
+            FITSImage object initialized from a xds
+        """
+        return_obj = cls()
+        xds = xr.open_zarr(zarr_filename)
+        return_obj._init_as_xds(xds)
+        return return_obj
+
     def _init_as_fits(self, fits_filename, telescope_name, istokes=0, ichan=0):
+        """
+        Backend for FITSImage.from_fits_file
+        Args:
+            fits_filename: FITS file on disk
+            telescope_name: Name of the telescope used
+            istokes: Stokes axis element to be fetched, should always be zero (singleton stokes axis or fetching I)
+            ichan: Channel axis element to be fetched, should be zero for most cases, unless image has multiple channels
+
+        Returns:
+            None
+        """
         self.filename = fits_filename
         self.telescope_name = telescope_name
         self.rootname = '.'.join(fits_filename.split('.')[:-1])+'.'
@@ -100,6 +143,13 @@ class FITSImage:
         self.original_y_axis = np.copy(self.y_axis)
 
     def _init_as_xds(self, xds):
+        """
+        Backend for FITSImage.from_xds
+        Args:
+            xds: Xarray DataSet
+        Returns:
+            None
+        """
         for key in xds.attrs:
             setattr(self, key, xds.attrs[key])
 
@@ -112,12 +162,25 @@ class FITSImage:
             setattr(self, str(key), xds[key].values)
 
     def _create_base_mask(self):
+        """
+        Create a base mask based on telescope parameters such as arm shadows.
+        Returns:
+            None
+        """
         telescope_obj = Telescope(self.telescope_name)
         self.base_mask = create_aperture_mask(self.x_axis, self.y_axis, telescope_obj.inlim, telescope_obj.oulim,
                                               arm_width=telescope_obj.arm_shadow_width,
                                               arm_angle=telescope_obj.arm_shadow_rotation)
 
     def resample(self, ref_image):
+        """
+        Resamples the data on this object onto the grid in ref_image
+        Args:
+            ref_image: Reference FITSImage object
+
+        Returns:
+            None
+        """
         test_image(ref_image)
         x_mesh_orig, y_mesh_orig = np.meshgrid(self.x_axis, self.y_axis, indexing='ij')
         x_mesh_dest, y_mesh_dest = np.meshgrid(ref_image.x_axis, ref_image.y_axis, indexing='ij')
@@ -132,6 +195,14 @@ class FITSImage:
         self.resampled = True
 
     def compare_difference(self, ref_image):
+        """
+        Does the difference comparison between self and ref_image.
+        Args:
+            ref_image: Reference FITSImage object
+
+        Returns:
+            None
+        """
         test_image(ref_image)
         if not self.image_has_same_sampling(ref_image):
             self.resample(ref_image)
@@ -141,6 +212,15 @@ class FITSImage:
         self.reference_name = ref_image.filename
 
     def compare_scaled_difference(self, ref_image, rejection=10):
+        """
+        Does the scaled difference comparison between self and ref_image.
+        Args:
+            ref_image: Reference FITSImage object
+            rejection: rejection level for scaling factor
+
+        Returns:
+            None
+        """
         test_image(ref_image)
         if not self.image_has_same_sampling(ref_image):
             self.resample(ref_image)
@@ -151,14 +231,44 @@ class FITSImage:
         self.compare_difference(ref_image)
 
     def image_has_same_sampling(self, ref_image):
+        """
+        Tests if self has the same X and Y sampling as ref_image
+        Args:
+            ref_image: Reference FITSImage object
+
+        Returns:
+            True or False
+        """
         test_image(ref_image)
         return are_axes_equal(self.x_axis, ref_image.x_axis) and are_axes_equal(self.y_axis, ref_image.y_axis)
 
     def _mask_array(self, image_array):
+        """
+        Applies base mask to image_array
+        Args:
+            image_array: Data array to be masked
+
+        Returns:
+            Masked array
+        """
         return np.where(self.base_mask, image_array, np.nan)
 
     def plot_images(self, destination, plot_data=False, plot_percentuals=False,
                     plot_divided_image=False, colormap='viridis', dpi=300, display=False):
+        """
+        Plot image contents of the FITSImage object, always plots the residuals when called
+        Args:
+            destination: Location onto which save plot files
+            plot_data: Also plot data array?
+            plot_percentuals: Also plot percentual residuals array?
+            plot_divided_image: Also plot divided image?
+            colormap: Colormap name for image plots
+            dpi: png resolution on disk
+            display: Show interactive view of plots
+
+        Returns:
+            None
+        """
 
         extent = compute_extent(self.x_axis, self.y_axis, 0.0)
         cmap = get_proper_color_map(colormap)
@@ -190,6 +300,23 @@ class FITSImage:
                            dpi, display, add_statistics=True)
 
     def _plot_map(self, data, title, zlabel, filename, cmap, extent, zscale, dpi, display, add_statistics=False):
+        """
+        Backend for plot_images
+        Args:
+            data: Data array to be plotted
+            title: Title to appear on plot
+            zlabel: Label for the colorbar
+            filename: name for the png file on disk
+            cmap: Colormap object for plots
+            extent: extents of the X and Y axes
+            zscale: Constraints on the Z axes.
+            dpi: png resolution on disk
+            display: Show interactive view of plots
+            add_statistics: Add simple statistics to plot's subtitle
+
+        Returns:
+            None
+        """
         fig, ax = plt.subplots(1, 1, figsize=[10, 8])
         if zscale == 'symmetrical':
             scale = max(np.abs(np.nanmin(data)), np.abs(np.nanmax(data)))
@@ -212,6 +339,11 @@ class FITSImage:
         close_figure(fig, title, filename, dpi, display)
 
     def export_as_xds(self):
+        """
+        Create a Xarray DataSet from the FITSImage object
+        Returns:
+            Xarray DataSet
+        """
         xds = xr.Dataset()
         obj_dict = vars(self)
 
@@ -239,10 +371,23 @@ class FITSImage:
         return xds
 
     def to_zarr(self, zarr_filename):
+        """
+        Saves a xds representation of self on disk using the zarr format.
+        Args:
+            zarr_filename: Name for the zarr container on disk
+
+        Returns:
+            None
+        """
         xds = self.export_as_xds()
         xds.to_zarr(zarr_filename, mode="w", compute=True, consolidated=True)
 
     def __repr__(self):
+        """
+        Print method
+        Returns:
+            A String summary of the current status of self.
+        """
         obj_dict = vars(self)
         outstr = ''
         for key, value in obj_dict.items():
@@ -256,6 +401,14 @@ class FITSImage:
         return outstr
 
     def export_to_fits(self, destination):
+        """
+        Export internal images to FITS files.
+        Args:
+            destination: location to store FITS files
+
+        Returns:
+            None
+        """
         pathlib.Path(destination).mkdir(exist_ok=True)
         ext_fits = '.fits'
         out_header = self.header.copy()
@@ -281,6 +434,17 @@ class FITSImage:
                         write_fits(out_header, key, np.fliplr(value.astype(float)), filename, unit, reorder_axis=False)
 
     def scatter_plot(self, destination, ref_image, dpi=300, display=False):
+        """
+        Produce a scatter plot of self.data agains ref_image.data
+        Args:
+            destination: Location to store scatter plot
+            ref_image: Reference FITSImage object
+            dpi: png resolution on disk
+            display: Show interactive view of plot
+
+        Returns:
+            None
+        """
         test_image(ref_image)
         if not self.image_has_same_sampling(ref_image):
             self.resample(ref_image)

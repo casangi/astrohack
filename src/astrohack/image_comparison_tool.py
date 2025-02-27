@@ -8,7 +8,7 @@ from astrohack.core.image_comparison_tool import image_comparison_chunk
 from astrohack.utils.graph import compute_graph_from_lists
 
 
-def compare_fits_image(
+def compare_fits_images(
         image: Union[str, List[str]],
         reference_image: Union[str, List[str]],
         telescope_name: str,
