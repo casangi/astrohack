@@ -90,7 +90,7 @@ def compare_fits_images(
 
     .. rubric:: Plots:
     A plot of the residuals of the comparison is always produced.
-    However, a few extra plots can be produced and their production is controlled by the plot_ parameters, these are:
+    However, a few extra plots can be produced and their production is controlled by the *plot_* parameters, these are:
         - *plot_data*: Activates plotting of the data used in the comparison, default is False as this is the data on \
                        the FITS file.
         - *plot_percentuals*: Activates the plotting of the residuals as a perdentage of the Reference Image, default \
