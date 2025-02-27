@@ -3,11 +3,16 @@ import xarray as xr
 import pathlib
 
 import toolviper.utils.logger as logger
+import toolviper
 
 from astrohack.core.image_comparison_tool import image_comparison_chunk
 from astrohack.utils.graph import compute_graph_from_lists
+from astrohack.utils.validation import custom_plots_checker
 
 
+@toolviper.utils.parameter.validate(
+    custom_checker=custom_plots_checker
+)
 def compare_fits_images(
         image: Union[str, List[str]],
         reference_image: Union[str, List[str]],
