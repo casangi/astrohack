@@ -3,7 +3,7 @@ name = "astrohack"
 version = "0.6.0"
 description = "Holography Antenna Commissioning Kit"
 readme = "README.md"
-requires-python = ">= 3.9, < 3.12"
+requires-python = ">= 3.10, < 3.13"
 dependencies = [ "astropy", "dask", "distributed", "dropbox", "toolviper", "ipywidgets", "matplotlib", "numba>=0.57.0", "numpy==1.26.4", "prettytable", "pycryptodome", "pytest", "pytest-cov", "pytest-html", "scikit_image", "scikit-learn", "scipy", "rich", "xarray", "zarr<3.0", "bokeh", "jupyterlab", "python_casacore>=3.5.2; sys_platform != \"darwin\" ",]
 [[project.authors]]
 name = "Joshua Hoskins"
