@@ -295,7 +295,8 @@ class FITSImage:
         if plot_divided_image:
             if self.divided_image is None:
                 raise Exception("Cannot plot a divided image that does not exist.")
-            self._plot_map(self._mask_array(self.divided_image), f'Divided image, ref={self.reference_name}',
+            self._plot_map(self._mask_array(self.divided_image),
+                           f'Divided image, ref={self.reference_name}, scaling={self.factor:.4f}',
                            f'Division [ ]', f'{base_name}divided.png', cmap, extent, [None, None],
                            dpi, display, add_statistics=True)
 
@@ -463,6 +464,14 @@ class FITSImage:
 
 
 def image_comparison_chunk(compare_params):
+    """
+    Chunk function for parallel execution of the image comparison tool.
+    Args:
+        compare_params: Parameter dictionary for workflow control.
+
+    Returns:
+        A DataTree containing the Image and its reference Image.
+    """
 
     image = FITSImage.from_fits_file(compare_params['this_image'], compare_params['telescope_name'])
     ref_image = FITSImage.from_fits_file(compare_params['this_reference_image'], compare_params['telescope_name'])
