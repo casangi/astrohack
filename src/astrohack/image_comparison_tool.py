@@ -85,27 +85,27 @@ def compare_fits_images(
 
     .. rubric:: Comparison:
     Two types of comparison between the images are available:
-
-    * *direct*: Where the residuals are simply computed as Reference - Image.
-    * *scaled*: Where the residuals are Reference - Factor * Image, with Factor = median(Reference/Image).
+        - *direct*: Where the residuals are simply computed as Reference - Image.
+        - *scaled*: Where the residuals are Reference - Factor * Image, with Factor = median(Reference/Image).
 
     .. rubric:: Plots:
     A plot of the residuals of the comparison is always produced.
     However, a few extra plots can be produced and their production is controlled by the plot_ parameters, these are:
-    * *plot_data*: Activates plotting of the data used in the comparison, default is False as this is the data on the \
-    FITS file.
-    * *plot_percentuals*: Activates the plotting of the residuals as a perdentage of the Reference Image, default is \
-    False as this is just another view on the residuals.
-    * *plot_divided_image*: Activates the plotting of Reference/Image, default is False. This plot is only available \
-    when using "scaled" comparison.
-    * *plot_scatter*: Activates the creation of a scatter plot of Reference vs Image, with a linear regression, default \
-    is True.
+        - *plot_data*: Activates plotting of the data used in the comparison, default is False as this is the data on \
+                       the FITS file.
+        - *plot_percentuals*: Activates the plotting of the residuals as a perdentage of the Reference Image, default \
+                              is False as this is just another view on the residuals.
+        - *plot_divided_image*: Activates the plotting of Reference/Image, default is False. This plot is only \
+                                available when using "scaled" comparison.
+        - *plot_scatter*: Activates the creation of a scatter plot of Reference vs Image, with a linear regression, \
+                          default is True.
 
     .. rubric:: Storage on disk:
     By default, this function only produces plots, but this can be changed using two parameters:
-    * *zarr_container_name*: If this parameter is not None a Zarr container will be created on disk with the contents \
-    of the produced DataTree.
-    * *export_to_fits*: If set to True will produce FITS files of the produced images and store them at *destination*.
+        - *zarr_container_name*: If this parameter is not None a Zarr container will be created on disk with the \
+                                 contents of the produced DataTree.
+        - *export_to_fits*: If set to True will produce FITS files of the produced images and store them at \
+                            *destination*.
 
     .. rubric:: Return type:
     This funtion returns a Xarray DataTree containing the Xarray DataSets that represent Image and Reference. The nodes \
