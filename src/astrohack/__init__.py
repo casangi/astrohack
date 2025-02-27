@@ -14,6 +14,7 @@ from .mds import *
 from .locit import *
 from .extract_locit import *
 from .cassegrain_ray_tracing import *
+from .image_comparison_tool import *
 
 # This installs a slick, informational tracebacks logger
 from rich.traceback import install
