@@ -85,6 +85,7 @@ def compare_fits_images(
 
     .. rubric:: Comparison:
     Two types of comparison between the images are available:
+
     * *direct*: Where the residuals are simply computed as Reference - Image.
     * *scaled*: Where the residuals are Reference - Factor * Image, with Factor = median(Reference/Image).
 

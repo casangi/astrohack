@@ -52,7 +52,7 @@ def panel(
     passing a dictionary, default is 3 (appropriate for sigma clipping)
     :type clip_level: float, dict, optional
 
-    :param exclude_shadows: Exclude regions with significant shadowing from analysis, e.g. secondary supporting arms,
+    :param exclude_shadows: Exclude regions with significant shadowing from analysis, e.g. secondary supporting arms, \
     default is True.
     :type exclude_shadows: bool, optional
 
