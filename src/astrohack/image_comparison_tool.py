@@ -4,7 +4,7 @@ import pathlib
 
 import toolviper.utils.logger as logger
 
-from astrohack.core.image_compare_tool import image_comparison_chunk
+from astrohack.core.image_comparison_tool import image_comparison_chunk
 from astrohack.utils.graph import compute_graph_from_lists
 
 
