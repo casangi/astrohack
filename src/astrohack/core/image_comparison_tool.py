@@ -22,48 +22,52 @@ def test_image(fits_image):
 
 class FITSImage:
 
-    def __init__(self, filename: str, telescope_name: str):
+    def __init__(self):
         """
-        Initializes the FITSImage object from a file on disk
-        Args:
-            filename: Name of the file on disk, may be .FITS file or a .zarr xds with a disk representation of a \
-            FITSImage object
-            telescope_name: Name of the telescope used on the images so that masking can be properly applied.
+        Blank slate initialization of the FITSImage object
         """
-        # Initialization from parameters
-        self.filename = filename
-        self.telescope_name = telescope_name
-        self.rootname = '.'.join(filename.split('.')[:-1])+'.'
-
-        # Blank slate initialization
-        self.header = None
-        self.data = None
+        # Attributes:
+        self.filename = None
+        self.telescope_name = None
+        self.rootname = None
         self.factor = 1.0
-        self.residuals = None
-        self.residuals_percent = None
-        self.divided_image = None
         self.reference_name = None
         self.resampled = False
+
+        # Metadata
+        self.header = None
+        self.unit = None
         self.x_axis = None
         self.y_axis = None
         self.original_x_axis = None
         self.original_y_axis = None
         self.x_unit = None
         self.y_unit = None
-        self.unit = None
-        self.fits_name = None
+
+        # Data variables
         self.original_data = None
+        self.data = None
+        self.residuals = None
+        self.residuals_percent = None
+        self.divided_image = None
 
-        if '.FITS' in filename.upper():
-            self._init_as_fits()
-        elif '.zarr' in filename:
-            self._init_as_xds()
-        else:
-            raise Exception(f"Don't know how to read {filename}")
+    @classmethod
+    def from_xds(cls, xds):
+        return_obj = cls()
+        return_obj._init_as_xds(xds)
+        return return_obj
 
-    def _init_as_fits(self, istokes=0, ichan=0):
+    @classmethod
+    def from_fits_file(cls, fits_filename, telescope_name):
+        return_obj = cls()
+        return_obj._init_as_fits(fits_filename, telescope_name)
+        return return_obj
+
+    def _init_as_fits(self, fits_filename, telescope_name, istokes=0, ichan=0):
+        self.filename = fits_filename
+        self.telescope_name = telescope_name
+        self.rootname = '.'.join(fits_filename.split('.')[:-1])+'.'
         self.header, self.data = read_fits(self.filename, header_as_dict=True)
-        self.fits_name = self.filename
         stokes_iaxis = get_stokes_axis_iaxis(self.header)
 
         self.unit = self.header['BUNIT']
@@ -95,9 +99,7 @@ class FITSImage:
         self.original_x_axis = np.copy(self.x_axis)
         self.original_y_axis = np.copy(self.y_axis)
 
-    def _init_as_xds(self):
-        filename = self.filename
-        xds = xr.open_zarr(self.filename)
+    def _init_as_xds(self, xds):
         for key in xds.attrs:
             setattr(self, key, xds.attrs[key])
 
@@ -108,8 +110,6 @@ class FITSImage:
 
         for key, value in xds.items():
             setattr(self, str(key), xds[key].values)
-
-        self.filename = filename
 
     def _create_base_mask(self):
         telescope_obj = Telescope(self.telescope_name)
@@ -300,8 +300,8 @@ class FITSImage:
 
 def image_comparison_chunk(compare_params):
 
-    image = FITSImage(compare_params['this_image'], compare_params['telescope_name'])
-    ref_image = FITSImage(compare_params['this_reference_image'], compare_params['telescope_name'])
+    image = FITSImage.from_fits_file(compare_params['this_image'], compare_params['telescope_name'])
+    ref_image = FITSImage.from_fits_file(compare_params['this_reference_image'], compare_params['telescope_name'])
     plot_data = compare_params['plot_data']
     plot_percentuals = compare_params['plot_percentuals']
     plot_divided = compare_params['plot_divided_image']
