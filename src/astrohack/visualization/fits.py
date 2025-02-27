@@ -2,7 +2,7 @@ import numpy as np
 from toolviper.utils import logger as logger
 from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import clight, convert_unit, add_prefix
-from astrohack.utils.fits import axis_to_fits_header, stokes_axis_to_fits_header, write_fits, resolution_to_fits_header
+from astrohack.utils.fits import put_axis_in_fits_header, put_stokes_axis_in_fits_header, write_fits, put_resolution_in_fits_header
 
 
 def export_to_fits_panel_chunk(parm_dict):
@@ -85,11 +85,11 @@ def export_to_fits_holog_chunk(parm_dict):
     if ntime != 1:
         raise Exception("Data with multiple times not supported for FITS export")
 
-    base_header = axis_to_fits_header(base_header, input_xds.chan.values, 3, 'Frequency', 'Hz')
-    base_header = stokes_axis_to_fits_header(base_header, 4)
+    base_header = put_axis_in_fits_header(base_header, input_xds.chan.values, 3, 'Frequency', 'Hz')
+    base_header = put_stokes_axis_in_fits_header(base_header, 4)
     rad_to_deg = convert_unit('rad', 'deg', 'trigonometric')
-    beam_header = axis_to_fits_header(base_header, -input_xds.l.values * rad_to_deg, 1, 'RA---SIN', 'deg')
-    beam_header = axis_to_fits_header(beam_header, input_xds.m.values * rad_to_deg, 2, 'DEC--SIN', 'deg')
+    beam_header = put_axis_in_fits_header(base_header, -input_xds.l.values * rad_to_deg, 1, 'RA---SIN', 'deg')
+    beam_header = put_axis_in_fits_header(beam_header, input_xds.m.values * rad_to_deg, 2, 'DEC--SIN', 'deg')
     beam_header['RADESYSA'] = 'FK5'
     beam = input_xds['BEAM'].values
     if parm_dict['complex_split'] == 'cartesian':
@@ -103,9 +103,9 @@ def export_to_fits_holog_chunk(parm_dict):
         write_fits(beam_header, 'Complex beam phase', np.angle(beam),
                    add_prefix(basename, 'beam_phase') + '.fits', 'Radians', 'image')
     wavelength = clight / input_xds.chan.values[0]
-    aperture_header = axis_to_fits_header(base_header, input_xds.u.values * wavelength, 1, 'X----LIN', 'm')
-    aperture_header = axis_to_fits_header(aperture_header, input_xds.u.values * wavelength, 2, 'Y----LIN', 'm')
-    aperture_header = resolution_to_fits_header(aperture_header, aperture_resolution)
+    aperture_header = put_axis_in_fits_header(base_header, input_xds.u.values * wavelength, 1, 'X----LIN', 'm')
+    aperture_header = put_axis_in_fits_header(aperture_header, input_xds.u.values * wavelength, 2, 'Y----LIN', 'm')
+    aperture_header = put_resolution_in_fits_header(aperture_header, aperture_resolution)
     aperture = input_xds['APERTURE'].values
     if parm_dict['complex_split'] == 'cartesian':
         write_fits(aperture_header, 'Complex aperture real part', aperture.real,
@@ -118,9 +118,9 @@ def export_to_fits_holog_chunk(parm_dict):
         write_fits(aperture_header, 'Complex aperture phase', np.angle(aperture),
                    add_prefix(basename, 'aperture_phase') + '.fits', 'rad', 'image')
 
-    phase_amp_header = axis_to_fits_header(base_header, input_xds.u_prime.values * wavelength, 1, 'X----LIN', 'm')
-    phase_amp_header = axis_to_fits_header(phase_amp_header, input_xds.v_prime.values * wavelength, 2, 'Y----LIN', 'm')
-    phase_amp_header = resolution_to_fits_header(phase_amp_header, aperture_resolution)
+    phase_amp_header = put_axis_in_fits_header(base_header, input_xds.u_prime.values * wavelength, 1, 'X----LIN', 'm')
+    phase_amp_header = put_axis_in_fits_header(phase_amp_header, input_xds.v_prime.values * wavelength, 2, 'Y----LIN', 'm')
+    phase_amp_header = put_resolution_in_fits_header(phase_amp_header, aperture_resolution)
     write_fits(phase_amp_header, 'Cropped aperture corrected phase', input_xds['CORRECTED_PHASE'].values,
                add_prefix(basename, 'corrected_phase') + '.fits', 'rad', 'image')
     return

@@ -31,8 +31,29 @@
                 "ea27",
                 "ea28"
             ],
-            "arm_shadow_rotation": 0.0,
-            "arm_shadow_width": 1.5,
+            "arm_shadow_rotation": 0,
+            "arm_shadow_width": [
+                [
+                    1.983,
+                    7.391,
+                    0.8
+                ],
+                [
+                    7.391,
+                    9.144,
+                    1.2
+                ],
+                [
+                    9.144,
+                    10.87,
+                    1.4
+                ],
+                [
+                    10.87,
+                    12.5,
+                    1.8
+                ]
+            ],
             "array_center": {
                 "m0": {
                     "unit": "rad",

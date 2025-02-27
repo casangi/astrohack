@@ -242,5 +242,9 @@ def test_holography_pipeline(set_data):
         exclude_shadows=False
     )
 
-    assert verify_panel_shifts(data_dir=str(set_data), ref_mean_shift=reference_dict["vla"]["offsets"]), "Verify panel shifts"
-    #assert verify_panel_shifts(data_dir=str(set_data)), "Verify panel shifts"
+    reference_shifts = np.array([-91.6455227, 61.69666059, 4.39843319, 122.26547831])
+    assert verify_panel_shifts(data_dir=str(set_data), ref_mean_shift=reference_shifts), "Verify panel shifts"
+    # This test using reference values is very hard to be updated, using this hardcoded reference_shifts is a
+    # temporary work around
+    # assert verify_panel_shifts(data_dir=str(set_data), ref_mean_shift=reference_dict["vla"]["offsets"]), \
+    #     "Verify panel shifts"

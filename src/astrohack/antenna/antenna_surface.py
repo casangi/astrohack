@@ -14,7 +14,7 @@ from astrohack.utils.text import add_prefix, bool_to_str, format_frequency, form
 from astrohack.visualization.plot_tools import well_positioned_colorbar, create_figure_and_axes, close_figure, \
     get_proper_color_map
 
-from astrohack.utils.fits import write_fits, resolution_to_fits_header, axis_to_fits_header
+from astrohack.utils.fits import write_fits, put_resolution_in_fits_header, put_axis_in_fits_header
 
 lnbr = "\n"
 SUPPORTED_POL_STATES = ['I', 'RR', 'LL', 'XX', 'YY']
@@ -172,7 +172,7 @@ class AntennaSurface:
     def _define_amp_clip(self, clip_type, clip_level):
         self.amplitude_noise = np.where(self.base_mask, np.nan, self.amplitude)
         if clip_type is None or clip_type == 'none':
-            clip = -np.inf
+            clip = np.nanmin(self.amplitude)
         elif clip_type == 'relative':
             clip = clip_level * np.nanmax(self.amplitude)
         elif clip_type == 'absolute':
@@ -303,7 +303,7 @@ class AntennaSurface:
             arm_angle = 0.0
 
         self.base_mask, self.rad, self.phi = create_aperture_mask(self.u_axis, self.v_axis, self.telescope.inlim,
-                                                                  self.telescope.diam/2,
+                                                                  self.telescope.oulim,
                                                                   arm_width=arm_width,
                                                                   arm_angle=arm_angle,
                                                                   return_polar_meshes=True)
@@ -865,9 +865,9 @@ class AntennaSurface:
             'WAVELENG': self.wavelength,
             'FREQUENC': clight / self.wavelength,
         }
-        head = axis_to_fits_header(head, self.u_axis, 1, 'X----LIN', 'm')
-        head = axis_to_fits_header(head, self.v_axis, 2, 'Y----LIN', 'm')
-        head = resolution_to_fits_header(head, self.resolution)
+        head = put_axis_in_fits_header(head, self.u_axis, 1, 'X----LIN', 'm')
+        head = put_axis_in_fits_header(head, self.v_axis, 2, 'Y----LIN', 'm')
+        head = put_resolution_in_fits_header(head, self.resolution)
 
         write_fits(head, 'Amplitude', self.amplitude, add_prefix(basename, 'amplitude') + '.fits', self.amp_unit,
                    'panel')
