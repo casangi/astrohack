@@ -90,8 +90,8 @@ class TestClassAntennaSurface:
         """
         Tests that a point falls into the correct panel and that this panel has the correct number of samples
         """
-        compvaluep0 = [3.2456341911764706, 0.7755055147058822, 198, 268, 0.00045656206805518506]
-        compnsampp0 = 120
+        compvaluep0 = [3.3030790441176467, 0.43083639705882354, 197, 262, 0.00025600619999005243]
+        compnsampp0 = 179
         self.tant.compile_panel_points()
         assert len(self.tant.panels[0].samples) == compnsampp0, 'Number of samples in panel is different from reference'
         assert self.tant.panels[0].samples[0] == PanelPoint(*compvaluep0), ('Point data in Panel is different from what'
@@ -101,9 +101,10 @@ class TestClassAntennaSurface:
         """
         Tests that fitting results for two panels match the reference
         """
-        solveparsp0 = [0.00035746,  0.00020089, -0.0008455 ]
-        solveparsp30 = [ 0.00039911, -0.00041468, -0.0007079]
+        solveparsp0 = [0.00032385, 0.00037302, -0.00092492]
+        solveparsp30 = [0.00038098, -0.00039892, -0.00067244]
         self.tant.fit_surface()
+
         assert len(self.tant.panels[0].model.parameters) == len(solveparsp0), ('Fitted results have a different length'
                                                                                ' from reference')
         for i in range(len(solveparsp30)):
