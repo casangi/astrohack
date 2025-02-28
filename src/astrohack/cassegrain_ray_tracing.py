@@ -364,21 +364,22 @@ def plot_radial_projection_from_rt_xds(
         horn_inter = horn_intercepts[ipnt]
         incoming = incoming_light[ipnt]
 
+        inf_str = "\u221e"
         # Plot incident light
         origin = pr_pnt - inf * incoming
-        add_rz_ray_to_plot(ax, origin, pr_pnt, 'yellow', '-', '$\infty$->Pr', sign)
+        add_rz_ray_to_plot(ax, origin, pr_pnt, 'yellow', '-', f'{inf_str}->Pr', sign)
 
         # Plot primary reflection
         if np.all(np.isnan(sc_pnt)):  # Ray does not touch secondary
             dest = pr_pnt + inf * pr_ref
-            add_rz_ray_to_plot(ax, pr_pnt, dest, 'red', '--', 'Pr->$\infty$', sign)
+            add_rz_ray_to_plot(ax, pr_pnt, dest, 'red', '--', f'Pr->{inf_str}', sign)
         else:
             add_rz_ray_to_plot(ax, pr_pnt, sc_pnt, 'yellow', '--', 'Pr->Sc', sign)
 
             # Plot secondary reflection
             if np.all(np.isnan(horn_inter)):  # Ray does not touch horn
                 dest = sc_pnt + inf * sc_ref
-                add_rz_ray_to_plot(ax, sc_pnt, dest, 'red', '-.', 'sc->$\infty$', sign)
+                add_rz_ray_to_plot(ax, sc_pnt, dest, 'red', '-.', f'Sc->{inf_str}', sign)
             else:
                 add_rz_ray_to_plot(ax, sc_pnt, horn_inter, 'yellow', '-.', 'Sc->Horn', sign)
 
