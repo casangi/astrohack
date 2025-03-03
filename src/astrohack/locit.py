@@ -16,6 +16,7 @@ from typing import Union, List
 @toolviper.utils.parameter.validate()
 def locit(
         locit_name: str,
+        point_name:str,
         position_name: str = None,
         elevation_limit: float = 10.0,
         polarization: str = 'both',
@@ -33,6 +34,9 @@ def locit(
 
     :param locit_name: Name of input *.locit.zarr file.
     :type locit_name: str
+
+    :param point_name: Name of the input .point.zarr file created by extract_pointing.
+    :type point_name: str
 
     :param position_name: Name of *<position_name>.position.zarr* file to create. Defaults to measurement set name \
     with *position.zarr* extension.

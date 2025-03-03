@@ -4,6 +4,10 @@
             "type":["str"],
             "required": true
         },
+        "point_name": {
+            "type":["str"],
+            "required": true
+        },
         "position_name":{
             "type":["str"],
             "required": false
