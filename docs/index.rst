@@ -20,3 +20,4 @@ Holography Antenna Commissioning Kit
    visualization_tutorial
    locit_tutorial
    cassegrain_ray_tracing_tutorial
+   user_docs
