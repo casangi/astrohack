@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = u'Holography Antenna Commissioning Kit'
-copyright = u'2023, National Radio Astronomy Observatory'
+copyright = u'2025, National Radio Astronomy Observatory'
 author = u'National Radio Astronomy Observatory'
 
 # The short X.Y version
@@ -108,7 +108,7 @@ language = 'en'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['build', 'Thumbs.db', '.DS_Store', 'html', '_build', '_api']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
