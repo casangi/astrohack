@@ -14,7 +14,7 @@ Holography Antenna Commissioning Kit
    :hidden:
    :maxdepth: 4
 
-   introduction
+   astrohack_installation
    api
    tutorial_vla
    visualization_tutorial
