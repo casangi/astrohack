@@ -23,7 +23,8 @@ python supported by astrohack. A fresh environment is recommended as
 to avoid conflicting dependencies with other packages. To create such
 an environment:
 
-.. code-block:: bash
+.. code-block:: sh
+		
    $ conda create --name astrohack python=3.12 --no-default-packages
    $ conda activate astrohack
 
@@ -31,13 +32,15 @@ On macos it is required to pre-install `python-casacore
 <https://github.com/casacore/python-casacore>`_, before installing
 astrohack:
 
-.. code-block:: bash
+.. code-block:: sh
+		
    $ conda install -c conda-forge python-casacore
 
 Astrohack is not yet available for download directly from conda-forge,
 therefore we suggest to install astrohack by using pip:
 
-.. code-block:: bash
+.. code-block:: sh
+		
    $ pip install astrohack
 
 It is also possible to install astrohack from source by downloading
@@ -46,7 +49,8 @@ the `source code
 directly from github. With the zip extracted you can then navigate to
 the root directory and make a local pip installation:
 
-.. code-block:: bash
+.. code-block:: sh
+		
    $ cd <Astrohack_root_dir>
    $ pip install -e .
 		
@@ -72,7 +76,7 @@ The installation script can be downloaded `here
 run the installation script it is necessary to make it executable, and
 then it can be executed:
 
-.. code-block:: bash
+.. code-block:: sh
 		
    $ chmod u+x astrohack_install.sh
    $ ./astrohack_install.sh
@@ -96,7 +100,7 @@ convenience functions.
 When the installation is done the user can check that it worked by
 invoking the environment:
 
-.. code-block:: bash
+.. code-block:: sh
 		
    $ activate_astrohack
 
@@ -112,7 +116,7 @@ If the installation happened without any problems the user will see no
 error messages.  To exit the venv the user should use the deactivate
 command:
 
-.. code-block:: bash
+.. code-block:: sh
 		
    $ deactivate
 
@@ -127,14 +131,16 @@ functionalities and/or bug fixes. To update astrohack it is necessary
 to first get into the venv and then we can call pip to update
 astrohack:
 
-.. code-block:: bash
+.. code-block:: sh
+		
    $ activate_astrohack
    $ pip install astrohack --upgrade
 
 If the user is not going to use astrohack straight away it is
 recommended to deactivate the venv after doing the update:
 
-.. code-block:: bash
+.. code-block:: sh
+		
    $ deactivate
 
 Installation or execution problems

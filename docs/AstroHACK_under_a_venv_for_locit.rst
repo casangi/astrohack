@@ -1,5 +1,5 @@
 Obtaining Antenna position Corrections
-~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This guide assumes that astrohack was installed in a virtual
 environment (venv) with the convenience functions as described `here <./Installing-astrohack-in-a-virtual-environment>`_
@@ -12,7 +12,7 @@ The first step in the data reduction is to download the scripts to be
 used in the data reduction process, this can be done by using one of the
 convenience functions created by the installation script:
 
-.. code-block:: bash
+.. code-block:: sh
 		
    $ get_locit_scripts
    
@@ -38,14 +38,14 @@ This script contains a basic command line interface to control its
 parameters, because of this it must be run in CASA in the command line
 mode, i.e.:
 
-.. code-block:: bash
+.. code-block:: sh
 
    $ casa -c pre_locit_script.py -h
 
 The output of the pre_locit_script.py script called with the **-h** flag
 is the help which should look like this:
 
-.. code-block:: bash
+.. code-block::
 
    $ casa -c pre_locit_script.py baseline.ms teste1 -h
 
@@ -91,7 +91,7 @@ will throw an error before executing any CASA step.
 
 A typical execution call will look like this:
 
-.. code-block:: bash
+.. code-block:: sh
 
    $ casa -c pre_locit_script.py my_dl_asdm baseline-241125 
 
@@ -108,13 +108,14 @@ Running exec_locit.py
 For running **exec_locit.py** we need to first activate the astrohack
 venv:
 
-.. code-block:: bash
+.. code-block:: sh
+		
    $ activate_astrohack
 
 With the venv activated we can then call **exec_locit.py** with the **-h**
 flag to have a look at its help:
 
-.. code-block:: bash
+.. code-block:: 
 		
    $ python exec_locit.py -h
    usage: exec_locit.py [-h] [-d] [-a ANTENNAS] [-c COMBINATION] [-p POLARIZATION] [-k] [-e ELEVATION_LIMIT] [-f FIT_ENGINE] caltable
@@ -154,9 +155,9 @@ few antennas for which we want antenna position corrections and that
 we want to combine the spectral windows using the phase difference
 between them.
 
-.. code-block:: bash
+.. code-block:: sh
 		
-   $ python exec_locit.py baseline-241125-pha.cal -a 'ea06,ea13,ea27' -c difference
+   python exec_locit.py baseline-241125-pha.cal -a 'ea06,ea13,ea27' -c difference
 
 
 Exporting results to parminator
@@ -167,7 +168,7 @@ to a parminator file by calling the **export_to_parminator.py** script.
 Like the other scripts it has a help that can be accessed with the
 **-h** flag:
 
-.. code-block:: bash
+.. code-block:: 
 		
    $ python export_to_parminator.py -h
    usage: export_to_parminator.py [-h] [-t CORRECTION_THRESHOLD] [-a ANTENNAS] position_file parminator_file
@@ -191,9 +192,9 @@ Like the other scripts it has a help that can be accessed with the
 
 A typical call to **export_to_parminator.py** shall look like this:
 
-.. code-block:: bash
+.. code-block:: sh
 		
-		$ python export_to_parminator.py baseline-241125.position.zarr 241125-baseline.par -t 0.05 -a 'ea13,ea27'
+   $ python export_to_parminator.py baseline-241125.position.zarr 241125-baseline.par -t 0.05 -a 'ea13,ea27'
 
 In this call we have chosen a threshold for corrections of 5 cm and to
 only export corrections for antennas ea13 and ea27 which will be
