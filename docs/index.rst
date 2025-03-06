@@ -4,8 +4,7 @@
 .. image:: https://github.com/casangi/astrohack/actions/workflows/python-testing-linux.yml/badge.svg
 
 .. image:: https://github.com/casangi/astrohack/actions/workflows/pythonpublish.yml/badge.svg
-   :target: 
-
+   :target: https://pypi.org/project/astrohack/
 	    
 .. image:: https://readthedocs.org/projects/astrohack/badge/?version=stable
    :target: https://astrohack.readthedocs.io/en/stable/?badge=stable
@@ -14,8 +13,7 @@
 Holography Antenna Commissioning Kit
 ====================================
 
-.. image:: https://github.com/casangi/astrohack/blob/astrohack-dev/docs/_media/astrohack_logo.png
-   :width: 250px
+.. image:: https://github.com/casangi/astrohack/blob/astrohack-dev/docs/_media/astrohack_logo.png?raw=true
    :align: left
 
 AstroHACK (Holography and Antenna Comissioning Kit) is a python
