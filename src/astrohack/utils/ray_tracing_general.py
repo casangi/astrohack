@@ -1,6 +1,7 @@
 import numpy as np
-from astrohack.utils.algorithms import least_squares_jit
+from astrohack.utils.algorithms import least_squares_jit, least_squares
 from numba import njit
+from scipy.spatial.distance import cdist
 
 
 def generalized_dot(vec_map_a, vec_map_b):
@@ -18,6 +19,7 @@ def normalize_vector_map(vector_map):
 
 def reflect_light(light, normals):
     return light - 2 * generalized_dot(light, normals)[..., np.newaxis] * normals
+
 
 @njit(cache=True, nogil=True)
 def compute_quintic_pseudo_spline_coefficients(point_cloud):
@@ -58,7 +60,35 @@ def compute_quintic_pseudo_spline_coefficients(point_cloud):
         matrix[irow, 0:npnt] = 1
 
     qps_coeffs, _, _, _ = least_squares_jit(matrix, vector)
-    return qps_coeffs
+    return qps_coeffs, matrix, vector
+
+
+def compute_qps_full_np(point_cloud):
+    n_extra_coeffs = 6
+    pcd_xy = point_cloud[:, 0:2]
+    pcd_z = point_cloud[:, 2]
+
+    npnt = pcd_xy.shape[0]
+    n_var = npnt + n_extra_coeffs
+    matrix_shape = (n_var, n_var)
+
+    matrix = np.empty(matrix_shape)
+    vector = np.zeros(n_var)
+
+    matrix[0:npnt, 0:npnt] = cdist(pcd_xy, pcd_xy)**5
+    matrix[0:npnt, npnt+0] = pcd_xy[:, 0] ** 2
+    matrix[0:npnt, npnt+1] = pcd_xy[:, 0] * pcd_xy[:, 1]
+    matrix[0:npnt, npnt+2] = pcd_xy[:, 1] ** 2
+    matrix[0:npnt, npnt+3] = pcd_xy[:, 0]
+    matrix[0:npnt, npnt+4] = pcd_xy[:, 1]
+    matrix[0:npnt, npnt+5] = 1
+    matrix[npnt:n_var, 0:npnt] = 1
+    matrix[npnt:n_var, npnt:n_var] = 0
+    vector[0:npnt] = pcd_z
+
+    qps_coeffs, _, _ = least_squares(matrix, vector)
+    return qps_coeffs, matrix, vector
+
 
 def compute_qps_value(pnt, qps_coeffs, point_cloud):
     # QPS definition from Bergman et al. 1994, IEEE Transactions on Antennas and propagation
@@ -72,6 +102,7 @@ def compute_qps_value(pnt, qps_coeffs, point_cloud):
     z_val += b_coeffs[3]*pnt[0] + b_coeffs[4]*pnt[1] + b_coeffs[5]
 
     return z_val
+
 
 def qps_pcd_fitting(point_cloud_filename, output_coeff_filename, max_rows=None):
 
