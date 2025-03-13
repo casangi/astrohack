@@ -60,7 +60,7 @@ def compute_quintic_pseudo_spline_coefficients(point_cloud):
         matrix[irow, 0:npnt] = 1
 
     qps_coeffs, _, _, _ = least_squares_jit(matrix, vector)
-    return qps_coeffs, matrix, vector
+    return qps_coeffs
 
 
 def compute_qps_full_np(point_cloud):
@@ -87,7 +87,7 @@ def compute_qps_full_np(point_cloud):
     vector[0:npnt] = pcd_z
 
     qps_coeffs, _, _ = least_squares(matrix, vector)
-    return qps_coeffs, matrix, vector
+    return qps_coeffs
 
 
 def compute_qps_value(pnt, qps_coeffs, point_cloud):
@@ -108,7 +108,6 @@ def qps_pcd_fitting(point_cloud_filename, output_coeff_filename, max_rows=None):
 
     pcd_data = np.loadtxt(point_cloud_filename, max_rows=max_rows)
     qps_coeffs = compute_quintic_pseudo_spline_coefficients(pcd_data)
-
     np.save(output_coeff_filename, qps_coeffs)
 
     return qps_coeffs
