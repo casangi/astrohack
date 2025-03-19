@@ -9,7 +9,8 @@ from astrohack.utils import data_statistics, clight, statistics_to_text, create_
 from astrohack.utils.constants import twopi
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.algorithms import phase_wrapping, create_coordinate_images
-from astrohack.utils.ray_tracing_general import generalized_dot, generalized_norm, normalize_vector_map, reflect_light
+from astrohack.utils.ray_tracing_general import generalized_dot, generalized_norm, normalize_vector_map, reflect_light, \
+    simple_axis
 from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
     close_figure, compute_extent
 from astrohack.visualization.textual_data import create_pretty_table
@@ -52,31 +53,6 @@ def write_rt_xds_to_zarr(rt_xds, zarr_filename, overwrite):
 ######################################################################
 # Setup routines and Mathematical description of the secondary shape #
 ######################################################################
-def _simple_axis(minmax, resolution, margin=0.05):
-    """
-    Creates an array spaning from min to max (may go over max if resolution is not an integer division) spaced by \
-    resolution
-    Args:
-        minmax: the minimum and maximum of the axis
-        resolution: The spacing between array elements
-        margin: Add a margin at the edge of the array beyonf min and max
-    Returns:
-        A numpy array representation of a linear axis.
-    """
-    mini, maxi = minmax
-    ax_range = maxi - mini
-    pad = margin * ax_range
-    if pad < np.abs(resolution):
-        pad = np.abs(resolution)
-    mini -= pad
-    maxi += pad
-    npnt = int(np.ceil((maxi - mini) / resolution))
-    axis_array = np.arange(npnt + 1)
-    axis_array = resolution * axis_array
-    axis_array = axis_array + mini + resolution / 2
-    return axis_array
-
-
 def make_gridded_cassegrain_primary(grid_size, resolution, telescope_pars):
     """
     Create a 1D representation of the primary and the normals to its surface based on a radial mask
@@ -90,7 +66,7 @@ def make_gridded_cassegrain_primary(grid_size, resolution, telescope_pars):
         the x and y axes
     """
     grid_minmax = [-grid_size / 2, grid_size / 2]
-    axis = _simple_axis(grid_minmax, resolution, margin=0.0)
+    axis = simple_axis(grid_minmax, resolution, margin=0.0)
     image_size = axis.shape[0]
     axis_idx = np.arange(image_size, dtype=int)
 

@@ -1,5 +1,6 @@
 import numpy as np
-from astrohack.utils.algorithms import least_squares_jit, least_squares
+
+from astrohack.utils.algorithms import least_squares_jit, least_squares, create_coordinate_images
 from numba import njit
 from scipy.spatial.distance import cdist
 
@@ -113,5 +114,82 @@ def qps_pcd_fitting(point_cloud_filename, output_coeff_filename, max_rows=None):
     return qps_coeffs
 
 
+def find_mid_point(array):
+    return (np.max(array)+np.min(array))/2
 
 
+@njit(cache=True, nogil=True)
+def grid_qps_jit(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off):
+    nx = x_axis.shape[0]
+    ny = y_axis.shape[0]
+    npnt = point_cloud.shape[0]
+    gridded = np.empty((nx, ny))
+    a_coeffs = qps_coeffs[0:npnt]
+    b_coeffs = qps_coeffs[npnt:]
+    pcd_xy = point_cloud[:, 0:2]
+
+    for ix, x_val in enumerate(x_axis):
+        for iy, y_val in enumerate(y_axis):
+            if ((x_val-x_off)**2 + (y_val-y_off)**2) <= active_radius**2:
+                pnt = np.array([x_val, y_val])
+                r_term = np.sum(a_coeffs*np.sqrt(np.sum((pnt[np.newaxis, 0:2]-pcd_xy)**2, axis=1))**5)
+                z_val  = r_term + b_coeffs[0]*pnt[0]**2 + b_coeffs[1]*pnt[0]*pnt[1] + b_coeffs[2]*pnt[1]**2
+                z_val += b_coeffs[3]*pnt[0] + b_coeffs[4]*pnt[1] + b_coeffs[5]
+                gridded[ix, iy] = z_val
+            else:
+                gridded[ix, iy] = np.nan
+
+    return gridded
+
+
+def grid_qps_primary(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off=None, y_off=None):
+    if x_off is None:
+        x_off = find_mid_point(point_cloud[:, 0])
+    if y_off is None:
+        y_off = find_mid_point(point_cloud[:, 1])
+
+    x_axis = simple_axis([-active_radius+x_off, active_radius+x_off], sampling)
+    y_axis = simple_axis([-active_radius+y_off, active_radius+y_off], sampling)
+
+    gridded_qps = grid_qps_jit(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off)
+    # x_mesh, y_mesh = create_coordinate_images(x_axis, y_axis, create_polar_coordinates=False)
+    return gridded_qps
+
+
+def degrade_qps(point_cloud, qps_coeffs, factor: int):
+    npnt = point_cloud.shape[0]
+    new_size = npnt//factor
+    new_qps = np.empty((new_size+6))
+    new_pcd = np.empty((new_size, 3))
+    for i_new in range(new_size):
+        i_old = i_new * factor
+        new_qps[i_new] = qps_coeffs[i_old]
+        new_pcd[i_new] = point_cloud[i_old]
+
+    new_qps[new_size:] = qps_coeffs[npnt:]
+    return new_qps, new_pcd
+
+
+def simple_axis(minmax, resolution, margin=0.05):
+    """
+    Creates an array spaning from min to max (may go over max if resolution is not an integer division) spaced by \
+    resolution
+    Args:
+        minmax: the minimum and maximum of the axis
+        resolution: The spacing between array elements
+        margin: Add a margin at the edge of the array beyonf min and max
+    Returns:
+        A numpy array representation of a linear axis.
+    """
+    mini, maxi = minmax
+    ax_range = maxi - mini
+    pad = margin * ax_range
+    if pad < np.abs(resolution):
+        pad = np.abs(resolution)
+    mini -= pad
+    maxi += pad
+    npnt = int(np.ceil((maxi - mini) / resolution))
+    axis_array = np.arange(npnt + 1)
+    axis_array = resolution * axis_array
+    axis_array = axis_array + mini + resolution / 2
+    return axis_array
