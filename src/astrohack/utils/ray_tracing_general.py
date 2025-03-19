@@ -1,5 +1,7 @@
 import numpy as np
 
+import toolviper.utils.logger as logger
+
 from astrohack.utils.algorithms import least_squares_jit, least_squares, create_coordinate_images
 from numba import njit
 from scipy.spatial.distance import cdist
@@ -168,6 +170,26 @@ def degrade_qps(point_cloud, qps_coeffs, factor: int):
 
     new_qps[new_size:] = qps_coeffs[npnt:]
     return new_qps, new_pcd
+
+
+def degrade_pcd(pcd_file, new_pcd_file, factor):
+    pcd_data = np.loadtxt(pcd_file)
+    npnt = pcd_data.shape[0]
+    new_size = npnt//factor
+    new_pcd = np.empty((new_size, 3))
+    for i_new in range(new_size):
+        i_old = i_new * factor
+        new_pcd[i_new] = pcd_data[i_old]
+
+    ext = new_pcd_file.split('.')[-1]
+    if ext == 'npy':
+        np.save(new_pcd_file, new_pcd)
+    elif ext in ['dat', 'txt']:
+        np.savetxt(new_pcd_file, new_pcd)
+    else:
+        logger.warning(f'Unknown extension {ext} degraded point cloud not saved to disk')
+
+    return new_pcd
 
 
 def simple_axis(minmax, resolution, margin=0.05):
