@@ -572,11 +572,11 @@ def significant_figures_round(x, digits):
         return x
 
 
-def statistics_to_text(data_statistics, keys=None):
+def statistics_to_text(data_statistics, keys=None, num_format='.2f'):
     if keys is None:
-        outstr = (f'min={data_statistics["min"]:.2f}, max={data_statistics["max"]:.2f}, '
-                  f'mean={data_statistics["mean"]:.2f}, med={data_statistics["median"]:.2f}, '
-                  f'rms={data_statistics["rms"]:.2f}')
+        outstr = (f'min={data_statistics["min"]:{num_format}}, max={data_statistics["max"]:{num_format}}, '
+                  f'mean={data_statistics["mean"]:{num_format}}, med={data_statistics["median"]:{num_format}}, '
+                  f'rms={data_statistics["rms"]:{num_format}}')
     else:
         outstr = ''
         for key in keys:
