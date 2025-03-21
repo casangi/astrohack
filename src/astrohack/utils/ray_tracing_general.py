@@ -125,7 +125,7 @@ def grid_qps_jit(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, 
     nx = x_axis.shape[0]
     ny = y_axis.shape[0]
     npnt = point_cloud.shape[0]
-    gridded = np.empty((nx, ny))
+    gridded = np.empty((nx, ny), dtype=np.float32)
     a_coeffs = qps_coeffs[0:npnt]
     b_coeffs = qps_coeffs[npnt:]
     pcd_xy = point_cloud[:, 0:2]
@@ -144,6 +144,36 @@ def grid_qps_jit(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, 
     return gridded
 
 
+@njit(cache=True, nogil=True)
+def grid_qps_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off):
+    nx = x_axis.shape[0]
+    ny = y_axis.shape[0]
+
+    new_pcd = np.empty((nx*ny, 3))
+    new_idx = np.empty((nx*ny, 2))
+
+    gridded_shape = (nx, ny)
+    npnt = point_cloud.shape[0]
+    a_coeffs = qps_coeffs[0:npnt]
+    b_coeffs = qps_coeffs[npnt:]
+    pcd_xy = point_cloud[:, 0:2]
+
+    i_pnt = 0
+    for ix, x_val in enumerate(x_axis):
+        for iy, y_val in enumerate(y_axis):
+            if ((x_val-x_off)**2 + (y_val-y_off)**2) <= active_radius**2:
+                pnt = np.array([x_val, y_val])
+                r_term = np.sum(a_coeffs*np.sqrt(np.sum((pnt[np.newaxis, 0:2]-pcd_xy)**2, axis=1))**5)
+                z_val  = r_term + b_coeffs[0]*pnt[0]**2 + b_coeffs[1]*pnt[0]*pnt[1] + b_coeffs[2]*pnt[1]**2
+                z_val += b_coeffs[3]*pnt[0] + b_coeffs[4]*pnt[1] + b_coeffs[5]
+                new_pcd[i_pnt] = np.array((x_val, y_val, z_val))
+                new_idx[i_pnt] = np.array((ix, iy))
+                i_pnt += 1
+
+    n_total = i_pnt+1
+    return new_pcd[:n_total, :], new_idx[:n_total, :]
+
+
 def grid_qps_primary(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off=None, y_off=None):
     if x_off is None:
         x_off = find_mid_point(point_cloud[:, 0])
@@ -156,6 +186,29 @@ def grid_qps_primary(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off
     gridded_qps = grid_qps_jit(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off)
     # x_mesh, y_mesh = create_coordinate_images(x_axis, y_axis, create_polar_coordinates=False)
     return gridded_qps
+
+
+def grid_qps_with_normals(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off=None, y_off=None, epsilon=1e-6):
+    if x_off is None:
+        x_off = find_mid_point(point_cloud[:, 0])
+    if y_off is None:
+        y_off = find_mid_point(point_cloud[:, 1])
+
+    x_axis = simple_axis([-active_radius + x_off, active_radius + x_off], sampling)
+    y_axis = simple_axis([-active_radius + y_off, active_radius + y_off], sampling)
+
+    new_pcd, new_idx = grid_qps_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off)
+    dx_pcd, _ = grid_qps_jit_1d(x_axis+epsilon, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off)
+    dx_pcd[:, 0] = new_pcd[:, 0]
+    dx_pcd[:, 2] = (dx_pcd[:, 2] - new_pcd[:, 2]) / epsilon
+
+    dy_pcd, _ = grid_qps_jit_1d(x_axis, y_axis+epsilon, point_cloud, qps_coeffs, active_radius, x_off, y_off)
+    dy_pcd[:, 1] = new_pcd[:, 1]
+    dy_pcd[:, 2] = (dy_pcd[:, 2] - new_pcd[:, 2]) / epsilon
+
+    print(dx_pcd.shape, new_pcd.shape)
+    normals = normalize_vector_map(np.cross(dy_pcd, dx_pcd))
+    return new_pcd, normals
 
 
 def degrade_qps(point_cloud, qps_coeffs, factor: int):
