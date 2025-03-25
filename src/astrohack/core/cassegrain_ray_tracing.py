@@ -321,7 +321,8 @@ def title_from_input_parameters(inpt_dict):
     title += (f'Focus offset = ({inpt_dict["x_focus_offset"]}, {inpt_dict["y_focus_offset"]}, '
               f'{inpt_dict["z_focus_offset"]}) [{inpt_dict["focus_offset_unit"]}], ')
     title += f'Phase offset = {inpt_dict["phase_offset"]} [{inpt_dict["phase_unit"]}], '
-    title += f'$\lambda$ = {inpt_dict["observing_wavelength"]} [{inpt_dict["wavelength_unit"]}]'
+    lambda_char = "\u03bb"
+    title += f'{lambda_char} = {inpt_dict["observing_wavelength"]} [{inpt_dict["wavelength_unit"]}]'
     return title
 
 

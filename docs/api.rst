@@ -1,7 +1,7 @@
 API
 ======================================================
 
-Under development.
+Currently we only provide API reference to user facing functions.
 
 .. toctree::
    :maxdepth: 2
