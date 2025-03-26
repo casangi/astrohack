@@ -583,11 +583,7 @@ def statistics_to_text(data_statistics:dict, keys:list=None, num_format:str=None
     if num_format == 'dynamic':
         format_list = []
         for key in key_list:
-            data_oom = np.log10(np.abs(data_statistics[key]))
-            if data_oom >= 4 or data_oom < -3:
-                format_list.append('.3e')
-            else:
-                format_list.append(f'{round(abs(data_oom))+1}f')
+            format_list.append(dynamic_format(data_statistics[key]))
     elif num_format is None:
         format_list = ['.2f'] * n_keys
     else:
@@ -599,3 +595,12 @@ def statistics_to_text(data_statistics:dict, keys:list=None, num_format:str=None
     outstr = outstr[:-2]
 
     return outstr
+
+
+def dynamic_format(value):
+    data_oom = np.log10(np.abs(value))
+    if data_oom >= 4 or data_oom < -3:
+        return '.3e'
+    else:
+        return f'{round(abs(data_oom))+1}f'
+
