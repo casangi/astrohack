@@ -276,19 +276,20 @@ class FITSImage:
 
         if self.residuals is None:
             raise Exception("Cannot plot results as they don't exist yet.")
-        self._plot_map(self._mask_array(self.residuals), f'Residuals, ref={self.reference_name}',
+        self._plot_map(self._mask_array(self.residuals), f'Residuals, {self.reference_name} - {self.rootname}',
                        f'Residuals [{self.unit}]', f'{base_name}residuals.png', cmap, extent,
                        'symmetrical', dpi, display, add_statistics=True)
 
         if plot_data:
             self._plot_map(self._mask_array(self.data), 'Original Data', f'Data [{self.unit}]',
                            f'{base_name}data.png', cmap, extent, [None, None], dpi, display,
-                           add_statistics=False)
+                           add_statistics=True)
 
         if plot_percentuals:
             if self.residuals is None:
                 raise Exception("Cannot plot results as they don't exist yet.")
-            self._plot_map(self._mask_array(self.residuals_percent), f'Residuals in %, ref={self.reference_name}',
+            self._plot_map(self._mask_array(self.residuals_percent),
+                           f'Residuals in %, {self.reference_name} - {self.rootname}',
                            f'Residuals [%]', f'{base_name}residuals_percent.png', cmap, extent,
                            'symmetrical', dpi, display, add_statistics=True)
 
@@ -296,7 +297,7 @@ class FITSImage:
             if self.divided_image is None:
                 raise Exception("Cannot plot a divided image that does not exist.")
             self._plot_map(self._mask_array(self.divided_image),
-                           f'Divided image, ref={self.reference_name}, scaling={self.factor:.4f}',
+                           f'Divided image, {self.reference_name} / {self.rootname}, scaling={self.factor:.4f}',
                            f'Division [ ]', f'{base_name}divided.png', cmap, extent, [None, None],
                            dpi, display, add_statistics=True)
 
@@ -336,7 +337,7 @@ class FITSImage:
         ax.set_ylabel(f"Y axis [{self.y_unit}]")
         if add_statistics:
             data_stats = data_statistics(data)
-            ax.set_title(statistics_to_text(data_stats))
+            ax.set_title(statistics_to_text(data_stats, num_format='dynamic'))
         close_figure(fig, title, filename, dpi, display)
 
     def export_as_xds(self):
