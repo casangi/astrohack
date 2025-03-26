@@ -33,10 +33,14 @@ def read_meta_data(file_name):
     return json_dict
 
 
-def add_caller_and_version_to_dict(in_dict):
+def add_caller_and_version_to_dict(in_dict, direct_call=False):
+    if direct_call:
+        ipos = 1
+    else:
+        ipos = 2
     in_dict.update({
         'version': astrohack.__version__,
-        'origin': inspect.stack()[1].function
+        'origin': inspect.stack()[ipos].function
     })
 
 
