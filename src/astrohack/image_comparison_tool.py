@@ -9,6 +9,7 @@ from astrohack.core.image_comparison_tool import image_comparison_chunk
 from astrohack.utils.graph import compute_graph_from_lists
 from astrohack.utils.validation import custom_plots_checker
 from astrohack.utils.data import add_caller_and_version_to_dict
+from astrohack.visualization.textual_data import create_fits_comparison_rms_table
 
 
 @toolviper.utils.parameter.validate(
@@ -155,3 +156,45 @@ def compare_fits_images(
         root.to_zarr(zarr_container_name, mode='w', consolidated=True)
 
     return root
+
+
+def build_rms_table_from_zarr_datatree(
+        zarr_data_tree: str,
+        table_file: str,
+        rms_unit: str = 'mm',
+        print_table: bool = False
+):
+    """
+    Goes through the data in a zarr DataTree created by compare_fits_images.
+
+    :param zarr_data_tree: Name on disk of the Zarr container holding a compare_fits_image DataTree.
+    :type zarr_data_tree: str
+
+    :param table_file: Name of the ASCII file to be created on disk to contain the RMS table
+    :type table_file: str
+
+    :param rms_unit: Unit for the RMSes in the table, default is 'mm'.
+    :type rms_unit: str, optional
+
+    :param print_table: Print table on terminal, default is False.
+    :type print_table: bool, optional
+
+    :return: None
+    :rtype: NoneType
+    """
+
+    input_params = locals()
+
+    if pathlib.Path(input_params['zarr_data_tree']).exists():
+        pass
+    else:
+        logger.error(f"File {input_params['zarr_data_tree']} does not exists.")
+        raise FileNotFoundError
+
+    xdt = xr.open_datatree(input_params['zarr_data_tree'])
+    if xdt.attrs['origin'] != 'compare_fits_images':
+        logger.error('Data tree file was not created by astrohack.compare_fits_images')
+        raise ValueError
+
+    create_fits_comparison_rms_table(input_params, xdt)
+    return
