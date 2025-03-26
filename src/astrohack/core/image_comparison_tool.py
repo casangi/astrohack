@@ -253,14 +253,16 @@ class FITSImage:
         """
         return np.where(self.base_mask, image_array, np.nan)
 
-    def plot_images(self, destination, plot_data=False, plot_percentuals=False,
-                    plot_divided_image=False, colormap='viridis', dpi=300, display=False):
+    def plot_images(self, destination, plot_resampled=False, plot_percentuals=False, plot_reference=False,
+                    plot_original=False, plot_divided_image=False, colormap='viridis', dpi=300, display=False):
         """
         Plot image contents of the FITSImage object, always plots the residuals when called
         Args:
             destination: Location onto which save plot files
-            plot_data: Also plot data array?
+            plot_resampled: Also plot data array?
             plot_percentuals: Also plot percentual residuals array?
+            plot_reference: Also plot reference image?
+            plot_original: Also plot original unresampled image?
             plot_divided_image: Also plot divided image?
             colormap: Colormap name for image plots
             dpi: png resolution on disk
@@ -280,9 +282,18 @@ class FITSImage:
                        f'Residuals [{self.unit}]', f'{base_name}residuals.png', cmap, extent,
                        'symmetrical', dpi, display, add_statistics=True)
 
-        if plot_data:
-            self._plot_map(self._mask_array(self.data), 'Original Data', f'Data [{self.unit}]',
-                           f'{base_name}data.png', cmap, extent, [None, None], dpi, display,
+        if plot_resampled:
+            self._plot_map(self._mask_array(self.data), 'Resampled Data', f'Data [{self.unit}]',
+                           f'{base_name}resampled.png', cmap, extent, [None, None], dpi, display,
+                           add_statistics=True)
+
+        if plot_reference:
+            self._plot_map(self._mask_array(self.data), f'Reference: {self.reference_name}', f'Data [{self.unit}]',
+                           f'{base_name}reference.png', cmap, extent, [None, None], dpi, display,
+                           add_statistics=True)
+        if plot_original:
+            self._plot_map(self._mask_array(self.original_data), f'Unresampled data', f'Data [{self.unit}]',
+                           f'{base_name}original.png', cmap, extent, [None, None], dpi, display,
                            add_statistics=True)
 
         if plot_percentuals:
@@ -295,11 +306,12 @@ class FITSImage:
 
         if plot_divided_image:
             if self.divided_image is None:
-                raise Exception("Cannot plot a divided image that does not exist.")
-            self._plot_map(self._mask_array(self.divided_image),
-                           f'Divided image, {self.reference_name} / {self.rootname}, scaling={self.factor:.4f}',
-                           f'Division [ ]', f'{base_name}divided.png', cmap, extent, [None, None],
-                           dpi, display, add_statistics=True)
+                pass
+            else:
+                self._plot_map(self._mask_array(self.divided_image),
+                               f'Divided image, {self.reference_name} / {self.rootname}, scaling={self.factor:.4f}',
+                               f'Division [ ]', f'{base_name}divided.png', cmap, extent, [None, None],
+                               dpi, display, add_statistics=True)
 
     def _plot_map(self, data, title, zlabel, filename, cmap, extent, zscale, dpi, display, add_statistics=False):
         """
@@ -476,22 +488,27 @@ def image_comparison_chunk(compare_params):
 
     image = FITSImage.from_fits_file(compare_params['this_image'], compare_params['telescope_name'])
     ref_image = FITSImage.from_fits_file(compare_params['this_reference_image'], compare_params['telescope_name'])
-    plot_data = compare_params['plot_data']
+    plot_resampled = compare_params['plot_resampled']
     plot_percentuals = compare_params['plot_percentuals']
     plot_divided = compare_params['plot_divided_image']
+    plot_reference = compare_params['plot_reference']
+    plot_original = compare_params['plot_original']
     destination = compare_params['destination']
     colormap = compare_params['colormap']
     dpi = compare_params['dpi']
     display = compare_params['display']
 
+    # plot_resampled=False, plot_percentuals=False, plot_reference=False,
+    #                 plot_original=False, plot_divided_image=False
+
     if compare_params['comparison'] == 'direct':
         image.compare_difference(ref_image)
-        image.plot_images(destination, plot_data, plot_percentuals, False, colormap=colormap, dpi=dpi,
-                          display=display)
+        image.plot_images(destination, plot_resampled, plot_percentuals, plot_reference, plot_original,
+                          False, colormap=colormap, dpi=dpi, display=display)
     elif compare_params['comparison'] == 'scaled':
         image.compare_scaled_difference(ref_image)
-        image.plot_images(destination, plot_data, plot_percentuals, plot_divided, colormap=colormap, dpi=dpi,
-                          display=display)
+        image.plot_images(destination, plot_resampled, plot_percentuals, plot_reference, plot_original, plot_divided,
+                          colormap=colormap, dpi=dpi, display=display)
     else:
         raise Exception(f'Unknown comparison type {compare_params["comparison"]}')
 
