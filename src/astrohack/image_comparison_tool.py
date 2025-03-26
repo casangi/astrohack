@@ -8,6 +8,7 @@ import toolviper
 from astrohack.core.image_comparison_tool import image_comparison_chunk
 from astrohack.utils.graph import compute_graph_from_lists
 from astrohack.utils.validation import custom_plots_checker
+from astrohack.utils.data import add_caller_and_version_to_dict
 
 
 @toolviper.utils.parameter.validate(
@@ -141,10 +142,11 @@ def compare_fits_images(
     param_dict = locals()
     pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
 
-    result_list = compute_graph_from_lists(param_dict, image_comparison_chunk, ['image', 'reference_image'], parallel)
-
     root = xr.DataTree(name='Root')
+    root.attrs.update(param_dict)
+    add_caller_and_version_to_dict(root.attrs, direct_call=True)
 
+    result_list = compute_graph_from_lists(param_dict, image_comparison_chunk, ['image', 'reference_image'], parallel)
     for item in result_list:
         tree_node = item
         root = root.assign({tree_node.name: tree_node})
