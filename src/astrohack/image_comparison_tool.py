@@ -132,8 +132,9 @@ def compare_fits_images(
     result_list = compute_graph_from_lists(param_dict, image_comparison_chunk, ['image', 'reference_image'], parallel)
 
     root = xr.DataTree(name='Root')
+
     for item in result_list:
-        tree_node = item[0]
+        tree_node = item
         root = root.assign({tree_node.name: tree_node})
 
     if zarr_container_name is not None:
