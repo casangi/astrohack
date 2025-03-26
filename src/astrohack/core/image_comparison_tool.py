@@ -242,7 +242,7 @@ class FITSImage:
         test_image(ref_image)
         return are_axes_equal(self.x_axis, ref_image.x_axis) and are_axes_equal(self.y_axis, ref_image.y_axis)
 
-    def _mask_array(self, image_array):
+    def mask_array(self, image_array):
         """
         Applies base mask to image_array
         Args:
@@ -253,7 +253,7 @@ class FITSImage:
         """
         return np.where(self.base_mask, image_array, np.nan)
 
-    def _mask_original(self):
+    def mask_original(self):
         """
         Applies base mask equivalent to original data
         Returns:
@@ -292,28 +292,28 @@ class FITSImage:
 
         if self.residuals is None:
             raise Exception("Cannot plot results as they don't exist yet.")
-        self._plot_map(self._mask_array(self.residuals), f'Residuals, {self.reference_name} - {self.filename}',
+        self._plot_map(self.mask_array(self.residuals), f'Residuals, {self.reference_name} - {self.filename}',
                        f'Residuals [{self.unit}]', f'{base_name}residuals.png', cmap, extent,
                        'symmetrical', dpi, display, add_statistics=True)
 
         if plot_resampled:
-            self._plot_map(self._mask_array(self.data), 'Resampled Data', f'Data [{self.unit}]',
+            self._plot_map(self.mask_array(self.data), 'Resampled Data', f'Data [{self.unit}]',
                            f'{base_name}resampled.png', cmap, extent, [None, None], dpi, display,
                            add_statistics=True)
 
         if plot_reference:
-            self._plot_map(self._mask_array(ref_image.data), f'Reference: {self.reference_name}', f'Data [{self.unit}]',
+            self._plot_map(self.mask_array(ref_image.data), f'Reference: {self.reference_name}', f'Data [{self.unit}]',
                            f'{base_name}reference.png', cmap, extent, [None, None], dpi, display,
                            add_statistics=True)
         if plot_original:
-            self._plot_map(self._mask_original(), f'Unresampled data', f'Data [{self.unit}]',
+            self._plot_map(self.mask_original(), f'Unresampled data', f'Data [{self.unit}]',
                            f'{base_name}original.png', cmap, extent, [None, None], dpi, display,
                            add_statistics=True)
 
         if plot_percentuals:
             if self.residuals is None:
                 raise Exception("Cannot plot results as they don't exist yet.")
-            self._plot_map(self._mask_array(self.residuals_percent),
+            self._plot_map(self.mask_array(self.residuals_percent),
                            f'Residuals in %, {self.reference_name} - {self.filename}',
                            f'Residuals [%]', f'{base_name}residuals_percent.png', cmap, extent,
                            'symmetrical', dpi, display, add_statistics=True)
@@ -322,7 +322,7 @@ class FITSImage:
             if self.divided_image is None:
                 pass
             else:
-                self._plot_map(self._mask_array(self.divided_image),
+                self._plot_map(self.mask_array(self.divided_image),
                                f'Divided image, {self.reference_name} / {self.filename}, scaling={self.factor:.4f}',
                                f'Division [ ]', f'{base_name}divided.png', cmap, extent, [None, None],
                                dpi, display, add_statistics=True)
@@ -534,3 +534,26 @@ def image_comparison_chunk(compare_params):
     tree_node = xr.DataTree(name=image.rootname[:-1], children={'Reference': ref_node, 'Image': img_node})
 
     return tree_node
+
+def extract_rms_from_xds(xds):
+    """
+    This simple function extracts FITSImage RMSes for a xds describing a FITSImage obj
+    Args:
+        xds: xds describing a FITSImage obj
+
+    Returns:
+        dict with RMS values
+    """
+    rms_dict = {}
+
+    img_obj = FITSImage.from_xds(xds)
+    if img_obj.residuals is None:
+        rms_dict['resampled'] = np.nan
+        rms_dict['residuals'] = np.nan
+    else:
+        rms_dict['resampled'] = np.nanstd(img_obj.mask_array(img_obj.data))
+        rms_dict['residuals'] = np.nanstd(img_obj.mask_array(img_obj.residuals))
+
+    rms_dict['original'] = np.nanstd(img_obj.mask_original())
+    return rms_dict
+
