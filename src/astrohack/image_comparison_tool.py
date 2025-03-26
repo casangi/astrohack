@@ -7,7 +7,7 @@ import toolviper
 
 from astrohack.core.image_comparison_tool import image_comparison_chunk
 from astrohack.utils.graph import compute_graph_from_lists
-from astrohack.utils.validation import custom_plots_checker
+from astrohack.utils.validation import custom_plots_checker, custom_unit_checker
 from astrohack.utils.data import add_caller_and_version_to_dict
 from astrohack.visualization.textual_data import create_fits_comparison_rms_table
 
@@ -157,8 +157,10 @@ def compare_fits_images(
 
     return root
 
-
-def build_rms_table_from_zarr_datatree(
+@toolviper.utils.parameter.validate(
+    custom_checker=custom_unit_checker
+)
+def rms_table_from_zarr_datatree(
         zarr_data_tree: str,
         table_file: str,
         rms_unit: str = 'mm',
