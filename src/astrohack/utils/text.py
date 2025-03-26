@@ -595,7 +595,6 @@ def statistics_to_text(data_statistics:dict, keys:list=None, num_format:str=None
 
     outstr = ''
     for ikey, key in enumerate(key_list):
-        print(key, data_statistics[key], format_list[ikey])
         outstr += f'{key}={data_statistics[key]:{format_list[ikey]}}, '
     outstr = outstr[:-2]
 
