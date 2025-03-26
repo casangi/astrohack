@@ -20,8 +20,10 @@ def compare_fits_images(
         destination: str,
         comparison: str = 'direct',
         zarr_container_name: str = None,
-        plot_data: bool = False,
+        plot_resampled: bool = False,
         plot_percentuals: bool = False,
+        plot_reference: bool = False,
+        plot_original: bool = False,
         plot_divided_image: bool = False,
         plot_scatter: bool = True,
         export_to_fits: bool = False,
@@ -52,8 +54,14 @@ def compare_fits_images(
     DataTree is not saved to disk.
     :type zarr_container_name: str, optional
 
-    :param plot_data: Plot the data array used in the comparison, default is False.
-    :type plot_data: bool, optional
+    :param plot_resampled: Plot the resampled data array used in the comparison, default is False.
+    :type plot_resampled: bool, optional
+
+    :param plot_reference: Plot the reference image used in the comparison, default is False.
+    :type plot_reference: bool, optional
+
+    :param plot_original: Plot the unresampled image used as input, default is False.
+    :type plot_original: bool, optional
 
     :param plot_percentuals: Plot the residuals in percent of reference image as well, default is False.
     :type plot_percentuals: bool, optional
@@ -96,10 +104,14 @@ def compare_fits_images(
     .. rubric:: Plots:
     A plot of the residuals of the comparison is always produced.
     However, a few extra plots can be produced and their production is controlled by the *plot_* parameters, these are:
-        - *plot_data*: Activates plotting of the data used in the comparison, default is False as this is the data on \
-                       the FITS file.
+        - *plot_resampled*: Activates plotting of the resampled data used in the comparison, default is False as this \
+                            is just the data on the FITS file resampled to the reference sampling.
         - *plot_percentuals*: Activates the plotting of the residuals as a perdentage of the Reference Image, default \
                               is False as this is just another view on the residuals.
+        - *plot_reference*: Activates the plotting of the reference image used in the comparison, default is False as \
+                            this is just the data on the reference FITS file.
+        - *plot_original*: Activates the plotting of the unresampled data, default is False as this is just the data \
+                           on the FITS file
         - *plot_divided_image*: Activates the plotting of Reference/Image, default is False. This plot is only \
                                 available when using "scaled" comparison.
         - *plot_scatter*: Activates the creation of a scatter plot of Reference vs Image, with a linear regression, \

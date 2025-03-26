@@ -33,12 +33,22 @@
             "required": false,
             "type": ["string"]
         },
-        "plot_data":{
+        "plot_resampled":{
             "nullable": false,
             "required": false,
             "type": ["boolean"]
         },
         "plot_percentuals":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "plot_reference":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "plot_original":{
             "nullable": false,
             "required": false,
             "type": ["boolean"]
