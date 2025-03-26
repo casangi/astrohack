@@ -351,6 +351,7 @@ def create_fits_comparison_rms_table(parameters, xdt):
     outstr = f'RMS comparison table from {parameters["zarr_data_tree"]}:\n'
     outstr += table.get_string()
     string_to_ascii_file(outstr, parameters['table_file'])
-    print(table)
+    if parameters['print_table']:
+        print(table)
     return
 
