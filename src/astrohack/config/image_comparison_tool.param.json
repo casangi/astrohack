@@ -33,12 +33,22 @@
             "required": false,
             "type": ["string"]
         },
-        "plot_data":{
+        "plot_resampled":{
             "nullable": false,
             "required": false,
             "type": ["boolean"]
         },
         "plot_percentuals":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "plot_reference":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "plot_original":{
             "nullable": false,
             "required": false,
             "type": ["boolean"]
@@ -77,6 +87,29 @@
             "type": ["boolean"]
         },
         "parallel":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        }
+    },
+    "rms_table_from_zarr_datatree":{
+        "zarr_data_tree": {
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "table_file": {
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "rms_unit": {
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.length"
+        },
+        "print_table": {
             "nullable": false,
             "required": false,
             "type": ["boolean"]

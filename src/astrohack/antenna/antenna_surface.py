@@ -115,7 +115,11 @@ class AntennaSurface:
         self.clip = inputxds.attrs['clip']
         self.solved = inputxds.attrs['solved']
         self.fitted = inputxds.attrs['fitted']
-        self.pol_state = inputxds.attrs['pol_state']
+        if 'pol_state' not in inputxds.attrs:
+            # Here I assume no one was doing panel fitting on something that is not Stokes I
+            self.pol_state = 'I'
+        else:
+            self.pol_state = inputxds.attrs['pol_state']
         # Arrays
         self.amplitude = inputxds['AMPLITUDE'].values
         self.phase = inputxds['PHASE'].values

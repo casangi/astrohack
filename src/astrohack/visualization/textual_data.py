@@ -1,6 +1,7 @@
 import numpy as np
 
-from astrohack.utils import rad_to_deg_str, twopi, fixed_format_error
+from astrohack.core.image_comparison_tool import extract_rms_from_xds
+from astrohack.utils import rad_to_deg_str, twopi, fixed_format_error, dynamic_format
 from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import convert_unit, clight, notavail, param_to_list, add_prefix, format_value_error, \
     rotate_to_gmt, format_frequency, format_wavelength, format_value_unit, length_units, trigo_units, format_label, \
@@ -318,3 +319,39 @@ def print_array_configuration(params, ant_dict, telescope_name):
 
     print(table)
     return
+
+
+def create_fits_comparison_rms_table(parameters, xdt):
+    image_list = xdt.children
+    rms_unit = parameters['rms_unit']
+
+    fields = ['Image', 'Reference', f'Original RMS [{rms_unit}]', f'Resampled RMS [{rms_unit}]',
+              f'Reference RMS [{rms_unit}]', f'Residuals RMS [{rms_unit}]']
+
+    factor = convert_unit('m', rms_unit, 'length')
+
+    table = create_pretty_table(fields)
+    for image in image_list:
+
+        image_xds = xdt[image]['Image'].to_dataset()
+        reference_xds = xdt[image]['Reference'].to_dataset()
+
+        img_rms_dict = extract_rms_from_xds(image_xds)
+        ref_rms_dict = extract_rms_from_xds(reference_xds)
+        values = np.array([img_rms_dict['original'], img_rms_dict['resampled'], ref_rms_dict['original'],
+                           img_rms_dict['residuals']])
+        values *= factor
+
+        row = [image_xds.attrs['filename'], reference_xds.attrs['filename']]
+        for val in values:
+            row.append(f'{val:{dynamic_format(val)}}')
+
+        table.add_row(row)
+
+    outstr = f'RMS comparison table from {parameters["zarr_data_tree"]}:\n'
+    outstr += table.get_string()
+    string_to_ascii_file(outstr, parameters['table_file'])
+    if parameters['print_table']:
+        print(table)
+    return
+

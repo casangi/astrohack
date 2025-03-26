@@ -572,14 +572,35 @@ def significant_figures_round(x, digits):
         return x
 
 
-def statistics_to_text(data_statistics, keys=None):
+def statistics_to_text(data_statistics:dict, keys:list=None, num_format:str=None):
     if keys is None:
-        outstr = (f'min={data_statistics["min"]:.2f}, max={data_statistics["max"]:.2f}, '
-                  f'mean={data_statistics["mean"]:.2f}, med={data_statistics["median"]:.2f}, '
-                  f'rms={data_statistics["rms"]:.2f}')
+        key_list = list(data_statistics.keys())
     else:
-        outstr = ''
-        for key in keys:
-            outstr += f'{key}={data_statistics[key]:.2f}, '
-        outstr = outstr[:-2]
+        key_list = keys
+
+    n_keys = len(key_list)
+
+    if num_format == 'dynamic':
+        format_list = []
+        for key in key_list:
+            format_list.append(dynamic_format(data_statistics[key]))
+    elif num_format is None:
+        format_list = ['.2f'] * n_keys
+    else:
+        format_list = [num_format] * n_keys
+
+    outstr = ''
+    for ikey, key in enumerate(key_list):
+        outstr += f'{key}={data_statistics[key]:{format_list[ikey]}}, '
+    outstr = outstr[:-2]
+
     return outstr
+
+
+def dynamic_format(value):
+    data_oom = np.log10(np.abs(value))
+    if data_oom >= 4 or data_oom < -3:
+        return '.3e'
+    else:
+        return f'{round(abs(data_oom))+1}f'
+
