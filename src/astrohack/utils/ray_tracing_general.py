@@ -170,7 +170,7 @@ def grid_qps_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_of
                 new_idx[i_pnt] = np.array((ix, iy))
                 i_pnt += 1
 
-    n_total = i_pnt+1
+    n_total = i_pnt
     return new_pcd[:n_total, :], new_idx[:n_total, :]
 
 
@@ -208,7 +208,6 @@ def grid_qps_with_normals(point_cloud, qps_coeffs, sampling, active_radius=9.0, 
     dy_pcd[:, 1] = 1.0
     dy_pcd[:, 2] = (dy_pcd[:, 2] - new_pcd[:, 2]) / epsilon
 
-    print(dx_pcd.shape, new_pcd.shape)
     normals = normalize_vector_map(np.cross(dx_pcd, dy_pcd))
     return new_pcd, normals
 
