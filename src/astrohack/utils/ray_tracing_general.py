@@ -188,7 +188,7 @@ def grid_qps_primary(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off
     return gridded_qps
 
 
-def grid_qps_with_normals(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off=None, y_off=None, epsilon=1e-6):
+def grid_qps_with_normals(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off=None, y_off=None, epsilon=1e-5):
     if x_off is None:
         x_off = find_mid_point(point_cloud[:, 0])
     if y_off is None:
@@ -209,7 +209,7 @@ def grid_qps_with_normals(point_cloud, qps_coeffs, sampling, active_radius=9.0, 
     dy_pcd[:, 2] = (dy_pcd[:, 2] - new_pcd[:, 2]) / epsilon
 
     normals = normalize_vector_map(np.cross(dx_pcd, dy_pcd))
-    return new_pcd, normals
+    return new_pcd, normals, new_idx
 
 
 def degrade_qps(point_cloud, qps_coeffs, factor: int):
