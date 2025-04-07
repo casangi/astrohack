@@ -199,15 +199,17 @@ def grid_qps_with_normals(point_cloud, qps_coeffs, sampling, active_radius=9.0, 
 
     new_pcd, new_idx = grid_qps_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off)
     dx_pcd, _ = grid_qps_jit_1d(x_axis+epsilon, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off)
-    dx_pcd[:, 0] = new_pcd[:, 0]
+    dx_pcd[:, 0] = 1.0
+    dx_pcd[:, 1] = 0.0
     dx_pcd[:, 2] = (dx_pcd[:, 2] - new_pcd[:, 2]) / epsilon
 
     dy_pcd, _ = grid_qps_jit_1d(x_axis, y_axis+epsilon, point_cloud, qps_coeffs, active_radius, x_off, y_off)
-    dy_pcd[:, 1] = new_pcd[:, 1]
+    dy_pcd[:, 0] = 0.0
+    dy_pcd[:, 1] = 1.0
     dy_pcd[:, 2] = (dy_pcd[:, 2] - new_pcd[:, 2]) / epsilon
 
     print(dx_pcd.shape, new_pcd.shape)
-    normals = normalize_vector_map(np.cross(dy_pcd, dx_pcd))
+    normals = normalize_vector_map(np.cross(dx_pcd, dy_pcd))
     return new_pcd, normals
 
 
