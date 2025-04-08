@@ -145,6 +145,15 @@ def grid_qps_jit(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, 
 
 
 @njit(cache=True, nogil=True)
+def compute_qps_one_point(x_val, y_val, a_coeffs, b_coeffs, pcd_xy):
+    pnt_xy = np.array([x_val, y_val])
+    r_term = np.sum(a_coeffs*np.sqrt(np.sum((pnt_xy[np.newaxis, :]-pcd_xy)**2, axis=1))**5)
+    z_val = r_term + b_coeffs[0]*pnt_xy[0]**2 + b_coeffs[1]*pnt_xy[0]*pnt_xy[1] + b_coeffs[2]*pnt_xy[1]**2
+    z_val += b_coeffs[3]*pnt_xy[0] + b_coeffs[4]*pnt_xy[1] + b_coeffs[5]
+    return z_val
+
+
+@njit(cache=True, nogil=True)
 def grid_qps_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off):
     nx = x_axis.shape[0]
     ny = y_axis.shape[0]
@@ -152,7 +161,6 @@ def grid_qps_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_of
     new_pcd = np.empty((nx*ny, 3))
     new_idx = np.empty((nx*ny, 2))
 
-    gridded_shape = (nx, ny)
     npnt = point_cloud.shape[0]
     a_coeffs = qps_coeffs[0:npnt]
     b_coeffs = qps_coeffs[npnt:]
@@ -172,6 +180,43 @@ def grid_qps_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_of
 
     n_total = i_pnt
     return new_pcd[:n_total, :], new_idx[:n_total, :]
+
+@njit(cache=True, nogil=True)
+def grid_qps_plus_fdd_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off, fdd_epsilon):
+    nx = x_axis.shape[0]
+    ny = y_axis.shape[0]
+    npnt_max = nx*ny
+
+    qps_pcd = np.empty((npnt_max, 3))
+    qps_pcd_dx = np.empty((npnt_max, 3))
+    qps_pcd_dy = np.empty((npnt_max, 3))
+    grid_idx = np.empty((npnt_max, 2))
+
+    npnt_pcd = point_cloud.shape[0]
+    a_coeffs = qps_coeffs[0:npnt_pcd]
+    b_coeffs = qps_coeffs[npnt_pcd:]
+    pcd_xy = point_cloud[:, 0:2]
+
+    i_pnt = 0
+    for ix, x_val in enumerate(x_axis):
+        for iy, y_val in enumerate(y_axis):
+            if ((x_val-x_off)**2 + (y_val-y_off)**2) <= active_radius**2:
+                qps_pcd[i_pnt, 0] = x_val
+                qps_pcd[i_pnt, 1] = y_val
+                qps_pcd[i_pnt, 2] = compute_qps_one_point(x_val, y_val, a_coeffs, b_coeffs, pcd_xy)
+                qps_pcd_dx[i_pnt, 0] = 1.
+                qps_pcd_dx[i_pnt, 1] = 0.
+                qps_pcd_dx[i_pnt, 2] = (compute_qps_one_point(x_val + fdd_epsilon, y_val, a_coeffs, b_coeffs, pcd_xy)
+                                        - qps_pcd[i_pnt, 2])/ fdd_epsilon
+                qps_pcd_dy[i_pnt, 0] = 0.
+                qps_pcd_dy[i_pnt, 1] = 1.
+                qps_pcd_dy[i_pnt, 2] = (compute_qps_one_point(x_val, y_val + fdd_epsilon, a_coeffs, b_coeffs, pcd_xy)
+                                        - qps_pcd[i_pnt, 2]) / fdd_epsilon
+                grid_idx[i_pnt, 0] = ix
+                grid_idx[i_pnt, 1] = iy
+                i_pnt += 1
+    n_total = i_pnt
+    return qps_pcd[:n_total, :], qps_pcd_dx[:n_total, :], qps_pcd_dy[:n_total, :], grid_idx[:n_total, :]
 
 
 def grid_qps_primary(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off=None, y_off=None):
@@ -210,6 +255,22 @@ def grid_qps_with_normals(point_cloud, qps_coeffs, sampling, active_radius=9.0, 
 
     normals = normalize_vector_map(np.cross(dx_pcd, dy_pcd))
     return new_pcd, normals, new_idx
+
+
+def grid_qps_with_fdd_normals(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off=None, y_off=None,
+                              fdd_epsilon=1e-5):
+    if x_off is None:
+        x_off = find_mid_point(point_cloud[:, 0])
+    if y_off is None:
+        y_off = find_mid_point(point_cloud[:, 1])
+
+    x_axis = simple_axis([-active_radius + x_off, active_radius + x_off], sampling)
+    y_axis = simple_axis([-active_radius + y_off, active_radius + y_off], sampling)
+    qps_pcd, qps_pcd_dx, qps_pcd_dy, grid_idx = grid_qps_plus_fdd_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs,
+                                                                         active_radius, x_off, y_off, fdd_epsilon)
+    qps_normals = normalize_vector_map(np.cross(qps_pcd_dx, qps_pcd_dy))
+    return qps_pcd, qps_normals, grid_idx
+
 
 
 def degrade_qps(point_cloud, qps_coeffs, factor: int):
