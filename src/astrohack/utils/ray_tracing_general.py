@@ -66,33 +66,6 @@ def compute_quintic_pseudo_spline_coefficients(point_cloud):
     return qps_coeffs
 
 
-def compute_qps_full_np(point_cloud):
-    n_extra_coeffs = 6
-    pcd_xy = point_cloud[:, 0:2]
-    pcd_z = point_cloud[:, 2]
-
-    npnt = pcd_xy.shape[0]
-    n_var = npnt + n_extra_coeffs
-    matrix_shape = (n_var, n_var)
-
-    matrix = np.empty(matrix_shape)
-    vector = np.zeros(n_var)
-
-    matrix[0:npnt, 0:npnt] = cdist(pcd_xy, pcd_xy)**5
-    matrix[0:npnt, npnt+0] = pcd_xy[:, 0] ** 2
-    matrix[0:npnt, npnt+1] = pcd_xy[:, 0] * pcd_xy[:, 1]
-    matrix[0:npnt, npnt+2] = pcd_xy[:, 1] ** 2
-    matrix[0:npnt, npnt+3] = pcd_xy[:, 0]
-    matrix[0:npnt, npnt+4] = pcd_xy[:, 1]
-    matrix[0:npnt, npnt+5] = 1
-    matrix[npnt:n_var, 0:npnt] = 1
-    matrix[npnt:n_var, npnt:n_var] = 0
-    vector[0:npnt] = pcd_z
-
-    qps_coeffs, _, _ = least_squares(matrix, vector)
-    return qps_coeffs
-
-
 def compute_qps_value(pnt, qps_coeffs, point_cloud):
     # QPS definition from Bergman et al. 1994, IEEE Transactions on Antennas and propagation
     npnt = point_cloud.shape[0]
@@ -108,7 +81,6 @@ def compute_qps_value(pnt, qps_coeffs, point_cloud):
 
 
 def qps_pcd_fitting(point_cloud_filename, output_coeff_filename, max_rows=None):
-
     pcd_data = np.loadtxt(point_cloud_filename, max_rows=max_rows)
     qps_coeffs = compute_quintic_pseudo_spline_coefficients(pcd_data)
     np.save(output_coeff_filename, qps_coeffs)
@@ -233,30 +205,6 @@ def grid_qps_primary(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off
     return gridded_qps
 
 
-def grid_qps_with_normals(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off=None, y_off=None, epsilon=1e-5):
-    if x_off is None:
-        x_off = find_mid_point(point_cloud[:, 0])
-    if y_off is None:
-        y_off = find_mid_point(point_cloud[:, 1])
-
-    x_axis = simple_axis([-active_radius + x_off, active_radius + x_off], sampling)
-    y_axis = simple_axis([-active_radius + y_off, active_radius + y_off], sampling)
-
-    new_pcd, new_idx = grid_qps_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off)
-    dx_pcd, _ = grid_qps_jit_1d(x_axis+epsilon, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off)
-    dx_pcd[:, 0] = 1.0
-    dx_pcd[:, 1] = 0.0
-    dx_pcd[:, 2] = (dx_pcd[:, 2] - new_pcd[:, 2]) / epsilon
-
-    dy_pcd, _ = grid_qps_jit_1d(x_axis, y_axis+epsilon, point_cloud, qps_coeffs, active_radius, x_off, y_off)
-    dy_pcd[:, 0] = 0.0
-    dy_pcd[:, 1] = 1.0
-    dy_pcd[:, 2] = (dy_pcd[:, 2] - new_pcd[:, 2]) / epsilon
-
-    normals = normalize_vector_map(np.cross(dx_pcd, dy_pcd))
-    return new_pcd, normals, new_idx
-
-
 def grid_qps_with_fdd_normals(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off=None, y_off=None,
                               fdd_epsilon=1e-5):
     if x_off is None:
@@ -271,20 +219,6 @@ def grid_qps_with_fdd_normals(point_cloud, qps_coeffs, sampling, active_radius=9
     qps_normals = normalize_vector_map(np.cross(qps_pcd_dx, qps_pcd_dy))
     return qps_pcd, qps_normals, grid_idx
 
-
-
-def degrade_qps(point_cloud, qps_coeffs, factor: int):
-    npnt = point_cloud.shape[0]
-    new_size = npnt//factor
-    new_qps = np.empty((new_size+6))
-    new_pcd = np.empty((new_size, 3))
-    for i_new in range(new_size):
-        i_old = i_new * factor
-        new_qps[i_new] = qps_coeffs[i_old]
-        new_pcd[i_new] = point_cloud[i_old]
-
-    new_qps[new_size:] = qps_coeffs[npnt:]
-    return new_qps, new_pcd
 
 
 def degrade_pcd(pcd_file, new_pcd_file, factor):
