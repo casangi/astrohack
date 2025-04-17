@@ -543,3 +543,9 @@ def significant_figures_round(x, digits):
         logger.warning("Unknown data type.")
 
         return x
+
+
+def statistics_to_text(data_statistics):
+    outstr = (f'min={data_statistics["min"]:.2e}, max={data_statistics["max"]:.2f}, mean={data_statistics["mean"]:.2f},'
+              f' median={data_statistics["median"]:.2f}, rms={data_statistics["rms"]:.2f}')
+    return outstr

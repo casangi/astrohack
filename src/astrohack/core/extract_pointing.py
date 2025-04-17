@@ -222,7 +222,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
                     
     M_direction = rotate(A_target,A_offset) #A_target is rotated to by A_offset
     if withPointingCorrection:
-        M_target = rotate(A_target,A_offset) + (A_encoder - A_pointing_direction)
+        M_direction = rotate(A_target,A_offset) + (A_encoder - A_pointing_direction)
         
     M_target = A_target
     M_pointing_offset = A_offset

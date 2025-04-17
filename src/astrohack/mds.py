@@ -49,8 +49,6 @@ from astrohack.utils.text import print_summary_header
 from astrohack.utils.text import rad_to_deg_str
 from astrohack.utils.text import rad_to_hour_str
 
-from prettytable import PrettyTable
-
 from typing import Any, List, Union, Tuple
 
 colorize = Colorize()
@@ -540,7 +538,7 @@ class AstrohackHologFile(dict):
             destination: str,
             delta: float = 0.01,
             ant: Union[str, List[str]] = "all",
-            ddi: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
             map_id: Union[int, List[int]] = "all",
             complex_split: str = 'polar',
             display: bool = False,
@@ -800,8 +798,8 @@ class AstrohackPanelFile(dict):
     def export_screws(
             self,
             destination: str,
-            ant: Union[str, List[str]] = None,
-            ddi: Union[int, List[int]] = None,
+            ant: Union[str, List[str]] = "all",
+            ddi: Union[int, List[int]] = "all",
             unit: str = 'mm',
             threshold: float = None,
             panel_labels: bool = True,
@@ -924,15 +922,15 @@ class AstrohackPanelFile(dict):
 
         **Additional Information**
         .. rubric:: Available plot types:
-        - *deviation*: Surface deviation estimated from phase and wavelength, three plots are produced for each antenna
-                       and ddi combination, surface before correction, the corrections applied and the corrected
+        - *deviation*: Surface deviation estimated from phase and wavelength, three plots are produced for each antenna \
+                       and ddi combination, surface before correction, the corrections applied and the corrected \
                        surface, most length units available
-        - *phase*: Phase deviations over the surface, three plots are produced for each antenna and ddi combination,
-                   phase before correction, the corrections applied and the corrected phase, deg and rad available as
+        - *phase*: Phase deviations over the surface, three plots are produced for each antenna and ddi combination, \
+                   phase before correction, the corrections applied and the corrected phase, deg and rad available as \
                    units
-        - *ancillary*: Two ancillary plots with useful information: The mask used to select data to be fitted, the
+        - *ancillary*: Two ancillary plots with useful information: The mask used to select data to be fitted, the \
                        amplitude data used to derive the mask, units are irrelevant for these plots
-        - *all*: All the plots listed above. In this case the unit parameter is taken to mean the deviation unit, the
+        - *all*: All the plots listed above. In this case the unit parameter is taken to mean the deviation unit, the \
                  phase unit is set to degrees
         """
 
@@ -989,6 +987,7 @@ class AstrohackPanelFile(dict):
             wavelength_unit: str = 'cm',
             frequencies: Union[float, List[float]] = None,
             frequency_unit: str = 'GHz',
+            rms_unit: str = 'mm',
             parallel: bool = False
     ) -> None:
         """ Compute estimated antenna gains in dB and saves them to ASCII files.
@@ -1014,6 +1013,9 @@ class AstrohackPanelFile(dict):
         :param frequency_unit: Unit for the frequencies being used, default is GHz.
         :type frequency_unit: str, optional
 
+        :param rms_unit: Unit for the Antenna surface RMS, default is mm.
+        :type rms_unit: str, optional
+
         :param parallel: If True will use an existing astrohack client to produce ASCII files in parallel, default is False
         :type parallel: bool, optional
 
@@ -1022,13 +1024,13 @@ class AstrohackPanelFile(dict):
         Export antenna gains in dB from ``astrohack.panel`` for analysis.
 
         **Additional Information**
+        
         .. rubric:: Selecting frequencies and wavelengths:
 
         If neither a frequency list nor a wavelength list is provided, ``export_gains_table`` will try to use a\
         predefined list set for the telescope associated with the dataset. If both are provided, ``export_gains_table``\
         will combine both lists.
         """
-
 
         param_dict = locals()
         pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
@@ -1189,7 +1191,7 @@ class AstrohackLocitFile(dict):
     ) -> None:
         """ Prints a table containing the array configuration
 
-        :param relative: Print relative antenna coordinates or geocentric coordinates, default is True
+        :param relative: Print antenna coordinates relative to array center or in geocentric coordinates, default is True
         :type relative: bool, optional
 
         .. _Description:

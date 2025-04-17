@@ -51,9 +51,6 @@
         "to_stokes":{
             "type":["boolean"]
         },
-        "apply_mask":{
-            "type":["boolean"]
-        },
         "phase_fit":{
             "type":["boolean", "list", "ndarray"],
             "minlength": 5,

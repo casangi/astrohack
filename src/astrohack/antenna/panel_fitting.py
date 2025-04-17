@@ -49,6 +49,7 @@ def _build_system(shape):
 #  Mean                           #
 ###################################
 
+
 def _solve_mean_opt(_self, samples):
     """
     Fit panel surface as a simple mean of its points deviation
@@ -81,6 +82,7 @@ def _correct_mean_opt(self, points):
 ###################################
 # Rigid                           #
 ###################################
+
 
 def _solve_rigid_opt(self, samples):
     """
@@ -128,6 +130,7 @@ def _correct_rigid_opt(self, points):
 ###################################
 # Flexible                        #
 ###################################
+
 
 def _solve_flexible_opt(self, samples):
     """
@@ -243,6 +246,8 @@ def _correct_full_paraboloid_opt(self, points):
 #######################################
 # Co-rotated paraboloid least squares #
 #######################################
+
+
 def _solve_corotated_lst_sq_opt(self, samples):
     """
     Builds the designer matrix for least squares fitting, and calls the least_squares fitter for a corotated
@@ -268,6 +273,7 @@ def _solve_corotated_lst_sq_opt(self, samples):
     params, _, _, _ = least_squares_jit(matrix, vector)
     return params
 
+
 def _correct_corotated_lst_sq_opt(self, points):
     """
     Provides the correction on a point using the fitted model
@@ -292,6 +298,7 @@ def _correct_corotated_lst_sq_opt(self, points):
 ###################################
 # Co-rotated robust               #
 ###################################
+
 
 def _solve_corotated_robust_opt(self, samples):
     """
@@ -634,5 +641,3 @@ class PanelPoint:
 
     def get_coords(self):
         return self.xc, self.yc, self.ix, self.iy
-
-

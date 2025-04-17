@@ -259,7 +259,8 @@ def extract_holog(
         holog_obs_dict: HologObsDict = None,
         ddi: Union[int, List[int], str] = 'all',
         baseline_average_distance: Union[float, str] = 'all',
-        baseline_average_nearest: Union[float, str] = 'all',
+        baseline_average_nearest: Union[float, str] = 1,
+        exclude_antennas: Union[list[str], str] = None,
         data_column: str = "CORRECTED_DATA",
         time_smoothing_interval: float = None,
         parallel: bool = False,
@@ -274,7 +275,7 @@ def extract_holog(
     :param point_name: Name of *<point_name>.point.zarr* file to use. This is must be provided.
     :type holog_name: str
 
-    :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with
+    :param holog_name: Name of *<holog_name>.holog.zarr* file to create. Defaults to measurement set name with \
     *holog.zarr* extension.
     :type holog_name: str, optional
 
@@ -301,6 +302,11 @@ def extract_holog(
     baseline_average_nearest is only used if the holog_obs_dict is not specified.  baseline_average_distance and \
     baseline_average_nearest can not be used together.
     :type baseline_average_nearest: int, optional
+
+    :param exclude_antennas: If an antenna is given for exclusion it will not be processed as a reference or a \
+    mapping antenna. This can be used to exclude antennas that have bad data for whatever reason. Default is None, \
+    meaning no antenna is excluded.
+    :type exclude_antennas: str | list, optional
 
     :param data_column: Determines the data column to pull from the measurement set. Defaults to "CORRECTED_DATA".
     :type data_column: str, optional, ex. DATA, CORRECTED_DATA
@@ -476,7 +482,8 @@ def extract_holog(
             extract_holog_params['baseline_average_nearest'],
             ant_names,
             ant_pos,
-            ant_names_main
+            ant_names_main,
+            exclude_antennas=extract_holog_params['exclude_antennas']
         )
 
         # From the generated holog_obs_dict subselect user supplied ddis.
@@ -487,7 +494,6 @@ def extract_holog(
                     ddi_id = int(ddi_key.replace('ddi_', ''))
                     if ddi_id not in ddi:
                         del holog_obs_dict[ddi_key]
-
 
     ctb = ctables.table(
         os.path.join(extract_holog_params['ms_name'], "STATE"),
@@ -523,28 +529,24 @@ def extract_holog(
     )
 
     telescope_name = obs_ctb.getcol("TELESCOPE_NAME")[0]
-    start_time_unix = obs_ctb.getcol('TIME_RANGE')[0][0] - 3506716800.0
-    time = Time(start_time_unix, format='unix').jyear
+    # start_time_unix = obs_ctb.getcol('TIME_RANGE')[0][0] - 3506716800.0
+    # time = Time(start_time_unix, format='unix').jyear
 
     # If we have an EVLA run from before 2023 the pointing table needs to be fixed.
-    if telescope_name == "EVLA" and time < 2023:
+    if telescope_name == "EVLA": # and time < 2023:
+        n_mapping = 0
+        for ddi_key, ddi_dict in holog_obs_dict.items():
+            n_map_ddi = 0
+            for map_dict in ddi_dict.values():
+                n_map_ddi += len(map_dict['ant'])
+            if n_map_ddi == 0:
+                logger.warning(f'DDI {ddi_key} has 0 mapping antennas')
+            n_mapping += n_map_ddi
 
-        # Convert from casa epoch to unix time
-        his_ctb = ctables.table(
-            os.path.join(extract_holog_params['ms_name'], "HISTORY"),
-            readonly=True,
-            lockoptions={"option": "usernoread"},
-            ack=False,
-        )
-
-        if "pnt_tbl:fixed" not in his_ctb.getcol("MESSAGE"):
-            logger.error(
-                "Pointing table not corrected, users should apply function astrohack.dio.fix_pointing_table() to "
-                "remedy this.")
-
-            return None
-
-        his_ctb.close()
+        if n_mapping == 0:
+            msg = 'No mapping antennas to process, maybe you need to fix the pointing table?'
+            logger.error(msg)
+            raise Exception(msg)
 
     count = 0
     delayed_list = []

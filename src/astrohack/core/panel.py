@@ -12,7 +12,8 @@ def process_panel_chunk(panel_chunk_params):
     Args:
         panel_chunk_params: dictionary of inputs
     """
-    
+
+    clip_level = panel_chunk_params['clip_level']
     if panel_chunk_params['origin'] == 'AIPS':
         inputxds = xr.open_zarr(panel_chunk_params['image_name'])
         telescope = Telescope(inputxds.attrs['telescope_name'])
@@ -25,10 +26,19 @@ def process_panel_chunk(panel_chunk_params):
         logger.info(f'processing {create_dataset_label(antenna, ddi)}')
         inputxds.attrs['AIPS'] = False
         telescope = Telescope.from_xds(inputxds)
+        if isinstance(clip_level, dict):
+            ant_name = antenna.split('_')[1]
+            ddi_name = int(ddi.split('_')[1])
+            try:
+                clip_level = clip_level[ant_name][ddi_name]
+            except KeyError:
+                msg = f'Antenna {ant_name} and DDI {ddi_name} combination not found in clip_level dictionary'
+                logger.error(msg)
+                raise Exception(msg)
 
     surface = AntennaSurface(inputxds, telescope, clip_type=panel_chunk_params['clip_type'],
                              pol_state=panel_chunk_params['polarization_state'],
-                             clip_level=panel_chunk_params['clip_level'], pmodel=panel_chunk_params['panel_model'],
+                             clip_level=clip_level, pmodel=panel_chunk_params['panel_model'],
                              panel_margins=panel_chunk_params['panel_margins'])
 
     surface.compile_panel_points()
