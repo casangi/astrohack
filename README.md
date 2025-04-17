@@ -1,10 +1,12 @@
 ![astrohack](docs/_media/astrohack_logo.png)
 
-[![Python 3.9 3.10 3.11](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11-blue)](https://www.python.org/downloads/release/python-380/)
-![Linux Tests](https://github.com/casangi/astrohack/actions/workflows/python-testing-linux.yml/badge.svg)
-![macOS Tests](https://github.com/casangi/astrohack/actions/workflows/python-testing-macos.yml/badge.svg)
-![Published](https://github.com/casangi/astrohack/actions/workflows/pythonpublish.yml/badge.svg)
-[![Documentation Status](https://readthedocs.org/projects/astrohack/badge/?version=stable)](https://astrohack.readthedocs.io/en/stable/?badge=stable)
+[![Python 3.11 3.12 3.13](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/downloads/release/python-3130/)
+[![Linux Tests](https://github.com/casangi/astrohack/actions/workflows/python-testing-linux.yml/badge.svg?branch=main)](https://github.com/casangi/astrohack/actions/workflows/python-testing-linux.yml?query=branch%3Amain)
+[![macOS Tests](https://github.com/casangi/astrohack/actions/workflows/python-testing-macos.yml/badge.svg?branch=main)](https://github.com/casangi/astrohack/actions/workflows/python-testing-macos.yml?query=branch%3Amain)
+[![ipynb Tests](https://github.com/casangi/astrohack/actions/workflows/run-ipynb.yml/badge.svg?branch=main)](https://github.com/casangi/astrohack/actions/workflows/run-ipynb.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/casangi/astrohack/branch/main/graph/badge.svg)](https://codecov.io/gh/casangi/astrohack/branch/main/astrohack)
+[![Documentation Status](https://readthedocs.org/projects/astrohack/badge/?version=latest)](https://astrohack.readthedocs.io)
+[![Version Status](https://img.shields.io/pypi/v/astrohack.svg)](https://pypi.python.org/pypi/astrohack/)
 
 astroHack (Holography Antenna Commissioning Kit) is a Python package under development by NRAO's [CASA](https://casa.nrao.edu) team to support holography and antenna position correction measurements. It currently supports pointed and on-the-fly holographies for both ALMA and the VLA as well as antenna position corrections for the VLA. The future goal of astrohack is to support the commissioning of the Next Generation Very Large Array (ngVLA). Much of the core functionality of astroHACK is inspired by the code of the following AIPS tasks: UVHOL, HOLOG and PANEL for holography and LOCIT for the antenna position corrections. AstroHACK enables parallel execution by using Dask and efficient single-threaded performance by making use of Numba.
 

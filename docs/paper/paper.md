@@ -104,7 +104,7 @@ Figure sizes can be customized by adding an optional second parameter:
 
 ![Antenna Position Pipeline.\label{fig:ant_pos}](antenna_position_pipeline.png){ width=90% }      <!-- { width=20% } -->
 
-End of image
+End of image \autoref{fig:ant_pos}
 
 # Acknowledgements
 

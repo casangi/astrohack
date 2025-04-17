@@ -1,5 +1,5 @@
-# Run MacOS tests using template in ToolVIPER
-name: MacOS Tests
+# .github/workflows/python-testing-linux.yml
+name: ipynb Tests
 
 on:
   push:
@@ -12,5 +12,7 @@ on:
       - '**.rst'
 
 jobs:
+ 
   call-testing-linux:
-    uses: casangi/toolviper/.github/workflows/python-testing-macos-template.yml@main
+    uses: casangi/toolviper/.github/workflows/run-ipynb-template.yml@main
+    secrets: inherit
