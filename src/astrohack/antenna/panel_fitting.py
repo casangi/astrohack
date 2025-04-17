@@ -10,6 +10,7 @@ from astrohack.utils import gauss_elimination, least_squares_jit
 #  General purpose                #
 ###################################
 
+
 def _fetch_sample_values(samples):
     points = np.ndarray((len(samples), 3))
     for ipnt, point in enumerate(samples):
@@ -45,6 +46,7 @@ def _build_system(shape):
     vector = np.zeros([shape[0]])
     return matrix, vector
 
+
 ###################################
 #  Mean                           #
 ###################################
@@ -77,7 +79,10 @@ def _correct_mean_opt(self, points):
     Returns:
         The point indexes and the correction to that point.
     """
-    return _fuse_idx_and_corrections(_fetch_sample_coords(points), np.full(len(points), self.parameters[0]))
+    return _fuse_idx_and_corrections(
+        _fetch_sample_coords(points), np.full(len(points), self.parameters[0])
+    )
+
 
 ###################################
 # Rigid                           #
@@ -124,8 +129,13 @@ def _correct_rigid_opt(self, points):
         The point indexes and the correction to that point.
     """
     coords = _fetch_sample_coords(points)
-    corr1d = coords[:, 0] * self.parameters[0] + coords[:, 1] * self.parameters[1] + self.parameters[2]
+    corr1d = (
+        coords[:, 0] * self.parameters[0]
+        + coords[:, 1] * self.parameters[1]
+        + self.parameters[2]
+    )
     return _fuse_idx_and_corrections(coords, corr1d)
+
 
 ###################################
 # Flexible                        #
@@ -145,20 +155,20 @@ def _solve_flexible_opt(self, samples):
     matrix, vector = _build_system([self.npar, self.npar])
     coeffs_val = self._flexible_coeffs_arrays(samples)
 
-    matrix[0, 0] = np.sum(coeffs_val[:, 0]*coeffs_val[:, 0])
-    matrix[0, 1] = np.sum(coeffs_val[:, 0]*coeffs_val[:, 1])
-    matrix[0, 2] = np.sum(coeffs_val[:, 0]*coeffs_val[:, 2])
-    matrix[0, 3] = np.sum(coeffs_val[:, 0]*coeffs_val[:, 3])
-    matrix[1, 1] = np.sum(coeffs_val[:, 1]*coeffs_val[:, 1])
-    matrix[1, 2] = np.sum(coeffs_val[:, 1]*coeffs_val[:, 2])
-    matrix[1, 3] = np.sum(coeffs_val[:, 1]*coeffs_val[:, 3])
-    matrix[2, 2] = np.sum(coeffs_val[:, 2]*coeffs_val[:, 2])
-    matrix[2, 3] = np.sum(coeffs_val[:, 2]*coeffs_val[:, 3])
-    matrix[3, 3] = np.sum(coeffs_val[:, 3]*coeffs_val[:, 3])
-    vector[0]   = np.sum(coeffs_val[:, 4]*coeffs_val[:, 0])
-    vector[1]   = np.sum(coeffs_val[:, 4]*coeffs_val[:, 1])
-    vector[2]   = np.sum(coeffs_val[:, 4]*coeffs_val[:, 2])
-    vector[3]   = np.sum(coeffs_val[:, 4]*coeffs_val[:, 3])
+    matrix[0, 0] = np.sum(coeffs_val[:, 0] * coeffs_val[:, 0])
+    matrix[0, 1] = np.sum(coeffs_val[:, 0] * coeffs_val[:, 1])
+    matrix[0, 2] = np.sum(coeffs_val[:, 0] * coeffs_val[:, 2])
+    matrix[0, 3] = np.sum(coeffs_val[:, 0] * coeffs_val[:, 3])
+    matrix[1, 1] = np.sum(coeffs_val[:, 1] * coeffs_val[:, 1])
+    matrix[1, 2] = np.sum(coeffs_val[:, 1] * coeffs_val[:, 2])
+    matrix[1, 3] = np.sum(coeffs_val[:, 1] * coeffs_val[:, 3])
+    matrix[2, 2] = np.sum(coeffs_val[:, 2] * coeffs_val[:, 2])
+    matrix[2, 3] = np.sum(coeffs_val[:, 2] * coeffs_val[:, 3])
+    matrix[3, 3] = np.sum(coeffs_val[:, 3] * coeffs_val[:, 3])
+    vector[0] = np.sum(coeffs_val[:, 4] * coeffs_val[:, 0])
+    vector[1] = np.sum(coeffs_val[:, 4] * coeffs_val[:, 1])
+    vector[2] = np.sum(coeffs_val[:, 4] * coeffs_val[:, 2])
+    vector[3] = np.sum(coeffs_val[:, 4] * coeffs_val[:, 3])
 
     matrix[1, 0] = matrix[0, 1]
     matrix[2, 0] = matrix[0, 2]
@@ -205,9 +215,9 @@ def _solve_full_paraboloid_opt(self, samples):
     points = np.ndarray((len(samples), 3))
     for ipnt, point in enumerate(samples):
         points[ipnt, :] = point.get_xcycval()
-    matrix[:, 0] = points[:, 0]**2 * points[:, 1]**2
-    matrix[:, 1] = points[:, 0]**2 * points[:, 1]
-    matrix[:, 2] = points[:, 1]**2 * points[:, 0]
+    matrix[:, 0] = points[:, 0] ** 2 * points[:, 1] ** 2
+    matrix[:, 1] = points[:, 0] ** 2 * points[:, 1]
+    matrix[:, 2] = points[:, 1] ** 2 * points[:, 0]
     matrix[:, 3] = points[:, 0] ** 2
     matrix[:, 4] = points[:, 1] ** 2
     matrix[:, 5] = points[:, 0] * points[:, 1]
@@ -238,10 +248,19 @@ def _correct_full_paraboloid_opt(self, points):
     xsq = xx**2
     ysq = yy**2
 
-    corr1d = (self.parameters[0]*xsq*ysq + self.parameters[1]*xsq*yy + self.parameters[2]*ysq*xx +
-              self.parameters[3]*xsq + self.parameters[4]*ysq + self.parameters[5]*xx*yy + self.parameters[6]*xx +
-              self.parameters[7]*yy + self.parameters[8])
+    corr1d = (
+        self.parameters[0] * xsq * ysq
+        + self.parameters[1] * xsq * yy
+        + self.parameters[2] * ysq * xx
+        + self.parameters[3] * xsq
+        + self.parameters[4] * ysq
+        + self.parameters[5] * xx * yy
+        + self.parameters[6] * xx
+        + self.parameters[7] * yy
+        + self.parameters[8]
+    )
     return _fuse_idx_and_corrections(coords, corr1d)
+
 
 #######################################
 # Co-rotated paraboloid least squares #
@@ -265,8 +284,14 @@ def _solve_corotated_lst_sq_opt(self, samples):
     x0 = self.center.xc
     y0 = self.center.yc
 
-    matrix[:, 0] = ((points[:, 0] - x0) * np.cos(self.zeta) - (points[:, 1] - y0) * np.sin(self.zeta))**2  # U
-    matrix[:, 1] = ((points[:, 0] - x0) * np.sin(self.zeta) + (points[:, 1] - y0) * np.cos(self.zeta))**2  # V
+    matrix[:, 0] = (
+        (points[:, 0] - x0) * np.cos(self.zeta)
+        - (points[:, 1] - y0) * np.sin(self.zeta)
+    ) ** 2  # U
+    matrix[:, 1] = (
+        (points[:, 0] - x0) * np.sin(self.zeta)
+        + (points[:, 1] - y0) * np.cos(self.zeta)
+    ) ** 2  # V
     matrix[:, 2] = 1.0
     vector[:] = points[:, 2]
 
@@ -289,11 +314,16 @@ def _correct_corotated_lst_sq_opt(self, points):
     sinzeta = np.sin(self.zeta)
     x0 = self.center.xc
     y0 = self.center.yc
-    corr1d = (((coords[:, 0] - x0) * coszeta - (coords[:, 1] - y0) * sinzeta) ** 2 * self.parameters[0] +
-              ((coords[:, 0] - x0) * sinzeta + (coords[:, 1] - y0) * coszeta) ** 2 * self.parameters[1] +
-              self.parameters[2])
+    corr1d = (
+        ((coords[:, 0] - x0) * coszeta - (coords[:, 1] - y0) * sinzeta) ** 2
+        * self.parameters[0]
+        + ((coords[:, 0] - x0) * sinzeta + (coords[:, 1] - y0) * coszeta) ** 2
+        * self.parameters[1]
+        + self.parameters[2]
+    )
     corrections = _fuse_idx_and_corrections(coords, corr1d)
     return corrections
+
 
 ###################################
 # Co-rotated robust               #
@@ -315,6 +345,7 @@ def _solve_corotated_robust_opt(self, samples):
         return _solve_corotated_lst_sq_opt(self, samples)
     except np.linalg.LinAlgError:
         return _solve_scipy_opt(self, samples)
+
 
 ###################################
 # Scipy base                      #
@@ -359,8 +390,14 @@ def _solve_scipy_opt(self, samples, verbose=False, x0=None):
     maxfevs = [100000, 1000000, 10000000]
     for maxfev in maxfevs:
         try:
-            result = opt.curve_fit(self._fitting_function, coords, devia,
-                                   p0=p0, bounds=[liminf, limsup], maxfev=maxfev)
+            result = opt.curve_fit(
+                self._fitting_function,
+                coords,
+                devia,
+                p0=p0,
+                bounds=[liminf, limsup],
+                maxfev=maxfev,
+            )
         except RuntimeError:
             if verbose:
                 logger.info("Increasing number of iterations")
@@ -373,11 +410,21 @@ def _solve_scipy_opt(self, samples, verbose=False, x0=None):
 
 
 def _correct_scipy_opt(self, points):
-    corrections = np.array([[point.ix, point.iy,
-                             self._fitting_function([point.xc, point.yc, self.center.xc, self.center.yc, self.zeta],
-                                                    *self.parameters)]
-                            for point in points])
+    corrections = np.array(
+        [
+            [
+                point.ix,
+                point.iy,
+                self._fitting_function(
+                    [point.xc, point.yc, self.center.xc, self.center.yc, self.zeta],
+                    *self.parameters,
+                ),
+            ]
+            for point in points
+        ]
+    )
     return corrections
+
 
 ###################################
 # Scipy Fitting Functions         #
@@ -447,76 +494,76 @@ def _rotated_paraboloid_scipy(params, ucurv, vcurv, zoff, theta):
 
 PANEL_MODEL_DICT = {
     "mean": {
-        'npar': 1,
-        'solve': _solve_mean_opt,
-        'correct': _correct_mean_opt,
-        'experimental': False,
-        'ring_only': False,
-        'fitting_function': None
+        "npar": 1,
+        "solve": _solve_mean_opt,
+        "correct": _correct_mean_opt,
+        "experimental": False,
+        "ring_only": False,
+        "fitting_function": None,
     },
     "rigid": {
-        'npar': 3,
-        'solve': _solve_rigid_opt,
-        'correct': _correct_rigid_opt,
-        'experimental': False,
-        'ring_only': False,
-        'fitting_function': None
+        "npar": 3,
+        "solve": _solve_rigid_opt,
+        "correct": _correct_rigid_opt,
+        "experimental": False,
+        "ring_only": False,
+        "fitting_function": None,
     },
     "flexible": {
-        'npar': 4,
-        'solve': _solve_flexible_opt,
-        'correct': _correct_flexible_opt,
-        'experimental': False,
-        'ring_only': True,
-        'fitting_function': None
+        "npar": 4,
+        "solve": _solve_flexible_opt,
+        "correct": _correct_flexible_opt,
+        "experimental": False,
+        "ring_only": True,
+        "fitting_function": None,
     },
     "corotated_scipy": {
-        'npar': 3,
-        'solve': _solve_scipy_opt,
-        'correct': _correct_corotated_lst_sq_opt,
-        'experimental': False,
-        'ring_only': False,
-        'fitting_function': _corotated_paraboloid_scipy
+        "npar": 3,
+        "solve": _solve_scipy_opt,
+        "correct": _correct_corotated_lst_sq_opt,
+        "experimental": False,
+        "ring_only": False,
+        "fitting_function": _corotated_paraboloid_scipy,
     },
     "corotated_lst_sq": {
-        'npar': 3,
-        'solve': _solve_corotated_lst_sq_opt,
-        'correct': _correct_corotated_lst_sq_opt,
-        'experimental': False,
-        'ring_only': False,
-        'fitting_function': None
+        "npar": 3,
+        "solve": _solve_corotated_lst_sq_opt,
+        "correct": _correct_corotated_lst_sq_opt,
+        "experimental": False,
+        "ring_only": False,
+        "fitting_function": None,
     },
     "corotated_robust": {
-        'npar': 3,
-        'solve': _solve_corotated_robust_opt,
-        'correct': _correct_corotated_lst_sq_opt,
-        'experimental': False,
-        'ring_only': False,
-        'fitting_function': _corotated_paraboloid_scipy
+        "npar": 3,
+        "solve": _solve_corotated_robust_opt,
+        "correct": _correct_corotated_lst_sq_opt,
+        "experimental": False,
+        "ring_only": False,
+        "fitting_function": _corotated_paraboloid_scipy,
     },
     "xy_paraboloid": {
-        'npar': 3,
-        'solve': _solve_scipy_opt,
-        'correct': _correct_scipy_opt,
-        'experimental': False,
-        'ring_only': False,
-        'fitting_function': _xyaxes_paraboloid_scipy
+        "npar": 3,
+        "solve": _solve_scipy_opt,
+        "correct": _correct_scipy_opt,
+        "experimental": False,
+        "ring_only": False,
+        "fitting_function": _xyaxes_paraboloid_scipy,
     },
     "rotated_paraboloid": {
-        'npar': 4,
-        'solve': _solve_scipy_opt,
-        'correct': _correct_scipy_opt,
-        'experimental': False,
-        'ring_only': False,
-        'fitting_function': _rotated_paraboloid_scipy
+        "npar": 4,
+        "solve": _solve_scipy_opt,
+        "correct": _correct_scipy_opt,
+        "experimental": False,
+        "ring_only": False,
+        "fitting_function": _rotated_paraboloid_scipy,
     },
     "full_paraboloid_lst_sq": {
-        'npar': 9,
-        'solve': _solve_full_paraboloid_opt,
-        'correct': _correct_full_paraboloid_opt,
-        'experimental': True,
-        'ring_only': False,
-        'fitting_function': None
+        "npar": 9,
+        "solve": _solve_full_paraboloid_opt,
+        "correct": _correct_full_paraboloid_opt,
+        "experimental": True,
+        "ring_only": False,
+        "fitting_function": None,
     },
 }
 
@@ -535,10 +582,10 @@ class PanelModel:
         self.zeta = zeta
         self.ref_points = ref_points
         self.center = center
-        self.npar = model_dict['npar']
-        self._solve = model_dict['solve']
-        self._correct_sub = model_dict['correct']
-        self._fitting_function = model_dict['fitting_function']
+        self.npar = model_dict["npar"]
+        self._solve = model_dict["solve"]
+        self._correct_sub = model_dict["correct"]
+        self._fitting_function = model_dict["fitting_function"]
         self.parameters = None
         self.fitted = False
 
@@ -547,11 +594,15 @@ class PanelModel:
         coeffs_val = np.ndarray((len(samples), 5))
 
         x1, x2, y2 = self.ref_points
-        f_lin = x1 + points[:, 1]*(x2-x1)/y2
-        coeffs_val[:, 0] = (y2-points[:, 1]) * (1.-points[:, 0]/f_lin) / (2.0*y2)
-        coeffs_val[:, 1] = points[:, 1]  * (1.-points[:, 0]/f_lin) / (2.0*y2)
-        coeffs_val[:, 2] = (y2-points[:, 1]) * (1.+points[:, 0]/f_lin) / (2.0*y2)
-        coeffs_val[:, 3] = points[:, 1]  * (1.+points[:, 0]/f_lin) / (2.0*y2)
+        f_lin = x1 + points[:, 1] * (x2 - x1) / y2
+        coeffs_val[:, 0] = (
+            (y2 - points[:, 1]) * (1.0 - points[:, 0] / f_lin) / (2.0 * y2)
+        )
+        coeffs_val[:, 1] = points[:, 1] * (1.0 - points[:, 0] / f_lin) / (2.0 * y2)
+        coeffs_val[:, 2] = (
+            (y2 - points[:, 1]) * (1.0 + points[:, 0] / f_lin) / (2.0 * y2)
+        )
+        coeffs_val[:, 3] = points[:, 1] * (1.0 + points[:, 0] / f_lin) / (2.0 * y2)
         coeffs_val[:, 4] = points[:, 2]
 
         return coeffs_val
@@ -643,4 +694,4 @@ class PanelPoint:
         return self.xc, self.yc, self.ix, self.iy
 
     def __repr__(self):
-        return f'{self.xc}, {self.yc}, {self.ix}, {self.iy}, {self.value}'
+        return f"{self.xc}, {self.yc}, {self.ix}, {self.iy}, {self.value}"

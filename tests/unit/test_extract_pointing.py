@@ -11,9 +11,9 @@ class TestExtractPointing:
         """setup any state specific to the execution of the given test class"""
         cls.datafolder = "point_data"
         cls.ms = "ea25_cal_small_before_fixed.split.ms"
-        
+
         toolviper.utils.data.download(file=cls.ms, folder=cls.datafolder)
-        
+
         cls.ms_name = os.path.join(cls.datafolder, cls.ms)
 
     @classmethod

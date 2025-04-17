@@ -5,6 +5,7 @@ from toolviper.dask.client.client import local_client
 from astrohack.extract_holog import extract_holog
 
 from astrohack.holog import holog
+import toolviper
 
 
 class Stakeholder:
@@ -13,21 +14,25 @@ class Stakeholder:
         self.client = local_client(cores=2, memory_limit="8GB")
 
         def setup(self):
-        # download test datasets
-        toolviper.utils.data.download("J1924-2914.ms.calibrated.split.SPW3", folder=os.getcwd())
-        self.alma_ms = os.path.join(os.getcwd(), "J1924-2914.ms.calibrated.split.SPW3")
+            # download test datasets
+            toolviper.utils.data.download(
+                "J1924-2914.ms.calibrated.split.SPW3", folder=os.getcwd()
+            )
+            self.alma_ms = os.path.join(
+                os.getcwd(), "J1924-2914.ms.calibrated.split.SPW3"
+            )
 
-        print(self.alma_ms)
+            print(self.alma_ms)
 
-        self.alma_zarr = "alma.split.holog.zarr"
-        extract_holog(
-            ms_name=self.alma_ms,
-            holog_name=self.alma_zarr,
-            data_column="DATA",
-            parallel=True,
-            overwrite=True,
-            reuse_point_zarr=False,
-        )
+            self.alma_zarr = "alma.split.holog.zarr"
+            extract_holog(
+                ms_name=self.alma_ms,
+                holog_name=self.alma_zarr,
+                data_column="DATA",
+                parallel=True,
+                overwrite=True,
+                reuse_point_zarr=False,
+            )
 
     def time_holog(self):
         holog(
@@ -42,6 +47,7 @@ class Stakeholder:
             to_stokes=True,
             parallel=True,
         )
+
 
 class TimeSuite:
     """

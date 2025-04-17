@@ -26,12 +26,18 @@ class Telescope:
 
         self.ant_list = []
 
-        self.filename = self._get_telescope_file_name(name).lower().replace(" ", "_") + ".zarr"
+        self.filename = (
+            self._get_telescope_file_name(name).lower().replace(" ", "_") + ".zarr"
+        )
 
         if path is None:
-            self.filepath = astrohack.utils.tools.file_search(root=astrohack.__path__[0], file_name=self.filename)
+            self.filepath = astrohack.utils.tools.file_search(
+                root=astrohack.__path__[0], file_name=self.filename
+            )
         else:
-            self.filepath = astrohack.utils.tools.file_search(root=path, file_name=self.filename)
+            self.filepath = astrohack.utils.tools.file_search(
+                root=path, file_name=self.filename
+            )
 
         self.read(pathlib.Path(self.filepath).joinpath(self.filename))
 
@@ -46,13 +52,20 @@ class Telescope:
     @classmethod
     def from_xds(cls, xds):
         if xds.attrs["telescope_name"] == "ALMA":
-            telescope_name = "_".join((xds.attrs["telescope_name"], xds.attrs["ant_name"][0:2]))
+            telescope_name = "_".join(
+                (xds.attrs["telescope_name"], xds.attrs["ant_name"][0:2])
+            )
             return cls(telescope_name)
-        elif xds.attrs["telescope_name"] == "EVLA" or xds.attrs["telescope_name"] == "VLA":
+        elif (
+            xds.attrs["telescope_name"] == "EVLA"
+            or xds.attrs["telescope_name"] == "VLA"
+        ):
             telescope_name = "VLA"
             return cls(telescope_name)
         else:
-            raise ValueError('Unsupported telescope {0:s}'.format(xds.attrs['telescope_name']))
+            raise ValueError(
+                "Unsupported telescope {0:s}".format(xds.attrs["telescope_name"])
+            )
 
     @staticmethod
     def _get_telescope_file_name(name):
@@ -65,17 +78,17 @@ class Telescope:
         appropriate telescope object
         """
         name = name.lower()
-        if 'ngvla' in name:
-            name = 'ngVLA_prototype'
-        elif 'vla' in name:
-            name = 'VLA'
-        elif 'alma' in name:
-            if 'dv' in name:
-                name = 'ALMA_DV'
-            elif 'tp' in name:
-                name = 'ALMA_TP'
+        if "ngvla" in name:
+            name = "ngVLA_prototype"
+        elif "vla" in name:
+            name = "VLA"
+        elif "alma" in name:
+            if "dv" in name:
+                name = "ALMA_DV"
+            elif "tp" in name:
+                name = "ALMA_TP"
             else:
-                name = 'ALMA_DA'
+                name = "ALMA_DA"
 
         return name
 
@@ -86,7 +99,9 @@ class Telescope:
         error = False
 
         if not self.nrings == len(self.inrad) == len(self.ourad):
-            logger.error("Number of panels don't match radii or number of panels list sizes")
+            logger.error(
+                "Number of panels don't match radii or number of panels list sizes"
+            )
             error = True
 
         if not self.onaxisoptics:
@@ -118,9 +133,9 @@ class Telescope:
 
     def _save_to_dist(self):
         obj_dict = vars(self)
-        filename = f'{self.filepath}/{self.filename}'
-        obj_dict.pop('filepath', None)
-        obj_dict.pop('filename', None)
+        filename = f"{self.filepath}/{self.filename}"
+        obj_dict.pop("filepath", None)
+        obj_dict.pop("filename", None)
         xds = xr.Dataset()
         xds.attrs = obj_dict
         xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
@@ -148,7 +163,7 @@ class Telescope:
         print(self)
 
     def __repr__(self):
-        outstr = ''
+        outstr = ""
         obj_dict = vars(self)
         for key, item in obj_dict.items():
             outstr += f"{key:20s} = {str(item)}\n"

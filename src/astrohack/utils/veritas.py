@@ -23,10 +23,15 @@ def get_center_pixel(file, antenna, ddi):
     aperture_shape = mds.APERTURE.values.shape[-2], mds.APERTURE.values.shape[-1]
     beam_shape = mds.BEAM.values.shape[-2], mds.BEAM.values.shape[-1]
 
-    aperture_center_pixels = mds.APERTURE.values[..., aperture_shape[0] // 2, aperture_shape[1] // 2]
+    aperture_center_pixels = mds.APERTURE.values[
+        ..., aperture_shape[0] // 2, aperture_shape[1] // 2
+    ]
     beam_center_pixels = mds.BEAM.values[..., beam_shape[0] // 2, beam_shape[1] // 2]
 
-    return {"aperture": np.squeeze(aperture_center_pixels), "beam": np.squeeze(beam_center_pixels)}
+    return {
+        "aperture": np.squeeze(aperture_center_pixels),
+        "beam": np.squeeze(beam_center_pixels),
+    }
 
 
 def get_grid_parameters(file):
@@ -48,29 +53,23 @@ def generate_verification_json(path, antenna, ddi, write=False, generate_files=T
     numerical_dict = {
         "vla": {
             "pixels": {
-                "before": {
-                    "aperture": [],
-                    "beam": []
-                },
-                "after": {
-                    "aperture": [],
-                    "beam": []
-                }
+                "before": {"aperture": [], "beam": []},
+                "after": {"aperture": [], "beam": []},
             },
             "cell_size": [],
             "grid_size": [],
-            "offsets": []
+            "offsets": [],
         }
     }
 
     for tag in ["before", "after"]:
         pixels = get_center_pixel(
-            file=f"{path}/{tag}.split.image.zarr",
-            antenna=antenna,
-            ddi=ddi
+            file=f"{path}/{tag}.split.image.zarr", antenna=antenna, ddi=ddi
         )
 
-        numerical_dict["vla"]["pixels"][tag]["aperture"] = list(map(str, pixels["aperture"]))
+        numerical_dict["vla"]["pixels"][tag]["aperture"] = list(
+            map(str, pixels["aperture"])
+        )
         numerical_dict["vla"]["pixels"][tag]["beam"] = list(map(str, pixels["beam"]))
 
     cell_size, grid_size = get_grid_parameters(file=f"{path}/before.split.holog.zarr")
@@ -79,17 +78,23 @@ def generate_verification_json(path, antenna, ddi, write=False, generate_files=T
     numerical_dict["vla"]["grid_size"] = [grid_size, grid_size]
 
     # Fill panel offsets
-    panel_list = ['3-4', '5-27', '5-37', '5-38']
+    panel_list = ["3-4", "5-27", "5-37", "5-38"]
 
     M_TO_MILS = 39370.1
 
     before_mds = open_panel(f"{path}/before.split.panel.zarr")
     after_mds = open_panel(f"{path}/after.split.panel.zarr")
 
-    before_shift = before_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
-    after_shift = after_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
+    before_shift = (
+        before_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
+    )
+    after_shift = (
+        after_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
+    )
 
-    numerical_dict["vla"]["offsets"] = np.mean(after_shift - before_shift, axis=1).tolist()
+    numerical_dict["vla"]["offsets"] = np.mean(
+        after_shift - before_shift, axis=1
+    ).tolist()
     print(np.mean(after_shift - before_shift, axis=1).tolist())
 
     if write:
@@ -101,13 +106,15 @@ def generate_verification_json(path, antenna, ddi, write=False, generate_files=T
 
 def generate_verification_files():
     for stub in ["before", "after"]:
-        toolviper.utils.data.download(file=f"ea25_cal_small_{stub}_fixed.split.ms", folder="data/")
+        toolviper.utils.data.download(
+            file=f"ea25_cal_small_{stub}_fixed.split.ms", folder="data/"
+        )
 
         extract_pointing(
             ms_name=f"data/ea25_cal_small_{stub}_fixed.split.ms",
             point_name=f"data/{stub}.split.point.zarr",
             overwrite=True,
-            parallel=False
+            parallel=False,
         )
 
         # Extract holography data using holog_obd_dict
@@ -117,21 +124,21 @@ def generate_verification_files():
             holog_name=f"data/{stub}.split.holog.zarr",
             data_column="CORRECTED_DATA",
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
         image_mds = holog(
             holog_name=f"data/{stub}.split.holog.zarr",
             image_name=f"data/{stub}.split.image.zarr",
             overwrite=True,
-            parallel=False
+            parallel=False,
         )
 
         before_mds = panel(
             image_name=f"data/{stub}.split.image.zarr",
-            panel_model='rigid',
+            panel_model="rigid",
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
 
@@ -140,12 +147,12 @@ def generate_panel_mask_array(generate_files=True):
         generate_verification_files()
 
     panel_mds = panel(
-            image_name='data/before.split.image.zarr',
-            clip_type='absolute',
-            clip_level=0.0,
-            parallel=False,
-            overwrite=True
-        )
+        image_name="data/before.split.image.zarr",
+        clip_type="absolute",
+        clip_level=0.0,
+        parallel=False,
+        overwrite=True,
+    )
 
     before_mds = open_panel("data/before.split.panel.zarr")
 
@@ -174,11 +181,10 @@ class Veritas:
             logger.info("Connected to Dropbox")
 
         except AuthError as e:
-            logger.error('Error connecting to Dropbox with access token: ' + str(e))
+            logger.error("Error connecting to Dropbox with access token: " + str(e))
 
     def list_files(self, path):
-        """Return a Pandas dataframe of files in a given Dropbox folder path in the Apps directory.
-        """
+        """Return a Pandas dataframe of files in a given Dropbox folder path in the Apps directory."""
 
         if self.dbx is None:
             logger.info("No connection to dropbox. Run connect() command.")
@@ -190,18 +196,18 @@ class Veritas:
             for file in files:
                 if isinstance(file, dropbox.files.FileMetadata):
                     metadata = {
-                        'name': file.name,
-                        'path_display': file.path_display,
-                        'client_modified': file.client_modified,
-                        'server_modified': file.server_modified
+                        "name": file.name,
+                        "path_display": file.path_display,
+                        "client_modified": file.client_modified,
+                        "server_modified": file.server_modified,
                     }
                     files_list.append(metadata)
 
             df = pd.DataFrame.from_records(files_list)
-            return df.sort_values(by='server_modified', ascending=False)
+            return df.sort_values(by="server_modified", ascending=False)
 
         except Exception as e:
-            logger.error('Error getting list of files from Dropbox: ' + str(e))
+            logger.error("Error getting list of files from Dropbox: " + str(e))
 
     def download_file(self, dropbox_file_path, local_file_path):
         """Download a file from Dropbox to the local machine."""
@@ -211,12 +217,12 @@ class Veritas:
             return None
 
         try:
-            with open(local_file_path, 'wb') as f:
+            with open(local_file_path, "wb") as f:
                 metadata, result = self.dbx.files_download(path=dropbox_file_path)
                 f.write(result.content)
 
         except Exception as e:
-            logger.error('Error downloading file from Dropbox: ' + str(e))
+            logger.error("Error downloading file from Dropbox: " + str(e))
 
     def upload_file(self, local_path, local_file, remote_file_path):
         """Upload a file from the local machine to a path in the Dropbox app directory.
@@ -242,25 +248,29 @@ class Veritas:
             local_file_path = pathlib.Path(local_path) / local_file
 
             with local_file_path.open("rb") as f:
-                meta = self.dbx.files_upload(f.read(), remote_file_path, mode=dropbox.files.WriteMode("overwrite"))
+                meta = self.dbx.files_upload(
+                    f.read(),
+                    remote_file_path,
+                    mode=dropbox.files.WriteMode("overwrite"),
+                )
 
                 return meta
         except Exception as e:
-            logger.error('Error uploading file to Dropbox: ' + str(e))
+            logger.error("Error uploading file to Dropbox: " + str(e))
 
     def connect_o2_auth(self):
         from dropbox import DropboxOAuth2FlowNoRedirect
 
-        '''
+        """
         This example walks through a basic oauth flow using the existing long-lived token type
         Populate your app key and app secret in order to run this locally
-        '''
+        """
 
         auth_flow = DropboxOAuth2FlowNoRedirect(self.key, self.secret)
 
         authorize_url = auth_flow.start()
         print("1. Go to: " + authorize_url)
-        print("2. Click \"Allow\" (you might have to log in first).")
+        print('2. Click "Allow" (you might have to log in first).')
         print("3. Copy the authorization code.")
         auth_code = input("Enter the authorization code here: ").strip()
 
@@ -280,7 +290,9 @@ class Veritas:
             self.certificate_path = certificate_path
 
         try:
-            private_key = RSA.import_key(open(f"{self.certificate_path}/private.pem").read())
+            private_key = RSA.import_key(
+                open(f"{self.certificate_path}/private.pem").read()
+            )
 
             with open(f"{self.certificate_path}/encrypted_data.bin", "rb") as f:
                 enc_session_key = f.read(private_key.size_in_bytes())

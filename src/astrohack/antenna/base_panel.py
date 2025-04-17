@@ -9,12 +9,22 @@ from astrohack.utils import convert_unit
 
 
 class BasePanel:
-    markers = ['X', 'o', '*', 'P', 'D']
-    colors = ['g', 'g', 'r', 'r', 'b']
+    markers = ["X", "o", "*", "P", "D"]
+    colors = ["g", "g", "r", "r", "b"]
     linewidth = 0.5
-    linecolor = 'black'
+    linecolor = "black"
 
-    def __init__(self, model, screws, plot_screw_pos, plot_screw_size, label, center=None, zeta=None, ref_points=None):
+    def __init__(
+        self,
+        model,
+        screws,
+        plot_screw_pos,
+        plot_screw_size,
+        label,
+        center=None,
+        zeta=None,
+        ref_points=None,
+    ):
         """
         Initializes the base panel with the appropriated fitting methods and providing basic functionality
         Fitting method models are:
@@ -64,7 +74,7 @@ class BasePanel:
         try:
             model_dict = PANEL_MODEL_DICT[self.model_name]
         except KeyError:
-            msg = f'Unknown model {self.model_name}'
+            msg = f"Unknown model {self.model_name}"
             logger.error(msg)
             raise Exception(msg)
 
@@ -110,19 +120,21 @@ class BasePanel:
         """
         Changes the method association to mean surface fitting, and fits the panel with it
         """
-        self.model = PanelModel(PANEL_MODEL_DICT['mean'], self.zeta, self.ref_points, self.center)
+        self.model = PanelModel(
+            PANEL_MODEL_DICT["mean"], self.zeta, self.ref_points, self.center
+        )
         self.model.solve(self.samples)
         self.fall_back_fit = True
 
     def get_corrections(self):
         if not self.solved:
-            msg = 'Cannot correct a panel that is not solved'
+            msg = "Cannot correct a panel that is not solved"
             logger.error(msg)
             raise Exception(msg)
         self.corr = self.model.correct(self.samples, self.margins)
         return self.corr
 
-    def export_screws(self, unit='mm'):
+    def export_screws(self, unit="mm"):
         """
         Export screw adjustments to a numpy array in unit
         Args:
@@ -131,7 +143,7 @@ class BasePanel:
         Returns:
             Numpy array with screw adjustments
         """
-        fac = convert_unit('m', unit, 'length')
+        fac = convert_unit("m", unit, "length")
         nscrew = len(self.screws)
         screw_corr = np.zeros(nscrew)
         for iscrew, screw in enumerate(self.screws):
@@ -146,11 +158,20 @@ class BasePanel:
             rotate: Rotate label for better display
         """
         if rotate:
-            angle = (-self.zeta % pi - pi/2)*convert_unit('rad', 'deg', 'trigonometric')
+            angle = (-self.zeta % pi - pi / 2) * convert_unit(
+                "rad", "deg", "trigonometric"
+            )
         else:
             angle = 0
-        ax.text(self.center.yc, self.center.xc, self.label, fontsize=fontsize, ha='center', va='center',
-                rotation=angle)
+        ax.text(
+            self.center.yc,
+            self.center.xc,
+            self.label,
+            fontsize=fontsize,
+            ha="center",
+            va="center",
+            rotation=angle,
+        )
 
     def plot_screws(self, ax):
         """
@@ -159,8 +180,14 @@ class BasePanel:
             ax: matplotlib axes instance
         """
         for iscrew, screw in enumerate(self.screws):
-            ax.scatter(screw.yc, screw.xc, marker=self.markers[iscrew], lw=self.linewidth, s=markersize,
-                       color=self.colors[iscrew])
+            ax.scatter(
+                screw.yc,
+                screw.xc,
+                marker=self.markers[iscrew],
+                lw=self.linewidth,
+                s=markersize,
+                color=self.colors[iscrew],
+            )
 
     def plot_corrections(self, ax, cmap, corrections, threshold, vmin, vmax):
         """
@@ -180,6 +207,10 @@ class BasePanel:
                 corr = 0
             else:
                 corr = corrections[iscrew]
-            circle = plt.Circle((screw.yc, screw.xc), self.plot_screw_size, color=cmap(norm(corr)),
-                                fill=True)
+            circle = plt.Circle(
+                (screw.yc, screw.xc),
+                self.plot_screw_size,
+                color=cmap(norm(corr)),
+                fill=True,
+            )
             ax.add_artist(circle)
