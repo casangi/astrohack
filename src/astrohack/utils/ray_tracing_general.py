@@ -5,6 +5,7 @@ import toolviper.utils.logger as logger
 from astrohack.utils.algorithms import least_squares_jit, least_squares, create_coordinate_images
 from numba import njit
 from scipy.spatial.distance import cdist
+import pickle
 
 nanvec3d = np.array([np.nan, np.nan, np.nan])
 intblankval = -1000
@@ -314,3 +315,81 @@ def jitted_triangle_find(pr_point, reflection, sc_mesh, sc_pnt):
             return it, point
 
     return intblankval, nanvec3d
+
+
+def np_qps_fitting(pcd):
+    npnt = pcd.shape[0]
+    pcd_xy = pcd[:, 0:2]
+    dist_matrix = np.sqrt(np.sum((pcd_xy[np.newaxis, :, :]-pcd_xy[:, np.newaxis, :])**2, axis =-1))
+
+    n_var = npnt+6
+    sys_matrix = np.zeros([n_var, n_var])
+    sys_vector = np.zeros([n_var])
+
+    sys_matrix[:npnt, :npnt] = dist_matrix**5
+    sys_matrix[:npnt, npnt+0] = pcd_xy[:, 0] ** 2
+    sys_matrix[:npnt, npnt+1] = pcd_xy[:, 0] * pcd_xy[:, 1]
+    sys_matrix[:npnt, npnt+2] = pcd_xy[:, 1] ** 2
+    sys_matrix[:npnt, npnt+3] = pcd_xy[:, 0]
+    sys_matrix[:npnt, npnt+4] = pcd_xy[:, 1]
+    sys_matrix[:npnt, npnt+5] = 1
+    sys_matrix[npnt:, :npnt] = 1.0
+
+    sys_vector[:npnt] = pcd[:, 2]
+    qps_coeffs, _, _ = least_squares(sys_matrix, sys_vector)
+    return qps_coeffs
+
+
+class LocalQPS:
+    n_qps_extra_vars = 6
+
+    def __init__(self):
+        # Meta data
+        self.npnt = -1
+        self.local_qps_n_pnt = -1
+
+        # Data arrays
+        self.global_pcd = None
+        self.local_qps_coeffs = None
+        self.local_pcds = None
+
+    @classmethod
+    def from_pcd(cls, pcd_data, local_qps_n_pnt=20):
+        new_obj = cls()
+        new_obj._init_from_pcd(pcd_data, local_qps_n_pnt)
+        return new_obj
+
+    def _init_from_pcd(self, pcd_data, local_qps_n_pnt):
+        self.pcd = pcd_data
+        self.npnt = self.pcd.shape[0]
+        self.local_qps_n_pnt = local_qps_n_pnt
+        self.local_pcds = np.empty([self.npnt, self.local_qps_n_pnt, 3])
+        self.qps_coeffs = np.empty([self.npnt, local_qps_n_pnt + self.n_qps_extra_vars])
+        for ipnt, point in enumerate(self.pcd):
+            dist2 = np.sum((point[np.newaxis, :]-self.pcd)**2, axis=-1)
+            n_closest = np.argsort(dist2)[:self.local_qps_n_pnt]
+            self.local_pcds[ipnt] = self.pcd[n_closest]
+            self.qps_coeffs[ipnt] = np_qps_fitting(self.pcd[n_closest])
+
+    @classmethod
+    def from_pickle(cls, filename):
+        with open(filename, 'rb') as pickled_file:
+            pkl_obj = pickle.load(pickled_file)
+            return pkl_obj
+
+    def get_local_qps(self, ipnt):
+        return self.qps_coeffs[ipnt], self.local_pcds[ipnt]
+        # qps_obj = QPS(self.qps_coeffs[ipnt], self.local_pcds[ipnt])
+        # return qps_obj
+
+    def __sizeof__(self):
+        total_size = 0
+        for key, item in self.__dict__.items():
+            total_size += item.__sizeof__()
+        return total_size
+
+    def to_pickle(self, filename):
+        with open(filename, 'wb') as pickle_file:
+            # noinspection PyTypeChecker
+            pickle.dump(self, pickle_file)
+
