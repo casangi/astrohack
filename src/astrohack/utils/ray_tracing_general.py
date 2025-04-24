@@ -340,6 +340,30 @@ def np_qps_fitting(pcd):
     return qps_coeffs
 
 
+def compute_point_and_normal(pnt, qps_coeffs, pcd):
+    npnt = pcd.shape[0]
+    acoeffs = qps_coeffs[:npnt]
+    bcoeffs = qps_coeffs[npnt:]
+    pnt_xy = pnt[0:2]
+    diff = pcd[:, 0:2] - pnt_xy
+    dist = np.sqrt(np.sum(diff**2, axis=-1))
+    aterm_val = np.sum(acoeffs * dist**5)
+    cubic_rterm = acoeffs * dist**3
+    aterm_dx = 5 * np.sum(diff[:, 0] * cubic_rterm)
+    aterm_dy = 5 * np.sum(diff[:, 1] * cubic_rterm)
+
+    qps_val = aterm_val + bcoeffs[0]*pnt[0]**2 + bcoeffs[1]*pnt[0]*pnt[1] + bcoeffs[2]*pnt[1]**2
+    qps_val += bcoeffs[3]*pnt[0] + bcoeffs[4]*pnt[1] + bcoeffs[5]
+
+    dqps_dx = aterm_dx + 2*bcoeffs[0]*pnt[0] + bcoeffs[1]*pnt[1] + bcoeffs[3]
+
+    dqps_dy = aterm_dy + bcoeffs[1]*pnt[0] + 2*bcoeffs[2]*pnt[1] + bcoeffs[4]
+
+    normal = normalize_vector_map(np.array([-dqps_dx, -dqps_dy, 1]))
+    new_pnt = np.array([pnt[0], pnt[1], qps_val])
+    return new_pnt, normal
+
+
 class LocalQPS:
     n_qps_extra_vars = 6
 
@@ -360,16 +384,16 @@ class LocalQPS:
         return new_obj
 
     def _init_from_pcd(self, pcd_data, local_qps_n_pnt):
-        self.pcd = pcd_data
-        self.npnt = self.pcd.shape[0]
+        self.global_pcd = pcd_data
+        self.npnt = self.global_pcd.shape[0]
         self.local_qps_n_pnt = local_qps_n_pnt
         self.local_pcds = np.empty([self.npnt, self.local_qps_n_pnt, 3])
-        self.qps_coeffs = np.empty([self.npnt, local_qps_n_pnt + self.n_qps_extra_vars])
-        for ipnt, point in enumerate(self.pcd):
-            dist2 = np.sum((point[np.newaxis, :]-self.pcd)**2, axis=-1)
+        self.local_qps_coeffs = np.empty([self.npnt, local_qps_n_pnt + self.n_qps_extra_vars])
+        for ipnt, point in enumerate(self.global_pcd):
+            dist2 = np.sum((point[np.newaxis, :]-self.global_pcd)**2, axis=-1)
             n_closest = np.argsort(dist2)[:self.local_qps_n_pnt]
-            self.local_pcds[ipnt] = self.pcd[n_closest]
-            self.qps_coeffs[ipnt] = np_qps_fitting(self.pcd[n_closest])
+            self.local_pcds[ipnt] = self.global_pcd[n_closest]
+            self.local_qps_coeffs[ipnt] = np_qps_fitting(self.global_pcd[n_closest])
 
     @classmethod
     def from_pickle(cls, filename):
@@ -378,7 +402,7 @@ class LocalQPS:
             return pkl_obj
 
     def get_local_qps(self, ipnt):
-        return self.qps_coeffs[ipnt], self.local_pcds[ipnt]
+        return self.local_qps_coeffs[ipnt], self.local_pcds[ipnt]
         # qps_obj = QPS(self.qps_coeffs[ipnt], self.local_pcds[ipnt])
         # return qps_obj
 
@@ -393,3 +417,44 @@ class LocalQPS:
             # noinspection PyTypeChecker
             pickle.dump(self, pickle_file)
 
+    def grid_primary(self, sampling, active_radius=9.0, x_off=None, y_off=None):
+        if x_off is None:
+            x_off = find_mid_point(self.global_pcd[:, 0])
+        if y_off is None:
+            y_off = find_mid_point(self.global_pcd[:, 1])
+
+        x_axis = simple_axis([-active_radius + x_off, active_radius + x_off], sampling)
+        y_axis = simple_axis([-active_radius + y_off, active_radius + y_off], sampling)
+
+        nx = x_axis.shape[0]
+        ny = y_axis.shape[0]
+        npnt_max = nx*ny
+
+        grd_surface = np.empty((npnt_max, 3))
+        grd_normal = np.empty((npnt_max, 3))
+        grd_idx = np.empty((npnt_max, 2))
+
+        i_pnt = 0
+        for ix, x_val in enumerate(x_axis):
+            xsel = np.abs(self.global_pcd[:, 0] - x_val) < 3 * sampling
+            for iy, y_val in enumerate(y_axis):
+                if ((x_val-x_off)**2 + (y_val-y_off)**2) <= active_radius**2:
+                    ysel = np.abs(self.global_pcd[:, 1] - y_val) < 3 * sampling
+                    fullsel = xsel & ysel
+                    sel_qps = self.local_qps_coeffs[fullsel]
+                    sel_gl_pcd = self.global_pcd[fullsel]
+                    sel_lc_pcd = self.local_pcds[fullsel]
+
+                    i_closest = np.argmin((sel_gl_pcd[:, 0]-x_val)**2+(sel_gl_pcd[:, 1]-y_val)**2)
+
+                    point, normal = compute_point_and_normal(np.array([x_val, y_val]), sel_qps[i_closest],
+                                                             sel_lc_pcd[i_closest])
+
+                    grd_surface[i_pnt, :] = point
+                    grd_normal[i_pnt, :] = normal
+                    grd_idx[i_pnt, :] = ix, iy
+
+                    i_pnt += 1
+        n_total = i_pnt
+
+        return grd_surface[:n_total, :], grd_normal[:n_total, :], grd_idx[:n_total, :]
