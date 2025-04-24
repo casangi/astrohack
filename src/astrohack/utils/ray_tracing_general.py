@@ -317,6 +317,35 @@ def jitted_triangle_find(pr_point, reflection, sc_mesh, sc_pnt):
     return intblankval, nanvec3d
 
 
+def find_closest_point_to_ray(ray_origin, ray_direction, pcd):
+    point_vectors = pcd - ray_origin[np.newaxis, :]
+    direction_norm = generalized_norm(ray_direction)
+    # Project point_vector onto self.direction
+    projection = generalized_dot(point_vectors, ray_direction[np.newaxis, :])/ direction_norm
+
+    # Calculate the closest point on the line to the given point
+    closest_points = ray_origin[np.newaxis, :] + projection[:, np.newaxis] * ray_direction[np.newaxis, :]
+    # Calculate the distance**2 between the points and the closest
+    # points on the ray
+    distances2 = np.sum((pcd-closest_points)**2, axis=-1)
+    i_closest = np.argmin(distances2, axis=-1)
+    return i_closest, closest_points[i_closest], np.sqrt(distances2[i_closest])
+
+
+def distance_from_ray_to_point(ray_origin, ray_direction, point):
+    pnt_vec = point - ray_origin
+    # Project point_vector onto ray_direction
+    dir2 = np.sum(ray_direction**2, axis=-1)
+    proj = np.sum(pnt_vec*ray_direction, axis=-1) / dir2
+
+    # Calculate the closest point on the line to the given point
+    clsst_pnt = ray_origin + proj * ray_direction
+    # Calculate the distance**2 between the points and the closest
+    # points on the self
+    dist = np.sqrt(np.sum((point-clsst_pnt)**2))
+    return dist, clsst_pnt
+
+
 def np_qps_fitting(pcd):
     npnt = pcd.shape[0]
     pcd_xy = pcd[:, 0:2]
@@ -340,7 +369,7 @@ def np_qps_fitting(pcd):
     return qps_coeffs
 
 
-def compute_point_and_normal(pnt, qps_coeffs, pcd):
+def qps_compute_point_and_normal(pnt, qps_coeffs, pcd):
     npnt = pcd.shape[0]
     acoeffs = qps_coeffs[:npnt]
     bcoeffs = qps_coeffs[npnt:]
@@ -362,6 +391,22 @@ def compute_point_and_normal(pnt, qps_coeffs, pcd):
     normal = normalize_vector_map(np.array([-dqps_dx, -dqps_dy, 1]))
     new_pnt = np.array([pnt[0], pnt[1], qps_val])
     return new_pnt, normal
+
+
+def qps_compute_point(pnt, qps_coeffs, pcd):
+    npnt = pcd.shape[0]
+    acoeffs = qps_coeffs[:npnt]
+    bcoeffs = qps_coeffs[npnt:]
+    pnt_xy = pnt[0:2]
+    diff = pcd[:, 0:2] - pnt_xy
+    dist = np.sqrt(np.sum(diff**2, axis=-1))
+    aterm_val = np.sum(acoeffs * dist**5)
+
+    qps_val = aterm_val + bcoeffs[0]*pnt[0]**2 + bcoeffs[1]*pnt[0]*pnt[1] + bcoeffs[2]*pnt[1]**2
+    qps_val += bcoeffs[3]*pnt[0] + bcoeffs[4]*pnt[1] + bcoeffs[5]
+
+    new_pnt = np.array([pnt[0], pnt[1], qps_val])
+    return new_pnt
 
 
 class LocalQPS:
@@ -447,8 +492,8 @@ class LocalQPS:
 
                     i_closest = np.argmin((sel_gl_pcd[:, 0]-x_val)**2+(sel_gl_pcd[:, 1]-y_val)**2)
 
-                    point, normal = compute_point_and_normal(np.array([x_val, y_val]), sel_qps[i_closest],
-                                                             sel_lc_pcd[i_closest])
+                    point, normal = qps_compute_point_and_normal(np.array([x_val, y_val]), sel_qps[i_closest],
+                                                                 sel_lc_pcd[i_closest])
 
                     grd_surface[i_pnt, :] = point
                     grd_normal[i_pnt, :] = normal
@@ -458,3 +503,26 @@ class LocalQPS:
         n_total = i_pnt
 
         return x_axis, y_axis, grd_surface[:n_total, :], grd_normal[:n_total, :], grd_idx[:n_total, :]
+
+    def find_reflection_point(self, ray_origin, ray_direction, wavelength, nitermax=1000):
+        epsilon = wavelength / 32.
+        i_closest, ray_pnt, dist = find_closest_point_to_ray(ray_origin, ray_direction, self.global_pcd)
+        loc_qps_coeff, loc_qps_pcd = self.get_local_qps(i_closest)
+        looking = True
+        niter = 0
+        # Here I am looking for a way to determine movement direction
+        # using XY info
+        # distance has to be measured in 3D but steps are in 2D
+        test_pnt = ray_pnt
+        while looking:
+            if dist < epsilon:
+                looking = False
+            elif niter < nitermax:
+                test_pnt = (test_pnt + 5 * ray_pnt)/6
+                test_pnt = qps_compute_point(test_pnt, loc_qps_coeff, loc_qps_pcd)
+                dist, ray_pnt = distance_from_ray_to_point(ray_origin, ray_direction, test_pnt)
+            else:
+                looking = False
+            niter += 1
+
+        return qps_compute_point_and_normal(ray_pnt, loc_qps_coeff, loc_qps_pcd)
