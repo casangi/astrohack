@@ -457,4 +457,4 @@ class LocalQPS:
                     i_pnt += 1
         n_total = i_pnt
 
-        return grd_surface[:n_total, :], grd_normal[:n_total, :], grd_idx[:n_total, :]
+        return x_axis, y_axis, grd_surface[:n_total, :], grd_normal[:n_total, :], grd_idx[:n_total, :]
