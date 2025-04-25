@@ -80,7 +80,7 @@ def well_positioned_colorbar(ax, fig, mappable, label, location='right', size='5
         return fig.colorbar(sm, label=label, cax=cax)
 
 
-def compute_extent(x_axis, y_axis, margin=0):
+def compute_extent(x_axis, y_axis, margin=0.0):
     """
     Compute extent from the arrays representing the X and Y axes
     Args:
@@ -319,3 +319,20 @@ def scatter_plot(
         ax.set_title(title)
 
     return
+
+
+def simple_imshow_map_plot(ax, fig, x_axis, y_axis, gridded_2d_arr, title, cmap, zlim,
+                           x_label='X axis [m]', y_label="Y axis [m]", z_label='Z Scale'):
+    if zlim is None:
+        minmax = [np.nanmin(gridded_2d_arr), np.nanmax(gridded_2d_arr)]
+    else:
+        minmax = zlim
+    ax.set_title(title)
+    extent = compute_extent(x_axis, y_axis, margin=0.1)
+    im = ax.imshow(gridded_2d_arr, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1])
+    well_positioned_colorbar(ax, fig, im, z_label)
+    ax.set_xlim(extent[:2])
+    ax.set_ylim(extent[2:])
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    return im
