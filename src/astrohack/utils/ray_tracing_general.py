@@ -316,6 +316,20 @@ def jitted_triangle_find(pr_point, reflection, sc_mesh, sc_pnt):
 
     return intblankval, nanvec3d
 
+def regrid_array(x_axis, y_axis, linear_array, grid_idx):
+    nx = x_axis.shape[0]
+    ny = y_axis.shape[0]
+    if linear_array.ndim == 1:
+        grid_shape = [nx, ny]
+    else:
+        grid_shape = [nx, ny, linear_array.shape[1]]
+
+    gridded = np.full(grid_shape, np.nan)
+    gridded[grid_idx[:, 0], grid_idx[:, 1]] = linear_array[:]
+    return gridded
+
+
+
 
 def find_closest_point_to_ray(ray_origin, ray_direction, pcd):
     point_vectors = pcd - ray_origin[np.newaxis, :]
@@ -477,7 +491,7 @@ class LocalQPS:
 
         grd_surface = np.empty((npnt_max, 3))
         grd_normal = np.empty((npnt_max, 3))
-        grd_idx = np.empty((npnt_max, 2))
+        grd_idx = np.empty((npnt_max, 2), dtype=int)
 
         i_pnt = 0
         for ix, x_val in enumerate(x_axis):
