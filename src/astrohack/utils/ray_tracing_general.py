@@ -19,6 +19,10 @@ def generalized_norm(vecmap):
     return np.sqrt(generalized_dot(vecmap, vecmap))
 
 
+def generalized_dist(vec_map_a, vec_map_b):
+    return np.sqrt(generalized_dot(vec_map_a, vec_map_b))
+
+
 def normalize_vector_map(vector_map):
     normalization = np.linalg.norm(vector_map, axis=-1)
     return vector_map / normalization[..., np.newaxis]
