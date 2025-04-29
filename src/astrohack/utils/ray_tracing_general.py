@@ -2,6 +2,7 @@ import numpy as np
 
 import toolviper.utils.logger as logger
 
+from astrohack.utils.text import format_byte_size
 from astrohack.utils.algorithms import least_squares_jit, least_squares, create_coordinate_images
 from numba import njit
 from scipy.spatial.distance import cdist
@@ -17,6 +18,10 @@ def generalized_dot(vec_map_a, vec_map_b):
 
 def generalized_norm(vecmap):
     return np.sqrt(generalized_dot(vecmap, vecmap))
+
+
+def generalized_dist2(vec_map_a, vec_map_b):
+    return np.sum((vec_map_a - vec_map_b)**2, axis=-1)
 
 
 def generalized_dist(vec_map_a, vec_map_b):
@@ -344,7 +349,7 @@ def find_closest_point_to_ray(ray_origin, ray_direction, pcd, max_dist):
     closest_points = ray_origin[np.newaxis, :] + projection[:, np.newaxis] * ray_direction[np.newaxis, :]
     # Calculate the distance**2 between the points and the closest
     # points on the ray
-    distances2 = np.sum((pcd-closest_points)**2, axis=-1)
+    distances2 = generalized_dist2(pcd, closest_points)
     i_closest = np.nanargmin(distances2, axis=-1)
     smallest_dist = np.sqrt(distances2[i_closest])
     if smallest_dist > max_dist:
@@ -363,14 +368,14 @@ def distance_from_ray_to_point(ray_origin, ray_direction, point):
     clsst_pnt = ray_origin + proj * ray_direction
     # Calculate the distance**2 between the points and the closest
     # points on the self
-    dist = np.sqrt(np.sum((point-clsst_pnt)**2))
+    dist = generalized_dist(point, clsst_pnt)
     return dist, clsst_pnt
 
 
 def np_qps_fitting(pcd):
     npnt = pcd.shape[0]
     pcd_xy = pcd[:, 0:2]
-    dist_matrix = np.sqrt(np.sum((pcd_xy[np.newaxis, :, :]-pcd_xy[:, np.newaxis, :])**2, axis =-1))
+    dist_matrix = generalized_dist(pcd_xy[np.newaxis, :, :], pcd_xy[:, np.newaxis, :])
 
     n_var = npnt+6
     sys_matrix = np.zeros([n_var, n_var])
@@ -419,8 +424,7 @@ def qps_compute_point(pnt, qps_coeffs, pcd):
     acoeffs = qps_coeffs[:npnt]
     bcoeffs = qps_coeffs[npnt:]
     pnt_xy = pnt[0:2]
-    diff = pcd[:, 0:2] - pnt_xy
-    dist = np.sqrt(np.sum(diff**2, axis=-1))
+    dist = generalized_dist(pcd[:, 0:2], pnt_xy)
     aterm_val = np.sum(acoeffs * dist**5)
 
     qps_val = aterm_val + bcoeffs[0]*pnt[0]**2 + bcoeffs[1]*pnt[0]*pnt[1] + bcoeffs[2]*pnt[1]**2
@@ -477,6 +481,22 @@ class LocalQPS:
         for key, item in self.__dict__.items():
             total_size += item.__sizeof__()
         return total_size
+
+    def __repr__(self):
+        total_size = 0
+        outstr = 'Contents of this LocalQPS object:\n'
+        for key, item in self.__dict__.items():
+            size = item.__sizeof__()
+            outstr += f'   {key} -> {type(item)}'
+            if isinstance(item, np.ndarray):
+                outstr += ' ('
+                for dim_size in item.shape:
+                    outstr += f'{dim_size},'
+                outstr = outstr[:-1] + f') [{item.dtype}]'
+            outstr += f' -> {format_byte_size(size)}\n'
+            total_size += size
+        outstr += f'Total size = {format_byte_size(total_size)}\n'
+        return outstr
 
     def to_pickle(self, filename):
         with open(filename, 'wb') as pickle_file:
