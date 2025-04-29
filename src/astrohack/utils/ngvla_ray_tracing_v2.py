@@ -214,6 +214,9 @@ class NgvlaRayTracer:
         close_figure(fig, f'Detailed visualization of rays', f'detailed_{chosen_ray}_ray_vis.png', dpi, display)
         return
 
+    def __repr__(self):
+        return format_object_contents(self)
+
 
 
 

@@ -610,7 +610,7 @@ def format_byte_size(byte_size):
     labels = ['B', 'KB', 'MB', 'GB', 'TB']
     format_size = byte_size
     i_label = 0
-    while byte_size > base and i_label < len(labels):
+    while format_size > base and i_label < len(labels)-1:
         i_label += 1
         format_size /= byte_size
     return f'{format_size:.2f} {labels[i_label]}'
@@ -621,7 +621,7 @@ def format_object_contents(obj):
     outstr = f'Contents of this {type(obj).__name__} object:\n'
     for key, item in obj.__dict__.items():
         size = item.__sizeof__()
-        outstr += f'   {key} -> {type(item)}'
+        outstr += f'   {key:22s} -> | {type(item).__name__} |'
         if isinstance(item, np.ndarray):
             outstr += ' ('
             for dim_size in item.shape:
