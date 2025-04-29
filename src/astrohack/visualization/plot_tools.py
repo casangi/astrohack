@@ -13,7 +13,7 @@ astrohack_cmaps = list(matplotlib_cmaps.keys())
 astrohack_cmaps.append('AIPS')
 
 
-def create_figure_and_axes(figure_size, boxes, default_figsize=figsize, sharex=False, sharey=False):
+def create_figure_and_axes(figure_size, boxes, default_figsize=figsize, sharex=False, sharey=False, plot_is_3d=False):
     """
     Create a figures and plotting axes within according to a desired figure size and number of boxes
     Args:
@@ -25,10 +25,15 @@ def create_figure_and_axes(figure_size, boxes, default_figsize=figsize, sharex=F
     Figure and plotting axes array
     """
     if figure_size is None or figure_size == 'None':
-        fig, axes = plt.subplots(boxes[0], boxes[1], figsize=default_figsize, sharex=sharex, sharey=sharey)
+        prog_fig_size = default_figsize
     else:
-        fig, axes = plt.subplots(boxes[0], boxes[1], figsize=figure_size, sharex=sharex, sharey=sharey)
+        prog_fig_size = figure_size
 
+    if plot_is_3d:
+        fig, axes = plt.subplots(boxes[0], boxes[1], figsize=prog_fig_size, sharex=sharex, sharey=sharey,
+                                 subplot_kw={'projection': '3d'})
+    else:
+        fig, axes = plt.subplots(boxes[0], boxes[1], figsize=prog_fig_size, sharex=sharex, sharey=sharey)
     return fig, axes
 
 
