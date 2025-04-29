@@ -334,7 +334,8 @@ def simple_imshow_map_plot(ax, fig, x_axis, y_axis, gridded_2d_arr, title, cmap,
         minmax = zlim
     ax.set_title(title)
     extent = compute_extent(x_axis, y_axis, margin=0.1)
-    im = ax.imshow(gridded_2d_arr, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1])
+    im = ax.imshow(gridded_2d_arr.T, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1],
+                   origin='lower')
     well_positioned_colorbar(ax, fig, im, z_label)
     ax.set_xlim(extent[:2])
     ax.set_ylim(extent[2:])
