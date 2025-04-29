@@ -20,7 +20,7 @@ def generalized_norm(vecmap):
 
 
 def generalized_dist(vec_map_a, vec_map_b):
-    return np.sqrt(generalized_dot(vec_map_a, vec_map_b))
+    return np.sqrt(np.sum((vec_map_a - vec_map_b)**2, axis=-1))
 
 
 def normalize_vector_map(vector_map):
