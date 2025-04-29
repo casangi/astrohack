@@ -2,7 +2,7 @@ import numpy as np
 
 import toolviper.utils.logger as logger
 
-from astrohack.utils.text import format_byte_size
+from astrohack.utils.text import format_byte_size, format_object_contents
 from astrohack.utils.algorithms import least_squares_jit, least_squares, create_coordinate_images
 from numba import njit
 from scipy.spatial.distance import cdist
@@ -483,20 +483,7 @@ class LocalQPS:
         return total_size
 
     def __repr__(self):
-        total_size = 0
-        outstr = 'Contents of this LocalQPS object:\n'
-        for key, item in self.__dict__.items():
-            size = item.__sizeof__()
-            outstr += f'   {key} -> {type(item)}'
-            if isinstance(item, np.ndarray):
-                outstr += ' ('
-                for dim_size in item.shape:
-                    outstr += f'{dim_size},'
-                outstr = outstr[:-1] + f') [{item.dtype}]'
-            outstr += f' -> {format_byte_size(size)}\n'
-            total_size += size
-        outstr += f'Total size = {format_byte_size(total_size)}\n'
-        return outstr
+        return format_object_contents(self)
 
     def to_pickle(self, filename):
         with open(filename, 'wb') as pickle_file:

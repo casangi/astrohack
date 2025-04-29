@@ -614,3 +614,20 @@ def format_byte_size(byte_size):
         i_label += 1
         format_size /= byte_size
     return f'{format_size:.2f} {labels[i_label]}'
+
+
+def format_object_contents(obj):
+    total_size = 0
+    outstr = f'Contents of this {type(obj).__name__} object:\n'
+    for key, item in obj.__dict__.items():
+        size = item.__sizeof__()
+        outstr += f'   {key} -> {type(item)}'
+        if isinstance(item, np.ndarray):
+            outstr += ' ('
+            for dim_size in item.shape:
+                outstr += f'{dim_size},'
+            outstr = outstr[:-1] + f') [{item.dtype}]'
+        outstr += f' -> {format_byte_size(size)}\n'
+        total_size += size
+    outstr += f'Total size = {format_byte_size(total_size)}\n'
+    return outstr
