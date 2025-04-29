@@ -604,3 +604,13 @@ def dynamic_format(value):
     else:
         return f'{round(abs(data_oom))+1}f'
 
+
+def format_byte_size(byte_size):
+    base = 1024
+    labels = ['B', 'KB', 'MB', 'GB', 'TB']
+    format_size = byte_size
+    i_label = 0
+    while byte_size > base and i_label < len(labels):
+        i_label += 1
+        format_size /= byte_size
+    return f'{format_size:.2f} {labels[i_label]}'
