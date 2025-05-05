@@ -695,3 +695,6 @@ class PanelPoint:
 
     def __repr__(self):
         return f"{self.xc}, {self.yc}, {self.ix}, {self.iy}, {self.value}"
+
+    def get_array(self):
+        return np.array([self.xc, self.yc, self.ix, self.iy, self.value])

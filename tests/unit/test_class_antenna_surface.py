@@ -117,11 +117,18 @@ class TestClassAntennaSurface:
         ]
         compnsampp0 = 179
         self.tant.compile_panel_points()
+
         assert (
             len(self.tant.panels[0].samples) == compnsampp0
         ), "Number of samples in panel is different from reference"
-        assert self.tant.panels[0].samples[0] == PanelPoint(*compvaluep0), (
-            "Point data in Panel is different from what" " is expected"
+
+        assert np.allclose(
+            self.tant.panels[0].samples[0].get_array(), compvaluep0, atol=self.tolerance
+        ), (
+            "Point data in Panel is different from what is expected. Given values: "
+            + str(self.tant.panels[0].samples[0].get_array())
+            + " Expected values: "
+            + str(compvaluep0)
         )
 
     def test_fit_surface(self):
