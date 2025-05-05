@@ -19,13 +19,12 @@ def get_stokes_axis_iaxis(header):
     Returns:
         None if no stokes axis is found, iaxis if stokes axis is found
     """
-    naxis = header['NAXIS']
+    naxis = header["NAXIS"]
     for iaxis in range(naxis):
-        axis_type = safe_keyword_fetch(header, f'CTYPE{iaxis+1}')
-        if 'STOKES' in axis_type:
+        axis_type = safe_keyword_fetch(header, f"CTYPE{iaxis+1}")
+        if "STOKES" in axis_type:
             return iaxis + 1
     return None
-
 
 
 def safe_keyword_fetch(header_dict, keyword):
@@ -65,7 +64,9 @@ def read_fits(filename, header_as_dict=True):
                 if head["NAXIS" + str(iax + 1)] != 1:
                     raise Exception(filename + " is not bi-dimensional")
     if head["NAXIS1"] != head["NAXIS2"]:
-        raise Exception(filename + " does not have the same amount of pixels in the x and y axes")
+        raise Exception(
+            filename + " does not have the same amount of pixels in the x and y axes"
+        )
 
     if header_as_dict:
         header_dict = {}
@@ -87,17 +88,19 @@ def get_axis_from_fits_header(header, iaxis, pixel_offset=True):
     Returns:
         numpy array representation of axis, axis type and axis unit
     """
-    n_elem = header[f'NAXIS{iaxis}']
-    ref = header[f'CRPIX{iaxis}']
-    inc = header[f'CDELT{iaxis}']
+    n_elem = header[f"NAXIS{iaxis}"]
+    ref = header[f"CRPIX{iaxis}"]
+    inc = header[f"CDELT{iaxis}"]
     if pixel_offset:
-        val = header[f'CRVAL{iaxis}'] + inc # This makes this routine symmetrical to the put routine.
+        val = (
+            header[f"CRVAL{iaxis}"] + inc
+        )  # This makes this routine symmetrical to the put routine.
     else:
-        val = header[f'CRVAL{iaxis}']
+        val = header[f"CRVAL{iaxis}"]
     axis = np.arange(n_elem)
-    axis = val + (ref-axis)*inc
-    axis_unit = safe_keyword_fetch(header, f'CUNIT{iaxis}')
-    axis_type = safe_keyword_fetch(header, f'CTYPE{iaxis}')
+    axis = val + (ref - axis) * inc
+    axis_unit = safe_keyword_fetch(header, f"CUNIT{iaxis}")
+    axis_type = safe_keyword_fetch(header, f"CTYPE{iaxis}")
     return axis, axis_type, axis_unit
 
 
@@ -114,16 +117,16 @@ def write_fits(header, imagetype, data, filename, unit, origin=None, reorder_axi
         reorder_axis: Reorder data axes so that they are compatible with regular FITS ordering
     """
 
-    header['BUNIT'] = unit
-    header['TYPE'] = imagetype
-    header['ORIGIN'] = f'Astrohack v{astrohack.__version__}: {origin}'
-    header['DATE'] = datetime.datetime.now().strftime('%b %d %Y, %H:%M:%S')
+    header["BUNIT"] = unit
+    header["TYPE"] = imagetype
+    header["ORIGIN"] = f"Astrohack v{astrohack.__version__}: {origin}"
+    header["DATE"] = datetime.datetime.now().strftime("%b %d %Y, %H:%M:%S")
 
     if origin is None:
-        header['ORIGIN'] = f'Astrohack v{astrohack.__version__}'
+        header["ORIGIN"] = f"Astrohack v{astrohack.__version__}"
         outfile = filename
     else:
-        header['ORIGIN'] = f'Astrohack v{astrohack.__version__}: {origin}'
+        header["ORIGIN"] = f"Astrohack v{astrohack.__version__}: {origin}"
         outfile = add_prefix(filename, origin)
 
     if reorder_axis:
@@ -138,7 +141,12 @@ def write_fits(header, imagetype, data, filename, unit, origin=None, reorder_axi
 
 
 def _reorder_axes_for_fits(data: np.ndarray):
-    carta_dim_order = (1, 0, 2, 3,)
+    carta_dim_order = (
+        1,
+        0,
+        2,
+        3,
+    )
     shape = data.shape
     n_dim = len(shape)
     if n_dim == 5:
@@ -162,13 +170,13 @@ def put_resolution_in_fits_header(header, resolution):
     if resolution is None:
         return header
     if resolution[0] >= resolution[1]:
-        header['BMAJ'] = resolution[0]
-        header['BMIN'] = resolution[1]
-        header['BPA'] = 0.0
+        header["BMAJ"] = resolution[0]
+        header["BMIN"] = resolution[1]
+        header["BPA"] = 0.0
     else:
-        header['BMAJ'] = resolution[1]
-        header['BMIN'] = resolution[0]
-        header['BPA'] = 90.0
+        header["BMAJ"] = resolution[1]
+        header["BMIN"] = resolution[0]
+        header["BPA"] = 90.0
     return header
 
 
@@ -188,7 +196,7 @@ def put_axis_in_fits_header(header: dict, axis, iaxis, axistype, unit, iswcs=Tru
     """
     outheader = header.copy()
     try:
-        wcsaxes = outheader['WCSAXES']
+        wcsaxes = outheader["WCSAXES"]
     except KeyError:
         wcsaxes = 0
 
@@ -198,11 +206,11 @@ def put_axis_in_fits_header(header: dict, axis, iaxis, axistype, unit, iswcs=Tru
     else:
         inc = axis[1] - axis[0]
         if inc == 0:
-            logger.error('Axis increment is zero valued')
+            logger.error("Axis increment is zero valued")
             raise Exception
         absdiff = abs((axis[-1] - axis[-2]) - inc) / inc
         if absdiff > 1e-7:
-            logger.error('Axis is not linear!')
+            logger.error("Axis is not linear!")
             raise Exception
 
     ref = naxis // 2
@@ -210,14 +218,14 @@ def put_axis_in_fits_header(header: dict, axis, iaxis, axistype, unit, iswcs=Tru
 
     if iswcs:
         wcsaxes += 1
-    outheader[f'WCSAXES'] = wcsaxes
-    outheader[f'NAXIS{iaxis}'] = naxis
-    outheader[f'CRVAL{iaxis}'] = val - inc
-    outheader[f'CDELT{iaxis}'] = inc
-    outheader[f'CRPIX{iaxis}'] = float(ref)
-    outheader[f'CROTA{iaxis}'] = 0.
-    outheader[f'CTYPE{iaxis}'] = axistype
-    outheader[f'CUNIT{iaxis}'] = unit
+    outheader[f"WCSAXES"] = wcsaxes
+    outheader[f"NAXIS{iaxis}"] = naxis
+    outheader[f"CRVAL{iaxis}"] = val - inc
+    outheader[f"CDELT{iaxis}"] = inc
+    outheader[f"CRPIX{iaxis}"] = float(ref)
+    outheader[f"CROTA{iaxis}"] = 0.0
+    outheader[f"CTYPE{iaxis}"] = axistype
+    outheader[f"CUNIT{iaxis}"] = unit
     return outheader
 
 
@@ -233,18 +241,18 @@ def put_stokes_axis_in_fits_header(header, iaxis):
     """
     outheader = header.copy()
     try:
-        wcsaxes = outheader['WCSAXES']
+        wcsaxes = outheader["WCSAXES"]
     except KeyError:
         wcsaxes = 0
     wcsaxes += 1
-    outheader[f'WCSAXES'] = wcsaxes
-    outheader[f'NAXIS{iaxis}'] = 4
-    outheader[f'CRVAL{iaxis}'] = 1.0
-    outheader[f'CDELT{iaxis}'] = 1.0
-    outheader[f'CRPIX{iaxis}'] = 1.0
-    outheader[f'CROTA{iaxis}'] = 0.
-    outheader[f'CTYPE{iaxis}'] = 'STOKES'
-    outheader[f'CUNIT{iaxis}'] = ''
+    outheader[f"WCSAXES"] = wcsaxes
+    outheader[f"NAXIS{iaxis}"] = 4
+    outheader[f"CRVAL{iaxis}"] = 1.0
+    outheader[f"CDELT{iaxis}"] = 1.0
+    outheader[f"CRPIX{iaxis}"] = 1.0
+    outheader[f"CROTA{iaxis}"] = 0.0
+    outheader[f"CTYPE{iaxis}"] = "STOKES"
+    outheader[f"CUNIT{iaxis}"] = ""
 
     return outheader
 
@@ -285,29 +293,38 @@ def aips_holog_to_xds(ampname, devname):
     devdata = np.flipud(devdata)
 
     if amphead["NAXIS1"] != devhead["NAXIS1"]:
-        raise Exception(ampname + ' and ' + devname + ' have different dimensions')
-    if amphead["CRPIX1"] != devhead["CRPIX1"] or amphead["CRVAL1"] != devhead["CRVAL1"] \
-            or amphead["CDELT1"] != devhead["CDELT1"]:
-        raise Exception(ampname + ' and ' + devname + ' have different axes descriptions')
+        raise Exception(ampname + " and " + devname + " have different dimensions")
+    if (
+        amphead["CRPIX1"] != devhead["CRPIX1"]
+        or amphead["CRVAL1"] != devhead["CRVAL1"]
+        or amphead["CDELT1"] != devhead["CDELT1"]
+    ):
+        raise Exception(
+            ampname + " and " + devname + " have different axes descriptions"
+        )
 
     npoint, wavelength = _get_aips_headpars(devhead)
-    u = np.arange(-amphead["CRPIX1"], amphead["NAXIS1"] - amphead["CRPIX1"]) * amphead["CDELT1"]
-    v = np.arange(-amphead["CRPIX2"], amphead["NAXIS2"] - amphead["CRPIX2"]) * amphead["CDELT2"]
+    u = (
+        np.arange(-amphead["CRPIX1"], amphead["NAXIS1"] - amphead["CRPIX1"])
+        * amphead["CDELT1"]
+    )
+    v = (
+        np.arange(-amphead["CRPIX2"], amphead["NAXIS2"] - amphead["CRPIX2"])
+        * amphead["CDELT2"]
+    )
 
     xds = xr.Dataset()
-    xds.attrs['npix'] = amphead["NAXIS1"]
-    xds.attrs['cell_size'] = amphead["CDELT1"]
-    xds.attrs['ref_pixel'] = amphead["CRPIX1"]
-    xds.attrs['ref_value'] = amphead["CRVAL1"]
-    xds.attrs['npoint'] = npoint
-    xds.attrs['wavelength'] = wavelength
-    xds.attrs['amp_unit'] = amphead["BUNIT"].strip()
-    xds.attrs['AIPS'] = True
-    xds.attrs['ant_name'] = amphead["TELESCOP"].strip()
-    xds['AMPLITUDE'] = xr.DataArray(ampdata, dims=["u", "v"])
-    xds['DEVIATION'] = xr.DataArray(devdata, dims=["u", "v"])
+    xds.attrs["npix"] = amphead["NAXIS1"]
+    xds.attrs["cell_size"] = amphead["CDELT1"]
+    xds.attrs["ref_pixel"] = amphead["CRPIX1"]
+    xds.attrs["ref_value"] = amphead["CRVAL1"]
+    xds.attrs["npoint"] = npoint
+    xds.attrs["wavelength"] = wavelength
+    xds.attrs["amp_unit"] = amphead["BUNIT"].strip()
+    xds.attrs["AIPS"] = True
+    xds.attrs["ant_name"] = amphead["TELESCOP"].strip()
+    xds["AMPLITUDE"] = xr.DataArray(ampdata, dims=["u", "v"])
+    xds["DEVIATION"] = xr.DataArray(devdata, dims=["u", "v"])
     coords = {"u": u, "v": v}
     xds = xds.assign_coords(coords)
     return xds
-
-

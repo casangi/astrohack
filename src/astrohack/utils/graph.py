@@ -7,20 +7,20 @@ from astrohack.utils.text import param_to_list
 
 
 def _construct_general_graph_recursively(
-        looping_dict,
-        chunk_function,
-        param_dict,
-        delayed_list,
-        key_order,
-        parallel=False,
-        oneup=None
+    looping_dict,
+    chunk_function,
+    param_dict,
+    delayed_list,
+    key_order,
+    parallel=False,
+    oneup=None,
 ):
     if len(key_order) == 0:
         if isinstance(looping_dict, xarray.Dataset):
-            param_dict['xds_data'] = looping_dict
+            param_dict["xds_data"] = looping_dict
 
         elif isinstance(looping_dict, dict):
-            param_dict['data_dict'] = looping_dict
+            param_dict["data_dict"] = looping_dict
 
         if parallel:
             delayed_list.append(dask.delayed(chunk_function)(dask.delayed(param_dict)))
@@ -36,7 +36,7 @@ def _construct_general_graph_recursively(
         white_list = [key for key in exec_list if approve_prefix(key)]
 
         for item in white_list:
-            param_dict[f'this_{key}'] = item
+            param_dict[f"this_{key}"] = item
 
             if item in looping_dict:
                 _construct_general_graph_recursively(
@@ -46,14 +46,14 @@ def _construct_general_graph_recursively(
                     delayed_list=delayed_list,
                     key_order=key_order[1:],
                     parallel=parallel,
-                    oneup=item
+                    oneup=item,
                 )
 
             else:
                 if oneup is None:
-                    logger.warning(f'{item} is not present in looping dict')
+                    logger.warning(f"{item} is not present in looping dict")
                 else:
-                    logger.warning(f'{item} is not present for {oneup}')
+                    logger.warning(f"{item} is not present for {oneup}")
 
 
 def compute_graph(looping_dict, chunk_function, param_dict, key_order, parallel=False):
@@ -77,7 +77,7 @@ def compute_graph(looping_dict, chunk_function, param_dict, key_order, parallel=
         param_dict=param_dict,
         delayed_list=delayed_list,
         key_order=key_order,
-        parallel=parallel
+        parallel=parallel,
     )
 
     if len(delayed_list) == 0:
@@ -91,7 +91,9 @@ def compute_graph(looping_dict, chunk_function, param_dict, key_order, parallel=
         return True
 
 
-def compute_graph_from_lists(param_dict, chunk_function, looping_key_list, parallel=False):
+def compute_graph_from_lists(
+    param_dict, chunk_function, looping_key_list, parallel=False
+):
     """
     Creates and executes a graph based on entries in a parameter dictionary that are lists
     Args:
@@ -110,7 +112,7 @@ def compute_graph_from_lists(param_dict, chunk_function, looping_key_list, paral
     for i_iter in range(niter):
         this_param = param_dict.copy()
         for key in looping_key_list:
-            this_param[f'this_{key}'] = param_dict[key][i_iter]
+            this_param[f"this_{key}"] = param_dict[key][i_iter]
 
         if parallel:
             delayed_list.append(dask.delayed(chunk_function)(dask.delayed(this_param)))

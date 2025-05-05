@@ -256,14 +256,14 @@ def open_pointing(file: str) -> Union[AstrohackPointFile, None]:
 
 
 def fix_pointing_table(ms_name: str, reference_antenna: List[str]) -> None:
-    """ Fix pointing table for a user defined subset of reference antennas.
+    """Fix pointing table for a user defined subset of reference antennas.
 
     :param ms_name: Measurement set name.
     :type ms_name: str
 
     :param reference_antenna: List of reference antennas.
     :type reference_antenna: list
-  
+
     .. _Description:
 
     **Example Usage**
@@ -273,12 +273,12 @@ def fix_pointing_table(ms_name: str, reference_antenna: List[str]) -> None:
         import astrohack
 
         astrohack.dio.fix_pointing_table(
-            ms_name="data/ea25_cal_small_before_fixed.split.ms", 
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
             reference_antenna=["ea15"]
         )
 
 
-  """
+    """
 
     path = pathlib.Path(ms_name)
     ms_name_fullpath = str(path.absolute().resolve())
@@ -286,22 +286,23 @@ def fix_pointing_table(ms_name: str, reference_antenna: List[str]) -> None:
     if not path.exists():
         logger.error("Error finding file: {file}".format(file=ms_name_fullpath))
 
-    ms_table = "/".join((ms_name_fullpath, 'ANTENNA'))
+    ms_table = "/".join((ms_name_fullpath, "ANTENNA"))
 
     query = 'select NAME from "{table}"'.format(table=ms_table)
 
-    ant_names = np.array(tables.taql(query).getcol('NAME'))
+    ant_names = np.array(tables.taql(query).getcol("NAME"))
 
     ant_id = np.arange(len(ant_names))
 
     query_ant = np.searchsorted(ant_names, reference_antenna)
 
-    ms_table = "/".join((ms_name_fullpath, 'POINTING'))
+    ms_table = "/".join((ms_name_fullpath, "POINTING"))
 
     ant_list = " or ".join(["ANTENNA_ID=={ant}".format(ant=ant) for ant in query_ant])
 
-    update = "update {table} set POINTING_OFFSET=0, TARGET=DIRECTION where {antennas}".format(table=ms_table,
-                                                                                              antennas=ant_list)
+    update = "update {table} set POINTING_OFFSET=0, TARGET=DIRECTION where {antennas}".format(
+        table=ms_table, antennas=ant_list
+    )
 
     tables.taql(update)
 
@@ -313,15 +314,11 @@ def fix_pointing_table(ms_name: str, reference_antenna: List[str]) -> None:
     if "pnt_tbl:fixed" not in message:
         tb.addrows(nrows=1)
         length = len(message)
-        tb.putcol(columnname="MESSAGE", value='pnt_tbl:fixed', startrow=length)
+        tb.putcol(columnname="MESSAGE", value="pnt_tbl:fixed", startrow=length)
 
 
-def print_json(
-        obj: JSON,
-        indent: int = 6,
-        columns: int = 7
-) -> None:
-    """ Print formatted JSON dictionary (** Deprecated by Console **)
+def print_json(obj: JSON, indent: int = 6, columns: int = 7) -> None:
+    """Print formatted JSON dictionary (** Deprecated by Console **)
 
     :param obj: JSON object
     :type obj: JSON
@@ -345,21 +342,20 @@ def print_json(
         else:
             list_indent = 0
 
-        print("{open}".format(open="[").rjust(list_indent, ' '))
+        print("{open}".format(open="[").rjust(list_indent, " "))
         print_array(obj, columns=columns, indent=indent + 1)
-        print("{close}".format(close="]").rjust(list_indent, ' '))
+        print("{close}".format(close="]").rjust(list_indent, " "))
 
     else:
         for key, value in obj.items():
             key_str = "{key}{open}".format(key=key, open=":{")
-            print("{key}".format(key=key_str).rjust(indent, ' '))
+            print("{key}".format(key=key_str).rjust(indent, " "))
             print_json(value, indent + 4, columns=columns)
-            print("{close}".format(close="}").rjust(indent - 4, ' '))
+            print("{close}".format(close="}").rjust(indent - 4, " "))
 
 
 def inspect_holog_obs_dict(
-        file: Union[str, JSON] = '.holog_obs_dict.json',
-        style: str = 'static'
+    file: Union[str, JSON] = ".holog_obs_dict.json", style: str = "static"
 ) -> Union[NoReturn, JSON]:
     """ Print formatted holography observation dictionary
 
@@ -410,17 +406,21 @@ def inspect_holog_obs_dict(
 
         except IsADirectoryError:
             try:
-                with open(file+'/holog_obs_dict.json') as json_file:
+                with open(file + "/holog_obs_dict.json") as json_file:
                     json_object = json.load(json_file)
             except FileNotFoundError:
-                logger.error("holog observations dictionary not found: {file}".format(file=file))
+                logger.error(
+                    "holog observations dictionary not found: {file}".format(file=file)
+                )
         except FileNotFoundError:
-            logger.error("holog observations dictionary not found: {file}".format(file=file))
+            logger.error(
+                "holog observations dictionary not found: {file}".format(file=file)
+            )
 
     else:
         json_object = file
 
-    if style == 'dynamic':
+    if style == "dynamic":
         from IPython.display import JSON
 
         return JSON(json_object)

@@ -6,7 +6,11 @@ import toolviper.utils.logger as logger
 from astrohack.utils.graph import compute_graph
 from astrohack.utils.file import overwrite_file
 from astrohack.utils.data import write_meta_data
-from astrohack.core.locit import locit_separated_chunk, locit_combined_chunk, locit_difference_chunk
+from astrohack.core.locit import (
+    locit_separated_chunk,
+    locit_combined_chunk,
+    locit_difference_chunk,
+)
 from astrohack.utils.text import get_default_file_name
 from astrohack.mds import AstrohackLocitFile, AstrohackPositionFile
 
@@ -15,18 +19,18 @@ from typing import Union, List
 
 @toolviper.utils.parameter.validate()
 def locit(
-        locit_name: str,
-        position_name: str = None,
-        elevation_limit: float = 10.0,
-        polarization: str = 'both',
-        fit_engine: str = 'scipy',
-        fit_kterm: bool = False,
-        fit_delay_rate: bool = True,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[int, List[int]] = "all",
-        combine_ddis: str = 'simple',
-        parallel: bool = False,
-        overwrite: bool = False
+    locit_name: str,
+    position_name: str = None,
+    elevation_limit: float = 10.0,
+    polarization: str = "both",
+    fit_engine: str = "scipy",
+    fit_kterm: bool = False,
+    fit_delay_rate: bool = True,
+    ant: Union[str, List[str]] = "all",
+    ddi: Union[int, List[int]] = "all",
+    combine_ddis: str = "simple",
+    parallel: bool = False,
+    overwrite: bool = False,
 ):
     """
     Extract Antenna position determination data from an MS and stores it in a locit output file.
@@ -144,50 +148,56 @@ def locit(
 
     # Doing this here allows it to get captured by locals()
     if position_name is None:
-        position_name = get_default_file_name(input_file=locit_name, output_type=".position.zarr")
+        position_name = get_default_file_name(
+            input_file=locit_name, output_type=".position.zarr"
+        )
 
     locit_params = locals()
 
     input_params = locit_params.copy()
     attributes = locit_params.copy()
 
-    assert pathlib.Path(locit_params['locit_name']).exists() is True, (
-        logger.error(f'File {locit_params["locit_name"]} does not exists.')
+    assert pathlib.Path(locit_params["locit_name"]).exists() is True, logger.error(
+        f'File {locit_params["locit_name"]} does not exists.'
     )
-    overwrite_file(locit_params['position_name'], locit_params['overwrite'])
+    overwrite_file(locit_params["position_name"], locit_params["overwrite"])
 
-    locit_mds = AstrohackLocitFile(locit_params['locit_name'])
+    locit_mds = AstrohackLocitFile(locit_params["locit_name"])
     locit_mds.open()
 
-    locit_params['antenna_info'] = locit_mds['antenna_info']
-    locit_params['observation_info'] = locit_mds['observation_info']
+    locit_params["antenna_info"] = locit_mds["antenna_info"]
+    locit_params["observation_info"] = locit_mds["observation_info"]
 
-    attributes['telescope_name'] = locit_mds._meta_data['telescope_name']
-    attributes['reference_antenna'] = locit_mds._meta_data['reference_antenna']
+    attributes["telescope_name"] = locit_mds._meta_data["telescope_name"]
+    attributes["reference_antenna"] = locit_mds._meta_data["reference_antenna"]
 
-    if combine_ddis == 'simple':
+    if combine_ddis == "simple":
         function = locit_combined_chunk
-        key_order = ['ant']
+        key_order = ["ant"]
 
-    elif combine_ddis == 'difference':
+    elif combine_ddis == "difference":
         function = locit_difference_chunk
-        key_order = ['ant']
+        key_order = ["ant"]
 
     else:
         function = locit_separated_chunk
-        key_order = ['ant', 'ddi']
+        key_order = ["ant", "ddi"]
 
     if compute_graph(locit_mds, function, locit_params, key_order, parallel=parallel):
-        if pathlib.Path(locit_params['position_name']).exists():
+        if pathlib.Path(locit_params["position_name"]).exists():
             logger.info("Finished processing")
 
-            output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_attr")
+            output_attr_file = "{name}/{ext}".format(
+                name=locit_params["position_name"], ext=".position_attr"
+            )
             write_meta_data(output_attr_file, attributes)
 
-            output_attr_file = "{name}/{ext}".format(name=locit_params['position_name'], ext=".position_input")
+            output_attr_file = "{name}/{ext}".format(
+                name=locit_params["position_name"], ext=".position_input"
+            )
             write_meta_data(output_attr_file, input_params)
 
-            position_mds = AstrohackPositionFile(locit_params['position_name'])
+            position_mds = AstrohackPositionFile(locit_params["position_name"])
             position_mds.open()
             return position_mds
         else:

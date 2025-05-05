@@ -9,16 +9,23 @@ from astrohack.extract_pointing import extract_pointing
 from astrohack.holog import holog
 from astrohack.panel import panel
 
-@pytest.fixture(scope='session')
+
+@pytest.fixture(scope="session")
 def set_data(tmp_path_factory):
     data_dir = tmp_path_factory.mktemp("data")
 
     # Data files
-    astrohack.toolviper.utils.data.download('J1924-2914.ms.calibrated.split.SPW3', folder=str(data_dir))
+    astrohack.toolviper.utils.data.download(
+        "J1924-2914.ms.calibrated.split.SPW3", folder=str(data_dir)
+    )
 
     # Verification json information
-    astrohack.toolviper.utils.data.download(file='extract_holog_verification.json', folder=str(data_dir))
-    astrohack.toolviper.utils.data.download(file='holog_numerical_verification.json', folder=str(data_dir))
+    astrohack.toolviper.utils.data.download(
+        file="extract_holog_verification.json", folder=str(data_dir)
+    )
+    astrohack.toolviper.utils.data.download(
+        file="holog_numerical_verification.json", folder=str(data_dir)
+    )
 
     return data_dir
 
@@ -28,17 +35,20 @@ def relative_difference(result, expected):
 
 
 def verify_panel_positions(
-        data_dir="",
-        panel_list=['3-11', '5-31', '7-52', '11-62'],
-        reference_position=np.array([-2.16823971, -0.94590908, 0.84834425, 0.76463105]),
-        antenna='ant_DV13',
-        ddi='ddi_0'
+    data_dir="",
+    panel_list=["3-11", "5-31", "7-52", "11-62"],
+    reference_position=np.array([-2.16823971, -0.94590908, 0.84834425, 0.76463105]),
+    antenna="ant_DV13",
+    ddi="ddi_0",
 ):
     M_TO_MILS = 39370.1
 
-    panel_mds = open_panel('{data}/alma.split.panel.zarr'.format(data=data_dir))
+    panel_mds = open_panel("{data}/alma.split.panel.zarr".format(data=data_dir))
 
-    panel_position = np.mean(panel_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS, axis=1)
+    panel_position = np.mean(
+        panel_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS,
+        axis=1,
+    )
 
     relative_position = relative_difference(panel_position, reference_position)
 
@@ -53,34 +63,38 @@ def verify_center_pixels(file, antenna, ddi, reference_center_pixels, tolerance=
     aperture_shape = mds.APERTURE.values.shape[-2], mds.APERTURE.values.shape[-1]
     beam_shape = mds.BEAM.values.shape[-2], mds.BEAM.values.shape[-1]
 
-    aperture_center_pixels = np.squeeze(mds.APERTURE.values[..., aperture_shape[0] // 2, aperture_shape[1] // 2])
-    beam_center_pixels = np.squeeze(mds.BEAM.values[..., beam_shape[0] // 2, beam_shape[1] // 2])
+    aperture_center_pixels = np.squeeze(
+        mds.APERTURE.values[..., aperture_shape[0] // 2, aperture_shape[1] // 2]
+    )
+    beam_center_pixels = np.squeeze(
+        mds.BEAM.values[..., beam_shape[0] // 2, beam_shape[1] // 2]
+    )
 
-    aperture_ref = list(map(complex, reference_center_pixels['aperture']))
-    beam_ref = list(map(complex, reference_center_pixels['beam']))
+    aperture_ref = list(map(complex, reference_center_pixels["aperture"]))
+    beam_ref = list(map(complex, reference_center_pixels["beam"]))
 
     for i in range(len(aperture_ref)):
-        aperture_check = relative_difference(
-            aperture_ref[i].real,
-            aperture_center_pixels[i].real
-        ) < tolerance
+        aperture_check = (
+            relative_difference(aperture_ref[i].real, aperture_center_pixels[i].real)
+            < tolerance
+        )
 
-        beam_check = relative_difference(
-            beam_ref[i].real,
-            beam_center_pixels[i].real
-        ) < tolerance
+        beam_check = (
+            relative_difference(beam_ref[i].real, beam_center_pixels[i].real)
+            < tolerance
+        )
 
         real_check = aperture_check and beam_check
 
-        aperture_check = relative_difference(
-            aperture_ref[i].imag,
-            aperture_center_pixels[i].imag
-        ) < tolerance
+        aperture_check = (
+            relative_difference(aperture_ref[i].imag, aperture_center_pixels[i].imag)
+            < tolerance
+        )
 
-        beam_check = relative_difference(
-            beam_ref[i].imag,
-            beam_center_pixels[i].imag
-        ) < tolerance
+        beam_check = (
+            relative_difference(beam_ref[i].imag, beam_center_pixels[i].imag)
+            < tolerance
+        )
 
         imag_check = aperture_check and beam_check
 
@@ -98,15 +112,16 @@ def verify_holog_diagnostics(json_data, truth_json, tolerance=1e-7):
     with open(truth_json) as file:
         reference_dict = json.load(file)
 
-    cell_size = reference_dict["alma"]['cell_size'][1]
-    grid_size = float(reference_dict["alma"]['grid_size'][1])
+    cell_size = reference_dict["alma"]["cell_size"][1]
+    grid_size = float(reference_dict["alma"]["grid_size"][1])
 
-    json_data['cell_size'] = np.abs(float(json_data['cell_size']))
+    json_data["cell_size"] = np.abs(float(json_data["cell_size"]))
 
     cell_size = np.abs(float(cell_size))
 
-    return (relative_difference(json_data['cell_size'], cell_size) < tolerance) and (
-                relative_difference(np.sqrt(int(json_data['n_pix'])), grid_size) < tolerance)
+    return (relative_difference(json_data["cell_size"], cell_size) < tolerance) and (
+        relative_difference(np.sqrt(int(json_data["n_pix"])), grid_size) < tolerance
+    )
 
 
 def test_holography_pipeline(set_data):
@@ -118,19 +133,16 @@ def test_holography_pipeline(set_data):
         holog_obs_dict = json_dict = json.load(file)
 
     extract_pointing(
-        ms_name=alma_ms,
-        point_name=alma_point,
-        parallel=False,
-        overwrite=True
+        ms_name=alma_ms, point_name=alma_point, parallel=False, overwrite=True
     )
 
     extract_holog(
         ms_name=alma_ms,
         holog_name=alma_holog,
         point_name=alma_point,
-        data_column='DATA',
+        data_column="DATA",
         parallel=False,
-        overwrite=True
+        overwrite=True,
     )
 
     verify_holog_obs_dictionary(holog_obs_dict["alma"])
@@ -151,7 +163,7 @@ def test_holography_pipeline(set_data):
         phase_fit=True,
         apply_mask=True,
         to_stokes=True,
-        parallel=False
+        parallel=False,
     )
 
     alma_image = str(set_data / "alma.split.image.zarr")
@@ -160,18 +172,18 @@ def test_holography_pipeline(set_data):
         file=alma_image,
         antenna="ant_DV13",
         ddi="ddi_0",
-        reference_center_pixels=reference_dict["alma"]['pixels'],
-        tolerance=1e-6
+        reference_center_pixels=reference_dict["alma"]["pixels"],
+        tolerance=1e-6,
     )
 
     alma_panel = panel(
         image_name=alma_image,
-        panel_model='rigid',
-        clip_type='relative',
+        panel_model="rigid",
+        clip_type="relative",
         clip_level=0.2,
         panel_margins=0.2,
         parallel=False,
-        overwrite=True
+        overwrite=True,
     )
 
     assert verify_panel_positions(data_dir=str(set_data))
