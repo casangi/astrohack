@@ -649,6 +649,7 @@ def extract_holog(
                     for map_ant_str in holog_obs_dict[ddi_name][holog_map_key][
                         "ant"
                     ].keys():
+
                         ref_ant_ids = np.array(
                             _convert_ant_name_to_id(
                                 ant_names,
@@ -1028,4 +1029,4 @@ def _convert_ant_name_to_id(ant_list, ant_names):
         _type_: _description_
     """
 
-    return np.nonzero(np.in1d(ant_list, ant_names))[0]
+    return np.nonzero(np.isin(ant_list, ant_names))[0]
