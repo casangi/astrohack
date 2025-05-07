@@ -695,7 +695,7 @@ def extract_holog(
                     if parallel:
                         delayed_list.append(
                             dask.delayed(process_extract_holog_chunk)(
-                                dask.delayed(extract_holog_params)
+                                dask.delayed(copy.deepcopy(extract_holog_params))
                             )
                         )
                     else:

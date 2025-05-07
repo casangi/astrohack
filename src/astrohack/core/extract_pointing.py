@@ -4,6 +4,7 @@ import dask
 import numpy as np
 import toolviper.utils.logger as logger
 import xarray as xr
+import copy
 
 from astrohack.utils.conversion import convert_dict_from_numba
 from astrohack.utils.file import load_point_file
@@ -94,11 +95,12 @@ def process_extract_pointing(ms_name, pnt_name, exclude, parallel=True):
     if parallel:
         delayed_pnt_list = []
         for i_ant in range(len(antenna_id)):
-            pnt_params["ant_id"] = antenna_id[i_ant]
-            pnt_params["ant_name"] = antenna_name[i_ant]
+            this_pars = copy.deepcopy(pnt_params)
+            this_pars["ant_id"] = antenna_id[i_ant]
+            this_pars["ant_name"] = antenna_name[i_ant]
 
             delayed_pnt_list.append(
-                dask.delayed(_make_ant_pnt_chunk)(ms_name, pnt_params)
+                dask.delayed(_make_ant_pnt_chunk)(ms_name, this_pars)
             )
 
         dask.compute(delayed_pnt_list)
