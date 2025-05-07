@@ -74,8 +74,7 @@ def process_extract_holog_chunk(extract_holog_params):
     else:
         ctb = ctables.taql(
             "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj "
-            "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
-            % (data_column, ddi, scans)
+            "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s" % (data_column, ddi, scans)
         )
     vis_data = ctb.getcol(data_column)
     weight = ctb.getcol("WEIGHT")
