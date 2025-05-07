@@ -64,18 +64,18 @@ def process_extract_holog_chunk(extract_holog_params):
     table_obj = ctables.table(
         ms_name, readonly=True, lockoptions={"option": "usernoread"}, ack=False
     )
-
+    scans = [int(scan) for scan in scans]
     if sel_state_ids:
         ctb = ctables.taql(
             "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj "
             "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
-            % (data_column, ddi, list(scans), list(sel_state_ids))
+            % (data_column, ddi, scans, list(sel_state_ids))
         )
     else:
         ctb = ctables.taql(
             "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj "
             "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
-            % (data_column, ddi, list(scans))
+            % (data_column, ddi, scans)
         )
     vis_data = ctb.getcol(data_column)
     weight = ctb.getcol("WEIGHT")
