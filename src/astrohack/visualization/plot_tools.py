@@ -13,7 +13,14 @@ astrohack_cmaps = list(matplotlib_cmaps.keys())
 astrohack_cmaps.append("AIPS")
 
 
-def create_figure_and_axes(figure_size, boxes, default_figsize=figsize, sharex=False, sharey=False, plot_is_3d=False):
+def create_figure_and_axes(
+    figure_size,
+    boxes,
+    default_figsize=figsize,
+    sharex=False,
+    sharey=False,
+    plot_is_3d=False,
+):
     """
     Create a figures and plotting axes within according to a desired figure size and number of boxes
     Args:
@@ -24,16 +31,24 @@ def create_figure_and_axes(figure_size, boxes, default_figsize=figsize, sharex=F
     Returns:
     Figure and plotting axes array
     """
-    if figure_size is None or figure_size == 'None':
+    if figure_size is None or figure_size == "None":
         prog_fig_size = default_figsize
     else:
         prog_fig_size = figure_size
 
     if plot_is_3d:
-        fig, axes = plt.subplots(boxes[0], boxes[1], figsize=prog_fig_size, sharex=sharex, sharey=sharey,
-                                 subplot_kw={'projection': '3d'})
+        fig, axes = plt.subplots(
+            boxes[0],
+            boxes[1],
+            figsize=prog_fig_size,
+            sharex=sharex,
+            sharey=sharey,
+            subplot_kw={"projection": "3d"},
+        )
     else:
-        fig, axes = plt.subplots(boxes[0], boxes[1], figsize=prog_fig_size, sharex=sharex, sharey=sharey)
+        fig, axes = plt.subplots(
+            boxes[0], boxes[1], figsize=prog_fig_size, sharex=sharex, sharey=sharey
+        )
     return fig, axes
 
 
@@ -358,16 +373,34 @@ def scatter_plot(
     return
 
 
-def simple_imshow_map_plot(ax, fig, x_axis, y_axis, gridded_2d_arr, title, cmap, zlim,
-                           x_label='X axis [m]', y_label="Y axis [m]", z_label='Z Scale'):
+def simple_imshow_map_plot(
+    ax,
+    fig,
+    x_axis,
+    y_axis,
+    gridded_2d_arr,
+    title,
+    cmap,
+    zlim,
+    x_label="X axis [m]",
+    y_label="Y axis [m]",
+    z_label="Z Scale",
+):
     if zlim is None:
         minmax = [np.nanmin(gridded_2d_arr), np.nanmax(gridded_2d_arr)]
     else:
         minmax = zlim
     ax.set_title(title)
     extent = compute_extent(x_axis, y_axis, margin=0.1)
-    im = ax.imshow(gridded_2d_arr.T, cmap=cmap, extent=extent, interpolation="nearest", vmin=minmax[0], vmax=minmax[1],
-                   origin='lower')
+    im = ax.imshow(
+        gridded_2d_arr.T,
+        cmap=cmap,
+        extent=extent,
+        interpolation="nearest",
+        vmin=minmax[0],
+        vmax=minmax[1],
+        origin="lower",
+    )
     well_positioned_colorbar(ax, fig, im, z_label)
     ax.set_xlim(extent[:2])
     ax.set_ylim(extent[2:])

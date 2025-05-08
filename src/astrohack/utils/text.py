@@ -653,32 +653,32 @@ def dynamic_format(value):
     if data_oom >= 4 or data_oom < -3:
         return ".3e"
     else:
-        return f'{round(abs(data_oom))+1}f'
+        return f"{round(abs(data_oom))+1}f"
 
 
 def format_byte_size(byte_size):
     base = 1024
-    labels = ['B', 'KB', 'MB', 'GB', 'TB']
+    labels = ["B", "KB", "MB", "GB", "TB"]
     format_size = byte_size
     i_label = 0
-    while format_size > base and i_label < len(labels)-1:
+    while format_size > base and i_label < len(labels) - 1:
         i_label += 1
         format_size /= byte_size
-    return f'{format_size:.2f} {labels[i_label]}'
+    return f"{format_size:.2f} {labels[i_label]}"
 
 
 def format_object_contents(obj):
     total_size = 0
-    outstr = f'Contents of this {type(obj).__name__} object:\n'
+    outstr = f"Contents of this {type(obj).__name__} object:\n"
     for key, item in obj.__dict__.items():
         size = item.__sizeof__()
-        outstr += f'   {key:22s} -> | {type(item).__name__} |'
+        outstr += f"   {key:22s} -> | {type(item).__name__} |"
         if isinstance(item, np.ndarray):
-            outstr += ' ('
+            outstr += " ("
             for dim_size in item.shape:
-                outstr += f'{dim_size},'
-            outstr = outstr[:-1] + f') [{item.dtype}]'
-        outstr += f' -> {format_byte_size(size)}\n'
+                outstr += f"{dim_size},"
+            outstr = outstr[:-1] + f") [{item.dtype}]"
+        outstr += f" -> {format_byte_size(size)}\n"
         total_size += size
-    outstr += f'Total size = {format_byte_size(total_size)}\n'
+    outstr += f"Total size = {format_byte_size(total_size)}\n"
     return outstr

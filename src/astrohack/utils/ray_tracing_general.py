@@ -3,7 +3,11 @@ import numpy as np
 import toolviper.utils.logger as logger
 
 from astrohack.utils.text import format_byte_size, format_object_contents
-from astrohack.utils.algorithms import least_squares_jit, least_squares, create_coordinate_images
+from astrohack.utils.algorithms import (
+    least_squares_jit,
+    least_squares,
+    create_coordinate_images,
+)
 from numba import njit
 from scipy.spatial.distance import cdist
 import pickle
@@ -21,11 +25,11 @@ def generalized_norm(vecmap):
 
 
 def generalized_dist2(vec_map_a, vec_map_b):
-    return np.sum((vec_map_a - vec_map_b)**2, axis=-1)
+    return np.sum((vec_map_a - vec_map_b) ** 2, axis=-1)
 
 
 def generalized_dist(vec_map_a, vec_map_b):
-    return np.sqrt(np.sum((vec_map_a - vec_map_b)**2, axis=-1))
+    return np.sqrt(np.sum((vec_map_a - vec_map_b) ** 2, axis=-1))
 
 
 def normalize_vector_map(vector_map):
@@ -41,7 +45,7 @@ def reflect_light(light, normals):
 def compute_quintic_pseudo_spline_coefficients(point_cloud):
     # QPS definition from Bergman et al. 1994, IEEE Transactions on Antennas and propagation
     def dist_2d(pnt_a, pnt_b):
-        return np.sqrt(np.sum((pnt_a-pnt_b)**2))
+        return np.sqrt(np.sum((pnt_a - pnt_b) ** 2))
 
     n_extra_coeffs = 6
     pcd_xy = point_cloud[:, 0:2]
@@ -63,14 +67,14 @@ def compute_quintic_pseudo_spline_coefficients(point_cloud):
         for icol in range(npnt):
             matrix[irow, icol] = dist_2d(pcd_xy[irow], pcd_xy[icol]) ** 5
 
-        matrix[irow, npnt+0] = pcd_xy[irow, 0] ** 2
-        matrix[irow, npnt+1] = pcd_xy[irow, 0] * pcd_xy[irow, 1]
-        matrix[irow, npnt+2] = pcd_xy[irow, 1] ** 2
-        matrix[irow, npnt+3] = pcd_xy[irow, 0]
-        matrix[irow, npnt+4] = pcd_xy[irow, 1]
-        matrix[irow, npnt+5] = 1
+        matrix[irow, npnt + 0] = pcd_xy[irow, 0] ** 2
+        matrix[irow, npnt + 1] = pcd_xy[irow, 0] * pcd_xy[irow, 1]
+        matrix[irow, npnt + 2] = pcd_xy[irow, 1] ** 2
+        matrix[irow, npnt + 3] = pcd_xy[irow, 0]
+        matrix[irow, npnt + 4] = pcd_xy[irow, 1]
+        matrix[irow, npnt + 5] = 1
 
-        print('\033[F', (irow+1)/npnt*100, '%              ')
+        print("\033[F", (irow + 1) / npnt * 100, "%              ")
 
     for irow in range(npnt, n_var):
         matrix[irow, 0:npnt] = 1
@@ -85,10 +89,17 @@ def compute_qps_value(pnt, qps_coeffs, point_cloud):
     pcd_xy = point_cloud[:, 0:2]
     a_coeffs = qps_coeffs[0:npnt]
     b_coeffs = qps_coeffs[npnt:]
-    r_term = np.sum(a_coeffs*np.sqrt(np.sum((pnt[np.newaxis, 0:2]-pcd_xy)**2, axis=1))**5)
+    r_term = np.sum(
+        a_coeffs * np.sqrt(np.sum((pnt[np.newaxis, 0:2] - pcd_xy) ** 2, axis=1)) ** 5
+    )
 
-    z_val  = r_term + b_coeffs[0]*pnt[0]**2 + b_coeffs[1]*pnt[0]*pnt[1] + b_coeffs[2]*pnt[1]**2
-    z_val += b_coeffs[3]*pnt[0] + b_coeffs[4]*pnt[1] + b_coeffs[5]
+    z_val = (
+        r_term
+        + b_coeffs[0] * pnt[0] ** 2
+        + b_coeffs[1] * pnt[0] * pnt[1]
+        + b_coeffs[2] * pnt[1] ** 2
+    )
+    z_val += b_coeffs[3] * pnt[0] + b_coeffs[4] * pnt[1] + b_coeffs[5]
 
     return z_val
 
@@ -102,7 +113,7 @@ def qps_pcd_fitting(point_cloud_filename, output_coeff_filename, max_rows=None):
 
 
 def find_mid_point(array):
-    return (np.max(array)+np.min(array))/2
+    return (np.max(array) + np.min(array)) / 2
 
 
 @njit(cache=True, nogil=True)
@@ -117,11 +128,19 @@ def grid_qps_jit(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, 
 
     for ix, x_val in enumerate(x_axis):
         for iy, y_val in enumerate(y_axis):
-            if ((x_val-x_off)**2 + (y_val-y_off)**2) <= active_radius**2:
+            if ((x_val - x_off) ** 2 + (y_val - y_off) ** 2) <= active_radius**2:
                 pnt = np.array([x_val, y_val])
-                r_term = np.sum(a_coeffs*np.sqrt(np.sum((pnt[np.newaxis, 0:2]-pcd_xy)**2, axis=1))**5)
-                z_val  = r_term + b_coeffs[0]*pnt[0]**2 + b_coeffs[1]*pnt[0]*pnt[1] + b_coeffs[2]*pnt[1]**2
-                z_val += b_coeffs[3]*pnt[0] + b_coeffs[4]*pnt[1] + b_coeffs[5]
+                r_term = np.sum(
+                    a_coeffs
+                    * np.sqrt(np.sum((pnt[np.newaxis, 0:2] - pcd_xy) ** 2, axis=1)) ** 5
+                )
+                z_val = (
+                    r_term
+                    + b_coeffs[0] * pnt[0] ** 2
+                    + b_coeffs[1] * pnt[0] * pnt[1]
+                    + b_coeffs[2] * pnt[1] ** 2
+                )
+                z_val += b_coeffs[3] * pnt[0] + b_coeffs[4] * pnt[1] + b_coeffs[5]
                 gridded[ix, iy] = z_val
             else:
                 gridded[ix, iy] = np.nan
@@ -132,19 +151,28 @@ def grid_qps_jit(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, 
 @njit(cache=True, nogil=True)
 def compute_qps_one_point(x_val, y_val, a_coeffs, b_coeffs, pcd_xy):
     pnt_xy = np.array([x_val, y_val])
-    r_term = np.sum(a_coeffs*np.sqrt(np.sum((pnt_xy[np.newaxis, :]-pcd_xy)**2, axis=1))**5)
-    z_val = r_term + b_coeffs[0]*pnt_xy[0]**2 + b_coeffs[1]*pnt_xy[0]*pnt_xy[1] + b_coeffs[2]*pnt_xy[1]**2
-    z_val += b_coeffs[3]*pnt_xy[0] + b_coeffs[4]*pnt_xy[1] + b_coeffs[5]
+    r_term = np.sum(
+        a_coeffs * np.sqrt(np.sum((pnt_xy[np.newaxis, :] - pcd_xy) ** 2, axis=1)) ** 5
+    )
+    z_val = (
+        r_term
+        + b_coeffs[0] * pnt_xy[0] ** 2
+        + b_coeffs[1] * pnt_xy[0] * pnt_xy[1]
+        + b_coeffs[2] * pnt_xy[1] ** 2
+    )
+    z_val += b_coeffs[3] * pnt_xy[0] + b_coeffs[4] * pnt_xy[1] + b_coeffs[5]
     return z_val
 
 
 @njit(cache=True, nogil=True)
-def grid_qps_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off):
+def grid_qps_jit_1d(
+    x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off
+):
     nx = x_axis.shape[0]
     ny = y_axis.shape[0]
 
-    new_pcd = np.empty((nx*ny, 3))
-    new_idx = np.empty((nx*ny, 2))
+    new_pcd = np.empty((nx * ny, 3))
+    new_idx = np.empty((nx * ny, 2))
 
     npnt = point_cloud.shape[0]
     a_coeffs = qps_coeffs[0:npnt]
@@ -154,11 +182,19 @@ def grid_qps_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_of
     i_pnt = 0
     for ix, x_val in enumerate(x_axis):
         for iy, y_val in enumerate(y_axis):
-            if ((x_val-x_off)**2 + (y_val-y_off)**2) <= active_radius**2:
+            if ((x_val - x_off) ** 2 + (y_val - y_off) ** 2) <= active_radius**2:
                 pnt = np.array([x_val, y_val])
-                r_term = np.sum(a_coeffs*np.sqrt(np.sum((pnt[np.newaxis, 0:2]-pcd_xy)**2, axis=1))**5)
-                z_val  = r_term + b_coeffs[0]*pnt[0]**2 + b_coeffs[1]*pnt[0]*pnt[1] + b_coeffs[2]*pnt[1]**2
-                z_val += b_coeffs[3]*pnt[0] + b_coeffs[4]*pnt[1] + b_coeffs[5]
+                r_term = np.sum(
+                    a_coeffs
+                    * np.sqrt(np.sum((pnt[np.newaxis, 0:2] - pcd_xy) ** 2, axis=1)) ** 5
+                )
+                z_val = (
+                    r_term
+                    + b_coeffs[0] * pnt[0] ** 2
+                    + b_coeffs[1] * pnt[0] * pnt[1]
+                    + b_coeffs[2] * pnt[1] ** 2
+                )
+                z_val += b_coeffs[3] * pnt[0] + b_coeffs[4] * pnt[1] + b_coeffs[5]
                 new_pcd[i_pnt] = np.array((x_val, y_val, z_val))
                 new_idx[i_pnt] = np.array((ix, iy))
                 i_pnt += 1
@@ -168,10 +204,12 @@ def grid_qps_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_of
 
 
 @njit(cache=True, nogil=True)
-def grid_qps_plus_fdd_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off, fdd_epsilon):
+def grid_qps_plus_fdd_jit_1d(
+    x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off, fdd_epsilon
+):
     nx = x_axis.shape[0]
     ny = y_axis.shape[0]
-    npnt_max = nx*ny
+    npnt_max = nx * ny
 
     qps_pcd = np.empty((npnt_max, 3))
     qps_pcd_dx = np.empty((npnt_max, 3))
@@ -186,41 +224,43 @@ def grid_qps_plus_fdd_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs, active_rad
     i_pnt = 0
     for ix, x_val in enumerate(x_axis):
         for iy, y_val in enumerate(y_axis):
-            if ((x_val-x_off)**2 + (y_val-y_off)**2) <= active_radius**2:
+            if ((x_val - x_off) ** 2 + (y_val - y_off) ** 2) <= active_radius**2:
                 qps_pcd[i_pnt, 0] = x_val
                 qps_pcd[i_pnt, 1] = y_val
-                qps_pcd[i_pnt, 2] = compute_qps_one_point(x_val, y_val, a_coeffs, b_coeffs, pcd_xy)
-                qps_pcd_dx[i_pnt, 0] = 1.
-                qps_pcd_dx[i_pnt, 1] = 0.
-                qps_pcd_dx[i_pnt, 2] = (compute_qps_one_point(x_val + fdd_epsilon, y_val, a_coeffs, b_coeffs, pcd_xy)
-                                        - qps_pcd[i_pnt, 2])/ fdd_epsilon
-                qps_pcd_dy[i_pnt, 0] = 0.
-                qps_pcd_dy[i_pnt, 1] = 1.
-                qps_pcd_dy[i_pnt, 2] = (compute_qps_one_point(x_val, y_val + fdd_epsilon, a_coeffs, b_coeffs, pcd_xy)
-                                        - qps_pcd[i_pnt, 2]) / fdd_epsilon
+                qps_pcd[i_pnt, 2] = compute_qps_one_point(
+                    x_val, y_val, a_coeffs, b_coeffs, pcd_xy
+                )
+                qps_pcd_dx[i_pnt, 0] = 1.0
+                qps_pcd_dx[i_pnt, 1] = 0.0
+                qps_pcd_dx[i_pnt, 2] = (
+                    compute_qps_one_point(
+                        x_val + fdd_epsilon, y_val, a_coeffs, b_coeffs, pcd_xy
+                    )
+                    - qps_pcd[i_pnt, 2]
+                ) / fdd_epsilon
+                qps_pcd_dy[i_pnt, 0] = 0.0
+                qps_pcd_dy[i_pnt, 1] = 1.0
+                qps_pcd_dy[i_pnt, 2] = (
+                    compute_qps_one_point(
+                        x_val, y_val + fdd_epsilon, a_coeffs, b_coeffs, pcd_xy
+                    )
+                    - qps_pcd[i_pnt, 2]
+                ) / fdd_epsilon
                 grid_idx[i_pnt, 0] = ix
                 grid_idx[i_pnt, 1] = iy
                 i_pnt += 1
     n_total = i_pnt
-    return qps_pcd[:n_total, :], qps_pcd_dx[:n_total, :], qps_pcd_dy[:n_total, :], grid_idx[:n_total, :]
+    return (
+        qps_pcd[:n_total, :],
+        qps_pcd_dx[:n_total, :],
+        qps_pcd_dy[:n_total, :],
+        grid_idx[:n_total, :],
+    )
 
 
-def grid_qps_primary(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off=None, y_off=None):
-    if x_off is None:
-        x_off = find_mid_point(point_cloud[:, 0])
-    if y_off is None:
-        y_off = find_mid_point(point_cloud[:, 1])
-
-    x_axis = simple_axis([-active_radius+x_off, active_radius+x_off], sampling)
-    y_axis = simple_axis([-active_radius+y_off, active_radius+y_off], sampling)
-
-    gridded_qps = grid_qps_jit(x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off)
-    # x_mesh, y_mesh = create_coordinate_images(x_axis, y_axis, create_polar_coordinates=False)
-    return gridded_qps
-
-
-def grid_qps_with_fdd_normals(point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off=None, y_off=None,
-                              fdd_epsilon=1e-5):
+def grid_qps_primary(
+    point_cloud, qps_coeffs, sampling, active_radius=9.0, x_off=None, y_off=None
+):
     if x_off is None:
         x_off = find_mid_point(point_cloud[:, 0])
     if y_off is None:
@@ -228,8 +268,40 @@ def grid_qps_with_fdd_normals(point_cloud, qps_coeffs, sampling, active_radius=9
 
     x_axis = simple_axis([-active_radius + x_off, active_radius + x_off], sampling)
     y_axis = simple_axis([-active_radius + y_off, active_radius + y_off], sampling)
-    qps_pcd, qps_pcd_dx, qps_pcd_dy, grid_idx = grid_qps_plus_fdd_jit_1d(x_axis, y_axis, point_cloud, qps_coeffs,
-                                                                         active_radius, x_off, y_off, fdd_epsilon)
+
+    gridded_qps = grid_qps_jit(
+        x_axis, y_axis, point_cloud, qps_coeffs, active_radius, x_off, y_off
+    )
+    # x_mesh, y_mesh = create_coordinate_images(x_axis, y_axis, create_polar_coordinates=False)
+    return gridded_qps
+
+
+def grid_qps_with_fdd_normals(
+    point_cloud,
+    qps_coeffs,
+    sampling,
+    active_radius=9.0,
+    x_off=None,
+    y_off=None,
+    fdd_epsilon=1e-5,
+):
+    if x_off is None:
+        x_off = find_mid_point(point_cloud[:, 0])
+    if y_off is None:
+        y_off = find_mid_point(point_cloud[:, 1])
+
+    x_axis = simple_axis([-active_radius + x_off, active_radius + x_off], sampling)
+    y_axis = simple_axis([-active_radius + y_off, active_radius + y_off], sampling)
+    qps_pcd, qps_pcd_dx, qps_pcd_dy, grid_idx = grid_qps_plus_fdd_jit_1d(
+        x_axis,
+        y_axis,
+        point_cloud,
+        qps_coeffs,
+        active_radius,
+        x_off,
+        y_off,
+        fdd_epsilon,
+    )
     qps_normals = normalize_vector_map(np.cross(qps_pcd_dx, qps_pcd_dy))
     return qps_pcd, qps_normals, grid_idx
 
@@ -237,19 +309,21 @@ def grid_qps_with_fdd_normals(point_cloud, qps_coeffs, sampling, active_radius=9
 def degrade_pcd(pcd_file, new_pcd_file, factor):
     pcd_data = np.loadtxt(pcd_file)
     npnt = pcd_data.shape[0]
-    new_size = npnt//factor
+    new_size = npnt // factor
     new_pcd = np.empty((new_size, 3))
     for i_new in range(new_size):
         i_old = i_new * factor
         new_pcd[i_new] = pcd_data[i_old]
 
-    ext = new_pcd_file.split('.')[-1]
-    if ext == 'npy':
+    ext = new_pcd_file.split(".")[-1]
+    if ext == "npy":
         np.save(new_pcd_file, new_pcd)
-    elif ext in ['dat', 'txt']:
+    elif ext in ["dat", "txt"]:
         np.savetxt(new_pcd_file, new_pcd)
     else:
-        logger.warning(f'Unknown extension {ext} degraded point cloud not saved to disk')
+        logger.warning(
+            f"Unknown extension {ext} degraded point cloud not saved to disk"
+        )
 
     return new_pcd
 
@@ -307,7 +381,7 @@ def moller_trumbore_algorithm(ray_origin, ray_vector, pa, pb, pc):
     # At this stage we can compute t to find out where the intersection point is on the line.
     t = inv_det * np.dot(edge2, s_cross_e1)
 
-    if t > epsilon: # ray intersection
+    if t > epsilon:  # ray intersection
         return True, ray_origin + ray_vector * t
     else:  # This means that there is a line intersection but not a ray intersection.
         return False, nanvec3d
@@ -319,7 +393,9 @@ def jitted_triangle_find(pr_point, reflection, sc_mesh, sc_pnt):
         va = sc_pnt[int(triangle[0])]
         vb = sc_pnt[int(triangle[1])]
         vc = sc_pnt[int(triangle[2])]
-        crosses_triangle, point = moller_trumbore_algorithm(pr_point, reflection, va, vb, vc)
+        crosses_triangle, point = moller_trumbore_algorithm(
+            pr_point, reflection, va, vb, vc
+        )
         if crosses_triangle:
             return it, point
 
@@ -343,10 +419,15 @@ def find_closest_point_to_ray(ray_origin, ray_direction, pcd, max_dist):
     point_vectors = pcd - ray_origin[np.newaxis, :]
     direction_norm = generalized_norm(ray_direction)
     # Project point_vector onto self.direction
-    projection = generalized_dot(point_vectors, ray_direction[np.newaxis, :])/ direction_norm
+    projection = (
+        generalized_dot(point_vectors, ray_direction[np.newaxis, :]) / direction_norm
+    )
 
     # Calculate the closest point on the line to the given point
-    closest_points = ray_origin[np.newaxis, :] + projection[:, np.newaxis] * ray_direction[np.newaxis, :]
+    closest_points = (
+        ray_origin[np.newaxis, :]
+        + projection[:, np.newaxis] * ray_direction[np.newaxis, :]
+    )
     # Calculate the distance**2 between the points and the closest
     # points on the ray
     distances2 = generalized_dist2(pcd, closest_points)
@@ -362,7 +443,7 @@ def distance_from_ray_to_point(ray_origin, ray_direction, point):
     pnt_vec = point - ray_origin
     # Project point_vector onto ray_direction
     dir2 = np.sum(ray_direction**2, axis=-1)
-    proj = np.sum(pnt_vec*ray_direction, axis=-1) / dir2
+    proj = np.sum(pnt_vec * ray_direction, axis=-1) / dir2
 
     # Calculate the closest point on the line to the given point
     clsst_pnt = ray_origin + proj * ray_direction
@@ -377,17 +458,17 @@ def np_qps_fitting(pcd):
     pcd_xy = pcd[:, 0:2]
     dist_matrix = generalized_dist(pcd_xy[np.newaxis, :, :], pcd_xy[:, np.newaxis, :])
 
-    n_var = npnt+6
+    n_var = npnt + 6
     sys_matrix = np.zeros([n_var, n_var])
     sys_vector = np.zeros([n_var])
 
     sys_matrix[:npnt, :npnt] = dist_matrix**5
-    sys_matrix[:npnt, npnt+0] = pcd_xy[:, 0] ** 2
-    sys_matrix[:npnt, npnt+1] = pcd_xy[:, 0] * pcd_xy[:, 1]
-    sys_matrix[:npnt, npnt+2] = pcd_xy[:, 1] ** 2
-    sys_matrix[:npnt, npnt+3] = pcd_xy[:, 0]
-    sys_matrix[:npnt, npnt+4] = pcd_xy[:, 1]
-    sys_matrix[:npnt, npnt+5] = 1
+    sys_matrix[:npnt, npnt + 0] = pcd_xy[:, 0] ** 2
+    sys_matrix[:npnt, npnt + 1] = pcd_xy[:, 0] * pcd_xy[:, 1]
+    sys_matrix[:npnt, npnt + 2] = pcd_xy[:, 1] ** 2
+    sys_matrix[:npnt, npnt + 3] = pcd_xy[:, 0]
+    sys_matrix[:npnt, npnt + 4] = pcd_xy[:, 1]
+    sys_matrix[:npnt, npnt + 5] = 1
     sys_matrix[npnt:, :npnt] = 1.0
 
     sys_vector[:npnt] = pcd[:, 2]
@@ -407,12 +488,17 @@ def qps_compute_point_and_normal(pnt, qps_coeffs, pcd):
     aterm_dx = 5 * np.sum(diff[:, 0] * cubic_rterm)
     aterm_dy = 5 * np.sum(diff[:, 1] * cubic_rterm)
 
-    qps_val = aterm_val + bcoeffs[0]*pnt[0]**2 + bcoeffs[1]*pnt[0]*pnt[1] + bcoeffs[2]*pnt[1]**2
-    qps_val += bcoeffs[3]*pnt[0] + bcoeffs[4]*pnt[1] + bcoeffs[5]
+    qps_val = (
+        aterm_val
+        + bcoeffs[0] * pnt[0] ** 2
+        + bcoeffs[1] * pnt[0] * pnt[1]
+        + bcoeffs[2] * pnt[1] ** 2
+    )
+    qps_val += bcoeffs[3] * pnt[0] + bcoeffs[4] * pnt[1] + bcoeffs[5]
 
-    dqps_dx = aterm_dx + 2*bcoeffs[0]*pnt[0] + bcoeffs[1]*pnt[1] + bcoeffs[3]
+    dqps_dx = aterm_dx + 2 * bcoeffs[0] * pnt[0] + bcoeffs[1] * pnt[1] + bcoeffs[3]
 
-    dqps_dy = aterm_dy + bcoeffs[1]*pnt[0] + 2*bcoeffs[2]*pnt[1] + bcoeffs[4]
+    dqps_dy = aterm_dy + bcoeffs[1] * pnt[0] + 2 * bcoeffs[2] * pnt[1] + bcoeffs[4]
 
     normal = normalize_vector_map(np.array([-dqps_dx, -dqps_dy, 1]))
     new_pnt = np.array([pnt[0], pnt[1], qps_val])
@@ -427,8 +513,13 @@ def qps_compute_point(pnt, qps_coeffs, pcd):
     dist = generalized_dist(pcd[:, 0:2], pnt_xy)
     aterm_val = np.sum(acoeffs * dist**5)
 
-    qps_val = aterm_val + bcoeffs[0]*pnt[0]**2 + bcoeffs[1]*pnt[0]*pnt[1] + bcoeffs[2]*pnt[1]**2
-    qps_val += bcoeffs[3]*pnt[0] + bcoeffs[4]*pnt[1] + bcoeffs[5]
+    qps_val = (
+        aterm_val
+        + bcoeffs[0] * pnt[0] ** 2
+        + bcoeffs[1] * pnt[0] * pnt[1]
+        + bcoeffs[2] * pnt[1] ** 2
+    )
+    qps_val += bcoeffs[3] * pnt[0] + bcoeffs[4] * pnt[1] + bcoeffs[5]
 
     new_pnt = np.array([pnt[0], pnt[1], qps_val])
     return new_pnt
@@ -458,16 +549,18 @@ class LocalQPS:
         self.npnt = self.global_pcd.shape[0]
         self.local_qps_n_pnt = local_qps_n_pnt
         self.local_pcds = np.empty([self.npnt, self.local_qps_n_pnt, 3])
-        self.local_qps_coeffs = np.empty([self.npnt, local_qps_n_pnt + self.n_qps_extra_vars])
+        self.local_qps_coeffs = np.empty(
+            [self.npnt, local_qps_n_pnt + self.n_qps_extra_vars]
+        )
         for ipnt, point in enumerate(self.global_pcd):
-            dist2 = np.sum((point[np.newaxis, :]-self.global_pcd)**2, axis=-1)
-            n_closest = np.argsort(dist2)[:self.local_qps_n_pnt]
+            dist2 = np.sum((point[np.newaxis, :] - self.global_pcd) ** 2, axis=-1)
+            n_closest = np.argsort(dist2)[: self.local_qps_n_pnt]
             self.local_pcds[ipnt] = self.global_pcd[n_closest]
             self.local_qps_coeffs[ipnt] = np_qps_fitting(self.global_pcd[n_closest])
 
     @classmethod
     def from_pickle(cls, filename):
-        with open(filename, 'rb') as pickled_file:
+        with open(filename, "rb") as pickled_file:
             pkl_obj = pickle.load(pickled_file)
             return pkl_obj
 
@@ -486,7 +579,7 @@ class LocalQPS:
         return format_object_contents(self)
 
     def to_pickle(self, filename):
-        with open(filename, 'wb') as pickle_file:
+        with open(filename, "wb") as pickle_file:
             # noinspection PyTypeChecker
             pickle.dump(self, pickle_file)
 
@@ -501,7 +594,7 @@ class LocalQPS:
 
         nx = x_axis.shape[0]
         ny = y_axis.shape[0]
-        npnt_max = nx*ny
+        npnt_max = nx * ny
 
         grd_surface = np.empty((npnt_max, 3))
         grd_normal = np.empty((npnt_max, 3))
@@ -511,17 +604,23 @@ class LocalQPS:
         for ix, x_val in enumerate(x_axis):
             xsel = np.abs(self.global_pcd[:, 0] - x_val) < 3 * sampling
             for iy, y_val in enumerate(y_axis):
-                if ((x_val-x_off)**2 + (y_val-y_off)**2) <= active_radius**2:
+                if ((x_val - x_off) ** 2 + (y_val - y_off) ** 2) <= active_radius**2:
                     ysel = np.abs(self.global_pcd[:, 1] - y_val) < 3 * sampling
                     fullsel = xsel & ysel
                     sel_qps = self.local_qps_coeffs[fullsel]
                     sel_gl_pcd = self.global_pcd[fullsel]
                     sel_lc_pcd = self.local_pcds[fullsel]
 
-                    i_closest = np.argmin((sel_gl_pcd[:, 0]-x_val)**2+(sel_gl_pcd[:, 1]-y_val)**2)
+                    i_closest = np.argmin(
+                        (sel_gl_pcd[:, 0] - x_val) ** 2
+                        + (sel_gl_pcd[:, 1] - y_val) ** 2
+                    )
 
-                    point, normal = qps_compute_point_and_normal(np.array([x_val, y_val]), sel_qps[i_closest],
-                                                                 sel_lc_pcd[i_closest])
+                    point, normal = qps_compute_point_and_normal(
+                        np.array([x_val, y_val]),
+                        sel_qps[i_closest],
+                        sel_lc_pcd[i_closest],
+                    )
 
                     grd_surface[i_pnt, :] = point
                     grd_normal[i_pnt, :] = normal
@@ -530,11 +629,21 @@ class LocalQPS:
                     i_pnt += 1
         n_total = i_pnt
 
-        return x_axis, y_axis, grd_surface[:n_total, :], grd_normal[:n_total, :], grd_idx[:n_total, :]
+        return (
+            x_axis,
+            y_axis,
+            grd_surface[:n_total, :],
+            grd_normal[:n_total, :],
+            grd_idx[:n_total, :],
+        )
 
-    def find_reflection_point(self, ray_origin, ray_direction, wavelength, nitermax=1000, max_dist=0.02):
-        epsilon = wavelength / 32.
-        i_closest, ray_pnt, dist = find_closest_point_to_ray(ray_origin, ray_direction, self.global_pcd, max_dist)
+    def find_reflection_point(
+        self, ray_origin, ray_direction, wavelength, nitermax=1000, max_dist=0.02
+    ):
+        epsilon = wavelength / 32.0
+        i_closest, ray_pnt, dist = find_closest_point_to_ray(
+            ray_origin, ray_direction, self.global_pcd, max_dist
+        )
         if i_closest == -1:  # Ray does not get close to the secondary
             return nanvec3d, nanvec3d
         else:
@@ -549,9 +658,11 @@ class LocalQPS:
                 if dist < epsilon:
                     looking = False
                 elif niter < nitermax:
-                    test_pnt = (test_pnt + 5 * ray_pnt)/6
+                    test_pnt = (test_pnt + 5 * ray_pnt) / 6
                     test_pnt = qps_compute_point(test_pnt, loc_qps_coeff, loc_qps_pcd)
-                    dist, ray_pnt = distance_from_ray_to_point(ray_origin, ray_direction, test_pnt)
+                    dist, ray_pnt = distance_from_ray_to_point(
+                        ray_origin, ray_direction, test_pnt
+                    )
                 else:
                     looking = False
                 niter += 1

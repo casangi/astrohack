@@ -7,10 +7,15 @@ import toolviper.utils.logger as logger
 import time
 
 from astrohack.utils import convert_unit, twopi, data_statistics, gauss_elimination
-from astrohack.utils.ray_tracing_general import moller_trumbore_algorithm, jitted_triangle_find, nanvec3d, intblankval
+from astrohack.utils.ray_tracing_general import (
+    moller_trumbore_algorithm,
+    jitted_triangle_find,
+    nanvec3d,
+    intblankval,
+)
 from astrohack.visualization.plot_tools import *
 
-return_line = '\033[F'
+return_line = "\033[F"
 
 
 def numpy_size(array):
@@ -99,7 +104,9 @@ def reflect_on_surface(light, normal):
 
 
 @njit(cache=True, nogil=True)
-def cropped_secondary_mesh(pr_reflec, pr_pnt, sc_pnt, sc_cropped_mesh, sc_cropped_mesh_norm, sc_n_triangles):
+def cropped_secondary_mesh(
+    pr_reflec, pr_pnt, sc_pnt, sc_cropped_mesh, sc_cropped_mesh_norm, sc_n_triangles
+):
     sc_reflec = np.empty_like(pr_reflec)
     sc_reflec_pnt = np.empty_like(pr_reflec)
     sc_reflec_triangle = np.empty(pr_reflec.shape[0])

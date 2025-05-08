@@ -14,10 +14,20 @@ from astrohack.utils import (
 from astrohack.utils.constants import twopi
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.algorithms import phase_wrapping, create_coordinate_images
-from astrohack.utils.ray_tracing_general import generalized_dot, generalized_norm, normalize_vector_map, reflect_light, \
-    simple_axis
-from astrohack.visualization.plot_tools import get_proper_color_map, create_figure_and_axes, well_positioned_colorbar, \
-    close_figure, compute_extent
+from astrohack.utils.ray_tracing_general import (
+    generalized_dot,
+    generalized_norm,
+    normalize_vector_map,
+    reflect_light,
+    simple_axis,
+)
+from astrohack.visualization.plot_tools import (
+    get_proper_color_map,
+    create_figure_and_axes,
+    well_positioned_colorbar,
+    close_figure,
+    compute_extent,
+)
 from astrohack.visualization.textual_data import create_pretty_table
 from astrohack.utils.text import format_value_error, format_label
 
