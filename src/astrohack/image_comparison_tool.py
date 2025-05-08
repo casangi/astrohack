@@ -12,27 +12,25 @@ from astrohack.utils.data import add_caller_and_version_to_dict
 from astrohack.visualization.textual_data import create_fits_comparison_rms_table
 
 
-@toolviper.utils.parameter.validate(
-    custom_checker=custom_plots_checker
-)
+@toolviper.utils.parameter.validate(custom_checker=custom_plots_checker)
 def compare_fits_images(
-        image: Union[str, List[str]],
-        reference_image: Union[str, List[str]],
-        telescope_name: str,
-        destination: str,
-        comparison: str = 'direct',
-        zarr_container_name: str = None,
-        plot_resampled: bool = False,
-        plot_percentuals: bool = False,
-        plot_reference: bool = False,
-        plot_original: bool = False,
-        plot_divided_image: bool = False,
-        plot_scatter: bool = True,
-        export_to_fits: bool = False,
-        colormap: str = 'viridis',
-        dpi: int = 300,
-        display: bool = False,
-        parallel: bool = False
+    image: Union[str, List[str]],
+    reference_image: Union[str, List[str]],
+    telescope_name: str,
+    destination: str,
+    comparison: str = "direct",
+    zarr_container_name: str = None,
+    plot_resampled: bool = False,
+    plot_percentuals: bool = False,
+    plot_reference: bool = False,
+    plot_original: bool = False,
+    plot_divided_image: bool = False,
+    plot_scatter: bool = True,
+    export_to_fits: bool = False,
+    colormap: str = "viridis",
+    dpi: int = 300,
+    display: bool = False,
+    parallel: bool = False,
 ):
     """
     Compares a set of images to a set of reference images.
@@ -136,35 +134,36 @@ def compare_fits_images(
     if isinstance(reference_image, str):
         reference_image = [reference_image]
     if len(image) != len(reference_image):
-        msg = 'List of reference images has a different size from the list of images'
+        msg = "List of reference images has a different size from the list of images"
         logger.error(msg)
         return
 
     param_dict = locals()
-    pathlib.Path(param_dict['destination']).mkdir(exist_ok=True)
+    pathlib.Path(param_dict["destination"]).mkdir(exist_ok=True)
 
-    root = xr.DataTree(name='Root')
+    root = xr.DataTree(name="Root")
     root.attrs.update(param_dict)
     add_caller_and_version_to_dict(root.attrs, direct_call=True)
 
-    result_list = compute_graph_from_lists(param_dict, image_comparison_chunk, ['image', 'reference_image'], parallel)
+    result_list = compute_graph_from_lists(
+        param_dict, image_comparison_chunk, ["image", "reference_image"], parallel
+    )
     for item in result_list:
         tree_node = item
         root = root.assign({tree_node.name: tree_node})
 
     if zarr_container_name is not None:
-        root.to_zarr(zarr_container_name, mode='w', consolidated=True)
+        root.to_zarr(zarr_container_name, mode="w", consolidated=True)
 
     return root
 
-@toolviper.utils.parameter.validate(
-    custom_checker=custom_unit_checker
-)
+
+@toolviper.utils.parameter.validate(custom_checker=custom_unit_checker)
 def rms_table_from_zarr_datatree(
-        zarr_data_tree: str,
-        table_file: str,
-        rms_unit: str = 'mm',
-        print_table: bool = False
+    zarr_data_tree: str,
+    table_file: str,
+    rms_unit: str = "mm",
+    print_table: bool = False,
 ):
     """
     Goes through the data in a zarr DataTree created by compare_fits_images.
@@ -187,15 +186,15 @@ def rms_table_from_zarr_datatree(
 
     input_params = locals()
 
-    if pathlib.Path(input_params['zarr_data_tree']).exists():
+    if pathlib.Path(input_params["zarr_data_tree"]).exists():
         pass
     else:
         logger.error(f"File {input_params['zarr_data_tree']} does not exists.")
         raise FileNotFoundError
 
-    xdt = xr.open_datatree(input_params['zarr_data_tree'])
-    if xdt.attrs['origin'] != 'compare_fits_images':
-        logger.error('Data tree file was not created by astrohack.compare_fits_images')
+    xdt = xr.open_datatree(input_params["zarr_data_tree"])
+    if xdt.attrs["origin"] != "compare_fits_images":
+        logger.error("Data tree file was not created by astrohack.compare_fits_images")
         raise ValueError
 
     create_fits_comparison_rms_table(input_params, xdt)

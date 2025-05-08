@@ -10,20 +10,28 @@ from astrohack.extract_pointing import extract_pointing
 from astrohack.holog import holog
 from astrohack.panel import panel
 
-base_name = 'ea25_cal_small_'
+base_name = "ea25_cal_small_"
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def set_data(tmp_path_factory):
     data_dir = tmp_path_factory.mktemp("data")
 
     # Data files
-    toolviper.utils.data.download(file='ea25_cal_small_before_fixed.split.ms', folder=str(data_dir))
-    toolviper.utils.data.download(file='ea25_cal_small_after_fixed.split.ms', folder=str(data_dir))
+    toolviper.utils.data.download(
+        file="ea25_cal_small_before_fixed.split.ms", folder=str(data_dir)
+    )
+    toolviper.utils.data.download(
+        file="ea25_cal_small_after_fixed.split.ms", folder=str(data_dir)
+    )
 
     # Verification json information
-    toolviper.utils.data.download(file='extract_holog_verification.json', folder=str(data_dir))
-    toolviper.utils.data.download(file='holog_numerical_verification.json', folder=str(data_dir))
+    toolviper.utils.data.download(
+        file="extract_holog_verification.json", folder=str(data_dir)
+    )
+    toolviper.utils.data.download(
+        file="holog_numerical_verification.json", folder=str(data_dir)
+    )
 
     return data_dir
 
@@ -33,23 +41,27 @@ def relative_difference(result, expected):
 
 
 def verify_panel_shifts(
-        data_dir="",
-        panel_list=None,
-        expected_shift=np.array([-100, 75, 0, 150]),
-        ref_mean_shift=np.array([-91.47636864, 60.34743659, 4.16119043, 122.40537789]),
-        antenna='ant_ea25',
-        ddi='ddi_0'
+    data_dir="",
+    panel_list=None,
+    expected_shift=np.array([-100, 75, 0, 150]),
+    ref_mean_shift=np.array([-91.47636864, 60.34743659, 4.16119043, 122.40537789]),
+    antenna="ant_ea25",
+    ddi="ddi_0",
 ):
     if panel_list is None:
-        panel_list = ['3-4', '5-27', '5-37', '5-38']
+        panel_list = ["3-4", "5-27", "5-37", "5-38"]
 
     M_TO_MILS = 39370.1
 
-    before_mds = open_panel('{data}/vla.before.split.panel.zarr'.format(data=data_dir))
-    after_mds = open_panel('{data}/vla.after.split.panel.zarr'.format(data=data_dir))
+    before_mds = open_panel("{data}/vla.before.split.panel.zarr".format(data=data_dir))
+    after_mds = open_panel("{data}/vla.after.split.panel.zarr".format(data=data_dir))
 
-    before_shift = before_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
-    after_shift = after_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
+    before_shift = (
+        before_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
+    )
+    after_shift = (
+        after_mds[antenna][ddi].sel(labels=panel_list).PANEL_SCREWS.values * M_TO_MILS
+    )
 
     difference = after_shift - before_shift
 
@@ -75,34 +87,38 @@ def verify_center_pixels(file, antenna, ddi, reference_center_pixels, tolerance=
     aperture_shape = mds.APERTURE.values.shape[-2], mds.APERTURE.values.shape[-1]
     beam_shape = mds.BEAM.values.shape[-2], mds.BEAM.values.shape[-1]
 
-    aperture_center_pixels = np.squeeze(mds.APERTURE.values[..., aperture_shape[0] // 2, aperture_shape[1] // 2])
-    beam_center_pixels = np.squeeze(mds.BEAM.values[..., beam_shape[0] // 2, beam_shape[1] // 2])
+    aperture_center_pixels = np.squeeze(
+        mds.APERTURE.values[..., aperture_shape[0] // 2, aperture_shape[1] // 2]
+    )
+    beam_center_pixels = np.squeeze(
+        mds.BEAM.values[..., beam_shape[0] // 2, beam_shape[1] // 2]
+    )
 
-    aperture_ref = list(map(complex, reference_center_pixels['aperture']))
-    beam_ref = list(map(complex, reference_center_pixels['beam']))
+    aperture_ref = list(map(complex, reference_center_pixels["aperture"]))
+    beam_ref = list(map(complex, reference_center_pixels["beam"]))
 
     for i in range(len(aperture_ref)):
-        aperture_check = relative_difference(
-            aperture_ref[i].real,
-            aperture_center_pixels[i].real
-        ) < tolerance
+        aperture_check = (
+            relative_difference(aperture_ref[i].real, aperture_center_pixels[i].real)
+            < tolerance
+        )
 
-        beam_check = relative_difference(
-            beam_ref[i].real,
-            beam_center_pixels[i].real
-        ) < tolerance
+        beam_check = (
+            relative_difference(beam_ref[i].real, beam_center_pixels[i].real)
+            < tolerance
+        )
 
         real_check = aperture_check and beam_check
 
-        aperture_check = relative_difference(
-            aperture_ref[i].imag,
-            aperture_center_pixels[i].imag
-        ) < tolerance
+        aperture_check = (
+            relative_difference(aperture_ref[i].imag, aperture_center_pixels[i].imag)
+            < tolerance
+        )
 
-        beam_check = relative_difference(
-            beam_ref[i].imag,
-            beam_center_pixels[i].imag
-        ) < tolerance
+        beam_check = (
+            relative_difference(beam_ref[i].imag, beam_center_pixels[i].imag)
+            < tolerance
+        )
 
         imag_check = aperture_check and beam_check
 
@@ -120,15 +136,16 @@ def verify_holog_diagnostics(json_data, truth_json, tolerance=1e-7):
     with open(truth_json) as file:
         reference_dict = json.load(file)
 
-    cell_size = reference_dict["vla"]['cell_size'][1]
-    grid_size = float(reference_dict["vla"]['grid_size'][1])
+    cell_size = reference_dict["vla"]["cell_size"][1]
+    grid_size = float(reference_dict["vla"]["grid_size"][1])
 
-    json_data['cell_size'] = np.abs(float(json_data['cell_size']))
+    json_data["cell_size"] = np.abs(float(json_data["cell_size"]))
 
     cell_size = np.abs(float(cell_size))
 
-    return (relative_difference(json_data['cell_size'], cell_size) < tolerance) and (
-            relative_difference(int(np.sqrt(json_data['n_pix'])), grid_size) < tolerance)
+    return (relative_difference(json_data["cell_size"], cell_size) < tolerance) and (
+        relative_difference(int(np.sqrt(json_data["n_pix"])), grid_size) < tolerance
+    )
 
 
 def test_holography_pipeline(set_data):
@@ -144,38 +161,34 @@ def test_holography_pipeline(set_data):
         holog_obs_dict = json_dict = json.load(file)
 
     extract_pointing(
-        ms_name=before_ms,
-        point_name=before_point,
-        parallel=False,
-        overwrite=True
+        ms_name=before_ms, point_name=before_point, parallel=False, overwrite=True
     )
 
     extract_pointing(
-        ms_name=after_ms,
-        point_name=after_point,
-        parallel=False,
-        overwrite=True
+        ms_name=after_ms, point_name=after_point, parallel=False, overwrite=True
     )
 
     extract_holog(
         ms_name=before_ms,
         point_name=before_point,
         holog_name=before_holog,
-        data_column='CORRECTED_DATA',
+        data_column="CORRECTED_DATA",
         parallel=False,
-        overwrite=True
+        overwrite=True,
     )
 
     extract_holog(
         ms_name=after_ms,
         point_name=after_point,
         holog_name=after_holog,
-        data_column='CORRECTED_DATA',
+        data_column="CORRECTED_DATA",
         parallel=False,
-        overwrite=True
+        overwrite=True,
     )
 
-    assert verify_holog_obs_dictionary(after_holog, holog_obs_dict["vla"]["after"]), "Verifiy holog obs dictionary"
+    assert verify_holog_obs_dictionary(
+        after_holog, holog_obs_dict["vla"]["after"]
+    ), "Verifiy holog obs dictionary"
 
     with open(str(set_data / "holog_numerical_verification.json")) as file:
         reference_dict = json.load(file)
@@ -186,25 +199,17 @@ def test_holography_pipeline(set_data):
     before_image = str(set_data / "vla.before.split.image.zarr")
     after_image = str(set_data / "vla.after.split.image.zarr")
 
-    holog(
-        holog_name=before_holog,
-        overwrite=True,
-        parallel=False
-    )
+    holog(holog_name=before_holog, overwrite=True, parallel=False)
 
     assert verify_center_pixels(
         file=before_image,
-        antenna='ant_ea25',
-        ddi='ddi_0',
+        antenna="ant_ea25",
+        ddi="ddi_0",
         reference_center_pixels=reference_dict["vla"]["pixels"]["before"],
-        tolerance=1.5e-6
+        tolerance=1.5e-6,
     ), "Verifiy center pixels-before"
 
-    holog(
-        holog_name=after_holog,
-        overwrite=True,
-        parallel=False
-    )
+    holog(holog_name=after_holog, overwrite=True, parallel=False)
 
     with open(str(set_data / "vla.before.split.holog.zarr/.holog_attr")) as attr_file:
         holog_attr = json.load(attr_file)
@@ -212,15 +217,15 @@ def test_holography_pipeline(set_data):
     assert verify_holog_diagnostics(
         json_data=holog_attr,
         truth_json=str(set_data / "holog_numerical_verification.json"),
-        tolerance=1e-4
+        tolerance=1e-4,
     ), "Verifiy holog diagnostics"
 
     assert verify_center_pixels(
         file=before_image,
-        antenna='ant_ea25',
-        ddi='ddi_0',
+        antenna="ant_ea25",
+        ddi="ddi_0",
         reference_center_pixels=reference_dict["vla"]["pixels"]["before"],
-        tolerance=1.5e-6
+        tolerance=1.5e-6,
     ), "Verifiy center pixels-after"
 
     before_image = str(set_data / "vla.before.split.image.zarr")
@@ -228,22 +233,24 @@ def test_holography_pipeline(set_data):
 
     before_panel = panel(
         image_name=before_image,
-        panel_model='rigid',
+        panel_model="rigid",
         parallel=False,
         overwrite=True,
-        exclude_shadows=False
+        exclude_shadows=False,
     )
 
     after_panel = panel(
         image_name=after_image,
-        panel_model='rigid',
+        panel_model="rigid",
         parallel=False,
         overwrite=True,
-        exclude_shadows=False
+        exclude_shadows=False,
     )
 
     reference_shifts = np.array([-91.6455227, 61.69666059, 4.39843319, 122.26547831])
-    assert verify_panel_shifts(data_dir=str(set_data), ref_mean_shift=reference_shifts), "Verify panel shifts"
+    assert verify_panel_shifts(
+        data_dir=str(set_data), ref_mean_shift=reference_shifts
+    ), "Verify panel shifts"
     # This test using reference values is very hard to be updated, using this hardcoded reference_shifts is a
     # temporary work around
     # assert verify_panel_shifts(data_dir=str(set_data), ref_mean_shift=reference_dict["vla"]["offsets"]), \

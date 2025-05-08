@@ -4,6 +4,7 @@ import dask
 import numpy as np
 import toolviper.utils.logger as logger
 import xarray as xr
+import copy
 
 from astrohack.utils.conversion import convert_dict_from_numba
 from astrohack.utils.file import load_point_file
@@ -80,37 +81,34 @@ def process_extract_pointing(ms_name, pnt_name, exclude, parallel=True):
     mapping_state_ids = np.array(mapping_state_ids)
 
     # For each ddi get holography scan start and end times:
-    scan_time_dict = _extract_scan_time_dict(time, scan_ids, state_ids, ddi, mapping_state_ids)
+    scan_time_dict = _extract_scan_time_dict(
+        time, scan_ids, state_ids, ddi, mapping_state_ids
+    )
 
     point_meta_ds = xr.Dataset()
-    point_meta_ds.attrs['mapping_state_ids'] = mapping_state_ids
+    point_meta_ds.attrs["mapping_state_ids"] = mapping_state_ids
     point_meta_ds.to_zarr(pnt_name, mode="w", compute=True, consolidated=True)
 
     ###########################################################################################
-    pnt_params = {
-        'pnt_name': pnt_name,
-        'scan_time_dict': scan_time_dict
-    }
+    pnt_params = {"pnt_name": pnt_name, "scan_time_dict": scan_time_dict}
 
     if parallel:
         delayed_pnt_list = []
         for i_ant in range(len(antenna_id)):
-            pnt_params['ant_id'] = antenna_id[i_ant]
-            pnt_params['ant_name'] = antenna_name[i_ant]
+            this_pars = copy.deepcopy(pnt_params)
+            this_pars["ant_id"] = antenna_id[i_ant]
+            this_pars["ant_name"] = antenna_name[i_ant]
 
             delayed_pnt_list.append(
-                dask.delayed(_make_ant_pnt_chunk)(
-                    ms_name,
-                    pnt_params
-                )
+                dask.delayed(_make_ant_pnt_chunk)(ms_name, this_pars)
             )
 
         dask.compute(delayed_pnt_list)
 
     else:
         for i_ant in range(len(antenna_id)):
-            pnt_params['ant_id'] = antenna_id[i_ant]
-            pnt_params['ant_name'] = antenna_name[i_ant]
+            pnt_params["ant_id"] = antenna_id[i_ant]
+            pnt_params["ant_name"] = antenna_name[i_ant]
 
             _make_ant_pnt_chunk(ms_name, pnt_params)
 
@@ -127,17 +125,16 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
         pnt_name (str): Name of output pointing dictionary file name.
     """
 
-    ant_id = pnt_params['ant_id']
-    ant_name = pnt_params['ant_name']
-    pnt_name = pnt_params['pnt_name']
-    scan_time_dict = pnt_params['scan_time_dict']
+    ant_id = pnt_params["ant_id"]
+    ant_name = pnt_params["ant_name"]
+    pnt_name = pnt_params["pnt_name"]
+    scan_time_dict = pnt_params["scan_time_dict"]
 
     table_obj = ctables.table(
         os.path.join(ms_name, "POINTING"),
         readonly=True,
-        lockoptions={
-            'option': 'usernoread'
-        }, ack=False
+        lockoptions={"option": "usernoread"},
+        ack=False,
     )
 
     tb = ctables.taql(
@@ -170,7 +167,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
     # DIRECTION: Antenna pointing direction
     pnt_xds["DIRECTION"] = xr.DataArray(direction, dims=("time", "az_el"))
 
-    # ENCODER: The current encoder values on the primary axes of the mount type for the antenna, expressed as a 
+    # ENCODER: The current encoder values on the primary axes of the mount type for the antenna, expressed as a
     # Direction Measure.
     pnt_xds["ENCODER"] = xr.DataArray(encoder, dims=("time", "az_el"))
 
@@ -190,14 +187,15 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
     # ## NB: Is VLA's definition of Azimuth the same for ALMA, MeerKAT, etc.? (positive for a clockwise rotation from
     # north, viewed from above) ## NB: Compare with calculation using WCS in astropy.
     l = np.cos(target[:, 1]) * np.sin(target[:, 0] - direction[:, 0])
-    m = np.sin(target[:, 1]) * np.cos(direction[:, 1]) - np.cos(target[:, 1]) * np.sin(direction[:, 1]) * np.cos(
-        target[:, 0] - direction[:, 0])
+    m = np.sin(target[:, 1]) * np.cos(direction[:, 1]) - np.cos(target[:, 1]) * np.sin(
+        direction[:, 1]
+    ) * np.cos(target[:, 0] - direction[:, 0])
 
     pnt_xds["DIRECTIONAL_COSINES"] = xr.DataArray(
         np.array([l, m]).T, dims=("time", "lm")
     )
 
-    '''
+    """
     Notes from ASDM (https://drive.google.com/file/d/16a3g0GQxgcO7N_ZabfdtexQ8r2jRbYIS/view)
     Science Data Model Binary Data Format:    https://drive.google.com/file/d/1PMrZFbkrMVfe57K6AAh1dR1FalS35jP2/view
         
@@ -229,7 +227,7 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
     M_encoder = A_encoder
     
     From the above description I suspect encoder should be used instead of direction, however for the VLA mapping 
-    antenna data no grid pattern appears (ALMA data does not have this problem).'''
+    antenna data no grid pattern appears (ALMA data does not have this problem)."""
 
     # Detect during which scans an antenna is mapping by averaging the POINTING_OFFSET radius.
     time_tree = spatial.KDTree(direction_time[:, None])  # Use for nearest interpolation
@@ -243,27 +241,33 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
         for scan_id, scan_time in ddi.items():
             _, time_index = time_tree.query(scan_time[:, None])
 
-            pointing_offset_scan_slice = pnt_xds["POINTING_OFFSET"].isel(time=slice(time_index[0], time_index[1]))
+            pointing_offset_scan_slice = pnt_xds["POINTING_OFFSET"].isel(
+                time=slice(time_index[0], time_index[1])
+            )
 
-            r = (np.sqrt(
-                pointing_offset_scan_slice.isel(az_el=0) ** 2 + pointing_offset_scan_slice.isel(az_el=1) ** 2)).mean()
+            r = (
+                np.sqrt(
+                    pointing_offset_scan_slice.isel(az_el=0) ** 2
+                    + pointing_offset_scan_slice.isel(az_el=1) ** 2
+                )
+            ).mean()
 
-            if r > 10 ** -12:  # Antenna is mapping since lm is non-zero
-                if ('map_' + str(map_id)) in map_scans_dict:
-                    map_scans_dict['map_' + str(map_id)].append(scan_id)
+            if r > 10**-12:  # Antenna is mapping since lm is non-zero
+                if ("map_" + str(map_id)) in map_scans_dict:
+                    map_scans_dict["map_" + str(map_id)].append(scan_id)
 
                 else:
-                    map_scans_dict['map_' + str(map_id)] = [scan_id]
+                    map_scans_dict["map_" + str(map_id)] = [scan_id]
 
             else:
                 map_id = map_id + 1
 
-        mapping_scans_obs_dict['ddi_' + str(ddi_id)] = map_scans_dict
+        mapping_scans_obs_dict["ddi_" + str(ddi_id)] = map_scans_dict
 
-    pnt_xds.attrs['mapping_scans_obs_dict'] = [mapping_scans_obs_dict]
+    pnt_xds.attrs["mapping_scans_obs_dict"] = [mapping_scans_obs_dict]
     ###############
 
-    pnt_xds.attrs['ant_name'] = pnt_params['ant_name']
+    pnt_xds.attrs["ant_name"] = pnt_params["ant_name"]
 
     logger.debug(
         "Writing pointing xds to {file}".format(
@@ -271,17 +275,24 @@ def _make_ant_pnt_chunk(ms_name, pnt_params):
         )
     )
 
-    pnt_xds.to_zarr(os.path.join(pnt_name, "ant_{}".format(str(ant_name))), mode="w", compute=True, consolidated=True)
+    pnt_xds.to_zarr(
+        os.path.join(pnt_name, "ant_{}".format(str(ant_name))),
+        mode="w",
+        compute=True,
+        consolidated=True,
+    )
 
 
 def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_ids):
-    '''
-        [ddi][scan][start, stop]
-    '''
-    scan_time_dict = _extract_scan_time_dict_jit(time, scan_ids, state_ids, ddi_ids, mapping_state_ids)
+    """
+    [ddi][scan][start, stop]
+    """
+    scan_time_dict = _extract_scan_time_dict_jit(
+        time, scan_ids, state_ids, ddi_ids, mapping_state_ids
+    )
 
-    # This section cleans up the case of when there was an issue with the scan time data. If the scan start and end 
-    # times are the same the mapping(reference) state identification does not work. For this reason, scans containing 
+    # This section cleans up the case of when there was an issue with the scan time data. If the scan start and end
+    # times are the same the mapping(reference) state identification does not work. For this reason, scans containing
     # instance of this are removed and any empty ddi(s) are dropped as well.
     drops = {}
 
@@ -305,7 +316,7 @@ def _extract_scan_time_dict(time, scan_ids, state_ids, ddi_ids, mapping_state_id
 @convert_dict_from_numba
 @njit(cache=False, nogil=True)
 def _extract_scan_time_dict_jit(time, scan_ids, state_ids, ddi_ids, mapping_state_ids):
-    """For each ddi get holography scan start and end times. A holography scan is detected when a scan_ids appears in 
+    """For each ddi get holography scan start and end times. A holography scan is detected when a scan_ids appears in
     mapping_state_ids.
 
     """

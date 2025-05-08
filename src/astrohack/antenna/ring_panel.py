@@ -8,8 +8,19 @@ class RingPanel(BasePanel):
     # This class describes and treats panels that are arranged in
     # rings on the Antenna surface
 
-    def __init__(self, model, angle, ipanel, label, inrad, ourad, margin=0.20, screw_scheme=None, screw_offset=None,
-                 plot_screw_size=0.20):
+    def __init__(
+        self,
+        model,
+        angle,
+        ipanel,
+        label,
+        inrad,
+        ourad,
+        margin=0.20,
+        screw_scheme=None,
+        screw_offset=None,
+        plot_screw_size=0.20,
+    ):
         """
         Initializes a panel that is a section of a ring in a circular antenna
         Fitting method kinds are:
@@ -49,14 +60,22 @@ class RingPanel(BasePanel):
         rt = (self.inrad + self.ourad) / 2
         self.center = PanelPoint(rt * np.cos(zeta), rt * np.sin(zeta))
         screws = self._init_screws(screw_scheme, screw_offset)
-        plot_screw_pos = self._init_screws(screw_scheme, 2*plot_screw_size)
+        plot_screw_pos = self._init_screws(screw_scheme, 2 * plot_screw_size)
         fi = self.theta2 - self.theta1
-        x1 = self.inrad * np.sin(fi/2.0)
-        x2 = self.ourad * np.sin(fi/2.0)
-        y2 = self.ourad * np.cos(fi/2.0)
+        x1 = self.inrad * np.sin(fi / 2.0)
+        x2 = self.ourad * np.sin(fi / 2.0)
+        y2 = self.ourad * np.cos(fi / 2.0)
         # Now we are ready to initialize the base object
-        super().__init__(model, screws, plot_screw_pos, plot_screw_size, label, center=self.center, zeta=zeta,
-                         ref_points=[x1, x2, y2])
+        super().__init__(
+            model,
+            screws,
+            plot_screw_pos,
+            plot_screw_size,
+            label,
+            center=self.center,
+            zeta=zeta,
+            ref_points=[x1, x2, y2],
+        )
 
     def _init_screws(self, scheme, offset):
         """
@@ -69,26 +88,28 @@ class RingPanel(BasePanel):
             numpy array with the positions of the screws
         """
         if scheme is None:
-            scheme = ['il', 'ir', 'ol', 'or']
+            scheme = ["il", "ir", "ol", "or"]
         if offset is None:
             offset = 1e-2  # 1 cm
         nscrews = len(scheme)
         screws = np.ndarray([nscrews], dtype=np.object_)
 
         for iscrew in range(nscrews):
-            if scheme[iscrew] == 'c':
+            if scheme[iscrew] == "c":
                 screws[iscrew] = self.center
             else:
-                if scheme[iscrew][0] == 'i':
+                if scheme[iscrew][0] == "i":
                     radius = self.inrad + offset
                 else:
                     radius = self.ourad - offset
                 deltatheta = offset / radius
-                if scheme[iscrew][1] == 'l':
+                if scheme[iscrew][1] == "l":
                     theta = self.theta1 + deltatheta
                 else:
                     theta = self.theta2 - deltatheta
-                screws[iscrew] = PanelPoint(radius*np.cos(theta), radius*np.sin(theta))
+                screws[iscrew] = PanelPoint(
+                    radius * np.cos(theta), radius * np.sin(theta)
+                )
         return screws
 
     def is_inside(self, rad, phi):
@@ -138,11 +159,22 @@ class RingPanel(BasePanel):
         y1 = self.inrad * np.cos(self.theta1)
         x2 = self.ourad * np.sin(self.theta1)
         y2 = self.ourad * np.cos(self.theta1)
-        ax.plot([x1, x2], [y1, y2], ls='-', color=self.linecolor, marker=None, lw=self.linewidth)
+        ax.plot(
+            [x1, x2],
+            [y1, y2],
+            ls="-",
+            color=self.linecolor,
+            marker=None,
+            lw=self.linewidth,
+        )
         if self.first:
             # Draw ring outline with first panel
-            inrad = plt.Circle((0, 0), self.inrad, color=self.linecolor, fill=False, lw=self.linewidth)
-            ourad = plt.Circle((0, 0), self.ourad, color=self.linecolor, fill=False, lw=self.linewidth)
+            inrad = plt.Circle(
+                (0, 0), self.inrad, color=self.linecolor, fill=False, lw=self.linewidth
+            )
+            ourad = plt.Circle(
+                (0, 0), self.ourad, color=self.linecolor, fill=False, lw=self.linewidth
+            )
             ax.add_patch(inrad)
             ax.add_patch(ourad)
         if label:

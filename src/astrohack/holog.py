@@ -21,22 +21,22 @@ Array = NewType("Array", Union[np.array, List[int], List[float]])
 
 @toolviper.utils.parameter.validate()
 def holog(
-        holog_name: str,
-        grid_size: Union[int, Array, List] = None,
-        cell_size: Union[int, Array, List] = None,
-        image_name: str = None,
-        padding_factor: int = 10,
-        grid_interpolation_mode: str = "gaussian",
-        chan_average: bool = True,
-        chan_tolerance_factor: float = 0.005,
-        scan_average: bool = True,
-        alma_osf_pad: str = None,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[int, List[int]] = "all",
-        to_stokes: bool = True,
-        phase_fit: bool = True,
-        overwrite: bool = False,
-        parallel: bool = False
+    holog_name: str,
+    grid_size: Union[int, Array, List] = None,
+    cell_size: Union[int, Array, List] = None,
+    image_name: str = None,
+    padding_factor: int = 10,
+    grid_interpolation_mode: str = "gaussian",
+    chan_average: bool = True,
+    chan_tolerance_factor: float = 0.005,
+    scan_average: bool = True,
+    alma_osf_pad: str = None,
+    ant: Union[str, List[str]] = "all",
+    ddi: Union[int, List[int]] = "all",
+    to_stokes: bool = True,
+    phase_fit: bool = True,
+    overwrite: bool = False,
+    parallel: bool = False,
 ) -> Union[AstrohackImageFile, None]:
     """ Process holography data and derive aperture illumination pattern.
 
@@ -151,49 +151,54 @@ def holog(
     """
     # Doing this here allows it to get captured by locals()
     if image_name is None:
-        image_name = get_default_file_name(input_file=holog_name, output_type=".image.zarr")
+        image_name = get_default_file_name(
+            input_file=holog_name, output_type=".image.zarr"
+        )
 
     holog_params = locals()
 
     input_params = holog_params.copy()
-    assert pathlib.Path(holog_params['holog_name']).exists() is True, (
-        logger.error(f'File {holog_params["holog_name"]} does not exists.')
+    assert pathlib.Path(holog_params["holog_name"]).exists() is True, logger.error(
+        f'File {holog_params["holog_name"]} does not exists.'
     )
 
-    overwrite_file(holog_params['image_name'], holog_params['overwrite'])
+    overwrite_file(holog_params["image_name"], holog_params["overwrite"])
 
-    json_data = "/".join((holog_params['holog_name'], ".holog_json"))
+    json_data = "/".join((holog_params["holog_name"], ".holog_json"))
 
     with open(json_data, "r") as json_file:
         holog_json = json.load(json_file)
 
-    meta_data = read_meta_data(holog_params['holog_name'] + '/.holog_attr')
+    meta_data = read_meta_data(holog_params["holog_name"] + "/.holog_attr")
 
     # If cell size is None, fill from metadata if it exists
     if holog_params["cell_size"] is None:
-        if meta_data['cell_size'] is None:
+        if meta_data["cell_size"] is None:
             logger.error(
                 "Cell size meta data not found. There was likely an issue with the holography data extraction. Fix\
-                 extract data or provide cell_size as argument.")
+                 extract data or provide cell_size as argument."
+            )
             logger.error("There was an error, see log above for more info.")
 
             return None
 
         else:
-            holog_params["cell_size"] = np.array([-meta_data["cell_size"], meta_data["cell_size"]])
+            holog_params["cell_size"] = np.array(
+                [-meta_data["cell_size"], meta_data["cell_size"]]
+            )
 
     else:
         holog_params["cell_size"] = _convert_gridding_parameter(
-            gridding_parameter=holog_params["cell_size"],
-            reflect_on_axis=True
+            gridding_parameter=holog_params["cell_size"], reflect_on_axis=True
         )
 
     # If grid size is None, create it from n_pix.
     if holog_params["grid_size"] is None:
-        if meta_data['n_pix'] is None:
+        if meta_data["n_pix"] is None:
             logger.error(
                 "Grid size meta data not found. There was likely an issue with the holography data extraction. Fix \
-                extract data or provide grid_size as argument.")
+                extract data or provide grid_size as argument."
+            )
             logger.error("There was an error, see log above for more info.")
 
             return None
@@ -205,41 +210,41 @@ def holog(
     else:
         logger.debug("Using user specified grid size.", holog_params["grid_size"])
         holog_params["grid_size"] = _convert_gridding_parameter(
-            gridding_parameter=holog_params["grid_size"],
-            reflect_on_axis=False
+            gridding_parameter=holog_params["grid_size"], reflect_on_axis=False
         )
 
-    logger.info('Cell size: {cell_size}, Grid size {grid_size}'.format(
-        cell_size=holog_params["cell_size"],
-        grid_size=holog_params["grid_size"]
-    ))
+    logger.info(
+        "Cell size: {cell_size}, Grid size {grid_size}".format(
+            cell_size=holog_params["cell_size"], grid_size=holog_params["grid_size"]
+        )
+    )
 
     json_data = {
         "cell_size": holog_params["cell_size"].tolist(),
-        "grid_size": holog_params["grid_size"].tolist()
+        "grid_size": holog_params["grid_size"].tolist(),
     }
 
     with open(".holog_diagnostic.json", "w") as out_file:
         json.dump(json_data, out_file)
 
     if compute_graph(
-            holog_json,
-            process_holog_chunk,
-            holog_params,
-            ['ant', 'ddi'],
-            parallel=parallel
+        holog_json, process_holog_chunk, holog_params, ["ant", "ddi"], parallel=parallel
     ):
 
-        output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_attr")
+        output_attr_file = "{name}/{ext}".format(
+            name=holog_params["image_name"], ext=".image_attr"
+        )
         write_meta_data(output_attr_file, holog_params)
 
-        output_attr_file = "{name}/{ext}".format(name=holog_params['image_name'], ext=".image_input")
+        output_attr_file = "{name}/{ext}".format(
+            name=holog_params["image_name"], ext=".image_input"
+        )
         write_meta_data(output_attr_file, input_params)
 
-        image_mds = AstrohackImageFile(holog_params['image_name'])
+        image_mds = AstrohackImageFile(holog_params["image_name"])
         image_mds.open()
 
-        logger.info('Finished processing')
+        logger.info("Finished processing")
 
         return image_mds
 
@@ -249,11 +254,12 @@ def holog(
 
 
 def _convert_gridding_parameter(
-        gridding_parameter: Union[List, Array],
-        reflect_on_axis=False
+    gridding_parameter: Union[List, Array], reflect_on_axis=False
 ) -> np.ndarray:
     if isinstance(gridding_parameter, Number):
-        gridding_parameter = np.array([np.power(-1, reflect_on_axis)*gridding_parameter, gridding_parameter])
+        gridding_parameter = np.array(
+            [np.power(-1, reflect_on_axis) * gridding_parameter, gridding_parameter]
+        )
 
     elif isinstance(gridding_parameter, list):
         gridding_parameter = np.array(gridding_parameter)
@@ -262,8 +268,8 @@ def _convert_gridding_parameter(
         pass
 
     else:
-        logger.error("Unknown dtype for gridding parameter: {}".format(gridding_parameter))
+        logger.error(
+            "Unknown dtype for gridding parameter: {}".format(gridding_parameter)
+        )
 
     return gridding_parameter
-
-

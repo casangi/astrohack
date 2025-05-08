@@ -22,17 +22,19 @@ def tokenize_version_number(version_number):
         Tokenized version number in 3 element numpy array of integers
     """
     if not isinstance(version_number, str):
-        raise Exception(f'Version number: {version_number} is not a string')
-    split = version_number.split('.')
+        raise Exception(f"Version number: {version_number} is not a string")
+    split = version_number.split(".")
     if len(split) != 3:
-        raise Exception(f'Version number: {version_number} is badly formated')
+        raise Exception(f"Version number: {version_number} is badly formated")
     tokenized = np.ndarray([3], dtype=int)
 
     for itoken in range(len(split)):
         try:
             tokenized[itoken] = int(split[itoken])
         except ValueError:
-            raise Exception(f'Version number: {version_number} is not composed of integers')
+            raise Exception(
+                f"Version number: {version_number} is not composed of integers"
+            )
     return tokenized
 
 
@@ -78,7 +80,8 @@ def calculate_suggested_grid_parameter(parameter, quantile=0.005):
         # data to be filtered. In this case just return the median which should be better with skewed data.
         if filtered_parameter.shape[0] == 0:
             logger.warning(
-                "Filtering of outliers in skewed data has failed, returning median value for gridding parameter.")
+                "Filtering of outliers in skewed data has failed, returning median value for gridding parameter."
+            )
 
             return np.median(parameter)
 
@@ -94,18 +97,20 @@ def calculate_suggested_grid_parameter(parameter, quantile=0.005):
         filtered_parameter = filtered_parameter[filtered_parameter <= upper_cutoff]
 
         if filtered_parameter.shape[0] == 0:
-            logger.warning("Filtering of outlier data has failed, returning mean value for gridding parameter.")
+            logger.warning(
+                "Filtering of outlier data has failed, returning mean value for gridding parameter."
+            )
             return np.mean(parameter)
 
         return np.mean(filtered_parameter)
 
 
 def _apply_mask(data, scaling=0.5):
-    """ Applies a cropping mask to the input data according to the scale factor
+    """Applies a cropping mask to the input data according to the scale factor
 
     Args:
         data (numpy,ndarray): numpy array containing the aperture grid.
-        scaling (float, optional): Scale factor which is used to determine the amount of the data to crop, ex. scale=0.5 
+        scaling (float, optional): Scale factor which is used to determine the amount of the data to crop, ex. scale=0.5
                                    means to crop the data by 50%. Defaults to 0.5.
 
     Returns:
@@ -120,11 +125,12 @@ def _apply_mask(data, scaling=0.5):
 
     assert mask > 0, logger.error(
         "Scaling values too small. Minimum values is:{}, though search may still fail due to lack of points.".format(
-            1 / x)
+            1 / x
+        )
     )
 
     start = int(x // 2 - mask // 2)
-    return data[start: (start + mask), start: (start + mask)]
+    return data[start : (start + mask), start : (start + mask)]
 
 
 def calc_coords(image_size, cell_size):
@@ -140,14 +146,20 @@ def calc_coords(image_size, cell_size):
 
     image_center = image_size // 2
 
-    x = np.arange(-image_center[0], image_size[0] - image_center[0]) * cell_size[0] + cell_size[0]/2
-    y = np.arange(-image_center[1], image_size[1] - image_center[1]) * cell_size[1] + cell_size[1]/2
+    x = (
+        np.arange(-image_center[0], image_size[0] - image_center[0]) * cell_size[0]
+        + cell_size[0] / 2
+    )
+    y = (
+        np.arange(-image_center[1], image_size[1] - image_center[1]) * cell_size[1]
+        + cell_size[1] / 2
+    )
 
     return x, y
 
 
 def find_nearest(array, value):
-    """ Find the nearest entry in array to that of value.
+    """Find the nearest entry in array to that of value.
 
     Args:
         array (numpy.array): _description_
@@ -194,8 +206,12 @@ def chunked_average(data, weight, avg_map, avg_freq):
 
         while (index < n_chan) and (avg_map[index] == avg_index):
             # Most probably will have to unravel assignment
-            data_avg[:, avg_index, :] = (data_avg[:, avg_index, :] + weight[:, index, :] * data[:, index, :])
-            weight_sum[:, avg_index, :] = weight_sum[:, avg_index, :] + weight[:, index, :]
+            data_avg[:, avg_index, :] = (
+                data_avg[:, avg_index, :] + weight[:, index, :] * data[:, index, :]
+            )
+            weight_sum[:, avg_index, :] = (
+                weight_sum[:, avg_index, :] + weight[:, index, :]
+            )
 
             index = index + 1
 
@@ -206,13 +222,15 @@ def chunked_average(data, weight, avg_map, avg_freq):
 
                 else:
                     data_avg[time_index, avg_index, pol_index] = (
-                            data_avg[time_index, avg_index, pol_index] / weight_sum[time_index, avg_index, pol_index])
+                        data_avg[time_index, avg_index, pol_index]
+                        / weight_sum[time_index, avg_index, pol_index]
+                    )
 
     return data_avg, weight_sum
 
 
 def _calculate_euclidean_distance(x, y, center):
-    """ Calculates the Euclidean distance between a pair of input points.
+    """Calculates the Euclidean distance between a pair of input points.
 
     Args:
         x (float): x-coordinate
@@ -227,7 +245,7 @@ def _calculate_euclidean_distance(x, y, center):
 
 
 def find_peak_beam_value(data, height=0.5, scaling=0.5):
-    """ Search algorithm to determine the maximal signal peak in the beam pattern.
+    """Search algorithm to determine the maximal signal peak in the beam pattern.
 
     Args:
         data (numpy.ndarray): beam data grid
@@ -281,17 +299,19 @@ def least_squares(system, vector, return_sigma=False):
     The solved system, the variances of the system solution and the sum of the residuals
     """
     if len(system.shape) != 2:
-        raise Exception('System must have 2 dimensions')
+        raise Exception("System must have 2 dimensions")
     if system.shape[0] < system.shape[1]:
-        raise Exception('System must have at least the same number of rows as it has of columns')
+        raise Exception(
+            "System must have at least the same number of rows as it has of columns"
+        )
 
     result, residuals, _, _ = np.linalg.lstsq(system, vector, rcond=None)
     dof = len(vector) - len(result)
     if dof > 0:
         errs = (vector - np.dot(system, result)) / dof
     else:
-        errs = (vector - np.dot(system, result))
-    sigma2 = np.sum(errs ** 2)
+        errs = vector - np.dot(system, result)
+    sigma2 = np.sum(errs**2)
     covar = np.linalg.inv(np.dot(system.T, system))
     variance = np.diag(sigma2 * covar)
 
@@ -314,17 +334,19 @@ def least_squares_jit(system, vector):
     The solved system, the variances of the system solution and the sum of the residuals
     """
     if len(system.shape) != 2:
-        raise Exception('System must have 2 dimensions')
+        raise Exception("System must have 2 dimensions")
     if system.shape[0] < system.shape[1]:
-        raise Exception('System must have at least the same number of rows as it has of columns')
+        raise Exception(
+            "System must have at least the same number of rows as it has of columns"
+        )
 
     result, residuals, _, _ = np.linalg.lstsq(system, vector)
     dof = len(vector) - len(result)
     if dof > 0:
         errs = (vector - np.dot(system, result)) / dof
     else:
-        errs = (vector - np.dot(system, result))
-    sigma2 = np.sum(errs ** 2)
+        errs = vector - np.dot(system, result)
+    sigma2 = np.sum(errs**2)
     covar = np.linalg.inv(np.dot(system.T, system))
     variance = np.diag(sigma2 * covar)
     return result, variance, residuals, np.sqrt(sigma2)
@@ -342,21 +364,27 @@ def _least_squares_fit_block(system, vector):
     The solved system and the variances of the system solution
     """
     if len(system.shape) < 2:
-        raise Exception('System block must have at least 2 dimensions')
+        raise Exception("System block must have at least 2 dimensions")
     if system.shape[-2] < system.shape[-1]:
-        raise Exception('Systems must have at least the same number of rows as they have of columns')
+        raise Exception(
+            "Systems must have at least the same number of rows as they have of columns"
+        )
     shape = system.shape
     results = np.zeros_like(vector)
     variances = np.zeros_like(vector)
     if len(shape) > 2:
         for it0 in range(shape[0]):
-            results[it0], variances[it0] = _least_squares_fit_block(system[it0], vector[it0])
+            results[it0], variances[it0] = _least_squares_fit_block(
+                system[it0], vector[it0]
+            )
     else:
         results, variances, _ = least_squares(system, vector)
     return results, variances
 
 
-def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_diameter, chan_freq, ddi):
+def calculate_optimal_grid_parameters(
+    pnt_map_dict, antenna_name, telescope_diameter, chan_freq, ddi
+):
     reference_frequency = np.median(chan_freq)
     reference_lambda = scipy.constants.speed_of_light / reference_frequency
 
@@ -366,12 +394,15 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_diam
     cell_size = 0.85 * reference_lambda / telescope_diameter
 
     # Get data range
-    data_range = \
-        (pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].max()
-         - pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].min())
+    data_range = (
+        pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].max()
+        - pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].min()
+    )
 
-    logger.info(f'{create_dataset_label(antenna_name, ddi)}: Cell size {format_angular_distance(cell_size)}, '
-                f'FOV: {format_angular_distance(data_range)}')
+    logger.info(
+        f"{create_dataset_label(antenna_name, ddi)}: Cell size {format_angular_distance(cell_size)}, "
+        f"FOV: {format_angular_distance(data_range)}"
+    )
     # logger.info(f"cell_size: {cell_size}")
     # logger.info(f"data_range: {data_range}")
 
@@ -379,7 +410,10 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_diam
         n_pix = int(np.ceil(data_range / cell_size)) ** 2
 
     except ZeroDivisionError:
-        logger.error(f"Zero division error, there was likely a problem calculating the data range.", verbose=True)
+        logger.error(
+            f"Zero division error, there was likely a problem calculating the data range.",
+            verbose=True,
+        )
         raise ZeroDivisionError
 
     return n_pix, cell_size
@@ -387,25 +421,22 @@ def calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, telescope_diam
 
 def compute_average_stokes_visibilities(vis, stokes):
     n_chan = len(vis.chan)
-    chan_ave_vis = vis.mean(dim='chan', skipna=True)
+    chan_ave_vis = vis.mean(dim="chan", skipna=True)
     amp, pha, sigma_amp, sigma_pha = compute_stokes(
-        chan_ave_vis['VIS'].values,
-        n_chan * chan_ave_vis['WEIGHT'].values,
-        chan_ave_vis.pol
+        chan_ave_vis["VIS"].values,
+        n_chan * chan_ave_vis["WEIGHT"].values,
+        chan_ave_vis.pol,
     )
 
-    coords = {
-        'time': chan_ave_vis.time,
-        'pol': ['I', 'Q', 'U', 'V']
-    }
+    coords = {"time": chan_ave_vis.time, "pol": ["I", "Q", "U", "V"]}
 
     xds = xr.Dataset()
     xds = xds.assign_coords(coords)
-    xds["AMPLITUDE"] = xr.DataArray(amp, dims=["time", 'pol'], coords=coords)
-    xds["PHASE"] = xr.DataArray(pha, dims=["time", 'pol'], coords=coords)
-    xds['SIGMA_AMP'] = xr.DataArray(sigma_amp, dims=["time", 'pol'], coords=coords)
-    xds['SIGMA_PHA'] = xr.DataArray(sigma_amp, dims=["time", 'pol'], coords=coords)
-    xds.attrs['frequency'] = np.mean(vis.chan) / 1e9  # in GHz
+    xds["AMPLITUDE"] = xr.DataArray(amp, dims=["time", "pol"], coords=coords)
+    xds["PHASE"] = xr.DataArray(pha, dims=["time", "pol"], coords=coords)
+    xds["SIGMA_AMP"] = xr.DataArray(sigma_amp, dims=["time", "pol"], coords=coords)
+    xds["SIGMA_PHA"] = xr.DataArray(sigma_amp, dims=["time", "pol"], coords=coords)
+    xds.attrs["frequency"] = np.mean(vis.chan) / 1e9  # in GHz
     return xds.sel(pol=stokes)
 
 
@@ -414,7 +445,7 @@ def compute_stokes(data, weight, pol_axis):
     weight[weight == 0] = np.nan
     sigma = np.sqrt(1 / weight)
     sigma_amp = np.zeros_like(weight)
-    if 'RR' in pol_axis:
+    if "RR" in pol_axis:
         stokes_data[:, 0] = (data[:, 0] + data[:, 3]) / 2
         sigma_amp[:, 0] = (sigma[:, 0] + sigma[:, 3]) / 2
         stokes_data[:, 1] = (data[:, 1] + data[:, 2]) / 2
@@ -423,7 +454,7 @@ def compute_stokes(data, weight, pol_axis):
         sigma_amp[:, 2] = sigma_amp[:, 1]
         stokes_data[:, 3] = (data[:, 0] - data[:, 3]) / 2
         sigma_amp[:, 0] = (sigma[:, 0] + sigma[:, 3]) / 2
-    elif 'XX' in pol_axis:
+    elif "XX" in pol_axis:
         stokes_data[:, 0] = (data[:, 0] + data[:, 3]) / 2
         sigma_amp[:, 0] = (sigma[:, 0] + sigma[:, 3]) / 2
         stokes_data[:, 1] = (data[:, 0] - data[:, 3]) / 2
@@ -439,11 +470,11 @@ def compute_stokes(data, weight, pol_axis):
     sigma_amp[~np.isfinite(sigma_amp)] = np.nan
     sigma_amp[sigma_amp == 0] = np.nan
     snr = stokes_amp / sigma_amp
-    cst = np.sqrt(9 / (2 * np.pi ** 3))
+    cst = np.sqrt(9 / (2 * np.pi**3))
     # Both sigmas here are probably wrong because of the uncertainty of how weights are stored.
     sigma_pha = np.pi / np.sqrt(3) * (1 - cst * snr)
     sigma_pha = np.where(snr > 2.5, 1 / snr, sigma_pha)
-    sigma_pha *= convert_unit('rad', 'deg', 'trigonometric')
+    sigma_pha *= convert_unit("rad", "deg", "trigonometric")
     return stokes_amp, stokes_pha, sigma_amp, sigma_pha
 
 
@@ -460,11 +491,18 @@ def compute_antenna_relative_off(antenna, tel_lon, tel_lat, tel_rad, scaling=1.0
     Returns:
     Offset to the east, Offset to the North, elevation offset and distance to array center
     """
-    antenna_off_east = tel_rad * (antenna['longitude'] - tel_lon) * np.cos(tel_lat)
-    antenna_off_north = tel_rad * (antenna['latitude'] - tel_lat)
-    antenna_off_ele = antenna['radius'] - tel_rad
-    antenna_dist = np.sqrt(antenna_off_east ** 2 + antenna_off_north ** 2 + antenna_off_ele ** 2)
-    return antenna_off_east * scaling, antenna_off_north * scaling, antenna_off_ele * scaling, antenna_dist * scaling
+    antenna_off_east = tel_rad * (antenna["longitude"] - tel_lon) * np.cos(tel_lat)
+    antenna_off_north = tel_rad * (antenna["latitude"] - tel_lat)
+    antenna_off_ele = antenna["radius"] - tel_rad
+    antenna_dist = np.sqrt(
+        antenna_off_east**2 + antenna_off_north**2 + antenna_off_ele**2
+    )
+    return (
+        antenna_off_east * scaling,
+        antenna_off_north * scaling,
+        antenna_off_ele * scaling,
+        antenna_dist * scaling,
+    )
 
 
 def rotate_to_gmt(positions, errors, longitude):
@@ -494,12 +532,12 @@ def rotate_to_gmt(positions, errors, longitude):
 
 def data_statistics(data_array):
     data_stats = {
-        'mean': np.nanmean(data_array),
-        'median': np.nanmedian(data_array),
-        'rms': np.nanstd(data_array),
-        'min': np.nanmin(data_array),
-        'max': np.nanmax(data_array)
-        }
+        "mean": np.nanmean(data_array),
+        "median": np.nanmedian(data_array),
+        "rms": np.nanstd(data_array),
+        "min": np.nanmin(data_array),
+        "max": np.nanmax(data_array),
+    }
     return data_stats
 
 
@@ -526,17 +564,27 @@ def create_coordinate_images(x_axis, y_axis, create_polar_coordinates=False):
     Returns:
         x_mesh and y_mesh, plus radius_mesh and polar_angle_mesh if create_polar_coordinates
     """
-    x_mesh, y_mesh = np.meshgrid(x_axis, y_axis, indexing='ij')
+    x_mesh, y_mesh = np.meshgrid(x_axis, y_axis, indexing="ij")
     if create_polar_coordinates:
-        radius_mesh = np.sqrt(x_mesh ** 2 + y_mesh ** 2)
+        radius_mesh = np.sqrt(x_mesh**2 + y_mesh**2)
         polar_angle_mesh = np.arctan2(x_mesh, -y_mesh) - np.pi / 2
-        polar_angle_mesh = np.where(polar_angle_mesh < 0, polar_angle_mesh + twopi, polar_angle_mesh)
+        polar_angle_mesh = np.where(
+            polar_angle_mesh < 0, polar_angle_mesh + twopi, polar_angle_mesh
+        )
         return x_mesh, y_mesh, radius_mesh, polar_angle_mesh
     else:
         return x_mesh, y_mesh
 
 
-def create_aperture_mask(x_axis, y_axis, inner_rad, outer_rad, arm_width=None, arm_angle=0, return_polar_meshes=False):
+def create_aperture_mask(
+    x_axis,
+    y_axis,
+    inner_rad,
+    outer_rad,
+    arm_width=None,
+    arm_angle=0,
+    return_polar_meshes=False,
+):
     """
     Create a basic aperture mask with support for feed supporting arms shadows
     Args:
@@ -551,8 +599,9 @@ def create_aperture_mask(x_axis, y_axis, inner_rad, outer_rad, arm_width=None, a
     Returns:
 
     """
-    x_mesh, y_mesh, radius_mesh, polar_angle_mesh = \
-        create_coordinate_images(x_axis, y_axis, create_polar_coordinates=True)
+    x_mesh, y_mesh, radius_mesh, polar_angle_mesh = create_coordinate_images(
+        x_axis, y_axis, create_polar_coordinates=True
+    )
     mask = np.full_like(radius_mesh, True, dtype=bool)
     mask = np.where(radius_mesh > outer_rad, False, mask)
     mask = np.where(radius_mesh < inner_rad, False, mask)
@@ -560,14 +609,34 @@ def create_aperture_mask(x_axis, y_axis, inner_rad, outer_rad, arm_width=None, a
     if arm_width is None:
         pass
     elif isinstance(arm_width, (float, int)):
-        mask = _arm_shadow_masking(mask, x_mesh, y_mesh, radius_mesh, inner_rad, outer_rad, arm_width, arm_angle)
+        mask = _arm_shadow_masking(
+            mask,
+            x_mesh,
+            y_mesh,
+            radius_mesh,
+            inner_rad,
+            outer_rad,
+            arm_width,
+            arm_angle,
+        )
     elif isinstance(arm_width, list):
         for section in arm_width:
             minradius, maxradius, width = section
-            mask = _arm_shadow_masking(mask, x_mesh, y_mesh, radius_mesh, minradius, maxradius, width, arm_angle)
+            mask = _arm_shadow_masking(
+                mask,
+                x_mesh,
+                y_mesh,
+                radius_mesh,
+                minradius,
+                maxradius,
+                width,
+                arm_angle,
+            )
 
     else:
-        raise Exception(f"Don't know how to handle an arm width of class {type(arm_width)}")
+        raise Exception(
+            f"Don't know how to handle an arm width of class {type(arm_width)}"
+        )
 
     if return_polar_meshes:
         return mask, radius_mesh, polar_angle_mesh
@@ -575,21 +644,31 @@ def create_aperture_mask(x_axis, y_axis, inner_rad, outer_rad, arm_width=None, a
         return mask
 
 
-def _arm_shadow_masking(inmask, x_mesh, y_mesh, radius_mesh, minradius, maxradius, width, angle):
+def _arm_shadow_masking(
+    inmask, x_mesh, y_mesh, radius_mesh, minradius, maxradius, width, angle
+):
     radial_mask = np.where(radius_mesh < minradius, False, inmask)
     radial_mask = np.where(radius_mesh >= maxradius, False, radial_mask)
-    if angle % pi/2 == 0:
-        oumask = np.where(np.bitwise_and(np.abs(x_mesh) < width/2., radial_mask), False, inmask)
-        oumask = np.where(np.bitwise_and(np.abs(y_mesh) < width/2., radial_mask), False, oumask)
+    if angle % pi / 2 == 0:
+        oumask = np.where(
+            np.bitwise_and(np.abs(x_mesh) < width / 2.0, radial_mask), False, inmask
+        )
+        oumask = np.where(
+            np.bitwise_and(np.abs(y_mesh) < width / 2.0, radial_mask), False, oumask
+        )
     else:
         # first shadow
         coeff = np.tan(angle % pi)
-        distance = np.abs((coeff*x_mesh-y_mesh)/np.sqrt(coeff**2+1))
-        oumask = np.where(np.bitwise_and(distance < width/2., radial_mask), False, inmask)
+        distance = np.abs((coeff * x_mesh - y_mesh) / np.sqrt(coeff**2 + 1))
+        oumask = np.where(
+            np.bitwise_and(distance < width / 2.0, radial_mask), False, inmask
+        )
         # second shadow
-        coeff = np.tan(angle % pi + pi/2)
-        distance = np.abs((coeff*x_mesh-y_mesh)/np.sqrt(coeff**2+1))
-        oumask = np.where(np.bitwise_and(distance < width/2., radial_mask), False, oumask)
+        coeff = np.tan(angle % pi + pi / 2)
+        distance = np.abs((coeff * x_mesh - y_mesh) / np.sqrt(coeff**2 + 1))
+        oumask = np.where(
+            np.bitwise_and(distance < width / 2.0, radial_mask), False, oumask
+        )
     return oumask
 
 

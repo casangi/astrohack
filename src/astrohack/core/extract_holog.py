@@ -41,15 +41,19 @@ def process_extract_holog_chunk(extract_holog_params):
     map_ant_tuple = extract_holog_params["map_ant_tuple"]
     map_ant_name_tuple = extract_holog_params["map_ant_name_tuple"]
     holog_map_key = extract_holog_params["holog_map_key"]
-    time_interval = extract_holog_params['time_smoothing_interval']
+    time_interval = extract_holog_params["time_smoothing_interval"]
     telescope_name = extract_holog_params["telescope_name"]
 
     # This piece of information is no longer used leaving them here commented out for completeness
     # ref_ant_per_map_ant_name_tuple = extract_holog_params["ref_ant_per_map_ant_name_tuple"]
 
     if len(ref_ant_per_map_ant_tuple) != len(map_ant_tuple):
-        logger.error("Reference antenna per mapping antenna list and mapping antenna list should have same length.")
-        raise Exception("Inconsistancy between antenna list length, see error above for more info.")
+        logger.error(
+            "Reference antenna per mapping antenna list and mapping antenna list should have same length."
+        )
+        raise Exception(
+            "Inconsistancy between antenna list length, see error above for more info."
+        )
 
     sel_state_ids = extract_holog_params["sel_state_ids"]
     holog_name = extract_holog_params["holog_name"]
@@ -57,19 +61,20 @@ def process_extract_holog_chunk(extract_holog_params):
     chan_freq = extract_holog_params["chan_setup"]["chan_freq"]
     pol = extract_holog_params["pol_setup"]["pol"]
 
-    table_obj = ctables.table(ms_name, readonly=True, lockoptions={'option': 'usernoread'}, ack=False)
-
+    table_obj = ctables.table(
+        ms_name, readonly=True, lockoptions={"option": "usernoread"}, ack=False
+    )
+    scans = [int(scan) for scan in scans]
     if sel_state_ids:
         ctb = ctables.taql(
             "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj "
             "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
-            % (data_column, ddi, list(scans), list(sel_state_ids))
+            % (data_column, ddi, scans, list(sel_state_ids))
         )
     else:
         ctb = ctables.taql(
             "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj "
-            "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
-            % (data_column, ddi, list(scans))
+            "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s" % (data_column, ddi, scans)
         )
     vis_data = ctb.getcol(data_column)
     weight = ctb.getcol("WEIGHT")
@@ -89,7 +94,13 @@ def process_extract_holog_chunk(extract_holog_params):
     ctb.close()
     table_obj.close()
 
-    time_vis, vis_map_dict, weight_map_dict, flagged_mapping_antennas, used_samples_dict = _extract_holog_chunk_jit(
+    (
+        time_vis,
+        vis_map_dict,
+        weight_map_dict,
+        flagged_mapping_antennas,
+        used_samples_dict,
+    ) = _extract_holog_chunk_jit(
         vis_data,
         weight,
         ant1,
@@ -100,7 +111,7 @@ def process_extract_holog_chunk(extract_holog_params):
         ref_ant_per_map_ant_tuple,
         map_ant_tuple,
         time_interval,
-        scan_list
+        scan_list,
     )
 
     del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row
@@ -118,13 +129,11 @@ def process_extract_holog_chunk(extract_holog_params):
     # function more general use (hopefully). I honestly couldn't see a reason to keep it inside.
     for ant_index in vis_map_dict.keys():
         antenna_name = "_".join(("ant", ant_names[ant_index]))
-        n_pix, cell_size = calculate_optimal_grid_parameters(pnt_map_dict, antenna_name, Telescope(telescope_name).diam,
-                                                             chan_freq, ddi)
+        n_pix, cell_size = calculate_optimal_grid_parameters(
+            pnt_map_dict, antenna_name, Telescope(telescope_name).diam, chan_freq, ddi
+        )
 
-        grid_params[antenna_name] = {
-            "n_pix": n_pix,
-            "cell_size": cell_size
-        }
+        grid_params[antenna_name] = {"n_pix": n_pix, "cell_size": cell_size}
 
     # ## To DO: ################## Average multiple repeated samples over_flow_protector_constant = float("%.5g" %
     # time_vis[0])  # For example 5076846059.4 -> 5076800000.0 time_vis = time_vis - over_flow_protector_constant
@@ -147,11 +156,13 @@ def process_extract_holog_chunk(extract_holog_params):
         ms_name,
         ant_names,
         grid_params,
-        time_interval
+        time_interval,
     )
 
-    logger.info("Finished extracting holography chunk for ddi: {ddi} holog_map_key: {holog_map_key}".format(
-        ddi=ddi, holog_map_key=holog_map_key)
+    logger.info(
+        "Finished extracting holography chunk for ddi: {ddi} holog_map_key: {holog_map_key}".format(
+            ddi=ddi, holog_map_key=holog_map_key
+        )
     )
 
 
@@ -183,17 +194,17 @@ def _get_time_intervals(time_vis_row, scan_list, time_interval):
 
 @njit(cache=False, nogil=True)
 def _extract_holog_chunk_jit(
-        vis_data,
-        weight,
-        ant1,
-        ant2,
-        time_vis_row,
-        flag,
-        flag_row,
-        ref_ant_per_map_ant_tuple,
-        map_ant_tuple,
-        time_interval,
-        scan_list
+    vis_data,
+    weight,
+    ant1,
+    ant2,
+    time_vis_row,
+    flag,
+    flag_row,
+    ref_ant_per_map_ant_tuple,
+    map_ant_tuple,
+    time_interval,
+    scan_list,
 ):
     """JIT compiled function to extract relevant visibilty data from chunk after flagging and applying weights.
 
@@ -247,7 +258,9 @@ def _extract_holog_chunk_jit(
         if time_vis_row[row] < time_samples[time_index] - half_int:
             continue
         else:
-            time_index = _get_time_index(time_vis_row[row], time_index, time_samples, half_int)
+            time_index = _get_time_index(
+                time_vis_row[row], time_index, time_samples, half_int
+            )
         if time_index < 0:
             break
 
@@ -281,14 +294,14 @@ def _extract_holog_chunk_jit(
                     # Calculate running weighted sum of visibilities
                     used_samples_dict[map_ant_id][time_index] = True
                     vis_map_dict[map_ant_id][time_index, chan, pol] = (
-                            vis_map_dict[map_ant_id][time_index, chan, pol]
-                            + vis_baseline[chan, pol] * weight[row, pol]
+                        vis_map_dict[map_ant_id][time_index, chan, pol]
+                        + vis_baseline[chan, pol] * weight[row, pol]
                     )
 
                     # Calculate running sum of weights
                     sum_weight_map_dict[map_ant_id][time_index, chan, pol] = (
-                            sum_weight_map_dict[map_ant_id][time_index, chan, pol]
-                            + weight[row, pol]
+                        sum_weight_map_dict[map_ant_id][time_index, chan, pol]
+                        + weight[row, pol]
                     )
 
     flagged_mapping_antennas = []
@@ -299,22 +312,25 @@ def _extract_holog_chunk_jit(
         for time_index in range(n_time):
             for chan in range(n_chan):
                 for pol in range(n_pol):
-                    sum_weight = sum_weight_map_dict[map_ant_id][
-                        time_index, chan, pol
-                    ]
+                    sum_weight = sum_weight_map_dict[map_ant_id][time_index, chan, pol]
                     sum_of_sum_weight = sum_of_sum_weight + sum_weight
                     if sum_weight == 0:
                         vis_map_dict[map_ant_id][time_index, chan, pol] = 0.0
                     else:
                         vis_map_dict[map_ant_id][time_index, chan, pol] = (
-                                vis_map_dict[map_ant_id][time_index, chan, pol]
-                                / sum_weight
+                            vis_map_dict[map_ant_id][time_index, chan, pol] / sum_weight
                         )
 
         if sum_of_sum_weight == 0:
             flagged_mapping_antennas.append(map_ant_id)
 
-    return time_samples, vis_map_dict, sum_weight_map_dict, flagged_mapping_antennas, used_samples_dict
+    return (
+        time_samples,
+        vis_map_dict,
+        sum_weight_map_dict,
+        flagged_mapping_antennas,
+        used_samples_dict,
+    )
 
 
 def _get_time_samples(time_vis):
@@ -336,21 +352,21 @@ def _get_time_samples(time_vis):
 
 
 def _create_holog_file(
-        holog_name,
-        vis_map_dict,
-        weight_map_dict,
-        pnt_map_dict,
-        time_vis,
-        used_samples_dict,
-        chan,
-        pol,
-        flagged_mapping_antennas,
-        holog_map_key,
-        ddi,
-        ms_name,
-        ant_names,
-        grid_params,
-        time_interval
+    holog_name,
+    vis_map_dict,
+    weight_map_dict,
+    pnt_map_dict,
+    time_vis,
+    used_samples_dict,
+    chan,
+    pol,
+    flagged_mapping_antennas,
+    holog_map_key,
+    ddi,
+    ms_name,
+    ant_names,
+    grid_params,
+    time_interval,
 ):
     """Create holog-structured, formatted output file and save to zarr.
 
@@ -377,7 +393,7 @@ def _create_holog_file(
 
     for map_ant_index in vis_map_dict.keys():
         if map_ant_index not in flagged_mapping_antennas:
-            valid_data = used_samples_dict[map_ant_index] == 1.
+            valid_data = used_samples_dict[map_ant_index] == 1.0
 
             ant_time_vis = time_vis[valid_data]
 
@@ -385,32 +401,44 @@ def _create_holog_file(
             astro_time_vis = astropy.time.Time(time_vis_days, format="mjd")
             time_samples, indicies = _get_time_samples(astro_time_vis)
             coords = {"time": ant_time_vis, "chan": chan, "pol": pol}
-            map_ant_tag = 'ant_' + ant_names[map_ant_index]  # 'ant_' + str(map_ant_index)
+            map_ant_tag = (
+                "ant_" + ant_names[map_ant_index]
+            )  # 'ant_' + str(map_ant_index)
 
-            direction = np.take(pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values, indicies, axis=0)
+            direction = np.take(
+                pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values,
+                indicies,
+                axis=0,
+            )
 
             parallactic_samples = calculate_parallactic_angle_chunk(
                 time_samples=time_samples,
                 observing_location=observing_location[map_ant_index],
-                direction=direction
+                direction=direction,
             )
 
             xds = xr.Dataset()
             xds = xds.assign_coords(coords)
             xds["VIS"] = xr.DataArray(
-                vis_map_dict[map_ant_index][valid_data, ...], dims=["time", "chan", "pol"]
+                vis_map_dict[map_ant_index][valid_data, ...],
+                dims=["time", "chan", "pol"],
             )
 
             xds["WEIGHT"] = xr.DataArray(
-                weight_map_dict[map_ant_index][valid_data, ...], dims=["time", "chan", "pol"]
+                weight_map_dict[map_ant_index][valid_data, ...],
+                dims=["time", "chan", "pol"],
             )
 
             xds["DIRECTIONAL_COSINES"] = xr.DataArray(
-                pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values[valid_data, ...], dims=["time", "lm"]
+                pnt_map_dict[map_ant_tag]["DIRECTIONAL_COSINES"].values[
+                    valid_data, ...
+                ],
+                dims=["time", "lm"],
             )
 
             xds["IDEAL_DIRECTIONAL_COSINES"] = xr.DataArray(
-                pnt_map_dict[map_ant_tag]["POINTING_OFFSET"].values[valid_data, ...], dims=["time", "lm"]
+                pnt_map_dict[map_ant_tag]["POINTING_OFFSET"].values[valid_data, ...],
+                dims=["time", "lm"],
             )
 
             xds.attrs["holog_map_key"] = holog_map_key
@@ -435,7 +463,13 @@ def _create_holog_file(
             xds.to_zarr(
                 os.path.join(
                     holog_file,
-                    'ddi_' + str(ddi) + "/" + str(holog_map_key) + "/" + "ant_" + str(ant_names[map_ant_index])
+                    "ddi_"
+                    + str(ddi)
+                    + "/"
+                    + str(holog_map_key)
+                    + "/"
+                    + "ant_"
+                    + str(ant_names[map_ant_index]),
                 ),
                 mode="w",
                 compute=True,
@@ -443,18 +477,22 @@ def _create_holog_file(
             )
 
         else:
-            logger.warning("Mapping antenna {index} has no data".format(index=ant_names[map_ant_index]))
+            logger.warning(
+                "Mapping antenna {index} has no data".format(
+                    index=ant_names[map_ant_index]
+                )
+            )
 
 
 def create_holog_obs_dict(
-        pnt_dict,
-        baseline_average_distance,
-        baseline_average_nearest,
-        ant_names,
-        ant_pos,
-        ant_names_main,
-        exclude_antennas=None,
-        write_distance_matrix=False
+    pnt_dict,
+    baseline_average_distance,
+    baseline_average_nearest,
+    ant_names,
+    ant_pos,
+    ant_names_main,
+    exclude_antennas=None,
+    write_distance_matrix=False,
 ):
     """
     Generate holog_obs_dict.
@@ -476,62 +514,82 @@ def create_holog_obs_dict(
         pass
 
     for ant_name in exclude_antennas:
-        prefixed = 'ant_'+ant_name
+        prefixed = "ant_" + ant_name
         if prefixed not in pnt_dict.keys():
-            logger.warning(f'Bad reference antenna {ant_name} is not present in the data.')
+            logger.warning(
+                f"Bad reference antenna {ant_name} is not present in the data."
+            )
 
     # Generate {ddi: {map: {scan:[i ...], ant:{ant_map_0:[], ...}}}} structure. No reference antennas are added
     # because we first need to populate all mapping antennas.
     for ant_name, ant_ds in pnt_dict.items():
-        if 'ant' in ant_name:
-            ant_name = ant_name.replace('ant_', '')
+        if "ant" in ant_name:
+            ant_name = ant_name.replace("ant_", "")
             if ant_name in exclude_antennas:
                 pass
             else:
                 if ant_name in ant_names_main:  # Check if antenna in main table.
                     ant_names_set.add(ant_name)
-                    for ddi, map_dict in ant_ds.attrs['mapping_scans_obs_dict'][0].items():
+                    for ddi, map_dict in ant_ds.attrs["mapping_scans_obs_dict"][
+                        0
+                    ].items():
                         if ddi not in holog_obs_dict:
                             holog_obs_dict[ddi] = {}
                         for ant_map_id, scan_list in map_dict.items():
                             if scan_list:
-                                map_key = _check_if_array_in_dict(mapping_scans_dict, scan_list)
+                                map_key = _check_if_array_in_dict(
+                                    mapping_scans_dict, scan_list
+                                )
                                 if not map_key:
-                                    map_key = 'map_' + str(map_id)
+                                    map_key = "map_" + str(map_id)
                                     mapping_scans_dict[map_key] = scan_list
                                     map_id = map_id + 1
 
                                 if map_key not in holog_obs_dict[ddi]:
-                                    holog_obs_dict[ddi][map_key] = {'scans': np.array(scan_list), 'ant': {}}
+                                    holog_obs_dict[ddi][map_key] = {
+                                        "scans": np.array(scan_list),
+                                        "ant": {},
+                                    }
 
-                                holog_obs_dict[ddi][map_key]['ant'][ant_name] = []
+                                holog_obs_dict[ddi][map_key]["ant"][ant_name] = []
 
-    df = pd.DataFrame(ant_pos, columns=['x', 'y', 'z'], index=ant_names)
-    df_mat = pd.DataFrame(distance_matrix(df.values, df.values), index=df.index, columns=df.index)
+    df = pd.DataFrame(ant_pos, columns=["x", "y", "z"], index=ant_names)
+    df_mat = pd.DataFrame(
+        distance_matrix(df.values, df.values), index=df.index, columns=df.index
+    )
     logger.debug("".join(("\n", str(df_mat))))
 
     if write_distance_matrix:
-        df_mat.to_csv(path_or_buf="{base}/.baseline_distance_matrix.csv".format(base=os.getcwd()), sep="\t")
-        logger.info("Writing distance matrix to {base}/.baseline_distance_matrix.csv ...".format(base=os.getcwd()))
+        df_mat.to_csv(
+            path_or_buf="{base}/.baseline_distance_matrix.csv".format(base=os.getcwd()),
+            sep="\t",
+        )
+        logger.info(
+            "Writing distance matrix to {base}/.baseline_distance_matrix.csv ...".format(
+                base=os.getcwd()
+            )
+        )
 
-    if (baseline_average_distance != 'all') and (baseline_average_nearest != 'all'):
-        logger.error('baseline_average_distance and baseline_average_nearest can not both be specified.')
+    if (baseline_average_distance != "all") and (baseline_average_nearest != "all"):
+        logger.error(
+            "baseline_average_distance and baseline_average_nearest can not both be specified."
+        )
 
         raise Exception("Too many baseline parameters specified.")
 
     # The reference antennas are then given by ref_ant_set = ant_names_set - map_ant_set.
     for ddi, ddi_dict in holog_obs_dict.items():
         for map_id, map_dict in ddi_dict.items():
-            map_ant_set = set(map_dict['ant'].keys())
+            map_ant_set = set(map_dict["ant"].keys())
 
             # Need a copy because of del holog_obs_dict[ddi][map_id]['ant'][map_ant_key] below.
-            map_ant_keys = list(map_dict['ant'].keys())
+            map_ant_keys = list(map_dict["ant"].keys())
 
             for map_ant_key in map_ant_keys:
                 ref_ant_set = ant_names_set - map_ant_set
 
                 # Select reference antennas by distance from mapping antenna
-                if baseline_average_distance != 'all':
+                if baseline_average_distance != "all":
                     sub_ref_ant_set = []
 
                     for ref_ant in ref_ant_set:
@@ -539,18 +597,27 @@ def create_holog_obs_dict(
                             sub_ref_ant_set.append(ref_ant)
 
                     if (not sub_ref_ant_set) and ref_ant_set:
-                        logger.warning('DDI ' + str(ddi) + ' and mapping antenna ' + str(
-                            map_ant_key) + ' has no reference antennas. If baseline_average_distance was specified '
-                                           'increase this distance. See antenna distance matrix in log by setting '
-                                           'debug level to DEBUG in client function.')
+                        logger.warning(
+                            "DDI "
+                            + str(ddi)
+                            + " and mapping antenna "
+                            + str(map_ant_key)
+                            + " has no reference antennas. If baseline_average_distance was specified "
+                            "increase this distance. See antenna distance matrix in log by setting "
+                            "debug level to DEBUG in client function."
+                        )
 
                     ref_ant_set = sub_ref_ant_set
 
                 # Select reference antennas by the n-closest antennas
-                if baseline_average_nearest != 'all':
+                if baseline_average_nearest != "all":
                     sub_ref_ant_set = []
-                    nearest_ant_list = df_mat.loc[map_ant_key, :].loc[list(ref_ant_set)].sort_values().index.tolist()[
-                                       0:baseline_average_nearest]
+                    nearest_ant_list = (
+                        df_mat.loc[map_ant_key, :]
+                        .loc[list(ref_ant_set)]
+                        .sort_values()
+                        .index.tolist()[0:baseline_average_nearest]
+                    )
 
                     logger.debug(nearest_ant_list)
                     for ref_ant in ref_ant_set:
@@ -561,12 +628,20 @@ def create_holog_obs_dict(
                 ##################################################
 
                 if ref_ant_set:
-                    holog_obs_dict[ddi][map_id]['ant'][map_ant_key] = np.array(list(ref_ant_set))
+                    holog_obs_dict[ddi][map_id]["ant"][map_ant_key] = np.array(
+                        list(ref_ant_set)
+                    )
                 else:
-                    del holog_obs_dict[ddi][map_id]['ant'][
-                        map_ant_key]  # Don't want mapping antennas with no reference antennas.
+                    del holog_obs_dict[ddi][map_id]["ant"][
+                        map_ant_key
+                    ]  # Don't want mapping antennas with no reference antennas.
                     logger.warning(
-                        'DDI ' + str(ddi) + ' and mapping antenna ' + str(map_ant_key) + ' has no reference antennas.')
+                        "DDI "
+                        + str(ddi)
+                        + " and mapping antenna "
+                        + str(map_ant_key)
+                        + " has no reference antennas."
+                    )
 
     return holog_obs_dict
 
@@ -600,33 +675,39 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
         vis_int = time_vis[1] - time_vis[0]
 
         if pnt_int < vis_int:
-            avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = \
-                _time_avg_pointing_jit(time_vis,
-                                       pnt_xds.time.values,
-                                       pnt_xds['DIRECTION'].values,
-                                       pnt_xds['DIRECTIONAL_COSINES'].values,
-                                       pnt_xds['ENCODER'].values,
-                                       pnt_xds['POINTING_OFFSET'].values,
-                                       pnt_xds['TARGET'].values,
+            avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = (
+                _time_avg_pointing_jit(
+                    time_vis,
+                    pnt_xds.time.values,
+                    pnt_xds["DIRECTION"].values,
+                    pnt_xds["DIRECTIONAL_COSINES"].values,
+                    pnt_xds["ENCODER"].values,
+                    pnt_xds["POINTING_OFFSET"].values,
+                    pnt_xds["TARGET"].values,
                 )
+            )
         else:
-            avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = \
-                _interpolate_pointing(time_vis,
-                                       pnt_xds.time.values,
-                                       pnt_xds['DIRECTION'].values,
-                                       pnt_xds['DIRECTIONAL_COSINES'].values,
-                                       pnt_xds['ENCODER'].values,
-                                       pnt_xds['POINTING_OFFSET'].values,
-                                       pnt_xds['TARGET'].values,
-                )
+            avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = _interpolate_pointing(
+                time_vis,
+                pnt_xds.time.values,
+                pnt_xds["DIRECTION"].values,
+                pnt_xds["DIRECTIONAL_COSINES"].values,
+                pnt_xds["ENCODER"].values,
+                pnt_xds["POINTING_OFFSET"].values,
+                pnt_xds["TARGET"].values,
+            )
 
         new_pnt_xds = xr.Dataset()
         new_pnt_xds.assign_coords(coords)
 
         new_pnt_xds["DIRECTION"] = xr.DataArray(avg_dir, dims=("time", "az_el"))
-        new_pnt_xds["DIRECTIONAL_COSINES"] = xr.DataArray(avg_dir_cos, dims=("time", "az_el"))
+        new_pnt_xds["DIRECTIONAL_COSINES"] = xr.DataArray(
+            avg_dir_cos, dims=("time", "az_el")
+        )
         new_pnt_xds["ENCODER"] = xr.DataArray(avg_enc, dims=("time", "az_el"))
-        new_pnt_xds["POINTING_OFFSET"] = xr.DataArray(avg_pnt_off, dims=("time", "az_el"))
+        new_pnt_xds["POINTING_OFFSET"] = xr.DataArray(
+            avg_pnt_off, dims=("time", "az_el")
+        )
         new_pnt_xds["TARGET"] = xr.DataArray(avg_tgt, dims=("time", "az_el"))
         new_pnt_xds.attrs = pnt_xds.attrs
         pnt_map_dict[antenna] = new_pnt_xds
@@ -655,14 +736,14 @@ def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt)
             i_time = _get_time_index(pnt_time[i_row], i_time, time_vis, half_int)
             if i_time < 0:
                 break
-        
+
         avg_dir[i_time] += dire[i_row]
         avg_dir_cos[i_time] += dir_cos[i_row]
         avg_enc[i_time] += enc[i_row]
         avg_pnt_off[i_time] += pnt_off[i_row]
         avg_tgt[i_time] += tgt[i_row]
-        avg_wgt[i_time] += 1            
-            
+        avg_wgt[i_time] += 1
+
     avg_dir /= avg_wgt
     avg_dir_cos /= avg_wgt
     avg_enc /= avg_wgt
@@ -679,26 +760,26 @@ def _interpolate_pointing(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt):
     n_row = pnt_time.shape[0]
     pnt_int = np.average(np.diff(pnt_time))
     half_int = (time_vis[1] - time_vis[0]) / 2
-    
+
     avg_dir = np.zeros(the_shape)
     avg_dir_cos = np.zeros(the_shape)
     avg_enc = np.zeros(the_shape)
     avg_pnt_off = np.zeros(the_shape)
     avg_tgt = np.zeros(the_shape)
     avg_wgt = np.zeros(the_shape)
-    
+
     for i_time in range(n_samples):
-        i_row = int(np.floor((time_vis[i_time]-half_int-pnt_time[0])/pnt_int))
+        i_row = int(np.floor((time_vis[i_time] - half_int - pnt_time[0]) / pnt_int))
 
         avg_dir[i_time] += dire[i_row]
         avg_dir_cos[i_time] += dir_cos[i_row]
         avg_enc[i_time] += enc[i_row]
         avg_pnt_off[i_time] += pnt_off[i_row]
         avg_tgt[i_time] += tgt[i_row]
-        avg_wgt[i_time] += 1         
+        avg_wgt[i_time] += 1
 
     return avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt
-    
+
 
 def create_holog_meta_data(holog_file, holog_dict, input_params):
     """Save holog file meta information to json file with the transformation
@@ -730,14 +811,14 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
 
                             cell_sizes.append(xds.attrs["grid_params"]["cell_size"])
                             n_pixs.append(xds.attrs["grid_params"]["n_pix"])
-                            telescope_names.append(xds.attrs['telescope_name'])
+                            telescope_names.append(xds.attrs["telescope_name"])
 
     # cell_sizes_sigfigs = significant_figures_round(cell_sizes, digits=3)
 
     meta_data = {
-        'cell_size': np.min(cell_sizes),
-        'n_pix': np.max(n_pixs),
-        'telescope_name': telescope_names[0]
+        "cell_size": np.min(cell_sizes),
+        "n_pix": np.max(n_pixs),
+        "telescope_name": telescope_names[0],
     }
 
     # Commented out tests on grid_size and cell_size as they do not help us in catching problems since grid_size and
@@ -765,8 +846,8 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
     #     ))
 
     if not (len(set(telescope_names)) == 1):
-        logger.error('Telescope name not consistent: ' + str(telescope_names))
-        meta_data['telescope_name'] = None
+        logger.error("Telescope name not consistent: " + str(telescope_names))
+        meta_data["telescope_name"] = None
 
     output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
 

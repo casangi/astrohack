@@ -6,11 +6,11 @@ from astrohack.visualization.plot_tools import astrohack_cmaps
 
 
 def custom_plots_checker(allowed_type):
-    if allowed_type == 'colormaps':
+    if allowed_type == "colormaps":
         return astrohack_cmaps
-    elif 'split' in allowed_type:
+    elif "split" in allowed_type:
         return custom_split_checker(allowed_type)
-    elif 'units' in allowed_type:
+    elif "units" in allowed_type:
         return custom_unit_checker(allowed_type)
     else:
         return "Not found"
@@ -34,7 +34,7 @@ def custom_unit_checker(unit_type):
 
 
 def custom_split_checker(split_type):
-    if split_type == 'split.complex':
+    if split_type == "split.complex":
         return possible_splits
     else:
         return "Not found"

@@ -17,22 +17,20 @@ from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 from typing import Union, List
 
 
-@toolviper.utils.parameter.validate(    
-    custom_checker=custom_panel_checker
-)
+@toolviper.utils.parameter.validate(custom_checker=custom_panel_checker)
 def panel(
-        image_name: str,
-        panel_name: str = None,
-        clip_type: str = 'sigma',
-        clip_level: Union[float, dict[dict[float]]] = 3.0,
-        exclude_shadows: bool = True,
-        panel_model: str = "rigid",
-        panel_margins: float = 0.05,
-        polarization_state: str = 'I',
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[int, List[str]] = "all",
-        parallel: bool = False,
-        overwrite: bool = False
+    image_name: str,
+    panel_name: str = None,
+    clip_type: str = "sigma",
+    clip_level: Union[float, dict[dict[float]]] = 3.0,
+    exclude_shadows: bool = True,
+    panel_model: str = "rigid",
+    panel_margins: float = 0.05,
+    polarization_state: str = "I",
+    ant: Union[str, List[str]] = "all",
+    ddi: Union[int, List[str]] = "all",
+    parallel: bool = False,
+    overwrite: bool = False,
 ):
     """Analyze holography images to derive panel adjustments
 
@@ -206,35 +204,45 @@ def panel(
     """
     # Doing this here allows it to get captured by locals()
     if panel_name is None:
-        panel_name = get_default_file_name(input_file=image_name, output_type='.panel.zarr')
+        panel_name = get_default_file_name(
+            input_file=image_name, output_type=".panel.zarr"
+        )
 
     panel_params = locals()
 
     input_params = panel_params.copy()
-    assert pathlib.Path(panel_params['image_name']).exists() is True, (
-        logger.error(f"File {panel_params['image_name']} does not exists.")
+    assert pathlib.Path(panel_params["image_name"]).exists() is True, logger.error(
+        f"File {panel_params['image_name']} does not exists."
     )
 
-    image_mds = AstrohackImageFile(panel_params['image_name'])
+    image_mds = AstrohackImageFile(panel_params["image_name"])
     image_mds.open()
 
-    overwrite_file(panel_params['panel_name'], panel_params['overwrite'])
+    overwrite_file(panel_params["panel_name"], panel_params["overwrite"])
 
-    if PANEL_MODEL_DICT[panel_model]['experimental']:
-        logger.warning(f'Using experimental panel fitting model {panel_model}')
+    if PANEL_MODEL_DICT[panel_model]["experimental"]:
+        logger.warning(f"Using experimental panel fitting model {panel_model}")
 
-    if os.path.exists(panel_params['image_name'] + '/.aips'):
-        panel_params['origin'] = 'AIPS'
+    if os.path.exists(panel_params["image_name"] + "/.aips"):
+        panel_params["origin"] = "AIPS"
         process_panel_chunk(panel_params)
 
     else:
-        panel_params['origin'] = 'astrohack'
-        panel_params['version'] = image_mds._input_pars['version']
-        if compute_graph(image_mds, process_panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
+        panel_params["origin"] = "astrohack"
+        panel_params["version"] = image_mds._input_pars["version"]
+        if compute_graph(
+            image_mds,
+            process_panel_chunk,
+            panel_params,
+            ["ant", "ddi"],
+            parallel=parallel,
+        ):
             logger.info("Finished processing")
-            output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_input")
+            output_attr_file = "{name}/{ext}".format(
+                name=panel_params["panel_name"], ext=".panel_input"
+            )
             write_meta_data(output_attr_file, input_params)
-            panel_mds = AstrohackPanelFile(panel_params['panel_name'])
+            panel_mds = AstrohackPanelFile(panel_params["panel_name"])
             panel_mds.open()
 
             return panel_mds
