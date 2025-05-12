@@ -1,4 +1,4 @@
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 from astropy import units as units
 from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord
 from astropy.time import Time
@@ -36,7 +36,7 @@ def convert_unit(unitin, unitout, kind):
     except KeyError:
 
         logger.error("Unrecognized unit kind: " + kind)
-        raise KeyError('Unrecognized unit kind')
+        raise KeyError("Unrecognized unit kind")
 
     inidx = _test_unit(unitin, unitlist)
     ouidx = _test_unit(unitout, unitlist)
@@ -59,7 +59,7 @@ def _test_unit(unit, unitlist):
         idx = unitlist.index(unit)
     except ValueError:
         logger.error("Unrecognized unit: " + unit)
-        raise ValueError('Unit not in list')
+        raise ValueError("Unit not in list")
 
     return idx
 
@@ -67,16 +67,20 @@ def _test_unit(unit, unitlist):
 def to_stokes(grid, pol):
     grid_stokes = np.zeros_like(grid)
 
-    if 'RR' in pol:
+    if "RR" in pol:
         grid_stokes[:, :, 0, :, :] = (grid[:, :, 0, :, :] + grid[:, :, 3, :, :]) / 2
         grid_stokes[:, :, 1, :, :] = (grid[:, :, 1, :, :] + grid[:, :, 2, :, :]) / 2
-        grid_stokes[:, :, 2, :, :] = 1j * (grid[:, :, 1, :, :] - grid[:, :, 2, :, :]) / 2
+        grid_stokes[:, :, 2, :, :] = (
+            1j * (grid[:, :, 1, :, :] - grid[:, :, 2, :, :]) / 2
+        )
         grid_stokes[:, :, 3, :, :] = (grid[:, :, 0, :, :] - grid[:, :, 3, :, :]) / 2
-    elif 'XX' in pol:
+    elif "XX" in pol:
         grid_stokes[:, :, 0, :, :] = (grid[:, :, 0, :, :] + grid[:, :, 3, :, :]) / 2
         grid_stokes[:, :, 1, :, :] = (grid[:, :, 0, :, :] - grid[:, :, 3, :, :]) / 2
         grid_stokes[:, :, 2, :, :] = (grid[:, :, 1, :, :] + grid[:, :, 2, :, :]) / 2
-        grid_stokes[:, :, 3, :, :] = 1j * (grid[:, :, 1, :, :] - grid[:, :, 2, :, :]) / 2
+        grid_stokes[:, :, 3, :, :] = (
+            1j * (grid[:, :, 1, :, :] - grid[:, :, 2, :, :]) / 2
+        )
     else:
         raise Exception("Pol not supported " + str(pol))
 
@@ -111,8 +115,8 @@ def altaz_to_hadec_astropy(az, el, time, x_ant, y_ant, z_ant):
     Returns: Hour angle and Declination
 
     """
-    ant_pos = EarthLocation.from_geocentric(x_ant, y_ant, z_ant, 'meter')
-    mjd_time = Time(casa_time_to_mjd(time), format='mjd', scale='utc')
+    ant_pos = EarthLocation.from_geocentric(x_ant, y_ant, z_ant, "meter")
+    mjd_time = Time(casa_time_to_mjd(time), format="mjd", scale="utc")
     az_el_frame = AltAz(location=ant_pos, obstime=mjd_time)
     ha_dec_frame = HADec(location=ant_pos, obstime=mjd_time)
     azel_coor = SkyCoord(az * units.rad, el * units.rad, frame=az_el_frame)

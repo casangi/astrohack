@@ -105,6 +105,18 @@
                 "string"
             ]
         },
+        "polarization_state": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "str"
+            ],
+            "minlength": 1,
+            "type": [
+                "string",
+                "list"
+            ]
+        },
         "plot_screws": {
             "nullable": false,
             "required": false,
@@ -329,6 +341,64 @@
             ]
         }
     },
+    "AstrohackImageFile.export_phase_fit_results": {
+        "destination": {
+            "nullable": false,
+            "required": true,
+            "type": [
+                "string"
+            ]
+        },
+        "ant": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "str"
+            ],
+            "minlength": 1,
+            "type": [
+                "string",
+                "list"
+            ]
+        },
+        "ddi": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "int"
+            ],
+            "minlength": 1,
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
+        },
+        "angle_unit": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "string"
+            ],
+            "check allowed with": "units.trig"
+        },
+        "length_unit": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "string"
+            ],
+            "check allowed with": "units.length"
+        },
+        "parallel": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "boolean"
+            ]
+        }
+    },
+
     "AstrohackHologFile.select": {
         "ddi": {
             "nullable": false,
@@ -840,6 +910,62 @@
             "type": ["boolean"]
         }
     },
+    "AstrohackPanelFile.export_gain_tables":{
+        "destination":{
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "ant":{
+            "nullable": false,
+            "required": false,
+            "struct_type": ["str"],
+            "minlength": 1,
+            "type": ["string", "list"]
+        },
+        "ddi":{
+            "nullable": false,
+            "required": false,
+            "struct_type": ["int"],
+            "minlength": 1,
+            "type": ["int", "list", "string"]
+        },
+        "wavelengths":{
+            "nullable": true,
+            "required": false,
+            "struct_type": ["float", "int"],
+            "type": ["int", "float", "list", "tuple", "ndarray"]
+        },
+        "wavelength_unit":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.length"
+        },
+        "frequencies":{
+            "nullable": true,
+            "required": false,
+            "struct_type": ["float", "int"],
+            "type": ["int", "float", "list", "tuple", "ndarray"]
+        },
+        "frequency_unit":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.frequency"
+        },
+        "rms_unit":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.length"
+        },
+        "parallel":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        }
+    },
 
     "AstrohackLocitFile.print_array_configuration":{
         "relative":{
@@ -972,6 +1098,12 @@
             "required": false,
             "type": ["string"],
             "check allowed with": "units.time"
+        },
+        "phase_unit":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.trig"
         }
     },
     "AstrohackPositionFile.plot_sky_coverage":{
@@ -1159,6 +1291,43 @@
             "type": ["int"],
             "min": 1,
             "max": 1200
+        }
+    },
+    "AstrohackPositionFile.export_results_to_parminator": {
+        "filename": {
+            "nullable": false,
+            "required": true,
+            "type": [
+                "string"
+            ]
+        },
+        "ant": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "str"
+            ],
+            "minlength": 1,
+            "type": [
+                "string",
+                "list"
+            ]
+        },
+        "ddi": {
+            "nullable": true,
+            "required": false,
+            "type": [
+                "int"
+            ]
+        },
+        "correction_threshold": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "int",
+                "float"
+            ],
+            "min": 0
         }
     }
 }

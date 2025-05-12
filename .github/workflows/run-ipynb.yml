@@ -1,0 +1,18 @@
+# .github/workflows/python-testing-linux.yml
+name: ipynb Tests
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - '**.rst'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - '**.rst'
+
+jobs:
+ 
+  call-testing-linux:
+    uses: casangi/toolviper/.github/workflows/run-ipynb-template.yml@main
+    secrets: inherit

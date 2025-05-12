@@ -2,7 +2,7 @@ import astrohack
 import pathlib
 
 import xarray as xr
-import graphviper.utils.logger as logger
+import toolviper.utils.logger as logger
 
 import astrohack.utils.tools
 
@@ -16,21 +16,28 @@ class Telescope:
             path: Path in which to look for telescope configuration files, defaults to the astrohack package
             data directory if None
         """
-
         self.onaxisoptics = None
         self.ourad = None
         self.inrad = None
         self.nrings = None
         self.ringed = None
+        self.diam = None
+        self.focus = None
 
         self.ant_list = []
 
-        self.filename = self._get_telescope_file_name(name).lower().replace(" ", "_") + ".zarr"
+        self.filename = (
+            self._get_telescope_file_name(name).lower().replace(" ", "_") + ".zarr"
+        )
 
         if path is None:
-            self.filepath = astrohack.utils.tools.file_search(root=astrohack.__path__[0], file_name=self.filename)
+            self.filepath = astrohack.utils.tools.file_search(
+                root=astrohack.__path__[0], file_name=self.filename
+            )
         else:
-            self.filepath = astrohack.utils.tools.file_search(root=path, file_name=self.filename)
+            self.filepath = astrohack.utils.tools.file_search(
+                root=path, file_name=self.filename
+            )
 
         self.read(pathlib.Path(self.filepath).joinpath(self.filename))
 
@@ -45,13 +52,20 @@ class Telescope:
     @classmethod
     def from_xds(cls, xds):
         if xds.attrs["telescope_name"] == "ALMA":
-            telescope_name = "_".join((xds.attrs["telescope_name"], xds.attrs["ant_name"][0:2]))
+            telescope_name = "_".join(
+                (xds.attrs["telescope_name"], xds.attrs["ant_name"][0:2])
+            )
             return cls(telescope_name)
-        elif xds.attrs["telescope_name"] == "EVLA":
+        elif (
+            xds.attrs["telescope_name"] == "EVLA"
+            or xds.attrs["telescope_name"] == "VLA"
+        ):
             telescope_name = "VLA"
             return cls(telescope_name)
         else:
-            raise ValueError('Unsupported telescope {0:s}'.format(xds.attrs['telescope_name']))
+            raise ValueError(
+                "Unsupported telescope {0:s}".format(xds.attrs["telescope_name"])
+            )
 
     @staticmethod
     def _get_telescope_file_name(name):
@@ -63,11 +77,18 @@ class Telescope:
         Returns:
         appropriate telescope object
         """
-        if 'VLA' in name:
-            name = 'VLA'
-        elif 'ALMA' in name:
-            # It does not matter which ALMA layout since the array center is the same
-            name = 'ALMA_DA'
+        name = name.lower()
+        if "ngvla" in name:
+            name = "ngVLA_prototype"
+        elif "vla" in name:
+            name = "VLA"
+        elif "alma" in name:
+            if "dv" in name:
+                name = "ALMA_DV"
+            elif "tp" in name:
+                name = "ALMA_TP"
+            else:
+                name = "ALMA_DA"
 
         return name
 
@@ -78,7 +99,9 @@ class Telescope:
         error = False
 
         if not self.nrings == len(self.inrad) == len(self.ourad):
-            logger.error("Number of panels don't match radii or number of panels list sizes")
+            logger.error(
+                "Number of panels don't match radii or number of panels list sizes"
+            )
             error = True
 
         if not self.onaxisoptics:
@@ -92,9 +115,9 @@ class Telescope:
 
     def _general_consistency(self):
         """
-        For the moment simply raises an Exception since only ringed telescopes are supported at the moment
+        For the moment does nothing as a general consistency test is not yet available
         """
-        raise Exception("General layout telescopes not yet supported")
+        pass
 
     def write(self, filename):
         """
@@ -102,9 +125,19 @@ class Telescope:
         Args:
             filename: Name of the output file
         """
-        ledict = vars(self)
+        obj_dict = vars(self)
         xds = xr.Dataset()
-        xds.attrs = ledict
+        xds.attrs = obj_dict
+        xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
+        return
+
+    def _save_to_dist(self):
+        obj_dict = vars(self)
+        filename = f"{self.filepath}/{self.filename}"
+        obj_dict.pop("filepath", None)
+        obj_dict.pop("filename", None)
+        xds = xr.Dataset()
+        xds.attrs = obj_dict
         xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
         return
 
@@ -127,6 +160,11 @@ class Telescope:
         """
         Prints all the parameters defined for the telescope object
         """
-        ledict = vars(self)
-        for key in ledict:
-            print("{0:15s} = ".format(key) + str(ledict[key]))
+        print(self)
+
+    def __repr__(self):
+        outstr = ""
+        obj_dict = vars(self)
+        for key, item in obj_dict.items():
+            outstr += f"{key:20s} = {str(item)}\n"
+        return outstr

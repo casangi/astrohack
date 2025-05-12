@@ -1,10 +1,12 @@
 import os
 import json
 import shutil
-import graphviper
+import pytest
+import toolviper
 
 import numpy as np
 
+from astrohack.antenna import Telescope
 from astrohack.holog import holog
 from astrohack.panel import panel
 from astrohack.extract_holog import extract_holog
@@ -15,117 +17,99 @@ def relative_difference(result, expected):
     return 2 * np.abs(result - expected) / (abs(result) + abs(expected))
 
 
-class TestPanel():
+class TestPanel:
     @classmethod
     def setup_class(cls):
-        """ setup any state specific to the execution of the given test class
-        such as fetching test data """
-        graphviper.utils.data.download(file="ea25_cal_small_after_fixed.split.ms", folder="data/")
-
-        graphviper.utils.data.download(file='extract_holog_verification.json')
-        graphviper.utils.data.download(file='holog_numerical_verification.json')
+        """setup any state specific to the execution of the given test class
+        such as fetching test data"""
+        toolviper.utils.data.download(
+            file="ea25_cal_small_before_fixed.split.ms", folder="data/"
+        )
 
         extract_pointing(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
             overwrite=True,
-            parallel=False
+            parallel=False,
         )
 
         # Extract holography data using holog_obd_dict
-        holog_mds = extract_holog(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
-            data_column="CORRECTED_DATA",
-            parallel=False,
-            overwrite=True
-        )
 
         extract_holog(
-            ms_name="data/ea25_cal_small_after_fixed.split.ms",
-            point_name="data/ea25_cal_small_after_fixed.split.point.zarr",
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            data_column='CORRECTED_DATA',
+            ms_name="data/ea25_cal_small_before_fixed.split.ms",
+            point_name="data/ea25_cal_small_before_fixed.split.point.zarr",
+            holog_name="data/ea25_cal_small_before_fixed.split.holog.zarr",
+            data_column="CORRECTED_DATA",
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
         holog(
-            holog_name='data/ea25_cal_small_after_fixed.split.holog.zarr',
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
+            holog_name="data/ea25_cal_small_before_fixed.split.holog.zarr",
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
             overwrite=True,
-            parallel=False
-        )
-
-        panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
-            clip_type='relative',
-            clip_level=0.2,
-            panel_margins=0.2,
-            panel_model='rigid',
             parallel=False,
-            overwrite=True
         )
-
-        with open('data/ea25_cal_small_after_fixed.split.image.zarr/.image_attr') as json_attr:
-            cls.json_file = json.load(json_attr)
 
     @classmethod
     def teardown_class(cls):
-        """ teardown any state that was previously setup with a call to setup_class
-        such as deleting test data """
+        """teardown any state that was previously setup with a call to setup_class
+        such as deleting test data"""
         shutil.rmtree("data")
 
     def setup_method(self):
-        """ setup any state specific to all methods of the given class """
+        """setup any state specific to all methods of the given class"""
         pass
 
     def teardown_method(self):
-        """ teardown any state that was previously setup for all methods of the given class """
+        """teardown any state that was previously setup for all methods of the given class"""
         pass
 
     def test_panel_name(self):
         """
-            Check that the panel output name was created correctly.
+        Check that the panel output name was created correctly.
         """
-
-        assert os.path.exists('data/ea25_cal_small_after_fixed.split.panel.zarr')
+        panel_mds = panel(
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            parallel=False,
+            overwrite=True,
+        )
+        assert os.path.exists("data/ea25_cal_small_before_fixed.split.panel.zarr")
 
     def test_panel_ant_id(self):
         """
-           Specify a single antenna to process; check that only that antenna was processed.
+        Specify a single antenna to process; check that only that antenna was processed.
         """
 
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
-            clip_type='relative',
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            panel_name="data/ea25_cal_small_before_fixed.split.panel.zarr",
+            clip_type="relative",
             clip_level=0.2,
             panel_margins=0.2,
-            ant=['ea25'],
-            panel_model='rigid',
+            ant=["ea25"],
+            panel_model="rigid",
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
-        assert list(panel_mds.keys()) == ['ant_ea25']
+        assert list(panel_mds.keys()) == ["ant_ea25"]
 
     def test_panel_ddi(self):
         """
-            Specify a single ddi to process; check that only that ddi was processed.
+        Specify a single ddi to process; check that only that ddi was processed.
         """
 
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
-            clip_type='relative',
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            panel_name="data/ea25_cal_small_before_fixed.split.panel.zarr",
+            clip_type="relative",
             clip_level=0.2,
             panel_margins=0.2,
-            ddi=[0],
-            panel_model='rigid',
+            ddi=["0"],
+            panel_model="rigid",
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
         for ant in panel_mds.keys():
@@ -134,124 +118,145 @@ class TestPanel():
 
     def test_panel_overwrite(self):
         """
-            Specify the output file should be overwritten; check that it WAS.
+        Specify the output file should be overwritten; check that it WAS.
         """
-        initial_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.image.zarr')
-
-        panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
-            clip_type='relative',
-            clip_level=0.2,
-            panel_margins=0.2,
-            panel_model='rigid',
-            parallel=False,
-            overwrite=True
+        initial_time = os.path.getctime(
+            "data/ea25_cal_small_before_fixed.split.image.zarr"
         )
 
-        modified_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.panel.zarr')
+        panel_mds = panel(
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            panel_name="data/ea25_cal_small_before_fixed.split.panel.zarr",
+            clip_type="relative",
+            clip_level=0.2,
+            panel_margins=0.2,
+            panel_model="rigid",
+            parallel=False,
+            overwrite=True,
+        )
+
+        modified_time = os.path.getctime(
+            "data/ea25_cal_small_before_fixed.split.panel.zarr"
+        )
 
         assert initial_time != modified_time
 
     def test_panel_not_overwrite(self):
         """
-           Specify the output file should be NOT be overwritten; check that it WAS NOT.
+        Specify the output file should be NOT be overwritten; check that it WAS NOT.
         """
-        initial_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.panel.zarr')
+        initial_time = os.path.getctime(
+            "data/ea25_cal_small_before_fixed.split.panel.zarr"
+        )
 
         try:
             panel_mds = panel(
-                image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-                panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
-                clip_type='relative',
+                image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+                panel_name="data/ea25_cal_small_before_fixed.split.panel.zarr",
+                clip_type="relative",
                 clip_level=0.2,
                 panel_margins=0.2,
-                panel_model='rigid',
+                panel_model="rigid",
                 parallel=False,
-                overwrite=False
+                overwrite=False,
             )
 
         except FileExistsError:
             pass
 
         finally:
-            modified_time = os.path.getctime('data/ea25_cal_small_after_fixed.split.panel.zarr')
+            modified_time = os.path.getctime(
+                "data/ea25_cal_small_before_fixed.split.panel.zarr"
+            )
 
             assert initial_time == modified_time
 
     def test_panel_mode(self):
         """
-           Specify panel computation mode and check that the data rms responded as expected.
+        Specify panel computation mode and check that the data rms responded as expected.
         """
-        panel_list = ['3-4', '5-27', '5-37', '5-38']
+        panel_list = ["3-4", "5-27", "5-37", "5-38"]
 
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
-            overwrite=True
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            panel_name="data/ea25_cal_small_before_fixed.split.panel.zarr",
+            overwrite=True,
         )
 
-        default_rms = panel_mds["ant_ea25"]["ddi_0"].sel(labels=panel_list).map(np.std).PANEL_SCREWS.values
+        default_rms = (
+            panel_mds["ant_ea25"]["ddi_0"]
+            .sel(labels=panel_list)
+            .map(np.std)
+            .PANEL_SCREWS.values
+        )
 
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/ea25_cal_small_after_fixed.split.panel.zarr',
-            panel_model='mean',
-            overwrite=True
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            panel_name="data/ea25_cal_small_before_fixed.split.panel.zarr",
+            panel_model="mean",
+            overwrite=True,
         )
 
-        mean_rms = panel_mds["ant_ea25"]["ddi_0"].sel(labels=panel_list).map(np.std).PANEL_SCREWS.values
+        mean_rms = (
+            panel_mds["ant_ea25"]["ddi_0"]
+            .sel(labels=panel_list)
+            .map(np.std)
+            .PANEL_SCREWS.values
+        )
 
         assert mean_rms < default_rms
 
     def test_panel_absolute_clip(self):
         """
-           Set cutoff=0 and compare results to known truth value array.
+        Set cutoff=0 and compare results to known truth value array.
         """
-        graphviper.utils.data.download(file='panel_cutoff_mask')
-
-        with open("panel_cutoff_mask.npy", "rb") as array:
-            reference_array = np.load(array)
-
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            clip_type='absolute',
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            clip_type="absolute",
             clip_level=0.0,
+            exclude_shadows=False,
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
-        assert np.all(panel_mds["ant_ea25"]["ddi_0"].MASK.values == reference_array)
+        telescope = Telescope("vla")
+
+        radius = panel_mds["ant_ea25"]["ddi_0"]["RADIUS"].values
+        dish_mask = np.where(radius < telescope.oulim, 1.0, 0)
+        dish_mask = np.where(radius < telescope.inlim, 0, dish_mask)
+        nvalid_pix = np.sum(dish_mask)
+
+        assert np.sum(panel_mds["ant_ea25"]["ddi_0"].MASK.values) == nvalid_pix
 
     def test_panel_relative_clip(self):
         panel_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            clip_type='relative',
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            clip_type="relative",
             clip_level=1,
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
         assert np.sum(panel_mds["ant_ea25"]["ddi_0"].MASK.values) == 1
 
     def test_panel_sigma_clip(self):
         panel_sig2_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/clip_sigma_2.split.panel.zarr',
-            clip_type='sigma',
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            panel_name="data/clip_sigma_2.split.panel.zarr",
+            clip_type="sigma",
             clip_level=2,
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
         n_mask_sig2 = np.sum(panel_sig2_mds["ant_ea25"]["ddi_0"].MASK.values)
 
         panel_sig3_mds = panel(
-            image_name='data/ea25_cal_small_after_fixed.split.image.zarr',
-            panel_name='data/clip_sigma_3.split.panel.zarr',
-            clip_type='sigma',
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            panel_name="data/clip_sigma_3.split.panel.zarr",
+            clip_type="sigma",
             clip_level=3,
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
         n_mask_sig3 = np.sum(panel_sig3_mds["ant_ea25"]["ddi_0"].MASK.values)

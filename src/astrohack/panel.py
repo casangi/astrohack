@@ -1,10 +1,9 @@
 import os
 import pathlib
-import shutil
-import graphviper.utils.logger as logger
-import graphviper.utils.parameter
+import toolviper.utils.logger as logger
+import toolviper.utils.parameter
 
-from astrohack.utils.fits import aips_holog_to_xds
+from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT
 from astrohack.utils.file import overwrite_file
 
 from astrohack.utils.data import write_meta_data
@@ -18,22 +17,20 @@ from astrohack.mds import AstrohackPanelFile, AstrohackImageFile
 from typing import Union, List
 
 
-@graphviper.utils.parameter.validate(
-    
-    custom_checker=custom_panel_checker
-)
+@toolviper.utils.parameter.validate(custom_checker=custom_panel_checker)
 def panel(
-        image_name: str,
-        panel_name: str = None,
-        clip_type: str = 'sigma',
-        clip_level: float = 3.0,
-        panel_model: str = "rigid",
-        panel_margins: float = 0.05,
-        polarization_state: str = 'I',
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[int, List[str]] = "all",
-        parallel: bool = False,
-        overwrite: bool = False
+    image_name: str,
+    panel_name: str = None,
+    clip_type: str = "sigma",
+    clip_level: Union[float, dict[dict[float]]] = 3.0,
+    exclude_shadows: bool = True,
+    panel_model: str = "rigid",
+    panel_margins: float = 0.05,
+    polarization_state: str = "I",
+    ant: Union[str, List[str]] = "all",
+    ddi: Union[int, List[str]] = "all",
+    parallel: bool = False,
+    overwrite: bool = False,
 ):
     """Analyze holography images to derive panel adjustments
 
@@ -45,11 +42,17 @@ def panel(
     *basename* of input file plus holography panel file suffix.
     :type panel_name: str, optional
 
-    :param clip_type: Choose the amplitude clipping algorithm: absolute, relative or sigma, default is sigma
+    :param clip_type: Choose the amplitude clipping algorithm: none, absolute, relative, sigma or noise_threshold, \
+    default is sigma
     :type clip_type: str, optional
 
-    :param clip_level: Choose level of clipping, default is 3 (appropriate for sigma clipping)
-    :type clip_level: float, optional
+    :param clip_level: Choose level of clipping, can also be specified for specific antenna and DDI combinations by \
+    passing a dictionary, default is 3 (appropriate for sigma clipping)
+    :type clip_level: float, dict, optional
+
+    :param exclude_shadows: Exclude regions with significant shadowing from analysis, e.g. secondary supporting arms, \
+    default is True.
+    :type exclude_shadows: bool, optional
 
     :param panel_model: Model of surface fitting function used to fit panel surfaces, None will default to "rigid". \
     Possible models are listed below.
@@ -115,20 +118,48 @@ def panel(
         .. rubric:: Amplitude clipping:
 
         In order to produce results of good quality parts of the aperture with low signal (e.g. the shadow of the
-        secondary mirror support) a mask is defined based on the amplitude of the aperture. There are 3 methods
+        secondary mirror support) a mask is defined based on the amplitude of the aperture. There are 5 methods
         (clip_type parameter) available to define at which level (clip_level) the amplitude is clipped:
 
-        * absolute: In this method the clipping value is taken directly from the clip_level parameter, e.g.:
-                    if the user calls `panel(..., clip_type='absolute', clip_level=3.5)` everything below 3.5 in
+        * none: In this method no amplitude clip is performed, i.e. the clipping value is set to -infinity.
+
+        * absolute: In this method the clipping value is taken directly from the clip_level parameter, e.g.: \
+                    if the user calls `panel(..., clip_type='absolute', clip_level=3.5)` everything below 3.5 in \
                     amplitude will be clipped
-        * relative: In this method the clipping value is derived from the amplitude maximum, e.g.: if the user calls
-                    `panel(..., clip_type='relative', clip_level=0.2) everything below 20% of the maximum amplitude will
-                    be clipped
-        * sigma;    In this method the clipping value is computed from the RMS noise in the amplitude outside the
-                    physical dish, e.g.: if the user calls `panel(clip_type='sigma', clip_level=3)` everything below 3
+        * relative: In this method the clipping value is derived from the amplitude maximum, e.g.: if the user calls \
+                    `panel(..., clip_type='relative', clip_level=0.2) everything below 20% of the maximum amplitude \
+                    will be clipped
+        * sigma:    In this method the clipping value is computed from the RMS noise in the amplitude outside the \
+                    physical dish, e.g.: if the user calls `panel(clip_type='sigma', clip_level=3)` everything below 3 \
                     times the RMS noise in amplitude will be clipped.
 
+        * noise_threshold: In this model the cut is first set to the maximum amplitude outside the disk, a proxy for \
+                    the noise maximum in amplitude, if this preserves a fraction of the aperture disk that is larger \
+                    than the clip_level this is the chosen amplitude cutoff, if not, the cutoff is iteratively lowered \
+                    by 10% until it preservers a fraction of the disk that is larger thatn clip_level. This heuristic \
+                    was created with help from VLA operations.
+
         The default clipping is set to 3 sigma.
+
+        .. rubric:: Passing a dictionary for amplitude clipping:
+
+        The dictionary used for specifying amplitude clippings specific for each antenna and DDI combination must
+        follow the following scheme:
+
+        .. parsed-literal::
+            amp_clip_dict = {
+                ant1_name: {
+                    0: 0.3
+                    1: 0.5
+                }
+                ant2_name: {
+                    0: 0.45
+                    1: 0.21
+                }
+            }
+
+        Where the antenna name is the usual antenna designation e.g. ea24 for the VLA or DV42 for ALMA, and the DDI
+        number must be given as an integer.
 
 
     .. _Description:
@@ -173,72 +204,48 @@ def panel(
     """
     # Doing this here allows it to get captured by locals()
     if panel_name is None:
-        panel_name = get_default_file_name(input_file=image_name, output_type='.panel.zarr')
+        panel_name = get_default_file_name(
+            input_file=image_name, output_type=".panel.zarr"
+        )
 
     panel_params = locals()
 
     input_params = panel_params.copy()
-    assert pathlib.Path(panel_params['image_name']).exists() is True, (
-        logger.error(f"File {panel_params['image_name']} does not exists.")
+    assert pathlib.Path(panel_params["image_name"]).exists() is True, logger.error(
+        f"File {panel_params['image_name']} does not exists."
     )
 
-    image_mds = AstrohackImageFile(panel_params['image_name'])
+    image_mds = AstrohackImageFile(panel_params["image_name"])
     image_mds.open()
 
-    overwrite_file(panel_params['panel_name'], panel_params['overwrite'])
+    overwrite_file(panel_params["panel_name"], panel_params["overwrite"])
 
-    if os.path.exists(panel_params['image_name'] + '/.aips'):
-        panel_params['origin'] = 'AIPS'
+    if PANEL_MODEL_DICT[panel_model]["experimental"]:
+        logger.warning(f"Using experimental panel fitting model {panel_model}")
+
+    if os.path.exists(panel_params["image_name"] + "/.aips"):
+        panel_params["origin"] = "AIPS"
         process_panel_chunk(panel_params)
 
     else:
-        panel_params['origin'] = 'astrohack'
-        if compute_graph(image_mds, process_panel_chunk, panel_params, ['ant', 'ddi'], parallel=parallel):
+        panel_params["origin"] = "astrohack"
+        panel_params["version"] = image_mds._input_pars["version"]
+        if compute_graph(
+            image_mds,
+            process_panel_chunk,
+            panel_params,
+            ["ant", "ddi"],
+            parallel=parallel,
+        ):
             logger.info("Finished processing")
-            output_attr_file = "{name}/{ext}".format(name=panel_params['panel_name'], ext=".panel_input")
+            output_attr_file = "{name}/{ext}".format(
+                name=panel_params["panel_name"], ext=".panel_input"
+            )
             write_meta_data(output_attr_file, input_params)
-            panel_mds = AstrohackPanelFile(panel_params['panel_name'])
+            panel_mds = AstrohackPanelFile(panel_params["panel_name"])
             panel_mds.open()
 
             return panel_mds
         else:
             logger.warning("No data to process")
             return None
-
-
-def _aips_holog_to_astrohack(
-        amp_image: str,
-        dev_image: str,
-        telescope_name: str,
-        holog_name: str,
-        overwrite: bool = False
-):
-    """
-    Package AIPS HOLOG products in a .image.zarr file compatible with astrohack.panel.panel
-
-    This function reads amplitude and deviation FITS files produced by AIPS's HOLOG task and transfers their data onto a
-    .image.zarr file that can be read by panel.
-    Most of the metadata can be inferred from the FITS headers, but it remains necessary to specify the telescope name
-    to be included on the .image.zarr file
-
-    Args:
-        amp_image: Full path to amplitude image
-        dev_image: Full path to deviation image
-        telescope_name: Telescope name to be added to the .zarr file
-        holog_name: Name of the output .zarr file
-        overwrite: Overwrite previous file of same name?
-    """
-    assert pathlib.Path(amp_image).exists() is True, logger.error(f'File {amp_image} does not exists.')
-    assert pathlib.Path(dev_image).exists() is True, logger.error(f'File {dev_image} does not exists.')
-
-    overwrite_file(holog_name, overwrite)
-
-    xds = aips_holog_to_xds(amp_image, dev_image)
-    xds.attrs['telescope_name'] = telescope_name
-
-    if pathlib.Path(holog_name).exists():
-        shutil.rmtree(holog_name, ignore_errors=False, onerror=None)
-
-    xds.to_zarr(holog_name, mode='w', compute=True, consolidated=True)
-    aips_mark = open(holog_name + '/.aips', 'w')
-    aips_mark.close()

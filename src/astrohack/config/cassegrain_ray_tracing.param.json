@@ -1,0 +1,235 @@
+{
+    "create_ray_tracing_telescope_parameter_dict":{
+        "primary_diameter":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 1e-8
+        },
+        "secondary_diameter":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 1e-8
+        },
+        "focal_length":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 1e-8
+        },
+        "z_intercept":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 1e-8
+        },
+        "foci_half_distance":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 1e-8
+        },
+        "inner_radius":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 1e-8
+        },
+        "horn_diameter":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 1e-8
+        },
+        "length_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.length"
+        }
+    },
+    "cassegrain_ray_tracing_pipeline":{
+        "output_xds_filename":{
+            "required": true,
+            "type": ["string"]
+        },
+        "telescope_parameters":{
+            "required": true,
+            "type": ["dict"]
+        },
+        "grid_size":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 0
+        },
+        "grid_resolution":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 1e-8
+        },
+        "grid_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.length"
+        },
+        "x_pointing_offset":{
+            "required": false,
+            "type": ["float", "int"]
+        },
+        "y_pointing_offset":{
+            "required": false,
+            "type": ["float", "int"]
+        },
+        "pointing_offset_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.trig"
+        },
+        "x_focus_offset":{
+            "required": false,
+            "type": ["float", "int"]
+        },
+        "y_focus_offset":{
+            "required": false,
+            "type": ["float", "int"]
+        },
+        "z_focus_offset":{
+            "required": false,
+            "type": ["float", "int"]
+        },
+        "focus_offset_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.length"
+        },
+        "phase_offset":{
+            "required": false,
+            "type": ["float", "int"]
+        },
+        "phase_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.trig"
+        },
+        "observing_wavelength":{
+            "required": false,
+            "type": ["float", "int"],
+            "min": 1e-8
+        },
+        "wavelength_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.length"
+        },
+        "overwrite": {
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        }
+    },
+    "plot_2d_maps_from_rt_xds":{
+        "rt_xds_filename":{
+            "required": true,
+            "type": ["string"]
+        },
+        "keys":{
+            "required": true,
+            "type": ["string", "list"]
+        },
+        "rootname":{
+            "required": true,
+            "type": ["string"]
+        },
+        "phase_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.trig"
+        },
+        "length_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.length"
+        },
+        "colormap":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "colormaps"
+        },
+        "display":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "dpi":{
+            "nullable": false,
+            "required": false,
+            "type": ["int"],
+            "min": 1,
+            "max": 1200
+        }
+    },
+    "plot_radial_projection_from_rt_xds":{
+        "rt_xds_filename":{
+            "required": true,
+            "type": ["string"]
+        },
+        "plot_filename":{
+            "required": true,
+            "type": ["string"]
+        },
+        "nrays":{
+            "required": false,
+            "type": ["int"],
+            "min": 0,
+            "max": 1e3
+        },
+        "display":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "dpi":{
+            "nullable": false,
+            "required": false,
+            "type": ["int"],
+            "min": 1,
+            "max": 1200
+        }
+    },
+    "apply_holog_phase_fitting_to_rt_xds":{
+        "rt_xds_filename":{
+            "required": true,
+            "type": ["string"]
+        },
+        "phase_plot_filename":{
+            "required": true,
+            "type": ["string"]
+        },
+        "fit_pointing_offset":{
+            "required": false,
+            "type": ["boolean"]
+        },
+        "fit_xy_secondary_offset":{
+            "required": false,
+            "type": ["boolean"]
+        },
+        "fit_focus_offset":{
+            "required": false,
+            "type": ["boolean"]
+        },
+        "phase_unit":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with":  "units.trig"
+        },
+        "colormap":{
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "colormaps"
+        },
+        "display":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "dpi":{
+            "required": false,
+            "type": ["int"],
+            "min": 1,
+            "max": 1200
+        }
+    }
+}

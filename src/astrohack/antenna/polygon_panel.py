@@ -15,11 +15,13 @@ class PolygonPanel(BasePanel):
             screws: Positions of the screw over the panel
         """
         if model == PANEL_MODELS[icorpara]:
-            raise Exception('corotatedparaboloid not supported for Polygon based panels')
+            raise Exception(
+                "corotatedparaboloid not supported for Polygon based panels"
+            )
         super().__init__(model, ipanel, screws)
         self.polygon = Polygon(polygon)
         if not self.polygon.is_simple:
-            raise Exception('Polygon must not intersect itself')
+            raise Exception("Polygon must not intersect itself")
         self.center = self.polygon.centroid.x, self.polygon.centroid.y
         return
 
@@ -31,7 +33,7 @@ class PolygonPanel(BasePanel):
         """
         return self.polygon.intersects(Point(point))
 
-    def export_adjustments(self, unit='mm'):
+    def export_adjustments(self, unit="mm"):
         """
         Exports panel screw adjustments to a string
         Args:
@@ -40,8 +42,8 @@ class PolygonPanel(BasePanel):
         Returns:
         String with screw adjustments for this panel
         """
-        string = '{0:8d}'.format(self.ipanel)
-        return string+self.export_screw_adjustments(unit)
+        string = "{0:8d}".format(self.ipanel)
+        return string + self.export_screw_adjustments(unit)
 
     def print_misc(self, verbose=False):
         """
@@ -51,7 +53,7 @@ class PolygonPanel(BasePanel):
         """
         print("########################################")
         print("{0:20s}={1:8d}".format("ipanel", self.ipanel))
-        print("{0:20s}={1:8s}".format("model", " " + self.model))
+        print("{0:20s}={1:8s}".format("model", " " + self.model_name))
         print("{0:20s}={1:8d}".format("nsamp", self.nsamp))
         if verbose:
             for isamp in range(self.nsamp):
@@ -68,7 +70,13 @@ class PolygonPanel(BasePanel):
             ax: matplotlib axes instance
             screws: Display screws in plot
         """
-        plot_polygon(self.polygon, ax=ax, add_points=False, color=self.linecolor, linewidth=self.linewidth)
+        plot_polygon(
+            self.polygon,
+            ax=ax,
+            add_points=False,
+            color=self.linecolor,
+            linewidth=self.linewidth,
+        )
         self.plot_label(ax)
         if screws:
             self.plot_screws(ax)

@@ -1,6 +1,6 @@
 import pathlib
-import graphviper.utils.parameter
-import graphviper.utils.logger as logger
+import toolviper.utils.parameter
+import toolviper.utils.logger as logger
 
 from astrohack.utils.text import get_default_file_name
 from astrohack.utils.file import overwrite_file
@@ -12,13 +12,13 @@ from astrohack.mds import AstrohackPointFile
 from typing import List, Union
 
 
-@graphviper.utils.parameter.validate()
+@toolviper.utils.parameter.validate()
 def extract_pointing(
-        ms_name: str,
-        point_name: str = None,
-        exclude: Union[str, List[str]] = None,
-        parallel: bool = False,
-        overwrite: bool = False,
+    ms_name: str,
+    point_name: str = None,
+    exclude: Union[str, List[str]] = None,
+    parallel: bool = False,
+    overwrite: bool = False,
 ) -> AstrohackPointFile:
     """ Extract pointing data from measurement set.  Creates holography output file.
 
@@ -63,36 +63,44 @@ def extract_pointing(
     """
     # Doing this here allows it to get captured by locals()
     if point_name is None:
-        point_name = get_default_file_name(input_file=ms_name, output_type=".point.zarr")
+        point_name = get_default_file_name(
+            input_file=ms_name, output_type=".point.zarr"
+        )
 
     # Returns the current local variables in dictionary form
     extract_pointing_params = locals()
 
     input_params = extract_pointing_params.copy()
 
-    assert pathlib.Path(extract_pointing_params['ms_name']).exists() is True, (
-        logger.error(f'File {extract_pointing_params["ms_name"]} does not exists.')
+    assert (
+        pathlib.Path(extract_pointing_params["ms_name"]).exists() is True
+    ), logger.error(f'File {extract_pointing_params["ms_name"]} does not exists.')
+
+    overwrite_file(
+        extract_pointing_params["point_name"], extract_pointing_params["overwrite"]
     )
 
-    overwrite_file(extract_pointing_params['point_name'], extract_pointing_params['overwrite'])
-
     pnt_dict = process_extract_pointing(
-        ms_name=extract_pointing_params['ms_name'],
-        pnt_name=extract_pointing_params['point_name'],
-        exclude=extract_pointing_params['exclude'],
-        parallel=extract_pointing_params['parallel']
+        ms_name=extract_pointing_params["ms_name"],
+        pnt_name=extract_pointing_params["point_name"],
+        exclude=extract_pointing_params["exclude"],
+        parallel=extract_pointing_params["parallel"],
     )
 
     # Calling this directly since it is so simple it doesn't need a "_create_{}" function.
     write_meta_data(
-        file_name="{name}/{ext}".format(name=extract_pointing_params['point_name'], ext=".point_input"),
-        input_dict=input_params
+        file_name="{name}/{ext}".format(
+            name=extract_pointing_params["point_name"], ext=".point_input"
+        ),
+        input_dict=input_params,
     )
 
     logger.info(f"Finished processing")
-    point_dict = load_point_file(file=extract_pointing_params["point_name"], dask_load=True)
+    point_dict = load_point_file(
+        file=extract_pointing_params["point_name"], dask_load=True
+    )
 
-    pointing_mds = AstrohackPointFile(extract_pointing_params['point_name'])
+    pointing_mds = AstrohackPointFile(extract_pointing_params["point_name"])
     pointing_mds.open()
 
     return pointing_mds

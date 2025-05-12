@@ -8,8 +8,8 @@ import pathlib
 import numpy as np
 import xarray as xr
 
-import graphviper.utils.logger as logger
-from graphviper.utils.console import Colorize
+import toolviper.utils.logger as logger
+from toolviper.utils.console import Colorize
 
 from astrohack.utils.data import read_meta_data
 
@@ -18,7 +18,7 @@ colorize = Colorize()
 
 
 def load_panel_file(file=None, panel_dict=None, dask_load=True):
-    """ Open panel file.
+    """Open panel file.
 
     Args:
         dask_load ():
@@ -42,25 +42,30 @@ def load_panel_file(file=None, panel_dict=None, dask_load=True):
         raise FileNotFoundError
 
     for ant in ant_list:
-        if 'ant' in ant:
-            ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
-                        os.path.isdir(file + "/" + str(ant))]
+        if "ant" in ant:
+            ddi_list = [
+                dir_name
+                for dir_name in os.listdir(file + "/" + str(ant))
+                if os.path.isdir(file + "/" + str(ant))
+            ]
             panel_data_dict[ant] = {}
 
             for ddi in ddi_list:
-                if 'ddi' in ddi:
+                if "ddi" in ddi:
                     if dask_load:
                         panel_data_dict[ant][ddi] = xr.open_zarr(
-                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi)
+                        )
                     else:
                         panel_data_dict[ant][ddi] = _open_no_dask_zarr(
-                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi)
+                        )
 
     return panel_data_dict
 
 
 def load_image_file(file=None, image_dict=None, dask_load=True):
-    """ Open holography file.
+    """Open holography file.
 
     Args:
         file (str, optional): Path to holography file. Defaults to None.
@@ -85,25 +90,30 @@ def load_image_file(file=None, image_dict=None, dask_load=True):
         raise FileNotFoundError
 
     for ant in ant_list:
-        if 'ant' in ant:
-            ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
-                        os.path.isdir(file + "/" + str(ant))]
+        if "ant" in ant:
+            ddi_list = [
+                dir_name
+                for dir_name in os.listdir(file + "/" + str(ant))
+                if os.path.isdir(file + "/" + str(ant))
+            ]
             ant_data_dict[ant] = {}
 
             for ddi in ddi_list:
-                if 'ddi' in ddi:
+                if "ddi" in ddi:
                     if dask_load:
                         ant_data_dict[ant][ddi] = xr.open_zarr(
-                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi)
+                        )
                     else:
                         ant_data_dict[ant][ddi] = _open_no_dask_zarr(
-                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi)
+                        )
 
     return ant_data_dict
 
 
 def load_locit_file(file=None, locit_dict=None, dask_load=True):
-    """ Open Antenna position (locit) file.
+    """Open Antenna position (locit) file.
 
     Args:
         dask_load ():
@@ -122,8 +132,8 @@ def load_locit_file(file=None, locit_dict=None, dask_load=True):
 
     ant_list = [dir_name for dir_name in os.listdir(file) if os.path.isdir(file)]
 
-    ant_data_dict['obs_info'] = read_meta_data(f'{file}/.observation_info')
-    ant_data_dict['ant_info'] = {}
+    ant_data_dict["observation_info"] = read_meta_data(f"{file}/.observation_info")
+    ant_data_dict["antenna_info"] = {}
 
     if not pathlib.Path(file).exists():
         logger.error("Requested file {} doesn't exist ...".format(colorize.blue(file)))
@@ -131,25 +141,34 @@ def load_locit_file(file=None, locit_dict=None, dask_load=True):
         raise FileNotFoundError
 
     for ant in ant_list:
-        if 'ant' in ant:
-            ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
-                        os.path.isdir(file + "/" + str(ant))]
+        if "ant" in ant:
+            ddi_list = [
+                dir_name
+                for dir_name in os.listdir(file + "/" + str(ant))
+                if os.path.isdir(file + "/" + str(ant))
+            ]
+
             ant_data_dict[ant] = {}
-            ant_data_dict['ant_info'][ant] = read_meta_data(f'{file}/{ant}/.antenna_info')
+            ant_data_dict["antenna_info"][ant] = read_meta_data(
+                f"{file}/{ant}/.antenna_info"
+            )
+
             for ddi in ddi_list:
-                if 'ddi' in ddi:
+                if "ddi" in ddi:
                     if dask_load:
                         ant_data_dict[ant][ddi] = xr.open_zarr(
-                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi)
+                        )
                     else:
                         ant_data_dict[ant][ddi] = _open_no_dask_zarr(
-                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                            "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi)
+                        )
 
     return ant_data_dict
 
 
 def load_position_file(file=None, position_dict=None, dask_load=True, combine=False):
-    """ Open position file.
+    """Open position file.
 
     Args:
         combine ():
@@ -176,31 +195,38 @@ def load_position_file(file=None, position_dict=None, dask_load=True, combine=Fa
 
     if combine:
         for ant in ant_list:
-            if 'ant' in ant:
+            if "ant" in ant:
                 if dask_load:
-                    ant_data_dict[ant] = xr.open_zarr(f'{file}/{ant}')
+                    ant_data_dict[ant] = xr.open_zarr(f"{file}/{ant}")
                 else:
-                    ant_data_dict[ant] = _open_no_dask_zarr(f'{file}/{ant}')
+                    ant_data_dict[ant] = _open_no_dask_zarr(f"{file}/{ant}")
     else:
         for ant in ant_list:
-            if 'ant' in ant:
-                ddi_list = [dir_name for dir_name in os.listdir(file + "/" + str(ant)) if
-                            os.path.isdir(file + "/" + str(ant))]
+            if "ant" in ant:
+                ddi_list = [
+                    dir_name
+                    for dir_name in os.listdir(file + "/" + str(ant))
+                    if os.path.isdir(file + "/" + str(ant))
+                ]
                 ant_data_dict[ant] = {}
                 for ddi in ddi_list:
-                    if 'ddi' in ddi:
+                    if "ddi" in ddi:
                         if dask_load:
                             ant_data_dict[ant][ddi] = xr.open_zarr(
-                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi)
+                            )
 
                         else:
                             ant_data_dict[ant][ddi] = _open_no_dask_zarr(
-                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi))
+                                "{name}/{ant}/{ddi}".format(name=file, ant=ant, ddi=ddi)
+                            )
 
     return ant_data_dict
 
 
-def load_holog_file(file, dask_load=True, load_pnt_dict=True, ant_id=None, ddi_id=None, holog_dict=None):
+def load_holog_file(
+    file, dask_load=True, load_pnt_dict=True, ant_id=None, ddi_id=None, holog_dict=None
+):
     """Loads holog file from disk
 
     Args:
@@ -256,17 +282,17 @@ def load_holog_file(file, dask_load=True, load_pnt_dict=True, ant_id=None, ddi_i
                                         mapping_ant_vis_holog_data_name
                                     )
                                 else:
-                                    holog_dict[ddi][holog_map][ant] = _open_no_dask_zarr(
-                                        mapping_ant_vis_holog_data_name)
+                                    holog_dict[ddi][holog_map][ant] = (
+                                        _open_no_dask_zarr(
+                                            mapping_ant_vis_holog_data_name
+                                        )
+                                    )
 
     if ant_id is None:
         return holog_dict
 
     return holog_dict, _read_data_from_holog_json(
-        holog_file=file,
-        holog_dict=holog_dict,
-        ant_id=ant_id,
-        ddi_id=ddi_id
+        holog_file=file, holog_dict=holog_dict, ant_id=ant_id, ddi_id=ddi_id
     )
 
 
@@ -274,21 +300,25 @@ def overwrite_file(file, overwrite):
     path = pathlib.Path(file)
 
     if (path.exists() is True) and (overwrite is False):
-        logger.error(f'{file} already exists. To overwrite set overwrite to True, or remove current file.')
+        logger.error(
+            f"{file} already exists. To overwrite set overwrite to True, or remove current file."
+        )
 
         raise FileExistsError("{file} exists.".format(file=file))
 
     elif (path.exists() is True) and (overwrite is True):
         if file.endswith(".zarr"):
-            logger.warning(f'{file} will be overwritten.')
+            logger.warning(f"{file} will be overwritten.")
             shutil.rmtree(file)
         else:
-            logger.warning(f'{file} may not be valid astrohack file. Check the file name again.')
+            logger.warning(
+                f"{file} may not be valid astrohack file. Check the file name again."
+            )
             raise Exception(f"IncorrectFileType: {file}")
 
 
 def load_image_xds(file_stem, ant, ddi, dask_load=True):
-    """ Load specific image xds
+    """Load specific image xds
 
     Args:
         dask_load ():
@@ -314,19 +344,21 @@ def load_image_xds(file_stem, ant, ddi, dask_load=True):
         raise FileNotFoundError("Image file: {} not found".format(image_path))
 
 
-def load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None, diagnostic=False):
+def load_point_file(
+    file, ant_list=None, dask_load=True, pnt_dict=None, diagnostic=False
+):
     """Load pointing dictionary from disk.
 
-        Args:
-            file (str): Input zarr file containing pointing dictionary.
-            diagnostic (bool):
-            pnt_dict (dict):
-            dask_load (bool):
-            ant_list (list):
+    Args:
+        file (str): Input zarr file containing pointing dictionary.
+        diagnostic (bool):
+        pnt_dict (dict):
+        dask_load (bool):
+        ant_list (list):
 
-        Returns:
-            dict: Pointing dictionary
-        """
+    Returns:
+        dict: Pointing dictionary
+    """
     if pnt_dict is None:
         pnt_dict = {}
 
@@ -335,7 +367,7 @@ def load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None, diagnost
 
         raise FileNotFoundError
 
-    pnt_dict['point_meta_ds'] = xr.open_zarr(file)
+    pnt_dict["point_meta_ds"] = xr.open_zarr(file)
 
     for ant in os.listdir(file):
         if "ant_" in ant:
@@ -354,15 +386,15 @@ def load_point_file(file, ant_list=None, dask_load=True, pnt_dict=None, diagnost
 def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
     """Read holog file metadata and extract antenna based xds information for each (ddi, holog_map)
 
-        Args:
-            ddi_id ():
-            holog_file (str): holog file name.
-            holog_dict (dict): holog file dictionary containing msxds data.
-            ant_id (int): Antenna id
+    Args:
+        ddi_id ():
+        holog_file (str): holog file name.
+        holog_dict (dict): holog file dictionary containing msxds data.
+        ant_id (int): Antenna id
 
-        Returns:
-            nested dict: nested dictionary (ddi, holog_map, xds) with xds data embedded in it.
-        """
+    Returns:
+        nested dict: nested dictionary (ddi, holog_map, xds) with xds data embedded in it.
+    """
 
     ant_id_str = str(ant_id)
 
@@ -385,21 +417,23 @@ def _read_data_from_holog_json(holog_file, holog_dict, ant_id, ddi_id=None):
 
             for holog_map in holog_json[ant_id_str][ddi].keys():
                 if "map_" in holog_map:
-                    ant_data_dict.setdefault(ddi, {})[holog_map] = holog_dict[ddi][holog_map][ant_id]
+                    ant_data_dict.setdefault(ddi, {})[holog_map] = holog_dict[ddi][
+                        holog_map
+                    ][ant_id]
 
     return ant_data_dict
 
 
 def _open_no_dask_zarr(zarr_name, slice_dict=None):
     """
-        Alternative to xarray open_zarr where the arrays are not Dask Arrays.
+    Alternative to xarray open_zarr where the arrays are not Dask Arrays.
 
-        slice_dict: A dictionary of slice objects for which values to read form a dimension.
-                    For example silce_dict={'time':slice(0,10)} would select the first 10 elements in the time dimension.
-                    If a dim is not specified all values are returned.
-        return:
-            xarray.Dataset()
-        """
+    slice_dict: A dictionary of slice objects for which values to read form a dimension.
+                For example silce_dict={'time':slice(0,10)} would select the first 10 elements in the time dimension.
+                If a dim is not specified all values are returned.
+    return:
+        xarray.Dataset()
+    """
 
     if slice_dict is None:
         slice_dict = {}
@@ -419,7 +453,7 @@ def _open_no_dask_zarr(zarr_name, slice_dict=None):
                 slice_dict_complete[dim] = slice(None)  # No slicing.
 
         if (var_attrs[DIMENSION_KEY][0] == var_name) and (
-                len(var_attrs[DIMENSION_KEY]) == 1
+            len(var_attrs[DIMENSION_KEY]) == 1
         ):
             coords[var_name] = var[
                 slice_dict_complete[var_attrs[DIMENSION_KEY][0]]
@@ -455,7 +489,8 @@ def _check_time_axis_consistency(pnt_dict):
     if fractional_error >= 0.01:
         logger.warning(
             "There is an inconsistency in the data length along the time axis in one or more of the antennas "
-            "POINTING_OFFSET; for more info run the logger in debug mode.")
+            "POINTING_OFFSET; for more info run the logger in debug mode."
+        )
 
         logger.debug("Pointing offset time axis length per antenna")
         logger.debug(str(variable_length))
@@ -470,6 +505,4 @@ def _get_attrs(zarr_obj):
     Returns:
         dict: a group of zarr attributes
     """
-    return {
-        k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")
-    }
+    return {k: v for k, v in zarr_obj.attrs.asdict().items() if not k.startswith("_NC")}

@@ -1,0 +1,55 @@
+{
+    "metadata": {
+        ".zattrs": {
+            "ant_list": [
+                "prototype"
+            ],
+            "array_center": {
+                "m0": {
+                    "unit": "rad",
+                    "value": -1.8782884344112576
+                },
+                "m1": {
+                    "unit": "rad",
+                    "value": 0.5916753430723376
+                },
+                "m2": {
+                    "unit": "m",
+                    "value": 6373580.000000001
+                },
+                "refer": "ITRF",
+                "valid": true
+            },
+            "comment": "Based on latest internal NRAO communication",
+            "diam": 25.0,
+            "focus": "N/A",
+            "gain_wavelengths": [
+                0.20,
+                0.13,
+                0.06,
+                0.03,
+                0.02,
+                0.013,
+                0.01,
+                0.007,
+		0.003
+            ],
+            "magnification": "N/A",
+            "name": "ngVLA prototype",
+            "npanel": 76,
+            "onaxisoptics": false,
+            "panel_list": false,
+            "ringed": false,
+            "screw_description": [
+                "il",
+                "ir",
+                "ol",
+                "or"
+            ]
+        },
+        ".zgroup": {
+            "zarr_format": 2
+        }
+    },
+    "zarr_consolidated_format": 1
+}

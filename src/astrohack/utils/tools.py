@@ -1,29 +1,49 @@
 import os
 import glob
-import graphviper
+import toolviper
 import shutil
-
+import sys
 import numpy as np
-import graphviper.utils.console as console
+import toolviper.utils.console as console
+from contextlib import contextmanager
 
 from casacore import tables
-from graphviper.utils import logger as logger
+from toolviper.utils import logger as logger
 
 from typing import Union
+
+
+@contextmanager
+def silence_stdout():
+    old_target = sys.stdout
+    try:
+        with open(os.devnull, "w") as new_target:
+            sys.stdout = new_target
+            yield new_target
+    finally:
+        sys.stdout = old_target
+
+
+@contextmanager
+def silence_stderr():
+    old_target = sys.stderr
+    try:
+        with open(os.devnull, "w") as new_target:
+            sys.stderr = new_target
+            yield new_target
+    finally:
+        sys.stderr = old_target
 
 
 def file_search(root: str = "/", file_name=None) -> Union[None, str]:
     colorize = console.Colorize()
 
     if root == "/":
-        graphviper.utils.logger.warning(
-            "File search from root could take some time ..."
-        )
+        toolviper.utils.logger.warning("File search from root could take some time ...")
 
-    graphviper.utils.logger.info(
+    toolviper.utils.logger.debug(
         "Searching {root} for {file_name}, please wait ...".format(
-            root=colorize.blue(root),
-            file_name=colorize.blue(file_name)
+            root=colorize.blue(root), file_name=colorize.blue(file_name)
         )
     )
 
@@ -38,7 +58,7 @@ def file_search(root: str = "/", file_name=None) -> Union[None, str]:
 
 
 def split_pointing_table(ms_name, antennas):
-    """ Split pointing table to contain only specified antennas
+    """Split pointing table to contain only specified antennas
 
     :param ms_name: Measurement file
     :type ms_name: str
@@ -49,10 +69,10 @@ def split_pointing_table(ms_name, antennas):
     # Need to get thea antenna-id values for the input antenna names. This is not available in the POINTING table,
     # so we build the values from the ANTENNA table.
 
-    table = "/".join((ms_name, 'ANTENNA'))
-    query = 'select NAME from {table}'.format(table=table)
+    table = "/".join((ms_name, "ANTENNA"))
+    query = "select NAME from {table}".format(table=table)
 
-    ant_names = np.array(tables.taql(query).getcol('NAME'))
+    ant_names = np.array(tables.taql(query).getcol("NAME"))
     ant_id = np.arange(len(ant_names))
 
     query_ant = np.searchsorted(ant_names, antennas)
@@ -62,30 +82,32 @@ def split_pointing_table(ms_name, antennas):
     # Build new POINTING table from the sub-selection of antenna values.
     table = "/".join((ms_name, "POINTING"))
 
-    selection = "select * from {table} where {antennas}".format(table=table, antennas=ant_list)
+    selection = "select * from {table} where {antennas}".format(
+        table=table, antennas=ant_list
+    )
 
     reduced = tables.taql(selection)
 
     # Copy the new table to the source measurement set.
-    table = "/".join((ms_name, 'REDUCED'))
+    table = "/".join((ms_name, "REDUCED"))
 
-    reduced.copy(newtablename='{table}'.format(table=table), deep=True)
+    reduced.copy(newtablename="{table}".format(table=table), deep=True)
     reduced.done()
 
     # Remove old POINTING table.
-    shutil.rmtree("/".join((ms_name, 'POINTING')))
+    shutil.rmtree("/".join((ms_name, "POINTING")))
 
     # Rename REDUCED table to POINTING
     tables.tablerename(
-        tablename="/".join((ms_name, 'REDUCED')),
-        newtablename="/".join((ms_name, 'POINTING'))
+        tablename="/".join((ms_name, "REDUCED")),
+        newtablename="/".join((ms_name, "POINTING")),
     )
 
 
 def get_valid_state_ids(
-        obs_modes,
-        desired_intent="MAP_ANTENNA_SURFACE",
-        excluded_intents=('REFERENCE', 'SYSTEM_CONFIGURATION')
+    obs_modes,
+    desired_intent="MAP_ANTENNA_SURFACE",
+    excluded_intents=("REFERENCE", "SYSTEM_CONFIGURATION"),
 ):
     """
     Get scan and subscan IDs
@@ -121,10 +143,10 @@ def get_telescope_lat_lon_rad(telescope):
     Returns:
     Array center  latitude, longitude and distance to the center of the Earth in meters
     """
-    if telescope.array_center['refer'] == 'ITRF':
-        lon = telescope.array_center['m0']['value']
-        lat = telescope.array_center['m1']['value']
-        rad = telescope.array_center['m2']['value']
+    if telescope.array_center["refer"] == "ITRF":
+        lon = telescope.array_center["m0"]["value"]
+        lat = telescope.array_center["m1"]["value"]
+        rad = telescope.array_center["m2"]["value"]
     else:
 
         msg = f'Unsupported telescope position reference :{telescope.array_center["refer"]}'

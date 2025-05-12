@@ -1,7 +1,7 @@
 import os
 
 import shutil
-import graphviper
+import toolviper
 
 import numpy as np
 
@@ -15,48 +15,48 @@ def relative_difference(result, expected):
     return 2 * np.abs(result - expected) / (abs(result) + abs(expected))
 
 
-class TestLocit():
+class TestLocit:
     @classmethod
     def setup_class(cls):
         """
-            Setup any state specific to the execution of the given test class
-            such as fetching test data
+        Setup any state specific to the execution of the given test class
+        such as fetching test data
         """
-        graphviper.utils.data.download('locit-input-pha.cal', folder='data')
+        toolviper.utils.data.download("locit-input-pha.cal", folder="data")
 
         locit_mds = extract_locit(
             cal_table="data/locit-input-pha.cal",
             locit_name="data/locit-input-pha.locit.zarr",
-            overwrite=True
+            overwrite=True,
         )
 
         position_mds = locit(
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
             elevation_limit=10.0,
-            polarization='both',
-            fit_engine='scipy',
+            polarization="both",
+            fit_engine="scipy",
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
     @classmethod
     def teardown_class(cls):
-        """ teardown any state that was previously setup with a call to setup_class
-        such as deleting test data """
+        """teardown any state that was previously setup with a call to setup_class
+        such as deleting test data"""
         shutil.rmtree("data")
 
     def setup_method(self):
-        """ setup any state specific to all methods of the given class """
+        """setup any state specific to all methods of the given class"""
         pass
 
     def teardown_method(self):
-        """ teardown any state that was previously setup for all methods of the given class """
+        """teardown any state that was previously setup for all methods of the given class"""
         pass
 
     def test_locit_name(self):
         """
-            Run locit with a specified locit_name and expect a file to be created on disk.
+        Run locit with a specified locit_name and expect a file to be created on disk.
         """
 
         assert os.path.exists("data/locit-input-pha.locit.zarr")
@@ -72,10 +72,10 @@ class TestLocit():
             position_name="data/locit-input-pha.position.zarr",
             ant=["ea25"],
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
-        assert list(position_mds.keys()) == ['ant_ea25']
+        assert list(position_mds.keys()) == ["ant_ea25"]
 
     def test_locit_ddi(self):
         """
@@ -89,7 +89,7 @@ class TestLocit():
             ddi=[0],
             combine_ddis="no",
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
         for ant in position_mds.keys():
@@ -98,7 +98,7 @@ class TestLocit():
 
     def test_locit_fit_kterm(self):
         """
-            Run locit with fit_kterm=True and expect a file to be created on disk containing a solution for the kterm.
+        Run locit with fit_kterm=True and expect a file to be created on disk containing a solution for the kterm.
         """
 
         position_mds = locit(
@@ -107,7 +107,7 @@ class TestLocit():
             fit_kterm=True,
             combine_ddis="no",
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
         for ant in position_mds.keys():
@@ -129,9 +129,9 @@ class TestLocit():
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
             fit_delay_rate=True,
-            combine_ddis='no',
+            combine_ddis="no",
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
         for ant in position_mds.keys():
@@ -146,31 +146,23 @@ class TestLocit():
 
     def test_locit_elevation_limit(self):
         """
-            Run locit with elevation_limit=90 and expect locit to fail because there is no available data.
+        Run locit with elevation_limit=90 and expect locit to fail because there is no available data.
         """
 
-        failed = False
-
-        try:
-            position_mds = locit(
+        assert (
+            locit(
                 locit_name="data/locit-input-pha.locit.zarr",
                 position_name="data/locit-input-pha.position.zarr",
                 elevation_limit=90.0,
                 parallel=False,
-                overwrite=True
+                overwrite=True,
             )
-
-            failed = True
-
-        except KeyError:
-            pass
-
-        finally:
-            assert failed == False
+            is None
+        )
 
     def test_locit_polarization(self):
         """
-            Run locit with polarization='R' and check that the file created on disk contains only delays for R.
+        Run locit with polarization='R' and check that the file created on disk contains only delays for R.
         """
 
         position_mds = locit(
@@ -178,7 +170,7 @@ class TestLocit():
             position_name="data/locit-input-pha.position.zarr",
             polarization="R",
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
         for ant in position_mds.keys():
@@ -193,26 +185,32 @@ class TestLocit():
         position_mds = locit(
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
-            combine_ddis='simple',
+            combine_ddis="simple",
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
         for key in position_mds.keys():
-            assert list(position_mds[key].keys()) == ['DECLINATION', 'DELAYS', 'ELEVATION', 'HOUR_ANGLE', 'LST',
-                                                      'MODEL']
+            assert list(position_mds[key].keys()) == [
+                "DECLINATION",
+                "DELAYS",
+                "ELEVATION",
+                "HOUR_ANGLE",
+                "LST",
+                "MODEL",
+            ]
 
     def test_locit_overwrite(self):
         """
-            Simply check that the file modification time has been changed after being overwritten.
+        Simply check that the file modification time has been changed after being overwritten.
         """
         initial_time = os.path.getctime("data/locit-input-pha.position.zarr")
 
-        position_mds = locit(
+        locit(
             locit_name="data/locit-input-pha.locit.zarr",
             position_name="data/locit-input-pha.position.zarr",
             parallel=False,
-            overwrite=True
+            overwrite=True,
         )
 
         modified_time = os.path.getctime("data/locit-input-pha.position.zarr")
@@ -221,16 +219,16 @@ class TestLocit():
 
     def test_locit_not_overwrite(self):
         """
-            Run locit with overwrite=False and expect the file created on disk to not be overwritten.
+        Run locit with overwrite=False and expect the file created on disk to not be overwritten.
         """
         initial_time = os.path.getctime("data/locit-input-pha.position.zarr")
 
         try:
-            position_mds = locit(
+            locit(
                 locit_name="data/locit-input-pha.locit.zarr",
                 position_name="data/locit-input-pha.position.zarr",
                 parallel=False,
-                overwrite=False
+                overwrite=False,
             )
 
         except FileExistsError:

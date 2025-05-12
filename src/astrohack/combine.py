@@ -1,6 +1,6 @@
 import pathlib
-import graphviper.utils.parameter
-import graphviper.utils.logger as logger
+import toolviper.utils.parameter
+import toolviper.utils.logger as logger
 
 from typing import Union, List
 
@@ -14,15 +14,15 @@ from astrohack.utils.text import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
 
-@graphviper.utils.parameter.validate()
+@toolviper.utils.parameter.validate()
 def combine(
-        image_name: str,
-        combine_name: str = None,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[int, List[int]] = "all",
-        weighted: bool = False,
-        parallel: bool = False,
-        overwrite: bool = False
+    image_name: str,
+    combine_name: str = None,
+    ant: Union[str, List[str]] = "all",
+    ddi: Union[int, List[int], str] = "all",
+    weighted: bool = False,
+    parallel: bool = False,
+    overwrite: bool = False,
 ) -> Union[AstrohackImageFile, None]:
     """Combine DDIs in a Holography image to increase SNR
 
@@ -82,34 +82,42 @@ def combine(
     """
 
     if combine_name is None:
-        combine_name = get_default_file_name(input_file=image_name, output_type=".image.zarr")
+        combine_name = get_default_file_name(
+            input_file=image_name, output_type=".image.zarr"
+        )
 
     combine_params = locals()
 
     input_params = combine_params.copy()
 
-    assert pathlib.Path(combine_params['image_name']).exists() is True, (
-        logger.error(f'File {combine_params["image_name"]} does not exists.')
+    assert pathlib.Path(combine_params["image_name"]).exists() is True, logger.error(
+        f'File {combine_params["image_name"]} does not exists.'
     )
 
-    overwrite_file(combine_params['combine_name'], combine_params['overwrite'])
+    overwrite_file(combine_params["combine_name"], combine_params["overwrite"])
 
-    image_mds = AstrohackImageFile(combine_params['image_name'])
+    image_mds = AstrohackImageFile(combine_params["image_name"])
     image_mds.open()
 
-    combine_params['image_mds'] = image_mds
+    combine_params["image_mds"] = image_mds
     image_attr = image_mds._meta_data
 
-    if compute_graph(image_mds, process_combine_chunk, combine_params, ['ant'], parallel=parallel):
+    if compute_graph(
+        image_mds, process_combine_chunk, combine_params, ["ant"], parallel=parallel
+    ):
         logger.info("Finished processing")
 
-        output_attr_file = "{name}/{ext}".format(name=combine_params['combine_name'], ext=".image_attr")
+        output_attr_file = "{name}/{ext}".format(
+            name=combine_params["combine_name"], ext=".image_attr"
+        )
         write_meta_data(output_attr_file, image_attr)
 
-        output_attr_file = "{name}/{ext}".format(name=combine_params['combine_name'], ext=".image_input")
+        output_attr_file = "{name}/{ext}".format(
+            name=combine_params["combine_name"], ext=".image_input"
+        )
         write_meta_data(output_attr_file, input_params)
 
-        combine_mds = AstrohackImageFile(combine_params['combine_name'])
+        combine_mds = AstrohackImageFile(combine_params["combine_name"])
         combine_mds.open()
         return combine_mds
     else:

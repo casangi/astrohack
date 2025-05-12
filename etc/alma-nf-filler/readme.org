@@ -1,0 +1,178 @@
+* Before running the ASDM filler
+
+The near field ALMA holography ASDM to .holog.zarr filler, simply
+refered to as the filler from now on, is dependent on the ASDM python
+bindings that allow python access to the data stores in the ASDM.
+
+** Getting the correct ASDM python bindings
+The ALMA NF holographies are stored in a custom ASDM format that are
+not accessible with the regular ASDM python bindings. To open these
+datasets we need to use custom python ASDM bindings, that are as of
+yet (Mid April 2024) not available to the public via pip.  We have
+stored a copy of these bindings in a dropbox that is available upon
+request to JW Steeb. Once access is granted oyu can download them at:
+[[https://www.dropbox.com/home/astroHACK/ALMA%20Near-Field%20Holography][Jan-Willem's dropbox]]
+
+The same dropbox folder containing the ASDM contains a .tar.gz file
+containing some example ALMA NF ASDMs.
+
+** Adding the paths to the ASDM bindings
+
+When the python bindings have been downloaded it is necessary to add
+them to yout PYTHONPATH and LD_LIBRARY_PATH environment variable to
+make them available in your python environment. In the following
+examples the python bindings are stored at
+"/home/thisuser/python/asdm_bindings", and the user is assumed to be
+using bash as their login shell.
+
+This can be done by a simple addition to your ~/.profile:
+
+#+BEGIN_SRC bash
+asdm_base="/home/thisuser/python/asdm_bindings"
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${asdm_base}/lib
+export PYTHONPATH=$PYTHONPATH:${asdm_base}/lib/python3.12/site-packages/
+#+END_SRC
+
+Or it can be done as a function that will deliver these paths on
+depend to your current shell, by including the following lines to your
+~/.profile:
+
+#+BEGIN_SRC bash
+function add_asdm_path
+{
+    asdm_base="/home/thisuser/python/asdm_bindings"
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${asdm_base}/lib
+    export PYTHONPATH=$PYTHONPATH:${asdm_base}/lib/python3.12/site-packages/
+}
+#+END_SRC
+
+* Running the ASDM filler
+The filler has been writen as a python library that can be accessed
+directly in a python script but a script with an argparse interface
+has been provided for convenience. No installation is necessary to run
+the filler. One can add the filler and convinience scripts to one's
+PYTHONPATH and PATH respectively for ease of use but that is not
+necessary, the easiest way to use them is to simply copy them to the
+working directory where you want to import the NF ASDMs to the
+astrohack format.
+
+** Using the convenience script
+This assumes that the user has copied both the library and the
+convenience script to the current working directory.  The convenience
+script contains a series of options that control the workflow of the
+filler, for example which kind of calibration is to be performed or if
+no calibration is to be performed. The user can see all this options
+by calling for the script's help:
+
+#+BEGIN_EXAMPLE
+$ python import-nf-asdm.py -h
+usage: import-nf-asdm.py [-h] [-t INTEG_TIME] [-v] [-q] [-p {linterp,spline,mean,regression,sqinterp,none}]
+                         [-a {linterp,spline,mean,regression,sqinterp,none}] [-c CAL_CYCLE] [-pc] [-s]
+                         nf_asdm holog_name
+
+Import an ALMA Near-Field ASDM to an AstroHACK .holog.zarr file
+
+positional arguments:
+  nf_asdm               Path to the root of the ALMA NF ASDM
+  holog_name            Name of the created AstroHACK file to be created (no extension)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -t INTEG_TIME, --integ-time INTEG_TIME
+                        Integration time on the visibilities and pointings, defaults to the largest interval of
+                        sampling (pointing or total power)
+  -v, --verbose         Print processing messages
+  -q, --print-and-quit  Print ASDM summary and quit
+  -p {linterp,spline,mean,regression,sqinterp,none}, --phase_cal {linterp,spline,mean,regression,sqinterp,none}
+                        Apply phase calibration of the specified type, "none" means no phase cal
+  -a {linterp,spline,mean,regression,sqinterp,none}, --amplitude_cal {linterp,spline,mean,regression,sqinterp,none}
+                        Apply amplitude calibration of the specified type, "none" means no amplitude cal
+  -c CAL_CYCLE, --cal_cycle CAL_CYCLE
+                        How many subscans in each calibration cycle, i.e. how many subscans from one
+                        calibration to the next
+  -pc, --plot_cal       Plot calibration to png files
+  -s, --save_cal        Save calibration Xarray dataset
+#+END_EXAMPLE
+
+Below is an example of a call to the convenience script where we ask
+the filler to print ou all the processing messages:
+
+#+BEGIN_EXAMPLE
+$ python import-nf-asdm.py ALMA_holography/uid___A002_Xad52b4_X3 X3 -v 
+Processing ALMA_holography/uid___A002_Xad52b4_X3 to X3.holog.zarr...
+
+Total number of pointing samples:  65355
+Total number of valid pointing samples:  55905 
+
+Retrieving Total Power Table...
+Done retrieving Total Power Table, took 25.58 seconds
+Total number of Total power samples:  261420 
+
+Calibrating Amplitude
+Amplitude calibration took: 0.0055 seconds
+Calibrating phase
+Phase calibration took: 0.0041 seconds
+
+Combining pointing and total power data...
+Number of time matched samples: 101029
+Number of filtered samples: 55799
+Combination took 0.66 seconds
+
+[2024-04-16 14:57:54,653]     INFO  toolviper:  Searching /export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack for alma_da.zarr, please wait ...
+Xarray dataset saved to X3.holog.zarr:
+
+<xarray.Dataset>
+Dimensions:                    (time: 55799, chan: 1, pol: 2, lm: 2)
+Coordinates:
+  * time                       (time) float64 4.956e+09 4.956e+09 ... 4.956e+09
+  * chan                       (chan) float64 1.04e+11
+  * pol                        (pol) <U2 'I' 'R2'
+Dimensions without coordinates: lm
+Data variables:
+    VIS                        (time, chan, pol) complex128 (0.00178573188609...
+    WEIGHT                     (time, chan, pol) float64 5.0 5.0 4.0 ... 7.0 7.0
+    DIRECTIONAL_COSINES        (time, lm) float64 0.01073 0.01077 ... -0.01073
+    IDEAL_DIRECTIONAL_COSINES  (time, lm) float64 -0.01086 -0.01076 ... 0.01074
+Attributes: (12/13)
+    holog_map_key:            map_0
+    ddi:                      0
+    parallactic_samples:      [0 0 0]
+    telescope_name:           ALMA
+    antenna_name:             DV08
+    near_field:               True
+    ...                       ...
+    l_min:                    -0.010765705250140348
+    l_max:                    0.010765707429685939
+    m_min:                    -0.010751019298791298
+    m_max:                    0.0108383490450486
+    grid_params:              {'n_pix': 11236, 'cell_size': 0.000204146309443...
+    time_smoothing_interval:  0.04800001624971628
+
+Finished processing (31.28 seconds)
+#+END_EXAMPLE
+
+** Using the library directly
+Another way to use the filler is to write a python script that imports
+the relevant functions from the library. This can be useful when one
+wants to import multiple datasets or import a single dataset with
+multiple parameter settings. Below is an example of such a python
+script where several NF ASDMS are imported.
+
+#+BEGIN_SRC python
+from alma_nf_filler_lib import asdm_to_holog
+
+names = ['X3', 'X4', 'X5', 'X6']
+base = 'ALMA_holography/uid___A002_Xad52b4_'
+
+for name in names:
+    asdm_to_holog(asdm_name=base+name, 
+                  holog_name=name, 
+		  integ_time=None, 
+		  verbose=True, 
+		  fake_corr=False,
+                  cal_amp='linterp', 
+		  cal_pha='linterp', 
+		  cal_cycle=3, 
+		  plot_cal=True, 
+		  save_cal=False)
+#+END_SRC

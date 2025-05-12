@@ -22,7 +22,7 @@
         },
         "grid_interpolation_mode":{
             "type":["str"],
-            "allowed": ["linear", "nearest", "cubic"]
+            "allowed": ["linear", "nearest", "cubic", "gaussian"]
         },
         "chan_average":{
             "type":["boolean"]
@@ -33,6 +33,10 @@
         },
         "scan_average":{
             "type":["boolean"]
+        },
+        "alma_osf_pad": {
+            "type": ["str"],
+            "nullable": true
         },
         "ant":{
             "type":["list", "str"],
@@ -47,11 +51,10 @@
         "to_stokes":{
             "type":["boolean"]
         },
-        "apply_mask":{
-            "type":["boolean"]
-        },
         "phase_fit":{
-            "type":["boolean"]
+            "type":["boolean", "list", "ndarray"],
+            "minlength": 5,
+            "maxlength": 5
         },
         "parallel":{
             "type":["boolean"]

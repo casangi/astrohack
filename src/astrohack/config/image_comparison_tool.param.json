@@ -1,0 +1,118 @@
+{
+    "compare_fits_images":{
+        "image":{
+            "nullable": false,
+            "required": true,
+            "struct_type": ["str"],
+            "type": ["string", "list"]
+        },
+        "reference_image":{
+            "nullable": false,
+            "required": true,
+            "struct_type": ["str"],
+            "type": ["string", "list"]
+        },
+        "telescope_name":{
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "destination":{
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "comparison":{
+            "allowed": ["direct", "scaled"],
+            "nullable": false,
+            "required": false,
+            "type": ["string"]
+        },
+        "zarr_container_name":{
+            "nullable": true,
+            "required": false,
+            "type": ["string"]
+        },
+        "plot_resampled":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "plot_percentuals":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "plot_reference":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "plot_original":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "plot_divided_image":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "plot_scatter":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "export_to_fits":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "colormap":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "colormaps"
+        },
+        "dpi":{
+            "nullable": false,
+            "required": false,
+            "type": ["int"],
+            "min": 1,
+            "max": 1200
+        },
+        "display":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "parallel":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        }
+    },
+    "rms_table_from_zarr_datatree":{
+        "zarr_data_tree": {
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "table_file": {
+            "nullable": false,
+            "required": true,
+            "type": ["string"]
+        },
+        "rms_unit": {
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.length"
+        },
+        "print_table": {
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        }
+    }
+}
