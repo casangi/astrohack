@@ -3,7 +3,7 @@ import numpy as np
 
 def zernike_order_0(u_lin, v_lin):
     # N = 0
-    return np.full_like(u_lin, 1.0)
+    return np.full([u_lin.shape[0], 1], 1.0)
 
 
 def zernike_order_1(u_lin, v_lin):
@@ -11,7 +11,7 @@ def zernike_order_1(u_lin, v_lin):
     nlines = u_lin.shape[0]
     matrix = np.empty([nlines, 3])
     # Fill with previous order
-    matrix[:, 0] = zernike_order_0(u_lin, v_lin)
+    matrix[:, 0] = zernike_order_0(u_lin, v_lin)[:, 0]
 
     # M = -1
     matrix[:, 1] = u_lin
@@ -89,6 +89,8 @@ zernike_functions = [zernike_order_0, zernike_order_1, zernike_order_2, zernike_
 
 
 def fit_zernike_coefficients(pol_state, aperture, u_axis, v_axis, zernike_order, aperture_radius, aperture_inlim):
+    # Selecting Zernike fitting func
+    fitting_func = zernike_functions[zernike_order]
 
     # Creating a unitary radius grid
     u_grid, v_grid = np.meshgrid(u_axis, v_axis)
@@ -97,11 +99,30 @@ def fit_zernike_coefficients(pol_state, aperture, u_axis, v_axis, zernike_order,
 
     # Creating a mask for valid points
     radius = np.sqrt(u_grid**2+v_grid**2)
-    mask = np.where(radius > 1, False, True)
-    mask = np.where(radius < aperture_inlim, False, mask)
+    mask = np.where(radius > 0.9, False, True)
+    mask = np.where(radius < aperture_inlim/aperture_radius, False, mask)
 
     # Vectorize grids with only valid points
     u_lin = u_grid[mask]
     v_lin = u_grid[mask]
     aperture_4d = aperture[:, :, :, mask]
+
+    # Getting fitting matrix
+    matrix = fitting_func(u_lin, v_lin)
+
+    solution_real, norm_real = _fit_an_aperture_plane_component(matrix, aperture_4d[0, 0, 0, :].real)
+    solution_imag, norm_imag = _fit_an_aperture_plane_component(matrix, aperture_4d[0, 0, 0, :].imag)
+
+    return solution_real, solution_imag
+
+
+def _fit_an_aperture_plane_component(matrix, aperture_plane_comp):
+    max_ap = np.nanmax(aperture_plane_comp)
+    result, _, _, _ = np.linalg.lstsq(matrix, aperture_plane_comp/max_ap, rcond=None)
+    return result, max_ap
+
+
+
+
+
 
