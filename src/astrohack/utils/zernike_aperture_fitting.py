@@ -99,7 +99,7 @@ def fit_zernike_coefficients(pol_state, aperture, u_axis, v_axis, zernike_order,
 
     # Creating a mask for valid points
     radius = np.sqrt(u_grid**2+v_grid**2)
-    mask = np.where(radius > 0.9, False, True)
+    mask = np.where(radius > 1, False, True)
     mask = np.where(radius < aperture_inlim/aperture_radius, False, mask)
 
     # Vectorize grids with only valid points
@@ -110,16 +110,21 @@ def fit_zernike_coefficients(pol_state, aperture, u_axis, v_axis, zernike_order,
     # Getting fitting matrix
     matrix = fitting_func(u_lin, v_lin)
 
-    solution_real, norm_real = _fit_an_aperture_plane_component(matrix, aperture_4d[0, 0, 0, :].real)
-    solution_imag, norm_imag = _fit_an_aperture_plane_component(matrix, aperture_4d[0, 0, 0, :].imag)
+    solution_real, rms_real, model_real = _fit_an_aperture_plane_component(matrix, aperture_4d[0, 0, 0, :].real)
+    solution_imag, rms_imag, model_imag = _fit_an_aperture_plane_component(matrix, aperture_4d[0, 0, 0, :].imag)
 
-    return solution_real, solution_imag
+    lemodel = np.empty_like(aperture)
+    lemodel[0, 0, 0, mask].real = model_real
+    lemodel[0, 0, 0, mask].imag = model_imag
+    return solution_real, rms_real, solution_imag, rms_imag, lemodel
 
 
 def _fit_an_aperture_plane_component(matrix, aperture_plane_comp):
     max_ap = np.nanmax(aperture_plane_comp)
     result, _, _, _ = np.linalg.lstsq(matrix, aperture_plane_comp/max_ap, rcond=None)
-    return result, max_ap
+    model = max_ap*np.dot(matrix, result)
+    rms = np.sqrt(np.sum((aperture_plane_comp-model)**2))/model.shape[0]
+    return result, rms, model
 
 
 
