@@ -1,91 +1,167 @@
 import numpy as np
 
+from astrohack.utils.algorithms import data_statistics
+from astrohack.utils.text import statistics_to_text
 
-def zernike_order_0(u_lin, v_lin):
+
+def zernike_order_0(u_ax, v_ax):
     # N = 0
-    return np.full([u_lin.shape[0], 1], 1.0)
+    return np.full([u_ax.shape[0], 1], 1.0)
 
 
-def zernike_order_1(u_lin, v_lin):
+def zernike_order_1(u_ax, v_ax):
     # N = 1
-    nlines = u_lin.shape[0]
+    nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 3])
     # Fill with previous order
-    matrix[:, 0] = zernike_order_0(u_lin, v_lin)[:, 0]
+    matrix[:, 0] = zernike_order_0(u_ax, v_ax)[:, 0]
 
     # M = -1
-    matrix[:, 1] = u_lin
+    matrix[:, 1] = u_ax
     # M = 1
-    matrix[:, 2] = v_lin
+    matrix[:, 2] = v_ax
     return matrix
 
 
-def zernike_order_2(u_lin, v_lin, return_powers=False):
-    nlines = u_lin.shape[0]
+def zernike_order_2(u_ax, v_ax, return_powers=False):
+    nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 6])
     # Fill with previous order
-    matrix[:, 0:3] = zernike_order_1(u_lin, v_lin)
-    u_sq = u_lin**2
-    v_sq = v_lin**2
+    matrix[:, 0:3] = zernike_order_1(u_ax, v_ax)
+    u_pow = [None, None, u_ax**2]
+    v_pow = [None, None, v_ax**2]
 
     # M = -2
-    matrix[:, 3] = 2*u_lin*v_lin
+    matrix[:, 3] = 2*u_ax*v_ax
     # M = 0
-    matrix[:, 4] = -1 + 2 * u_sq + 2 * v_sq ** 2
+    matrix[:, 4] = -1 + 2 * u_pow[2] + 2 * v_pow[2] ** 2
     # M = 2
-    matrix[:, 5] = -u_sq ** 2 + v_sq ** 2
+    matrix[:, 5] = -u_pow[2] ** 2 + v_pow[2] ** 2
 
     if return_powers:
-        return matrix, u_sq, v_sq
+        return matrix, u_pow, v_pow
     else:
         return matrix
 
 
-def zernike_order_3(u_lin, v_lin, return_powers=False):
-    nlines = u_lin.shape[0]
+def zernike_order_3(u_ax, v_ax, return_powers=False):
+    nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 10])
     # Fill with previous order
-    matrix[:, 0:6], u_sq, v_sq = zernike_order_2(u_lin, v_lin, return_powers=True)
+    matrix[:, 0:6], u_pow, v_pow = zernike_order_2(u_ax, v_ax, return_powers=True)
+    u_pow.append(u_pow[2]*u_ax)
+    v_pow.append(v_pow[2]*v_ax)
 
-    u_cb = u_sq*u_lin
-    v_cb = v_sq*v_lin
     # M = -3
-    matrix[:, 6] = -u_cb + 3 * u_lin * v_sq
+    matrix[:, 6] = -u_pow[3] + 3 * u_ax * v_pow[2]
     # M = -1
-    matrix[:, 7] = -2 * u_lin + 3 * u_cb + 3 * u_lin * v_sq
+    matrix[:, 7] = -2 * u_ax + 3 * u_pow[3] + 3 * u_ax * v_pow[2]
     # M = 1
-    matrix[:, 8] = -2 * v_lin + 3 * v_cb + 3 * u_sq * v_lin
+    matrix[:, 8] = -2 * v_ax + 3 * v_pow[3] + 3 * u_pow[2] * v_ax
     # M = 3
-    matrix[:, 9] = -v_cb + 3 * v_cb + 3 * u_sq * v_lin
+    matrix[:, 9] = -v_pow[3] + 3 * v_pow[3] + 3 * u_pow[2] * v_ax
 
     if return_powers:
-        return matrix, u_sq, u_cb, v_sq, v_cb
+        return matrix, u_pow, v_pow
     else:
         return matrix
 
 
-def zernike_order_4(u_lin, v_lin):
-    nlines = u_lin.shape[0]
+def zernike_order_4(u_ax, v_ax, return_powers=False):
+    nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 15])
     # Fill with previous order
-    matrix[:, 0:10], u_sq, u_cb, v_sq, v_cb = zernike_order_3(u_lin, v_lin, return_powers=True)
-    u_qu = u_sq**2
-    v_qu = v_sq**2
+    matrix[:, 0:10], u_pow, v_pow = zernike_order_3(u_ax, v_ax, return_powers=True)
+    u_pow.append(u_pow[2]**2)
+    v_pow.append(v_pow[2]**2)
 
     # M = -4
-    matrix[:, 10] = -4*u_cb*v_lin + 4*u_lin*v_cb
+    matrix[:, 10] = -4*u_pow[3]*v_ax + 4*u_ax*v_pow[3]
     # M = -2
-    matrix[:, 11] = -6*u_lin*v_lin + 8*u_cb*v_lin + 8*u_lin*v_cb
+    matrix[:, 11] = -6*u_ax*v_ax + 8*u_pow[3]*v_ax + 8*u_ax*v_pow[3]
     # M = 0
-    matrix[:, 12] = 1 - 6*u_sq - 6*v_sq + 6*u_qu + 12*u_sq*v_sq + 6*v_qu
+    matrix[:, 12] = 1 - 6*u_pow[2] - 6*v_pow[2] + 6*u_pow[4] + 12*u_pow[2]*v_pow[2] + 6*v_pow[4]
     # M = 2
-    matrix[:, 13] = 3*u_sq - 3*v_sq - 4*u_qu + 4*v_qu
+    matrix[:, 13] = 3*u_pow[2] - 3*v_pow[2] - 4*u_pow[4] + 4*v_pow[4]
     # M = 4
-    matrix[:, 13] = u_qu - 6*u_sq*v_sq + v_qu
-    return matrix
+    matrix[:, 13] = u_pow[4] - 6*u_pow[2]*v_pow[2] + v_pow[4]
+
+    if return_powers:
+        return matrix, u_pow, v_pow
+    else:
+        return matrix
 
 
-zernike_functions = [zernike_order_0, zernike_order_1, zernike_order_2, zernike_order_3, zernike_order_4]
+def zernike_order_5(u_ax, v_ax, return_powers=False):
+    nlines = u_ax.shape[0]
+    matrix = np.empty([nlines, 21])
+    # Fill with previous order
+    matrix[:, 0:15], u_pow, v_pow = zernike_order_4(u_ax, v_ax, return_powers=True)
+    u_pow.append(u_pow[4] * u_ax)
+    v_pow.append(v_pow[4] * v_ax)
+
+    # M = -5
+    matrix[:, 15] = u_pow[5] - 10*u_pow[3]*v_pow[2] + 5*u_ax*v_pow[4]
+    # M = -3
+    matrix[:, 16] = 4*u_pow[3] - 12*u_ax*v_pow[2] - 5*u_pow[5] + 10*u_pow[3]*v_pow[2] + 15*u_ax*v_pow[4]
+    # M = -1
+    matrix[:, 17] = (3 * u_ax - 12 * u_pow[3] - 12 * u_ax * v_pow[2] + 10 * u_pow[5] + 20 * u_pow[3] * v_pow[2] +
+                     10 * u_ax * v_pow[4])
+    # M = 1
+    matrix[:, 18] = (3 * v_ax - 12 * v_pow[3] - 12 * v_ax * u_pow[2] + 10 * v_pow[5] + 20 * v_pow[3] * u_pow[2] +
+                     10 * v_ax * u_pow[4])
+    # M = 3
+    matrix[:, 19] = - 4*v_pow[3] + 12*v_ax*u_pow[2] + 5*v_pow[5] - 10*v_pow[3]*u_pow[2] - 15*v_ax*u_pow[4]
+    # M = 5
+    matrix[:, 20] = v_pow[5] - 10*v_pow[3]*u_pow[2] + 5*v_ax*u_pow[4]
+
+    if return_powers:
+        return matrix, u_pow, v_pow
+    else:
+        return matrix
+
+
+def zernike_order_6(u_ax, v_ax, return_powers=False):
+    nlines = u_ax.shape[0]
+    matrix = np.empty([nlines, 28])
+    # Fill with previous order
+    matrix[:, 0:21], u_pow, v_pow = zernike_order_5(u_ax, v_ax, return_powers=True)
+    u_pow.append(u_pow[5] * u_ax)
+    v_pow.append(v_pow[5] * v_ax)
+    u3v = u_pow[3]*v_ax
+    uv3 = u_ax*v_pow[3]
+    u5v = u_pow[5]*v_ax
+    uv5 = u_ax*v_pow[5]
+    u3v3 = u_pow[3]*v_pow[3]
+    u2v4 = u_pow[2]*v_pow[4]
+    u4v2 = u_pow[4]*v_pow[2]
+    u2v2 = u_pow[2]*v_pow[2]
+
+    # M = -6
+    matrix[:, 21] = 6*u5v - 20*u3v3 + 6*uv5
+    # M = -4
+    matrix[:, 22] = 20*u3v - 20*uv3 - 24*u5v + 24*uv5
+    # M = -2
+    matrix[:, 23] = 12*u_ax*v_ax - 40*u3v - 40*uv3 + 30*u5v + 60*u3v3 - 30*uv5
+    # M = 0
+    matrix[:, 24] = (-1 + 12*u_pow[2] + 12*v_pow[2] - 30*u_pow[4] - 60*u2v2 - 30*v_pow[4] + 20*u_pow[6] +
+                     60*u4v2 + 60*u2v4 + 20*v_pow[6])
+    # M = 2
+    matrix[:, 25] = -6*u_pow[2] + 6*v_pow[2] + 20*u_pow[4] - 20*v_pow[4] - 15*u_pow[6] - 15*u4v2 + 15*u2v4 + 15*v_pow[6]
+    # M = 4
+    matrix[:, 26] = -5*u_pow[4] + 30*u2v2 - 5*v_pow[4] + 6*u_pow[6] - 30*u4v2 - 30*u2v4 + 6*v_pow[6]
+    # M = 6
+    matrix[:, 27] = -u_pow[6] + 15*u4v2 - 15*u2v4 + v_pow[6]
+
+    print(statistics_to_text(data_statistics(matrix[:, 21:])))
+    if return_powers:
+        return matrix, u_pow, v_pow
+    else:
+        return matrix
+
+
+zernike_functions = [zernike_order_0, zernike_order_1, zernike_order_2, zernike_order_3, zernike_order_4,
+                     zernike_order_5, zernike_order_6]
 
 
 def fit_zernike_coefficients(pol_state, aperture, u_axis, v_axis, zernike_order, aperture_radius, aperture_inlim):
