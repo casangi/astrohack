@@ -1,5 +1,5 @@
 import numpy as np
-
+from scipy import optimize as opt
 from astrohack.utils.algorithms import data_statistics
 from astrohack.utils.text import statistics_to_text
 
@@ -153,21 +153,19 @@ def zernike_order_6(u_ax, v_ax, return_powers=False):
     # M = 6
     matrix[:, 27] = -u_pow[6] + 15*u4v2 - 15*u2v4 + v_pow[6]
 
-    print(statistics_to_text(data_statistics(matrix[:, 21:])))
+    print(np.sum(~np.isfinite(matrix)), )
+
     if return_powers:
         return matrix, u_pow, v_pow
     else:
         return matrix
 
 
-zernike_functions = [zernike_order_0, zernike_order_1, zernike_order_2, zernike_order_3, zernike_order_4,
-                     zernike_order_5, zernike_order_6]
+zernike_matrix_functions = [zernike_order_0, zernike_order_1, zernike_order_2, zernike_order_3, zernike_order_4,
+                            zernike_order_5, zernike_order_6]
 
 
-def fit_zernike_coefficients(pol_state, aperture, u_axis, v_axis, zernike_order, aperture_radius, aperture_inlim):
-    # Selecting Zernike fitting func
-    fitting_func = zernike_functions[zernike_order]
-
+def fit_zernike_coefficients(fitting_method, aperture, u_axis, v_axis, zernike_order, aperture_radius, aperture_inlim):
     # Creating a unitary radius grid
     u_grid, v_grid = np.meshgrid(u_axis, v_axis, indexing='ij')
     u_grid /= aperture_radius
@@ -191,11 +189,21 @@ def fit_zernike_coefficients(pol_state, aperture, u_axis, v_axis, zernike_order,
     uv_idx_grid[:, 0] = u_idx_grd[mask]
     uv_idx_grid[:, 1] = v_idx_grd[mask]
 
-    # Getting fitting matrix
-    matrix = fitting_func(u_lin, v_lin)
+    matrix_func = zernike_matrix_functions[zernike_order]
+    matrix = matrix_func(u_lin, v_lin)
 
-    solution_real, rms_real, model_real_lin = _fit_an_aperture_plane_component(matrix, aperture_4d[0, 0, 0, :].real)
-    solution_imag, rms_imag, model_imag_lin = _fit_an_aperture_plane_component(matrix, aperture_4d[0, 0, 0, :].imag)
+    if fitting_method == 'numpy least squares':
+        solution_real, rms_real, model_real_lin = (
+            _fit_an_aperture_plane_component_np_least_squares(matrix, aperture_4d[0, 0, 0, :].real))
+        solution_imag, rms_imag, model_imag_lin = (
+            _fit_an_aperture_plane_component_np_least_squares(matrix, aperture_4d[0, 0, 0, :].imag))
+    elif fitting_method == 'scipy least squares':
+        solution_real, rms_real, model_real_lin = (
+            _fit_an_aperture_plane_component_scipy_opt_lst_sq(matrix, aperture_4d[0, 0, 0, :].real))
+        solution_imag, rms_imag, model_imag_lin = (
+            _fit_an_aperture_plane_component_scipy_opt_lst_sq(matrix, aperture_4d[0, 0, 0, :].imag))
+    else:
+        raise Exception(f"Unknown fitting method {fitting_method}")
 
     # Regridding model
     model = np.full_like(aperture, np.nan+np.nan*1j, dtype=complex)
@@ -203,12 +211,27 @@ def fit_zernike_coefficients(pol_state, aperture, u_axis, v_axis, zernike_order,
     return solution_real, rms_real, solution_imag, rms_imag, model
 
 
-def _fit_an_aperture_plane_component(matrix, aperture_plane_comp):
+def _fit_an_aperture_plane_component_np_least_squares(matrix, aperture_plane_comp):
     max_ap = np.nanmax(aperture_plane_comp)
     result, _, _, _ = np.linalg.lstsq(matrix, aperture_plane_comp/max_ap, rcond=None)
     model = max_ap*np.matmul(matrix, result)
     rms = np.sqrt(np.sum((aperture_plane_comp-model)**2))/model.shape[0]
     return result, rms, model
+
+
+def _scipy_fitting_func(coeffs, matrix, aperture):
+    return aperture - np.matmul(matrix, coeffs)
+
+
+def _fit_an_aperture_plane_component_scipy_opt_lst_sq(matrix, aperture_plane_comp):
+    initial_pars = np.ones(matrix.shape[1])
+    max_ap = np.nanmax(aperture_plane_comp)
+    norm_aperture = aperture_plane_comp/max_ap
+    args = [matrix, norm_aperture]
+    results = opt.least_squares(_scipy_fitting_func, initial_pars, args=args)
+    model = max_ap*np.matmul(matrix, results.x)
+    rms = np.sqrt(np.sum((aperture_plane_comp-model)**2))/model.shape[0]
+    return results.x, rms, model
 
 
 
