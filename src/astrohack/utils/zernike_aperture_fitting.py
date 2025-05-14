@@ -93,7 +93,7 @@ def fit_zernike_coefficients(pol_state, aperture, u_axis, v_axis, zernike_order,
     fitting_func = zernike_functions[zernike_order]
 
     # Creating a unitary radius grid
-    u_grid, v_grid = np.meshgrid(u_axis, v_axis)
+    u_grid, v_grid = np.meshgrid(u_axis, v_axis, indexing='ij')
     u_grid /= aperture_radius
     v_grid /= aperture_radius
 
@@ -107,22 +107,30 @@ def fit_zernike_coefficients(pol_state, aperture, u_axis, v_axis, zernike_order,
     v_lin = u_grid[mask]
     aperture_4d = aperture[:, :, :, mask]
 
+    # Creating grid reconstruction
+    u_idx = np.arange(u_axis.shape[0], dtype=int)
+    v_idx = np.arange(v_axis.shape[0], dtype=int)
+    u_idx_grd, v_idx_grd = np.meshgrid(u_idx, v_idx, indexing='ij')
+    uv_idx_grid = np.empty([u_lin.shape[0], 2], dtype=int)
+    uv_idx_grid[:, 0] = u_idx_grd[mask]
+    uv_idx_grid[:, 1] = v_idx_grd[mask]
+
     # Getting fitting matrix
     matrix = fitting_func(u_lin, v_lin)
 
-    solution_real, rms_real, model_real = _fit_an_aperture_plane_component(matrix, aperture_4d[0, 0, 0, :].real)
-    solution_imag, rms_imag, model_imag = _fit_an_aperture_plane_component(matrix, aperture_4d[0, 0, 0, :].imag)
+    solution_real, rms_real, model_real_lin = _fit_an_aperture_plane_component(matrix, aperture_4d[0, 0, 0, :].real)
+    solution_imag, rms_imag, model_imag_lin = _fit_an_aperture_plane_component(matrix, aperture_4d[0, 0, 0, :].imag)
 
-    lemodel = np.empty_like(aperture)
-    lemodel[0, 0, 0, mask].real = model_real
-    lemodel[0, 0, 0, mask].imag = model_imag
-    return solution_real, rms_real, solution_imag, rms_imag, lemodel
+    # Regridding model
+    model = np.full_like(aperture, np.nan+np.nan*1j, dtype=complex)
+    model[0, 0, 0, uv_idx_grid[:, 0], uv_idx_grid[:, 1]] = model_real_lin[:] + 1j*model_imag_lin[:]
+    return solution_real, rms_real, solution_imag, rms_imag, model
 
 
 def _fit_an_aperture_plane_component(matrix, aperture_plane_comp):
     max_ap = np.nanmax(aperture_plane_comp)
     result, _, _, _ = np.linalg.lstsq(matrix, aperture_plane_comp/max_ap, rcond=None)
-    model = max_ap*np.dot(matrix, result)
+    model = max_ap*np.matmul(matrix, result)
     rms = np.sqrt(np.sum((aperture_plane_comp-model)**2))/model.shape[0]
     return result, rms, model
 
