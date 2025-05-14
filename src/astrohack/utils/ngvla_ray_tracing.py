@@ -7,17 +7,14 @@ import toolviper.utils.logger as logger
 import time
 
 from astrohack.utils import convert_unit, twopi, data_statistics, gauss_elimination
-from astrohack.visualization.plot_tools import (
-    get_proper_color_map,
-    create_figure_and_axes,
-    well_positioned_colorbar,
-    close_figure,
-    compute_extent,
-    scatter_plot,
+from astrohack.utils.ray_tracing_general import (
+    moller_trumbore_algorithm,
+    jitted_triangle_find,
+    nanvec3d,
+    intblankval,
 )
+from astrohack.visualization.plot_tools import *
 
-nanvec3d = np.array([np.nan, np.nan, np.nan])
-intblankval = -1000
 return_line = "\033[F"
 
 
@@ -102,57 +99,8 @@ def inner_product_1d_jit(vec_a, vec_b):
 
 
 @njit(cache=True, nogil=True)
-def moller_trumbore_algorithm(ray_origin, ray_vector, pa, pb, pc):
-    epsilon = 1e-10
-    edge1 = pb - pa
-    edge2 = pc - pa
-
-    ray_cross_edge2 = np.cross(ray_vector, edge2)
-    determinant = np.dot(edge1, ray_cross_edge2)
-
-    if np.abs(determinant) < epsilon:
-        return False, nanvec3d
-
-    inv_det = 1.0 / determinant
-    s = ray_origin - pa
-    u = inv_det * np.dot(s, ray_cross_edge2)
-
-    if (u < 0 and np.abs(u) > epsilon) or (u > 1 and np.abs(u - 1) > epsilon):
-        return False, nanvec3d
-
-    s_cross_e1 = np.cross(s, edge1)
-    v = inv_det * np.dot(ray_vector, s_cross_e1)
-
-    if (v < 0 and np.abs(v) > epsilon) or (u + v > 1 and np.abs(u + v - 1) > epsilon):
-        return False, nanvec3d
-
-    # At this stage we can compute t to find out where the intersection point is on the line.
-    t = inv_det * np.dot(edge2, s_cross_e1)
-
-    if t > epsilon:  # ray intersection
-        return True, ray_origin + ray_vector * t
-    else:  # This means that there is a line intersection but not a ray intersection.
-        return False, nanvec3d
-
-
-@njit(cache=True, nogil=True)
 def reflect_on_surface(light, normal):
     return light - 2 * np.dot(light, normal) * normal
-
-
-@njit(cache=True, nogil=True)
-def jitted_triangle_find(pr_point, reflection, sc_mesh, sc_pnt):
-    for it, triangle in enumerate(sc_mesh):
-        va = sc_pnt[int(triangle[0])]
-        vb = sc_pnt[int(triangle[1])]
-        vc = sc_pnt[int(triangle[2])]
-        crosses_triangle, point = moller_trumbore_algorithm(
-            pr_point, reflection, va, vb, vc
-        )
-        if crosses_triangle:
-            return it, point
-
-    return intblankval, nanvec3d
 
 
 @njit(cache=True, nogil=True)
