@@ -13,9 +13,7 @@ def zernike_order_1(u_ax, v_ax):
     # N = 1
     nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 3])
-    # Fill with previous order
-    matrix[:, 0] = zernike_order_0(u_ax, v_ax)[:, 0]
-
+    matrix[:, 0] = 1.0
     # M = -1
     matrix[:, 1] = u_ax
     # M = 1
