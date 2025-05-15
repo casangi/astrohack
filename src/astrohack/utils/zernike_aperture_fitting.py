@@ -176,7 +176,7 @@ def fit_zernike_coefficients(fitting_method, aperture, u_axis, v_axis, zernike_o
 
     # Vectorize grids with only valid points
     u_lin = u_grid[mask]
-    v_lin = u_grid[mask]
+    v_lin = v_grid[mask]
     aperture_4d = aperture[:, :, :, mask]
 
     # Creating grid reconstruction
