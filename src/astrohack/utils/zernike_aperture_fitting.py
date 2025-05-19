@@ -206,8 +206,61 @@ def zernike_order_7(u_ax, v_ax, return_powers=False):
         return matrix
 
 
+def zernike_order_8(u_ax, v_ax, return_powers=False):
+    nlines = u_ax.shape[0]
+    matrix = np.empty([nlines, 45])
+    # Fill with previous order
+    matrix[:, 0:36], u_pow, v_pow = zernike_order_7(u_ax, v_ax, return_powers=True)
+    u_pow.append(u_pow[7] * u_ax)
+    v_pow.append(v_pow[7] * v_ax)
+    
+    u2v2 = u_pow[2] * v_pow[2]
+    u3v3 = u_pow[3] * v_pow[3]
+    u4v4 = u_pow[4] * v_pow[4]
+
+    u3v = u_pow[3] * v_ax
+    uv3 = u_ax * v_pow[3]
+    u5v = u_pow[5] * v_ax
+    uv5 = u_ax * v_pow[5]
+    u7v = u_pow[7] * v_ax
+    uv7 = u_ax * v_pow[7]
+    u5v3 = u_pow[5] * v_pow[3]
+    u3v5 = u_pow[3] * v_pow[5]
+    u2v4 = u_pow[2] * v_pow[4]
+    u4v2 = u_pow[4] * v_pow[2]
+    u2v6 = u_pow[2] * v_pow[6]
+    u6v2 = u_pow[6] * v_pow[2]
+    
+    # M -8
+    matrix[:, 36] = 8*(uv7-u7v) + 56*(u5v3 - u3v5)
+    # M -6
+    matrix[:, 37] = -42*(u5v + uv5) + 140*u3v3 + 48*(u7v + uv7) - 112*(u5v3 + u3v5)
+    # M -4
+    matrix[:, 38] = 60*(uv3 - u3v) + 168*(u5v - uv5) + 112*(uv7 - u7v) + 112*(u3v5 - u5v3)
+    # M -2
+    matrix[:, 39] = -20*u_ax*v_ax + 120*(u3v + uv3) - 210*(u5v + uv5) - 420*u3v3 + 112*(uv7 - u7v) + 336*(u5v3 + u3v5)
+    # M 0
+    matrix[:, 40] = (1 - 20*(u_pow[2] + v_pow[2]) + 90*(u_pow[4] + v_pow[4]) + 180*u2v2 - 140*(u_pow[6] + v_pow[6]) -
+                     420*(u4v2 + u2v4) + 70*(u_pow[8] + v_pow[8]) + 280*(u2v6 + u6v2) + 420*u4v4)
+    # M 2
+    matrix[:, 41] = (10*(u_pow[2] - v_pow[2]) - 60*(v_pow[4] - u_pow[4]) + 105*(u4v2 - u2v4) + 105*(u_pow[6] - v_pow[6])
+                     + 56*(v_pow[8] - u_pow[8]) + 112*(u2v6 - u6v2))
+    # M 4
+    matrix[:, 42] = (15*(u_pow[4] + v_pow[4]) - 90*u2v2 - 42*(u_pow[6] + v_pow[6]) + 210*(u2v4 + u4v2) +
+                     28*(u_pow[8] + v_pow[8]) - 112*(u2v6 + u6v2) - 280*u4v4)
+    # M 6
+    matrix[:, 43] = 7*(u_pow[6] - v_pow[6]) + 105*(u2v4 - u4v2) + 8*(v_pow[8] - u_pow[8]) + 112*(u6v2 - u2v6)
+    # M 8
+    matrix[:, 44] = u_pow[8] + v_pow[8] - 28*(u6v2 + u2v6) + 70*u4v4
+
+    if return_powers:
+        return matrix, u_pow, v_pow
+    else:
+        return matrix
+
+
 zernike_matrix_functions = [zernike_order_0, zernike_order_1, zernike_order_2, zernike_order_3, zernike_order_4,
-                            zernike_order_5, zernike_order_6, zernike_order_7]
+                            zernike_order_5, zernike_order_6, zernike_order_7, zernike_order_8]
 
 
 def fit_zernike_coefficients(fitting_method, aperture, u_axis, v_axis, zernike_order, aperture_radius, aperture_inlim):
