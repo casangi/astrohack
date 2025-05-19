@@ -4,6 +4,8 @@ from astrohack.utils.algorithms import data_statistics
 from astrohack.utils.text import statistics_to_text
 
 
+# Cartesian forms for the Zernike Polynomials extracted from Lakshminarayanan & Fleck, Journal of modern Optics 2011.
+
 def zernike_order_0(u_ax, v_ax):
     # N = 0
     return np.full([u_ax.shape[0], 1], 1.0)
@@ -151,7 +153,52 @@ def zernike_order_6(u_ax, v_ax, return_powers=False):
     # M = 6
     matrix[:, 27] = -u_pow[6] + 15*u4v2 - 15*u2v4 + v_pow[6]
 
-    print(np.sum(~np.isfinite(matrix)), )
+    if return_powers:
+        return matrix, u_pow, v_pow
+    else:
+        return matrix
+
+
+def zernike_order_7(u_ax, v_ax, return_powers=False):
+    nlines = u_ax.shape[0]
+    matrix = np.empty([nlines, 36])
+    # Fill with previous order
+    matrix[:, 0:28], u_pow, v_pow = zernike_order_6(u_ax, v_ax, return_powers=True)
+    u_pow.append(u_pow[6] * u_ax)
+    v_pow.append(v_pow[6] * v_ax)
+
+    u5v2 = u_pow[5]*v_pow[2]
+    u2v5 = u_pow[2]*v_pow[5]
+    u3v4 = u_pow[3] * v_pow[4]
+    u4v3 = u_pow[4] * v_pow[3]
+    u3v2 = u_pow[3] * v_pow[2]
+    u2v3 = u_pow[2] * v_pow[3]
+    uv2 = u_ax * v_pow[2]
+    u2v = u_pow[2] * v_ax
+    uv4 = u_ax * v_pow[4]
+    u4v = u_pow[4] * v_ax
+    uv6 = u_ax * v_pow[6]
+    u6v = u_pow[6] * v_ax
+
+    # M = -7
+    matrix[:, 28] = -u_pow[7] + 21*u5v2 - 35*u3v4 + 7*uv6
+    # M = -5
+    matrix[:, 29] = -6*u_pow[5] + 60*u3v2 - 30*uv4 + 7*u_pow[7] - 63*u5v2 - 35*u3v4 + 35*uv6
+    # M = -3
+    matrix[:, 30] = -10*u_pow[3] + 30*uv2 + 30*u_pow[5] - 60*u3v2 - 90*uv4 - 21*u_pow[7] + 21*u5v2 + 105*u3v4 + 63*uv6
+    # M = -1
+    matrix[:, 31] = (-4*u_ax + 30*u_pow[3] + 30*uv2 - 60*u_pow[5] - 120*u3v2 - 60*uv4 - 35*u_pow[7] + 105*u5v2 +
+                     105*u3v4 + 35*uv6)
+    # M = 1
+    matrix[:, 32] = (-4*v_ax + 30*v_pow[3] + 30*u2v - 60*v_pow[5] - 120*u2v3 - 60*u4v - 35*v_pow[7] + 105*u2v5 +
+                     105*u4v3 + 35*u6v)
+    # M = 3 -> Symmetry would suggest that there is a typo here on the paper hence the u6v term having a negative
+    # signal here but not in Lakshminarayanan & Fleck 2011
+    matrix[:, 33] = 10*v_pow[3] - 30*u2v - 30*v_pow[5] + 60*u2v3 + 90*u4v + 21*v_pow[7] - 21*u2v5 - 105*u4v3 + 63*u6v
+    # M = 5
+    matrix[:, 34] = -6*v_pow[5] + 60*u2v3 - 30*u4v + 7*v_pow[7] - 63*u2v5 - 35*u4v3 + 35*u6v
+    # M = 7
+    matrix[:, 35] = v_pow[7] - 21*u2v5 + 35*u4v3 - 7*u6v
 
     if return_powers:
         return matrix, u_pow, v_pow
@@ -160,7 +207,7 @@ def zernike_order_6(u_ax, v_ax, return_powers=False):
 
 
 zernike_matrix_functions = [zernike_order_0, zernike_order_1, zernike_order_2, zernike_order_3, zernike_order_4,
-                            zernike_order_5, zernike_order_6]
+                            zernike_order_5, zernike_order_6, zernike_order_7]
 
 
 def fit_zernike_coefficients(fitting_method, aperture, u_axis, v_axis, zernike_order, aperture_radius, aperture_inlim):
