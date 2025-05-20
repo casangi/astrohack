@@ -37,7 +37,7 @@ from astrohack.visualization.textual_data import (
     export_gains_table_chunk,
     export_phase_fit_chunk,
     print_array_configuration,
-    export_to_parminator,
+    export_to_parminator, export_zernike_fit_chunk,
 )
 from astrohack.visualization.fits import (
     export_to_fits_panel_chunk,
@@ -429,6 +429,36 @@ class AstrohackImageFile(dict):
         pathlib.Path(param_dict["destination"]).mkdir(exist_ok=True)
         compute_graph(
             self, export_phase_fit_chunk, param_dict, ["ant", "ddi"], parallel=parallel
+        )
+
+    @toolviper.utils.parameter.validate(custom_checker=custom_unit_checker)
+    def export_zernike_fit_results(
+        self,
+        destination: str,
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[int]] = "all",
+        parallel: bool = False,
+    ) -> None:
+        """Export phase fit resutls from the data in an AstrohackImageFIle object to ASCII files.
+
+        :param destination: Name of the destination folder to contain ASCII files
+        :type destination: str
+        :param ant: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+        :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param parallel: If True will use an existing astrohack client to produce ASCII files in parallel, default is False
+        :type parallel: bool, optional
+
+        .. _Description:
+
+        Export the results of the phase fitting process in ``astrohack.holog`` for analysis
+        """
+        param_dict = locals()
+
+        pathlib.Path(param_dict["destination"]).mkdir(exist_ok=True)
+        compute_graph(
+            self, export_zernike_fit_chunk, param_dict, ["ant", "ddi"], parallel=parallel
         )
 
 
