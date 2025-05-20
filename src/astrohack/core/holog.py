@@ -103,9 +103,8 @@ def process_holog_chunk(holog_chunk_params):
             )
         )
 
-    zernike_coeffs, zernike_model, zernike_rms = fit_zernike_coefficients(aperture_grid, u_axis, v_axis,
-                                                                          holog_chunk_params['zernike_N_order'],
-                                                                          telescope)
+    zernike_coeffs, zernike_model, zernike_rms, osa_coeff_list = \
+        fit_zernike_coefficients(aperture_grid, u_axis, v_axis, holog_chunk_params['zernike_N_order'], telescope)
 
     orig_pol_axis = pol_axis
     if to_stokes:
@@ -156,6 +155,7 @@ def process_holog_chunk(holog_chunk_params):
         u_prime,
         v_prime,
         orig_pol_axis,
+        osa_coeff_list,
         zernike_coeffs,
         zernike_model,
         zernike_rms,
@@ -252,6 +252,7 @@ def _export_to_xds(
     u_prime,
     v_prime,
     orig_pol_axis,
+    osa_coeff_list,
     zernike_coeffs,
     zernike_model,
     zernike_rms,
@@ -272,7 +273,7 @@ def _export_to_xds(
         phase_corrected_angle, dims=["time", "chan", "pol", "u_prime", "v_prime"]
     )
 
-    xds["ZERNIKE_COEFFICIENTS"] = xr.DataArray(zernike_coeffs, dims=["time", "chan", "orig_pol", "OSA"])
+    xds["ZERNIKE_COEFFICIENTS"] = xr.DataArray(zernike_coeffs, dims=["time", "chan", "orig_pol", "osa"])
     xds["ZERNIKE_MODEL"] = xr.DataArray(zernike_model, dims=["time", "chan", "orig_pol", "u", "v"])
     xds["ZERNIKE_FIT_RMS"] = xr.DataArray(zernike_rms, dims=["time", "chan", "orig_pol"])
 
@@ -294,6 +295,7 @@ def _export_to_xds(
         "u_prime": u_prime,
         "v_prime": v_prime,
         "chan": freq_axis,
+        "osa": osa_coeff_list
     }
     xds = xds.assign_coords(coords)
     xds.to_zarr(

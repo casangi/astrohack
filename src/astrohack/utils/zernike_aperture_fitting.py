@@ -472,7 +472,7 @@ def fit_zernike_coefficients(aperture, u_axis, v_axis, zernike_order, telescope,
                 zernike_coeffs[itime, ichan, ipol] = real_coeffs + 1j*imag_coeffs
                 fit_rms[itime, ichan, ipol] = real_rms + 1j*imag_rms
 
-    return zernike_coeffs, zernike_model, fit_rms
+    return zernike_coeffs, zernike_model, fit_rms, create_osa_coordinates(zernike_order)
 
 
 def _fit_an_aperture_plane_component_np_least_squares(matrix, aperture_plane_comp):
