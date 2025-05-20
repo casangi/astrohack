@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import optimize as opt
-from astrohack.utils.algorithms import data_statistics
+from astrohack.utils.algorithms import data_statistics, create_aperture_mask
 from astrohack.utils.text import statistics_to_text
 
 
@@ -401,16 +401,20 @@ zernike_matrix_functions = [zernike_order_0, zernike_order_1, zernike_order_2, z
                             zernike_order_10]
 
 
-def fit_zernike_coefficients(fitting_method, aperture, u_axis, v_axis, zernike_order, aperture_radius, aperture_inlim):
+def fit_zernike_coefficients(aperture, u_axis, v_axis, zernike_order, telescope,
+                             fitting_method='numpy', mask_arm_shadows=True):
     # Creating a unitary radius grid
+    aperture_radius = telescope.diam/2
     u_grid, v_grid = np.meshgrid(u_axis, v_axis, indexing='ij')
     u_grid /= aperture_radius
     v_grid /= aperture_radius
 
     # Creating a mask for valid points
-    radius = np.sqrt(u_grid**2+v_grid**2)
-    mask = np.where(radius > 1, False, True)
-    mask = np.where(radius < aperture_inlim/aperture_radius, False, mask)
+    if mask_arm_shadows:
+        mask = create_aperture_mask(u_axis, v_axis, telescope.inlim, aperture_radius,
+                                    arm_width=telescope.arm_shadow_width, arm_angle=telescope.arm_shadow_rotation)
+    else:
+        mask = create_aperture_mask(u_axis, v_axis, telescope.inlim, aperture_radius)
 
     # Vectorize grids with only valid points
     u_lin = u_grid[mask]
@@ -428,23 +432,32 @@ def fit_zernike_coefficients(fitting_method, aperture, u_axis, v_axis, zernike_o
     matrix_func = zernike_matrix_functions[zernike_order]
     matrix = matrix_func(u_lin, v_lin)
 
-    if fitting_method == 'numpy least squares':
-        solution_real, rms_real, model_real_lin = (
-            _fit_an_aperture_plane_component_np_least_squares(matrix, aperture_4d[0, 0, 0, :].real))
-        solution_imag, rms_imag, model_imag_lin = (
-            _fit_an_aperture_plane_component_np_least_squares(matrix, aperture_4d[0, 0, 0, :].imag))
-    elif fitting_method == 'scipy least squares':
-        solution_real, rms_real, model_real_lin = (
-            _fit_an_aperture_plane_component_scipy_opt_lst_sq(matrix, aperture_4d[0, 0, 0, :].real))
-        solution_imag, rms_imag, model_imag_lin = (
-            _fit_an_aperture_plane_component_scipy_opt_lst_sq(matrix, aperture_4d[0, 0, 0, :].imag))
+    ntime, nchan, npol = aperture.shape[:3]
+    ncoeffs = matrix.shape[1]
+    zernike_coeffs = np.ndarray([ntime, nchan, npol, ncoeffs], dtype=complex)
+    zernike_model = np.full_like(aperture, np.nan+np.nan*1j, dtype=complex)
+    fit_rms = np.ndarray([ntime, nchan, npol], dtype=complex)
+
+    if fitting_method == 'numpy':
+        fit_func = _fit_an_aperture_plane_component_np_least_squares
+    elif fitting_method == 'scipy':
+        fit_func = _fit_an_aperture_plane_component_np_least_squares
     else:
         raise Exception(f"Unknown fitting method {fitting_method}")
 
-    # Regridding model
-    model = np.full_like(aperture, np.nan+np.nan*1j, dtype=complex)
-    model[0, 0, 0, uv_idx_grid[:, 0], uv_idx_grid[:, 1]] = model_real_lin[:] + 1j*model_imag_lin[:]
-    return solution_real, rms_real, solution_imag, rms_imag, model
+    for itime in range(ntime):
+        for ichan in range(nchan):
+            for ipol in range(npol):
+                real_coeffs, real_rms, real_model = \
+                    fit_func(matrix, aperture_4d[itime, ichan, ipol].real)
+                imag_coeffs, imag_rms, imag_model = \
+                    fit_func(matrix, aperture_4d[itime, ichan, ipol].imag)
+                zernike_model[itime, ichan, ipol, uv_idx_grid[:, 0], uv_idx_grid[:, 1]] = \
+                    real_model[:] + 1j*imag_model[:]
+                zernike_coeffs[itime, ichan, ipol] = real_coeffs + 1j*imag_coeffs
+                fit_rms[itime, ichan, ipol] = real_rms + 1j*imag_rms
+
+    return zernike_coeffs, zernike_model, fit_rms
 
 
 def _fit_an_aperture_plane_component_np_least_squares(matrix, aperture_plane_comp):
