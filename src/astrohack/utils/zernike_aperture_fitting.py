@@ -401,6 +401,21 @@ zernike_matrix_functions = [zernike_order_0, zernike_order_1, zernike_order_2, z
                             zernike_order_10]
 
 
+def create_osa_coordinates(zernike_order, split_nm=False):
+    coordinates = []
+    for n in range(zernike_order+1):
+        if n == 0:
+            coordinates.append([0, 0])
+        else:
+            for m in range(-n, n+1, 2):
+                coordinates.append([n, m])
+
+    if not split_nm:
+        coordinates = [f'N={idx[0]}, M={idx[1]}' for idx in coordinates]
+
+    return coordinates
+
+
 def fit_zernike_coefficients(aperture, u_axis, v_axis, zernike_order, telescope,
                              fitting_method='numpy', mask_arm_shadows=True):
     # Creating a unitary radius grid
