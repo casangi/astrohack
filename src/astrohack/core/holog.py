@@ -6,6 +6,7 @@ from astrohack.antenna.telescope import Telescope
 from astrohack.utils import create_dataset_label
 from astrohack.utils.algorithms import calc_coords
 from astrohack.utils.constants import clight
+from astrohack.utils.zernike_aperture_fitting import fit_zernike_coefficients
 from astrohack.utils.data import read_meta_data
 from astrohack.utils.file import load_holog_file
 from astrohack.utils.imaging import (
@@ -101,6 +102,11 @@ def process_holog_chunk(holog_chunk_params):
                 label=label,
             )
         )
+
+    zernike_coeffs, zernike_model, zernike_rms = fit_zernike_coefficients(aperture_grid, u_axis, v_axis,
+                                                                          holog_chunk_params['zernike_N_order'],
+                                                                          telescope)
+    print("zernike_coeffs=", zernike_coeffs)
 
     if to_stokes:
         beam_grid = astrohack.utils.conversion.to_stokes(beam_grid, pol_axis)

@@ -33,6 +33,7 @@ def holog(
     alma_osf_pad: str = None,
     ant: Union[str, List[str]] = "all",
     ddi: Union[int, List[int]] = "all",
+    zernike_N_order: int = 5,
     to_stokes: bool = True,
     phase_fit: bool = True,
     overwrite: bool = False,
@@ -91,6 +92,9 @@ def holog(
 
     :param ddi: List of ddi to be processed, defaults to "all" when None, ex. 0
     :type ddi: list or int, optional
+
+    :param zernike_N_order: Maximal N order for the Zernike Polynomials to be fitted to the aperture data.
+    :type zernike_N_order: int, optional
 
     :param to_stokes: Dictates whether polarization is computed according to stokes values., defaults to True
     :type to_stokes: bool, optional

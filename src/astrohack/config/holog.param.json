@@ -48,6 +48,12 @@
             "struct type": ["int", "str"],
             "nullable": false
         },
+        "zernike_N_order": {
+            "type": ["int"],
+            "nullable": false,
+            "min": 0,
+            "max": 10
+        },
         "to_stokes":{
             "type":["boolean"]
         },
