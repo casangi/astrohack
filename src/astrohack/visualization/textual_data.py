@@ -397,6 +397,36 @@ def export_phase_fit_chunk(parm_dict):
     string_to_ascii_file(outstr, f"{destination}/image_phase_fit_{antenna}_{ddi}.txt")
 
 
+def export_zernike_fit_chunk(parm_dict):
+    antenna = parm_dict["this_ant"]
+    ddi = parm_dict["this_ddi"]
+    zernike_coeffs = parm_dict["xds_data"]["ZERNIKE_COEFFICIENTS"].values
+    rms = parm_dict["xds_data"]["ZERNIKE_FIT_RMS"].values
+    corr_axis = parm_dict["xds_data"].orig_pol.values
+    freq_axis = parm_dict["xds_data"].chan.values
+    ntime = zernike_coeffs.shape[0]
+    osa_indices = parm_dict["xds_data"].osa.values
+    destination = parm_dict["destination"]
+
+    field_names = ["Indices", "Real", "Imaginary"]
+    alignment = ["l", "c", "c"]
+    outstr = ""
+
+    for itime in range(ntime):
+        for ichan, freq in enumerate(freq_axis):
+            for icorr, corr in enumerate(corr_axis):
+                outstr += f'* map {itime}, Frequency {format_frequency(freq)}, Correlation {corr}:\n'
+                outstr += f'   Fit RMS = {rms[itime, ichan, icorr].real:.8f} + {rms[itime, ichan, icorr].imag:.8f}*i\n\n'
+                table = create_pretty_table(field_names, alignment)
+                for icoeff, coeff in enumerate(zernike_coeffs[itime, ichan, icorr]):
+                    row = [osa_indices[icoeff], f'{coeff.real:.8f}', f'{coeff.imag:.8f}']
+                    table.add_row(row)
+
+                outstr += table.get_string() + "\n\n"
+
+    string_to_ascii_file(outstr, f"{destination}/image_zernike_fit_{antenna}_{ddi}.txt")
+
+
 def print_array_configuration(params, ant_dict, telescope_name):
     """Backend for printing the array configuration onto a table
 
