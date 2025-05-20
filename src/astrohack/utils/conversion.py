@@ -65,6 +65,15 @@ def _test_unit(unit, unitlist):
 
 
 def to_stokes(grid, pol):
+    """
+    Convert gridded 5D data or aperture data from polariza correlations to Stokes
+    Args:
+        grid: Gridded 5D data expected to be of shape [time, chan, pol, x, y]
+        pol: The polarization correlation axis
+
+    Returns:
+        the same data now converted to Stokes parameters
+    """
     grid_stokes = np.zeros_like(grid)
 
     if "RR" in pol:
