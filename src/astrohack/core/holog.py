@@ -106,8 +106,8 @@ def process_holog_chunk(holog_chunk_params):
     zernike_coeffs, zernike_model, zernike_rms = fit_zernike_coefficients(aperture_grid, u_axis, v_axis,
                                                                           holog_chunk_params['zernike_N_order'],
                                                                           telescope)
-    print("zernike_coeffs=", zernike_coeffs)
 
+    orig_pol_axis = pol_axis
     if to_stokes:
         beam_grid = astrohack.utils.conversion.to_stokes(beam_grid, pol_axis)
         aperture_grid = astrohack.utils.conversion.to_stokes(aperture_grid, pol_axis)
@@ -155,7 +155,11 @@ def process_holog_chunk(holog_chunk_params):
         v_axis,
         u_prime,
         v_prime,
-        holog_chunk_params["image_name"],
+        orig_pol_axis,
+        zernike_coeffs,
+        zernike_model,
+        zernike_rms,
+        holog_chunk_params["image_name"]
     )
 
     logger.info(f"Finished processing {label}")
@@ -247,7 +251,11 @@ def _export_to_xds(
     v_axis,
     u_prime,
     v_prime,
-    image_name,
+    orig_pol_axis,
+    zernike_coeffs,
+    zernike_model,
+    zernike_rms,
+    image_name
 ):
     # Todo: Add Paralactic angle as a non-dimension coordinate dependant on time.
     xds = xr.Dataset()
@@ -264,6 +272,10 @@ def _export_to_xds(
         phase_corrected_angle, dims=["time", "chan", "pol", "u_prime", "v_prime"]
     )
 
+    xds["ZERNIKE_COEFFICIENTS"] = xr.DataArray(zernike_coeffs, dims=["time", "chan", "orig_pol", "OSA"])
+    xds["ZERNIKE_MODEL"] = xr.DataArray(zernike_model, dims=["time", "chan", "orig_pol", "u", "v"])
+    xds["ZERNIKE_FIT_RMS"] = xr.DataArray(zernike_rms, dims=["time", "chan", "orig_pol"])
+
     xds.attrs["aperture_resolution"] = aperture_resolution
     xds.attrs["ant_id"] = ant_id
     xds.attrs["ant_name"] = ant_name
@@ -273,6 +285,7 @@ def _export_to_xds(
     xds.attrs["phase_fitting"] = phase_fit_results
 
     coords = {
+        "orig_pol": orig_pol_axis,
         "pol": pol_axis,
         "l": l_axis,
         "m": m_axis,
