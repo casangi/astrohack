@@ -68,14 +68,6 @@ def process_holog_chunk(holog_chunk_params):
             data=beam_grid, parallactic_angle_dict=ant_data_dict[ddi]
         )
 
-    ###############
-
-    if to_stokes:
-        beam_grid = astrohack.utils.conversion.to_stokes(beam_grid, pol_axis)
-        pol_axis = ["I", "Q", "U", "V"]
-
-    ###############
-
     if holog_chunk_params["scan_average"]:
         beam_grid = np.mean(beam_grid, axis=0)[None, ...]
         time_centroid = np.mean(np.array(time_centroid))
@@ -110,6 +102,11 @@ def process_holog_chunk(holog_chunk_params):
             )
         )
 
+    if to_stokes:
+        beam_grid = astrohack.utils.conversion.to_stokes(beam_grid, pol_axis)
+        aperture_grid = astrohack.utils.conversion.to_stokes(aperture_grid, pol_axis)
+        pol_axis = ["I", "Q", "U", "V"]
+
     amplitude, phase, u_prime, v_prime = _crop_and_split_aperture(
         aperture_grid, u_axis, v_axis, telescope
     )
@@ -131,6 +128,7 @@ def process_holog_chunk(holog_chunk_params):
     )
 
     aperture_resolution = _compute_aperture_resolution(l_axis, m_axis, used_wavelength)
+
     _export_to_xds(
         beam_grid,
         aperture_grid,
