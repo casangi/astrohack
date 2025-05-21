@@ -385,22 +385,37 @@ def simple_imshow_map_plot(
     x_label="X axis [m]",
     y_label="Y axis [m]",
     z_label="Z Scale",
+    transpose=False,
+    extent=None
 ):
     if zlim is None:
         minmax = [np.nanmin(gridded_2d_arr), np.nanmax(gridded_2d_arr)]
     else:
         minmax = zlim
+    if extent is None:
+        extent = compute_extent(x_axis, y_axis, margin=0.1)
+
     ax.set_title(title)
-    extent = compute_extent(x_axis, y_axis, margin=0.1)
-    im = ax.imshow(
-        gridded_2d_arr.T,
-        cmap=cmap,
-        extent=extent,
-        interpolation="nearest",
-        vmin=minmax[0],
-        vmax=minmax[1],
-        origin="lower",
-    )
+    if transpose:
+        im = ax.imshow(
+            gridded_2d_arr.T,
+            cmap=cmap,
+            extent=extent,
+            interpolation="nearest",
+            vmin=minmax[0],
+            vmax=minmax[1],
+            origin="lower",
+        )
+    else:
+        im = ax.imshow(
+            gridded_2d_arr,
+            cmap=cmap,
+            extent=extent,
+            interpolation="nearest",
+            vmin=minmax[0],
+            vmax=minmax[1],
+        )
+
     well_positioned_colorbar(ax, fig, im, z_label)
     ax.set_xlim(extent[:2])
     ax.set_ylim(extent[2:])
