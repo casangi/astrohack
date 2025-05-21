@@ -20,8 +20,6 @@ from astrohack.visualization.plot_tools import (
     create_figure_and_axes,
     close_figure,
     plot_boxes_limits_and_labels,
-    get_proper_color_map,
-    well_positioned_colorbar,
     scatter_plot,
     simple_imshow_map_plot
 )
@@ -890,60 +888,28 @@ def plot_beam_by_pol(laxis, maxis, pol, beam_image, basename, parm_dict):
     """
 
     fig, axes = create_figure_and_axes(parm_dict["figure_size"], [1, 2])
-    extent = [laxis[0], laxis[-1], maxis[0], maxis[-1]]
-    norm = "Nomalized"
+    norm_z_label = f"Z Scale [Normalized]"
+    x_label = f'L axis [{parm_dict["angle_unit"]}]'
+    y_label = f'M axis [{parm_dict["angle_unit"]}]'
 
     if parm_dict["complex_split"] == "cartesian":
         vmin = np.min([np.nanmin(beam_image.real), np.nanmin(beam_image.imag)])
         vmax = np.max([np.nanmax(beam_image.real), np.nanmax(beam_image.imag)])
-        plot_beam_sub(
-            extent,
-            axes[0],
-            fig,
-            beam_image.real,
-            "Real part",
-            parm_dict,
-            vmin,
-            vmax,
-            norm,
-        )
-        plot_beam_sub(
-            extent,
-            axes[1],
-            fig,
-            beam_image.imag,
-            "Imag. part",
-            parm_dict,
-            vmin,
-            vmax,
-            norm,
-        )
+        simple_imshow_map_plot(axes[0], fig, laxis, maxis, beam_image.real, "Real part", parm_dict['colormap'],
+                               [vmin, vmax], x_label=x_label, y_label=y_label, z_label=norm_z_label)
+        simple_imshow_map_plot(axes[1], fig, laxis, maxis, beam_image.imag, "Imaginary part", parm_dict['colormap'],
+                               [vmin, vmax], x_label=x_label, y_label=y_label, z_label=norm_z_label)
     else:
         scale = convert_unit("rad", parm_dict["phase_unit"], "trigonometric")
         amplitude = np.absolute(beam_image)
         phase = np.angle(beam_image) * scale
-        plot_beam_sub(
-            extent,
-            axes[0],
-            fig,
-            amplitude,
-            "Amplitude",
-            parm_dict,
-            np.nanmin(amplitude[amplitude > 1e-8]),
-            np.nanmax(amplitude),
-            norm,
-        )
-        plot_beam_sub(
-            extent,
-            axes[1],
-            fig,
-            phase,
-            "Phase",
-            parm_dict,
-            -np.pi * scale,
-            np.pi * scale,
-            parm_dict["phase_unit"],
-        )
+
+        simple_imshow_map_plot(axes[0], fig, laxis, maxis, amplitude, "Amplitude", parm_dict['colormap'],
+                               [np.nanmin(amplitude[amplitude > 1e-8]), np.nanmax(amplitude)],
+                               x_label=x_label, y_label=y_label, z_label=norm_z_label)
+        simple_imshow_map_plot(axes[1], fig, laxis, maxis, phase, "Phase", parm_dict['colormap'],
+                               [-np.pi * scale, np.pi * scale], x_label=x_label, y_label=y_label,
+                               z_label=f"Phase [{parm_dict['phase_unit']}]")
 
     plot_name = add_prefix(
         add_prefix(basename, parm_dict["complex_split"]), "image_beam"
@@ -954,36 +920,6 @@ def plot_beam_by_pol(laxis, maxis, pol, beam_image, basename, parm_dict):
     )
     close_figure(fig, suptitle, plot_name, parm_dict["dpi"], parm_dict["display"])
     return
-
-
-def plot_beam_sub(extent, axis, fig, beam_image, label, parm_dict, vmin, vmax, zunit):
-    """
-    Plot beam panel
-    Args:
-        extent: the full X and Y extents
-        axis: the matplotlib axis instance
-        fig: The figure onto which to add panel
-        beam_image: the beam image to plot
-        label: The label on the panel
-        parm_dict: dictionary with general and plotting parameters
-        vmin: Minimum in panel
-        vmax: Maximum in panel
-        zunit: Unit for the map
-
-    """
-    colormap = get_proper_color_map(parm_dict["colormap"])
-    im = axis.imshow(
-        beam_image,
-        cmap=colormap,
-        interpolation="nearest",
-        extent=extent,
-        vmin=vmin,
-        vmax=vmax,
-    )
-    well_positioned_colorbar(axis, fig, im, f"Z Scale [{zunit}]")
-    axis.set_xlabel(f'L axis [{parm_dict["angle_unit"]}]')
-    axis.set_ylabel(f'M axis [{parm_dict["angle_unit"]}]')
-    axis.set_title(label)
 
 
 def plot_zernike_model_chunk(parm_dict):
