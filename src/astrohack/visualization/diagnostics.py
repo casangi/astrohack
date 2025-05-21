@@ -25,20 +25,13 @@ from astrohack.visualization.plot_tools import (
 )
 
 
-def _calc_index(n, m):
-    if n >= m:
-        return n % m
-    else:
-        return n
-
-
-def _extract_indices(l, m, squared_radius):
+def _extract_indices(laxis, maxis, squared_radius):
     indices = []
 
-    assert l.shape[0] == m.shape[0], "l, m must be same size."
+    assert laxis.shape[0] == maxis.shape[0], "l, m must be same size."
 
-    for i in range(l.shape[0]):
-        squared_sum = np.power(l[i], 2) + np.power(m[i], 2)
+    for i in range(laxis.shape[0]):
+        squared_sum = np.power(laxis[i], 2) + np.power(maxis[i], 2)
         if squared_sum <= squared_radius:
             indices.append(i)
 
@@ -54,12 +47,12 @@ def _matplotlib_calibration_inspection_function(
     radius = np.power(data.grid_params["cell_size"] * delta, 2)
     pol_index = np.squeeze(np.where(data.pol.values == pol))
 
-    l = data.DIRECTIONAL_COSINES.values[..., 0]
-    m = data.DIRECTIONAL_COSINES.values[..., 1]
+    laxis = data.DIRECTIONAL_COSINES.values[..., 0]
+    maxis = data.DIRECTIONAL_COSINES.values[..., 1]
 
-    assert l.shape[0] == m.shape[0], "l, m dimensions don't match!"
+    assert laxis.shape[0] == maxis.shape[0], "l, m dimensions don't match!"
 
-    indices = _extract_indices(l=l, m=m, squared_radius=radius)
+    indices = _extract_indices(laxis=laxis, maxis=maxis, squared_radius=radius)
 
     vis = data.isel(time=indices).VIS
     times = Time(vis.time.data - UNIX_CONVERSION, format="unix").iso
@@ -104,7 +97,7 @@ def calibration_plot_chunk(param_dict):
 
     assert l_axis.shape[0] == m_axis.shape[0], "l, m dimensions don't match!"
 
-    indices = _extract_indices(l=l_axis, m=m_axis, squared_radius=radius)
+    indices = _extract_indices(laxis=l_axis, maxis=m_axis, squared_radius=radius)
 
     if complex_split == "cartesian":
         vis_dict = {
