@@ -159,6 +159,7 @@ def process_holog_chunk(holog_chunk_params):
         zernike_coeffs,
         zernike_model,
         zernike_rms,
+        holog_chunk_params['zernike_N_order'],
         holog_chunk_params["image_name"]
     )
 
@@ -256,6 +257,7 @@ def _export_to_xds(
     zernike_coeffs,
     zernike_model,
     zernike_rms,
+    zernike_n_order,
     image_name
 ):
     # Todo: Add Paralactic angle as a non-dimension coordinate dependant on time.
@@ -284,6 +286,7 @@ def _export_to_xds(
     xds.attrs["time_centroid"] = np.array(time_centroid)
     xds.attrs["ddi"] = ddi
     xds.attrs["phase_fitting"] = phase_fit_results
+    xds.attrs["zernike_N_order"] = zernike_n_order
 
     coords = {
         "orig_pol": orig_pol_axis,
