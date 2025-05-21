@@ -439,6 +439,87 @@
             ]
         }
     },
+    "AstrohackImageFile.plot_zernike_model": {
+        "destination": {
+            "nullable": false,
+            "required": true,
+            "type": [
+                "string"
+            ]
+        },
+        "ant": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "str"
+            ],
+            "minlength": 1,
+            "type": [
+                "string",
+                "list"
+            ]
+        },
+        "ddi": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "int"
+            ],
+            "minlength": 1,
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
+        },
+        "display": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "boolean"
+            ]
+        },
+        "colormap": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "string"
+            ],
+            "check allowed with": "colormaps"
+        },
+        "figure_size": {
+            "nullable": true,
+            "required": false,
+            "struct_type": [
+                "float"
+            ],
+            "minlength": 2,
+            "maxlength": 2,
+            "type": [
+                "list",
+                "tuple",
+                "ndarray"
+            ]
+        },
+        "dpi": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "int"
+            ],
+            "min": 1,
+            "max": 1200
+        },
+        "parallel": {
+            "nullable": false,
+            "required": false,
+            "type": [
+                "boolean"
+            ]
+        }
+    },
+
+
     "AstrohackHologFile.select": {
         "ddi": {
             "nullable": false,

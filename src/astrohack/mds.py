@@ -431,7 +431,7 @@ class AstrohackImageFile(dict):
             self, export_phase_fit_chunk, param_dict, ["ant", "ddi"], parallel=parallel
         )
 
-    @toolviper.utils.parameter.validate(custom_checker=custom_unit_checker)
+    @toolviper.utils.parameter.validate()
     def export_zernike_fit_results(
         self,
         destination: str,
@@ -462,6 +462,7 @@ class AstrohackImageFile(dict):
             self, export_zernike_fit_chunk, param_dict, ["ant", "ddi"], parallel=parallel
         )
 
+    @toolviper.utils.parameter.validate(custom_checker=custom_plots_checker)
     def plot_zernike_model(
         self,
         destination: str,
@@ -473,7 +474,30 @@ class AstrohackImageFile(dict):
         dpi: int = 300,
         parallel: bool = False,
     ) -> None:
+        """Plot Zernike models from the data in an AstrohackImageFile object.
 
+        :param destination: Name of the destination folder to contain the model plots
+        :type destination: str
+        :param ant: List of antennas/antenna to be exported, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+        :param ddi: List of ddis/ddi to be exported, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param display: Display plots inline or suppress, defaults to True
+        :type display: bool, optional
+        :param colormap: Colormap for plots, default is viridis
+        :type colormap: str, optional
+        :param figure_size: 2 element array/list/tuple with the plot sizes in inches
+        :type figure_size: numpy.ndarray, list, tuple, optional
+        :param dpi: dots per inch to be used in plots, default is 300
+        :type dpi: int, optional
+        :param parallel: If True will use an existing astrohack client to produce plots in parallel, default is False
+        :type parallel: bool, optional
+
+        .. _Description:
+
+        Export Zernike coefficients from the AstrohackImageFile object obtained during processing in \
+        ``astrohack.holog`` for analysis.
+        """
         param_dict = locals()
 
         pathlib.Path(param_dict["destination"]).mkdir(exist_ok=True)
