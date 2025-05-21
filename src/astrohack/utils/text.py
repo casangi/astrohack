@@ -583,7 +583,7 @@ def create_pretty_table(field_names, alignment="c"):
     return table
 
 
-def create_dataset_label(ant_id, ddi_id):
+def create_dataset_label(ant_id, ddi_id, separator=':'):
     if "ant_" in ant_id:
         ant_name = get_data_name(ant_id)
     else:
@@ -597,7 +597,7 @@ def create_dataset_label(ant_id, ddi_id):
             ddi_name = get_data_name(ddi_id)
         else:
             ddi_name = ddi_id
-        return f"{ant_name.upper()}: DDI {ddi_name}"
+        return f"{ant_name.upper()}{separator} DDI {ddi_name}"
 
 
 def get_data_name(data_id):
