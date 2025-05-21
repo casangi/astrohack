@@ -13,7 +13,7 @@ from astrohack.utils.validation import custom_split_checker
 
 from astrohack.utils.graph import compute_graph
 
-from astrohack.visualization.diagnostics import calibration_plot_chunk
+from astrohack.visualization.diagnostics import calibration_plot_chunk, plot_zernike_model_chunk
 from astrohack.visualization.diagnostics import plot_lm_coverage
 from astrohack.visualization.diagnostics import plot_sky_coverage_chunk
 from astrohack.visualization.diagnostics import plot_delays_chunk
@@ -405,7 +405,7 @@ class AstrohackImageFile(dict):
         length_unit: str = "mm",
         parallel: bool = False,
     ) -> None:
-        """Export phase fit resutls from the data in an AstrohackImageFIle object to ASCII files.
+        """Export phase fit results from the data in an AstrohackImageFIle object to ASCII files.
 
         :param destination: Name of the destination folder to contain ASCII files
         :type destination: str
@@ -439,7 +439,7 @@ class AstrohackImageFile(dict):
         ddi: Union[int, List[int]] = "all",
         parallel: bool = False,
     ) -> None:
-        """Export phase fit resutls from the data in an AstrohackImageFIle object to ASCII files.
+        """Export Zernike coefficients from the data in an AstrohackImageFIle object to ASCII files.
 
         :param destination: Name of the destination folder to contain ASCII files
         :type destination: str
@@ -452,13 +452,33 @@ class AstrohackImageFile(dict):
 
         .. _Description:
 
-        Export the results of the phase fitting process in ``astrohack.holog`` for analysis
+        Export Zernike coefficients from the AstrohackImageFile object obtained during processing in \
+        ``astrohack.holog`` for analysis.
         """
         param_dict = locals()
 
         pathlib.Path(param_dict["destination"]).mkdir(exist_ok=True)
         compute_graph(
             self, export_zernike_fit_chunk, param_dict, ["ant", "ddi"], parallel=parallel
+        )
+
+    def plot_zernike_model(
+        self,
+        destination: str,
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[int]] = "all",
+        display: bool = False,
+        colormap: str = "viridis",
+        figure_size: Union[Tuple, List[float], np.array] = (16, 9),
+        dpi: int = 300,
+        parallel: bool = False,
+    ) -> None:
+
+        param_dict = locals()
+
+        pathlib.Path(param_dict["destination"]).mkdir(exist_ok=True)
+        compute_graph(
+            self, plot_zernike_model_chunk, param_dict, ["ant", "ddi"], parallel=parallel
         )
 
 

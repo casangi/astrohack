@@ -11,7 +11,7 @@ from astrohack.utils import (
     clight,
     compute_antenna_relative_off,
     rotate_to_gmt,
-    plot_types,
+    plot_types, from_stokes, create_dataset_label,
 )
 from astrohack.utils.constants import fontsize, markersize
 from astrohack.utils.text import param_to_list, add_prefix
@@ -23,6 +23,7 @@ from astrohack.visualization.plot_tools import (
     get_proper_color_map,
     well_positioned_colorbar,
     scatter_plot,
+    simple_imshow_map_plot
 )
 
 
@@ -983,3 +984,77 @@ def plot_beam_sub(extent, axis, fig, beam_image, label, parm_dict, vmin, vmax, z
     axis.set_xlabel(f'L axis [{parm_dict["angle_unit"]}]')
     axis.set_ylabel(f'M axis [{parm_dict["angle_unit"]}]')
     axis.set_title(label)
+
+
+def plot_zernike_model_chunk(parm_dict):
+    """
+    Chunk function for the user facing function plot_zernike_model
+    Args:
+        parm_dict: the parameter dict containing the parameters for the plot and the data.
+
+    Returns:
+        Plots of the Zernike models along with residuals in png files inside destination.
+    """
+    antenna = parm_dict["this_ant"]
+    ddi = parm_dict["this_ddi"]
+    destination = parm_dict["destination"]
+    input_xds = parm_dict["xds_data"]
+
+    if input_xds.sizes["chan"] != 1:
+        raise Exception("Only single channel holographies supported")
+
+    if input_xds.sizes["time"] != 1:
+        raise Exception("Only single mapping holographies supported")
+
+    # Data retrieval
+    u_axis = input_xds.u.values
+    v_axis = input_xds.v.values
+    pol_axis = input_xds.pol.values
+    corr_axis = input_xds.orig_pol.values
+    zernike_model = input_xds.ZERNIKE_MODEL.isel(time=0, chan=0).values
+    aperture = input_xds.APERTURE.values
+    zernike_n_order = input_xds.attrs["zernike_N_order"]
+    corr_aperture = from_stokes(aperture, pol_axis, corr_axis)[0, 0, :, :, :]
+    suptitle = (f'Zernike model with N<={zernike_n_order} for {create_dataset_label(antenna, ddi, ',')} '
+                f'correlation: ')
+
+    for icorr, corr in enumerate(corr_axis):
+        filename = f"{destination}/image_zernike_model_{antenna}_{ddi}_corr_{corr}.png"
+        _plot_zernike_aperture_model(suptitle+f'{corr}',
+                                     corr_aperture[icorr],
+                                     u_axis,
+                                     v_axis,
+                                     zernike_model[icorr],
+                                     filename,
+                                     parm_dict)
+
+    return
+
+
+def _plot_cartesian_component(ax, fig, aperture, model, u_axis, v_axis, colormap, comp_label):
+    maxabs = np.nanmax(np.abs(aperture))
+    zlim = [-maxabs, maxabs]
+    residuals = aperture-model
+    nvalid = np.sum(np.isfinite(model))
+    rms = np.sqrt(np.nansum(residuals**2))/nvalid
+    simple_imshow_map_plot(ax[0], fig, u_axis, v_axis, aperture,
+                           f'Aperture {comp_label} part', colormap, zlim, z_label="EM intensity")
+    simple_imshow_map_plot(ax[1], fig, u_axis, v_axis, model,
+                           f'Model {comp_label} part', colormap, zlim, z_label="EM intensity")
+    simple_imshow_map_plot(ax[2], fig, u_axis, v_axis, residuals,
+                           f'Residuals {comp_label} part, RMS={rms:.5f}', colormap, zlim, z_label="EM intensity")
+
+
+def _plot_zernike_aperture_model(suptitle, aperture, u_axis, v_axis, model_aperture, filename, parm_dict):
+    fig, ax = create_figure_and_axes(parm_dict['figure_size'], [2, 3])
+    _plot_cartesian_component(ax[0], fig, aperture.real, model_aperture.real,
+                              u_axis, v_axis, parm_dict['colormap'], 'real')
+    _plot_cartesian_component(ax[1], fig, aperture.imag, model_aperture.imag,
+                              u_axis, v_axis, parm_dict['colormap'], 'imaginary')
+    close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'], tight_layout=True)
+
+
+
+
+
+
