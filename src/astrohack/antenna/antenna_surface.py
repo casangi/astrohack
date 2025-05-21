@@ -100,7 +100,7 @@ class AntennaSurface:
 
         self._create_aperture_mask(clip_type, clip_level, exclude_shadows)
         if nan_out_of_bounds:
-            self._nan_out_of_bounds2()
+            self._nan_out_of_bounds()
         self.deviation = self._phase_to_deviation()
 
         if self.telescope.ringed:
@@ -381,41 +381,9 @@ class AntennaSurface:
             self.mask = np.where(self.amplitude < self.clip, False, self.base_mask)
             self.mask = np.where(~np.isfinite(self.phase), False, self.mask)
 
-    def _build_ring_mask(self):
-        """
-        Builds the mask on regions to be included in panel surface masks, specific to circular antennas as there is an
-        outer and inner limit to the mask based on the antenna's inner receiver hole and outer edge
-        """
-        self.mask = np.where(self.amplitude < self.clip, False, True)
-        self.mask = np.where(self.rad > self.telescope.inlim, self.mask, False)
-        self.mask = np.where(self.rad < self.telescope.oulim, self.mask, False)
-        self.mask = np.where(np.isnan(self.amplitude), False, self.mask)
-        self.mask = np.where(self.deviation != self.deviation, False, self.mask)
-
-    def _nan_out_of_bounds_ringed(self, data):
-        """
-        Replace by NaNs all data that is beyond the edges of the antenna surface
-        Args:
-            data: The array to be transformed
-
-        Returns:
-            Transformed array with nans outside the antenna valid limits
-        """
-        ouradius = np.where(self.rad > self.telescope.diam / 2.0, np.nan, data)
-        inradius = np.where(self.rad < self.telescope.inlim, np.nan, ouradius)
-        return inradius
-
-    def _nan_out_of_bounds2(self):
+    def _nan_out_of_bounds(self):
         self.phase = np.where(self.base_mask, self.phase, np.nan)
         self.amplitude = np.where(self.base_mask, self.amplitude, np.nan)
-
-    def _build_polar(self):
-        """
-        Build polar coordinate grid, specific for circular antennas with panels arranged in rings
-        """
-        self.u_mesh, self.v_mesh, self.rad, self.phi = create_coordinate_images(
-            self.u_axis, self.v_axis, create_polar_coordinates=True
-        )
 
     def _build_ring_panels(self):
         """
