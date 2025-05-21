@@ -386,14 +386,15 @@ def simple_imshow_map_plot(
     y_label="Y axis [m]",
     z_label="Z Scale",
     transpose=False,
-    extent=None
+    extent=None,
+    extent_margin=0
 ):
     if zlim is None:
         minmax = [np.nanmin(gridded_2d_arr), np.nanmax(gridded_2d_arr)]
     else:
         minmax = zlim
     if extent is None:
-        extent = compute_extent(x_axis, y_axis, margin=0.1)
+        extent = compute_extent(x_axis, y_axis, margin=extent_margin)
 
     ax.set_title(title)
     if transpose:
