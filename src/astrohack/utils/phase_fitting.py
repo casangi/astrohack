@@ -35,6 +35,7 @@ NPAR = 10
 def execute_phase_fitting(
     amplitude,
     phase,
+    zernike_model,
     pol_axis,
     freq_axis,
     telescope,
@@ -72,34 +73,48 @@ def execute_phase_fitting(
     # else:
     #    Raise Exception because this should not be reachable
 
-    do_phase_fit, phase_fit_control = _solve_phase_fitting_controls(
-        user_phase_fit_control, telescope.name
-    )
+    if phase_fit_engine == 'Pertubations':
 
-    if do_phase_fit:
-        logger.debug(f"{label}: Applying phase correction")
+        do_phase_fit, phase_fit_control = _solve_phase_fitting_controls(
+            user_phase_fit_control, telescope.name
+        )
 
-        if is_near_field:
-            phase_corrected_angle, phase_fit_results = _clic_like_phase_fitting(
-                phase, freq_axis, telescope, focus_offset, uaxis, vaxis, label
-            )
+        if do_phase_fit:
+            logger.debug(f"{label}: Applying phase correction")
+
+            if is_near_field:
+                phase_corrected_angle, phase_fit_results = _clic_like_phase_fitting(
+                    phase, freq_axis, telescope, focus_offset, uaxis, vaxis, label
+                )
+            else:
+                phase_corrected_angle, phase_fit_results = _aips_like_phase_fitting(
+                    amplitude,
+                    phase,
+                    pol_axis,
+                    freq_axis,
+                    telescope,
+                    uv_cell_size,
+                    phase_fit_control,
+                    to_stokes,
+                )
+
+            return phase_corrected_angle, phase_fit_results
         else:
-            phase_corrected_angle, phase_fit_results = _aips_like_phase_fitting(
-                amplitude,
-                phase,
-                pol_axis,
-                freq_axis,
-                telescope,
-                uv_cell_size,
-                phase_fit_control,
-                to_stokes,
-            )
-    else:
-        phase_fit_results = None
-        phase_corrected_angle = phase.copy()
-        logger.info(f"{label}: Skipping phase correction")
+            return _skip_phase_fitting(label, phase)
 
-    return phase_corrected_angle, phase_fit_results
+    elif phase_fit_engine == 'Zernike':
+        return _skip_phase_fitting(label, phase)
+
+    elif phase_fit_engine == 'None' or phase_fit_engine is None:
+        return _skip_phase_fitting(label, phase)
+    else:
+        logger.error(f'Unsupported phase fitting engine: {phase_fit_engine}')
+        raise ValueError
+
+
+def _skip_phase_fitting(label, phase):
+    logger.info(f"{label}: Skipping phase correction")
+    return None, phase.copy()
 
 
 def _aips_like_phase_fitting(
