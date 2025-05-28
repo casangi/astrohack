@@ -32,105 +32,32 @@ aips_par_names = [
 NPAR = 10
 
 
-def execute_phase_fitting(
-    amplitude,
-    phase,
-    zernike_model,
-    pol_axis,
-    freq_axis,
-    telescope,
-    uv_cell_size,
-    phase_fit_engine,
-    user_phase_fit_control,
-    to_stokes,
-    is_near_field,
-    focus_offset,
-    uaxis,
-    vaxis,
-    label,
-):
-    """
-    Executes the phase fitting controls here to declutter core/holog.py
-    Args:
-        amplitude: Amplitude image(s)
-        phase: Phase image(s)
-        pol_axis: Polarization axis of the dataset
-        freq_axis: Frequency axis of the dataset at phase fitting stage
-        telescope: Telescope class object
-        uv_cell_size: UV cell size
-        user_phase_fit_control: phase_fit control from user
-        to_stokes: Dataset is in stokes parameters rather than correlations
-        is_near_field: Dataset is a near field holography dataset
-
-    Returns: Corrected phase dataset (set to the phase if no phase fit is to be performed), phase fitting results in a
-    dictionary
-
-    """
-
-    # if phase_fit_engine == 'Pertubations':
-    # elif phase_fit_engine == 'Zernike':
-    # elif phase_fit_engine == 'None' or phase_fit_engine is None:
-    # else:
-    #    Raise Exception because this should not be reachable
-
-    if phase_fit_engine == 'Pertubations':
-
-        do_phase_fit, phase_fit_control = _solve_phase_fitting_controls(
-            user_phase_fit_control, telescope.name
-        )
-
-        if do_phase_fit:
-            logger.debug(f"{label}: Applying phase correction")
-
-            if is_near_field:
-                phase_corrected_angle, phase_fit_results = _clic_like_phase_fitting(
-                    phase, freq_axis, telescope, focus_offset, uaxis, vaxis, label
-                )
-            else:
-                phase_corrected_angle, phase_fit_results = _aips_like_phase_fitting(
-                    amplitude,
-                    phase,
-                    pol_axis,
-                    freq_axis,
-                    telescope,
-                    uv_cell_size,
-                    phase_fit_control,
-                    to_stokes,
-                )
-
-            return phase_corrected_angle, phase_fit_results
-        else:
-            return _skip_phase_fitting(label, phase)
-
-    elif phase_fit_engine == 'Zernike':
-        return _skip_phase_fitting(label, phase)
-
-    elif phase_fit_engine == 'None' or phase_fit_engine is None:
-        return _skip_phase_fitting(label, phase)
-    else:
-        logger.error(f'Unsupported phase fitting engine: {phase_fit_engine}')
-        raise ValueError
-
-
-def _skip_phase_fitting(label, phase):
+def skip_phase_fitting(label, phase):
     logger.info(f"{label}: Skipping phase correction")
     return None, phase.copy()
 
 
-def _aips_like_phase_fitting(
+def _zernike_phase_fitting():
+    return
+
+
+def aips_like_phase_fitting(
     amplitude,
     phase,
     pol_axis,
     freq_axis,
     telescope,
     uv_cell_size,
-    phase_fit_control,
-    to_stokes,
+    user_phase_fit_control,
+    label
 ):
-    if to_stokes:
-        pol_indexes = (0,)
-    else:
-        if "RR" in pol_axis:
+
+    do_fit, phase_fit_control = _solve_phase_fitting_controls(user_phase_fit_control, telescope.name)
+    if do_fit:
+        if "I" in pol_axis:
+            i_i = get_str_idx_in_list("I", pol_axis)
+            pol_indexes = (i_i,)
+        elif "RR" in pol_axis:
             i_rr = get_str_idx_in_list("RR", pol_axis)
             i_ll = get_str_idx_in_list("LL", pol_axis)
             pol_indexes = (i_rr, i_ll)
@@ -143,28 +70,30 @@ def _aips_like_phase_fitting(
             logger.error(msg)
             raise Exception(msg)
 
-    min_wavelength = clight / freq_axis[0]
-    results, errors, phase_corrected_angle, _, in_rms, out_rms = (
-        _aips_phase_fitting_block(
-            pol_indexes=pol_indexes,
-            wavelength=min_wavelength,
-            telescope=telescope,
-            cellxy=uv_cell_size[
-                0
-            ],  # THIS HAS TO BE CHANGED, (X, Y) CELL SIZE ARE NOT THE SAME.
-            amplitude_image=amplitude,
-            phase_image=phase,
-            pointing_offset=phase_fit_control[0],
-            focus_xy_offsets=phase_fit_control[1],
-            focus_z_offset=phase_fit_control[2],
-            subreflector_tilt=phase_fit_control[3],
-            cassegrain_offset=phase_fit_control[4],
+        min_wavelength = clight / freq_axis[0]
+        results, errors, phase_corrected_angle, _, in_rms, out_rms = (
+            _aips_phase_fitting_block(
+                pol_indexes=pol_indexes,
+                wavelength=min_wavelength,
+                telescope=telescope,
+                cellxy=uv_cell_size[
+                    0
+                ],  # THIS HAS TO BE CHANGED, (X, Y) CELL SIZE ARE NOT THE SAME.
+                amplitude_image=amplitude,
+                phase_image=phase,
+                pointing_offset=phase_fit_control[0],
+                focus_xy_offsets=phase_fit_control[1],
+                focus_z_offset=phase_fit_control[2],
+                subreflector_tilt=phase_fit_control[3],
+                cassegrain_offset=phase_fit_control[4],
+            )
         )
-    )
 
-    phase_fit_results = _unpack_results(
-        results, errors, pol_axis, freq_axis, pol_indexes
-    )
+        phase_fit_results = _unpack_results(
+            results, errors, pol_axis, freq_axis, pol_indexes
+        )
+    else:
+        return skip_phase_fitting(label, phase)
     return phase_corrected_angle, phase_fit_results
 
 
@@ -1176,7 +1105,7 @@ def _clic_phase_model(matrix, best_fit):
     return phase_model
 
 
-def _clic_like_phase_fitting(
+def clic_like_phase_fitting(
     phase, freq_axis, telescope, focus_offset, uaxis, vaxis, label
 ):
     logger.info(f"{label}: Going into CLIC code")

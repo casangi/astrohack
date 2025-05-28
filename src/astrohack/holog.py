@@ -19,7 +19,7 @@ from astrohack.mds import AstrohackImageFile
 Array = NewType("Array", Union[np.array, List[int], List[float]])
 
 
-@toolviper.utils.parameter.validate()
+# @toolviper.utils.parameter.validate()
 def holog(
     holog_name: str,
     grid_size: Union[int, Array, List] = None,
@@ -34,8 +34,9 @@ def holog(
     ant: Union[str, List[str]] = "all",
     ddi: Union[int, List[int]] = "all",
     zernike_N_order: int = 5,
+    phase_fit_engine: str = 'perturbations',
+    phase_fit_control: bool = True,
     to_stokes: bool = True,
-    phase_fit: bool = True,
     overwrite: bool = False,
     parallel: bool = False,
 ) -> Union[AstrohackImageFile, None]:

@@ -4,6 +4,7 @@ import xarray as xr
 
 from astrohack.antenna.telescope import Telescope
 from astrohack.utils import create_dataset_label
+from astrohack.utils.conversion import convert_5d_grid_to_stokes
 from astrohack.utils.algorithms import calc_coords
 from astrohack.utils.constants import clight
 from astrohack.utils.zernike_aperture_fitting import fit_zernike_coefficients
@@ -16,7 +17,8 @@ from astrohack.utils.imaging import (
 from astrohack.utils.imaging import mask_circular_disk
 from astrohack.utils.gridding import grid_beam
 from astrohack.utils.imaging import parallactic_derotation
-from astrohack.utils.phase_fitting import execute_phase_fitting
+from astrohack.utils.phase_fitting import clic_like_phase_fitting, skip_phase_fitting, \
+    aips_like_phase_fitting
 
 import toolviper.utils.logger as logger
 
@@ -41,7 +43,7 @@ def process_holog_chunk(holog_chunk_params):
     logger.info(f"Processing {label}")
     meta_data = read_meta_data(holog_chunk_params["holog_name"] + "/.holog_attr")
     ddi = holog_chunk_params["this_ddi"]
-    to_stokes = holog_chunk_params["to_stokes"]
+    convert_to_stokes = holog_chunk_params["to_stokes"]
     ref_xds = ant_data_dict[ddi]["map_0"]
     telescope = _get_correct_telescope(
         ref_xds.attrs["antenna_name"], meta_data["telescope_name"]
@@ -107,30 +109,33 @@ def process_holog_chunk(holog_chunk_params):
         fit_zernike_coefficients(aperture_grid, u_axis, v_axis, holog_chunk_params['zernike_N_order'], telescope)
 
     orig_pol_axis = pol_axis
-    if to_stokes:
-        beam_grid = astrohack.utils.conversion.to_stokes(beam_grid, pol_axis)
-        aperture_grid = astrohack.utils.conversion.to_stokes(aperture_grid, pol_axis)
+    if convert_to_stokes:
+        beam_grid = convert_5d_grid_to_stokes(beam_grid, pol_axis)
+        aperture_grid = convert_5d_grid_to_stokes(aperture_grid, pol_axis)
         pol_axis = ["I", "Q", "U", "V"]
 
     amplitude, phase, u_prime, v_prime = _crop_and_split_aperture(
         aperture_grid, u_axis, v_axis, telescope
     )
 
-    phase_corrected_angle, phase_fit_results = execute_phase_fitting(
-        amplitude,
-        phase,
-        pol_axis,
-        freq_axis,
-        telescope,
-        uv_cell_size,
-        holog_chunk_params["phase_fit"],
-        to_stokes,
-        is_near_field,
-        focus_offset,
-        u_prime,
-        v_prime,
-        label,
-    )
+    phase_fit_engine = holog_chunk_params["phase_fit_engine"]
+
+    if phase_fit_engine is None or phase_fit_engine == "none":
+        phase_corrected_angle, phase_fit_results = skip_phase_fitting(label, phase)
+    else:
+        if is_near_field:
+            phase_corrected_angle, phase_fit_results = (
+                clic_like_phase_fitting(phase, freq_axis, telescope, focus_offset, u_prime, v_prime, label))
+        else:
+            if phase_fit_engine == 'perturbations':
+                phase_corrected_angle, phase_fit_results = (
+                    aips_like_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size,
+                                            holog_chunk_params["phase_fit_control"], label))
+            elif phase_fit_engine == 'zernike':
+                phase_corrected_angle, phase_fit_results = skip_phase_fitting(label, phase)
+            else:
+                logger.error(f'Unsupported phase fitting engine: {phase_fit_engine}')
+                raise ValueError
 
     aperture_resolution = _compute_aperture_resolution(l_axis, m_axis, used_wavelength)
 
