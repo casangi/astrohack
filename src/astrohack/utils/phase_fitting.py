@@ -8,7 +8,7 @@ from astrohack.utils.algorithms import (
 )
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.constants import clight
-from astrohack.utils.text import get_str_idx_in_list
+from astrohack.utils.tools import get_str_idx_in_list
 from matplotlib.patches import Circle
 from astrohack.visualization.plot_tools import (
     well_positioned_colorbar,
@@ -39,7 +39,8 @@ def execute_phase_fitting(
     freq_axis,
     telescope,
     uv_cell_size,
-    phase_fit_parameter,
+    phase_fit_engine,
+    user_phase_fit_control,
     to_stokes,
     is_near_field,
     focus_offset,
@@ -56,7 +57,7 @@ def execute_phase_fitting(
         freq_axis: Frequency axis of the dataset at phase fitting stage
         telescope: Telescope class object
         uv_cell_size: UV cell size
-        phase_fit_parameter: phase_fit control from user
+        user_phase_fit_control: phase_fit control from user
         to_stokes: Dataset is in stokes parameters rather than correlations
         is_near_field: Dataset is a near field holography dataset
 
@@ -64,8 +65,15 @@ def execute_phase_fitting(
     dictionary
 
     """
+
+    # if phase_fit_engine == 'Pertubations':
+    # elif phase_fit_engine == 'Zernike':
+    # elif phase_fit_engine == 'None' or phase_fit_engine is None:
+    # else:
+    #    Raise Exception because this should not be reachable
+
     do_phase_fit, phase_fit_control = _solve_phase_fitting_controls(
-        phase_fit_parameter, telescope.name
+        user_phase_fit_control, telescope.name
     )
 
     if do_phase_fit:

@@ -543,14 +543,6 @@ def fixed_format_error(value, error, scaling, significance_scale):
     return f"{out_val:{out_fmt}} \u00b1 {out_err:{out_fmt}}"
 
 
-def get_str_idx_in_list(target, array):
-    for i_tgt, item in enumerate(array):
-        if target == item:
-            return i_tgt
-    logger.error(f"Target {target} not found in {array}")
-    return None
-
-
 def bool_to_str(boolean):
     if boolean:
         return "yes"

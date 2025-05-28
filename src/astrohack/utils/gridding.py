@@ -13,7 +13,7 @@ from astrohack.utils import (
     find_peak_beam_value,
     chunked_average,
 )
-from astrohack.utils.text import get_str_idx_in_list
+from astrohack.utils.tools import get_str_idx_in_list
 
 
 def grid_beam(
