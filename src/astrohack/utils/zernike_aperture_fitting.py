@@ -1,5 +1,7 @@
 import numpy as np
 from scipy import optimize as opt
+
+from astrohack.utils import create_2d_array_reconstruction_array
 from astrohack.utils.algorithms import data_statistics, create_aperture_mask
 from astrohack.utils.text import statistics_to_text
 
@@ -437,12 +439,7 @@ def fit_zernike_coefficients(aperture, u_axis, v_axis, zernike_order, telescope,
     aperture_4d = aperture[:, :, :, mask]
 
     # Creating grid reconstruction
-    u_idx = np.arange(u_axis.shape[0], dtype=int)
-    v_idx = np.arange(v_axis.shape[0], dtype=int)
-    u_idx_grd, v_idx_grd = np.meshgrid(u_idx, v_idx, indexing='ij')
-    uv_idx_grid = np.empty([u_lin.shape[0], 2], dtype=int)
-    uv_idx_grid[:, 0] = u_idx_grd[mask]
-    uv_idx_grid[:, 1] = v_idx_grd[mask]
+    uv_idx_grid = create_2d_array_reconstruction_array(u_axis, v_axis, mask)
 
     matrix_func = zernike_matrix_functions[zernike_order]
     matrix = matrix_func(u_lin, v_lin)
