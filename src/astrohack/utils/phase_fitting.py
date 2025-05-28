@@ -37,10 +37,6 @@ def skip_phase_fitting(label, phase):
     return None, phase.copy()
 
 
-def _zernike_phase_fitting():
-    return
-
-
 def aips_like_phase_fitting(
     amplitude,
     phase,

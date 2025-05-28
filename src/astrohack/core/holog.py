@@ -1,12 +1,10 @@
-import astrohack
 import numpy as np
 import xarray as xr
 
 from astrohack.antenna.telescope import Telescope
-from astrohack.utils import create_dataset_label
+from astrohack.utils.text import create_dataset_label
 from astrohack.utils.conversion import convert_5d_grid_to_stokes
-from astrohack.utils.algorithms import calc_coords
-from astrohack.utils.constants import clight
+from astrohack.utils.algorithms import phase_wrapping
 from astrohack.utils.zernike_aperture_fitting import fit_zernike_coefficients
 from astrohack.utils.data import read_meta_data
 from astrohack.utils.file import load_holog_file
@@ -14,7 +12,6 @@ from astrohack.utils.imaging import (
     calculate_far_field_aperture,
     calculate_near_field_aperture,
 )
-from astrohack.utils.imaging import mask_circular_disk
 from astrohack.utils.gridding import grid_beam
 from astrohack.utils.imaging import parallactic_derotation
 from astrohack.utils.phase_fitting import clic_like_phase_fitting, skip_phase_fitting, \
@@ -104,9 +101,9 @@ def process_holog_chunk(holog_chunk_params):
                 label=label,
             )
         )
-
+    zernike_n_order = holog_chunk_params['zernike_n_order']
     zernike_coeffs, zernike_model, zernike_rms, osa_coeff_list = \
-        fit_zernike_coefficients(aperture_grid, u_axis, v_axis, holog_chunk_params['zernike_N_order'], telescope)
+        fit_zernike_coefficients(aperture_grid, u_axis, v_axis, zernike_n_order, telescope)
 
     orig_pol_axis = pol_axis
     if convert_to_stokes:
@@ -132,7 +129,17 @@ def process_holog_chunk(holog_chunk_params):
                     aips_like_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size,
                                             holog_chunk_params["phase_fit_control"], label))
             elif phase_fit_engine == 'zernike':
-                phase_corrected_angle, phase_fit_results = skip_phase_fitting(label, phase)
+                if zernike_n_order > 4:
+                    logger.warning('Using a Zernike order > 4 for phase fitting may result in overfitting')
+
+                if convert_to_stokes:
+                    zernike_grid = convert_5d_grid_to_stokes(zernike_model, orig_pol_axis)
+                else:
+                    zernike_grid = zernike_model.copy()
+                zernike_amp, zernike_phase, _, _ = _crop_and_split_aperture(zernike_grid, u_axis, v_axis, telescope)
+
+                phase_corrected_angle = phase_wrapping(phase - zernike_phase)
+                phase_fit_results = None
             else:
                 logger.error(f'Unsupported phase fitting engine: {phase_fit_engine}')
                 raise ValueError
@@ -164,7 +171,7 @@ def process_holog_chunk(holog_chunk_params):
         zernike_coeffs,
         zernike_model,
         zernike_rms,
-        holog_chunk_params['zernike_N_order'],
+        zernike_n_order,
         holog_chunk_params["image_name"]
     )
 
