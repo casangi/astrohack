@@ -65,7 +65,7 @@ def _test_unit(unit, unitlist):
     return idx
 
 
-def to_stokes(grid, pol_axis):
+def convert_5d_grid_to_stokes(grid, pol_axis):
     """
     Convert gridded 5D data or aperture data from polariza correlations to Stokes
     Args:
@@ -103,7 +103,7 @@ def to_stokes(grid, pol_axis):
     return grid_stokes
 
 
-def from_stokes(stokes_grid, input_pol_axis, destiny_pol_axis):
+def convert_5d_grid_from_stokes(stokes_grid, input_pol_axis, destiny_pol_axis):
     i_i = get_str_idx_in_list("I", input_pol_axis)
     i_q = get_str_idx_in_list("Q", input_pol_axis)
     i_u = get_str_idx_in_list("U", input_pol_axis)

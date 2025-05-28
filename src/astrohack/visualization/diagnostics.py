@@ -11,7 +11,7 @@ from astrohack.utils import (
     clight,
     compute_antenna_relative_off,
     rotate_to_gmt,
-    plot_types, from_stokes, create_dataset_label,
+    plot_types, convert_5d_grid_from_stokes, create_dataset_label,
 )
 from astrohack.utils.constants import fontsize, markersize
 from astrohack.utils.text import param_to_list, add_prefix
@@ -943,7 +943,7 @@ def plot_zernike_model_chunk(parm_dict):
     zernike_model = input_xds.ZERNIKE_MODEL.isel(time=0, chan=0).values
     aperture = input_xds.APERTURE.values
     zernike_n_order = input_xds.attrs["zernike_N_order"]
-    corr_aperture = from_stokes(aperture, pol_axis, corr_axis)[0, 0, :, :, :]
+    corr_aperture = convert_5d_grid_from_stokes(aperture, pol_axis, corr_axis)[0, 0, :, :, :]
     suptitle = (f'Zernike model with N<={zernike_n_order} for {create_dataset_label(antenna, ddi, ',')} '
                 f'correlation: ')
 
