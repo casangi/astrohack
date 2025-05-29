@@ -3,6 +3,7 @@ import pathlib
 import numpy as np
 
 import toolviper.utils.logger as logger
+import toolviper
 
 from numbers import Number
 from typing import List, Union, NewType, Tuple
@@ -15,10 +16,11 @@ from astrohack.core.holog import process_holog_chunk
 from astrohack.utils.text import get_default_file_name
 from astrohack.mds import AstrohackImageFile
 
+
 Array = NewType("Array", Union[np.array, List[int], List[float]])
 
 
-# @toolviper.utils.parameter.validate()
+@toolviper.utils.parameter.validate()
 def holog(
     holog_name: str,
     grid_size: Union[int, Array, List] = None,
