@@ -27,7 +27,7 @@ from astrohack.visualization.plot_tools import (
     close_figure,
     simple_imshow_map_plot,
     get_proper_color_map,
-    well_positioned_colorbar
+    well_positioned_colorbar,
 )
 
 from astrohack.utils.fits import (
@@ -692,8 +692,18 @@ class AntennaSurface:
         cmap = parm_dict["colormap"]
         fig, ax = create_figure_and_axes(parm_dict["figure_size"], [1, 1])
 
-        simple_imshow_map_plot(ax, fig, self.u_axis, self.v_axis, data, title, cmap, parm_dict["z_lim"],
-                               z_label="Z Scale [" + parm_dict["unit"] + "]", add_colorbar=add_colorbar)
+        simple_imshow_map_plot(
+            ax,
+            fig,
+            self.u_axis,
+            self.v_axis,
+            data,
+            title,
+            cmap,
+            parm_dict["z_lim"],
+            z_label="Z Scale [" + parm_dict["unit"] + "]",
+            add_colorbar=add_colorbar,
+        )
 
         self._add_resolution_to_plot(ax)
         ax.set_xlabel("X axis [m]")

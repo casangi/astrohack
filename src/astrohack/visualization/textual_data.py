@@ -415,11 +415,15 @@ def export_zernike_fit_chunk(parm_dict):
     for itime in range(ntime):
         for ichan, freq in enumerate(freq_axis):
             for icorr, corr in enumerate(corr_axis):
-                outstr += f'* map {itime}, Frequency {format_frequency(freq)}, Correlation {corr}:\n'
-                outstr += f'   Fit RMS = {rms[itime, ichan, icorr].real:.8f} + {rms[itime, ichan, icorr].imag:.8f}*i\n\n'
+                outstr += f"* map {itime}, Frequency {format_frequency(freq)}, Correlation {corr}:\n"
+                outstr += f"   Fit RMS = {rms[itime, ichan, icorr].real:.8f} + {rms[itime, ichan, icorr].imag:.8f}*i\n\n"
                 table = create_pretty_table(field_names, alignment)
                 for icoeff, coeff in enumerate(zernike_coeffs[itime, ichan, icorr]):
-                    row = [osa_indices[icoeff], f'{coeff.real:.8f}', f'{coeff.imag:.8f}']
+                    row = [
+                        osa_indices[icoeff],
+                        f"{coeff.real:.8f}",
+                        f"{coeff.imag:.8f}",
+                    ]
                     table.add_row(row)
 
                 outstr += table.get_string() + "\n\n"

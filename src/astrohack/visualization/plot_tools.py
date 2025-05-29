@@ -388,7 +388,7 @@ def simple_imshow_map_plot(
     transpose=False,
     extent=None,
     extent_margin=0,
-    add_colorbar=True
+    add_colorbar=True,
 ):
     if zlim is None:
         minmax = [np.nanmin(gridded_2d_arr), np.nanmax(gridded_2d_arr)]

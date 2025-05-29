@@ -45,10 +45,12 @@ def aips_like_phase_fitting(
     telescope,
     uv_cell_size,
     user_phase_fit_control,
-    label
+    label,
 ):
 
-    do_fit, phase_fit_control = _solve_phase_fitting_controls(user_phase_fit_control, telescope.name)
+    do_fit, phase_fit_control = _solve_phase_fitting_controls(
+        user_phase_fit_control, telescope.name
+    )
     if do_fit:
         if "I" in pol_axis:
             i_i = get_str_idx_in_list("I", pol_axis)
@@ -164,13 +166,13 @@ def _solve_phase_fitting_controls(phase_fit_par, tel_name):
                 )
                 if tel_name not in ["VLA", "VLBA"]:
                     do_sub_til = False
-                    logger.debug(f"Telescope {tel_name} has no tilt in the subreflector, hence sub reflector "
-                                 f"tilt has been turned off")
+                    logger.debug(
+                        f"Telescope {tel_name} has no tilt in the subreflector, hence sub reflector "
+                        f"tilt has been turned off"
+                    )
 
     else:
-        raise Exception(
-            "Phase fit parameter is not an array of booleans."
-        )
+        raise Exception("Phase fit parameter is not an array of booleans.")
     return do_phase_fit, [
         do_pnt_off,
         do_xy_foc_off,

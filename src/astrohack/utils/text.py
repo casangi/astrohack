@@ -575,7 +575,7 @@ def create_pretty_table(field_names, alignment="c"):
     return table
 
 
-def create_dataset_label(ant_id, ddi_id, separator=':'):
+def create_dataset_label(ant_id, ddi_id, separator=":"):
     if "ant_" in ant_id:
         ant_name = get_data_name(ant_id)
     else:

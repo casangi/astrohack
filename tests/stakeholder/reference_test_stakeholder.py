@@ -242,7 +242,7 @@ def test_holog(set_data):
         chan_average=True,
         scan_average=True,
         overwrite=True,
-        phase_fit_engine='perturbations',
+        phase_fit_engine="perturbations",
         to_stokes=True,
         parallel=True,
     )

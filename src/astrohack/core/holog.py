@@ -14,8 +14,11 @@ from astrohack.utils.imaging import (
 )
 from astrohack.utils.gridding import grid_beam
 from astrohack.utils.imaging import parallactic_derotation
-from astrohack.utils.phase_fitting import clic_like_phase_fitting, skip_phase_fitting, \
-    aips_like_phase_fitting
+from astrohack.utils.phase_fitting import (
+    clic_like_phase_fitting,
+    skip_phase_fitting,
+    aips_like_phase_fitting,
+)
 
 import toolviper.utils.logger as logger
 
@@ -101,9 +104,12 @@ def process_holog_chunk(holog_chunk_params):
                 label=label,
             )
         )
-    zernike_n_order = holog_chunk_params['zernike_n_order']
-    zernike_coeffs, zernike_model, zernike_rms, osa_coeff_list = \
-        fit_zernike_coefficients(aperture_grid, u_axis, v_axis, zernike_n_order, telescope)
+    zernike_n_order = holog_chunk_params["zernike_n_order"]
+    zernike_coeffs, zernike_model, zernike_rms, osa_coeff_list = (
+        fit_zernike_coefficients(
+            aperture_grid, u_axis, v_axis, zernike_n_order, telescope
+        )
+    )
 
     orig_pol_axis = pol_axis
     if convert_to_stokes:
@@ -121,27 +127,41 @@ def process_holog_chunk(holog_chunk_params):
         phase_corrected_angle, phase_fit_results = skip_phase_fitting(label, phase)
     else:
         if is_near_field:
-            phase_corrected_angle, phase_fit_results = (
-                clic_like_phase_fitting(phase, freq_axis, telescope, focus_offset, u_prime, v_prime, label))
+            phase_corrected_angle, phase_fit_results = clic_like_phase_fitting(
+                phase, freq_axis, telescope, focus_offset, u_prime, v_prime, label
+            )
         else:
-            if phase_fit_engine == 'perturbations':
-                phase_corrected_angle, phase_fit_results = (
-                    aips_like_phase_fitting(amplitude, phase, pol_axis, freq_axis, telescope, uv_cell_size,
-                                            holog_chunk_params["phase_fit_control"], label))
-            elif phase_fit_engine == 'zernike':
+            if phase_fit_engine == "perturbations":
+                phase_corrected_angle, phase_fit_results = aips_like_phase_fitting(
+                    amplitude,
+                    phase,
+                    pol_axis,
+                    freq_axis,
+                    telescope,
+                    uv_cell_size,
+                    holog_chunk_params["phase_fit_control"],
+                    label,
+                )
+            elif phase_fit_engine == "zernike":
                 if zernike_n_order > 4:
-                    logger.warning('Using a Zernike order > 4 for phase fitting may result in overfitting')
+                    logger.warning(
+                        "Using a Zernike order > 4 for phase fitting may result in overfitting"
+                    )
 
                 if convert_to_stokes:
-                    zernike_grid = convert_5d_grid_to_stokes(zernike_model, orig_pol_axis)
+                    zernike_grid = convert_5d_grid_to_stokes(
+                        zernike_model, orig_pol_axis
+                    )
                 else:
                     zernike_grid = zernike_model.copy()
-                zernike_amp, zernike_phase, _, _ = _crop_and_split_aperture(zernike_grid, u_axis, v_axis, telescope)
+                zernike_amp, zernike_phase, _, _ = _crop_and_split_aperture(
+                    zernike_grid, u_axis, v_axis, telescope
+                )
 
                 phase_corrected_angle = phase_wrapping(phase - zernike_phase)
                 phase_fit_results = None
             else:
-                logger.error(f'Unsupported phase fitting engine: {phase_fit_engine}')
+                logger.error(f"Unsupported phase fitting engine: {phase_fit_engine}")
                 raise ValueError
 
     aperture_resolution = _compute_aperture_resolution(l_axis, m_axis, used_wavelength)
@@ -172,7 +192,7 @@ def process_holog_chunk(holog_chunk_params):
         zernike_model,
         zernike_rms,
         zernike_n_order,
-        holog_chunk_params["image_name"]
+        holog_chunk_params["image_name"],
     )
 
     logger.info(f"Finished processing {label}")
@@ -270,7 +290,7 @@ def _export_to_xds(
     zernike_model,
     zernike_rms,
     zernike_n_order,
-    image_name
+    image_name,
 ):
     # Todo: Add Paralactic angle as a non-dimension coordinate dependant on time.
     xds = xr.Dataset()
@@ -287,9 +307,15 @@ def _export_to_xds(
         phase_corrected_angle, dims=["time", "chan", "pol", "u_prime", "v_prime"]
     )
 
-    xds["ZERNIKE_COEFFICIENTS"] = xr.DataArray(zernike_coeffs, dims=["time", "chan", "orig_pol", "osa"])
-    xds["ZERNIKE_MODEL"] = xr.DataArray(zernike_model, dims=["time", "chan", "orig_pol", "u", "v"])
-    xds["ZERNIKE_FIT_RMS"] = xr.DataArray(zernike_rms, dims=["time", "chan", "orig_pol"])
+    xds["ZERNIKE_COEFFICIENTS"] = xr.DataArray(
+        zernike_coeffs, dims=["time", "chan", "orig_pol", "osa"]
+    )
+    xds["ZERNIKE_MODEL"] = xr.DataArray(
+        zernike_model, dims=["time", "chan", "orig_pol", "u", "v"]
+    )
+    xds["ZERNIKE_FIT_RMS"] = xr.DataArray(
+        zernike_rms, dims=["time", "chan", "orig_pol"]
+    )
 
     xds.attrs["aperture_resolution"] = aperture_resolution
     xds.attrs["ant_id"] = ant_id
@@ -310,7 +336,7 @@ def _export_to_xds(
         "u_prime": u_prime,
         "v_prime": v_prime,
         "chan": freq_axis,
-        "osa": osa_coeff_list
+        "osa": osa_coeff_list,
     }
     xds = xds.assign_coords(coords)
     xds.to_zarr(

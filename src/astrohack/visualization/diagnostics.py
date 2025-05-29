@@ -11,7 +11,9 @@ from astrohack.utils import (
     clight,
     compute_antenna_relative_off,
     rotate_to_gmt,
-    plot_types, convert_5d_grid_from_stokes, create_dataset_label,
+    plot_types,
+    convert_5d_grid_from_stokes,
+    create_dataset_label,
 )
 from astrohack.utils.constants import fontsize, markersize
 from astrohack.utils.text import param_to_list, add_prefix
@@ -21,7 +23,7 @@ from astrohack.visualization.plot_tools import (
     close_figure,
     plot_boxes_limits_and_labels,
     scatter_plot,
-    simple_imshow_map_plot
+    simple_imshow_map_plot,
 )
 
 
@@ -888,21 +890,63 @@ def plot_beam_by_pol(laxis, maxis, pol, beam_image, basename, parm_dict):
     if parm_dict["complex_split"] == "cartesian":
         vmin = np.min([np.nanmin(beam_image.real), np.nanmin(beam_image.imag)])
         vmax = np.max([np.nanmax(beam_image.real), np.nanmax(beam_image.imag)])
-        simple_imshow_map_plot(axes[0], fig, laxis, maxis, beam_image.real, "Real part", parm_dict['colormap'],
-                               [vmin, vmax], x_label=x_label, y_label=y_label, z_label=norm_z_label)
-        simple_imshow_map_plot(axes[1], fig, laxis, maxis, beam_image.imag, "Imaginary part", parm_dict['colormap'],
-                               [vmin, vmax], x_label=x_label, y_label=y_label, z_label=norm_z_label)
+        simple_imshow_map_plot(
+            axes[0],
+            fig,
+            laxis,
+            maxis,
+            beam_image.real,
+            "Real part",
+            parm_dict["colormap"],
+            [vmin, vmax],
+            x_label=x_label,
+            y_label=y_label,
+            z_label=norm_z_label,
+        )
+        simple_imshow_map_plot(
+            axes[1],
+            fig,
+            laxis,
+            maxis,
+            beam_image.imag,
+            "Imaginary part",
+            parm_dict["colormap"],
+            [vmin, vmax],
+            x_label=x_label,
+            y_label=y_label,
+            z_label=norm_z_label,
+        )
     else:
         scale = convert_unit("rad", parm_dict["phase_unit"], "trigonometric")
         amplitude = np.absolute(beam_image)
         phase = np.angle(beam_image) * scale
 
-        simple_imshow_map_plot(axes[0], fig, laxis, maxis, amplitude, "Amplitude", parm_dict['colormap'],
-                               [np.nanmin(amplitude[amplitude > 1e-8]), np.nanmax(amplitude)],
-                               x_label=x_label, y_label=y_label, z_label=norm_z_label)
-        simple_imshow_map_plot(axes[1], fig, laxis, maxis, phase, "Phase", parm_dict['colormap'],
-                               [-np.pi * scale, np.pi * scale], x_label=x_label, y_label=y_label,
-                               z_label=f"Phase [{parm_dict['phase_unit']}]")
+        simple_imshow_map_plot(
+            axes[0],
+            fig,
+            laxis,
+            maxis,
+            amplitude,
+            "Amplitude",
+            parm_dict["colormap"],
+            [np.nanmin(amplitude[amplitude > 1e-8]), np.nanmax(amplitude)],
+            x_label=x_label,
+            y_label=y_label,
+            z_label=norm_z_label,
+        )
+        simple_imshow_map_plot(
+            axes[1],
+            fig,
+            laxis,
+            maxis,
+            phase,
+            "Phase",
+            parm_dict["colormap"],
+            [-np.pi * scale, np.pi * scale],
+            x_label=x_label,
+            y_label=y_label,
+            z_label=f"Phase [{parm_dict['phase_unit']}]",
+        )
 
     plot_name = add_prefix(
         add_prefix(basename, parm_dict["complex_split"]), "image_beam"
@@ -943,47 +987,101 @@ def plot_zernike_model_chunk(parm_dict):
     zernike_model = input_xds.ZERNIKE_MODEL.isel(time=0, chan=0).values
     aperture = input_xds.APERTURE.values
     zernike_n_order = input_xds.attrs["zernike_N_order"]
-    corr_aperture = convert_5d_grid_from_stokes(aperture, pol_axis, corr_axis)[0, 0, :, :, :]
-    suptitle = (f'Zernike model with N<={zernike_n_order} for {create_dataset_label(antenna, ddi, ',')} '
-                f'correlation: ')
+    corr_aperture = convert_5d_grid_from_stokes(aperture, pol_axis, corr_axis)[
+        0, 0, :, :, :
+    ]
+    suptitle = (
+        f"Zernike model with N<={zernike_n_order} for {create_dataset_label(antenna, ddi, ',')} "
+        f"correlation: "
+    )
 
     for icorr, corr in enumerate(corr_axis):
         filename = f"{destination}/image_zernike_model_{antenna}_{ddi}_corr_{corr}.png"
-        _plot_zernike_aperture_model(suptitle+f'{corr}',
-                                     corr_aperture[icorr],
-                                     u_axis,
-                                     v_axis,
-                                     zernike_model[icorr],
-                                     filename,
-                                     parm_dict)
+        _plot_zernike_aperture_model(
+            suptitle + f"{corr}",
+            corr_aperture[icorr],
+            u_axis,
+            v_axis,
+            zernike_model[icorr],
+            filename,
+            parm_dict,
+        )
 
     return
 
 
-def _plot_cartesian_component(ax, fig, aperture, model, u_axis, v_axis, colormap, comp_label):
+def _plot_cartesian_component(
+    ax, fig, aperture, model, u_axis, v_axis, colormap, comp_label
+):
     maxabs = np.nanmax(np.abs(aperture))
     zlim = [-maxabs, maxabs]
-    residuals = aperture-model
+    residuals = aperture - model
     nvalid = np.sum(np.isfinite(model))
-    rms = np.sqrt(np.nansum(residuals**2))/nvalid
-    simple_imshow_map_plot(ax[0], fig, u_axis, v_axis, aperture,
-                           f'Aperture {comp_label} part', colormap, zlim, z_label="EM intensity")
-    simple_imshow_map_plot(ax[1], fig, u_axis, v_axis, model,
-                           f'Model {comp_label} part', colormap, zlim, z_label="EM intensity")
-    simple_imshow_map_plot(ax[2], fig, u_axis, v_axis, residuals,
-                           f'Residuals {comp_label} part, RMS={rms:.5f}', colormap, zlim, z_label="EM intensity")
+    rms = np.sqrt(np.nansum(residuals**2)) / nvalid
+    simple_imshow_map_plot(
+        ax[0],
+        fig,
+        u_axis,
+        v_axis,
+        aperture,
+        f"Aperture {comp_label} part",
+        colormap,
+        zlim,
+        z_label="EM intensity",
+    )
+    simple_imshow_map_plot(
+        ax[1],
+        fig,
+        u_axis,
+        v_axis,
+        model,
+        f"Model {comp_label} part",
+        colormap,
+        zlim,
+        z_label="EM intensity",
+    )
+    simple_imshow_map_plot(
+        ax[2],
+        fig,
+        u_axis,
+        v_axis,
+        residuals,
+        f"Residuals {comp_label} part, RMS={rms:.5f}",
+        colormap,
+        zlim,
+        z_label="EM intensity",
+    )
 
 
-def _plot_zernike_aperture_model(suptitle, aperture, u_axis, v_axis, model_aperture, filename, parm_dict):
-    fig, ax = create_figure_and_axes(parm_dict['figure_size'], [2, 3])
-    _plot_cartesian_component(ax[0], fig, aperture.real, model_aperture.real,
-                              u_axis, v_axis, parm_dict['colormap'], 'real')
-    _plot_cartesian_component(ax[1], fig, aperture.imag, model_aperture.imag,
-                              u_axis, v_axis, parm_dict['colormap'], 'imaginary')
-    close_figure(fig, suptitle, filename, parm_dict['dpi'], parm_dict['display'], tight_layout=True)
-
-
-
-
-
-
+def _plot_zernike_aperture_model(
+    suptitle, aperture, u_axis, v_axis, model_aperture, filename, parm_dict
+):
+    fig, ax = create_figure_and_axes(parm_dict["figure_size"], [2, 3])
+    _plot_cartesian_component(
+        ax[0],
+        fig,
+        aperture.real,
+        model_aperture.real,
+        u_axis,
+        v_axis,
+        parm_dict["colormap"],
+        "real",
+    )
+    _plot_cartesian_component(
+        ax[1],
+        fig,
+        aperture.imag,
+        model_aperture.imag,
+        u_axis,
+        v_axis,
+        parm_dict["colormap"],
+        "imaginary",
+    )
+    close_figure(
+        fig,
+        suptitle,
+        filename,
+        parm_dict["dpi"],
+        parm_dict["display"],
+        tight_layout=True,
+    )

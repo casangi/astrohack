@@ -683,9 +683,9 @@ def create_2d_array_reconstruction_array(x_axis, y_axis, mask):
     n_valid = np.sum(mask)
     x_idx = np.arange(x_axis.shape[0], dtype=int)
     y_idx = np.arange(y_axis.shape[0], dtype=int)
-    x_idx_grd, y_idx_grd = np.meshgrid(x_idx, y_idx, indexing='ij')
+    x_idx_grd, y_idx_grd = np.meshgrid(x_idx, y_idx, indexing="ij")
     uv_idx_grid = np.empty([n_valid, 2], dtype=int)
     uv_idx_grid[:, 0] = x_idx_grd[mask]
     uv_idx_grid[:, 1] = y_idx_grd[mask]
-    
+
     return uv_idx_grid

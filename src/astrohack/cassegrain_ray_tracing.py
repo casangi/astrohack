@@ -552,9 +552,16 @@ def apply_holog_phase_fitting_to_rt_xds(
     # Disable secondary slope
     telescope.surp_slope = 0
 
-    phase_corrected_angle, phase_fit_results = aips_like_phase_fitting(amplitude_5d, phase_5d, pol_axis, freq_axis,
-                                                                       telescope, uv_cell_size, phase_fit_control,
-                                                                       label)
+    phase_corrected_angle, phase_fit_results = aips_like_phase_fitting(
+        amplitude_5d,
+        phase_5d,
+        pol_axis,
+        freq_axis,
+        telescope,
+        uv_cell_size,
+        phase_fit_control,
+        label,
+    )
 
     compare_ray_tracing_to_phase_fit_results(
         rt_xds,

@@ -13,7 +13,10 @@ from astrohack.utils.validation import custom_split_checker
 
 from astrohack.utils.graph import compute_graph
 
-from astrohack.visualization.diagnostics import calibration_plot_chunk, plot_zernike_model_chunk
+from astrohack.visualization.diagnostics import (
+    calibration_plot_chunk,
+    plot_zernike_model_chunk,
+)
 from astrohack.visualization.diagnostics import plot_lm_coverage
 from astrohack.visualization.diagnostics import plot_sky_coverage_chunk
 from astrohack.visualization.diagnostics import plot_delays_chunk
@@ -37,7 +40,8 @@ from astrohack.visualization.textual_data import (
     export_gains_table_chunk,
     export_phase_fit_chunk,
     print_array_configuration,
-    export_to_parminator, export_zernike_fit_chunk,
+    export_to_parminator,
+    export_zernike_fit_chunk,
 )
 from astrohack.visualization.fits import (
     export_to_fits_panel_chunk,
@@ -459,7 +463,11 @@ class AstrohackImageFile(dict):
 
         pathlib.Path(param_dict["destination"]).mkdir(exist_ok=True)
         compute_graph(
-            self, export_zernike_fit_chunk, param_dict, ["ant", "ddi"], parallel=parallel
+            self,
+            export_zernike_fit_chunk,
+            param_dict,
+            ["ant", "ddi"],
+            parallel=parallel,
         )
 
     @toolviper.utils.parameter.validate(custom_checker=custom_plots_checker)
@@ -502,7 +510,11 @@ class AstrohackImageFile(dict):
 
         pathlib.Path(param_dict["destination"]).mkdir(exist_ok=True)
         compute_graph(
-            self, plot_zernike_model_chunk, param_dict, ["ant", "ddi"], parallel=parallel
+            self,
+            plot_zernike_model_chunk,
+            param_dict,
+            ["ant", "ddi"],
+            parallel=parallel,
         )
 
 

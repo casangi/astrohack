@@ -85,7 +85,9 @@ def convert_5d_grid_to_stokes(grid, pol_axis):
 
         grid_stokes[:, :, 0, :, :] = (grid[:, :, irr, :, :] + grid[:, :, ill, :, :]) / 2
         grid_stokes[:, :, 1, :, :] = (grid[:, :, irl, :, :] + grid[:, :, ilr, :, :]) / 2
-        grid_stokes[:, :, 2, :, :] = 1j * (grid[:, :, irl, :, :] - grid[:, :, ilr, :, :]) / 2
+        grid_stokes[:, :, 2, :, :] = (
+            1j * (grid[:, :, irl, :, :] - grid[:, :, ilr, :, :]) / 2
+        )
         grid_stokes[:, :, 3, :, :] = (grid[:, :, irr, :, :] - grid[:, :, ill, :, :]) / 2
     elif "XX" in pol_axis:
         ixx = get_str_idx_in_list("XX", pol_axis)
@@ -96,7 +98,9 @@ def convert_5d_grid_to_stokes(grid, pol_axis):
         grid_stokes[:, :, 0, :, :] = (grid[:, :, ixx, :, :] + grid[:, :, iyy, :, :]) / 2
         grid_stokes[:, :, 1, :, :] = (grid[:, :, ixx, :, :] - grid[:, :, iyy, :, :]) / 2
         grid_stokes[:, :, 2, :, :] = (grid[:, :, ixy, :, :] + grid[:, :, iyx, :, :]) / 2
-        grid_stokes[:, :, 3, :, :] = 1j * (grid[:, :, ixy, :, :] - grid[:, :, iyx, :, :]) / 2
+        grid_stokes[:, :, 3, :, :] = (
+            1j * (grid[:, :, ixy, :, :] - grid[:, :, iyx, :, :]) / 2
+        )
     else:
         raise Exception("Pol not supported " + str(pol_axis))
 
@@ -116,11 +120,19 @@ def convert_5d_grid_from_stokes(stokes_grid, input_pol_axis, destiny_pol_axis):
         irl = get_str_idx_in_list("RL", destiny_pol_axis)
         ilr = get_str_idx_in_list("LR", destiny_pol_axis)
         ill = get_str_idx_in_list("LL", destiny_pol_axis)
-        
-        corr_grid[:, :, irr, :, :] = stokes_grid[:, :, i_i, :, :] + stokes_grid[:, :, i_v, :, :]
-        corr_grid[:, :, irl, :, :] = stokes_grid[:, :, i_q, :, :] - 1j*stokes_grid[:, :, i_u, :, :]
-        corr_grid[:, :, ilr, :, :] = stokes_grid[:, :, i_q, :, :] + 1j*stokes_grid[:, :, i_u, :, :]
-        corr_grid[:, :, ill, :, :] = stokes_grid[:, :, i_i, :, :] - stokes_grid[:, :, i_v, :, :]
+
+        corr_grid[:, :, irr, :, :] = (
+            stokes_grid[:, :, i_i, :, :] + stokes_grid[:, :, i_v, :, :]
+        )
+        corr_grid[:, :, irl, :, :] = (
+            stokes_grid[:, :, i_q, :, :] - 1j * stokes_grid[:, :, i_u, :, :]
+        )
+        corr_grid[:, :, ilr, :, :] = (
+            stokes_grid[:, :, i_q, :, :] + 1j * stokes_grid[:, :, i_u, :, :]
+        )
+        corr_grid[:, :, ill, :, :] = (
+            stokes_grid[:, :, i_i, :, :] - stokes_grid[:, :, i_v, :, :]
+        )
 
     elif "XX" in destiny_pol_axis:
         ixx = get_str_idx_in_list("XX", destiny_pol_axis)
@@ -128,10 +140,18 @@ def convert_5d_grid_from_stokes(stokes_grid, input_pol_axis, destiny_pol_axis):
         iyx = get_str_idx_in_list("YX", destiny_pol_axis)
         iyy = get_str_idx_in_list("YY", destiny_pol_axis)
 
-        corr_grid[:, :, ixx, :, :] = stokes_grid[:, :, i_i, :, :] + stokes_grid[:, :, i_q, :, :]
-        corr_grid[:, :, ixy, :, :] = stokes_grid[:, :, i_u, :, :] - 1j*stokes_grid[:, :, i_v, :, :]
-        corr_grid[:, :, iyx, :, :] = stokes_grid[:, :, i_u, :, :] + 1j*stokes_grid[:, :, i_v, :, :]
-        corr_grid[:, :, iyy, :, :] = stokes_grid[:, :, i_i, :, :] - stokes_grid[:, :, i_q, :, :]
+        corr_grid[:, :, ixx, :, :] = (
+            stokes_grid[:, :, i_i, :, :] + stokes_grid[:, :, i_q, :, :]
+        )
+        corr_grid[:, :, ixy, :, :] = (
+            stokes_grid[:, :, i_u, :, :] - 1j * stokes_grid[:, :, i_v, :, :]
+        )
+        corr_grid[:, :, iyx, :, :] = (
+            stokes_grid[:, :, i_u, :, :] + 1j * stokes_grid[:, :, i_v, :, :]
+        )
+        corr_grid[:, :, iyy, :, :] = (
+            stokes_grid[:, :, i_i, :, :] - stokes_grid[:, :, i_q, :, :]
+        )
 
     else:
         raise Exception("Pol not supported " + str(destiny_pol_axis))
