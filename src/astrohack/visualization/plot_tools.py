@@ -14,7 +14,12 @@ astrohack_cmaps.append("AIPS")
 
 
 def create_figure_and_axes(
-    figure_size, boxes, default_figsize=figsize, sharex=False, sharey=False
+    figure_size,
+    boxes,
+    default_figsize=figsize,
+    sharex=False,
+    sharey=False,
+    plot_is_3d=False,
 ):
     """
     Create a figures and plotting axes within according to a desired figure size and number of boxes
@@ -27,14 +32,23 @@ def create_figure_and_axes(
     Figure and plotting axes array
     """
     if figure_size is None or figure_size == "None":
+        prog_fig_size = default_figsize
+    else:
+        prog_fig_size = figure_size
+
+    if plot_is_3d:
         fig, axes = plt.subplots(
-            boxes[0], boxes[1], figsize=default_figsize, sharex=sharex, sharey=sharey
+            boxes[0],
+            boxes[1],
+            figsize=prog_fig_size,
+            sharex=sharex,
+            sharey=sharey,
+            subplot_kw={"projection": "3d"},
         )
     else:
         fig, axes = plt.subplots(
-            boxes[0], boxes[1], figsize=figure_size, sharex=sharex, sharey=sharey
+            boxes[0], boxes[1], figsize=prog_fig_size, sharex=sharex, sharey=sharey
         )
-
     return fig, axes
 
 
@@ -88,7 +102,7 @@ def well_positioned_colorbar(
         return fig.colorbar(sm, label=label, cax=cax)
 
 
-def compute_extent(x_axis, y_axis, margin=0):
+def compute_extent(x_axis, y_axis, margin=0.0):
     """
     Compute extent from the arrays representing the X and Y axes
     Args:
@@ -357,3 +371,57 @@ def scatter_plot(
         ax.set_title(title)
 
     return
+
+
+def simple_imshow_map_plot(
+    ax,
+    fig,
+    x_axis,
+    y_axis,
+    gridded_2d_arr,
+    title,
+    cmap,
+    zlim,
+    x_label="X axis [m]",
+    y_label="Y axis [m]",
+    z_label="Z Scale",
+    transpose=False,
+    extent=None,
+    extent_margin=0,
+    add_colorbar=True,
+):
+    if zlim is None:
+        minmax = [np.nanmin(gridded_2d_arr), np.nanmax(gridded_2d_arr)]
+    else:
+        minmax = zlim
+    if extent is None:
+        extent = compute_extent(x_axis, y_axis, margin=extent_margin)
+
+    ax.set_title(title)
+    if transpose:
+        im = ax.imshow(
+            gridded_2d_arr.T,
+            cmap=cmap,
+            extent=extent,
+            interpolation="nearest",
+            vmin=minmax[0],
+            vmax=minmax[1],
+            origin="lower",
+        )
+    else:
+        im = ax.imshow(
+            gridded_2d_arr,
+            cmap=cmap,
+            extent=extent,
+            interpolation="nearest",
+            vmin=minmax[0],
+            vmax=minmax[1],
+        )
+
+    if add_colorbar:
+        well_positioned_colorbar(ax, fig, im, z_label)
+    ax.set_xlim(extent[:2])
+    ax.set_ylim(extent[2:])
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    return im

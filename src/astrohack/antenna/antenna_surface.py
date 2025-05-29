@@ -12,7 +12,6 @@ from astrohack.utils import (
     statistics_to_text,
     phase_wrapping,
     create_aperture_mask,
-    create_coordinate_images,
 )
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
@@ -24,10 +23,11 @@ from astrohack.utils.text import (
     format_value_unit,
 )
 from astrohack.visualization.plot_tools import (
-    well_positioned_colorbar,
     create_figure_and_axes,
     close_figure,
+    simple_imshow_map_plot,
     get_proper_color_map,
+    well_positioned_colorbar,
 )
 
 from astrohack.utils.fits import (
@@ -100,7 +100,7 @@ class AntennaSurface:
 
         self._create_aperture_mask(clip_type, clip_level, exclude_shadows)
         if nan_out_of_bounds:
-            self._nan_out_of_bounds2()
+            self._nan_out_of_bounds()
         self.deviation = self._phase_to_deviation()
 
         if self.telescope.ringed:
@@ -381,41 +381,9 @@ class AntennaSurface:
             self.mask = np.where(self.amplitude < self.clip, False, self.base_mask)
             self.mask = np.where(~np.isfinite(self.phase), False, self.mask)
 
-    def _build_ring_mask(self):
-        """
-        Builds the mask on regions to be included in panel surface masks, specific to circular antennas as there is an
-        outer and inner limit to the mask based on the antenna's inner receiver hole and outer edge
-        """
-        self.mask = np.where(self.amplitude < self.clip, False, True)
-        self.mask = np.where(self.rad > self.telescope.inlim, self.mask, False)
-        self.mask = np.where(self.rad < self.telescope.oulim, self.mask, False)
-        self.mask = np.where(np.isnan(self.amplitude), False, self.mask)
-        self.mask = np.where(self.deviation != self.deviation, False, self.mask)
-
-    def _nan_out_of_bounds_ringed(self, data):
-        """
-        Replace by NaNs all data that is beyond the edges of the antenna surface
-        Args:
-            data: The array to be transformed
-
-        Returns:
-            Transformed array with nans outside the antenna valid limits
-        """
-        ouradius = np.where(self.rad > self.telescope.diam / 2.0, np.nan, data)
-        inradius = np.where(self.rad < self.telescope.inlim, np.nan, ouradius)
-        return inradius
-
-    def _nan_out_of_bounds2(self):
+    def _nan_out_of_bounds(self):
         self.phase = np.where(self.base_mask, self.phase, np.nan)
         self.amplitude = np.where(self.base_mask, self.amplitude, np.nan)
-
-    def _build_polar(self):
-        """
-        Build polar coordinate grid, specific for circular antennas with panels arranged in rings
-        """
-        self.u_mesh, self.v_mesh, self.rad, self.phi = create_coordinate_images(
-            self.u_axis, self.v_axis, create_polar_coordinates=True
-        )
 
     def _build_ring_panels(self):
         """
@@ -607,7 +575,7 @@ class AntennaSurface:
         plotname = add_prefix(basename, f"{caller}_mask")
         parm_dict["z_lim"] = [0, 1]
         parm_dict["unit"] = " "
-        self._plot_map(plotname, plotmask, "Mask", parm_dict, colorbar=False)
+        self._plot_map(plotname, plotmask, "Mask", parm_dict)
 
     def plot_amplitude(self, basename, caller, parm_dict):
         """
@@ -719,31 +687,25 @@ class AntennaSurface:
             plotname = add_prefix(plotname, caller)
             self._plot_map(plotname, factor * maps[iplot], title, parm_dict)
 
-    def _plot_map(self, filename, data, title, parm_dict, colorbar=True):
-        cmap = get_proper_color_map(parm_dict["colormap"])
-        fig, ax = create_figure_and_axes(parm_dict["figure_size"], [1, 1])
-        ax.set_title(title)
-        # set the limits of the plot to the limits of the data
-        extent = [
-            np.min(self.u_axis),
-            np.max(self.u_axis),
-            np.min(self.v_axis),
-            np.max(self.v_axis),
-        ]
-        vmin, vmax = parm_dict["z_lim"]
-        im = ax.imshow(
-            data,
-            cmap=cmap,
-            interpolation="nearest",
-            extent=extent,
-            vmin=vmin,
-            vmax=vmax,
-        )
-        self._add_resolution_to_plot(ax, extent)
-        if colorbar:
-            well_positioned_colorbar(ax, fig, im, "Z Scale [" + parm_dict["unit"] + "]")
+    def _plot_map(self, filename, data, title, parm_dict, add_colorbar=True):
 
-        self._add_resolution_to_plot(ax, extent)
+        cmap = parm_dict["colormap"]
+        fig, ax = create_figure_and_axes(parm_dict["figure_size"], [1, 1])
+
+        simple_imshow_map_plot(
+            ax,
+            fig,
+            self.u_axis,
+            self.v_axis,
+            data,
+            title,
+            cmap,
+            parm_dict["z_lim"],
+            z_label="Z Scale [" + parm_dict["unit"] + "]",
+            add_colorbar=add_colorbar,
+        )
+
+        self._add_resolution_to_plot(ax)
         ax.set_xlabel("X axis [m]")
         ax.set_ylabel("Y axis [m]")
         for panel in self.panels:
@@ -754,13 +716,15 @@ class AntennaSurface:
         suptitle = f"{self.label}, Pol. state: {self.pol_state}"
         close_figure(fig, suptitle, filename, parm_dict["dpi"], parm_dict["display"])
 
-    def _add_resolution_to_plot(self, ax, extent, xpos=0.9, ypos=0.1):
+    def _add_resolution_to_plot(self, ax, xpos=0.9, ypos=0.1):
         lw = 0.5
         if self.resolution is None:
             return
-        dx = extent[1] - extent[0]
-        dy = extent[3] - extent[2]
-        center = (extent[0] + xpos * dx, extent[2] + ypos * dy)
+        minx = np.min(self.u_axis)
+        miny = np.min(self.v_axis)
+        dx = np.max(self.u_axis) - minx
+        dy = np.max(self.v_axis) - miny
+        center = (minx + xpos * dx, miny + ypos * dy)
         resolution = patches.Ellipse(
             center,
             self.resolution[0],
@@ -825,7 +789,7 @@ class AntennaSurface:
             vmax=vmax,
         )
 
-        self._add_resolution_to_plot(ax, extent)
+        self._add_resolution_to_plot(ax)
         colorbar = well_positioned_colorbar(
             ax, fig, im, "Screw adjustments [" + unit + "]"
         )

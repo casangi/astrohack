@@ -4,6 +4,7 @@ from astropy.coordinates import EarthLocation, AltAz, HADec, SkyCoord
 from astropy.time import Time
 
 from astrohack.utils.constants import *
+from astrohack.utils.tools import get_str_idx_in_list
 
 
 # Global conversion functions
@@ -64,27 +65,98 @@ def _test_unit(unit, unitlist):
     return idx
 
 
-def to_stokes(grid, pol):
+def convert_5d_grid_to_stokes(grid, pol_axis):
+    """
+    Convert gridded 5D data or aperture data from polariza correlations to Stokes
+    Args:
+        grid: Gridded 5D data expected to be of shape [time, chan, pol, x, y]
+        pol_axis: The polarization correlation axis
+
+    Returns:
+        the same data now converted to Stokes parameters
+    """
     grid_stokes = np.zeros_like(grid)
 
-    if "RR" in pol:
-        grid_stokes[:, :, 0, :, :] = (grid[:, :, 0, :, :] + grid[:, :, 3, :, :]) / 2
-        grid_stokes[:, :, 1, :, :] = (grid[:, :, 1, :, :] + grid[:, :, 2, :, :]) / 2
+    if "RR" in pol_axis:
+        irr = get_str_idx_in_list("RR", pol_axis)
+        irl = get_str_idx_in_list("RL", pol_axis)
+        ilr = get_str_idx_in_list("LR", pol_axis)
+        ill = get_str_idx_in_list("LL", pol_axis)
+
+        grid_stokes[:, :, 0, :, :] = (grid[:, :, irr, :, :] + grid[:, :, ill, :, :]) / 2
+        grid_stokes[:, :, 1, :, :] = (grid[:, :, irl, :, :] + grid[:, :, ilr, :, :]) / 2
         grid_stokes[:, :, 2, :, :] = (
-            1j * (grid[:, :, 1, :, :] - grid[:, :, 2, :, :]) / 2
+            1j * (grid[:, :, irl, :, :] - grid[:, :, ilr, :, :]) / 2
         )
-        grid_stokes[:, :, 3, :, :] = (grid[:, :, 0, :, :] - grid[:, :, 3, :, :]) / 2
-    elif "XX" in pol:
-        grid_stokes[:, :, 0, :, :] = (grid[:, :, 0, :, :] + grid[:, :, 3, :, :]) / 2
-        grid_stokes[:, :, 1, :, :] = (grid[:, :, 0, :, :] - grid[:, :, 3, :, :]) / 2
-        grid_stokes[:, :, 2, :, :] = (grid[:, :, 1, :, :] + grid[:, :, 2, :, :]) / 2
+        grid_stokes[:, :, 3, :, :] = (grid[:, :, irr, :, :] - grid[:, :, ill, :, :]) / 2
+    elif "XX" in pol_axis:
+        ixx = get_str_idx_in_list("XX", pol_axis)
+        ixy = get_str_idx_in_list("XY", pol_axis)
+        iyx = get_str_idx_in_list("YX", pol_axis)
+        iyy = get_str_idx_in_list("YY", pol_axis)
+
+        grid_stokes[:, :, 0, :, :] = (grid[:, :, ixx, :, :] + grid[:, :, iyy, :, :]) / 2
+        grid_stokes[:, :, 1, :, :] = (grid[:, :, ixx, :, :] - grid[:, :, iyy, :, :]) / 2
+        grid_stokes[:, :, 2, :, :] = (grid[:, :, ixy, :, :] + grid[:, :, iyx, :, :]) / 2
         grid_stokes[:, :, 3, :, :] = (
-            1j * (grid[:, :, 1, :, :] - grid[:, :, 2, :, :]) / 2
+            1j * (grid[:, :, ixy, :, :] - grid[:, :, iyx, :, :]) / 2
         )
     else:
-        raise Exception("Pol not supported " + str(pol))
+        raise Exception("Pol not supported " + str(pol_axis))
 
     return grid_stokes
+
+
+def convert_5d_grid_from_stokes(stokes_grid, input_pol_axis, destiny_pol_axis):
+    i_i = get_str_idx_in_list("I", input_pol_axis)
+    i_q = get_str_idx_in_list("Q", input_pol_axis)
+    i_u = get_str_idx_in_list("U", input_pol_axis)
+    i_v = get_str_idx_in_list("V", input_pol_axis)
+
+    corr_grid = np.zeros_like(stokes_grid)
+
+    if "RR" in destiny_pol_axis:
+        irr = get_str_idx_in_list("RR", destiny_pol_axis)
+        irl = get_str_idx_in_list("RL", destiny_pol_axis)
+        ilr = get_str_idx_in_list("LR", destiny_pol_axis)
+        ill = get_str_idx_in_list("LL", destiny_pol_axis)
+
+        corr_grid[:, :, irr, :, :] = (
+            stokes_grid[:, :, i_i, :, :] + stokes_grid[:, :, i_v, :, :]
+        )
+        corr_grid[:, :, irl, :, :] = (
+            stokes_grid[:, :, i_q, :, :] - 1j * stokes_grid[:, :, i_u, :, :]
+        )
+        corr_grid[:, :, ilr, :, :] = (
+            stokes_grid[:, :, i_q, :, :] + 1j * stokes_grid[:, :, i_u, :, :]
+        )
+        corr_grid[:, :, ill, :, :] = (
+            stokes_grid[:, :, i_i, :, :] - stokes_grid[:, :, i_v, :, :]
+        )
+
+    elif "XX" in destiny_pol_axis:
+        ixx = get_str_idx_in_list("XX", destiny_pol_axis)
+        ixy = get_str_idx_in_list("XY", destiny_pol_axis)
+        iyx = get_str_idx_in_list("YX", destiny_pol_axis)
+        iyy = get_str_idx_in_list("YY", destiny_pol_axis)
+
+        corr_grid[:, :, ixx, :, :] = (
+            stokes_grid[:, :, i_i, :, :] + stokes_grid[:, :, i_q, :, :]
+        )
+        corr_grid[:, :, ixy, :, :] = (
+            stokes_grid[:, :, i_u, :, :] - 1j * stokes_grid[:, :, i_v, :, :]
+        )
+        corr_grid[:, :, iyx, :, :] = (
+            stokes_grid[:, :, i_u, :, :] + 1j * stokes_grid[:, :, i_v, :, :]
+        )
+        corr_grid[:, :, iyy, :, :] = (
+            stokes_grid[:, :, i_i, :, :] - stokes_grid[:, :, i_q, :, :]
+        )
+
+    else:
+        raise Exception("Pol not supported " + str(destiny_pol_axis))
+
+    return corr_grid
 
 
 def convert_dict_from_numba(func):

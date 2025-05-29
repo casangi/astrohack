@@ -12,6 +12,8 @@ from astrohack.utils import (
     compute_antenna_relative_off,
     rotate_to_gmt,
     plot_types,
+    convert_5d_grid_from_stokes,
+    create_dataset_label,
 )
 from astrohack.utils.constants import fontsize, markersize
 from astrohack.utils.text import param_to_list, add_prefix
@@ -20,26 +22,18 @@ from astrohack.visualization.plot_tools import (
     create_figure_and_axes,
     close_figure,
     plot_boxes_limits_and_labels,
-    get_proper_color_map,
-    well_positioned_colorbar,
     scatter_plot,
+    simple_imshow_map_plot,
 )
 
 
-def _calc_index(n, m):
-    if n >= m:
-        return n % m
-    else:
-        return n
-
-
-def _extract_indices(l, m, squared_radius):
+def _extract_indices(laxis, maxis, squared_radius):
     indices = []
 
-    assert l.shape[0] == m.shape[0], "l, m must be same size."
+    assert laxis.shape[0] == maxis.shape[0], "l, m must be same size."
 
-    for i in range(l.shape[0]):
-        squared_sum = np.power(l[i], 2) + np.power(m[i], 2)
+    for i in range(laxis.shape[0]):
+        squared_sum = np.power(laxis[i], 2) + np.power(maxis[i], 2)
         if squared_sum <= squared_radius:
             indices.append(i)
 
@@ -55,12 +49,12 @@ def _matplotlib_calibration_inspection_function(
     radius = np.power(data.grid_params["cell_size"] * delta, 2)
     pol_index = np.squeeze(np.where(data.pol.values == pol))
 
-    l = data.DIRECTIONAL_COSINES.values[..., 0]
-    m = data.DIRECTIONAL_COSINES.values[..., 1]
+    laxis = data.DIRECTIONAL_COSINES.values[..., 0]
+    maxis = data.DIRECTIONAL_COSINES.values[..., 1]
 
-    assert l.shape[0] == m.shape[0], "l, m dimensions don't match!"
+    assert laxis.shape[0] == maxis.shape[0], "l, m dimensions don't match!"
 
-    indices = _extract_indices(l=l, m=m, squared_radius=radius)
+    indices = _extract_indices(laxis=laxis, maxis=maxis, squared_radius=radius)
 
     vis = data.isel(time=indices).VIS
     times = Time(vis.time.data - UNIX_CONVERSION, format="unix").iso
@@ -105,7 +99,7 @@ def calibration_plot_chunk(param_dict):
 
     assert l_axis.shape[0] == m_axis.shape[0], "l, m dimensions don't match!"
 
-    indices = _extract_indices(l=l_axis, m=m_axis, squared_radius=radius)
+    indices = _extract_indices(laxis=l_axis, maxis=m_axis, squared_radius=radius)
 
     if complex_split == "cartesian":
         vis_dict = {
@@ -889,59 +883,69 @@ def plot_beam_by_pol(laxis, maxis, pol, beam_image, basename, parm_dict):
     """
 
     fig, axes = create_figure_and_axes(parm_dict["figure_size"], [1, 2])
-    extent = [laxis[0], laxis[-1], maxis[0], maxis[-1]]
-    norm = "Nomalized"
+    norm_z_label = f"Z Scale [Normalized]"
+    x_label = f'L axis [{parm_dict["angle_unit"]}]'
+    y_label = f'M axis [{parm_dict["angle_unit"]}]'
 
     if parm_dict["complex_split"] == "cartesian":
         vmin = np.min([np.nanmin(beam_image.real), np.nanmin(beam_image.imag)])
         vmax = np.max([np.nanmax(beam_image.real), np.nanmax(beam_image.imag)])
-        plot_beam_sub(
-            extent,
+        simple_imshow_map_plot(
             axes[0],
             fig,
+            laxis,
+            maxis,
             beam_image.real,
             "Real part",
-            parm_dict,
-            vmin,
-            vmax,
-            norm,
+            parm_dict["colormap"],
+            [vmin, vmax],
+            x_label=x_label,
+            y_label=y_label,
+            z_label=norm_z_label,
         )
-        plot_beam_sub(
-            extent,
+        simple_imshow_map_plot(
             axes[1],
             fig,
+            laxis,
+            maxis,
             beam_image.imag,
-            "Imag. part",
-            parm_dict,
-            vmin,
-            vmax,
-            norm,
+            "Imaginary part",
+            parm_dict["colormap"],
+            [vmin, vmax],
+            x_label=x_label,
+            y_label=y_label,
+            z_label=norm_z_label,
         )
     else:
         scale = convert_unit("rad", parm_dict["phase_unit"], "trigonometric")
         amplitude = np.absolute(beam_image)
         phase = np.angle(beam_image) * scale
-        plot_beam_sub(
-            extent,
+
+        simple_imshow_map_plot(
             axes[0],
             fig,
+            laxis,
+            maxis,
             amplitude,
             "Amplitude",
-            parm_dict,
-            np.nanmin(amplitude[amplitude > 1e-8]),
-            np.nanmax(amplitude),
-            norm,
+            parm_dict["colormap"],
+            [np.nanmin(amplitude[amplitude > 1e-8]), np.nanmax(amplitude)],
+            x_label=x_label,
+            y_label=y_label,
+            z_label=norm_z_label,
         )
-        plot_beam_sub(
-            extent,
+        simple_imshow_map_plot(
             axes[1],
             fig,
+            laxis,
+            maxis,
             phase,
             "Phase",
-            parm_dict,
-            -np.pi * scale,
-            np.pi * scale,
-            parm_dict["phase_unit"],
+            parm_dict["colormap"],
+            [-np.pi * scale, np.pi * scale],
+            x_label=x_label,
+            y_label=y_label,
+            z_label=f"Phase [{parm_dict['phase_unit']}]",
         )
 
     plot_name = add_prefix(
@@ -955,31 +959,129 @@ def plot_beam_by_pol(laxis, maxis, pol, beam_image, basename, parm_dict):
     return
 
 
-def plot_beam_sub(extent, axis, fig, beam_image, label, parm_dict, vmin, vmax, zunit):
+def plot_zernike_model_chunk(parm_dict):
     """
-    Plot beam panel
+    Chunk function for the user facing function plot_zernike_model
     Args:
-        extent: the full X and Y extents
-        axis: the matplotlib axis instance
-        fig: The figure onto which to add panel
-        beam_image: the beam image to plot
-        label: The label on the panel
-        parm_dict: dictionary with general and plotting parameters
-        vmin: Minimum in panel
-        vmax: Maximum in panel
-        zunit: Unit for the map
+        parm_dict: the parameter dict containing the parameters for the plot and the data.
 
+    Returns:
+        Plots of the Zernike models along with residuals in png files inside destination.
     """
-    colormap = get_proper_color_map(parm_dict["colormap"])
-    im = axis.imshow(
-        beam_image,
-        cmap=colormap,
-        interpolation="nearest",
-        extent=extent,
-        vmin=vmin,
-        vmax=vmax,
+    antenna = parm_dict["this_ant"]
+    ddi = parm_dict["this_ddi"]
+    destination = parm_dict["destination"]
+    input_xds = parm_dict["xds_data"]
+
+    if input_xds.sizes["chan"] != 1:
+        raise Exception("Only single channel holographies supported")
+
+    if input_xds.sizes["time"] != 1:
+        raise Exception("Only single mapping holographies supported")
+
+    # Data retrieval
+    u_axis = input_xds.u.values
+    v_axis = input_xds.v.values
+    pol_axis = input_xds.pol.values
+    corr_axis = input_xds.orig_pol.values
+    zernike_model = input_xds.ZERNIKE_MODEL.isel(time=0, chan=0).values
+    aperture = input_xds.APERTURE.values
+    zernike_n_order = input_xds.attrs["zernike_N_order"]
+    corr_aperture = convert_5d_grid_from_stokes(aperture, pol_axis, corr_axis)[
+        0, 0, :, :, :
+    ]
+    suptitle = (
+        f"Zernike model with N<={zernike_n_order} for {create_dataset_label(antenna, ddi, ',')} "
+        f"correlation: "
     )
-    well_positioned_colorbar(axis, fig, im, f"Z Scale [{zunit}]")
-    axis.set_xlabel(f'L axis [{parm_dict["angle_unit"]}]')
-    axis.set_ylabel(f'M axis [{parm_dict["angle_unit"]}]')
-    axis.set_title(label)
+
+    for icorr, corr in enumerate(corr_axis):
+        filename = f"{destination}/image_zernike_model_{antenna}_{ddi}_corr_{corr}.png"
+        _plot_zernike_aperture_model(
+            suptitle + f"{corr}",
+            corr_aperture[icorr],
+            u_axis,
+            v_axis,
+            zernike_model[icorr],
+            filename,
+            parm_dict,
+        )
+
+    return
+
+
+def _plot_cartesian_component(
+    ax, fig, aperture, model, u_axis, v_axis, colormap, comp_label
+):
+    maxabs = np.nanmax(np.abs(aperture))
+    zlim = [-maxabs, maxabs]
+    residuals = aperture - model
+    nvalid = np.sum(np.isfinite(model))
+    rms = np.sqrt(np.nansum(residuals**2)) / nvalid
+    simple_imshow_map_plot(
+        ax[0],
+        fig,
+        u_axis,
+        v_axis,
+        aperture,
+        f"Aperture {comp_label} part",
+        colormap,
+        zlim,
+        z_label="EM intensity",
+    )
+    simple_imshow_map_plot(
+        ax[1],
+        fig,
+        u_axis,
+        v_axis,
+        model,
+        f"Model {comp_label} part",
+        colormap,
+        zlim,
+        z_label="EM intensity",
+    )
+    simple_imshow_map_plot(
+        ax[2],
+        fig,
+        u_axis,
+        v_axis,
+        residuals,
+        f"Residuals {comp_label} part, RMS={rms:.5f}",
+        colormap,
+        zlim,
+        z_label="EM intensity",
+    )
+
+
+def _plot_zernike_aperture_model(
+    suptitle, aperture, u_axis, v_axis, model_aperture, filename, parm_dict
+):
+    fig, ax = create_figure_and_axes(parm_dict["figure_size"], [2, 3])
+    _plot_cartesian_component(
+        ax[0],
+        fig,
+        aperture.real,
+        model_aperture.real,
+        u_axis,
+        v_axis,
+        parm_dict["colormap"],
+        "real",
+    )
+    _plot_cartesian_component(
+        ax[1],
+        fig,
+        aperture.imag,
+        model_aperture.imag,
+        u_axis,
+        v_axis,
+        parm_dict["colormap"],
+        "imaginary",
+    )
+    close_figure(
+        fig,
+        suptitle,
+        filename,
+        parm_dict["dpi"],
+        parm_dict["display"],
+        tight_layout=True,
+    )

@@ -5,7 +5,7 @@ from astrohack.antenna.telescope import Telescope
 from astrohack.utils.validation import custom_unit_checker, custom_plots_checker
 from astrohack.core.cassegrain_ray_tracing import *
 from astrohack.utils import convert_unit, clight, add_caller_and_version_to_dict
-from astrohack.utils.phase_fitting import execute_phase_fitting
+from astrohack.utils.phase_fitting import aips_like_phase_fitting
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
 from typing import Union
 
@@ -528,16 +528,13 @@ def apply_holog_phase_fitting_to_rt_xds(
     pol_axis = np.array(["I"])
 
     # Misc Parameters
-    focus_offset = 0.0  # Only relevant for Near Field data
     label = "Cassegrain-RT-Model"  # Relevant only for logger messages
     uv_cell_size = np.array(
         [u_axis[1] - u_axis[0], v_axis[1] - v_axis[0]]
     )  # This should be computed from the axis we are passing the engine...
 
     # Initiate Control toggles
-    is_stokes = True
-    is_near_field = False
-    phase_fit_parameter = [
+    phase_fit_control = [
         fit_pointing_offset,  # Pointing Offset (Supported)
         fit_xy_secondary_offset,  # X&Y Focus Offset (Supported)
         fit_focus_offset,  # Z Focus Offset (Supported)
@@ -555,19 +552,14 @@ def apply_holog_phase_fitting_to_rt_xds(
     # Disable secondary slope
     telescope.surp_slope = 0
 
-    phase_corrected_angle, phase_fit_results = execute_phase_fitting(
+    phase_corrected_angle, phase_fit_results = aips_like_phase_fitting(
         amplitude_5d,
         phase_5d,
         pol_axis,
         freq_axis,
         telescope,
         uv_cell_size,
-        phase_fit_parameter,
-        is_stokes,
-        is_near_field,
-        focus_offset,
-        u_axis,
-        v_axis,
+        phase_fit_control,
         label,
     )
 

@@ -48,13 +48,24 @@
             "struct type": ["int", "str"],
             "nullable": false
         },
-        "to_stokes":{
-            "type":["boolean"]
+        "zernike_n_order": {
+            "type": ["int"],
+            "nullable": false,
+            "min": 0,
+            "max": 10
         },
-        "phase_fit":{
-            "type":["boolean", "list", "ndarray"],
+        "phase_fit_engine": {
+            "type": ["str"],
+            "allowed": ["zernike", "perturbations", "none"],
+            "nullable": true
+        },
+        "phase_fit_control":{
+            "type":["tuple", "list", "ndarray"],
             "minlength": 5,
             "maxlength": 5
+        },
+        "to_stokes":{
+            "type":["boolean"]
         },
         "parallel":{
             "type":["boolean"]

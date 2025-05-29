@@ -543,14 +543,6 @@ def fixed_format_error(value, error, scaling, significance_scale):
     return f"{out_val:{out_fmt}} \u00b1 {out_err:{out_fmt}}"
 
 
-def get_str_idx_in_list(target, array):
-    for i_tgt, item in enumerate(array):
-        if target == item:
-            return i_tgt
-    logger.error(f"Target {target} not found in {array}")
-    return None
-
-
 def bool_to_str(boolean):
     if boolean:
         return "yes"
@@ -583,7 +575,7 @@ def create_pretty_table(field_names, alignment="c"):
     return table
 
 
-def create_dataset_label(ant_id, ddi_id):
+def create_dataset_label(ant_id, ddi_id, separator=":"):
     if "ant_" in ant_id:
         ant_name = get_data_name(ant_id)
     else:
@@ -597,7 +589,7 @@ def create_dataset_label(ant_id, ddi_id):
             ddi_name = get_data_name(ddi_id)
         else:
             ddi_name = ddi_id
-        return f"{ant_name.upper()}: DDI {ddi_name}"
+        return f"{ant_name.upper()}{separator} DDI {ddi_name}"
 
 
 def get_data_name(data_id):
@@ -654,3 +646,31 @@ def dynamic_format(value):
         return ".3e"
     else:
         return f"{round(abs(data_oom))+1}f"
+
+
+def format_byte_size(byte_size):
+    base = 1024
+    labels = ["B", "KB", "MB", "GB", "TB"]
+    format_size = byte_size
+    i_label = 0
+    while format_size > base and i_label < len(labels) - 1:
+        i_label += 1
+        format_size /= byte_size
+    return f"{format_size:.2f} {labels[i_label]}"
+
+
+def format_object_contents(obj):
+    total_size = 0
+    outstr = f"Contents of this {type(obj).__name__} object:\n"
+    for key, item in obj.__dict__.items():
+        size = item.__sizeof__()
+        outstr += f"   {key:22s} -> | {type(item).__name__} |"
+        if isinstance(item, np.ndarray):
+            outstr += " ("
+            for dim_size in item.shape:
+                outstr += f"{dim_size},"
+            outstr = outstr[:-1] + f") [{item.dtype}]"
+        outstr += f" -> {format_byte_size(size)}\n"
+        total_size += size
+    outstr += f"Total size = {format_byte_size(total_size)}\n"
+    return outstr

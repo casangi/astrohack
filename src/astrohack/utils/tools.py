@@ -154,3 +154,11 @@ def get_telescope_lat_lon_rad(telescope):
         raise Exception(msg)
 
     return lon, lat, rad
+
+
+def get_str_idx_in_list(target, array):
+    for i_tgt, item in enumerate(array):
+        if target == item:
+            return i_tgt
+    logger.error(f"Target {target} not found in {array}")
+    return None
