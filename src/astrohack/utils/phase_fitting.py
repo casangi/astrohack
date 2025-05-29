@@ -34,7 +34,7 @@ NPAR = 10
 
 def skip_phase_fitting(label, phase):
     logger.info(f"{label}: Skipping phase correction")
-    return None, phase.copy()
+    return phase.copy(), None
 
 
 def aips_like_phase_fitting(
