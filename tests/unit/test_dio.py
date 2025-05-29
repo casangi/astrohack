@@ -44,7 +44,7 @@ class TestAstrohackDio:
         cls.image_mds = holog(
             holog_name=cls.datafolder + "/ea25_cal_small_before_fixed.split.holog.zarr",
             overwrite=True,
-            phase_fit=True,
+            phase_fit_engine="perturbations",
             to_stokes=True,
             parallel=True,
         )

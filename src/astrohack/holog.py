@@ -3,10 +3,9 @@ import pathlib
 import numpy as np
 
 import toolviper.utils.logger as logger
-import toolviper.utils.parameter
 
 from numbers import Number
-from typing import List, Union, NewType
+from typing import List, Union, NewType, Tuple
 
 from astrohack.utils.graph import compute_graph
 from astrohack.utils.file import overwrite_file
@@ -35,7 +34,7 @@ def holog(
     ddi: Union[int, List[int]] = "all",
     zernike_n_order: int = 5,
     phase_fit_engine: str = 'perturbations',
-    phase_fit_control: bool = True,
+    phase_fit_control: Union[List[bool], Tuple[bool]] = (True, True, True, True, True),
     to_stokes: bool = True,
     overwrite: bool = False,
     parallel: bool = False,
@@ -97,20 +96,26 @@ def holog(
     :param zernike_n_order: Maximal N order for the Zernike Polynomials to be fitted to the aperture data.
     :type zernike_n_order: int, optional
 
-    :param to_stokes: Dictates whether polarization is computed according to stokes values., defaults to True
-    :type to_stokes: bool, optional
+    :param phase_fit_engine: Choose between the two available phase fitting engines, "perturbations" which assumes \
+    cassegrain optics and "zernike" which makes no assumption about the optical system but may overfit the aperture \
+    phase, default is "perturbations".
+    :type phase_fit_engine: str, optional.
 
-    :param phase_fit: If a boolean array is given each element controls one aspect of phase fitting. defaults to True.
-        
-        Phase fitting:
-        
+    :param phase_fit_control: Controls which type of optical perturbations are to be fitted when phase_fit_engine is \
+    set to "perturbations".
+
+        Available phase fit controls:
+
         - [0]: pointing offset; 
         - [1]: focus xy offsets; 
         - [2]: focus z offset; 
         - [3]: subreflector tilt (off by default except for VLA and VLBA)
         - [4]: cassegrain offset
 
-    :type phase_fit: bool, optional
+    :type phase_fit_control: bool array, optional
+
+    :param to_stokes: Dictates whether polarization is computed according to stokes values., defaults to True
+    :type to_stokes: bool, optional
 
     :param overwrite: Overwrite existing files on disk, defaults to False
     :type overwrite: bool, optional

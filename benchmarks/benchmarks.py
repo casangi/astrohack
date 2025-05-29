@@ -42,8 +42,7 @@ class Stakeholder:
             chan_average=True,
             scan_average=True,
             overwrite=True,
-            phase_fit=True,
-            apply_mask=True,
+            phase_fit_engine="perturbations",
             to_stokes=True,
             parallel=True,
         )
