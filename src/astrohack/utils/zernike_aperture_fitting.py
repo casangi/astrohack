@@ -2,18 +2,34 @@ import numpy as np
 from scipy import optimize as opt
 
 from astrohack.utils import create_2d_array_reconstruction_array
-from astrohack.utils.algorithms import data_statistics, create_aperture_mask
-from astrohack.utils.text import statistics_to_text
-
+from astrohack.utils.algorithms import create_aperture_mask
 
 # Cartesian forms for the Zernike Polynomials extracted from Lakshminarayanan & Fleck, Journal of modern Optics 2011.
 
 def zernike_order_0(u_ax, v_ax):
+    """
+    Zernike 0-eth order polynomial, simple flat disk.
+    Args:
+        u_ax: Aperture U axis
+        v_ax: Aperture V axis
+
+    Returns:
+        a [n, 1] Matrix filled with ones.
+    """
     # N = 0
     return np.full([u_ax.shape[0], 1], 1.0)
 
 
 def zernike_order_1(u_ax, v_ax):
+    """
+    Zernike first order polynomials, simple linear gradients.
+    Args:
+        u_ax: Aperture U axis
+        v_ax: Aperture V axis
+
+    Returns:
+        a [n, 3] Matrix filled with U and V values.
+    """
     # N = 1
     nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 3])
@@ -26,6 +42,16 @@ def zernike_order_1(u_ax, v_ax):
 
 
 def zernike_order_2(u_ax, v_ax, return_powers=False):
+    """
+    Zernike second order polynomials, first astigmatisms and linear defocus.
+    Args:
+        u_ax: Aperture U axis
+        v_ax: Aperture V axis
+        return_powers: return list of already compute U and V powers? (saves computing time)
+
+    Returns:
+        a [n, 6] Matrix filled with the first 6 polynomials.
+    """
     nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 6])
     # Fill with previous order
@@ -47,6 +73,16 @@ def zernike_order_2(u_ax, v_ax, return_powers=False):
 
 
 def zernike_order_3(u_ax, v_ax, return_powers=False):
+    """
+    Zernike third order polynomials, first comas and trefoils.
+    Args:
+        u_ax: Aperture U axis
+        v_ax: Aperture V axis
+        return_powers: return list of already compute U and V powers? (saves computing time)
+
+    Returns:
+        a [n, 10] Matrix filled the first 10 polynomials.
+    """
     nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 10])
     # Fill with previous order
@@ -70,6 +106,16 @@ def zernike_order_3(u_ax, v_ax, return_powers=False):
 
 
 def zernike_order_4(u_ax, v_ax, return_powers=False):
+    """
+    Zernike forth order polynomials, second astigmatisms, first spherical aberations and tetrafoils.
+    Args:
+        u_ax: Aperture U axis
+        v_ax: Aperture V axis
+        return_powers: return list of already compute U and V powers? (saves computing time)
+
+    Returns:
+        a [n, 15] Matrix filled the first 15 polynomials.
+    """
     nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 15])
     # Fill with previous order
@@ -86,7 +132,7 @@ def zernike_order_4(u_ax, v_ax, return_powers=False):
     # M = 2
     matrix[:, 13] = 3*u_pow[2] - 3*v_pow[2] - 4*u_pow[4] + 4*v_pow[4]
     # M = 4
-    matrix[:, 13] = u_pow[4] - 6*u_pow[2]*v_pow[2] + v_pow[4]
+    matrix[:, 14] = u_pow[4] - 6*u_pow[2]*v_pow[2] + v_pow[4]
 
     if return_powers:
         return matrix, u_pow, v_pow
@@ -95,6 +141,16 @@ def zernike_order_4(u_ax, v_ax, return_powers=False):
 
 
 def zernike_order_5(u_ax, v_ax, return_powers=False):
+    """
+    Zernike fifth order polynomials, pentafoils, second comas.
+    Args:
+        u_ax: Aperture U axis
+        v_ax: Aperture V axis
+        return_powers: return list of already compute U and V powers? (saves computing time)
+
+    Returns:
+        a [n, 21] Matrix filled the first 21 polynomials.
+    """
     nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 21])
     # Fill with previous order
@@ -124,6 +180,16 @@ def zernike_order_5(u_ax, v_ax, return_powers=False):
 
 
 def zernike_order_6(u_ax, v_ax, return_powers=False):
+    """
+    Zernike sixth order polynomials, second spherical aberations, hexafoils
+    Args:
+        u_ax: Aperture U axis
+        v_ax: Aperture V axis
+        return_powers: return list of already compute U and V powers? (saves computing time)
+
+    Returns:
+        a [n, 28] Matrix filled the first 28 polynomials.
+    """
     nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 28])
     # Fill with previous order
@@ -162,6 +228,16 @@ def zernike_order_6(u_ax, v_ax, return_powers=False):
 
 
 def zernike_order_7(u_ax, v_ax, return_powers=False):
+    """
+    Zernike seventh order polynomials, heptafoils
+    Args:
+        u_ax: Aperture U axis
+        v_ax: Aperture V axis
+        return_powers: return list of already compute U and V powers? (saves computing time)
+
+    Returns:
+        a [n, 36] Matrix filled the first 36 polynomials.
+    """
     nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 36])
     # Fill with previous order
@@ -209,6 +285,16 @@ def zernike_order_7(u_ax, v_ax, return_powers=False):
 
 
 def zernike_order_8(u_ax, v_ax, return_powers=False):
+    """
+    Zernike eigth order polynomials, octafoils
+    Args:
+        u_ax: Aperture U axis
+        v_ax: Aperture V axis
+        return_powers: return list of already compute U and V powers? (saves computing time)
+
+    Returns:
+        a [n, 45] Matrix filled the first 45 polynomials.
+    """
     nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 45])
     # Fill with previous order
@@ -262,6 +348,16 @@ def zernike_order_8(u_ax, v_ax, return_powers=False):
 
 
 def zernike_order_9(u_ax, v_ax, return_powers=False):
+    """
+    Zernike nineth order polynomials, enneafoils
+    Args:
+        u_ax: Aperture U axis
+        v_ax: Aperture V axis
+        return_powers: return list of already compute U and V powers? (saves computing time)
+
+    Returns:
+        a [n, 55] Matrix filled the first 55 polynomials.
+    """
     nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 55])
     # Fill with previous order
@@ -325,6 +421,16 @@ def zernike_order_9(u_ax, v_ax, return_powers=False):
 
 
 def zernike_order_10(u_ax, v_ax, return_powers=False):
+    """
+    Zernike tenth order polynomials, decafoils
+    Args:
+        u_ax: Aperture U axis
+        v_ax: Aperture V axis
+        return_powers: return list of already compute U and V powers? (saves computing time)
+
+    Returns:
+        a [n, 66] Matrix filled the first 66 polynomials.
+    """
     nlines = u_ax.shape[0]
     matrix = np.empty([nlines, 66])
     # Fill with previous order
@@ -404,6 +510,15 @@ zernike_matrix_functions = [zernike_order_0, zernike_order_1, zernike_order_2, z
 
 
 def create_osa_coordinates(zernike_order, split_nm=False):
+    """
+    Create a list of the labels of all the polynomials from the N order given.
+    Args:
+        zernike_order: The value of the N order.
+        split_nm: Is result to be given in a 1D list (False, default) or in a 2D [N,M] list.
+
+    Returns:
+        A list containing the OSA ordered Zernike indices labels.
+    """
     coordinates = []
     for n in range(zernike_order+1):
         if n == 0:
@@ -419,7 +534,23 @@ def create_osa_coordinates(zernike_order, split_nm=False):
 
 
 def fit_zernike_coefficients(aperture, u_axis, v_axis, zernike_order, telescope,
-                             fitting_method='numpy', mask_arm_shadows=True):
+                             fitting_engine='numpy', mask_arm_shadows=True):
+    """
+    Fit zernike polynomial coefficients to an aperture array.
+    Args:
+        aperture: 5D array containing the correlation apertures ([time, chan, pol, u, v]).
+        u_axis: U axis for the apertures
+        v_axis: V axis for the apertures.
+        zernike_order: The N-eth order to be fitted to the aperture.
+        telescope: Telescope class object with telescope's optical info.
+        fitting_engine: Which fittign engine to use, numpy's linear algebra or scipy optimize.
+        mask_arm_shadows: Mask the shadows of the arms holding the secondary in place (usually only relevant for
+        cassegrain telescopes)
+
+    Returns:
+        The Zernike coefficients, the model derived from these coefficients, the RMS of the fit and the labeling for
+        the zernike coeficients.
+    """
     # Creating a unitary radius grid
     aperture_radius = telescope.diam/2
     u_grid, v_grid = np.meshgrid(u_axis, v_axis, indexing='ij')
@@ -450,12 +581,12 @@ def fit_zernike_coefficients(aperture, u_axis, v_axis, zernike_order, telescope,
     zernike_model = np.full_like(aperture, np.nan+np.nan*1j, dtype=complex)
     fit_rms = np.ndarray([ntime, nchan, npol], dtype=complex)
 
-    if fitting_method == 'numpy':
+    if fitting_engine == 'numpy':
         fit_func = _fit_an_aperture_plane_component_np_least_squares
-    elif fitting_method == 'scipy':
+    elif fitting_engine == 'scipy':
         fit_func = _fit_an_aperture_plane_component_np_least_squares
     else:
-        raise Exception(f"Unknown fitting method {fitting_method}")
+        raise Exception(f"Unknown fitting method {fitting_engine}")
 
     for itime in range(ntime):
         for ichan in range(nchan):
@@ -473,6 +604,15 @@ def fit_zernike_coefficients(aperture, u_axis, v_axis, zernike_order, telescope,
 
 
 def _fit_an_aperture_plane_component_np_least_squares(matrix, aperture_plane_comp):
+    """
+    Fit Zernike polynomial coefficients to aperture data using numpy's linear algebra least squares engine.
+    Args:
+        matrix: The matrix containing the Zernike polynomials
+        aperture_plane_comp: a real or imaginary part of an aperture plane (usually a correlation)
+
+    Returns:
+    coefficients, fit rms, and model
+    """
     max_ap = np.nanmax(aperture_plane_comp)
     result, _, _, _ = np.linalg.lstsq(matrix, aperture_plane_comp/max_ap, rcond=None)
     model = max_ap*np.matmul(matrix, result)
@@ -481,10 +621,29 @@ def _fit_an_aperture_plane_component_np_least_squares(matrix, aperture_plane_com
 
 
 def _scipy_fitting_func(coeffs, matrix, aperture):
+    """
+    Just a simple minimizing function to be used with scipy optimize least squares engine.
+    Args:
+        coeffs: Coefficients to be tested.
+        matrix: The matrix containing the Zernike polynomials.
+        aperture: Aperture data.
+
+    Returns:
+        residuals of aperture - model
+    """
     return aperture - np.matmul(matrix, coeffs)
 
 
 def _fit_an_aperture_plane_component_scipy_opt_lst_sq(matrix, aperture_plane_comp):
+    """
+    Fit Zernike polynomial coefficients to aperture data using scipy's optimize least squares engine.
+    Args:
+        matrix: The matrix containing the Zernike polynomials
+        aperture_plane_comp: a real or imaginary part of an aperture plane (usually a correlation)
+
+    Returns:
+        coefficients, fit rms, and model
+    """
     initial_pars = np.ones(matrix.shape[1])
     max_ap = np.nanmax(aperture_plane_comp)
     norm_aperture = aperture_plane_comp/max_ap
