@@ -246,7 +246,7 @@ class TestHolog:
 
         assert json_file["chan_tolerance_factor"] == 0.0049
 
-    def test_hologto_stokes(self):
+    def test_holog_to_stokes(self):
         """
         Check that to_stokes flag was set holog is run.
         """
@@ -289,6 +289,54 @@ class TestHolog:
         )
 
         assert initial_time != modified_time
+
+    def test_holog_perturbation_phase_fit(self):
+        image_mds = holog(
+            holog_name="data/ea25_cal_small_before_fixed.split.holog.zarr",
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            phase_fit_engine="perturbations",
+            overwrite=True,
+            parallel=False,
+        )
+        keys = ['phase_offset', 'x_cassegrain_offset', 'x_focus_offset', 'x_point_offset', 'x_subreflector_tilt',
+                'y_cassegrain_offset', 'y_focus_offset', 'y_point_offset', 'y_subreflector_tilt', 'z_focus_offset']
+        references = [0.0861304879297036, -28.045787251012207, -1.9383658506669263, 0.00016828956091287107,
+                      0.0003653280374292776, 22.78821389721876, 3.3388223711536327, -0.00031530991702692017,
+                      0.0006555960110387395, 0.07328893682243502]
+
+        pha_fit_res = image_mds['ant_ea25']['ddi_0'].attrs["phase_fitting"]["map_0"]["14167000000.0"]["I"]
+
+        for ikey, key in enumerate(keys):
+            assert np.abs(pha_fit_res[key]['value'] - references[ikey]) < 1e-6
+
+        image_mds = holog(
+            holog_name="data/ea25_cal_small_before_fixed.split.holog.zarr",
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            phase_fit_engine="perturbations",
+            phase_fit_control=[False, False, False, False, False],
+            overwrite=True,
+            parallel=False,
+        )
+        pha_fit_res = image_mds['ant_ea25']['ddi_0'].attrs["phase_fitting"]
+
+        assert pha_fit_res is None
+
+        image_mds = holog(
+            holog_name="data/ea25_cal_small_before_fixed.split.holog.zarr",
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            phase_fit_engine="perturbations",
+            phase_fit_control=[False, True, False, True, False],
+            overwrite=True,
+            parallel=False,
+        )
+
+        pha_fit_res = image_mds['ant_ea25']['ddi_0'].attrs["phase_fitting"]["map_0"]["14167000000.0"]["I"]
+
+        assert np.isnan(pha_fit_res['x_point_offset']['error'])
+        assert np.isnan(pha_fit_res['z_focus_offset']['error'])
+        assert np.isnan(pha_fit_res['x_cassegrain_offset']['error'])
+
+
 
     def test_holog_not_overwrite(self):
         """
