@@ -336,7 +336,41 @@ class TestHolog:
         assert np.isnan(pha_fit_res['z_focus_offset']['error'])
         assert np.isnan(pha_fit_res['x_cassegrain_offset']['error'])
 
+    def test_holog_no_phase_fitting(self):
+        image_mds = holog(
+            holog_name="data/ea25_cal_small_before_fixed.split.holog.zarr",
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            phase_fit_engine="none",
+            overwrite=True,
+            parallel=False,
+        )
 
+        pha_fit_res = image_mds['ant_ea25']['ddi_0'].attrs["phase_fitting"]
+
+        assert pha_fit_res is None
+
+    def test_holog_zernike_phase_fitting(self):
+        image_mds = holog(
+            holog_name="data/ea25_cal_small_before_fixed.split.holog.zarr",
+            image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            phase_fit_engine="zernike",
+            zernike_n_order=4,
+            overwrite=True,
+            parallel=False,
+        )
+
+        pha_fit_res = image_mds['ant_ea25']['ddi_0'].attrs["phase_fitting"]
+
+        assert pha_fit_res is None
+
+        ref_idx = [[125, 125], [213, 430], [432, 195]]
+        ref_phase = [-0.1832512763834142, -0.1476201796080896, 0.0009533632210843024]
+
+        phase_img = image_mds['ant_ea25']['ddi_0'].CORRECTED_PHASE.values[0,0,0]
+
+        for itest in range(len(ref_phase)):
+            ix, iy = ref_idx[itest]
+            assert np.abs(phase_img[ix, iy] - ref_phase[itest]) < 1e-6
 
     def test_holog_not_overwrite(self):
         """
