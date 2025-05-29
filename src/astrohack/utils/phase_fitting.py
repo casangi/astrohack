@@ -142,18 +142,8 @@ def _solve_phase_fitting_controls(phase_fit_par, tel_name):
     Returns:
     Whether to perform phase fitting, phasefitting controls
     """
-    if isinstance(phase_fit_par, bool):
-        do_phase_fit = phase_fit_par
-        do_pnt_off = True
-        do_xy_foc_off = True
-        do_z_foc_off = True
-        do_cass_off = True
-        if tel_name == "VLA" or tel_name == "VLBA":
-            do_sub_til = True
-        else:
-            do_sub_til = False
 
-    elif isinstance(phase_fit_par, (np.ndarray, list, tuple)):
+    if isinstance(phase_fit_par, (np.ndarray, list, tuple)):
         if len(phase_fit_par) != 5:
             raise Exception("Phase fit parameter must have 5 elements")
 
@@ -172,10 +162,14 @@ def _solve_phase_fitting_controls(phase_fit_par, tel_name):
                 do_pnt_off, do_xy_foc_off, do_z_foc_off, do_sub_til, do_cass_off = (
                     phase_fit_par
                 )
+                if tel_name not in ["VLA", "VLBA"]:
+                    do_sub_til = False
+                    logger.debug(f"Telescope {tel_name} has no tilt in the subreflector, hence sub reflector "
+                                 f"tilt has been turned off")
 
     else:
         raise Exception(
-            "Phase fit parameter is neither a boolean nor an array of booleans."
+            "Phase fit parameter is not an array of booleans."
         )
     return do_phase_fit, [
         do_pnt_off,
