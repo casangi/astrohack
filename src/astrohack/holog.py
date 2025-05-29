@@ -34,7 +34,7 @@ def holog(
     alma_osf_pad: str = None,
     ant: Union[str, List[str]] = "all",
     ddi: Union[int, List[int]] = "all",
-    zernike_n_order: int = 5,
+    zernike_n_order: int = 4,
     phase_fit_engine: str = 'perturbations',
     phase_fit_control: Union[List[bool], Tuple[bool]] = (True, True, True, True, True),
     to_stokes: bool = True,
