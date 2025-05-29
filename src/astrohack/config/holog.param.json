@@ -56,7 +56,8 @@
         },
         "phase_fit_engine": {
             "type": ["str"],
-            "allowed": ["zernike", "perturbations"]
+            "allowed": ["zernike", "perturbations", "none"],
+            "nullable": true
         },
         "phase_fit_control":{
             "type":["tuple", "list", "ndarray"],
