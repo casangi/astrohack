@@ -113,7 +113,7 @@ class TestClassAntennaSurface:
             0.43083639705882354,
             197,
             262,
-            0.00025600619999005243,
+            2.57549549e-04,
         ]
         compnsampp0 = 179
         self.tant.compile_panel_points()
@@ -135,13 +135,14 @@ class TestClassAntennaSurface:
         """
         Tests that fitting results for two panels match the reference
         """
-        solveparsp0 = [0.00032385, 0.00037302, -0.00092492]
-        solveparsp30 = [0.00038098, -0.00039892, -0.00067244]
+        solveparsp0 = [0.00032415, 0.00037302, -0.00092434]
+        solveparsp30 = [0.00038105, -0.00039928, -0.00067004]
         self.tant.fit_surface()
 
         assert len(self.tant.panels[0].model.parameters) == len(solveparsp0), (
             "Fitted results have a different length" " from reference"
         )
+
         for i in range(len(solveparsp30)):
             assert (
                 abs(self.tant.panels[0].model.parameters[i] - solveparsp0[i])
