@@ -195,9 +195,7 @@ def create_phase_model(parameters, wavelength, telescope, u_axis, v_axis):
     Returns:
 
     """
-    iNPARameters = _external_to_internal_parameters(
-        parameters, wavelength, telescope
-    )
+    iNPARameters = _external_to_internal_parameters(parameters, wavelength, telescope)
     dummyphase = np.zeros((u_axis.shape[0], v_axis.shape[0]))
 
     _, model = _correct_phase(
@@ -321,9 +319,7 @@ def _aips_phase_fitting_block(
     out_rms = _compute_phase_rms_block(corrected_phase)
     #
     # # Convert output to convenient units
-    results = _internal_to_external_parameters_block(
-        results, wavelength, telescope
-    )
+    results = _internal_to_external_parameters_block(results, wavelength, telescope)
     errors = _internal_to_external_parameters_block(
         np.sqrt(variances), wavelength, telescope
     )
@@ -573,9 +569,9 @@ def _build_design_matrix_block(
             for pol in pols:
                 for i_u, u_val in enumerate(u_axis):
                     for i_v, v_val in enumerate(v_axis):
-                        if np.sqrt(u_val**2+v_val**2) > ourad:
+                        if np.sqrt(u_val**2 + v_val**2) > ourad:
                             continue
-                        if np.sqrt(u_val**2+v_val**2) < inrad:
+                        if np.sqrt(u_val**2 + v_val**2) < inrad:
                             continue
                         #   ignore blanked pixels.
                         phase = phase_image[time, chan, pol, i_u, i_v]
@@ -716,7 +712,8 @@ def _internal_to_external_parameters_block(parameters, wavelength, telescope):
         for chan in range(nchan):
             for pol in range(npol):
                 results[time, chan, pol] = _internal_to_external_parameters(
-                    parameters[time, chan, pol], wavelength, telescope)
+                    parameters[time, chan, pol], wavelength, telescope
+                )
     return results
 
 
@@ -751,10 +748,18 @@ def _ignore_non_fitted_block(ignored, matrix, vector):
                     )
     return newmatrix, newvector
 
+
 # Change is needed here
 @njit(cache=False, nogil=True)
 def _correct_phase_block(
-    pols, phase_image, u_axis, v_axis, parameters, magnification, focal_length, phase_slope
+    pols,
+    phase_image,
+    u_axis,
+    v_axis,
+    parameters,
+    magnification,
+    focal_length,
+    phase_slope,
 ):
     """
     Corrects a phase image by using the phase model with the given parameters
@@ -811,11 +816,7 @@ def _correct_phase_block(
                                 focal_length,
                                 phase_slope,
                             )
-                            corr = (
-                                phase_offset
-                                + x_pnt_off * u_val
-                                + y_pnt_off * v_val
-                            )
+                            corr = phase_offset + x_pnt_off * u_val + y_pnt_off * v_val
                             corr += (
                                 x_focus_off * x_focus
                                 + y_focus_off * y_focus

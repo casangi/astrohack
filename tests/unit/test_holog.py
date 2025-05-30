@@ -21,7 +21,9 @@ class TestHolog:
     def setup_class(cls):
         """setup any state specific to the execution of the given test class
         such as fetching test data"""
-        toolviper.utils.data.download(file="ea25_cal_small_before_fixed.split.ms", folder="data/")
+        toolviper.utils.data.download(
+            file="ea25_cal_small_before_fixed.split.ms", folder="data/"
+        )
 
         toolviper.utils.data.download(
             file="holog_numerical_verification.json", folder="data/"
@@ -308,18 +310,22 @@ class TestHolog:
             "y_subreflector_tilt",
             "z_focus_offset",
         ]
-        references = [0.07854467856879538,
-                      -28.044142593327745,
-                      -1.9400764990642743,
-                      0.0001641826578867972,
-                      0.0003639636675771953,
-                      -22.79834097424694,
-                      -3.316538216333087,
-                      0.00031687826284370707,
-                      -0.0006533042611128819,
-                      0.07242809618691809]
+        references = [
+            0.07854467856879538,
+            -28.044142593327745,
+            -1.9400764990642743,
+            0.0001641826578867972,
+            0.0003639636675771953,
+            -22.79834097424694,
+            -3.316538216333087,
+            0.00031687826284370707,
+            -0.0006533042611128819,
+            0.07242809618691809,
+        ]
 
-        pha_fit_res = image_mds["ant_ea25"]["ddi_0"].attrs["phase_fitting"]["map_0"]["14167000000.0"]["I"]
+        pha_fit_res = image_mds["ant_ea25"]["ddi_0"].attrs["phase_fitting"]["map_0"][
+            "14167000000.0"
+        ]["I"]
 
         for ikey, key in enumerate(keys):
             assert np.abs(pha_fit_res[key]["value"] - references[ikey]) < 1e-6
@@ -345,7 +351,9 @@ class TestHolog:
             parallel=False,
         )
 
-        pha_fit_res = image_mds["ant_ea25"]["ddi_0"].attrs["phase_fitting"]["map_0"]["14167000000.0"]["I"]
+        pha_fit_res = image_mds["ant_ea25"]["ddi_0"].attrs["phase_fitting"]["map_0"][
+            "14167000000.0"
+        ]["I"]
 
         assert np.isnan(pha_fit_res["x_point_offset"]["error"])
         assert np.isnan(pha_fit_res["z_focus_offset"]["error"])
