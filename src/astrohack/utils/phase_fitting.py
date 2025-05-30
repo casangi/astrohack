@@ -69,14 +69,14 @@ def aips_like_phase_fitting(
             logger.error(msg)
             raise Exception(msg)
 
-        uv_cell_size = u_axis[1]-u_axis[0]
         min_wavelength = clight / freq_axis[0]
         results, errors, phase_corrected_angle, _, in_rms, out_rms = (
             _aips_phase_fitting_block(
                 pol_indexes=pol_indexes,
                 wavelength=min_wavelength,
                 telescope=telescope,
-                cellxy=uv_cell_size,  # THIS HAS TO BE CHANGED, (X, Y) CELL SIZE ARE NOT THE SAME.
+                u_axis=u_axis,
+                v_axis=v_axis,
                 amplitude_image=amplitude,
                 phase_image=phase,
                 pointing_offset=phase_fit_control[0],
@@ -182,27 +182,28 @@ def _solve_phase_fitting_controls(phase_fit_par, tel_name):
     ]
 
 
-def create_phase_model(npix, parameters, wavelength, telescope, cellxy):
+def create_phase_model(parameters, wavelength, telescope, u_axis, v_axis):
     """
     Create a phase model with npix by npix size according to the given parameters
     Args:
-        npix: Number of pixels in each size of the model
         parameters: Parameters for the phase model in the units described in _phase_fitting
         wavelength: Observing wavelength, in meters
         telescope: Telescope object containing the optics parameters
-        cellxy: Map cell spacing, in meters
+        u_axis: Aperture's U axis
+        v_axis: Aperture's V axis
 
     Returns:
 
     """
     iNPARameters = _external_to_internal_parameters(
-        parameters, wavelength, telescope, cellxy
+        parameters, wavelength, telescope
     )
-    dummyphase = np.zeros((npix, npix))
+    dummyphase = np.zeros((u_axis.shape[0], v_axis.shape[0]))
 
     _, model = _correct_phase(
         dummyphase,
-        cellxy,
+        u_axis,
+        v_axis,
         iNPARameters,
         telescope.magnification,
         telescope.focus,
@@ -215,7 +216,8 @@ def _aips_phase_fitting_block(
     pol_indexes,
     wavelength,
     telescope,
-    cellxy,
+    u_axis,
+    v_axis,
     amplitude_image,
     phase_image,
     pointing_offset,
@@ -257,7 +259,8 @@ def _aips_phase_fitting_block(
         pol_indexes: Indices of the polarizations to be used for phase fitting
         wavelength: Observing wavelength, in meters
         telescope: Telescope object containing the optics parameters
-        cellxy: Map cell spacing, in meters
+        u_axis: Aperture's U axis
+        v_axis: Aperture's V axis
         amplitude_image: Grading amplitude map
         phase_image: Grading phase map
         pointing_offset: enable phase slope (pointing offset)
@@ -276,9 +279,10 @@ def _aips_phase_fitting_block(
     """
     matrix, vector = _build_design_matrix_block(
         pol_indexes,
-        -telescope.inlim,
-        -telescope.diam / 2,
-        cellxy,
+        telescope.inlim,
+        telescope.diam / 2,
+        u_axis,
+        v_axis,
         phase_image,
         amplitude_image,
         telescope.magnification,
@@ -305,7 +309,8 @@ def _aips_phase_fitting_block(
     corrected_phase, phase_model = _correct_phase_block(
         pol_indexes,
         phase_image,
-        cellxy,
+        u_axis,
+        v_axis,
         results,
         telescope.magnification,
         telescope.focus,
@@ -317,24 +322,23 @@ def _aips_phase_fitting_block(
     #
     # # Convert output to convenient units
     results = _internal_to_external_parameters_block(
-        results, wavelength, telescope, cellxy
+        results, wavelength, telescope
     )
     errors = _internal_to_external_parameters_block(
-        np.sqrt(variances), wavelength, telescope, cellxy
+        np.sqrt(variances), wavelength, telescope
     )
     #
     # return results, errors, corrected_phase, phase_model,
     return results, errors, corrected_phase, phase_model, in_rms, out_rms
 
 
-def _internal_to_external_parameters(parameters, wavelength, telescope, cellxy):
+def _internal_to_external_parameters(parameters, wavelength, telescope):
     """
     Convert internal parameter array to convenient external units
     Args:
         parameters: Array in internal units
         wavelength: Observing wavelength, in meters
         telescope: Telescope object containing the optics parameters
-        cellxy: Map cell spacing, in meters
 
     Returns:
         Array in convenient units, see _phase_fitting for more details
@@ -347,18 +351,17 @@ def _internal_to_external_parameters(parameters, wavelength, telescope, cellxy):
     rad2deg = convert_unit("rad", "deg", "trigonometric")
     results[6:8] *= rad2deg / (1000.0 * telescope.secondary_dist)
     # rescale phase ramp to pointing offset
-    results[1:3] *= wavelength * rad2deg / 360.0 / cellxy
+    results[1:3] *= wavelength * rad2deg / 360.0
     return results * rad2deg
 
 
-def _external_to_internal_parameters(exparameters, wavelength, telescope, cellxy):
+def _external_to_internal_parameters(exparameters, wavelength, telescope):
     """
     Convert external parameter array to internal units
     Args:
         exparameters: Array in external units
         wavelength: Observing wavelength, in meters
         telescope: Telescope object containing the optics parameters
-        cellxy: Map cell spacing, in meters
 
     Returns:
         Array in internal units, see _phase_fitting for more details
@@ -371,7 +374,7 @@ def _external_to_internal_parameters(exparameters, wavelength, telescope, cellxy
     rad2deg = convert_unit("rad", "deg", "trigonometric")
     iNPARameters[6:8] /= rad2deg / (1000.0 * telescope.secondary_dist)
     # rescale phase ramp to pointing offset
-    iNPARameters[1:3] /= wavelength * rad2deg / 360.0 / cellxy
+    iNPARameters[1:3] /= wavelength * rad2deg / 360.0
     iNPARameters /= rad2deg
 
     return iNPARameters
@@ -401,13 +404,14 @@ def _ignore_non_fitted(ignored, matrix, vector):
 
 
 def _correct_phase(
-    phase_image, cellxy, parameters, magnification, focal_length, phase_slope
+    phase_image, u_axis, v_axis, parameters, magnification, focal_length, phase_slope
 ):
     """
     Corrects a phase image by using the phase model with the given parameters
     Args:
         phase_image: Grading phase map
-        cellxy: Map cell spacing, in meters
+        u_axis: Aperture's U axis
+        v_axis: Aperture's V axis
         parameters: Parameters to be used in model determination
         magnification: Telescope Magnification
         focal_length: Nominal focal length, in meters
@@ -417,8 +421,6 @@ def _correct_phase(
         Corrected phase image and corresponfing phase_model
     """
     npix = phase_image.shape[0]
-    ix0 = npix // 2
-    iy0 = npix // 2
     phase_model = np.zeros((npix, npix))
     corrected_phase = np.zeros((npix, npix))
     (
@@ -434,26 +436,23 @@ def _correct_phase(
         y_cass_off,
     ) = parameters
 
-    for iy in range(npix):
-        for ix in range(npix):
-            if not np.isnan(phase_image[ix, iy]):
-                x_delta_pix = ix - ix0
-                y_delta_pix = iy - iy0
+    for i_u, u_val in enumerate(u_axis):
+        for i_v, v_val in enumerate(v_axis):
+            if not np.isnan(phase_image[i_u, i_v]):
 
                 x_focus, y_focus, z_focus, x_tilt, y_tilt, x_cass, y_cass = (
                     _matrix_coeffs(
-                        x_delta_pix,
-                        y_delta_pix,
+                        u_val,
+                        v_val,
                         magnification,
                         focal_length,
-                        cellxy,
                         phase_slope,
                     )
                 )
                 corr = (
                     phase_offset
-                    + x_pnt_off * x_delta_pix
-                    + y_pnt_off * y_delta_pix
+                    + x_pnt_off * u_val
+                    + y_pnt_off * v_val
                     + x_focus_off * x_focus
                 )
                 corr += (
@@ -463,24 +462,21 @@ def _correct_phase(
                     + y_subref_tilt * y_tilt
                 )
                 corr += x_cass_off * x_cass + y_cass_off * y_cass
-                corrected_phase[ix, iy] = phase_image[ix, iy] - corr
-                phase_model[ix, iy] = corr
+                corrected_phase[i_u, i_v] = phase_image[i_u, i_v] - corr
+                phase_model[i_u, i_v] = corr
 
     return corrected_phase, phase_model
 
 
 @njit(cache=False, nogil=True)
-def _matrix_coeffs(
-    x_delta_pix, y_delta_pix, magnification, focal_length, cellxy, phase_slope
-):
+def _matrix_coeffs(u_val, v_val, magnification, focal_length, phase_slope):
     """
     Computes the matrix coefficients used when building the design matrix and correcting the phase image
     Args:
-        x_delta_pix: Distance from X reference pixel, in pixels
-        y_delta_pix: Distance from Y reference pixel, in pixels
+        u_val: U value
+        v_val: V value
         magnification: Telescope Magnification
         focal_length: Nominal focal length
-        cellxy: Map cell spacing, in meters
         phase_slope: Slope to apply to Q factor
 
     Returns:
@@ -492,10 +488,9 @@ def _matrix_coeffs(
         x_cass: Cassegrain coefficient in x direction
         y_cass: Cassegrain coefficient in y direction
     """
-    focal_path = focal_length / cellxy
-    rad = np.sqrt(x_delta_pix * x_delta_pix + y_delta_pix * y_delta_pix)
-    ang = np.arctan2(y_delta_pix, x_delta_pix)
-    q_factor = rad / (2.0 * focal_path)
+    rad = np.sqrt(u_val**2 + v_val**2)
+    ang = np.arctan2(v_val, u_val)
+    q_factor = rad / (2.0 * focal_length)
     q_factor_scaled = q_factor / magnification
     denominator = 1.0 + q_factor * q_factor
     denominator_scaled = 1.0 + q_factor_scaled * q_factor_scaled
@@ -536,9 +531,10 @@ def _matrix_coeffs(
 @njit(cache=False, nogil=True)
 def _build_design_matrix_block(
     pols,
-    xymin,
-    xymax,
-    cellxy,
+    inrad,
+    ourad,
+    u_axis,
+    v_axis,
     phase_image,
     amplitude_image,
     magnification,
@@ -549,11 +545,10 @@ def _build_design_matrix_block(
     Builds the design matrix to be used on the least squares fitting
     Args:
         pols: Indices of the polarizations to be used for phase fitting
-        xymin: minimum of |x| and |y| used in correcting for pointing, focus, and feed offset. Negative values denote a
-        range of SQRT(x*x + y*y)
-        xymax: maximum of |x| and |y| used in correcting for pointing, focus, and feed offset. Negative values denote a
-        range of SQRT(x*x + y*y)
-        cellxy: Map cell spacing, in meters
+        inrad: minimum radius to be considered in fit
+        ourad: maximum radius to be considered in fit
+        u_axis: Aperture's U axis
+        v_axis: Aperture's V axis
         phase_image: Grading phase map
         amplitude_image: Grading amplitude map
         magnification: Telescope Magnification
@@ -567,82 +562,44 @@ def _build_design_matrix_block(
     #   focal length in cellular units
     ntime = amplitude_image.shape[0]
     nchan = amplitude_image.shape[1]
-    npix = phase_image.shape[3]
     npols = len(pols)
     ipol = 0
-    ix0 = npix // 2
-    iy0 = npix // 2
 
     matrix = np.zeros((ntime, nchan, npols, NPAR, NPAR))
     vector = np.zeros((ntime, nchan, npols, NPAR))
-    ixymin = abs(xymin / cellxy)
-    ixymax = abs(xymax / cellxy)
-    min_squared_pix_radius = (xymin * xymin) / (cellxy * cellxy)
-    max_squared_pix_radius = (xymax * xymax) / (cellxy * cellxy)
 
     for time in range(ntime):
         for chan in range(nchan):
             for pol in pols:
-                for ix in range(npix):
-                    x_delta_pix = abs(ix - ix0)
-                    #   check absolute limits.
-                    if xymin > 0.0 and x_delta_pix < ixymin:
-                        continue
-                    if xymax > 0.0 and x_delta_pix > ixymax:
-                        continue
-                    #   is this row of pixels outside
-                    #   the outer ring?
-                    if (
-                        xymax < 0.0
-                        and x_delta_pix * x_delta_pix > max_squared_pix_radius
-                    ):
-                        continue
-                    for iy in range(npix):
+                for i_u, u_val in enumerate(u_axis):
+                    for i_v, v_val in enumerate(v_axis):
+                        if np.sqrt(u_val**2+v_val**2) > ourad:
+                            continue
+                        if np.sqrt(u_val**2+v_val**2) < inrad:
+                            continue
                         #   ignore blanked pixels.
-                        phase = phase_image[time, chan, pol, ix, iy]
+                        phase = phase_image[time, chan, pol, i_u, i_v]
                         if np.isnan(phase):
                             continue
                         #   check for inclusion.
-                        y_delta_pix = abs(iy - iy0)
-                        radius_pix_squared = (
-                            x_delta_pix * x_delta_pix + y_delta_pix * y_delta_pix
-                        )
-                        #   inner limits.
-                        if xymin > 0.0:
-                            if y_delta_pix < ixymin:
-                                continue
-                        elif xymin < 0.0:
-                            if radius_pix_squared < min_squared_pix_radius:
-                                continue
-                        #   outer limits.
-                        if xymax > 0.0:
-                            if y_delta_pix > ixymax:
-                                continue
-                        elif xymax < 0.0:
-                            if radius_pix_squared > max_squared_pix_radius:
-                                continue
 
                         #   evaluate variables (in cells)
-                        weight = amplitude_image[time, chan, pol, ix, iy]
-
-                        x_delta_pix = ix - ix0
-                        y_delta_pix = iy - iy0
+                        weight = amplitude_image[time, chan, pol, i_u, i_v]
 
                         x_focus, y_focus, z_focus, x_tilt, y_tilt, x_cass, y_cass = (
                             _matrix_coeffs(
-                                x_delta_pix,
-                                y_delta_pix,
+                                u_val,
+                                v_val,
                                 magnification,
                                 focal_length,
-                                cellxy,
                                 phase_slope,
                             )
                         )
 
                         #  build the design matrix.
                         vector[time, chan, ipol, 0] += phase * weight
-                        vector[time, chan, ipol, 1] += phase * x_delta_pix * weight
-                        vector[time, chan, ipol, 2] += phase * y_delta_pix * weight
+                        vector[time, chan, ipol, 1] += phase * u_val * weight
+                        vector[time, chan, ipol, 2] += phase * v_val * weight
                         vector[time, chan, ipol, 3] += phase * x_focus * weight
                         vector[time, chan, ipol, 4] += phase * y_focus * weight
                         vector[time, chan, ipol, 5] += phase * z_focus * weight
@@ -651,8 +608,8 @@ def _build_design_matrix_block(
                         vector[time, chan, ipol, 8] += phase * x_cass * weight
                         vector[time, chan, ipol, 9] += phase * y_cass * weight
                         matrix[time, chan, ipol, 0, 0] += weight
-                        matrix[time, chan, ipol, 0, 1] += x_delta_pix * weight
-                        matrix[time, chan, ipol, 0, 2] += y_delta_pix * weight
+                        matrix[time, chan, ipol, 0, 1] += u_val * weight
+                        matrix[time, chan, ipol, 0, 2] += v_val * weight
                         matrix[time, chan, ipol, 0, 3] += x_focus * weight
                         matrix[time, chan, ipol, 0, 4] += y_focus * weight
                         matrix[time, chan, ipol, 0, 5] += z_focus * weight
@@ -660,29 +617,23 @@ def _build_design_matrix_block(
                         matrix[time, chan, ipol, 0, 7] += y_tilt * weight
                         matrix[time, chan, ipol, 0, 8] += x_cass * weight
                         matrix[time, chan, ipol, 0, 9] += y_cass * weight
-                        matrix[time, chan, ipol, 1, 1] += (
-                            x_delta_pix * x_delta_pix * weight
-                        )
-                        matrix[time, chan, ipol, 1, 2] += (
-                            x_delta_pix * y_delta_pix * weight
-                        )
-                        matrix[time, chan, ipol, 1, 3] += x_delta_pix * x_focus * weight
-                        matrix[time, chan, ipol, 1, 4] += x_delta_pix * y_focus * weight
-                        matrix[time, chan, ipol, 1, 5] += x_delta_pix * z_focus * weight
-                        matrix[time, chan, ipol, 1, 6] += x_delta_pix * x_tilt * weight
-                        matrix[time, chan, ipol, 1, 7] += x_delta_pix * y_tilt * weight
-                        matrix[time, chan, ipol, 1, 8] += x_delta_pix * x_cass * weight
-                        matrix[time, chan, ipol, 1, 9] += x_delta_pix * y_cass * weight
-                        matrix[time, chan, ipol, 2, 2] += (
-                            y_delta_pix * y_delta_pix * weight
-                        )
-                        matrix[time, chan, ipol, 2, 3] += y_delta_pix * x_focus * weight
-                        matrix[time, chan, ipol, 2, 4] += y_delta_pix * y_focus * weight
-                        matrix[time, chan, ipol, 2, 5] += y_delta_pix * z_focus * weight
-                        matrix[time, chan, ipol, 2, 6] += y_delta_pix * x_tilt * weight
-                        matrix[time, chan, ipol, 2, 7] += y_delta_pix * y_tilt * weight
-                        matrix[time, chan, ipol, 2, 8] += y_delta_pix * x_cass * weight
-                        matrix[time, chan, ipol, 2, 9] += y_delta_pix * y_cass * weight
+                        matrix[time, chan, ipol, 1, 1] += u_val**2 * weight
+                        matrix[time, chan, ipol, 1, 2] += u_val * v_val * weight
+                        matrix[time, chan, ipol, 1, 3] += u_val * x_focus * weight
+                        matrix[time, chan, ipol, 1, 4] += u_val * y_focus * weight
+                        matrix[time, chan, ipol, 1, 5] += u_val * z_focus * weight
+                        matrix[time, chan, ipol, 1, 6] += u_val * x_tilt * weight
+                        matrix[time, chan, ipol, 1, 7] += u_val * y_tilt * weight
+                        matrix[time, chan, ipol, 1, 8] += u_val * x_cass * weight
+                        matrix[time, chan, ipol, 1, 9] += u_val * y_cass * weight
+                        matrix[time, chan, ipol, 2, 2] += v_val**2 * weight
+                        matrix[time, chan, ipol, 2, 3] += v_val * x_focus * weight
+                        matrix[time, chan, ipol, 2, 4] += v_val * y_focus * weight
+                        matrix[time, chan, ipol, 2, 5] += v_val * z_focus * weight
+                        matrix[time, chan, ipol, 2, 6] += v_val * x_tilt * weight
+                        matrix[time, chan, ipol, 2, 7] += v_val * y_tilt * weight
+                        matrix[time, chan, ipol, 2, 8] += v_val * x_cass * weight
+                        matrix[time, chan, ipol, 2, 9] += v_val * y_cass * weight
                         matrix[time, chan, ipol, 3, 3] += x_focus * x_focus * weight
                         matrix[time, chan, ipol, 3, 4] += x_focus * y_focus * weight
                         matrix[time, chan, ipol, 3, 5] += x_focus * z_focus * weight
@@ -726,7 +677,7 @@ def _reconstruct_full_results_block(results, variances, ignored):
         ignored: The array containing the information on which parameters were ignored
 
     Returns:
-        reconstructed_results: full length result array, non fitted parameters replaced by zero
+        reconstructed_results: full length result array, non-fitted parameters replaced by zero
         reconstructed_variances: full length variance array, nan means unfitted parameter
     """
     ntime, nchan, npol = results.shape[0:3]
@@ -748,14 +699,13 @@ def _reconstruct_full_results_block(results, variances, ignored):
     return reconstructed_results, reconstructed_variances
 
 
-def _internal_to_external_parameters_block(parameters, wavelength, telescope, cellxy):
+def _internal_to_external_parameters_block(parameters, wavelength, telescope):
     """
     Convert internal parameter array to convenient external units
     Args:
         parameters: Array in internal units
         wavelength: Observing wavelength, in meters
         telescope: Telescope object containing the optics parameters
-        cellxy: Map cell spacing, in meters
 
     Returns:
         Array in convenient units, see _phase_fitting for more details
@@ -766,8 +716,7 @@ def _internal_to_external_parameters_block(parameters, wavelength, telescope, ce
         for chan in range(nchan):
             for pol in range(npol):
                 results[time, chan, pol] = _internal_to_external_parameters(
-                    parameters[time, chan, pol], wavelength, telescope, cellxy
-                )
+                    parameters[time, chan, pol], wavelength, telescope)
     return results
 
 
@@ -802,16 +751,17 @@ def _ignore_non_fitted_block(ignored, matrix, vector):
                     )
     return newmatrix, newvector
 
-
+# Change is needed here
 @njit(cache=False, nogil=True)
 def _correct_phase_block(
-    pols, phase_image, cellxy, parameters, magnification, focal_length, phase_slope
+    pols, phase_image, u_axis, v_axis, parameters, magnification, focal_length, phase_slope
 ):
     """
     Corrects a phase image by using the phase model with the given parameters
     Args:
         phase_image: Grading phase map
-        cellxy: Map cell spacing, in meters
+        u_axis: Aperture's U axis
+        v_axis: Aperture's V axis
         parameters: Parameters to be used in model determination
         magnification: Telescope Magnification
         focal_length: Nominal focal length, in meters
@@ -820,12 +770,9 @@ def _correct_phase_block(
     Returns:
         Corrected phase image and corresponfing phase_model
     """
-    npix = phase_image.shape[-1]
     ntime = phase_image.shape[0]
     nchan = phase_image.shape[1]
     ipol = 0
-    ix0 = npix // 2
-    iy0 = npix // 2
     phase_model = np.zeros_like(phase_image)
     corrected_phase = phase_image.copy()
 
@@ -844,13 +791,10 @@ def _correct_phase_block(
                     x_cass_off,
                     y_cass_off,
                 ) = parameters[time, chan, ipol]
-                for iy in range(npix):
-                    for ix in range(npix):
-                        phase = phase_image[time, chan, pol, ix, iy]
+                for i_u, u_val in enumerate(u_axis):
+                    for i_v, v_val in enumerate(v_axis):
+                        phase = phase_image[time, chan, pol, i_u, i_v]
                         if not np.isnan(phase):
-
-                            x_delta_pix = ix - ix0
-                            y_delta_pix = iy - iy0
 
                             (
                                 x_focus,
@@ -861,17 +805,16 @@ def _correct_phase_block(
                                 x_cass,
                                 y_cass,
                             ) = _matrix_coeffs(
-                                x_delta_pix,
-                                y_delta_pix,
+                                u_val,
+                                v_val,
                                 magnification,
                                 focal_length,
-                                cellxy,
                                 phase_slope,
                             )
                             corr = (
                                 phase_offset
-                                + x_pnt_off * x_delta_pix
-                                + y_pnt_off * y_delta_pix
+                                + x_pnt_off * u_val
+                                + y_pnt_off * v_val
                             )
                             corr += (
                                 x_focus_off * x_focus
@@ -884,10 +827,10 @@ def _correct_phase_block(
                                 + x_cass_off * x_cass
                             )
                             corr += y_cass_off * y_cass
-                            corrected_phase[time, chan, pol, ix, iy] = (
+                            corrected_phase[time, chan, pol, i_u, i_v] = (
                                 phase_wrapping_jit(phase - corr)
                             )
-                            phase_model[time, chan, pol, ix, iy] = corr
+                            phase_model[time, chan, pol, i_u, i_v] = corr
                 ipol += 1
     return corrected_phase, phase_model
 
