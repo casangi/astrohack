@@ -43,7 +43,8 @@ def aips_like_phase_fitting(
     pol_axis,
     freq_axis,
     telescope,
-    uv_cell_size,
+    u_axis,
+    v_axis,
     user_phase_fit_control,
     label,
 ):
@@ -68,15 +69,14 @@ def aips_like_phase_fitting(
             logger.error(msg)
             raise Exception(msg)
 
+        uv_cell_size = u_axis[1]-u_axis[0]
         min_wavelength = clight / freq_axis[0]
         results, errors, phase_corrected_angle, _, in_rms, out_rms = (
             _aips_phase_fitting_block(
                 pol_indexes=pol_indexes,
                 wavelength=min_wavelength,
                 telescope=telescope,
-                cellxy=uv_cell_size[
-                    0
-                ],  # THIS HAS TO BE CHANGED, (X, Y) CELL SIZE ARE NOT THE SAME.
+                cellxy=uv_cell_size,  # THIS HAS TO BE CHANGED, (X, Y) CELL SIZE ARE NOT THE SAME.
                 amplitude_image=amplitude,
                 phase_image=phase,
                 pointing_offset=phase_fit_control[0],

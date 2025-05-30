@@ -138,7 +138,8 @@ def process_holog_chunk(holog_chunk_params):
                     pol_axis,
                     freq_axis,
                     telescope,
-                    uv_cell_size,
+                    u_axis,
+                    v_axis,
                     holog_chunk_params["phase_fit_control"],
                     label,
                 )

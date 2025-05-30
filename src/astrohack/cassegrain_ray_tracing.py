@@ -558,7 +558,8 @@ def apply_holog_phase_fitting_to_rt_xds(
         pol_axis,
         freq_axis,
         telescope,
-        uv_cell_size,
+        u_axis,
+        v_axis,
         phase_fit_control,
         label,
     )
