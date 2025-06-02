@@ -1,0 +1,5 @@
+ignore:
+  - "src/astrohack/visualization"
+  - "examples"
+  - "stakeholder_test"
+  - "etc"
