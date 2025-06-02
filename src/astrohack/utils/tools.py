@@ -2,37 +2,13 @@ import os
 import glob
 import toolviper
 import shutil
-import sys
 import numpy as np
 import toolviper.utils.console as console
-from contextlib import contextmanager
 
 from casacore import tables
 from toolviper.utils import logger as logger
 
 from typing import Union
-
-
-@contextmanager
-def silence_stdout():
-    old_target = sys.stdout
-    try:
-        with open(os.devnull, "w") as new_target:
-            sys.stdout = new_target
-            yield new_target
-    finally:
-        sys.stdout = old_target
-
-
-@contextmanager
-def silence_stderr():
-    old_target = sys.stderr
-    try:
-        with open(os.devnull, "w") as new_target:
-            sys.stderr = new_target
-            yield new_target
-    finally:
-        sys.stderr = old_target
 
 
 def file_search(root: str = "/", file_name=None) -> Union[None, str]:

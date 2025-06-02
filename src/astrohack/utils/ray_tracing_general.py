@@ -2,7 +2,6 @@ import numpy as np
 
 
 nanvec3d = np.array([np.nan, np.nan, np.nan])
-intblankval = -1000
 
 
 def generalized_dot(vec_map_a, vec_map_b):
@@ -11,14 +10,6 @@ def generalized_dot(vec_map_a, vec_map_b):
 
 def generalized_norm(vecmap):
     return np.sqrt(generalized_dot(vecmap, vecmap))
-
-
-def generalized_dist2(vec_map_a, vec_map_b):
-    return np.sum((vec_map_a - vec_map_b) ** 2, axis=-1)
-
-
-def generalized_dist(vec_map_a, vec_map_b):
-    return np.sqrt(np.sum((vec_map_a - vec_map_b) ** 2, axis=-1))
 
 
 def normalize_vector_map(vector_map):
