@@ -80,7 +80,7 @@ def parallactic_derotation(data, parallactic_angle_dict):
     maps = list(parallactic_angle_dict.keys())
 
     # Get the median index for the first map (this should be the same for every map).
-    median_index = len(parallactic_angle_dict[maps[0]].parallactic_samples) // 2
+    # median_index = len(parallactic_angle_dict[maps[0]].parallactic_samples) // 2
 
     # This is the angle we will rotate the maps to.
     # median_angular_reference = parallactic_angle_dict[maps[0]].parallactic_samples[median_index]
@@ -96,34 +96,6 @@ def parallactic_derotation(data, parallactic_angle_dict):
         )
 
     return data
-
-
-def mask_circular_disk(center, radius, array, mask_value=np.nan):
-    """Create a mask to trim an image
-
-    Args:
-        center (tuple): tuple describing the center of the image
-        radius (int): disk radius
-        array (numpy.ndarray): data array to mask
-        mask_value (int, optional): Value to set masked value to. Defaults to 1.
-
-    Returns:
-        _type_: _description_
-    """
-    shape = np.array(array.shape[-2:])
-
-    if center is None:
-        center = shape // 2
-
-    r, c = disk(center, radius, shape=shape)
-    mask = np.zeros(shape, dtype=array.dtype)
-    mask[r, c] = 1
-
-    mask = np.tile(mask, reps=(array.shape[:-2] + (1, 1)))
-
-    mask[mask == 0] = mask_value
-
-    return mask
 
 
 def calculate_far_field_aperture(
@@ -298,57 +270,6 @@ def _feed_correction(phase, u_axis, v_axis, focal_length, nk=10):
     return phase + feed_phase
 
 
-def _fit_illumination_pattern(amp, u_axis, v_axis, diameter, blockage):
-    """
-    Fit aperture amplitude pattern to a gaussian
-    Args:
-        amp: Aperture amplitude
-        u_axis: U axis
-        v_axis: V axis
-        diameter: Telescope diameter
-        blockage: Inner blockage radius
-
-    Returns:
-        Best fit gaussian to the ilumination pattern
-    """
-    amp_max = np.max(amp)
-    db_amp = 10.0 * np.log10(amp / amp_max)
-
-    npar = 5
-    umesh, vmesh = np.meshgrid(u_axis, v_axis)
-    umesh = umesh.ravel()
-    vmesh = vmesh.ravel()
-    umesh2 = umesh**2
-    vmesh2 = vmesh**2
-
-    oulim2 = (diameter / 2) ** 2
-    inlim2 = blockage**2
-    dist2 = umesh2 + vmesh2
-
-    mask = np.where(dist2 >= inlim2, True, False)
-    mask = np.where(dist2 >= oulim2, False, mask)
-
-    npoints = np.sum(mask)
-    matrix = np.empty([npoints, npar])
-    matrix[:, 0] = umesh2[mask]
-    matrix[:, 1] = vmesh2[mask]
-    matrix[:, 2] = umesh[mask]
-    matrix[:, 3] = vmesh[mask]
-    matrix[:, 4] = 1.0
-    vector = db_amp.ravel()[mask]
-
-    result, _, _ = least_squares(matrix, vector)
-    db_fitted = (
-        umesh2 * result[0]
-        + vmesh2 * result[1]
-        + umesh * result[2]
-        + vmesh * result[3]
-        + result[4]
-    )
-    fitted = 10 ** (db_fitted / 10)
-    return fitted.reshape(amp.shape)
-
-
 def _circular_gaussian(axes, amp, x0, y0, sigma, offset):
     """
     Compute a Circular gaussian image
@@ -369,81 +290,6 @@ def _circular_gaussian(axes, amp, x0, y0, sigma, offset):
     expo = 1 * ((x_axis - x0) ** 2 + (y_axis - y0) ** 2)
     expo /= 2 * sigma**2
     return amp * np.exp(-expo) + offset
-
-
-def _two_gaussians(
-    axes, x0, y0, amp_narrow, sigma_narrow, amp_broad, sigma_broad, offset
-):
-    """
-    Compute the sum of two Circular gaussian images, one narrow the othe broad
-    Args:
-        axes: X and Y axes mesh grids
-        x0: Gaussian center in X
-        y0: Gaussian center in Y
-        amp_narrow: Narrow Gaussian amplitude
-        sigma_narrow: Narrow Gaussian width
-        amp_broad: broad Gaussian amplitude
-        sigma_broad: broad Gaussian width
-        offset: gaussian base offset
-
-    Returns:
-        sum of two circular gaussian images
-    """
-    # offset = 0
-    narrow = _circular_gaussian(axes, amp_narrow, x0, y0, sigma_narrow, 0)
-    broad = _circular_gaussian(axes, amp_broad, x0, y0, sigma_broad, 0)
-    return narrow + broad + offset
-
-
-def _fit_dishhorn_beam_artefact(amp, blockage, u_axis, v_axis):
-    """
-    Attempt to fit the artefact that appears at the center of an aperture amplitude iamge
-    Args:
-        amp: Aperture amplitude
-        blockage: Inner blockage radius
-        u_axis: U axis
-        v_axis: V axis
-
-    Returns:
-        Fitted artefact
-    """
-    logger.info("Fitting feed horn artefact")
-    u_mesh, v_mesh = np.meshgrid(u_axis, v_axis)
-
-    dist2 = u_mesh**2 + v_mesh**2
-    sel = dist2 < (4 * blockage) ** 2
-
-    # Ravel data for the fit
-    fit_data = amp[sel]
-    fit_u = u_mesh[sel]
-    fit_v = v_mesh[sel]
-
-    # initial guess of parameters
-    initial_guess = (
-        0,
-        0,
-        np.max(amp),
-        blockage / sig_2_fwhm,
-        4.0,
-        2 * blockage / sig_2_fwhm,
-        0,
-    )
-    import scipy.optimize as opt
-
-    # find the optimal Gaussian parameters
-    results = opt.curve_fit(
-        _two_gaussians, (fit_u, fit_v), fit_data, p0=initial_guess, maxfev=int(1e6)
-    )
-
-    popt = results[0]
-    # create new data with these parameters
-    popt[-1] = 0
-    data_fitted = _two_gaussians((u_mesh, v_mesh), *popt)
-
-    popt[3] *= sig_2_fwhm
-    popt[5] *= sig_2_fwhm
-    feed_fit = data_fitted
-    return feed_fit
 
 
 def _pad_beam_image(grid, padding_factor):

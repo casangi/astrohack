@@ -1069,18 +1069,6 @@ def clic_like_phase_fitting(
     return phase, best_fit
 
 
-def plot_map_simple(data, fig, ax, title, u_axis, v_axis):
-    extent = [np.min(u_axis), np.max(u_axis), np.min(v_axis), np.max(v_axis)]
-    cmap = get_proper_color_map("viridis")
-    im = ax.imshow(data, cmap=cmap, extent=extent)
-    circ = Circle((0, 0), 6, fill=False, color="black")
-    ax.add_patch(circ)
-    circ = Circle((0, 0), 3, fill=False, color="black")
-    ax.add_patch(circ)
-    ax.set_title(title)
-    well_positioned_colorbar(ax, fig, im, title)
-
-
 @njit(cache=False, nogil=True)
 def phase_wrapping_jit(phase):
     """

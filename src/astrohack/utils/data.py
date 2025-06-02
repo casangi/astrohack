@@ -51,8 +51,6 @@ def write_meta_data(file_name, input_dict):
         input_dict: Dictionary to be included in the metadata
     """
 
-    calling_function = 1
-
     meta_data = copy.deepcopy(input_dict)
 
     add_caller_and_version_to_dict(meta_data)

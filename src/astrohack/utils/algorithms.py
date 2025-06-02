@@ -60,51 +60,6 @@ def data_from_version_needs_patch(version_to_check, patched_version):
     return False
 
 
-def calculate_suggested_grid_parameter(parameter, quantile=0.005):
-    import scipy
-
-    logger.warning(parameter)
-    # Determine skew properties and return median. Only do this if there are at least 5 values.
-    if np.abs(scipy.stats.skew(parameter)) > 0.5:
-
-        if scipy.stats.skew(parameter) > 0:
-            cutoff = np.quantile(parameter, 1 - quantile)
-            filtered_parameter = parameter[parameter <= cutoff]
-
-        else:
-
-            cutoff = np.quantile(parameter, quantile)
-            filtered_parameter = parameter[parameter >= cutoff]
-
-        # The culling of data that is extremely skewed can fail if the number of values is too small causing all the
-        # data to be filtered. In this case just return the median which should be better with skewed data.
-        if filtered_parameter.shape[0] == 0:
-            logger.warning(
-                "Filtering of outliers in skewed data has failed, returning median value for gridding parameter."
-            )
-
-            return np.median(parameter)
-
-        return np.median(filtered_parameter)
-
-    # Process as mean
-    else:
-
-        upper_cutoff = np.quantile(parameter, 1 - quantile)
-        lower_cutoff = np.quantile(parameter, quantile)
-
-        filtered_parameter = parameter[parameter >= lower_cutoff]
-        filtered_parameter = filtered_parameter[filtered_parameter <= upper_cutoff]
-
-        if filtered_parameter.shape[0] == 0:
-            logger.warning(
-                "Filtering of outlier data has failed, returning mean value for gridding parameter."
-            )
-            return np.mean(parameter)
-
-        return np.mean(filtered_parameter)
-
-
 def _apply_mask(data, scaling=0.5):
     """Applies a cropping mask to the input data according to the scale factor
 
