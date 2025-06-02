@@ -922,7 +922,7 @@ def fit_zernike_coefficients(
     if fitting_engine == "numpy":
         fit_func = _fit_an_aperture_plane_component_np_least_squares
     elif fitting_engine == "scipy":
-        fit_func = _fit_an_aperture_plane_component_np_least_squares
+        fit_func = _fit_an_aperture_plane_component_scipy_opt_lst_sq
     else:
         raise Exception(f"Unknown fitting method {fitting_engine}")
 
