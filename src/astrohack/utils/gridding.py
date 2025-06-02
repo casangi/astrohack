@@ -334,7 +334,7 @@ def _convolution_gridding(
     beam_size = _compute_beam_size(diameter, reference_scaling_frequency)
 
     start = time.time()
-    beam, wei = _convolution_gridding_jit(
+    beam, _ = _convolution_gridding_jit(
         visibilities, lmvis, weights, sky_cell_size, l_axis, m_axis, beam_size, avg_chan
     )
     duration = time.time() - start

@@ -78,7 +78,7 @@ def process_holog_chunk(holog_chunk_params):
     # Current bottleneck
     if is_near_field:
         distance, focus_offset = telescope.dist_dict[holog_chunk_params["alma_osf_pad"]]
-        aperture_grid, u_axis, v_axis, uv_cell_size, used_wavelength = (
+        aperture_grid, u_axis, v_axis, _, used_wavelength = (
             calculate_near_field_aperture(
                 grid=beam_grid,
                 sky_cell_size=holog_chunk_params["cell_size"],
@@ -93,7 +93,7 @@ def process_holog_chunk(holog_chunk_params):
         )
     else:
         focus_offset = 0
-        aperture_grid, u_axis, v_axis, uv_cell_size, used_wavelength = (
+        aperture_grid, u_axis, v_axis, _, used_wavelength = (
             calculate_far_field_aperture(
                 grid=beam_grid,
                 padding_factor=holog_chunk_params["padding_factor"],
@@ -155,7 +155,8 @@ def process_holog_chunk(holog_chunk_params):
                     )
                 else:
                     zernike_grid = zernike_model.copy()
-                zernike_amp, zernike_phase, _, _ = _crop_and_split_aperture(
+
+                _, zernike_phase, _, _ = _crop_and_split_aperture(
                     zernike_grid, u_axis, v_axis, telescope
                 )
 
