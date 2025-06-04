@@ -380,7 +380,7 @@ def simple_imshow_map_plot(
     y_axis,
     gridded_2d_arr,
     title,
-    cmap,
+    colormap,
     zlim,
     x_label="X axis [m]",
     y_label="Y axis [m]",
@@ -390,6 +390,7 @@ def simple_imshow_map_plot(
     extent_margin=0,
     add_colorbar=True,
 ):
+    cmap = get_proper_color_map(colormap)
     if zlim is None:
         minmax = [np.nanmin(gridded_2d_arr), np.nanmax(gridded_2d_arr)]
     else:
