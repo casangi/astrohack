@@ -177,6 +177,8 @@ class Telescope2:
         self.inlim = None
         self.oulim = None
         self.name = None
+        self.el_axis_offset = None
+        self.dist_dict = None
 
     def read(self, filename):
         """
@@ -185,6 +187,7 @@ class Telescope2:
             filename: name of the input file
         """
         try:
+            logger.debug('Reading telescope data from: filename')
             xds = xr.open_zarr(filename)
             for key in xds.attrs:
                 setattr(self, key, xds.attrs[key])
@@ -198,6 +201,10 @@ class Telescope2:
         self.filename = abs_path.name
         self.filepath = abs_path.parent
 
+    def read_from_distro(self, name):
+        dest_path = "/".join([astrohack.__path__[0], f'data/telescopes/{name.lower()}.zarr'])
+        self.read(dest_path)
+
 
     def write(self, filename):
         """
@@ -210,6 +217,7 @@ class Telescope2:
         obj_dict.pop("filename", None)
         xds = xr.Dataset()
         xds.attrs = obj_dict
+        logger.debug('Writing telescope data to: filename')
         xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
         return
 
@@ -220,11 +228,8 @@ class Telescope2:
             outstr += f"{key:20s} = {str(item)}\n"
         return outstr
 
-    def _write_to_distro(self):
-        astrohack_path = astrohack.__path__[0]
-        dest_path = "/".join([astrohack_path, 'data/telescopes/'])
-        dest_path += f'{self.name.lower()}.zarr'
-        print(dest_path)
+    def write_to_distro(self):
+        dest_path = "/".join([astrohack.__path__[0], f'data/telescopes/{self.name.lower().replace(" ", "_")}.zarr'])
         self.write(dest_path)
 
 
@@ -249,7 +254,7 @@ class RingedCassegrain(Telescope2):
         self.surp_slope = None
         self.nrings = None
 
-    def consitency_check(self):
+    def consistency_check(self):
         error = False
 
         if not self.nrings == len(self.inrad) == len(self.ourad):
@@ -265,5 +270,54 @@ class RingedCassegrain(Telescope2):
 
         return
 
+    @classmethod
+    def from_name(cls, name):
+        obj = cls()
+        obj.read_from_distro(name)
+        return obj
+
+
+def get_proper_telescope(name: str, antenna_name: str = None):
+    """
+    Retrieve the proper telescope object based on the name
+    Args:
+        name: Name of the telescope
+        antenna_name: Name of the antenna, significant for heterogenius arrays.
+    Returns:
+        A telescope object of one of the proper subclasses
+    """
+
+    name = name.lower()
+    if isinstance(antenna_name, str):
+        antenna_name = antenna_name.lower()
+    if 'vla' in name:
+        if antenna_name is None or 'ea' in antenna_name:
+            return RingedCassegrain.from_name('vla')
+        elif 'na' in antenna_name:
+            print('ngvla antenna not yet supported')
+            return None
+        else:
+            raise Exception(f'Unsupported antenna type for the VLA: {antenna_name}')
+
+    elif 'vlba' in name:
+        return RingedCassegrain.from_name('vlba')
+
+    elif 'alma' in name:
+        if antenna_name is None:
+            raise Exception('ALMA is an heterogenious array and hence an antenna name is needed')
+        elif 'dv' in antenna_name:
+            return RingedCassegrain.from_name('alma_dv')
+        elif 'da' in antenna_name:
+            return RingedCassegrain.from_name('alma_da')
+        elif 'tp' in antenna_name:
+            return RingedCassegrain.from_name('alma_tp')
+        else:
+            raise Exception(f'Unsupported antenna type for ALMA: {antenna_name}')
+
+    elif 'aca' in name:
+        return RingedCassegrain.from_name('aca_7m')
+
+    else:
+        return None
 
 
