@@ -162,3 +162,108 @@ class Telescope:
         for key, item in obj_dict.items():
             outstr += f"{key:20s} = {str(item)}\n"
         return outstr
+
+
+class Telescope2:
+
+    def __init__(self):
+        # Some of these will need to refactored later
+        self.diam = None
+        self.ant_list = None
+        self.filename = None
+        self.filepath = None
+        self.array_center = None
+        self.comment = None
+        self.inlim = None
+        self.oulim = None
+        self.name = None
+
+    def read(self, filename):
+        """
+        Read the telescope object from an X array .zarr telescope configuration file
+        Args:
+            filename: name of the input file
+        """
+        try:
+            xds = xr.open_zarr(filename)
+            for key in xds.attrs:
+                setattr(self, key, xds.attrs[key])
+
+        except FileNotFoundError:
+            logger.error(f"Telescope file not found: {filename}")
+            raise FileNotFoundError
+
+        relative_path = pathlib.Path(filename)
+        abs_path = relative_path.resolve()
+        self.filename = abs_path.name
+        self.filepath = abs_path.parent
+
+
+    def write(self, filename):
+        """
+        Write the telescope object to an X array .zarr telescope configuration file
+        Args:
+            filename: Name of the output file
+        """
+        obj_dict = vars(self)
+        obj_dict.pop("filepath", None)
+        obj_dict.pop("filename", None)
+        xds = xr.Dataset()
+        xds.attrs = obj_dict
+        xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
+        return
+
+    def __repr__(self):
+        outstr = ""
+        obj_dict = vars(self)
+        for key, item in obj_dict.items():
+            outstr += f"{key:20s} = {str(item)}\n"
+        return outstr
+
+    def _write_to_distro(self):
+        astrohack_path = astrohack.__path__[0]
+        dest_path = "/".join([astrohack_path, 'data/telescopes/'])
+        dest_path += f'{self.name.lower()}.zarr'
+        print(dest_path)
+        self.write(dest_path)
+
+
+class RingedCassegrain(Telescope2):
+
+    def __init__(self):
+        super().__init__()
+
+        self.inrad = None
+        self.ourad = None
+        self.focus = None
+        self.arm_shadow_rotation = None
+        self.arm_shadow_width = None
+        self.gain_wavelengths = None
+        self.magnification = None
+        self.npanel = None
+        self.panel_numbering = None
+        self.screw_description = None
+        self.screw_offset = None
+        self.secondary_dist = None
+        self.secondary_support = None
+        self.surp_slope = None
+        self.nrings = None
+
+    def consitency_check(self):
+        error = False
+
+        if not self.nrings == len(self.inrad) == len(self.ourad):
+            logger.error(
+                "Number of panels don't match radii or number of panels list sizes"
+            )
+            error = True
+
+        if error:
+            raise Exception("Failed Consistency check")
+        else:
+            print('Consistency passed')
+
+        return
+
+
+
