@@ -1,6 +1,6 @@
 import numpy as np
 from toolviper.utils import logger as logger
-from astrohack.antenna import Telescope, AntennaSurface
+from astrohack.antenna import AntennaSurface
 from astrohack.utils import clight, convert_unit, add_prefix
 from astrohack.utils.fits import (
     put_axis_in_fits_header,
@@ -24,8 +24,7 @@ def export_to_fits_panel_chunk(parm_dict):
         f"Exporting panel contents of {antenna} {ddi} to FITS files in {destination}"
     )
     xds = parm_dict["xds_data"]
-    telescope = Telescope.from_xds(xds)
-    surface = AntennaSurface(xds, telescope, reread=True)
+    surface = AntennaSurface(xds, reread=True)
     basename = f"{destination}/{antenna}_{ddi}"
     surface.export_to_fits(basename)
     return

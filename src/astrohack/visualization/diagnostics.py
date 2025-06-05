@@ -780,8 +780,7 @@ def plot_antenna_chunk(parm_dict):
     plot_type = parm_dict["plot_type"]
     basename = f"{destination}/{antenna}_{ddi}"
     xds = parm_dict["xds_data"]
-    telescope = Telescope.from_xds(xds)
-    surface = AntennaSurface(xds, telescope, reread=True)
+    surface = AntennaSurface(xds, reread=True)
     if plot_type == plot_types[0]:  # deviation plot
         surface.plot_deviation(basename, "panel", parm_dict)
     elif plot_type == plot_types[1]:  # phase plot
@@ -807,7 +806,6 @@ def plot_aperture_chunk(parm_dict):
     destination = parm_dict["destination"]
     input_xds = parm_dict["xds_data"]
     input_xds.attrs["AIPS"] = False
-    telescope = Telescope.from_xds(input_xds)
 
     asked_pol_states = parm_dict["polarization_state"]
     avail_pol_states = input_xds.pol.values
@@ -826,7 +824,6 @@ def plot_aperture_chunk(parm_dict):
         if pol_state in avail_pol_states:
             surface = AntennaSurface(
                 input_xds,
-                telescope,
                 nan_out_of_bounds=False,
                 pol_state=str(pol_state),
                 clip_type="absolute",
