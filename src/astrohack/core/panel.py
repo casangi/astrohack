@@ -44,7 +44,6 @@ def process_panel_chunk(panel_chunk_params):
         exclude_shadows=panel_chunk_params["exclude_shadows"],
     )
 
-    surface.compile_panel_points()
     surface.fit_surface()
     surface.correct_surface()
 
