@@ -277,6 +277,17 @@ class RingedCassegrain(Telescope2):
         return obj
 
 
+class NgvlaPrototype(Telescope2):
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def from_name(cls, name):
+        obj = cls()
+        obj.read_from_distro(name)
+        return obj
+
+
 def get_proper_telescope(name: str, antenna_name: str = None):
     """
     Retrieve the proper telescope object based on the name
