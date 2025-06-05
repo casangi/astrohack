@@ -368,11 +368,15 @@ class RingedCassegrain(Telescope2):
 
         return panel_list, panel_map
 
-    def phase_to_deviation(self):
-        return
+    def phase_to_deviation(self, radius, phase, wavelength):
+        acoeff = (wavelength / twopi) / (4.0 * self.focus)
+        bcoeff = 4 * self.focus**2
+        return acoeff * phase * np.sqrt(radius**2 + bcoeff)
 
-    def deviation_to_phase(self):
-        return
+    def deviation_to_phase(self, radius, deviation, wavelength):
+        acoeff = (wavelength / twopi) / (4.0 * self.focus)
+        bcoeff = 4 * self.focus**2
+        return deviation / (acoeff * np.sqrt(radius**2 + bcoeff))
 
 
 class NgvlaPrototype(Telescope2):
