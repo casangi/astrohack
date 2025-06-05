@@ -316,8 +316,9 @@ class RingedCassegrain(Telescope2):
         jpanel = int(nppersec - (ipanel % nppersec))
         return "{0:1d}-{1:1d}{2:1d}".format(sector, iring + 1, jpanel)
 
-    def build_panel_list(self, panel_model, panel_margins, u_axis, v_axis, radius, phi, deviation, mask):
-
+    def build_panel_list(self, panel_model, panel_margins):
+        from time import time
+        start = time()
         if self.name in ["VLA", "VLBA"]:
             self._panel_label = self._vla_panel_labeling
         elif "ALMA" in self.name or self.name == "ACA 7m":
@@ -326,17 +327,8 @@ class RingedCassegrain(Telescope2):
             raise Exception(f"Don't know how to build panel list for {self.name}")
 
         panel_list = []
-        panel_map = np.full_like(radius, -1)
-        panelsum = 0
         for iring in range(self.nrings):
             angle = twopi / self.npanel[iring]
-            panel_map = np.where(
-                radius >= self.inrad[iring],
-                np.floor(phi / angle) + panelsum,
-                panel_map,
-            )
-            panelsum += self.npanel[iring]
-
             for ipanel in range(self.npanel[iring]):
                 panel = RingPanel(
                     panel_model,
@@ -352,6 +344,34 @@ class RingedCassegrain(Telescope2):
                 )
                 panel_list.append(panel)
 
+        return panel_list
+
+    def attribute_pixels_to_panels(self, panel_list, u_axis, v_axis, radius, phi, deviation, mask):
+        """
+        Attribute pixels in deviation to the panels in the panel_list
+        Args:
+            panel_list: The panel list must have been created by build_panel_list for the same instrument
+            u_axis: Aperture U axis
+            v_axis: Aperture V axis
+            radius: Aperture radius map
+            phi: Aperture phi angle map
+            deviation: Aperture deviation
+            mask: Aperture mask
+
+        Returns:
+            map of panel attributions
+        """
+        panel_map = np.full_like(radius, -1)
+        panelsum = 0
+        for iring in range(self.nrings):
+            angle = twopi / self.npanel[iring]
+            panel_map = np.where(
+                radius >= self.inrad[iring],
+                np.floor(phi / angle) + panelsum,
+                panel_map,
+            )
+            panelsum += self.npanel[iring]
+
         for ix, xc in enumerate(u_axis):
             for iy, yc in enumerate(v_axis):
                 ipanel = panel_map[ix, iy]
@@ -366,7 +386,8 @@ class RingedCassegrain(Telescope2):
                         else:
                             panel.add_margin([xc, yc, ix, iy, deviation[ix, iy]])
 
-        return panel_list, panel_map
+        return panel_map
+
 
     def phase_to_deviation(self, radius, phase, wavelength):
         acoeff = (wavelength / twopi) / (4.0 * self.focus)
