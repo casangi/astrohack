@@ -44,7 +44,6 @@ class AntennaSurface:
     def __init__(
         self,
         inputxds,
-        telescope,
         clip_type="sigma",
         clip_level=3,
         pmodel="rigid",
@@ -60,7 +59,6 @@ class AntennaSurface:
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
             inputxds: Input xarray dataset
-            telescope: Telescope object
             clip_type: Type of clipping to be applied to amplitude
             clip_level: Level of clipping
             pmodel: model of panel surface fitting, if is None defaults to telescope default
