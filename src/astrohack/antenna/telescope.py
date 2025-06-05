@@ -5,6 +5,8 @@ import xarray as xr
 import toolviper.utils.logger as logger
 
 import astrohack.utils.tools
+from astrohack.utils.constants import *
+from astrohack.antenna.ring_panel import RingPanel
 
 
 class Telescope:
@@ -254,6 +256,14 @@ class RingedCassegrain(Telescope2):
         self.surp_slope = None
         self.nrings = None
 
+        self._panel_label = None
+
+    @classmethod
+    def from_name(cls, name):
+        obj = cls()
+        obj.read_from_distro(name)
+        return obj
+
     def consistency_check(self):
         error = False
 
@@ -270,11 +280,99 @@ class RingedCassegrain(Telescope2):
 
         return
 
-    @classmethod
-    def from_name(cls, name):
-        obj = cls()
-        obj.read_from_distro(name)
-        return obj
+    @staticmethod
+    def _vla_panel_labeling(iring, ipanel):
+        """
+        Provide the correct panel label for VLA style panels
+        Args:
+            iring: Number of the ring the panel is in
+            ipanel: Number of the panel in that ring clockwise from the top
+        Returns:
+            The proper label for the panel at iring, ipanel
+        """
+        return "{0:d}-{1:d}".format(iring + 1, ipanel + 1)
+
+    def _alma_panel_labeling(self, iring, ipanel):
+        """
+        Provide the correct panel label for ALMA style panels, which is more complicated than VLA panels due to the
+        implementation of panel sectors
+        Args:
+            iring: Number of the ring the panel is in
+            ipanel: Number of the panel in that ring clockwise from the top
+
+        Returns:
+            The proper label for the panel at iring, ipanel
+        """
+        angle = twopi / self.npanel[iring]
+        sector_angle = twopi / self.npanel[0]
+        theta = twopi - (ipanel + 0.5) * angle
+        sector = int(
+            ((theta / sector_angle) + 1 + self.npanel[0] / 4)
+            % self.npanel[0]
+        )
+        if sector == 0:
+            sector = self.npanel[0]
+        nppersec = self.npanel[iring] / self.npanel[0]
+        jpanel = int(nppersec - (ipanel % nppersec))
+        return "{0:1d}-{1:1d}{2:1d}".format(sector, iring + 1, jpanel)
+
+    def build_panel_list(self, panel_model, panel_margins, u_axis, v_axis, radius, phi, deviation, mask):
+
+        if self.name in ["VLA", "VLBA"]:
+            self._panel_label = self._vla_panel_labeling
+        elif "ALMA" in self.name or self.name == "ACA 7m":
+            self._panel_label = self._alma_panel_labeling
+        else:
+            raise Exception(f"Don't know how to build panel list for {self.name}")
+
+        panel_list = []
+        panel_map = np.full_like(radius, -1)
+        panelsum = 0
+        for iring in range(self.nrings):
+            angle = twopi / self.npanel[iring]
+            panel_map = np.where(
+                radius >= self.inrad[iring],
+                np.floor(phi / angle) + panelsum,
+                panel_map,
+            )
+            panelsum += self.npanel[iring]
+
+            for ipanel in range(self.npanel[iring]):
+                panel = RingPanel(
+                    panel_model,
+                    angle,
+                    ipanel,
+                    self._panel_label(iring, ipanel),
+                    self.inrad[iring],
+                    self.ourad[iring],
+                    margin=panel_margins,
+                    screw_scheme=self.screw_description,
+                    screw_offset=self.screw_offset,
+                    plot_screw_size=0.006 * self.diam,
+                )
+                panel_list.append(panel)
+
+        for ix, xc in enumerate(u_axis):
+            for iy, yc in enumerate(v_axis):
+                ipanel = panel_map[ix, iy]
+                if ipanel >= 0:
+                    panel = panel_list[int(ipanel)]
+                    issample, inpanel = panel.is_inside(
+                        radius[ix, iy], phi[ix, iy]
+                    )
+                    if inpanel:
+                        if issample and mask[ix, iy]:
+                            panel.add_sample([xc, yc, ix, iy, deviation[ix, iy]])
+                        else:
+                            panel.add_margin([xc, yc, ix, iy, deviation[ix, iy]])
+
+        return panel_list, panel_map
+
+    def phase_to_deviation(self):
+        return
+
+    def deviation_to_phase(self):
+        return
 
 
 class NgvlaPrototype(Telescope2):
