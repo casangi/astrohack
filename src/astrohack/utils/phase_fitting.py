@@ -345,7 +345,7 @@ def _internal_to_external_parameters(parameters, wavelength, telescope):
     results[3:] *= scaling
     # Sub-reflector tilt to degrees
     rad2deg = convert_unit("rad", "deg", "trigonometric")
-    results[6:8] *= rad2deg / (1000.0 * telescope.secondary_dist)
+    results[6:8] *= rad2deg / (1000.0 * telescope.secondary_distance_to_focus)
     # rescale phase ramp to pointing offset
     results[1:3] *= wavelength * rad2deg / 360.0
     return results * rad2deg
@@ -368,7 +368,7 @@ def _external_to_internal_parameters(exparameters, wavelength, telescope):
     iNPARameters[3:] /= scaling
     # Sub-reflector tilt from degrees
     rad2deg = convert_unit("rad", "deg", "trigonometric")
-    iNPARameters[6:8] /= rad2deg / (1000.0 * telescope.secondary_dist)
+    iNPARameters[6:8] /= rad2deg / (1000.0 * telescope.secondary_distance_to_focus)
     # rescale phase ramp to pointing offset
     iNPARameters[1:3] /= wavelength * rad2deg / 360.0
     iNPARameters /= rad2deg

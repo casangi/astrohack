@@ -545,7 +545,7 @@ def apply_holog_phase_fitting_to_rt_xds(
     c_fact = telescope_pars["foci_half_distance"]
     a_fact = telescope_pars["z_intercept"]
     telescope.magnification = (c_fact + a_fact) / (c_fact - a_fact)
-    telescope.secondary_dist = c_fact - a_fact
+    telescope.secondary_distance_to_focus = c_fact - a_fact
     # Disable secondary slope
     telescope.surp_slope = 0
 

@@ -92,7 +92,7 @@ class TestClassAntennaSurface:
             < 0.01
         ), "Azimuth at the horizontal axis is more than 1% different from pi/2"
         # tests _build_ring_panels
-        assert len(self.tant.panels) == np.sum(self.tant.telescope.npanel), (
+        assert len(self.tant.panels) == np.sum(self.tant.telescope.n_panel_per_ring), (
             "Number of panels do not " "match the expected number"
         )
         # tests _build_ring_mask
