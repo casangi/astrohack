@@ -1,7 +1,7 @@
 import numpy as np
 import xarray as xr
 
-from astrohack.antenna.telescope import Telescope
+from astrohack.antenna.telescope import get_proper_telescope
 from astrohack.utils.text import create_dataset_label
 from astrohack.utils.conversion import convert_5d_grid_to_stokes
 from astrohack.utils.algorithms import phase_wrapping
@@ -45,9 +45,7 @@ def process_holog_chunk(holog_chunk_params):
     ddi = holog_chunk_params["this_ddi"]
     convert_to_stokes = holog_chunk_params["to_stokes"]
     ref_xds = ant_data_dict[ddi]["map_0"]
-    telescope = _get_correct_telescope(
-        ref_xds.attrs["antenna_name"], meta_data["telescope_name"]
-    )
+    telescope = get_proper_telescope(meta_data["telescope_name"], ref_xds.attrs["antenna_name"])
     try:
         is_near_field = ref_xds.attrs["near_field"]
     except KeyError:
@@ -198,23 +196,6 @@ def process_holog_chunk(holog_chunk_params):
     )
 
     logger.info(f"Finished processing {label}")
-
-
-def _get_correct_telescope(ant_name, telescope_name):
-    # Get telescope info
-    if ant_name.upper().__contains__("DV"):
-        telescope_name = "_".join((telescope_name, "DV"))
-
-    elif ant_name.upper().__contains__("DA"):
-        telescope_name = "_".join((telescope_name, "DA"))
-
-    elif ant_name.upper().__contains__("EA"):
-        telescope_name = "VLA"
-
-    else:
-        raise Exception("Antenna type not found: {name}".format(name=ant_name))
-
-    return Telescope(telescope_name)
 
 
 def _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope, scaling=1.5):
