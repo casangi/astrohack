@@ -9,7 +9,7 @@ from astrohack.utils.constants import *
 from astrohack.antenna.ring_panel import RingPanel
 
 
-class Telescope2:
+class Telescope:
 
     def __init__(self):
         # Some of these will need to refactored later
@@ -78,7 +78,7 @@ class Telescope2:
         self.write(dest_path)
 
 
-class RingedCassegrain(Telescope2):
+class RingedCassegrain(Telescope):
 
     def __init__(self):
         super().__init__()
@@ -243,7 +243,7 @@ class RingedCassegrain(Telescope2):
         return deviation / (acoeff * np.sqrt(radius**2 + bcoeff))
 
 
-class NgvlaPrototype(Telescope2):
+class NgvlaPrototype(Telescope):
     def __init__(self):
         super().__init__()
 
