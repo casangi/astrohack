@@ -13,7 +13,7 @@ class TestClassTelescope:
         """
         tel = Telescope("vla")
         assert tel.name == "VLA", "Telescope name loaded incorrectly"
-        assert tel.diam == 25.0, "Telescope diameter loaded incorrectly"
+        assert tel.diameter == 25.0, "Telescope diameter loaded incorrectly"
 
         with pytest.raises(Exception):
             tel = Telescope("xxx")
@@ -23,7 +23,7 @@ class TestClassTelescope:
         Tests the reading of a hack file and the errors when trying to read a non-existent file
         """
         tel = Telescope("vla")
-        tel.read(tel.filepath + "/vlba.zarr")
+        tel.read(tel.file_path + "/vlba.zarr")
         assert tel.name == "VLBA", "Telescope name loaded incorrectly"
         assert tel.focus == 8.75, "Telescope focus length loaded incorrectly"
 
@@ -41,7 +41,7 @@ class TestClassTelescope:
             testfile
         ), "Telescope configuration file not created at the proper location"
         assert (
-            filecmp.cmp(tel.filepath + "/vlba.zarr/.zattrs", testfile + "/.zattrs") == 0
+                filecmp.cmp(tel.file_path + "/vlba.zarr/.zattrs", testfile + "/.zattrs") == 0
         ), ("Telescope configuration " "file is not equal to the " "reference")
         shutil.rmtree(testfile)
 

@@ -121,7 +121,7 @@ def process_holog_chunk(holog_chunk_params):
 
     # Current bottleneck
     if is_near_field:
-        distance, focus_offset = telescope.dist_dict[holog_chunk_params["alma_osf_pad"]]
+        distance, focus_offset = telescope.station_distance_dict[holog_chunk_params["alma_osf_pad"]]
         aperture_grid, u_axis, v_axis, _, used_wavelength = (
             calculate_near_field_aperture(
                 grid=beam_grid,
@@ -248,7 +248,7 @@ def _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope, scaling=1
     # Default scaling factor is now 1.5 to allow for better analysis of the noise around the aperture.
     # This will probably mean no cropping for most apertures, but may be important if dish appears too small in the
     # aperture.
-    max_aperture_radius = 0.5 * telescope.diam
+    max_aperture_radius = 0.5 * telescope.diameter
 
     image_slice = aperture_grid[0, 0, 0, ...]
     center_pixel = np.array(image_slice.shape[0:2]) // 2

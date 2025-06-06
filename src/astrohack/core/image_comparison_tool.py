@@ -188,8 +188,8 @@ class FITSImage:
         self.base_mask = create_aperture_mask(
             self.x_axis,
             self.y_axis,
-            telescope_obj.inlim,
-            telescope_obj.oulim,
+            telescope_obj.inner_radial_limit,
+            telescope_obj.outer_radial_limit,
             arm_width=telescope_obj.arm_shadow_width,
             arm_angle=telescope_obj.arm_shadow_rotation,
         )
@@ -294,8 +294,8 @@ class FITSImage:
         orig_mask = create_aperture_mask(
             self.original_x_axis,
             self.original_y_axis,
-            telescope_obj.inlim,
-            telescope_obj.oulim,
+            telescope_obj.inner_radial_limit,
+            telescope_obj.outer_radial_limit,
             arm_width=telescope_obj.arm_shadow_width,
             arm_angle=telescope_obj.arm_shadow_rotation,
         )

@@ -222,8 +222,8 @@ class AntennaSurface:
     def _compute_noise_threshold_clip(self, threshold, step_multiplier=0.95):
         noise_stats = data_statistics(self.amplitude_noise)
 
-        in_disk = np.where(self.rad < self.telescope.diam / 2.0, 1.0, np.nan)
-        in_disk = np.where(self.rad < self.telescope.inlim, np.nan, in_disk)
+        in_disk = np.where(self.rad < self.telescope.diameter / 2.0, 1.0, np.nan)
+        in_disk = np.where(self.rad < self.telescope.inner_radial_limit, np.nan, in_disk)
         n_in_disk = np.nansum(in_disk)
         in_disk_amp = in_disk * self.amplitude
 
@@ -244,7 +244,7 @@ class AntennaSurface:
         Args:
             margin: How much margin should be left outside the dish diameter
         """
-        edge = (0.5 + margin) * self.telescope.diam
+        edge = (0.5 + margin) * self.telescope.diameter
         iumin = np.argmax(self.u_axis > -edge)
         iumax = np.argmax(self.u_axis > edge)
         ivmin = np.argmax(self.v_axis > -edge)
@@ -265,8 +265,8 @@ class AntennaSurface:
         self.base_mask, self.rad, self.phi = create_aperture_mask(
             self.u_axis,
             self.v_axis,
-            self.telescope.inlim,
-            self.telescope.oulim,
+            self.telescope.inner_radial_limit,
+            self.telescope.outer_radial_limit,
             arm_width=arm_width,
             arm_angle=arm_angle,
             return_polar_meshes=True,
@@ -319,8 +319,8 @@ class AntennaSurface:
         # This is valid for the VLA not sure if valid for anything else...
         wavelength_scaling = self.wavelength / wavelength
 
-        dish_mask = np.where(self.rad > self.telescope.inlim, True, False)
-        dish_mask = np.where(self.rad < self.telescope.diam / 2, dish_mask, False)
+        dish_mask = np.where(self.rad > self.telescope.inner_radial_limit, True, False)
+        dish_mask = np.where(self.rad < self.telescope.diameter / 2, dish_mask, False)
 
         if corrected:
             if self.fitted:
@@ -338,7 +338,7 @@ class AntennaSurface:
         sinsum = np.nansum(np.sin(scaled_phase[dish_mask]))
         real_factor = np.sqrt(cossum**2 + sinsum**2) / np.sum(dish_mask)
 
-        theo_gain = fourpi * self.telescope.diam / wavelength
+        theo_gain = fourpi * self.telescope.diameter / wavelength
         real_gain = theo_gain * real_factor
         return to_db(real_gain), to_db(theo_gain)
 

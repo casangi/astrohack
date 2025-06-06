@@ -13,17 +13,17 @@ class Telescope:
 
     def __init__(self):
         # Some of these will need to refactored later
-        self.diam = None
-        self.ant_list = None
-        self.filename = None
-        self.filepath = None
+        self.diameter = None
+        self.antenna_list = None
+        self.file_name = None
+        self.file_path = None
         self.array_center = None
         self.comment = None
-        self.inlim = None
-        self.oulim = None
+        self.inner_radial_limit = None
+        self.outer_radial_limit = None
         self.name = None
         self.el_axis_offset = None
-        self.dist_dict = None
+        self.station_distance_dict = None
 
     def read(self, filename):
         """
@@ -43,8 +43,8 @@ class Telescope:
 
         relative_path = pathlib.Path(filename)
         abs_path = relative_path.resolve()
-        self.filename = abs_path.name
-        self.filepath = abs_path.parent
+        self.file_name = abs_path.name
+        self.file_path = abs_path.parent
 
     def read_from_distro(self, name):
         dest_path = "/".join([astrohack.__path__[0], f'data/telescopes/{name.lower()}.zarr'])
@@ -183,7 +183,7 @@ class RingedCassegrain(Telescope):
                     margin=panel_margins,
                     screw_scheme=self.screw_description,
                     screw_offset=self.screw_offset,
-                    plot_screw_size=0.006 * self.diam,
+                    plot_screw_size=0.006 * self.diameter,
                 )
                 panel_list.append(panel)
 

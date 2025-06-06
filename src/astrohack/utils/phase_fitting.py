@@ -277,8 +277,8 @@ def _aips_phase_fitting_block(
     """
     matrix, vector = _build_design_matrix_block(
         pol_indexes,
-        telescope.inlim,
-        telescope.diam / 2,
+        telescope.inner_radial_limit,
+        telescope.diameter / 2,
         u_axis,
         v_axis,
         phase_image,
@@ -1051,8 +1051,8 @@ def clic_like_phase_fitting(
     best_fit, phase_model = _clic_full_phase_fitting(
         8,
         freq,
-        telescope.diam,
-        telescope.inlim,
+        telescope.diameter,
+        telescope.inner_radial_limit,
         telescope.focus,
         focus_offset,
         phase_i,

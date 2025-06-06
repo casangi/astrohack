@@ -131,7 +131,7 @@ def calculate_far_field_aperture(
 
     if apply_grid_correction:
         aperture_grid = gridding_correction(
-            aperture_grid, freq, telescope.diam, sky_cell_size, u_axis, v_axis
+            aperture_grid, freq, telescope.diameter, sky_cell_size, u_axis, v_axis
         )
     duration = time.time() - start
     logger.debug(f"{label}: Far field aperture took {duration:.3} seconds")
@@ -178,7 +178,7 @@ def calculate_near_field_aperture(
 
     padded_grid = _pad_beam_image(work_grid, padding_factor)
     wavelength = clight / freq[0]
-    z_max = (telescope.diam / 2) ** 2 / 4 / telescope.focus
+    z_max = (telescope.diameter / 2) ** 2 / 4 / telescope.focus
     scale = 1.0 + (telescope.el_axis_off + z_max / 2.0) / distance
     u_axis, v_axis, l_axis, m_axis, aperture_cell_size = _compute_axes(
         padded_grid.shape, sky_cell_size, wavelength, scale=scale
@@ -191,7 +191,7 @@ def calculate_near_field_aperture(
     )
     if apply_grid_correction:
         aperture_grid = gridding_correction(
-            aperture_grid, freq, telescope.diam, sky_cell_size, u_axis, v_axis
+            aperture_grid, freq, telescope.diameter, sky_cell_size, u_axis, v_axis
         )
 
     aperture_grid = _correct_phase_nf_effects(

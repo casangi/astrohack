@@ -33,7 +33,7 @@ def export_to_parminator(data_dict, parm_dict):
     kterm_present = data_dict._meta_data["fit_kterm"]
 
     telescope = get_proper_telescope(data_dict._meta_data["telescope_name"])
-    full_antenna_list = telescope.ant_list
+    full_antenna_list = telescope.antenna_list
     selected_antenna_list = param_to_list(parm_dict["ant"], data_dict, "ant")
     threshold = parm_dict["correction_threshold"]
 
@@ -137,7 +137,7 @@ def export_locit_fit_results(data_dict, parm_dict):
 
     table = create_pretty_table(field_names)
     telescope = get_proper_telescope(data_dict._meta_data["telescope_name"])
-    full_antenna_list = telescope.ant_list
+    full_antenna_list = telescope.antenna_list
     selected_antenna_list = param_to_list(parm_dict["ant"], data_dict, "ant")
 
     for ant_name in full_antenna_list:
@@ -460,7 +460,7 @@ def print_array_configuration(params, ant_dict, telescope_name):
         field_names = ["Name", "Station", "Longitude", "Latitude", "Radius [m]"]
 
     table = create_pretty_table(field_names)
-    for ant_name in telescope.ant_list:
+    for ant_name in telescope.antenna_list:
         ant_key = "ant_" + ant_name
         if ant_key in ant_dict:
             antenna = ant_dict[ant_key]
