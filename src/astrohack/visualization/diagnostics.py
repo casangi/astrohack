@@ -662,7 +662,9 @@ def plot_position_corrections(parm_dict, data_dict):
     Returns:
     PNG file(s) with the correction plots
     """
-    telescope = get_proper_telescope(data_dict._meta_data["telescope_name"], parm_dict["ant"])
+    telescope = get_proper_telescope(
+        data_dict._meta_data["telescope_name"], parm_dict["ant"]
+    )
     destination = parm_dict["destination"]
     ref_ant = data_dict._meta_data["reference_antenna"]
     combined = parm_dict["combined"]

@@ -45,7 +45,9 @@ def process_holog_chunk(holog_chunk_params):
     ddi = holog_chunk_params["this_ddi"]
     convert_to_stokes = holog_chunk_params["to_stokes"]
     ref_xds = ant_data_dict[ddi]["map_0"]
-    telescope = get_proper_telescope(meta_data["telescope_name"], ref_xds.attrs["antenna_name"])
+    telescope = get_proper_telescope(
+        meta_data["telescope_name"], ref_xds.attrs["antenna_name"]
+    )
     try:
         is_near_field = ref_xds.attrs["near_field"]
     except KeyError:
@@ -75,7 +77,9 @@ def process_holog_chunk(holog_chunk_params):
 
     # Current bottleneck
     if is_near_field:
-        distance, focus_offset = telescope.station_distance_dict[holog_chunk_params["alma_osf_pad"]]
+        distance, focus_offset = telescope.station_distance_dict[
+            holog_chunk_params["alma_osf_pad"]
+        ]
         aperture_grid, u_axis, v_axis, _, used_wavelength = (
             calculate_near_field_aperture(
                 grid=beam_grid,

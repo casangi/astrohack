@@ -1230,7 +1230,9 @@ def _compute_grid_params(meta_dict, extent):
     clight = scipy.constants.speed_of_light
     wavelength = clight / meta_dict["spw"]["frequency"][0]
 
-    telescope = get_proper_telescope(meta_dict["ant"]["telescope"], meta_dict["ant"]["antenna"])
+    telescope = get_proper_telescope(
+        meta_dict["ant"]["telescope"], meta_dict["ant"]["antenna"]
+    )
 
     cell_size = wavelength / telescope.diameter / 3.0
 

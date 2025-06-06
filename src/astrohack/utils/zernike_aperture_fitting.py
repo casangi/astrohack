@@ -900,7 +900,9 @@ def fit_zernike_coefficients(
             arm_angle=telescope.arm_shadow_rotation,
         )
     else:
-        mask = create_aperture_mask(u_axis, v_axis, telescope.inner_radial_limit, aperture_radius)
+        mask = create_aperture_mask(
+            u_axis, v_axis, telescope.inner_radial_limit, aperture_radius
+        )
 
     # Vectorize grids with only valid points
     u_lin = u_grid[mask]

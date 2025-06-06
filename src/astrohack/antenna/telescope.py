@@ -32,7 +32,7 @@ class Telescope:
             filename: name of the input file
         """
         try:
-            logger.debug('Reading telescope data from: filename')
+            logger.debug("Reading telescope data from: filename")
             xds = xr.open_zarr(filename)
             for key in xds.attrs:
                 setattr(self, key, xds.attrs[key])
@@ -47,9 +47,10 @@ class Telescope:
         self.file_path = abs_path.parent
 
     def read_from_distro(self, name):
-        dest_path = "/".join([astrohack.__path__[0], f'data/telescopes/{name.lower()}.zarr'])
+        dest_path = "/".join(
+            [astrohack.__path__[0], f"data/telescopes/{name.lower()}.zarr"]
+        )
         self.read(dest_path)
-
 
     def write(self, filename):
         """
@@ -62,7 +63,7 @@ class Telescope:
         obj_dict.pop("filename", None)
         xds = xr.Dataset()
         xds.attrs = obj_dict
-        logger.debug('Writing telescope data to: filename')
+        logger.debug("Writing telescope data to: filename")
         xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
         return
 
@@ -74,7 +75,12 @@ class Telescope:
         return outstr
 
     def write_to_distro(self):
-        dest_path = "/".join([astrohack.__path__[0], f'data/telescopes/{self.name.lower().replace(" ", "_")}.zarr'])
+        dest_path = "/".join(
+            [
+                astrohack.__path__[0],
+                f'data/telescopes/{self.name.lower().replace(" ", "_")}.zarr',
+            ]
+        )
         self.write(dest_path)
 
 
@@ -110,7 +116,11 @@ class RingedCassegrain(Telescope):
     def consistency_check(self):
         error = False
 
-        if not self.n_rings_of_panels == len(self.panel_inner_radii) == len(self.panel_outer_radii):
+        if (
+            not self.n_rings_of_panels
+            == len(self.panel_inner_radii)
+            == len(self.panel_outer_radii)
+        ):
             logger.error(
                 "Number of panels don't match radii or number of panels list sizes"
             )
@@ -119,7 +129,7 @@ class RingedCassegrain(Telescope):
         if error:
             raise Exception("Failed Consistency check")
         else:
-            print('Consistency passed')
+            print("Consistency passed")
 
         return
 
@@ -161,6 +171,7 @@ class RingedCassegrain(Telescope):
 
     def build_panel_list(self, panel_model, panel_margins):
         from time import time
+
         start = time()
         if self.name in ["VLA", "VLBA"]:
             self._panel_label = self._vla_panel_labeling
@@ -189,7 +200,9 @@ class RingedCassegrain(Telescope):
 
         return panel_list
 
-    def attribute_pixels_to_panels(self, panel_list, u_axis, v_axis, radius, phi, deviation, mask):
+    def attribute_pixels_to_panels(
+        self, panel_list, u_axis, v_axis, radius, phi, deviation, mask
+    ):
         """
         Attribute pixels in deviation to the panels in the panel_list
         Args:
@@ -220,9 +233,7 @@ class RingedCassegrain(Telescope):
                 ipanel = panel_map[ix, iy]
                 if ipanel >= 0:
                     panel = panel_list[int(ipanel)]
-                    issample, inpanel = panel.is_inside(
-                        radius[ix, iy], phi[ix, iy]
-                    )
+                    issample, inpanel = panel.is_inside(radius[ix, iy], phi[ix, iy])
                     if inpanel:
                         if issample and mask[ix, iy]:
                             panel.add_sample([xc, yc, ix, iy, deviation[ix, iy]])
@@ -230,7 +241,6 @@ class RingedCassegrain(Telescope):
                             panel.add_margin([xc, yc, ix, iy, deviation[ix, iy]])
 
         return panel_map
-
 
     def phase_to_deviation(self, radius, phase, wavelength):
         acoeff = (wavelength / twopi) / (4.0 * self.focus)
@@ -267,34 +277,34 @@ def get_proper_telescope(name: str, antenna_name: str = None):
     name = name.lower()
     if isinstance(antenna_name, str):
         antenna_name = antenna_name.lower()
-    if 'vla' in name:
-        if antenna_name is None or 'ea' in antenna_name:
-            return RingedCassegrain.from_name('vla')
-        elif 'na' in antenna_name:
-            print('ngvla antenna not yet supported')
+    if "vla" in name:
+        if antenna_name is None or "ea" in antenna_name:
+            return RingedCassegrain.from_name("vla")
+        elif "na" in antenna_name:
+            print("ngvla antenna not yet supported")
             return None
         else:
-            raise Exception(f'Unsupported antenna type for the VLA: {antenna_name}')
+            raise Exception(f"Unsupported antenna type for the VLA: {antenna_name}")
 
-    elif 'vlba' in name:
-        return RingedCassegrain.from_name('vlba')
+    elif "vlba" in name:
+        return RingedCassegrain.from_name("vlba")
 
-    elif 'alma' in name:
+    elif "alma" in name:
         if antenna_name is None:
-            raise Exception('ALMA is an heterogenious array and hence an antenna name is needed')
-        elif 'dv' in antenna_name:
-            return RingedCassegrain.from_name('alma_dv')
-        elif 'da' in antenna_name:
-            return RingedCassegrain.from_name('alma_da')
-        elif 'tp' in antenna_name:
-            return RingedCassegrain.from_name('alma_tp')
+            raise Exception(
+                "ALMA is an heterogenious array and hence an antenna name is needed"
+            )
+        elif "dv" in antenna_name:
+            return RingedCassegrain.from_name("alma_dv")
+        elif "da" in antenna_name:
+            return RingedCassegrain.from_name("alma_da")
+        elif "tp" in antenna_name:
+            return RingedCassegrain.from_name("alma_tp")
         else:
-            raise Exception(f'Unsupported antenna type for ALMA: {antenna_name}')
+            raise Exception(f"Unsupported antenna type for ALMA: {antenna_name}")
 
-    elif 'aca' in name:
-        return RingedCassegrain.from_name('aca_7m')
+    elif "aca" in name:
+        return RingedCassegrain.from_name("aca_7m")
 
     else:
         return None
-
-
