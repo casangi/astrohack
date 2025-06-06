@@ -884,7 +884,7 @@ def fit_zernike_coefficients(
         the zernike coeficients.
     """
     # Creating a unitary radius grid
-    aperture_radius = telescope.diam / 2
+    aperture_radius = telescope.diameter / 2
     u_grid, v_grid = np.meshgrid(u_axis, v_axis, indexing="ij")
     u_grid /= aperture_radius
     v_grid /= aperture_radius
@@ -894,13 +894,13 @@ def fit_zernike_coefficients(
         mask = create_aperture_mask(
             u_axis,
             v_axis,
-            telescope.inlim,
+            telescope.inner_radial_limit,
             aperture_radius,
             arm_width=telescope.arm_shadow_width,
             arm_angle=telescope.arm_shadow_rotation,
         )
     else:
-        mask = create_aperture_mask(u_axis, v_axis, telescope.inlim, aperture_radius)
+        mask = create_aperture_mask(u_axis, v_axis, telescope.inner_radial_limit, aperture_radius)
 
     # Vectorize grids with only valid points
     u_lin = u_grid[mask]

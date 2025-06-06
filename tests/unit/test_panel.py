@@ -221,8 +221,8 @@ class TestPanel:
         telescope = get_proper_telescope("vla")
 
         radius = panel_mds["ant_ea25"]["ddi_0"]["RADIUS"].values
-        dish_mask = np.where(radius < telescope.oulim, 1.0, 0)
-        dish_mask = np.where(radius < telescope.inlim, 0, dish_mask)
+        dish_mask = np.where(radius < telescope.outer_radial_limit, 1.0, 0)
+        dish_mask = np.where(radius < telescope.inner_radial_limit, 0, dish_mask)
         nvalid_pix = np.sum(dish_mask)
 
         assert np.sum(panel_mds["ant_ea25"]["ddi_0"].MASK.values) == nvalid_pix

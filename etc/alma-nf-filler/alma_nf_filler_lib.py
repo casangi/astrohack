@@ -1232,7 +1232,7 @@ def _compute_grid_params(meta_dict, extent):
 
     telescope = get_proper_telescope(meta_dict["ant"]["telescope"], meta_dict["ant"]["antenna"])
 
-    cell_size = wavelength / telescope.diam / 3.0
+    cell_size = wavelength / telescope.diameter / 3.0
 
     min_range = np.min(
         [extent["l_max"] - extent["l_min"], extent["m_max"] - extent["m_min"]]

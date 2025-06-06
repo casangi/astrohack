@@ -125,7 +125,7 @@ def process_extract_holog_chunk(extract_holog_params):
         telescope = get_proper_telescope(telescope_name)
         antenna_name = "_".join(("ant", ant_names[ant_index]))
         n_pix, cell_size = calculate_optimal_grid_parameters(
-            pnt_map_dict, antenna_name, telescope.diam, chan_freq, ddi
+            pnt_map_dict, antenna_name, telescope.diameter, chan_freq, ddi
         )
 
         grid_params[antenna_name] = {"n_pix": n_pix, "cell_size": cell_size}
