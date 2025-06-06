@@ -1,7 +1,7 @@
 import toolviper
 import xarray as xr
 
-from astrohack.antenna.telescope import Telescope
+from astrohack.antenna import get_proper_telescope
 from astrohack.utils.validation import custom_unit_checker, custom_plots_checker
 from astrohack.core.cassegrain_ray_tracing import *
 from astrohack.utils import convert_unit, clight, add_caller_and_version_to_dict
@@ -529,9 +529,6 @@ def apply_holog_phase_fitting_to_rt_xds(
 
     # Misc Parameters
     label = "Cassegrain-RT-Model"  # Relevant only for logger messages
-    uv_cell_size = np.array(
-        [u_axis[1] - u_axis[0], v_axis[1] - v_axis[0]]
-    )  # This should be computed from the axis we are passing the engine...
 
     # Initiate Control toggles
     phase_fit_control = [
@@ -543,7 +540,7 @@ def apply_holog_phase_fitting_to_rt_xds(
     ]
 
     # Manipulate VLA telescope object so that it has compatible parameters to the ones in the RT model.
-    telescope = Telescope("VLA")
+    telescope = get_proper_telescope('VLA')
     telescope.focus = telescope_pars["focal_length"]
     c_fact = telescope_pars["foci_half_distance"]
     a_fact = telescope_pars["z_intercept"]
