@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 import xarray as xr
 import pathlib
 
-from astrohack.antenna.telescope import Telescope
+from astrohack.antenna.telescope import get_proper_telescope
 from astrohack.utils.text import statistics_to_text
 from astrohack.utils.algorithms import (
     create_aperture_mask,
@@ -184,7 +184,7 @@ class FITSImage:
         Returns:
             None
         """
-        telescope_obj = Telescope(self.telescope_name)
+        telescope_obj = get_proper_telescope(self.telescope_name)
         self.base_mask = create_aperture_mask(
             self.x_axis,
             self.y_axis,
@@ -290,7 +290,7 @@ class FITSImage:
         Returns:
             Masked original data
         """
-        telescope_obj = Telescope(self.telescope_name)
+        telescope_obj = get_proper_telescope(self.telescope_name)
         orig_mask = create_aperture_mask(
             self.original_x_axis,
             self.original_y_axis,
