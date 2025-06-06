@@ -1,15 +1,8 @@
 import numpy as np
 
 from astrohack.core.image_comparison_tool import extract_rms_from_xds
-from astrohack.utils import (
-    rad_to_deg_str,
-    twopi,
-    fixed_format_error,
-    dynamic_format,
-    format_observation_summary,
-    make_header,
-)
-from astrohack.antenna import Telescope, AntennaSurface
+from astrohack.utils import rad_to_deg_str, twopi, fixed_format_error, dynamic_format, format_observation_summary, make_header
+from astrohack.antenna import get_proper_telescope, AntennaSurface
 from astrohack.utils import (
     convert_unit,
     clight,
@@ -39,7 +32,8 @@ def export_to_parminator(data_dict, parm_dict):
 
     kterm_present = data_dict._meta_data["fit_kterm"]
 
-    full_antenna_list = Telescope(data_dict._meta_data["telescope_name"]).ant_list
+    telescope = get_proper_telescope(data_dict._meta_data["telescope_name"])
+    full_antenna_list = telescope.ant_list
     selected_antenna_list = param_to_list(parm_dict["ant"], data_dict, "ant")
     threshold = parm_dict["correction_threshold"]
 
@@ -142,7 +136,8 @@ def export_locit_fit_results(data_dict, parm_dict):
         slo_fact = 1.0
 
     table = create_pretty_table(field_names)
-    full_antenna_list = Telescope(data_dict._meta_data["telescope_name"]).ant_list
+    telescope = get_proper_telescope(data_dict._meta_data["telescope_name"])
+    full_antenna_list = telescope.ant_list
     selected_antenna_list = param_to_list(parm_dict["ant"], data_dict, "ant")
 
     for ant_name in full_antenna_list:
@@ -297,7 +292,7 @@ def export_gains_table_chunk(parm_dict):
     ant = parm_dict["this_ant"]
     ddi = parm_dict["this_ddi"]
     xds = parm_dict["xds_data"]
-    telescope = Telescope.from_xds(xds)
+    telescope = get_proper_telescope(xds.attrs["telescope_name"], ant)
     antenna = AntennaSurface(xds, reread=True)
     frequency = clight / antenna.wavelength
 
@@ -445,7 +440,7 @@ def print_array_configuration(params, ant_dict, telescope_name):
         ant_dict: Parameter dictionary crafted by the calling function
         telescope_name: Name of the telescope used in observations
     """
-    telescope = Telescope(telescope_name)
+    telescope = get_proper_telescope(telescope_name)
     relative = params["relative"]
 
     print(f"\n{telescope_name} antennas, # of antennas {len(ant_dict.keys())}:")
