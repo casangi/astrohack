@@ -1,6 +1,5 @@
 from astrohack.antenna.antenna_surface import AntennaSurface
-from astrohack.antenna.panel_fitting import PanelPoint
-from astrohack.antenna.telescope import Telescope
+from astrohack.antenna.telescope import get_proper_telescope
 from astrohack import extract_holog, extract_pointing, holog
 from astrohack.utils.conversion import convert_unit
 
@@ -60,7 +59,7 @@ class TestClassAntennaSurface:
     )
     inputxds.attrs["ant_name"] = "test"
     inputxds.attrs["ddi"] = "test"
-    tel = Telescope("vla")
+    tel = get_proper_telescope("vla")
     datashape = (510, 510)
     middlepix = 255
     tant = AntennaSurface(inputxds, tel, panel_margins=0.2)
