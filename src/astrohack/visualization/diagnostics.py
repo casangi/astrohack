@@ -4,7 +4,7 @@ from astropy.time import Time
 from toolviper.utils import logger as logger
 
 from astrohack.antenna.antenna_surface import AntennaSurface
-from astrohack.antenna.telescope import Telescope
+from astrohack.antenna.telescope import get_proper_telescope
 from astrohack.utils import (
     convert_unit,
     pi,
@@ -662,7 +662,7 @@ def plot_position_corrections(parm_dict, data_dict):
     Returns:
     PNG file(s) with the correction plots
     """
-    telescope = Telescope(data_dict._meta_data["telescope_name"])
+    telescope = get_proper_telescope(data_dict._meta_data["telescope_name"], parm_dict["ant"])
     destination = parm_dict["destination"]
     ref_ant = data_dict._meta_data["reference_antenna"]
     combined = parm_dict["combined"]
