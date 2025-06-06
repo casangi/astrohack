@@ -11,7 +11,7 @@ from numba.core import types
 
 from casacore import tables as ctables
 
-from astrohack.antenna import Telescope
+from astrohack.antenna import get_proper_telescope
 from astrohack.utils import create_dataset_label
 from astrohack.utils.imaging import calculate_parallactic_angle_chunk
 from astrohack.utils.algorithms import calculate_optimal_grid_parameters
@@ -25,16 +25,7 @@ def process_extract_holog_chunk(extract_holog_params):
     """Perform data query on holography data chunk and get unique time and state_ids/
 
     Args:
-        extract_holog_params: dictionary containing parameters
-
-    Some of the parameters are:
-        ms_name (str): Measurementset name
-        data_column (str): Data column to extract.
-        ddi (int): Data description id
-        scan (int): Scan number
-        map_ant_ids (numpy.narray): Array of antenna_id values corresponding to mapping data.
-        ref_ant_ids (numpy.narray): Arry of antenna_id values corresponding to reference data.
-        sel_state_ids (list): List pf state_ids corresponding to holography data
+        extract_holog_params: parameters controlling work to be done on this chunk
     """
 
     ms_name = extract_holog_params["ms_name"]
@@ -142,13 +133,10 @@ def process_extract_holog_chunk(extract_holog_params):
     # The loop has been moved out of the function here making the gridding parameter auto-calculation
     # function more general use (hopefully). I honestly couldn't see a reason to keep it inside.
     for ant_index in vis_map_dict.keys():
+        telescope = get_proper_telescope(telescope_name)
         antenna_name = "_".join(("ant", ant_names[ant_index]))
         n_pix, cell_size = calculate_optimal_grid_parameters(
-            pnt_map_dict,
-            antenna_name,
-            Telescope(gen_info["telescope name"]).diam,
-            chan_freq,
-            ddi,
+            pnt_map_dict, antenna_name, telescope.diameter, chan_freq, ddi
         )
 
         grid_params[antenna_name] = {"n_pix": n_pix, "cell_size": cell_size}
