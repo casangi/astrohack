@@ -1,12 +1,11 @@
 import os
-import json
 import shutil
 import pytest
 import toolviper
 
 import numpy as np
 
-from astrohack.antenna import Telescope
+from astrohack.antenna import get_proper_telescope
 from astrohack.holog import holog
 from astrohack.panel import panel
 from astrohack.extract_holog import extract_holog
@@ -219,7 +218,7 @@ class TestPanel:
             overwrite=True,
         )
 
-        telescope = Telescope("vla")
+        telescope = get_proper_telescope("vla")
 
         radius = panel_mds["ant_ea25"]["ddi_0"]["RADIUS"].values
         dish_mask = np.where(radius < telescope.oulim, 1.0, 0)
