@@ -540,7 +540,7 @@ def apply_holog_phase_fitting_to_rt_xds(
     ]
 
     # Manipulate VLA telescope object so that it has compatible parameters to the ones in the RT model.
-    telescope = get_proper_telescope('VLA')
+    telescope = get_proper_telescope("VLA")
     telescope.focus = telescope_pars["focal_length"]
     c_fact = telescope_pars["foci_half_distance"]
     a_fact = telescope_pars["z_intercept"]

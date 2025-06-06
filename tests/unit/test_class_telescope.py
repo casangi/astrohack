@@ -41,7 +41,8 @@ class TestClassTelescope:
             testfile
         ), "Telescope configuration file not created at the proper location"
         assert (
-                filecmp.cmp(tel.file_path + "/vlba.zarr/.zattrs", testfile + "/.zattrs") == 0
+            filecmp.cmp(tel.file_path + "/vlba.zarr/.zattrs", testfile + "/.zattrs")
+            == 0
         ), ("Telescope configuration " "file is not equal to the " "reference")
         shutil.rmtree(testfile)
 

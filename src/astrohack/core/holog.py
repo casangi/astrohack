@@ -121,7 +121,9 @@ def process_holog_chunk(holog_chunk_params):
 
     # Current bottleneck
     if is_near_field:
-        distance, focus_offset = telescope.station_distance_dict[holog_chunk_params["alma_osf_pad"]]
+        distance, focus_offset = telescope.station_distance_dict[
+            holog_chunk_params["alma_osf_pad"]
+        ]
         aperture_grid, u_axis, v_axis, _, used_wavelength = (
             calculate_near_field_aperture(
                 grid=beam_grid,

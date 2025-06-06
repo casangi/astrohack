@@ -92,16 +92,24 @@ class AntennaSurface:
             self.phase = phase_wrapping(self.phase)
 
         self._create_aperture_mask(clip_type, clip_level, exclude_shadows)
-        self.deviation = self.telescope.phase_to_deviation(self.rad, self.phase, self.wavelength)
+        self.deviation = self.telescope.phase_to_deviation(
+            self.rad, self.phase, self.wavelength
+        )
         self.panels = self.telescope.build_panel_list(pmodel, panel_margins)
         if not self.reread:
             self.panelmodel = pmodel
             self.panel_margins = panel_margins
             if crop:
                 self._crop_maps()
-            self.panel_distribution = self.telescope.attribute_pixels_to_panels(self.panels, self.u_axis, self.v_axis,
-                                                                                self.rad, self.phi, self.deviation,
-                                                                                self.mask)
+            self.panel_distribution = self.telescope.attribute_pixels_to_panels(
+                self.panels,
+                self.u_axis,
+                self.v_axis,
+                self.rad,
+                self.phi,
+                self.deviation,
+                self.mask,
+            )
 
         if nan_out_of_bounds:
             self._nan_out_of_bounds()
@@ -198,8 +206,12 @@ class AntennaSurface:
         self.antenna_name = inputxds.attrs["summary"]["general"]["antenna name"]
         self.resolution = inputxds.summary["aperture"]["resolution"]
         self.ddi = inputxds.attrs["ddi"]
-        self.label = create_dataset_label(inputxds.attrs["ant_name"], inputxds.attrs["ddi"])
-        self.telescope = get_proper_telescope(inputxds.attrs["telescope_name"], inputxds.attrs["ant_name"])
+        self.label = create_dataset_label(
+            self.antenna_name, inputxds.attrs["ddi"]
+        )
+        self.telescope = get_proper_telescope(
+            self.summary["general"]["telescope name"], self.antenna_name
+        )
 
     def _define_amp_clip(self, clip_type, clip_level):
         self.amplitude_noise = np.where(self.base_mask, np.nan, self.amplitude)
@@ -223,7 +235,9 @@ class AntennaSurface:
         noise_stats = data_statistics(self.amplitude_noise)
 
         in_disk = np.where(self.rad < self.telescope.diameter / 2.0, 1.0, np.nan)
-        in_disk = np.where(self.rad < self.telescope.inner_radial_limit, np.nan, in_disk)
+        in_disk = np.where(
+            self.rad < self.telescope.inner_radial_limit, np.nan, in_disk
+        )
         n_in_disk = np.nansum(in_disk)
         in_disk_amp = in_disk * self.amplitude
 
@@ -282,7 +296,6 @@ class AntennaSurface:
     def _nan_out_of_bounds(self):
         self.phase = np.where(self.base_mask, self.phase, np.nan)
         self.amplitude = np.where(self.base_mask, self.amplitude, np.nan)
-
 
     def _fetch_panel_ringed(self, ring, panel):
         """
@@ -401,8 +414,12 @@ class AntennaSurface:
                 ix, iy = int(corr[0]), int(corr[1])
                 self.residuals[ix, iy] -= corr[-1]
                 self.corrections[ix, iy] = -corr[-1]
-        self.phase_corrections = self.telescope.deviation_to_phase(self.rad, self.corrections, self.wavelength)
-        self.phase_residuals = self.telescope.deviation_to_phase(self.rad, self.residuals, self.wavelength)
+        self.phase_corrections = self.telescope.deviation_to_phase(
+            self.rad, self.corrections, self.wavelength
+        )
+        self.phase_residuals = self.telescope.deviation_to_phase(
+            self.rad, self.residuals, self.wavelength
+        )
         self._build_panel_data_arrays()
         self.solved = True
 
