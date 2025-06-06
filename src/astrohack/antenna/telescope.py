@@ -83,21 +83,21 @@ class RingedCassegrain(Telescope):
     def __init__(self):
         super().__init__()
 
-        self.inrad = None
-        self.ourad = None
+        self.panel_inner_radii = None
+        self.panel_outer_radii = None
         self.focus = None
         self.arm_shadow_rotation = None
         self.arm_shadow_width = None
         self.gain_wavelengths = None
         self.magnification = None
-        self.npanel = None
+        self.n_panel_per_ring = None
         self.panel_numbering = None
         self.screw_description = None
         self.screw_offset = None
-        self.secondary_dist = None
-        self.secondary_support = None
+        self.secondary_distance_to_focus = None
+        self.secondary_support_shape = None
         self.surp_slope = None
-        self.nrings = None
+        self.n_rings_of_panels = None
 
         self._panel_label = None
 
@@ -110,7 +110,7 @@ class RingedCassegrain(Telescope):
     def consistency_check(self):
         error = False
 
-        if not self.nrings == len(self.inrad) == len(self.ourad):
+        if not self.n_rings_of_panels == len(self.panel_inner_radii) == len(self.panel_outer_radii):
             logger.error(
                 "Number of panels don't match radii or number of panels list sizes"
             )
@@ -146,16 +146,16 @@ class RingedCassegrain(Telescope):
         Returns:
             The proper label for the panel at iring, ipanel
         """
-        angle = twopi / self.npanel[iring]
-        sector_angle = twopi / self.npanel[0]
+        angle = twopi / self.n_panel_per_ring[iring]
+        sector_angle = twopi / self.n_panel_per_ring[0]
         theta = twopi - (ipanel + 0.5) * angle
         sector = int(
-            ((theta / sector_angle) + 1 + self.npanel[0] / 4)
-            % self.npanel[0]
+            ((theta / sector_angle) + 1 + self.n_panel_per_ring[0] / 4)
+            % self.n_panel_per_ring[0]
         )
         if sector == 0:
-            sector = self.npanel[0]
-        nppersec = self.npanel[iring] / self.npanel[0]
+            sector = self.n_panel_per_ring[0]
+        nppersec = self.n_panel_per_ring[iring] / self.n_panel_per_ring[0]
         jpanel = int(nppersec - (ipanel % nppersec))
         return "{0:1d}-{1:1d}{2:1d}".format(sector, iring + 1, jpanel)
 
@@ -170,16 +170,16 @@ class RingedCassegrain(Telescope):
             raise Exception(f"Don't know how to build panel list for {self.name}")
 
         panel_list = []
-        for iring in range(self.nrings):
-            angle = twopi / self.npanel[iring]
-            for ipanel in range(self.npanel[iring]):
+        for iring in range(self.n_rings_of_panels):
+            angle = twopi / self.n_panel_per_ring[iring]
+            for ipanel in range(self.n_panel_per_ring[iring]):
                 panel = RingPanel(
                     panel_model,
                     angle,
                     ipanel,
                     self._panel_label(iring, ipanel),
-                    self.inrad[iring],
-                    self.ourad[iring],
+                    self.panel_inner_radii[iring],
+                    self.panel_outer_radii[iring],
                     margin=panel_margins,
                     screw_scheme=self.screw_description,
                     screw_offset=self.screw_offset,
@@ -206,14 +206,14 @@ class RingedCassegrain(Telescope):
         """
         panel_map = np.full_like(radius, -1)
         panelsum = 0
-        for iring in range(self.nrings):
-            angle = twopi / self.npanel[iring]
+        for iring in range(self.n_rings_of_panels):
+            angle = twopi / self.n_panel_per_ring[iring]
             panel_map = np.where(
-                radius >= self.inrad[iring],
+                radius >= self.panel_inner_radii[iring],
                 np.floor(phi / angle) + panelsum,
                 panel_map,
             )
-            panelsum += self.npanel[iring]
+            panelsum += self.n_panel_per_ring[iring]
 
         for ix, xc in enumerate(u_axis):
             for iy, yc in enumerate(v_axis):

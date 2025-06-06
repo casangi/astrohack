@@ -298,7 +298,7 @@ class AntennaSurface:
         if ring == 1:
             ipanel = panel - 1
         else:
-            ipanel = np.sum(self.telescope.npanel[: ring - 1]) + panel - 1
+            ipanel = np.sum(self.telescope.n_panel_per_ring[: ring - 1]) + panel - 1
         return self.panels[ipanel]
 
     def gains(self):
