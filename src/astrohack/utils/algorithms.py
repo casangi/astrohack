@@ -85,15 +85,15 @@ def _apply_mask(data, scaling=0.5):
     )
 
     start = int(x // 2 - mask // 2)
-    return data[start : (start + mask), start : (start + mask)]
+    return data[start: (start + mask), start: (start + mask)]
 
 
 def calc_coords(image_size, cell_size):
     """Calculate the center pixel of the image given a cell and image size
 
     Args:
-        image_size (np.array): image size
-        cell_size (np.array): cell size
+        image_size (np.ndarray): image size
+        cell_size (np.ndarray): cell size
 
     Returns:
         float, float: center pixel location in coordinates x, y
@@ -188,12 +188,12 @@ def _calculate_euclidean_distance(x, y, center):
     """Calculates the Euclidean distance between a pair of input points.
 
     Args:
-        x (float): x-coordinate
-        y (float): y-coordinate
+        x (float, np.ndarray): x-coordinate
+        y (float, np.ndarray): y-coordinate
         center (tuple (float)): float tuple containing the coordinates to the center pixel
 
     Returns:
-        float: euclidean distance of points from center pixel
+        float, np.ndarray: euclidean distance of points from center pixel
     """
 
     return np.sqrt(np.power(x - center[0], 2) + np.power(y - center[1], 2))
