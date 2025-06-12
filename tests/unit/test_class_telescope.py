@@ -3,20 +3,43 @@ import os
 import filecmp
 import shutil
 
-from astrohack.antenna.telescope import Telescope
+from astrohack import get_proper_telescope
+from astrohack.antenna.telescope import Telescope, RingedCassegrain, NgvlaPrototype
 
 
 class TestClassTelescope:
-    def test_init(self):
+    def test_get_proper_telescope(self):
         """
         Test the initialization of a Telescope object using the VLA as a test case
         """
-        tel = Telescope("vla")
+        tel = get_proper_telescope("vla")
+        assert isinstance(tel, RingedCassegrain), "Telescope initialized to the proper class"
         assert tel.name == "VLA", "Telescope name loaded incorrectly"
         assert tel.diameter == 25.0, "Telescope diameter loaded incorrectly"
 
         with pytest.raises(Exception):
-            tel = Telescope("xxx")
+            vla_ns = get_proper_telescope("vla", 'teletubies')
+
+        ngvla = get_proper_telescope("VLA", "na")
+        assert ngvla is None, "ngvla telescopes are not initializable yet"
+
+        alma_da = get_proper_telescope("ALMA", "DA13")
+        assert alma_da.name == "ALMA DA", "ALMA DA is not properly initialized"
+
+        alma_dv = get_proper_telescope("ALMA", "DV13")
+        assert alma_dv.name == "ALMA DV", "ALMA DV is not properly initialized"
+
+        alma_tp = get_proper_telescope("ALMA", "TP3")
+        assert alma_tp.name == "ALMA TP", "ALMA TP is not properly initialized"
+
+        with pytest.raises(Exception):
+            alma_ns = get_proper_telescope("ALMA")
+
+        with pytest.raises(Exception):
+            alma_ns = get_proper_telescope("ALMA", 'teletubies')
+
+        newtel = get_proper_telescope('asdrubal')
+        assert newtel is None, "Nonsense telescope name does not return None"
 
     def test_read(self):
         """
