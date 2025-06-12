@@ -45,8 +45,8 @@ class Telescope:
 
         relative_path = pathlib.Path(filename)
         abs_path = relative_path.resolve()
-        self.file_name = abs_path.name
-        self.file_path = abs_path.parent
+        self.file_name = str(abs_path.name)
+        self.file_path = str(abs_path.parent)
 
     def read_from_distro(self, name):
         """
