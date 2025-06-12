@@ -1,7 +1,7 @@
 {
     "metadata": {
         ".zattrs": {
-            "ant_list": [
+            "antenna_list": [
                 "ea01",
                 "ea02",
                 "ea03",
@@ -71,7 +71,7 @@
                 "valid": true
             },
             "comment": "Data taken from AIPS source code and EVLA memo 212, Screw offset taken from measurements done insitu by VSM on March 14 2023, Array center location from CASA 6.5.5.21",
-            "diam": 25.0,
+            "diameter": 25.0,
             "focus": 8.8,
             "gain_wavelengths": [
                 0.2,
@@ -83,8 +83,8 @@
                 0.01,
                 0.007
             ],
-            "inlim": 2.0,
-            "inrad": [
+            "inner_radial_limit": 2.0,
+            "panel_inner_radii": [
                 1.983,
                 3.683,
                 5.563,
@@ -94,7 +94,7 @@
             ],
             "magnification": 13.0,
             "name": "VLA",
-            "npanel": [
+            "n_panel_per_ring": [
                 12,
                 16,
                 24,
@@ -102,10 +102,10 @@
                 40,
                 40
             ],
-            "nrings": 6,
+            "n_rings_of_panels": 6,
             "onaxisoptics": true,
-            "oulim": 12.0,
-            "ourad": [
+            "outer_radial_limit": 12.0,
+            "panel_outer_radii": [
                 3.683,
                 5.563,
                 7.391,
