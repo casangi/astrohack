@@ -346,7 +346,6 @@ def get_proper_telescope(name: str, antenna_name: str = None):
         if antenna_name is None or "ea" in antenna_name:
             return RingedCassegrain.from_name("vla")
         elif "na" in antenna_name:
-            print("ngvla antenna not yet supported")
             return None
         else:
             raise Exception(f"Unsupported antenna type for the VLA: {antenna_name}")
