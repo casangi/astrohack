@@ -10,9 +10,11 @@ from astrohack.antenna.ring_panel import RingPanel
 
 
 class Telescope:
+    """
+    Base telescope class containing IO methods and attributes that are common to all telescopes.
+    """
 
     def __init__(self):
-        # Some of these will need to refactored later
         self.diameter = None
         self.antenna_list = None
         self.file_name = None
@@ -47,6 +49,14 @@ class Telescope:
         self.file_path = abs_path.parent
 
     def read_from_distro(self, name):
+        """
+        Read telescope info from files distributed with astrohack.
+        Args:
+            name: Name of the telescope to be read.
+
+        Returns:
+            None
+        """
         dest_path = "/".join(
             [astrohack.__path__[0], f"data/telescopes/{name.lower()}.zarr"]
         )
@@ -68,6 +78,11 @@ class Telescope:
         return
 
     def __repr__(self):
+        """
+        Simple print function that prints all class attributes.
+        Returns:
+            String containing descriptions of all object attributes.
+        """
         outstr = ""
         obj_dict = vars(self)
         for key, item in obj_dict.items():
@@ -85,6 +100,10 @@ class Telescope:
 
 
 class RingedCassegrain(Telescope):
+    """
+    Derived class containing description and methods pertaining to telescope whose panels are distributed in concentric
+    rings from the dish center.
+    """
 
     def __init__(self):
         super().__init__()
@@ -109,11 +128,24 @@ class RingedCassegrain(Telescope):
 
     @classmethod
     def from_name(cls, name):
+        """
+        Initialize and read from the distro a telescope object.
+        Args:
+            name: Name of the telescope to be read.
+
+        Returns:
+            RingedCassegrain object
+        """
         obj = cls()
         obj.read_from_distro(name)
         return obj
 
     def consistency_check(self):
+        """
+        Make a simple check to test that some of its attributes are
+        Returns:
+            None
+        """
         error = False
 
         if (
@@ -170,6 +202,15 @@ class RingedCassegrain(Telescope):
         return "{0:1d}-{1:1d}{2:1d}".format(sector, iring + 1, jpanel)
 
     def build_panel_list(self, panel_model, panel_margins):
+        """
+        Construct a list of panel objects according to the telescope description
+        Args:
+            panel_model: Type of panel model to be fitted.
+            panel_margins: how much of the panel
+
+        Returns:
+            List containing RingPanel objects
+        """
         from time import time
 
         start = time()
@@ -204,7 +245,7 @@ class RingedCassegrain(Telescope):
         self, panel_list, u_axis, v_axis, radius, phi, deviation, mask
     ):
         """
-        Attribute pixels in deviation to the panels in the panel_list
+        Attribute pixels in deviation image to the panels in the panel_list
         Args:
             panel_list: The panel list must have been created by build_panel_list for the same instrument
             u_axis: Aperture U axis
@@ -243,17 +284,41 @@ class RingedCassegrain(Telescope):
         return panel_map
 
     def phase_to_deviation(self, radius, phase, wavelength):
+        """
+        Transform phase image to physical deviation image based on wavelength.
+        Args:
+            radius: Radius image used for inclination determination
+            phase: Phase image in Radians
+            wavelength: Observation wavelength in meters
+
+        Returns:
+            Deviation image.
+        """
         acoeff = (wavelength / twopi) / (4.0 * self.focus)
         bcoeff = 4 * self.focus**2
         return acoeff * phase * np.sqrt(radius**2 + bcoeff)
 
     def deviation_to_phase(self, radius, deviation, wavelength):
+        """"
+        Transform deviation image to physical phase image based on wavelength.
+        Args:
+            radius: Radius image used for inclination determination
+            deviation: Deviation image in meters
+            wavelength: Observation wavelength in meters
+
+        Returns:
+            Phase image.
+        """
         acoeff = (wavelength / twopi) / (4.0 * self.focus)
         bcoeff = 4 * self.focus**2
         return deviation / (acoeff * np.sqrt(radius**2 + bcoeff))
 
 
 class NgvlaPrototype(Telescope):
+    """
+    Derived class to contain ngVLA prototype specific methods and attributes.
+    """
+
     def __init__(self):
         super().__init__()
 
