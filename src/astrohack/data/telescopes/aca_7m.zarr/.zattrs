@@ -16,7 +16,7 @@
         "refer": "WGS84",
         "valid": true
     },
-    "comment": "Preliminary data for ACA 7m array, Diameter, focus, npanel, nrings and inlim taken from ALMA cycle 9 handbook. magnification and secondary_dist estimated from data from cycle 9 handbook. inrad and ourad computed assuming equal radial spans for each ring. surp_slope assumed to be 0, Array center location from CASA 6.5.5.21",
+    "comment": "Preliminary data for ACA 7m array, Diameter, focus, n_panel_per_ring, n_rings_of_panels and inner_radial_limit taken from ALMA cycle 9 handbook. magnification and secondary_dist estimated from data from cycle 9 handbook. panel_inner_radii and panel_outer_radii computed assuming equal radial spans for each ring. surp_slope assumed to be 0, Array center location from CASA 6.5.5.21",
     "diameter": 7.0,
     "station_distance_dict": {
         "TF01": [

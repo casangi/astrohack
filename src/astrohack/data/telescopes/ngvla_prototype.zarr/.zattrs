@@ -1,5 +1,5 @@
 {
-    "ant_list": [
+    "antenna_list": [
         "prototype"
     ],
     "array_center": {
@@ -19,7 +19,7 @@
         "valid": true
     },
     "comment": "Based on latest internal NRAO communication",
-    "diam": 18.0,
+    "diameter": 18.0,
     "focus": "N/A",
     "gain_wavelengths": [
         0.20,
@@ -34,7 +34,7 @@
     ],
     "magnification": "N/A",
     "name": "ngVLA prototype",
-    "npanel": 76,
+    "n_panel_per_ring": 76,
     "onaxisoptics": false,
     "panel_list": false,
     "ringed": false,
