@@ -7,6 +7,7 @@ import toolviper.utils.logger as logger
 import astrohack.utils.tools
 from astrohack.utils.constants import *
 from astrohack.antenna.ring_panel import RingPanel
+from astrohack.utils.algorithms import create_coordinate_images, arm_shadow_masking
 
 
 class Telescope:
@@ -219,7 +220,6 @@ class RingedCassegrain(Telescope):
         """
         from time import time
 
-        start = time()
         if self.name in ["VLA", "VLBA"]:
             self._panel_label = self._vla_panel_labeling
         elif "ALMA" in self.name or self.name == "ACA 7m":
@@ -290,6 +290,38 @@ class RingedCassegrain(Telescope):
                             panel.add_margin([xc, yc, ix, iy, deviation[ix, iy]])
 
         return panel_map
+
+    def create_aperture_mask(self, u_axis, v_axis, exclude_arms=True, return_polar_meshes=False, use_outer_limit=False):
+        u_mesh, v_mesh, radius_mesh, polar_angle_mesh = create_coordinate_images(u_axis, v_axis,
+                                                                                 create_polar_coordinates=True)
+
+        if use_outer_limit:
+            outer_radius = self.outer_radial_limit
+        else:
+            outer_radius = self.diameter/2.
+
+        mask = np.full_like(radius_mesh, True, dtype=bool)
+        mask = np.where(radius_mesh > outer_radius, False, mask)
+        mask = np.where(radius_mesh < self.inner_radial_limit, False, mask)
+
+        if self.arm_shadow_width is None or not exclude_arms:
+            pass
+        elif isinstance(self.arm_shadow_width, (float, int)):
+            mask = _arm_shadow_masking(mask, u_mesh, v_mesh, radius_mesh, self.inner_radial_limit, outer_radius,
+                                       self.arm_shadow_width, self.arm_shadow_rotation)
+        elif isinstance(self.arm_shadow_width, list):
+            for section in self.arm_shadow_width:
+                minradius, maxradius, width = section
+                mask = _arm_shadow_masking(mask, u_mesh, v_mesh, radius_mesh, minradius, maxradius, width,
+                                           self.arm_shadow_rotation)
+
+        else:
+            raise Exception(f"Don't know how to handle an arm width of class {type(self.arm_shadow_width)}")
+
+        if return_polar_meshes:
+            return mask, radius_mesh, polar_angle_mesh
+        else:
+            return mask
 
     def phase_to_deviation(self, radius, phase, wavelength):
         """

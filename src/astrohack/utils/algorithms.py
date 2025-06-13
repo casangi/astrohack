@@ -564,7 +564,7 @@ def create_aperture_mask(
     if arm_width is None:
         pass
     elif isinstance(arm_width, (float, int)):
-        mask = _arm_shadow_masking(
+        mask = arm_shadow_masking(
             mask,
             x_mesh,
             y_mesh,
@@ -577,7 +577,7 @@ def create_aperture_mask(
     elif isinstance(arm_width, list):
         for section in arm_width:
             minradius, maxradius, width = section
-            mask = _arm_shadow_masking(
+            mask = arm_shadow_masking(
                 mask,
                 x_mesh,
                 y_mesh,
@@ -599,7 +599,7 @@ def create_aperture_mask(
         return mask
 
 
-def _arm_shadow_masking(
+def arm_shadow_masking(
     inmask, x_mesh, y_mesh, radius_mesh, minradius, maxradius, width, angle
 ):
     radial_mask = np.where(radius_mesh < minradius, False, inmask)
