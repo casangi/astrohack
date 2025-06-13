@@ -30,6 +30,7 @@ from astrohack.visualization.plot_tools import (
 )
 from astrohack.visualization.textual_data import create_pretty_table
 from astrohack.utils.text import format_value_error, format_label
+from astrohack.antenna.telescope import get_proper_telescope
 
 nanvec3d = np.full([3], np.nan)
 
@@ -90,12 +91,10 @@ def make_gridded_cassegrain_primary(grid_size, resolution, telescope_pars):
         axis, axis, create_polar_coordinates=True
     )
     x_idx_mesh, y_idx_mesh = np.meshgrid(axis_idx, axis_idx, indexing="ij")
-    radial_mask = create_aperture_mask(
-        axis,
-        axis,
-        telescope_pars["inner_radius"],
-        telescope_pars["primary_diameter"] / 2,
-    )
+    tel = get_proper_telescope('vla')
+    tel.inner_radial_limit = telescope_pars["inner_radius"]
+    tel.diameter = telescope_pars["primary_diameter"]
+    radial_mask = tel.create_aperture_mask(axis, axis, exclude_arms=False)
     img_radius = img_radius[radial_mask]
     npnt_1d = img_radius.shape[0]
     idx_1d = np.empty([npnt_1d, 2], dtype=int)
