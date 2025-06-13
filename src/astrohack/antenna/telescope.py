@@ -148,6 +148,12 @@ class RingedCassegrain(Telescope):
         """
         error = False
 
+        if self.panel_outer_radii[-1] > self.diameter/2.:
+            logger.error(
+                "Panel description goes beyond dish outermost radius"
+            )
+            error = True
+
         if (
             not self.n_rings_of_panels
             == len(self.panel_inner_radii)
@@ -268,6 +274,8 @@ class RingedCassegrain(Telescope):
                 panel_map,
             )
             panelsum += self.n_panel_per_ring[iring]
+        panel_map = np.where(radius >= self.panel_inner_radii[0], panel_map, np.nan)
+        panel_map = np.where(radius > self.panel_outer_radii[-1], np.nan, panel_map)
 
         for ix, xc in enumerate(u_axis):
             for iy, yc in enumerate(v_axis):
