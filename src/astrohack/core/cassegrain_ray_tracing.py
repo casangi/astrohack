@@ -9,7 +9,6 @@ from astrohack.utils import (
     data_statistics,
     clight,
     statistics_to_text,
-    create_aperture_mask,
 )
 from astrohack.utils.constants import twopi
 from astrohack.utils.conversion import convert_unit
