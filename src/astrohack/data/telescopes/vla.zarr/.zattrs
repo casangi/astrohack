@@ -120,7 +120,7 @@
         "or"
     ],
     "screw_offset": 0.0635,
-    "secondary_dist": 0.522,
+    "secondary_distance_to_focus": 0.522,
     "secondary_support": "+",
     "surp_slope": 0.7
 }

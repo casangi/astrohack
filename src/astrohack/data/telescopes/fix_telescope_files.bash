@@ -2,8 +2,8 @@
 
 f_to_corr=(".zattrs" ".zmetadata")
 
-old_vars=("diametereter")
-new_vars=("diameter")
+old_vars=("secondary_dist")
+new_vars=("secondary_distance_to_focus")
 
 # old_vars=("diam" "ant_list" "filename" "filepath" "inlim" "oulim"
 # "dist_dict" "inrad" "ourad" "npanel" "nrings")
