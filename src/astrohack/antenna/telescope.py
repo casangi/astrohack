@@ -307,12 +307,12 @@ class RingedCassegrain(Telescope):
         if self.arm_shadow_width is None or not exclude_arms:
             pass
         elif isinstance(self.arm_shadow_width, (float, int)):
-            mask = _arm_shadow_masking(mask, u_mesh, v_mesh, radius_mesh, self.inner_radial_limit, outer_radius,
+            mask = arm_shadow_masking(mask, u_mesh, v_mesh, radius_mesh, self.inner_radial_limit, outer_radius,
                                        self.arm_shadow_width, self.arm_shadow_rotation)
         elif isinstance(self.arm_shadow_width, list):
             for section in self.arm_shadow_width:
                 minradius, maxradius, width = section
-                mask = _arm_shadow_masking(mask, u_mesh, v_mesh, radius_mesh, minradius, maxradius, width,
+                mask = arm_shadow_masking(mask, u_mesh, v_mesh, radius_mesh, minradius, maxradius, width,
                                            self.arm_shadow_rotation)
 
         else:
