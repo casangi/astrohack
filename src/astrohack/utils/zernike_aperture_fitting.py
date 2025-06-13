@@ -6,12 +6,12 @@ from astrohack.utils import create_2d_array_reconstruction_array
 # Cartesian forms for the Zernike Polynomials extracted from Lakshminarayanan & Fleck, Journal of modern Optics 2011.
 
 
-def zernike_order_0(u_ax, v_ax):
+def zernike_order_0(u_ax, _):
     """
     Zernike 0-eth order polynomial, simple flat disk.
     Args:
         u_ax: Aperture U axis
-        v_ax: Aperture V axis
+        _: Aperture V axis
 
     Returns:
         a [n, 1] Matrix filled with ones.
