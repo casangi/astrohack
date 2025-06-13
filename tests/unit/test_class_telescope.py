@@ -4,7 +4,6 @@ import filecmp
 import shutil
 import numpy as np
 
-from astrohack.utils.algorithms import create_aperture_mask
 from astrohack.utils.ray_tracing_general import  simple_axis
 from astrohack.antenna import RingPanel
 from astrohack.antenna.telescope import RingedCassegrain, get_proper_telescope
@@ -134,8 +133,7 @@ class TestClassTelescope:
         u_axis = simple_axis([-15, 15], 0.1, 0.0)
         v_axis = simple_axis([-15, 15], 0.1, 0.0)
         panel_list = tel.build_panel_list('flexible', 0.2)
-        mask, radius, phi = create_aperture_mask(u_axis, v_axis, tel.inner_radial_limit, tel.diameter/2,
-                                                 return_polar_meshes=True)
+        mask, radius, phi = tel.create_aperture_mask(u_axis, v_axis, return_polar_meshes=True)
         dev = np.where(mask, 0.0, np.nan)
         panel_map = tel.attribute_pixels_to_panels(panel_list, u_axis, v_axis, radius, phi, dev, mask)
         assert panel_map.shape[0] == u_axis.shape[0] and panel_map.shape[1] == v_axis.shape[0], \
