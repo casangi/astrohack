@@ -492,6 +492,7 @@ def apply_holog_phase_fitting_to_rt_xds(
 
     """
     rt_xds = open_rt_zarr(rt_xds_filename)
+    telescope = get_proper_telescope("VLA")
 
     ntime = 1
     npol = 1
@@ -514,13 +515,9 @@ def apply_holog_phase_fitting_to_rt_xds(
     )
     phase_5d = np.empty_like(amplitude_5d)
     phase_5d[..., :, :] = phase_2d
-    radial_mask, radius, _ = create_aperture_mask(
-        u_axis,
-        v_axis,
-        telescope_pars["inner_radius"],
-        telescope_pars["primary_diameter"] / 2,
-        return_polar_meshes=True,
-    )
+
+    radial_mask, radius, _ = telescope.create_aperture_mask(u_axis, v_axis, exclude_arms=False,
+                                                            return_polar_meshes=True)
     amplitude_5d[..., :, :] = np.where(radial_mask, 1.0, np.nan)
 
     # Create frequency and polarization axes
@@ -540,7 +537,6 @@ def apply_holog_phase_fitting_to_rt_xds(
     ]
 
     # Manipulate VLA telescope object so that it has compatible parameters to the ones in the RT model.
-    telescope = get_proper_telescope("VLA")
     telescope.focus = telescope_pars["focal_length"]
     c_fact = telescope_pars["foci_half_distance"]
     a_fact = telescope_pars["z_intercept"]
