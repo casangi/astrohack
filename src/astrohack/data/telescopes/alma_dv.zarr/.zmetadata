@@ -116,7 +116,7 @@
                 "c"
             ],
             "screw_offset": null,
-            "secondary_dist": 0.294,
+            "secondary_distance_to_focus": 0.294,
             "secondary_support": "+",
             "surp_slope": 0.0
         },
