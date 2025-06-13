@@ -11,7 +11,6 @@ from astrohack.utils import (
     data_statistics,
     statistics_to_text,
     phase_wrapping,
-    create_aperture_mask,
 )
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
@@ -269,22 +268,11 @@ class AntennaSurface:
         self.phase = self.phase[iumin:iumax, ivmin:ivmax]
 
     def _create_aperture_mask(self, clip_type, clip_level, exclude_shadows):
-        if exclude_shadows:
-            arm_width = self.telescope.arm_shadow_width
-            arm_angle = self.telescope.arm_shadow_rotation
-        else:
-            arm_width = None
-            arm_angle = 0.0
 
-        self.base_mask, self.rad, self.phi = create_aperture_mask(
-            self.u_axis,
-            self.v_axis,
-            self.telescope.inner_radial_limit,
-            self.telescope.outer_radial_limit,
-            arm_width=arm_width,
-            arm_angle=arm_angle,
-            return_polar_meshes=True,
-        )
+        self.base_mask, self.rad, self.phi = self.telescope.create_aperture_mask(self.u_axis, self.v_axis,
+                                                                                 exclude_arms=exclude_shadows,
+                                                                                 return_polar_meshes=True,
+                                                                                 use_outer_limit=True)
 
         if self.reread:
             pass
