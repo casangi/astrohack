@@ -184,7 +184,9 @@ class FITSImage:
             None
         """
         telescope_obj = get_proper_telescope(self.telescope_name)
-        self.base_mask = telescope_obj.create_aperture_mask(self.x_axis, self.y_axis, use_outer_limit=True)
+        self.base_mask = telescope_obj.create_aperture_mask(
+            self.x_axis, self.y_axis, use_outer_limit=True
+        )
 
     def resample(self, ref_image):
         """
@@ -283,7 +285,9 @@ class FITSImage:
             Masked original data
         """
         telescope_obj = get_proper_telescope(self.telescope_name)
-        orig_mask = telescope_obj.create_aperture_mask(self.original_x_axis, self.original_y_axis, use_outer_limit=True)
+        orig_mask = telescope_obj.create_aperture_mask(
+            self.original_x_axis, self.original_y_axis, use_outer_limit=True
+        )
         return np.where(orig_mask, self.original_data, np.nan)
 
     def plot_images(

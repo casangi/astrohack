@@ -269,10 +269,13 @@ class AntennaSurface:
 
     def _create_aperture_mask(self, clip_type, clip_level, exclude_shadows):
 
-        self.base_mask, self.rad, self.phi = self.telescope.create_aperture_mask(self.u_axis, self.v_axis,
-                                                                                 exclude_arms=exclude_shadows,
-                                                                                 return_polar_meshes=True,
-                                                                                 use_outer_limit=True)
+        self.base_mask, self.rad, self.phi = self.telescope.create_aperture_mask(
+            self.u_axis,
+            self.v_axis,
+            exclude_arms=exclude_shadows,
+            return_polar_meshes=True,
+            use_outer_limit=True,
+        )
 
         if self.reread:
             pass

@@ -85,7 +85,7 @@ def _apply_mask(data, scaling=0.5):
     )
 
     start = int(x // 2 - mask // 2)
-    return data[start: (start + mask), start: (start + mask)]
+    return data[start : (start + mask), start : (start + mask)]
 
 
 def calc_coords(image_size, cell_size):

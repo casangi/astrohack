@@ -516,8 +516,9 @@ def apply_holog_phase_fitting_to_rt_xds(
     phase_5d = np.empty_like(amplitude_5d)
     phase_5d[..., :, :] = phase_2d
 
-    radial_mask, radius, _ = telescope.create_aperture_mask(u_axis, v_axis, exclude_arms=False,
-                                                            return_polar_meshes=True)
+    radial_mask, radius, _ = telescope.create_aperture_mask(
+        u_axis, v_axis, exclude_arms=False, return_polar_meshes=True
+    )
     amplitude_5d[..., :, :] = np.where(radial_mask, 1.0, np.nan)
 
     # Create frequency and polarization axes
