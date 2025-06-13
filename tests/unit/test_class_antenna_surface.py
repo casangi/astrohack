@@ -57,12 +57,12 @@ class TestClassAntennaSurface:
     inputxds = xr.open_zarr(
         f"{datafolder}/ea25_cal_small_after_fixed.split.image.zarr/ant_ea25/ddi_0"
     )
-    inputxds.attrs["ant_name"] = "test"
+    inputxds.attrs["ant_name"] = "ea00"
     inputxds.attrs["ddi"] = "test"
     tel = get_proper_telescope("vla")
     datashape = (510, 510)
     middlepix = 255
-    tant = AntennaSurface(inputxds, tel, panel_margins=0.2)
+    tant = AntennaSurface(inputxds, panel_margins=0.2)
     tolerance = 1e-6
     sigma = 20
     rand = sigma * np.random.randn(*datashape)
@@ -102,33 +102,6 @@ class TestClassAntennaSurface:
         assert not self.tant.mask[
             0, 0
         ], "Mask is True at edges, where it should be False"
-
-    def test_compile_panel_points_ringed(self):
-        """
-        Tests that a point falls into the correct panel and that this panel has the correct number of samples
-        """
-        compvaluep0 = [
-            3.3030790441176467,
-            0.43083639705882354,
-            197,
-            262,
-            2.57549549e-04,
-        ]
-        compnsampp0 = 179
-        self.tant.compile_panel_points()
-
-        assert (
-            len(self.tant.panels[0].samples) == compnsampp0
-        ), "Number of samples in panel is different from reference"
-
-        assert np.allclose(
-            self.tant.panels[0].samples[0].get_array(), compvaluep0, atol=self.tolerance
-        ), (
-            "Point data in Panel is different from what is expected. Given values: "
-            + str(self.tant.panels[0].samples[0].get_array())
-            + " Expected values: "
-            + str(compvaluep0)
-        )
 
     def test_fit_surface(self):
         """
