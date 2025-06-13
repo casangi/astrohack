@@ -2,7 +2,6 @@ import numpy as np
 from scipy import optimize as opt
 
 from astrohack.utils import create_2d_array_reconstruction_array
-from astrohack.utils.algorithms import create_aperture_mask
 
 # Cartesian forms for the Zernike Polynomials extracted from Lakshminarayanan & Fleck, Journal of modern Optics 2011.
 
@@ -890,19 +889,7 @@ def fit_zernike_coefficients(
     v_grid /= aperture_radius
 
     # Creating a mask for valid points
-    if mask_arm_shadows:
-        mask = create_aperture_mask(
-            u_axis,
-            v_axis,
-            telescope.inner_radial_limit,
-            aperture_radius,
-            arm_width=telescope.arm_shadow_width,
-            arm_angle=telescope.arm_shadow_rotation,
-        )
-    else:
-        mask = create_aperture_mask(
-            u_axis, v_axis, telescope.inner_radial_limit, aperture_radius
-        )
+    mask = telescope.create_aperture_mask(u_axis, v_axis, exclude_arms=mask_arm_shadows)
 
     # Vectorize grids with only valid points
     u_lin = u_grid[mask]
