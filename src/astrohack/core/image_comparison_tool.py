@@ -7,7 +7,6 @@ import pathlib
 from astrohack.antenna.telescope import get_proper_telescope
 from astrohack.utils.text import statistics_to_text
 from astrohack.utils.algorithms import (
-    create_aperture_mask,
     data_statistics,
     are_axes_equal,
 )
@@ -185,14 +184,7 @@ class FITSImage:
             None
         """
         telescope_obj = get_proper_telescope(self.telescope_name)
-        self.base_mask = create_aperture_mask(
-            self.x_axis,
-            self.y_axis,
-            telescope_obj.inner_radial_limit,
-            telescope_obj.outer_radial_limit,
-            arm_width=telescope_obj.arm_shadow_width,
-            arm_angle=telescope_obj.arm_shadow_rotation,
-        )
+        self.base_mask = telescope_obj.create_aperture_mask(self.x_axis, self.y_axis, use_outer_limit=True)
 
     def resample(self, ref_image):
         """
@@ -291,14 +283,7 @@ class FITSImage:
             Masked original data
         """
         telescope_obj = get_proper_telescope(self.telescope_name)
-        orig_mask = create_aperture_mask(
-            self.original_x_axis,
-            self.original_y_axis,
-            telescope_obj.inner_radial_limit,
-            telescope_obj.outer_radial_limit,
-            arm_width=telescope_obj.arm_shadow_width,
-            arm_angle=telescope_obj.arm_shadow_rotation,
-        )
+        orig_mask = telescope_obj.create_aperture_mask(self.original_x_axis, self.original_y_axis, use_outer_limit=True)
         return np.where(orig_mask, self.original_data, np.nan)
 
     def plot_images(
