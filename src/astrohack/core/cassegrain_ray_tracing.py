@@ -90,7 +90,7 @@ def make_gridded_cassegrain_primary(grid_size, resolution, telescope_pars):
         axis, axis, create_polar_coordinates=True
     )
     x_idx_mesh, y_idx_mesh = np.meshgrid(axis_idx, axis_idx, indexing="ij")
-    tel = get_proper_telescope('vla')
+    tel = get_proper_telescope("vla")
     tel.inner_radial_limit = telescope_pars["inner_radius"]
     tel.diameter = telescope_pars["primary_diameter"]
     radial_mask = tel.create_aperture_mask(axis, axis, exclude_arms=False)

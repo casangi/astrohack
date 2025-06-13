@@ -149,10 +149,8 @@ class RingedCassegrain(Telescope):
         """
         error = False
 
-        if self.panel_outer_radii[-1] > self.diameter/2.:
-            logger.error(
-                "Panel description goes beyond dish outermost radius"
-            )
+        if self.panel_outer_radii[-1] > self.diameter / 2.0:
+            logger.error("Panel description goes beyond dish outermost radius")
             error = True
 
         if (
@@ -291,14 +289,22 @@ class RingedCassegrain(Telescope):
 
         return panel_map
 
-    def create_aperture_mask(self, u_axis, v_axis, exclude_arms=True, return_polar_meshes=False, use_outer_limit=False):
-        u_mesh, v_mesh, radius_mesh, polar_angle_mesh = create_coordinate_images(u_axis, v_axis,
-                                                                                 create_polar_coordinates=True)
+    def create_aperture_mask(
+        self,
+        u_axis,
+        v_axis,
+        exclude_arms=True,
+        return_polar_meshes=False,
+        use_outer_limit=False,
+    ):
+        u_mesh, v_mesh, radius_mesh, polar_angle_mesh = create_coordinate_images(
+            u_axis, v_axis, create_polar_coordinates=True
+        )
 
         if use_outer_limit:
             outer_radius = self.outer_radial_limit
         else:
-            outer_radius = self.diameter/2.
+            outer_radius = self.diameter / 2.0
 
         mask = np.full_like(radius_mesh, True, dtype=bool)
         mask = np.where(radius_mesh > outer_radius, False, mask)
@@ -307,16 +313,34 @@ class RingedCassegrain(Telescope):
         if self.arm_shadow_width is None or not exclude_arms:
             pass
         elif isinstance(self.arm_shadow_width, (float, int)):
-            mask = arm_shadow_masking(mask, u_mesh, v_mesh, radius_mesh, self.inner_radial_limit, outer_radius,
-                                       self.arm_shadow_width, self.arm_shadow_rotation)
+            mask = arm_shadow_masking(
+                mask,
+                u_mesh,
+                v_mesh,
+                radius_mesh,
+                self.inner_radial_limit,
+                outer_radius,
+                self.arm_shadow_width,
+                self.arm_shadow_rotation,
+            )
         elif isinstance(self.arm_shadow_width, list):
             for section in self.arm_shadow_width:
                 minradius, maxradius, width = section
-                mask = arm_shadow_masking(mask, u_mesh, v_mesh, radius_mesh, minradius, maxradius, width,
-                                           self.arm_shadow_rotation)
+                mask = arm_shadow_masking(
+                    mask,
+                    u_mesh,
+                    v_mesh,
+                    radius_mesh,
+                    minradius,
+                    maxradius,
+                    width,
+                    self.arm_shadow_rotation,
+                )
 
         else:
-            raise Exception(f"Don't know how to handle an arm width of class {type(self.arm_shadow_width)}")
+            raise Exception(
+                f"Don't know how to handle an arm width of class {type(self.arm_shadow_width)}"
+            )
 
         if return_polar_meshes:
             return mask, radius_mesh, polar_angle_mesh
@@ -339,7 +363,7 @@ class RingedCassegrain(Telescope):
         return acoeff * phase * np.sqrt(radius**2 + bcoeff)
 
     def deviation_to_phase(self, radius, deviation, wavelength):
-        """"
+        """ "
         Transform deviation image to physical phase image based on wavelength.
         Args:
             radius: Radius image used for inclination determination
