@@ -93,6 +93,23 @@ class TestClassTelescope:
         with pytest.raises(Exception):
             tel.consistency_check()
 
+    def test_create_aperture_mask(self):
+        tel = get_proper_telescope("vla")
+        u_axis = simple_axis([-15, 15], 0.1, 0.0)
+        v_axis = simple_axis([-15, 15], 0.1, 0.0)
+        mid_point = u_axis.shape[0]//2
+
+        mask = tel.create_aperture_mask(u_axis, v_axis)
+        assert mask[130,130], "Mask should be True here"
+        assert not mask[mid_point, mid_point], "Mask should be False inside blockage"
+        assert not mask[130,150], "Mask should be False in an arm shadow"
+
+        mask = tel.create_aperture_mask(u_axis, v_axis, exclude_arms=False)
+        assert mask[130,130], "Mask should be True here"
+        assert not mask[mid_point, mid_point], "Mask should be False inside blockage"
+        assert mask[130,150], "Mask should be True in an arm shadow"
+
+
     def test_build_panel_list(self):
         tel = get_proper_telescope("vla")
         panel_list = tel.build_panel_list('flexible', 0.2)
