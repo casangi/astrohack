@@ -1,28 +1,33 @@
 from shapely import Polygon, Point
 from shapely.plotting import plot_polygon
-from astrohack.antenna.base_panel import BasePanel, PANEL_MODELS, icorpara
+from astrohack.antenna.base_panel import BasePanel
 
 
 class PolygonPanel(BasePanel):
 
-    def __init__(self, model, ipanel, polygon, screws):
+    def __init__(self, label, model, panel_info, panel_margin, plot_screw_size=0.20,):
         """
         Initializes a polygon based panel based on a polygon shape and the screw positions
         Args:
+            label: panel label
             model: What model of surface to be used in fitting ["rigid", "mean", "xyparaboloid", "rotatedparaboloid"]
-            ipanel: Panel number
-            polygon: Polygon describing the panel shape
-            screws: Positions of the screw over the panel
+            panel_info: Dictionary with panel information
         """
-        if model == PANEL_MODELS[icorpara]:
+        if 'corotated' in model:
             raise Exception(
-                "corotatedparaboloid not supported for Polygon based panels"
+                f"corotated models such as {model} are not supported for Polygon based panels"
             )
-        super().__init__(model, ipanel, screws)
-        self.polygon = Polygon(polygon)
+
+        poly = Polygon(panel_info['polygon'])
+
+        screws = panel_info['screws']
+        super().__init__(model, screws, screws, plot_screw_size, label,
+                         center=[poly.centroid.x, poly.centroid.y], zeta=None, ref_points=None,)
+        self.polygon = poly
+        self.margin = panel_margin
+
         if not self.polygon.is_simple:
             raise Exception("Polygon must not intersect itself")
-        self.center = self.polygon.centroid.x, self.polygon.centroid.y
         return
 
     def is_inside(self, point):
@@ -31,19 +36,7 @@ class PolygonPanel(BasePanel):
         Args:
             point: point to be tested
         """
-        return self.polygon.intersects(Point(point))
-
-    def export_adjustments(self, unit="mm"):
-        """
-        Exports panel screw adjustments to a string
-        Args:
-            unit: Unit for screw adjustments ['mm','miliinches']
-
-        Returns:
-        String with screw adjustments for this panel
-        """
-        string = "{0:8d}".format(self.ipanel)
-        return string + self.export_screw_adjustments(unit)
+        return self.polygon.intersects(Point([point.xc, point.yc]))
 
     def print_misc(self, verbose=False):
         """
@@ -52,15 +45,12 @@ class PolygonPanel(BasePanel):
             verbose: Include more information in print
         """
         print("########################################")
-        print("{0:20s}={1:8d}".format("ipanel", self.ipanel))
+        print("{0:20s}={1:8d}".format("label", self.label))
         print("{0:20s}={1:8s}".format("model", " " + self.model_name))
-        print("{0:20s}={1:8d}".format("nsamp", self.nsamp))
+        print("{0:20s}={1:8d}".format("nsamp", len(self.samples)))
         if verbose:
-            for isamp in range(self.nsamp):
-                strg = "{0:20s}=".format("samp{0:d}".format(isamp))
-                for val in self.values[isamp]:
-                    strg += str(val) + ", "
-                print(strg)
+            for sample in self.samples:
+                print(sample)
         print()
 
     def plot(self, ax, screws=False):
