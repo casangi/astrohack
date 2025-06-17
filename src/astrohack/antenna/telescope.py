@@ -428,11 +428,28 @@ class NgvlaPrototype(Telescope):
         self,
         u_axis,
         v_axis,
-        exclude_arms=True,
+        _=True,
         return_polar_meshes=False,
         use_outer_limit=False,
     ):
-        return
+        u_mesh, v_mesh, radius_mesh, polar_angle_mesh = create_coordinate_images(
+            u_axis, v_axis, create_polar_coordinates=True
+        )
+
+        if use_outer_limit:
+            outer_radius = self.outer_radial_limit
+        else:
+            outer_radius = self.diameter / 2.0
+
+        mask = np.full_like(radius_mesh, True, dtype=bool)
+        mask = np.where(radius_mesh > outer_radius, False, mask)
+        # This line does not need to be included as there is no blockage in the ngvla!
+        # mask = np.where(radius_mesh < self.inner_radial_limit, False, mask)
+
+        if return_polar_meshes:
+            return mask, radius_mesh, polar_angle_mesh
+        else:
+            return mask
 
     def phase_to_deviation(self, radius, phase, wavelength):
         return
