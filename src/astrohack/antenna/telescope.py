@@ -221,7 +221,6 @@ class RingedCassegrain(Telescope):
         Returns:
             List containing RingPanel objects
         """
-        from time import time
 
         if self.name in ["VLA", "VLBA"]:
             self._panel_label = self._vla_panel_labeling
@@ -406,16 +405,24 @@ class NgvlaPrototype(Telescope):
             panel_list.append(panel)
         return panel_list
 
-    def attribute_pixels_to_panels(
-        self, panel_list, u_axis, v_axis, radius, phi, deviation, mask
-    ):
+    @staticmethod
+    def attribute_pixels_to_panels(panel_list, u_axis, v_axis, radius, _, deviation, mask):
+
+        panel_map = np.full_like(radius, np.nan)
         for ix, xc in enumerate(u_axis):
             for iy, yc in enumerate(v_axis):
                 if mask[ix, iy]:
-                    for panel in panel_list:
-                        pass
+                    for ipanel, panel in enumerate(panel_list):
+                        issample, inpanel = panel.is_inside(xc, yc)
+                        if inpanel:
+                            if issample:
+                                panel.add_margin([xc, yc, ix, iy, deviation[ix, iy]])
+                            else:
+                                panel.add_sample([xc, yc, ix, iy, deviation[ix, iy]])
+                            panel_map[ix, iy] = ipanel
+                            break
 
-        return
+        return panel_map
 
     def create_aperture_mask(
         self,
