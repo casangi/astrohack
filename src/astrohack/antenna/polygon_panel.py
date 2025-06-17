@@ -30,13 +30,16 @@ class PolygonPanel(BasePanel):
             raise Exception("Polygon must not intersect itself")
         return
 
-    def is_inside(self, point):
+    def is_inside(self, xc, yc):
         """
         Checks if a point is inside the panel by using shapely's point in polygon method
         Args:
-            point: point to be tested
+            xc: point x coordinate
+            yc: point y coordinate
         """
-        return self.polygon.intersects(Point([point.xc, point.yc]))
+        inpanel = self.polygon.intersects(Point([xc, yc]))
+        issample = True
+        return issample, inpanel
 
     def print_misc(self, verbose=False):
         """
