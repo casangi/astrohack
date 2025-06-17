@@ -412,11 +412,13 @@ def get_proper_telescope(name: str, antenna_name: str = None):
     name = name.lower()
     if isinstance(antenna_name, str):
         antenna_name = antenna_name.lower()
-    if "vla" in name:
+    if "ngvla" in name:
+        return NgvlaPrototype.from_name("ngvla_proto_2025")
+    elif "vla" in name:
         if antenna_name is None or "ea" in antenna_name:
             return RingedCassegrain.from_name("vla")
         elif "na" in antenna_name:
-            return None
+            return NgvlaPrototype.from_name("ngvla_proto_2025")
         else:
             raise Exception(f"Unsupported antenna type for the VLA: {antenna_name}")
 
