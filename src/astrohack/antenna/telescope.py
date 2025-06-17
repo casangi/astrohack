@@ -5,6 +5,7 @@ import xarray as xr
 import toolviper.utils.logger as logger
 
 import astrohack.utils.tools
+from astrohack.antenna.polygon_panel import PolygonPanel
 from astrohack.utils.constants import *
 from astrohack.antenna.ring_panel import RingPanel
 from astrohack.utils.algorithms import create_coordinate_images, arm_shadow_masking
@@ -397,6 +398,40 @@ class NgvlaPrototype(Telescope):
         obj = cls()
         obj.read_from_distro(name)
         return obj
+
+    def build_panel_list(self, panel_model, panel_margins):
+        panel_list = []
+        for panel_label, panel_info in self.panel_dict.items():
+            panel = PolygonPanel(panel_label, panel_model, panel_info, panel_margins)
+            panel_list.append(panel)
+        return panel_list
+
+    def attribute_pixels_to_panels(
+        self, panel_list, u_axis, v_axis, radius, phi, deviation, mask
+    ):
+        for ix, xc in enumerate(u_axis):
+            for iy, yc in enumerate(v_axis):
+                if mask[ix, iy]:
+                    for panel in panel_list:
+                        pass
+
+        return
+
+    def create_aperture_mask(
+        self,
+        u_axis,
+        v_axis,
+        exclude_arms=True,
+        return_polar_meshes=False,
+        use_outer_limit=False,
+    ):
+        return
+
+    def phase_to_deviation(self, radius, phase, wavelength):
+        return
+
+    def deviation_to_phase(self, radius, deviation, wavelength):
+        return
 
 
 def get_proper_telescope(name: str, antenna_name: str = None):
