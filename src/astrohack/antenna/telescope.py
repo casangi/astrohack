@@ -78,6 +78,15 @@ class Telescope:
         xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
         return
 
+    def write_to_distro(self):
+        dest_path = "/".join(
+            [
+                astrohack.__path__[0],
+                f'data/telescopes/{self.name.lower().replace(" ", "_")}.zarr',
+            ]
+        )
+        self.write(dest_path)
+
     def __repr__(self):
         """
         Simple print function that prints all class attributes.
@@ -87,17 +96,12 @@ class Telescope:
         outstr = ""
         obj_dict = vars(self)
         for key, item in obj_dict.items():
-            outstr += f"{key:20s} = {str(item)}\n"
+            if isinstance(item, dict):
+                key_list = list(item.keys())
+                outstr += f"{key:20s} = dict({str(key_list)})\n"
+            else:
+                outstr += f"{key:20s} = {str(item)}\n"
         return outstr
-
-    def write_to_distro(self):
-        dest_path = "/".join(
-            [
-                astrohack.__path__[0],
-                f'data/telescopes/{self.name.lower().replace(" ", "_")}.zarr',
-            ]
-        )
-        self.write(dest_path)
 
 
 class RingedCassegrain(Telescope):
@@ -385,6 +389,8 @@ class NgvlaPrototype(Telescope):
 
     def __init__(self):
         super().__init__()
+        self.panel_dict = None
+        self.screw_description = None
 
     @classmethod
     def from_name(cls, name):
