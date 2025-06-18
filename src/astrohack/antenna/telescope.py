@@ -391,6 +391,7 @@ class NgvlaPrototype(Telescope):
         super().__init__()
         self.panel_dict = None
         self.screw_description = None
+        self.localqps = None
 
     @classmethod
     def from_name(cls, name):
