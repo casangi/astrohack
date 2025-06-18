@@ -407,7 +407,9 @@ class NgvlaPrototype(Telescope):
         return panel_list
 
     @staticmethod
-    def attribute_pixels_to_panels(panel_list, u_axis, v_axis, radius, _, deviation, mask):
+    def attribute_pixels_to_panels(
+        panel_list, u_axis, v_axis, radius, _, deviation, mask
+    ):
 
         panel_map = np.full_like(radius, np.nan)
         for ix, xc in enumerate(u_axis):
