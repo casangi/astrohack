@@ -5,7 +5,14 @@ from astrohack.antenna.base_panel import BasePanel
 
 class PolygonPanel(BasePanel):
 
-    def __init__(self, label, model, panel_info, panel_margin, plot_screw_size=0.20,):
+    def __init__(
+        self,
+        label,
+        model,
+        panel_info,
+        panel_margin,
+        plot_screw_size=0.20,
+    ):
         """
         Initializes a polygon based panel based on a polygon shape and the screw positions
         Args:
@@ -13,16 +20,24 @@ class PolygonPanel(BasePanel):
             model: What model of surface to be used in fitting ["rigid", "mean", "xyparaboloid", "rotatedparaboloid"]
             panel_info: Dictionary with panel information
         """
-        if 'corotated' in model:
+        if "corotated" in model:
             raise Exception(
                 f"corotated models such as {model} are not supported for Polygon based panels"
             )
 
-        poly = Polygon(panel_info['polygon'])
+        poly = Polygon(panel_info["polygon"])
 
-        screws = panel_info['screws']
-        super().__init__(model, screws, screws, plot_screw_size, label,
-                         center=[poly.centroid.x, poly.centroid.y], zeta=None, ref_points=None,)
+        screws = panel_info["screws"]
+        super().__init__(
+            model,
+            screws,
+            screws,
+            plot_screw_size,
+            label,
+            center=[poly.centroid.x, poly.centroid.y],
+            zeta=None,
+            ref_points=None,
+        )
         self.polygon = poly
         self.margin = panel_margin
 

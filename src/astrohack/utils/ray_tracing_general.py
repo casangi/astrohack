@@ -49,6 +49,7 @@ def simple_axis(minmax, resolution, margin=0.05):
     axis_array = axis_array + mini + resolution / 2
     return axis_array
 
+
 def np_qps_fitting(pcd):
     npnt = pcd.shape[0]
     pcd_xy = pcd[:, 0:2]
