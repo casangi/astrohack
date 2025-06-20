@@ -337,29 +337,6 @@ def compute_phase(rt_xds, wavelength, phase_offset):
 ###########################################################
 # Plotting routines and plotting aids, such as regridding #
 ###########################################################
-def regrid_data_onto_2d_grid(npnt, data, indexes):
-    """
-    Use index information to get 1D data back onto a 2D grid.
-    Args:
-        npnt: Number of points on the 2d grid (assumed to be a square)
-        data: 1D data to be regridded
-        indexes: 1D array of 2D indexes
-
-    Returns:
-        Data regridded onto a 2D array
-    """
-    npnt_1d = data.shape[0]
-    if len(data.shape) == 2:
-        gridded_2d = np.full([npnt, npnt, data.shape[1]], np.nan)
-        for ipnt in range(npnt_1d):
-            ix, iy = indexes[ipnt]
-            gridded_2d[ix, iy, :] = data[ipnt, :]
-    else:
-        gridded_2d = np.full([npnt, npnt], np.nan)
-        for ipnt in range(npnt_1d):
-            ix, iy = indexes[ipnt]
-            gridded_2d[ix, iy] = data[ipnt]
-    return gridded_2d
 
 
 def title_from_input_parameters(inpt_dict):
