@@ -1,11 +1,10 @@
 import numpy as np
+import pickle
 
-from astrohack import create_coordinate_images, regrid_data_onto_2d_grid
-from astrohack.utils import create_2d_array_reconstruction_array
-from astrohack.utils.algorithms import least_squares
+from astrohack.utils.algorithms import least_squares, create_2d_array_reconstruction_array, create_coordinate_images, regrid_data_onto_2d_grid
 
 nanvec3d = np.array([np.nan, np.nan, np.nan])
-
+return_line = "\033[F"
 
 def generalized_dot(vec_map_a, vec_map_b):
     return np.sum(vec_map_a * vec_map_b, axis=-1)
@@ -143,7 +142,9 @@ class LocalQPS:
         self.local_qps_coeffs = np.empty(
             [self.npnt, local_qps_n_pnt + self.n_qps_extra_vars]
         )
+        print('0% done')
         for ipnt, point in enumerate(self.global_pcd):
+            print(f'{return_line}{100*ipnt/self.npnt:.2f}% done       ')
             dist2 = np.sum((point[np.newaxis, :] - self.global_pcd) ** 2, axis=-1)
             n_closest = np.argsort(dist2)[: self.local_qps_n_pnt]
             self.local_pcds[ipnt] = self.global_pcd[n_closest]
@@ -177,8 +178,8 @@ class LocalQPS:
         """
         dist = generalized_dist(self.global_pcd[:, 0:2], point)
         i_closest = np.argsort(dist)[0]
-        z_val, normal = qps_compute_point_and_normal(point, self.local_qps_coeffs[i_closest], self.local_pcds[i_closest])
-
+        full_pnt, normal = qps_compute_point_and_normal(point, self.local_qps_coeffs[i_closest], self.local_pcds[i_closest])
+        z_val = full_pnt[2]
         return z_val, normal
 
     def plot_z_val_and_z_cos(self, colormap, zlim, dpi, display):
@@ -220,3 +221,25 @@ class LocalQPS:
 
     def compute_high_resolution_z_val_and_z_cos(self, x_resolution, y_resolution):
         return
+
+    @classmethod
+    def from_pickle(cls, filename):
+        with open(filename, "rb") as pickled_file:
+            pkl_obj = pickle.load(pickled_file)
+            return pkl_obj
+
+    def get_local_qps(self, ipnt):
+        return self.local_qps_coeffs[ipnt], self.local_pcds[ipnt]
+        # qps_obj = QPS(self.qps_coeffs[ipnt], self.local_pcds[ipnt])
+        # return qps_obj
+
+    def __sizeof__(self):
+        total_size = 0
+        for key, item in self.__dict__.items():
+            total_size += item.__sizeof__()
+        return total_size
+
+    def to_pickle(self, filename):
+        with open(filename, "wb") as pickle_file:
+            # noinspection PyTypeChecker
+            pickle.dump(self, pickle_file)
