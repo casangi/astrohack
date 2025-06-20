@@ -578,26 +578,25 @@ def create_2d_array_reconstruction_array(x_axis, y_axis, mask):
     return xy_idx_grid
 
 
-def regrid_data_onto_2d_grid(npnt, data, indexes):
+def regrid_data_onto_2d_grid(x_axis, y_axis, linear_array, grid_idx):
     """
     Use index information to get 1D data back onto a 2D grid.
     Args:
-        npnt: Number of points on the 2d grid (assumed to be a square)
-        data: 1D data to be regridded
-        indexes: 1D array of 2D indexes
+        x_axis: X axis of the data on the 2 D grid
+        y_axis: Y axis of the data on the 2 D grid
+        linear_array: Linearized masked array
+        grid_idx: Linearized 2 D indexes onto the original grid
 
     Returns:
-        Data regridded onto a 2D array
+    Data regridded onto a 2D array
     """
-    npnt_1d = data.shape[0]
-    if len(data.shape) == 2:
-        gridded_2d = np.full([npnt, npnt, data.shape[1]], np.nan)
-        for ipnt in range(npnt_1d):
-            ix, iy = indexes[ipnt]
-            gridded_2d[ix, iy, :] = data[ipnt, :]
+    nx = x_axis.shape[0]
+    ny = y_axis.shape[0]
+    if linear_array.ndim == 1:
+        grid_shape = [nx, ny]
     else:
-        gridded_2d = np.full([npnt, npnt], np.nan)
-        for ipnt in range(npnt_1d):
-            ix, iy = indexes[ipnt]
-            gridded_2d[ix, iy] = data[ipnt]
-    return gridded_2d
+        grid_shape = [nx, ny, linear_array.shape[1]]
+
+    gridded = np.full(grid_shape, np.nan)
+    gridded[grid_idx[:, 0], grid_idx[:, 1]] = linear_array[:]
+    return gridded
