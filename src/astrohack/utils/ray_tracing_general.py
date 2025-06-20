@@ -1,5 +1,7 @@
 import numpy as np
 import pickle
+from scipy.spatial import distance_matrix
+from numba import njit
 
 from astrohack.utils.algorithms import least_squares, create_2d_array_reconstruction_array, create_coordinate_images, regrid_data_onto_2d_grid
 
@@ -104,6 +106,53 @@ def qps_compute_point_and_normal(pnt, qps_coeffs, pcd):
     return new_pnt, normal
 
 
+@njit()
+def qps_compute_point_and_normal_jit(pnt, qps_coeffs, pcd):
+    npnt = pcd.shape[0]
+    acoeffs = qps_coeffs[:npnt]
+    bcoeffs = qps_coeffs[npnt:]
+    pnt_xy = pnt[0:2]
+    diff = pcd[:, 0:2] - pnt_xy
+    dist = np.sqrt(np.sum(diff**2, axis=-1))
+    aterm_val = np.sum(acoeffs * dist**5)
+    cubic_rterm = acoeffs * dist**3
+    aterm_dx = 5 * np.sum(diff[:, 0] * cubic_rterm)
+    aterm_dy = 5 * np.sum(diff[:, 1] * cubic_rterm)
+
+    qps_val = (
+        aterm_val
+        + bcoeffs[0] * pnt[0] ** 2
+        + bcoeffs[1] * pnt[0] * pnt[1]
+        + bcoeffs[2] * pnt[1] ** 2
+    )
+    qps_val += bcoeffs[3] * pnt[0] + bcoeffs[4] * pnt[1] + bcoeffs[5]
+
+    dqps_dx = aterm_dx + 2 * bcoeffs[0] * pnt[0] + bcoeffs[1] * pnt[1] + bcoeffs[3]
+
+    dqps_dy = aterm_dy + bcoeffs[1] * pnt[0] + 2 * bcoeffs[2] * pnt[1] + bcoeffs[4]
+
+    normal = np.array([-dqps_dx, -dqps_dy, 1])
+    normal /= np.sqrt(np.sum(normal**2))
+    #normal = normalize_vector_map(np.array([-dqps_dx, -dqps_dy, 1]))
+    new_pnt = np.array([pnt[0], pnt[1], qps_val])
+    return new_pnt, normal
+
+
+@njit()
+def qps_image_jit(global_pcd, local_qps_coeffs, local_pcds, points):
+    npnt = points.shape[0]
+    new_zval = np.empty(npnt, dtype=np.float64)
+    new_norm = np.empty((npnt, 3), dtype=np.float64)
+    for ipnt in range(npnt):
+        dist = np.sum((global_pcd[:, 0:2]-points[ipnt])**2, axis=-1)
+        i_closest = np.argmin(dist)
+        pnt, norm = qps_compute_point_and_normal_jit(points[ipnt], local_qps_coeffs[i_closest], local_pcds[i_closest])
+        new_zval[ipnt] = pnt[2]
+        new_norm[ipnt] = norm
+
+    return new_zval, new_norm
+
+
 class LocalQPS:
     n_qps_extra_vars = 6
 
@@ -177,15 +226,46 @@ class LocalQPS:
 
         """
         dist = generalized_dist(self.global_pcd[:, 0:2], point)
-        i_closest = np.argsort(dist)[0]
+        i_closest = np.argmin(dist)
         full_pnt, normal = qps_compute_point_and_normal(point, self.local_qps_coeffs[i_closest], self.local_pcds[i_closest])
         z_val = full_pnt[2]
         return z_val, normal
 
+    def vectorized_z_val_and_z_cos(self, point_arr):
+        npnt = point_arr.shape[0]
+        main_idx = np.arange(npnt)
+        vec_qps = np.vectorize(qps_compute_point_and_normal)
+        z_val = np.empty(npnt)
+        z_norm = np.empty([npnt, 3])
+
+        def execute_selection(pcd_selection, point_sel):
+            pnt_retrieve = main_idx[point_sel]
+            dist_matrix = distance_matrix(self.global_pcd[pcd_selection, 0:2], point_arr[point_sel])
+            i_closest_arr = np.argmin(dist_matrix, axis=0)
+            print(np.sum(pcd_selection), np.sum(point_sel), i_closest_arr.shape, dist_matrix.shape)
+            qps_coeffs = self.local_qps_coeffs[pcd_selection, :][i_closest_arr, :]
+            local_pcds = self.local_pcds[pcd_selection][i_closest_arr]
+            pnt, normals = vec_qps(point_arr, qps_coeffs, local_pcds)
+            z_val[pnt_retrieve] = pnt[:, 2]
+            z_norm[pnt_retrieve] = normals
+
+        pcd_sel = (self.global_pcd[:, 0] < 0) & (self.global_pcd[:, 1] < 0)
+        pnt_sel = (point_arr[:, 0] < 0) & (point_arr[:, 1] < 0)
+        execute_selection(pcd_sel, pnt_sel)
+
+        # dist_matrix = distance_matrix(self.global_pcd[:, 0:2], point_arr)
+        # i_closest_arr = np.argmin(dist_matrix, axis=-1)
+        # qps_coeffs = self.local_qps_coeffs[i_closest_arr]
+        # local_pcds = self.local_pcds[i_closest_arr]
+        # pnt, normals = vec_qps(point_arr, qps_coeffs, local_pcds)
+
+        return z_val, z_norm
+
     def plot_z_val_and_z_cos(self, colormap, zlim, dpi, display):
         return
 
-    def compute_gridded_z_val_and_z_cos(self, u_axis, v_axis, mask, gridding_engine='2D regrid', light=(0,0,-1)):
+    def compute_gridded_z_val_and_z_cos(self, u_axis, v_axis, mask, gridding_engine='2D regrid', light=(0,0,-1),
+                                        vectorized=True):
         light = np.array(light)
 
         u_mesh, v_mesh = create_coordinate_images(u_axis, v_axis)
@@ -195,11 +275,14 @@ class LocalQPS:
         uv_points[:, 0] = u_mesh[mask]
         uv_points[:, 1] = v_mesh[mask]
 
-        z_val = np.empty([uv_points.shape[0]])
-        z_norm = np.empty([uv_points.shape[0], 3])
+        if vectorized:
+            z_val, z_norm = qps_image_jit(self.global_pcd, self.local_qps_coeffs, self.local_pcds, uv_points)
+        else:
+            z_val = np.empty([uv_points.shape[0]])
+            z_norm = np.empty([uv_points.shape[0], 3])
 
-        for ip, point in enumerate(uv_points):
-            z_val[ip], z_norm[ip] = self.compute_z_val_and_z_cos(point)
+            for ip, point in enumerate(uv_points):
+                z_val[ip], z_norm[ip] = self.compute_z_val_and_z_cos(point)
 
         z_angle = (generalized_dot(z_norm, light))/(generalized_norm(z_norm)*generalized_norm(light))
 
