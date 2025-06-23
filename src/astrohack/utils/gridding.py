@@ -37,6 +37,7 @@ def grid_beam(
         chan_tol_fac: Frequency tolerance to chunk channels together
         telescope: Telescope object containing optical description of the telescope
         grid_interpolation_mode: linear, nearest, cubic or gaussian (convolution)
+        label: label to be used in messages
 
     Returns:
         The gridded beam, its time centroid, frequency axis, polarization axis, L and M axes and a boolean about the
