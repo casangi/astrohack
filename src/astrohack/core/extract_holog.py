@@ -1,5 +1,6 @@
 import os
 import json
+
 import numpy as np
 import xarray as xr
 import astropy
@@ -446,6 +447,7 @@ def _create_holog_file(
             xds.attrs["parallactic_samples"] = parallactic_samples
             xds.attrs["telescope_name"] = telescope_name
             xds.attrs["antenna_name"] = ant_names[map_ant_index]
+            xds.attrs["az_el_information"] = _get_az_el_characteristics(pnt_map_dict[map_ant_tag], valid_data)
 
             xds.attrs["l_max"] = np.max(xds["DIRECTIONAL_COSINES"][:, 0].values)
             xds.attrs["l_min"] = np.min(xds["DIRECTIONAL_COSINES"][:, 0].values)
@@ -874,3 +876,17 @@ def _get_time_index(data_time, i_time, time_axis, half_int):
         if i_time == time_axis.shape[0]:
             return -1
     return i_time
+
+
+def _get_az_el_characteristics(pnt_map_xds, valid_data):
+    az_el = pnt_map_xds["ENCODER"].values[valid_data, ...]
+    lm = pnt_map_xds["DIRECTIONAL_COSINES"].values[valid_data, ...]
+    rad2deg = 180/np.pi
+    mean_az_el = np.mean(az_el, axis=0)*rad2deg
+    median_az_el = np.median(az_el, axis=0)*rad2deg
+    ic = np.argmin((lm[:, 0]**2 + lm[:, 1])**2)
+    center_az_el = az_el[ic]*rad2deg
+    az_el_info = {'center': center_az_el.tolist(),
+                  'mean': mean_az_el.tolist(),
+                  'median': median_az_el.tolist()}
+    return az_el_info
