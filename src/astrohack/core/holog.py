@@ -48,6 +48,7 @@ def process_holog_chunk(holog_chunk_params):
     telescope = _get_correct_telescope(
         ref_xds.attrs["antenna_name"], meta_data["telescope_name"]
     )
+    az_el_info = ref_xds.attrs['az_el_information']
     try:
         is_near_field = ref_xds.attrs["near_field"]
     except KeyError:
@@ -195,6 +196,7 @@ def process_holog_chunk(holog_chunk_params):
         zernike_rms,
         zernike_n_order,
         holog_chunk_params["image_name"],
+        az_el_info
     )
 
     logger.info(f"Finished processing {label}")
@@ -293,6 +295,7 @@ def _export_to_xds(
     zernike_rms,
     zernike_n_order,
     image_name,
+    az_el_info,
 ):
     # Todo: Add Paralactic angle as a non-dimension coordinate dependant on time.
     xds = xr.Dataset()
@@ -327,6 +330,7 @@ def _export_to_xds(
     xds.attrs["ddi"] = ddi
     xds.attrs["phase_fitting"] = phase_fit_results
     xds.attrs["zernike_N_order"] = zernike_n_order
+    xds.attrs["az_el_information"] = az_el_info
 
     coords = {
         "orig_pol": orig_pol_axis,
