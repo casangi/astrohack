@@ -1,7 +1,7 @@
 import math
 import scipy.ndimage
 import numpy as np
-import astropy.units as u
+import astropy.units as units
 import astropy.coordinates as coord
 from numba import njit
 import scipy.fftpack
@@ -44,15 +44,15 @@ def calculate_parallactic_angle_chunk(
     """
 
     observing_location = coord.EarthLocation.from_geocentric(
-        x=observing_location[0] * u.m,
-        y=observing_location[1] * u.m,
-        z=observing_location[2] * u.m,
+        x=observing_location[0] * units.m,
+        y=observing_location[1] * units.m,
+        z=observing_location[2] * units.m,
     )
 
     direction = coord.SkyCoord(
-        ra=direction[:, 0] * u.rad, dec=direction[:, 1] * u.rad, frame=dir_frame.lower()
+        ra=direction[:, 0] * units.rad, dec=direction[:, 1] * units.rad, frame=dir_frame.lower()
     )
-    zenith = coord.SkyCoord(0, 90, unit=u.deg, frame=zenith_frame.lower())
+    zenith = coord.SkyCoord(0, 90, unit=units.deg, frame=zenith_frame.lower())
 
     altaz_frame = coord.AltAz(location=observing_location, obstime=time_samples)
     zenith_altaz = zenith.transform_to(altaz_frame)
