@@ -2,11 +2,14 @@ import numpy as np
 import pickle
 from scipy.spatial import distance_matrix
 from numba import njit
+from numpy.linalg import LinAlgError
 
 from astrohack.utils.algorithms import least_squares, create_2d_array_reconstruction_array, create_coordinate_images, regrid_data_onto_2d_grid
+from astrohack.visualization.plot_tools import *
 
 nanvec3d = np.array([np.nan, np.nan, np.nan])
 return_line = "\033[F"
+
 
 def generalized_dot(vec_map_a, vec_map_b):
     return np.sum(vec_map_a * vec_map_b, axis=-1)
@@ -73,7 +76,11 @@ def np_qps_fitting(pcd):
     sys_matrix[npnt:, :npnt] = 1.0
 
     sys_vector[:npnt] = pcd[:, 2]
-    qps_coeffs, _, _ = least_squares(sys_matrix, sys_vector)
+    try:
+        qps_coeffs, _, _ = least_squares(sys_matrix, sys_vector)
+    except LinAlgError:
+        print(sys_matrix, sys_vector)
+        raise LinAlgError
     return qps_coeffs
 
 
@@ -143,13 +150,15 @@ def qps_image_jit(global_pcd, local_qps_coeffs, local_pcds, points):
     npnt = points.shape[0]
     new_zval = np.empty(npnt, dtype=np.float64)
     new_norm = np.empty((npnt, 3), dtype=np.float64)
+    print()
     for ipnt in range(npnt):
+        print(return_line, 100*ipnt/npnt, '% done     ')
         dist = np.sum((global_pcd[:, 0:2]-points[ipnt])**2, axis=-1)
         i_closest = np.argmin(dist)
         pnt, norm = qps_compute_point_and_normal_jit(points[ipnt], local_qps_coeffs[i_closest], local_pcds[i_closest])
         new_zval[ipnt] = pnt[2]
         new_norm[ipnt] = norm
-
+    print('Done')
     return new_zval, new_norm
 
 
@@ -177,14 +186,14 @@ class LocalQPS:
         self.high_res_v_axis = None
 
     @classmethod
-    def from_pcd(cls, pcd_data, local_qps_n_pnt=20, displacement=(0,0,0)):
+    def from_pcd(cls, pcd_data, local_qps_n_pnt=20, displacement=(0, 0, 0)):
         new_obj = cls()
         new_obj._init_from_pcd(pcd_data, local_qps_n_pnt, displacement)
         return new_obj
 
     def _init_from_pcd(self, pcd_data, local_qps_n_pnt, displacement):
         self.global_pcd = pcd_data
-        self.global_pcd -= np.array(displacement)
+        self.global_pcd[:, ] -= np.array(displacement)
         self.npnt = self.global_pcd.shape[0]
         self.local_qps_n_pnt = local_qps_n_pnt
         self.local_pcds = np.empty([self.npnt, self.local_qps_n_pnt, 3])
@@ -261,10 +270,17 @@ class LocalQPS:
 
         return z_val, z_norm
 
-    def plot_z_val_and_z_cos(self, colormap, zlim, dpi, display):
+    def plot_z_val_and_z_cos(self, colormap='viridis', zlim=None, dpi=300, display=False):
+        fig, ax = create_figure_and_axes(None, [1, 2])
+        simple_imshow_map_plot(ax[0], fig, self.current_u_axis, self.current_v_axis, self.current_z_val,
+                               'Z value', colormap, zlim, z_label='Z value [m]', transpose=True)
+        simple_imshow_map_plot(ax[1], fig, self.current_u_axis, self.current_v_axis, self.current_z_cos,
+                               'Z Cosine', colormap, zlim, z_label='Z cosine []', transpose=True)
+        close_figure(fig, 'Gridded surface and cosine of surface angle to Z axis', 'zval_zcos.png',
+                     dpi, display)
         return
 
-    def compute_gridded_z_val_and_z_cos(self, u_axis, v_axis, mask, gridding_engine='2D regrid', light=(0,0,-1),
+    def compute_gridded_z_val_and_z_cos(self, u_axis, v_axis, mask, gridding_engine='2D regrid', light=(0, 0, -1),
                                         vectorized=True):
         light = np.array(light)
 
