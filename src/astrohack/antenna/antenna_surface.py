@@ -88,7 +88,7 @@ class AntennaSurface:
         self.pol_state = pol_state
         self._read_xds(inputxds)
         self.telescope = telescope
-
+        
         if patch_phase:
             self.phase = phase_wrapping(self.phase)
 
@@ -216,12 +216,14 @@ class AntennaSurface:
             inputxds: X array dataset
         """
         # Origin dependant reading
+
         if self.reread:
             self._read_panel_xds(inputxds)
         else:
             self._read_holog_xds(inputxds)
 
         # Common elements
+        self.az_el_info = inputxds.attrs['az_el_information']
         self.antenna_name = inputxds.attrs["ant_name"]
         self.ddi = inputxds.attrs["ddi"]
         self.label = create_dataset_label(
@@ -919,6 +921,8 @@ class AntennaSurface:
         xds.attrs["fitted"] = self.fitted
         xds.attrs["aperture_resolution"] = self.resolution
         xds.attrs["pol_state"] = self.pol_state
+        xds.attrs['az_el_information'] = self.az_el_info
+
         xds["AMPLITUDE"] = xr.DataArray(self.amplitude, dims=["u", "v"])
         xds["PHASE"] = xr.DataArray(self.phase, dims=["u", "v"])
         xds["DEVIATION"] = xr.DataArray(self.deviation, dims=["u", "v"])
