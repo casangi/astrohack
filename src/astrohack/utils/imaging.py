@@ -105,12 +105,13 @@ def calculate_far_field_aperture(
 
     Args:
         grid (numpy.ndarray): gridded beam data
-        padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edged of
-                                        each beam data grid and not between layers. Defaults to 20.
+        padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edged
+                                        of each beam data grid and not between layers. Defaults to 20.
         freq: Beam grid frequency axis
         telescope: telescope object with optical parameters
         sky_cell_size: Sky cell size (radians)
         apply_grid_correction: Apply grid correction (True for gaussian convolution of the beam)
+        label: Data label for messages
 
     Returns:
         aperture grid, u-coordinate array, v-coordinate array, aperture cell size, representative wavelength
@@ -160,6 +161,7 @@ def calculate_near_field_aperture(
         telescope: telescope object with optical parameters
         apply_grid_correction: Apply grid correction (True for gaussian convolution of the beam)
         apodize: Apodize beam to avoid boxing effects in the FFT (the dashed line cross)
+        label: Data label for messages
 
     Returns:
         aperture grid, u-coordinate array, v-coordinate array, aperture cell size, representative wavelength
