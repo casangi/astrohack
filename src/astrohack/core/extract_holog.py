@@ -487,6 +487,7 @@ def _create_holog_file(
             xds.attrs["observation_information"] = obs_info
             xds.attrs["antenna_name"] = ant_names[map_ant_index]
             xds.attrs["az_el_information"] = _get_az_el_characteristics(pnt_map_dict[map_ant_tag], valid_data)
+            xds.attrs["frequency_information"] = _get_freq_summary(chan)
 
             xds.attrs["l_max"] = np.max(xds["DIRECTIONAL_COSINES"][:, 0].values)
             xds.attrs["l_min"] = np.min(xds["DIRECTIONAL_COSINES"][:, 0].values)
@@ -933,3 +934,15 @@ def _get_az_el_characteristics(pnt_map_xds, valid_data):
                   'mean': mean_az_el.tolist(),
                   'median': median_az_el.tolist()}
     return az_el_info
+
+
+def _get_freq_summary(chan_axis):
+    chan_width = np.abs(chan_axis[1]-chan_axis[0])
+    freq_info = {
+        "channel width": chan_width,
+        "number of channels": chan_axis.shape[0],
+        "range": [chan_axis[0]-chan_width/2, chan_axis[-1]+chan_width/2],
+        "representative": chan_axis[chan_axis.shape[0]//2]
+    }
+
+    return freq_info
