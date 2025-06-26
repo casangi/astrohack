@@ -226,6 +226,7 @@ class AntennaSurface:
         self.az_el_info = inputxds.attrs['az_el_information']
         self.obs_info = inputxds.attrs['observation_information']
         self.antenna_name = inputxds.attrs["ant_name"]
+        self.freq_info = inputxds.attrs["frequency_information"]
         self.ddi = inputxds.attrs["ddi"]
         self.label = create_dataset_label(
             inputxds.attrs["ant_name"], inputxds.attrs["ddi"]
@@ -924,6 +925,7 @@ class AntennaSurface:
         xds.attrs["pol_state"] = self.pol_state
         xds.attrs['az_el_information'] = self.az_el_info
         xds.attrs['observation_information'] = self.obs_info
+        xds.attrs['frequency_information'] = self.freq_info
 
         xds["AMPLITUDE"] = xr.DataArray(self.amplitude, dims=["u", "v"])
         xds["PHASE"] = xr.DataArray(self.phase, dims=["u", "v"])
