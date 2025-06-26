@@ -14,8 +14,9 @@ from casacore import tables as ctables
 from astrohack.antenna import Telescope
 from astrohack.utils import create_dataset_label
 from astrohack.utils.imaging import calculate_parallactic_angle_chunk
-from astrohack.utils.algorithms import calculate_optimal_grid_parameters
+from astrohack.utils.algorithms import calculate_optimal_grid_parameters, phase_wrapping
 from astrohack.utils.conversion import casa_time_to_mjd
+from astrohack.utils.constants import twopi
 
 from astrohack.utils.file import load_point_file
 
@@ -196,6 +197,12 @@ def _get_obs_summary(ms_name, fields_ids):
     time_range = casa_time_to_mjd(obs_table.getcol("TIME_RANGE")[0])
     telescope_name = obs_table.getcol("TELESCOPE_NAME")[0]
     obs_table.close()
+
+    phase_center_fk5[:, 0] = np.where(
+        phase_center_fk5[:, 0] < 0,
+        phase_center_fk5[:, 0] + twopi,
+        phase_center_fk5[:, 0],
+    )
 
     obs_info = {
         "source": src_name[i_src],
