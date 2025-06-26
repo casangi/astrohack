@@ -881,11 +881,14 @@ def _get_time_index(data_time, i_time, time_axis, half_int):
 def _get_az_el_characteristics(pnt_map_xds, valid_data):
     az_el = pnt_map_xds["ENCODER"].values[valid_data, ...]
     lm = pnt_map_xds["DIRECTIONAL_COSINES"].values[valid_data, ...]
-    rad2deg = 180/np.pi
-    mean_az_el = np.mean(az_el, axis=0)*rad2deg
-    median_az_el = np.median(az_el, axis=0)*rad2deg
-    ic = np.argmin((lm[:, 0]**2 + lm[:, 1])**2)
-    center_az_el = az_el[ic]*rad2deg
+    mean_az_el = np.mean(az_el, axis=0)
+    median_az_el = np.median(az_el, axis=0)
+    lmmid = lm.shape[0]//2
+    lmquart = lmmid//2
+    ilow = lmmid-lmquart
+    iupper = lmmid+lmquart+1
+    ic = np.argmin((lm[ilow:iupper, 0] ** 2 + lm[ilow:iupper, 1]) ** 2) + ilow
+    center_az_el = az_el[ic]
     az_el_info = {'center': center_az_el.tolist(),
                   'mean': mean_az_el.tolist(),
                   'median': median_az_el.tolist()}
