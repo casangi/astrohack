@@ -686,7 +686,7 @@ def format_az_el_information(az_el_dict, key='center', unit='deg', precision='.1
 
     az_el = np.array(az_el_dict[key])*convert_unit('rad', unit, 'trigonometric')
     prefix += ' Az, El'
-    az_el_label = f'{prefix:16s} = ({az_el[0]:{precision}}, {az_el[1]:{precision}}) [{unit}]'
+    az_el_label = f'{prefix:21s} = ({az_el[0]:{precision}}, {az_el[1]:{precision}}) [{unit}]'
     return az_el_label
 
 
@@ -694,7 +694,7 @@ def format_observation_information(obs_dict, az_el_dict, az_el_key='mean', phase
                                    time_format="%d %h %Y, %H:%M:%S", precision='.1f', tab='   '):
     outstr = 'Observation Summary:\n'
     for key, item in obs_dict.items():
-        outstr += f'{tab}{key.capitalize().replace('_', ' '):16s} = '
+        outstr += f'{tab}{key.capitalize().replace('_', ' '):21s} = '
         if 'FK5' in key:
             if phase_center_unit == 'radec':
                 outstr += f'{rad_to_hour_str(item[0])} {rad_to_deg_str(item[1])} [FK5]'
@@ -715,7 +715,7 @@ def format_observation_information(obs_dict, az_el_dict, az_el_key='mean', phase
 def format_spectral_information(freq_dict, tab='   '):
     outstr = 'Spectral Summary:\n'
     for key, item in freq_dict.items():
-        outstr += f'{tab}{key.capitalize().replace('_', ' '):16s} = '
+        outstr += f'{tab}{key.capitalize().replace('_', ' '):21s} = '
         if 'range' in key:
             outstr += f'{format_frequency(item[0], decimal_places=3)} to {format_frequency(item[1], decimal_places=3)}'
         elif 'number' in key:
