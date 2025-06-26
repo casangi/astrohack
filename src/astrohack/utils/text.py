@@ -3,7 +3,7 @@ import inspect
 import textwrap
 
 import numpy as np
-
+from astropy.time import Time
 from prettytable import PrettyTable
 from toolviper.utils import logger as logger
 
@@ -676,7 +676,7 @@ def format_object_contents(obj):
     return outstr
 
 
-def format_az_el_information(az_el_dict, key='center', unit='deg', precision='.2g'):
+def format_az_el_information(az_el_dict, key='center', unit='deg', precision='.1f'):
     if key == 'center':
         prefix = '@ l,m = (0,0),'
     elif key in ['mean', 'median']:
@@ -685,5 +685,28 @@ def format_az_el_information(az_el_dict, key='center', unit='deg', precision='.2
         raise ValueError(f"Unrecognized key: {key}")
 
     az_el = np.array(az_el_dict[key])*convert_unit('rad', unit, 'trigonometric')
-    az_el_label = f'{prefix} Az, El = ({az_el[0]:{precision}}, {az_el[1]:{precision}}) [{unit}]'
+    prefix += ' Az, El'
+    az_el_label = f'{prefix:16s} = ({az_el[0]:{precision}}, {az_el[1]:{precision}}) [{unit}]'
     return az_el_label
+
+
+def format_observation_information(obs_dict, az_el_dict, az_el_key='mean', phase_center_unit='radec', az_el_unit='deg',
+                                   time_format="%d %h %Y, %H:%M:%S", precision='.1f', tab='   '):
+    outstr = 'Observation Summary:\n'
+    for key, item in obs_dict.items():
+        outstr += f'{tab}{key.capitalize().replace('_', ' '):16s} = '
+        if 'FK5' in key:
+            if phase_center_unit == 'radec':
+                outstr += f'{rad_to_hour_str(item[0])} {rad_to_deg_str(item[1])} [FK5]'
+            else:
+                fac = convert_unit('rad', phase_center_unit, 'trigonometric')
+                outstr += f'({fac*item[0]:{precision}}, {fac*item[1]:{precision}}) [{phase_center_unit}]'
+        elif 'time' in key:
+            date = Time(item, format='mjd').to_datetime()
+            outstr += f'{date.strftime(time_format)} (UTC)'
+        else:
+            outstr += str(item)
+        outstr += '\n'
+
+    outstr += f'{tab}{format_az_el_information(az_el_dict, az_el_key, unit=az_el_unit, precision=precision)}\n'
+    return outstr
