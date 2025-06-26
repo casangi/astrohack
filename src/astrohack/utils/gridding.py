@@ -24,6 +24,7 @@ def grid_beam(
     chan_tol_fac,
     telescope,
     grid_interpolation_mode,
+    frequency_information,
     label,
 ):
     """
@@ -37,6 +38,7 @@ def grid_beam(
         chan_tol_fac: Frequency tolerance to chunk channels together
         telescope: Telescope object containing optical description of the telescope
         grid_interpolation_mode: linear, nearest, cubic or gaussian (convolution)
+        frequency_information: Dictionaty containing a summary of frequency information.
         label: label to be used in messages
 
     Returns:
@@ -56,6 +58,8 @@ def grid_beam(
         n_chan = 1
         avg_chan_map, avg_freq_axis = _create_average_chan_map(freq_axis, chan_tol_fac)
         output_freq_axis = [np.mean(avg_freq_axis)]
+        frequency_information["channel width"] *= frequency_information["number of channels"]
+        frequency_information["number of channels"] = 1
     else:
         avg_chan_map = None
         avg_freq_axis = None
@@ -133,6 +137,7 @@ def grid_beam(
         l_axis,
         m_axis,
         grid_corr,
+        frequency_information
     )
 
 

@@ -56,7 +56,7 @@ def process_holog_chunk(holog_chunk_params):
     except KeyError:
         is_near_field = False
 
-    beam_grid, time_centroid, freq_axis, pol_axis, l_axis, m_axis, grid_corr = (
+    beam_grid, time_centroid, freq_axis, pol_axis, l_axis, m_axis, grid_corr, freq_info = (
         grid_beam(
             ant_ddi_dict=ant_data_dict[ddi],
             grid_size=holog_chunk_params["grid_size"],
@@ -65,6 +65,7 @@ def process_holog_chunk(holog_chunk_params):
             chan_tol_fac=holog_chunk_params["chan_tolerance_factor"],
             telescope=telescope,
             grid_interpolation_mode=holog_chunk_params["grid_interpolation_mode"],
+            frequency_information=ref_xds.attrs["frequency_information"],
             label=label,
         )
     )
@@ -198,7 +199,8 @@ def process_holog_chunk(holog_chunk_params):
         zernike_n_order,
         holog_chunk_params["image_name"],
         az_el_info,
-        obs_info
+        obs_info,
+        freq_info
     )
 
     logger.info(f"Finished processing {label}")
@@ -297,7 +299,8 @@ def _export_to_xds(
     zernike_n_order,
     image_name,
     az_el_info,
-    obs_info
+    obs_info,
+    freq_info
 ):
     # Todo: Add Paralactic angle as a non-dimension coordinate dependant on time.
     xds = xr.Dataset()
@@ -333,6 +336,7 @@ def _export_to_xds(
     xds.attrs["zernike_N_order"] = zernike_n_order
     xds.attrs["az_el_information"] = az_el_info
     xds.attrs["observation_information"] = obs_info
+    xds.attrs["frequency_information"] = freq_info
 
     coords = {
         "orig_pol": orig_pol_axis,
