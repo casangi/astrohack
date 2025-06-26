@@ -15,6 +15,7 @@ from astrohack.antenna import Telescope
 from astrohack.utils import create_dataset_label
 from astrohack.utils.imaging import calculate_parallactic_angle_chunk
 from astrohack.utils.algorithms import calculate_optimal_grid_parameters
+from astrohack.utils.conversion import casa_time_to_mjd
 
 from astrohack.utils.file import load_point_file
 
@@ -23,13 +24,16 @@ def process_extract_holog_chunk(extract_holog_params):
     """Perform data query on holography data chunk and get unique time and state_ids/
 
     Args:
+        extract_holog_params: dictionary containing parameters
+
+    Some of the parameters are:
         ms_name (str): Measurementset name
         data_column (str): Data column to extract.
         ddi (int): Data description id
         scan (int): Scan number
         map_ant_ids (numpy.narray): Array of antenna_id values corresponding to mapping data.
         ref_ant_ids (numpy.narray): Arry of antenna_id values corresponding to reference data.
-        sel_state_ids (list): List pf state_ids corresponding to holography data/
+        sel_state_ids (list): List pf state_ids corresponding to holography data
     """
 
     ms_name = extract_holog_params["ms_name"]
@@ -43,7 +47,6 @@ def process_extract_holog_chunk(extract_holog_params):
     map_ant_name_tuple = extract_holog_params["map_ant_name_tuple"]
     holog_map_key = extract_holog_params["holog_map_key"]
     time_interval = extract_holog_params["time_smoothing_interval"]
-    telescope_name = extract_holog_params["telescope_name"]
 
     # This piece of information is no longer used leaving them here commented out for completeness
     # ref_ant_per_map_ant_name_tuple = extract_holog_params["ref_ant_per_map_ant_name_tuple"]
@@ -68,14 +71,14 @@ def process_extract_holog_chunk(extract_holog_params):
     scans = [int(scan) for scan in scans]
     if sel_state_ids:
         ctb = ctables.taql(
-            "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj "
-            "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
+            "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, FIELD_ID from "
+            "$table_obj WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s AND STATE_ID in %s"
             % (data_column, ddi, scans, list(sel_state_ids))
         )
     else:
         ctb = ctables.taql(
-            "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG from $table_obj "
-            "WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s" % (data_column, ddi, scans)
+            "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, FIELD_ID from "
+            "$table_obj WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s" % (data_column, ddi, scans)
         )
     vis_data = ctb.getcol(data_column)
     weight = ctb.getcol("WEIGHT")
@@ -87,6 +90,9 @@ def process_extract_holog_chunk(extract_holog_params):
     flag = ctb.getcol("FLAG")
     flag_row = ctb.getcol("FLAG_ROW")
     scan_list = ctb.getcol("SCAN_NUMBER")
+    field_ids = ctb.getcol("FIELD_ID")
+
+    obs_info = _get_obs_summary(ms_name, field_ids)
 
     # Here we use the median of the differences between dumps as this is a good proxy for the integration time
     if time_interval is None:
@@ -115,7 +121,7 @@ def process_extract_holog_chunk(extract_holog_params):
         scan_list,
     )
 
-    del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row
+    del vis_data, weight, ant1, ant2, time_vis_row, flag, flag_row, field_ids
 
     map_ant_name_list = list(map(str, map_ant_name_tuple))
 
@@ -131,7 +137,7 @@ def process_extract_holog_chunk(extract_holog_params):
     for ant_index in vis_map_dict.keys():
         antenna_name = "_".join(("ant", ant_names[ant_index]))
         n_pix, cell_size = calculate_optimal_grid_parameters(
-            pnt_map_dict, antenna_name, Telescope(telescope_name).diam, chan_freq, ddi
+            pnt_map_dict, antenna_name, Telescope(obs_info["telescope_name"]).diam, chan_freq, ddi
         )
 
         grid_params[antenna_name] = {"n_pix": n_pix, "cell_size": cell_size}
@@ -158,6 +164,7 @@ def process_extract_holog_chunk(extract_holog_params):
         ant_names,
         grid_params,
         time_interval,
+        obs_info
     )
 
     logger.info(
@@ -165,6 +172,39 @@ def process_extract_holog_chunk(extract_holog_params):
             ddi=ddi, holog_map_key=holog_map_key
         )
     )
+
+
+def _get_obs_summary(ms_name, fields_ids):
+    unq_ids = np.unique(fields_ids)
+    field_tbl = ctables.table(
+        ms_name + "::FIELD",
+        readonly=True,
+        lockoptions={"option": "usernoread"},
+        ack=False,
+    )
+    i_src = int(unq_ids[0])
+    src_name = field_tbl.getcol("NAME")
+    phase_center_fk5 = field_tbl.getcol("PHASE_DIR")[:, 0, :]
+    field_tbl.close()
+
+    obs_table = ctables.table(
+        ms_name + "::OBSERVATION",
+        readonly=True,
+        lockoptions={"option": "usernoread"},
+        ack=False,
+    )
+    time_range = casa_time_to_mjd(obs_table.getcol("TIME_RANGE")[0])
+    telescope_name = obs_table.getcol("TELESCOPE_NAME")[0]
+    obs_table.close()
+
+    obs_info = {
+        "source": src_name[i_src],
+        "FK5 phase center": phase_center_fk5[i_src].tolist(),
+        "telescope_name": telescope_name,
+        "start time": time_range[0],
+        "stop time": time_range[-1]
+    }
+    return obs_info
 
 
 @njit(cache=False, nogil=True)
@@ -368,12 +408,14 @@ def _create_holog_file(
     ant_names,
     grid_params,
     time_interval,
+    obs_info
 ):
     """Create holog-structured, formatted output file and save to zarr.
 
     Args:
         holog_name (str): holog file name.
-        vis_map_dict (dict): a nested dictionary/map of weighted visibilities indexed as [antenna][time, chan, pol]; mainains time ordering.
+        vis_map_dict (dict): a nested dictionary/map of weighted visibilities indexed as [antenna][time, chan, pol]; \
+        mainains time ordering.
         weight_map_dict (dict): weights dictionary/map for visibilites in vis_map_dict
         pnt_map_dict (dict): pointing table map dictionary
         time_vis (numpy.ndarray): time_vis values
@@ -386,9 +428,6 @@ def _create_holog_file(
 
     ctb = ctables.table("/".join((ms_name, "ANTENNA")), ack=False)
     observing_location = ctb.getcol("POSITION")
-
-    ctb = ctables.table("/".join((ms_name, "OBSERVATION")), ack=False)
-    telescope_name = ctb.getcol("TELESCOPE_NAME")[0]
 
     ctb.close()
 
@@ -445,7 +484,7 @@ def _create_holog_file(
             xds.attrs["holog_map_key"] = holog_map_key
             xds.attrs["ddi"] = ddi
             xds.attrs["parallactic_samples"] = parallactic_samples
-            xds.attrs["telescope_name"] = telescope_name
+            xds.attrs["observation_information"] = obs_info
             xds.attrs["antenna_name"] = ant_names[map_ant_index]
             xds.attrs["az_el_information"] = _get_az_el_characteristics(pnt_map_dict[map_ant_tag], valid_data)
 
@@ -813,7 +852,7 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
 
                             cell_sizes.append(xds.attrs["grid_params"]["cell_size"])
                             n_pixs.append(xds.attrs["grid_params"]["n_pix"])
-                            telescope_names.append(xds.attrs["telescope_name"])
+                            telescope_names.append(xds.attrs["observation_information"]["telescope_name"])
 
     # cell_sizes_sigfigs = significant_figures_round(cell_sizes, digits=3)
 
@@ -834,7 +873,8 @@ def create_holog_meta_data(holog_file, holog_dict, input_params):
     #     meta_data["cell_size"] = \
     #         astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(cell_sizes))
     #
-    #     logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]))
+    #     logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]
+    #     ))
     #
     # if not (len(set(n_pixs)) == 1):
     #     logger.warning('Number of pixels not consistent: ' + str(n_pixs))
