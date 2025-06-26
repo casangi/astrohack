@@ -674,3 +674,16 @@ def format_object_contents(obj):
         total_size += size
     outstr += f"Total size = {format_byte_size(total_size)}\n"
     return outstr
+
+
+def format_az_el_information(az_el_dict, key='center', unit='deg', precision='.2g'):
+    if key == 'center':
+        prefix = '@ l,m = (0,0),'
+    elif key in ['mean', 'median']:
+        prefix = key.capitalize()
+    else:
+        raise ValueError(f"Unrecognized key: {key}")
+
+    az_el = np.array(az_el_dict[key])*convert_unit('rad', unit, 'trigonometric')
+    az_el_label = f'{prefix} Az, El = ({az_el[0]:{precision}}, {az_el[1]:{precision}}) [{unit}]'
+    return az_el_label
