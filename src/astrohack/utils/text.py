@@ -710,3 +710,20 @@ def format_observation_information(obs_dict, az_el_dict, az_el_key='mean', phase
 
     outstr += f'{tab}{format_az_el_information(az_el_dict, az_el_key, unit=az_el_unit, precision=precision)}\n'
     return outstr
+
+
+def format_spectral_information(freq_dict, tab='   '):
+    outstr = 'Spectral Summary:\n'
+    for key, item in freq_dict.items():
+        outstr += f'{tab}{key.capitalize().replace('_', ' '):16s} = '
+        if 'range' in key:
+            outstr += f'{format_frequency(item[0], decimal_places=3)} to {format_frequency(item[1], decimal_places=3)}'
+        elif 'number' in key:
+            outstr += f'{item}'
+        else:
+            outstr += format_frequency(item, decimal_places=3)
+        outstr += '\n'
+
+    return outstr
+
+
