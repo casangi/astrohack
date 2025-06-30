@@ -366,7 +366,7 @@ def calculate_optimal_grid_parameters(
         )
         raise ZeroDivisionError
 
-    return n_pix.tolist(), cell_size.tolist()
+    return [int(n_pix[0]), int(n_pix[1])], cell_size.tolist()
 
 
 def compute_average_stokes_visibilities(vis, stokes):

@@ -57,7 +57,7 @@ def process_holog_chunk(holog_chunk_params):
     else:
         raise Exception(f"Don't know what due with grid size of type {type(user_grid_size)}")
 
-    logger.info(f'{label}: Using a grid of {int(grid_size[0])} by {int(grid_size[1])} pixels for the beam')
+    logger.info(f'{label}: Using a grid of {grid_size[0]} by {grid_size[1]} pixels for the beam')
 
     user_cell_size = holog_chunk_params["cell_size"]
     if user_cell_size is None:
