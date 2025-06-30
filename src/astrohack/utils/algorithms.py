@@ -352,7 +352,7 @@ def calculate_optimal_grid_parameters(
     data_range = np.array([lm[:, 0].max()-lm[:, 0].min(), lm[:, 1].max()-lm[:, 1].min()])
 
     logger.info(
-        f"{create_dataset_label(antenna_name, ddi)}: Cell size {format_angular_distance(cell_size)}, "
+        f"{create_dataset_label(antenna_name, ddi)}: Suggested cell size {format_angular_distance(cell_size)}, "
         f"FOV: ({format_angular_distance(data_range[0])}, {format_angular_distance(data_range[1])})"
     )
 
