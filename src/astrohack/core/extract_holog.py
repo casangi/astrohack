@@ -189,46 +189,6 @@ def _get_map_ref_dict(map_ant_tuple, ref_ant_per_map_ant_tuple, ant_names):
     return map_dict
 
 
-
-def _get_obs_summary(ms_name, field_ids):
-    unq_ids = np.unique(field_ids)
-    field_tbl = ctables.table(
-        ms_name + "::FIELD",
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-        ack=False,
-    )
-    i_src = int(unq_ids[0])
-    src_name = field_tbl.getcol("NAME")
-    phase_center_fk5 = field_tbl.getcol("PHASE_DIR")[:, 0, :]
-    field_tbl.close()
-
-    obs_table = ctables.table(
-        ms_name + "::OBSERVATION",
-        readonly=True,
-        lockoptions={"option": "usernoread"},
-        ack=False,
-    )
-    time_range = casa_time_to_mjd(obs_table.getcol("TIME_RANGE")[0])
-    telescope_name = obs_table.getcol("TELESCOPE_NAME")[0]
-    obs_table.close()
-
-    phase_center_fk5[:, 0] = np.where(
-        phase_center_fk5[:, 0] < 0,
-        phase_center_fk5[:, 0] + twopi,
-        phase_center_fk5[:, 0],
-    )
-
-    obs_info = {
-        "source": src_name[i_src],
-        "phase center": phase_center_fk5[i_src].tolist(),
-        "telescope_name": telescope_name,
-        "start time": time_range[0],
-        "stop time": time_range[-1]
-    }
-    return obs_info
-
-
 @njit(cache=False, nogil=True)
 def _get_time_intervals(time_vis_row, scan_list, time_interval):
     unq_scans = np.unique(scan_list)
@@ -847,6 +807,45 @@ def _get_time_index(data_time, i_time, time_axis, half_int):
         if i_time == time_axis.shape[0]:
             return -1
     return i_time
+
+
+def _get_obs_summary(ms_name, field_ids):
+    unq_ids = np.unique(field_ids)
+    field_tbl = ctables.table(
+        ms_name + "::FIELD",
+        readonly=True,
+        lockoptions={"option": "usernoread"},
+        ack=False,
+    )
+    i_src = int(unq_ids[0])
+    src_name = field_tbl.getcol("NAME")
+    phase_center_fk5 = field_tbl.getcol("PHASE_DIR")[:, 0, :]
+    field_tbl.close()
+
+    obs_table = ctables.table(
+        ms_name + "::OBSERVATION",
+        readonly=True,
+        lockoptions={"option": "usernoread"},
+        ack=False,
+    )
+    time_range = casa_time_to_mjd(obs_table.getcol("TIME_RANGE")[0])
+    telescope_name = obs_table.getcol("TELESCOPE_NAME")[0]
+    obs_table.close()
+
+    phase_center_fk5[:, 0] = np.where(
+        phase_center_fk5[:, 0] < 0,
+        phase_center_fk5[:, 0] + twopi,
+        phase_center_fk5[:, 0],
+    )
+
+    obs_info = {
+        "source": src_name[i_src],
+        "phase center": phase_center_fk5[i_src].tolist(),
+        "telescope name": telescope_name,
+        "start time": time_range[0],
+        "stop time": time_range[-1]
+    }
+    return obs_info
 
 
 def _get_az_el_characteristics(pnt_map_xds, valid_data):
