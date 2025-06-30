@@ -51,7 +51,7 @@ class Telescope:
 
     @classmethod
     def from_xds(cls, xds):
-        tel_name = xds.attrs["observation_information"]["telescope_name"]
+        tel_name = xds.attrs["summary"]["general"]["telescope name"]
         if tel_name == "ALMA":
             telescope_name = "_".join(
                 (tel_name, xds.attrs["ant_name"][0:2])

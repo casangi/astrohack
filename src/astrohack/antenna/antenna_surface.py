@@ -140,16 +140,6 @@ class AntennaSurface:
         self.v_axis = inputxds.v_prime.values
         self.computephase = False
 
-        try:
-            self.resolution = inputxds.attrs["aperture_resolution"]
-        except KeyError:
-
-            logger.warning("holog image does not have resolution information")
-            logger.warning(
-                "Rerun holog with astrohack v>0.1.5 for aperture resolution information"
-            )
-            self.resolution = None
-
     def _read_panel_xds(self, inputxds):
         self.wavelength = inputxds.attrs["wavelength"]
         self.amp_unit = inputxds.attrs["amp_unit"]
@@ -171,24 +161,7 @@ class AntennaSurface:
         self.u_axis = inputxds.u.values
         self.v_axis = inputxds.u.values
         self.panel_distribution = inputxds["PANEL_DISTRIBUTION"].values
-        try:
-            self.amplitude_noise = inputxds["AMP_NOISE"].values
-        except KeyError:
-            logger.warning(
-                "Input panel file does not have amplitude noise information, noise statistics will be "
-                "flawed"
-            )
-            self.amplitude_noise = np.full_like(self.amplitude, np.nan)
-
-        try:
-            self.resolution = inputxds.attrs["aperture_resolution"]
-        except KeyError:
-
-            logger.warning("Input panel file does not have resolution information")
-            logger.warning(
-                "Rerun holog with astrohack v>0.1.5 for aperture resolution information"
-            )
-            self.resolution = None
+        self.amplitude_noise = inputxds["AMP_NOISE"].values
 
         if self.solved:
             self.panel_fallback = inputxds["PANEL_FALLBACK"].values
@@ -223,13 +196,12 @@ class AntennaSurface:
             self._read_holog_xds(inputxds)
 
         # Common elements
-        self.az_el_info = inputxds.attrs['az_el_information']
-        self.obs_info = inputxds.attrs['observation_information']
-        self.antenna_name = inputxds.attrs["ant_name"]
-        self.freq_info = inputxds.attrs["frequency_information"]
+        self.summary = inputxds.attrs['summary']
+        self.antenna_name = inputxds.attrs["summary"]["general"]["antenna name"]
+        self.resolution = inputxds.summary["aperture"]["resolution"]
         self.ddi = inputxds.attrs["ddi"]
         self.label = create_dataset_label(
-            inputxds.attrs["ant_name"], inputxds.attrs["ddi"]
+            self.antenna_name, inputxds.attrs["ddi"]
         )
 
     def _define_amp_clip(self, clip_type, clip_level):
@@ -911,8 +883,6 @@ class AntennaSurface:
         xds = xr.Dataset()
         gains = self.gains()
         rms = self.get_rms(unit="m")
-        xds.attrs["telescope_name"] = self.telescope.name
-        xds.attrs["ant_name"] = self.antenna_name
         xds.attrs["ddi"] = self.ddi
         xds.attrs["wavelength"] = self.wavelength
         xds.attrs["amp_unit"] = self.amp_unit
@@ -923,9 +893,7 @@ class AntennaSurface:
         xds.attrs["fitted"] = self.fitted
         xds.attrs["aperture_resolution"] = self.resolution
         xds.attrs["pol_state"] = self.pol_state
-        xds.attrs['az_el_information'] = self.az_el_info
-        xds.attrs['observation_information'] = self.obs_info
-        xds.attrs['frequency_information'] = self.freq_info
+        xds.attrs['summary'] = self.summary
 
         xds["AMPLITUDE"] = xr.DataArray(self.amplitude, dims=["u", "v"])
         xds["PHASE"] = xr.DataArray(self.phase, dims=["u", "v"])
