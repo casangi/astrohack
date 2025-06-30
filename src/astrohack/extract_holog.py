@@ -26,7 +26,7 @@ from astrohack.utils.file import overwrite_file
 from astrohack.utils.file import load_holog_file
 from astrohack.utils.file import load_point_file
 from astrohack.utils.data import write_meta_data
-from astrohack.core.extract_holog import create_holog_obs_dict
+from astrohack.core.extract_holog import create_holog_obs_dict, create_holog_json
 from astrohack.core.extract_holog import process_extract_holog_chunk
 from astrohack.utils.tools import get_valid_state_ids
 from astrohack.utils.text import get_default_file_name
@@ -718,6 +718,8 @@ def extract_holog(
         holog_dict = load_holog_file(
             file=extract_holog_params["holog_name"], dask_load=True, load_pnt_dict=False
         )
+
+        create_holog_json(extract_holog_params["holog_name"], holog_dict)
 
         holog_attr_file = "{name}/{ext}".format(
             name=extract_holog_params["holog_name"], ext=".holog_input"

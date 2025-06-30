@@ -905,3 +905,40 @@ def _crate_observation_summary(antenna_name, obs_info, grid_params, lm, chan_axi
     }
     return summary
 
+
+def create_holog_json(holog_file, holog_dict):
+    """Save holog file meta information to json file with the transformation
+        of the ordering (ddi, holog_map, ant) --> (ant, ddi, holog_map).
+
+    Args:
+        input_params ():
+        holog_file (str): holog file name.
+        holog_dict (dict): Dictionary containing msdx data.
+    """
+
+    ant_holog_dict = {}
+
+    for ddi, map_dict in holog_dict.items():
+        if "ddi_" in ddi:
+            for mapping, ant_dict in map_dict.items():
+                if "map_" in mapping:
+                    for ant, xds in ant_dict.items():
+                        if "ant_" in ant:
+                            if ant not in ant_holog_dict:
+                                ant_holog_dict[ant] = {ddi: {mapping: {}}}
+                            elif ddi not in ant_holog_dict[ant]:
+                                ant_holog_dict[ant][ddi] = {mapping: {}}
+
+                            ant_holog_dict[ant][ddi][mapping] = xds.to_dict(data=False)
+
+    output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
+
+    try:
+        with open(output_meta_file, "w") as json_file:
+            json.dump(ant_holog_dict, json_file)
+
+    except Exception as error:
+        logger.error(f"{error}")
+
+        raise Exception(error)
+
