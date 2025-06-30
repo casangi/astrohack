@@ -102,6 +102,8 @@ def process_extract_holog_chunk(extract_holog_params):
     ctb.close()
     table_obj.close()
 
+    map_ref_dict = _get_map_ref_dict(map_ant_tuple, ref_ant_per_map_ant_tuple, ant_names)
+
     (
         time_vis,
         vis_map_dict,
@@ -165,7 +167,8 @@ def process_extract_holog_chunk(extract_holog_params):
         ant_names,
         grid_params,
         time_interval,
-        obs_info
+        obs_info,
+        map_ref_dict
     )
 
     logger.info(
@@ -175,8 +178,20 @@ def process_extract_holog_chunk(extract_holog_params):
     )
 
 
-def _get_obs_summary(ms_name, fields_ids):
-    unq_ids = np.unique(fields_ids)
+def _get_map_ref_dict(map_ant_tuple, ref_ant_per_map_ant_tuple, ant_names):
+    map_dict = {}
+    for ii, map_id in enumerate(map_ant_tuple):
+        map_name = ant_names[map_id]
+        ref_list = []
+        for ref_id in ref_ant_per_map_ant_tuple[ii]:
+            ref_list.append(ant_names[ref_id])
+        map_dict[map_name] = ref_list
+    return map_dict
+
+
+
+def _get_obs_summary(ms_name, field_ids):
+    unq_ids = np.unique(field_ids)
     field_tbl = ctables.table(
         ms_name + "::FIELD",
         readonly=True,
@@ -206,7 +221,7 @@ def _get_obs_summary(ms_name, fields_ids):
 
     obs_info = {
         "source": src_name[i_src],
-        "FK5 phase center": phase_center_fk5[i_src].tolist(),
+        "phase center": phase_center_fk5[i_src].tolist(),
         "telescope_name": telescope_name,
         "start time": time_range[0],
         "stop time": time_range[-1]
@@ -415,7 +430,8 @@ def _create_holog_file(
     ant_names,
     grid_params,
     time_interval,
-    obs_info
+    obs_info,
+    map_ref_dict
 ):
     """Create holog-structured, formatted output file and save to zarr.
 
@@ -435,7 +451,6 @@ def _create_holog_file(
 
     ctb = ctables.table("/".join((ms_name, "ANTENNA")), ack=False)
     observing_location = ctb.getcol("POSITION")
-
     ctb.close()
 
     for map_ant_index in vis_map_dict.keys():
@@ -503,6 +518,10 @@ def _create_holog_file(
 
             xds.attrs["grid_params"] = grid_params[map_ant_tag]
             xds.attrs["time_smoothing_interval"] = time_interval
+
+            xds.attrs["summary"] = _crate_observation_summary(ant_names[map_ant_index], obs_info, grid_params,
+                                                              xds["DIRECTIONAL_COSINES"].values, chan,
+                                                              pnt_map_dict[map_ant_tag], valid_data, map_ref_dict)
 
             holog_file = holog_name
 
@@ -953,3 +972,32 @@ def _get_freq_summary(chan_axis):
     }
 
     return freq_info
+
+
+def _crate_observation_summary(antenna_name, obs_info, grid_params, lm, chan_axis, pnt_map_xds, valid_data,
+                               map_ref_dict):
+    spw_info = _get_freq_summary(chan_axis)
+    obs_info['az el info'] = _get_az_el_characteristics(pnt_map_xds, valid_data)
+    obs_info['reference antennas'] = map_ref_dict[antenna_name]
+    obs_info['antenna name'] = antenna_name
+
+    l_max = np.max(lm[:, 0])
+    l_min = np.min(lm[:, 0])
+    m_max = np.max(lm[:, 1])
+    m_min = np.min(lm[:, 1])
+
+    beam_info = {
+        'grid size': grid_params[f'ant_{antenna_name}']['n_pix'],
+        'cell size': grid_params[f'ant_{antenna_name}']['cell_size'],
+        'l extent': [l_min, l_max],
+        'm extent': [m_min, m_max],
+    }
+
+    summary = {
+        "spectral": spw_info,
+        "beam": beam_info,
+        "general": obs_info,
+        "aperture": None
+    }
+    return summary
+
