@@ -695,7 +695,7 @@ def format_observation_information(obs_dict, az_el_dict, az_el_key='mean', phase
     outstr = 'Observation Summary:\n'
     for key, item in obs_dict.items():
         outstr += f'{tab}{key.capitalize().replace('_', ' '):21s} = '
-        if 'FK5' in key:
+        if 'phase center' in key:
             if phase_center_unit == 'radec':
                 outstr += f'{rad_to_hour_str(item[0])} {rad_to_deg_str(item[1])} [FK5]'
             else:
