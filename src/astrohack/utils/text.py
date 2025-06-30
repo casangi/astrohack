@@ -746,6 +746,19 @@ def format_beam_information(beam_dict, tab, ident, key_size):
     return outstr
 
 
+def format_aperture_information(aperture_dict, tab, ident, key_size, resolution_unit='cm'):
+    outstr = f'{ident}Aperture:\n'
+    tab += ident
+    for key, item in aperture_dict.items():
+        outstr += f'{tab}{key.capitalize().replace('_', ' '):{key_size}s} => '
+        if key == 'grid size':
+            outstr += f'{item[0]} by {item[1]} pixels'
+        else:
+            outstr += f'{format_wavelength(item[0])} by {format_wavelength(item[1])}'
+        outstr += '\n'
+    return outstr
+
+
 def format_observation_summary(obs_sum, tab_size=3, tab_count=0, az_el_key='mean', phase_center_unit='radec',
                                az_el_unit='deg', time_format="%d %h %Y, %H:%M:%S", precision='.1f', key_size=18):
     spc = ' '
@@ -763,4 +776,7 @@ def format_observation_summary(obs_sum, tab_size=3, tab_count=0, az_el_key='mean
     outstr += '\n'
     outstr += format_beam_information(obs_sum["beam"], one_tab, ident, key_size)
 
+    if obs_sum["aperture"] is not None:
+        outstr += '\n'
+        outstr += format_aperture_information(obs_sum["aperture"], one_tab, ident, key_size)
     return outstr
