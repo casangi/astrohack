@@ -216,8 +216,7 @@ def holog(
             return None
 
         else:
-            n_pix = int(np.sqrt(meta_data["n_pix"]))
-            holog_params["grid_size"] = np.array([n_pix, n_pix])
+            holog_params["grid_size"] = np.array([meta_data["n_pix"], meta_data["n_pix"]], dtype=int)
 
     else:
         logger.debug("Using user specified grid size.", holog_params["grid_size"])
