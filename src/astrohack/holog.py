@@ -10,7 +10,6 @@ from typing import List, Union, NewType, Tuple
 
 from astrohack.utils.graph import compute_graph
 from astrohack.utils.file import overwrite_file
-from astrohack.utils.data import read_meta_data
 from astrohack.utils.data import write_meta_data
 from astrohack.core.holog import process_holog_chunk
 from astrohack.utils.text import get_default_file_name
@@ -24,7 +23,7 @@ Array = NewType("Array", Union[np.array, List[int], List[float]])
 def holog(
     holog_name: str,
     grid_size: Union[int, Array, List] = None,
-    cell_size: Union[int, Array, List] = None,
+    cell_size: Union[float, Array, List] = None,
     image_name: str = None,
     padding_factor: int = 10,
     grid_interpolation_mode: str = "gaussian",
@@ -180,63 +179,6 @@ def holog(
 
     with open(json_data, "r") as json_file:
         holog_json = json.load(json_file)
-
-    meta_data = read_meta_data(holog_params["holog_name"] + "/.holog_attr")
-
-    # If cell size is None, fill from metadata if it exists
-    if holog_params["cell_size"] is None:
-        if meta_data["cell_size"] is None:
-            logger.error(
-                "Cell size meta data not found. There was likely an issue with the holography data extraction. Fix\
-                 extract data or provide cell_size as argument."
-            )
-            logger.error("There was an error, see log above for more info.")
-
-            return None
-
-        else:
-            holog_params["cell_size"] = np.array(
-                [-meta_data["cell_size"], meta_data["cell_size"]]
-            )
-
-    else:
-        holog_params["cell_size"] = _convert_gridding_parameter(
-            gridding_parameter=holog_params["cell_size"], reflect_on_axis=True
-        )
-
-    # If grid size is None, create it from n_pix.
-    if holog_params["grid_size"] is None:
-        if meta_data["n_pix"] is None:
-            logger.error(
-                "Grid size meta data not found. There was likely an issue with the holography data extraction. Fix \
-                extract data or provide grid_size as argument."
-            )
-            logger.error("There was an error, see log above for more info.")
-
-            return None
-
-        else:
-            holog_params["grid_size"] = np.array([meta_data["n_pix"], meta_data["n_pix"]], dtype=int)
-
-    else:
-        logger.debug("Using user specified grid size.", holog_params["grid_size"])
-        holog_params["grid_size"] = _convert_gridding_parameter(
-            gridding_parameter=holog_params["grid_size"], reflect_on_axis=False
-        )
-
-    logger.info(
-        "Cell size: {cell_size}, Grid size {grid_size}".format(
-            cell_size=holog_params["cell_size"], grid_size=holog_params["grid_size"]
-        )
-    )
-
-    json_data = {
-        "cell_size": holog_params["cell_size"].tolist(),
-        "grid_size": holog_params["grid_size"].tolist(),
-    }
-
-    with open(".holog_diagnostic.json", "w") as out_file:
-        json.dump(json_data, out_file)
 
     if compute_graph(
         holog_json, process_holog_chunk, holog_params, ["ant", "ddi"], parallel=parallel
