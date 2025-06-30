@@ -572,7 +572,6 @@ class AstrohackHologFile(dict):
             load_holog_file(
                 file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self
             )
-            self._meta_data = read_meta_data(file + "/.holog_attr")
             self._input_pars = read_meta_data(file + "/.holog_input")
             self._file_is_open = True
 
@@ -620,16 +619,6 @@ class AstrohackHologFile(dict):
             return self
         else:
             return self[ddi][map_id][ant]
-
-    @property
-    def meta_data(self):
-        """Retrieve AstrohackHologFile JSON metadata.
-
-        :return: JSON metadata for this AstrohackHologFile object
-        :rtype: dict
-        """
-
-        return self._meta_data
 
     @toolviper.utils.parameter.validate(custom_checker=custom_plots_checker)
     def plot_diagnostics(

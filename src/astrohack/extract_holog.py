@@ -9,13 +9,13 @@ import multiprocessing
 
 import toolviper.utils.parameter
 import dask
+
 import astrohack
 import psutil
 
 import numpy as np
 import toolviper.utils.logger as logger
 
-from astropy.time import Time
 from casacore import tables as ctables
 from rich.console import Console
 from rich.table import Table
@@ -26,7 +26,6 @@ from astrohack.utils.file import overwrite_file
 from astrohack.utils.file import load_holog_file
 from astrohack.utils.file import load_point_file
 from astrohack.utils.data import write_meta_data
-from astrohack.core.extract_holog import create_holog_meta_data
 from astrohack.core.extract_holog import create_holog_obs_dict
 from astrohack.core.extract_holog import process_extract_holog_chunk
 from astrohack.utils.tools import get_valid_state_ids
@@ -719,17 +718,6 @@ def extract_holog(
         holog_dict = load_holog_file(
             file=extract_holog_params["holog_name"], dask_load=True, load_pnt_dict=False
         )
-
-        meta_data = create_holog_meta_data(
-            holog_file=extract_holog_params["holog_name"],
-            holog_dict=holog_dict,
-            input_params=extract_holog_params.copy(),
-        )
-
-        holog_attr_file = "{name}/{ext}".format(
-            name=extract_holog_params["holog_name"], ext=".holog_attr"
-        )
-        write_meta_data(holog_attr_file, meta_data)
 
         holog_attr_file = "{name}/{ext}".format(
             name=extract_holog_params["holog_name"], ext=".holog_input"

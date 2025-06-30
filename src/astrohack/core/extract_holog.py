@@ -506,17 +506,6 @@ def _create_holog_file(
             xds.attrs["holog_map_key"] = holog_map_key
             xds.attrs["ddi"] = ddi
             xds.attrs["parallactic_samples"] = parallactic_samples
-            xds.attrs["observation_information"] = obs_info
-            xds.attrs["antenna_name"] = ant_names[map_ant_index]
-            xds.attrs["az_el_information"] = _get_az_el_characteristics(pnt_map_dict[map_ant_tag], valid_data)
-            xds.attrs["frequency_information"] = _get_freq_summary(chan)
-
-            xds.attrs["l_max"] = np.max(xds["DIRECTIONAL_COSINES"][:, 0].values)
-            xds.attrs["l_min"] = np.min(xds["DIRECTIONAL_COSINES"][:, 0].values)
-            xds.attrs["m_max"] = np.max(xds["DIRECTIONAL_COSINES"][:, 1].values)
-            xds.attrs["m_min"] = np.min(xds["DIRECTIONAL_COSINES"][:, 1].values)
-
-            xds.attrs["grid_params"] = grid_params[map_ant_tag]
             xds.attrs["time_smoothing_interval"] = time_interval
 
             xds.attrs["summary"] = _crate_observation_summary(ant_names[map_ant_index], obs_info, grid_params,
@@ -847,91 +836,6 @@ def _interpolate_pointing(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt):
         avg_wgt[i_time] += 1
 
     return avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt
-
-
-def create_holog_meta_data(holog_file, holog_dict, input_params):
-    """Save holog file meta information to json file with the transformation
-        of the ordering (ddi, holog_map, ant) --> (ant, ddi, holog_map).
-
-    Args:
-        input_params ():
-        holog_file (str): holog file name.
-        holog_dict (dict): Dictionary containing msdx data.
-    """
-
-    ant_holog_dict = {}
-    cell_sizes = []
-    n_pixs = []
-    telescope_names = []
-
-    for ddi, map_dict in holog_dict.items():
-        if "ddi_" in ddi:
-            for mapping, ant_dict in map_dict.items():
-                if "map_" in mapping:
-                    for ant, xds in ant_dict.items():
-                        if "ant_" in ant:
-                            if ant not in ant_holog_dict:
-                                ant_holog_dict[ant] = {ddi: {mapping: {}}}
-                            elif ddi not in ant_holog_dict[ant]:
-                                ant_holog_dict[ant][ddi] = {mapping: {}}
-
-                            ant_holog_dict[ant][ddi][mapping] = xds.to_dict(data=False)
-
-                            cell_sizes.append(xds.attrs["grid_params"]["cell_size"])
-                            n_pixs.append(xds.attrs["grid_params"]["n_pix"])
-                            telescope_names.append(xds.attrs["observation_information"]["telescope_name"])
-
-    # cell_sizes_sigfigs = significant_figures_round(cell_sizes, digits=3)
-
-    meta_data = {
-        "cell_size": np.min(cell_sizes),
-        "n_pix": np.max(n_pixs),
-        "telescope_name": telescope_names[0],
-    }
-
-    # Commented out tests on grid_size and cell_size as they do not help us in catching problems since grid_size and
-    # cell_size should be free to vary between antennas and DDIs, e.g. DDIs at different frequencies and arrays with
-    # antennas of different sizes
-
-    # if not (len(set(cell_sizes_sigfigs)) == 1):
-    #     logger.warning('Cell size not consistent: ' + str(cell_sizes))
-    #     logger.warning('Calculating suggested cell size ...')
-    #
-    #     meta_data["cell_size"] = \
-    #         astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(cell_sizes))
-    #
-    #     logger.info("The suggested cell size is calculated to be: {cell_size}".format(cell_size=meta_data["cell_size"]
-    #     ))
-    #
-    # if not (len(set(n_pixs)) == 1):
-    #     logger.warning('Number of pixels not consistent: ' + str(n_pixs))
-    #     logger.warning('Calculating suggested number of pixels ...')
-    #
-    #     meta_data['n_pix'] = int(
-    #         astrohack.utils.algorithms.calculate_suggested_grid_parameter(parameter=np.array(n_pixs)))
-    #
-    #     logger.info("The suggested number of pixels is calculated to be: {n_pix} (grid: {points} x {points})".format(
-    #         n_pix=meta_data["n_pix"], points=int(np.sqrt(meta_data["n_pix"]))
-    #     ))
-
-    if not (len(set(telescope_names)) == 1):
-        logger.error("Telescope name not consistent: " + str(telescope_names))
-        meta_data["telescope_name"] = None
-
-    output_meta_file = "{name}/{ext}".format(name=holog_file, ext=".holog_json")
-
-    try:
-        with open(output_meta_file, "w") as json_file:
-            json.dump(ant_holog_dict, json_file)
-
-    except Exception as error:
-        logger.error(f"{error}")
-
-        raise Exception(error)
-
-    meta_data.update(input_params)
-
-    return meta_data
 
 
 @njit(cache=False, nogil=True)
