@@ -457,8 +457,9 @@ def format_wavelength(wave_value, unit="m", decimal_places=2):
     return format_value_unit(fac * wave_value, unitout, decimal_places)
 
 
-def format_angular_distance(dist_value, unit="rad", decimal_places=2):
+def format_angular_distance(user_value, unit="rad", decimal_places=2):
     one_deg = np.pi / 180
+    dist_value = np.abs(user_value)
     if dist_value >= np.pi / 180:
         unitout = "deg"
     elif dist_value >= one_deg / 60:
@@ -470,7 +471,7 @@ def format_angular_distance(dist_value, unit="rad", decimal_places=2):
     else:
         unitout = "uasec"
     fac = convert_unit(unit, unitout, "trigonometric")
-    return format_value_unit(fac * dist_value, unitout, decimal_places)
+    return format_value_unit(fac * user_value, unitout, decimal_places)
 
 
 def format_label(label, separators=("_", "\n"), new_separator=" "):
@@ -686,36 +687,39 @@ def format_az_el_information(az_el_dict, key='center', unit='deg', precision='.1
 
     az_el = np.array(az_el_dict[key])*convert_unit('rad', unit, 'trigonometric')
     prefix += ' Az, El'
-    az_el_label = f'{prefix:21s} = ({az_el[0]:{precision}}, {az_el[1]:{precision}}) [{unit}]'
+    az_el_label = f'{prefix} = ({az_el[0]:{precision}}, {az_el[1]:{precision}}) [{unit}]'
     return az_el_label
 
 
-def format_observation_information(obs_dict, az_el_dict, az_el_key='mean', phase_center_unit='radec', az_el_unit='deg',
-                                   time_format="%d %h %Y, %H:%M:%S", precision='.1f', tab='   '):
-    outstr = 'Observation Summary:\n'
+def format_observation_information(obs_dict, tab, ident, key_size, az_el_key='mean', phase_center_unit='radec', az_el_unit='deg',
+                                   time_format="%d %h %Y, %H:%M:%S", precision='.1f'):
+    outstr = f'{ident}General:\n'
+    tab = tab+ident
     for key, item in obs_dict.items():
-        outstr += f'{tab}{key.capitalize().replace('_', ' '):21s} = '
+        line = f'{tab}{key.capitalize().replace('_', ' '):{key_size}s} => '
         if 'phase center' in key:
             if phase_center_unit == 'radec':
-                outstr += f'{rad_to_hour_str(item[0])} {rad_to_deg_str(item[1])} [FK5]'
+                line += f'{rad_to_hour_str(item[0])} {rad_to_deg_str(item[1])} [FK5]'
             else:
                 fac = convert_unit('rad', phase_center_unit, 'trigonometric')
-                outstr += f'({fac*item[0]:{precision}}, {fac*item[1]:{precision}}) [{phase_center_unit}]'
+                line += f'({fac*item[0]:{precision}}, {fac*item[1]:{precision}}) [{phase_center_unit}]'
         elif 'time' in key:
             date = Time(item, format='mjd').to_datetime()
-            outstr += f'{date.strftime(time_format)} (UTC)'
+            line += f'{date.strftime(time_format)} (UTC)'
+        elif 'az el info' in key:
+            line += f'{format_az_el_information(item, az_el_key, unit=az_el_unit, precision=precision)}'
         else:
-            outstr += str(item)
-        outstr += '\n'
+            line += str(item)
+        outstr += f'{line}\n'
 
-    outstr += f'{tab}{format_az_el_information(az_el_dict, az_el_key, unit=az_el_unit, precision=precision)}\n'
     return outstr
 
 
-def format_spectral_information(freq_dict, tab='   '):
-    outstr = 'Spectral Summary:\n'
+def format_spectral_information(freq_dict, tab, ident, key_size):
+    outstr = f'{ident}Spectral:\n'
+    tab += ident
     for key, item in freq_dict.items():
-        outstr += f'{tab}{key.capitalize().replace('_', ' '):21s} = '
+        outstr += f'{tab}{key.capitalize().replace('_', ' '):{key_size}s} => '
         if 'range' in key:
             outstr += f'{format_frequency(item[0], decimal_places=3)} to {format_frequency(item[1], decimal_places=3)}'
         elif 'number' in key:
@@ -727,3 +731,36 @@ def format_spectral_information(freq_dict, tab='   '):
     return outstr
 
 
+def format_beam_information(beam_dict, tab, ident, key_size):
+    outstr = f'{ident}Beam:\n'
+    tab += ident
+    for key, item in beam_dict.items():
+        outstr += f'{tab}{key.capitalize().replace('_', ' '):{key_size}s} => '
+        if key == 'cell size':
+            outstr += format_angular_distance(item)
+        elif key == 'grid size':
+            outstr += f'{item[0]} by {item[1]} pixels'
+        else:
+            outstr += f'From {format_angular_distance(item[0])} to {format_angular_distance(item[1])}'
+        outstr += '\n'
+    return outstr
+
+
+def format_observation_summary(obs_sum, tab_size=3, tab_count=0, az_el_key='mean', phase_center_unit='radec',
+                               az_el_unit='deg', time_format="%d %h %Y, %H:%M:%S", precision='.1f', key_size=18):
+    spc = ' '
+    major_tab = tab_count*tab_size*spc
+    one_tab = tab_size*spc
+    ident = one_tab+major_tab
+    outstr = f'{major_tab}Observation Summary:\n\n'
+    outstr += format_observation_information(obs_sum["general"], az_el_key=az_el_key,
+                                             phase_center_unit=phase_center_unit, az_el_unit=az_el_unit,
+                                             time_format=time_format, precision=precision, tab=one_tab,
+                                             ident=one_tab+major_tab, key_size=key_size)
+    outstr += '\n'
+    outstr += format_spectral_information(obs_sum["spectral"], one_tab, ident, key_size)
+
+    outstr += '\n'
+    outstr += format_beam_information(obs_sum["beam"], one_tab, ident, key_size)
+
+    return outstr
