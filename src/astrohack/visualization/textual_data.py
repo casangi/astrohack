@@ -573,8 +573,5 @@ def generate_observation_summary(parm_dict):
                                          az_el_unit=parm_dict['az_el_unit'],
                                          time_format=parm_dict["time_format"])+'\n'
 
-    if parm_dict["print_summary"]:
-        print(outstr)
-
     return outstr
 
