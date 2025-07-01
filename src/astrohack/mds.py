@@ -593,6 +593,8 @@ class AstrohackHologFile(dict):
                 self.select,
                 self.plot_diagnostics,
                 self.plot_lm_sky_coverage,
+                self.export_to_aips,
+                self.observation_summary
             ]
         )
 
