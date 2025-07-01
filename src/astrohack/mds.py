@@ -3,7 +3,6 @@ import toolviper.utils.parameter
 
 import numpy as np
 import toolviper.utils.logger as logger
-from joblib.testing import param
 
 from toolviper.utils.console import Colorize
 
@@ -521,6 +520,7 @@ class AstrohackImageFile(dict):
             parallel=parallel,
         )
 
+    @toolviper.utils.parameter.validate(custom_checker=custom_unit_checker)
     def observation_summary(
         self,
         summary_file: str,
@@ -846,6 +846,7 @@ class AstrohackHologFile(dict):
         compute_graph(self, export_to_aips, param_dict, key_order, parallel)
         return
 
+    @toolviper.utils.parameter.validate(custom_checker=custom_unit_checker)
     def observation_summary(
             self,
             summary_file: str,
@@ -1254,6 +1255,7 @@ class AstrohackPanelFile(dict):
             parallel=parallel,
         )
 
+    @toolviper.utils.parameter.validate(custom_checker=custom_unit_checker)
     def observation_summary(
         self,
         summary_file: str,

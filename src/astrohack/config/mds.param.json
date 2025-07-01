@@ -518,7 +518,79 @@
             ]
         }
     },
-
+    "AstrohackImageFile.observation_summary": {
+        "summary_file": {
+            "nullable": false,
+            "required": true,
+            "type": [
+                "string"
+            ]
+        },
+        "ant": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "str"
+            ],
+            "minlength": 1,
+            "type": [
+                "string",
+                "list"
+            ]
+        },
+        "ddi": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "int"
+            ],
+            "minlength": 1,
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
+        },
+        "az_el_key": {
+            "nullable": false,
+            "required": true,
+            "type": ["string"],
+            "allowed": ["mean", "median", "center"]
+        },
+        "phase_center_unit": {
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.radec"
+        },
+        "az_el_unit": {
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.trig"
+        },
+        "time_format":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"]
+        },
+        "tab_size": {
+            "nullable": false,
+            "required": false,
+            "type": ["int"],
+            "min": 0
+        },
+        "print_summary": {
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "parallel": {
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        }
+    },
 
     "AstrohackHologFile.select": {
         "ddi": {
@@ -825,6 +897,92 @@
             ]
         }
     },
+    "AstrohackHologFile.observation_summary": {
+        "summary_file": {
+            "nullable": false,
+            "required": true,
+            "type": [
+                "string"
+            ]
+        },
+        "map_id": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "int"
+            ],
+            "minlength": 1,
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
+        },
+        "ant": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "str"
+            ],
+            "minlength": 1,
+            "type": [
+                "string",
+                "list"
+            ]
+        },
+        "ddi": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "int"
+            ],
+            "minlength": 1,
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
+        },
+        "az_el_key": {
+            "nullable": false,
+            "required": true,
+            "type": ["string"],
+            "allowed": ["mean", "median", "center"]
+        },
+        "phase_center_unit": {
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.radec"
+        },
+        "az_el_unit": {
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.trig"
+        },
+        "time_format":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"]
+        },
+        "tab_size": {
+            "nullable": false,
+            "required": false,
+            "type": ["int"],
+            "min": 0
+        },
+        "print_summary": {
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "parallel": {
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        }
+    },
 
     "AstrohackPanelFile.get_antenna": {
         "ant":{
@@ -1082,6 +1240,79 @@
             "check allowed with": "units.length"
         },
         "parallel":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        }
+    },
+    "AstrohackPanelFile.observation_summary": {
+        "summary_file": {
+            "nullable": false,
+            "required": true,
+            "type": [
+                "string"
+            ]
+        },
+        "ant": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "str"
+            ],
+            "minlength": 1,
+            "type": [
+                "string",
+                "list"
+            ]
+        },
+        "ddi": {
+            "nullable": false,
+            "required": false,
+            "struct_type": [
+                "int"
+            ],
+            "minlength": 1,
+            "type": [
+                "int",
+                "list",
+                "string"
+            ]
+        },
+        "az_el_key": {
+            "nullable": false,
+            "required": true,
+            "type": ["string"],
+            "allowed": ["mean", "median", "center"]
+        },
+        "phase_center_unit": {
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.radec"
+        },
+        "az_el_unit": {
+            "nullable": false,
+            "required": false,
+            "type": ["string"],
+            "check allowed with": "units.trig"
+        },
+        "time_format":{
+            "nullable": false,
+            "required": false,
+            "type": ["string"]
+        },
+        "tab_size": {
+            "nullable": false,
+            "required": false,
+            "type": ["int"],
+            "min": 0
+        },
+        "print_summary": {
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "parallel": {
             "nullable": false,
             "required": false,
             "type": ["boolean"]
