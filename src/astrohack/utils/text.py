@@ -764,12 +764,12 @@ def format_observation_summary(obs_sum, tab_size=3, tab_count=0, az_el_key='mean
     spc = ' '
     major_tab = tab_count*tab_size*spc
     one_tab = tab_size*spc
-    ident = one_tab+major_tab
-    outstr = f'{major_tab}Observation Summary:\n\n'
-    outstr += format_observation_information(obs_sum["general"], az_el_key=az_el_key,
-                                             phase_center_unit=phase_center_unit, az_el_unit=az_el_unit,
-                                             time_format=time_format, precision=precision, tab=one_tab,
-                                             ident=one_tab+major_tab, key_size=key_size)
+    ident = major_tab
+
+    outstr = format_observation_information(obs_sum["general"], az_el_key=az_el_key,
+                                            phase_center_unit=phase_center_unit, az_el_unit=az_el_unit,
+                                            time_format=time_format, precision=precision, tab=one_tab,
+                                            ident=ident, key_size=key_size)
     outstr += '\n'
     outstr += format_spectral_information(obs_sum["spectral"], one_tab, ident, key_size)
 
@@ -780,3 +780,21 @@ def format_observation_summary(obs_sum, tab_size=3, tab_count=0, az_el_key='mean
         outstr += '\n'
         outstr += format_aperture_information(obs_sum["aperture"], one_tab, ident, key_size)
     return outstr
+
+
+def make_header(heading, separator, header_width, buffer_width):
+    spc = ' '
+    sep_line = f'{header_width * separator}\n'
+    len_head = len(heading)
+    before_blank = (header_width - 2*buffer_width - len_head)//2
+    if 2*buffer_width+len_head+2*before_blank < header_width:
+        after_blank = before_blank+1
+    else:
+        after_blank = before_blank
+    outstr = sep_line
+    buffer = buffer_width*separator
+    outstr += f'{buffer}{before_blank*spc}{heading}{after_blank*spc}{buffer}\n'
+    outstr += sep_line+'\n'
+    return outstr
+
+
