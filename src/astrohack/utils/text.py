@@ -457,6 +457,43 @@ def format_wavelength(wave_value, unit="m", decimal_places=2):
     return format_value_unit(fac * wave_value, unitout, decimal_places)
 
 
+def format_duration(duration, unit='sec', decimal_places=2):
+    duration = np.abs(duration*convert_unit(unit, 'sec', 'time'))
+    oneminu = convert_unit('min', 'sec', 'time')
+    onehour = convert_unit('hour', 'sec', 'time')
+    oneday = convert_unit('day', 'sec', 'time')
+
+    if duration < 1:
+        if duration < 1e-6:
+            unitout = 'nsec'
+        elif duration < 1e-3:
+            unitout = 'usec'
+        else:
+            unitout = 'msec'
+        fac = convert_unit('sec', unitout, "time")
+        return format_value_unit(fac * duration, unitout, decimal_places)
+    elif duration < oneminu:
+        return format_value_unit(duration, 'sec', decimal_places)
+    elif oneminu <= duration < onehour:
+        minu = int(np.floor(duration/oneminu))
+        seco = duration - minu*oneminu
+        return f'{minu} min, {format_value_unit(seco, 'sec', decimal_places)}'
+    elif onehour <= duration < oneday:
+        hour = int(np.floor(duration/onehour))
+        rest = duration - hour*onehour
+        minu = int(np.floor(rest/oneminu))
+        seco = rest - minu*oneminu
+        return f'{hour} hour, {minu} min, {format_value_unit(seco, 'sec', decimal_places)}'
+    else:
+        day = int(np.floor(duration/oneday))
+        rest = duration - day*oneday
+        hour = int(np.floor(rest/onehour))
+        rest -= hour*onehour
+        minu = int(np.floor(rest/oneminu))
+        seco = rest - minu*oneminu
+        return f'{day} day, {hour} hour, {minu} min, {format_value_unit(seco, 'sec', decimal_places)}'
+
+
 def format_angular_distance(user_value, unit="rad", decimal_places=2):
     one_deg = np.pi / 180
     dist_value = np.abs(user_value)
@@ -691,8 +728,8 @@ def format_az_el_information(az_el_dict, key='center', unit='deg', precision='.1
     return az_el_label
 
 
-def format_observation_information(obs_dict, tab, ident, key_size, az_el_key='mean', phase_center_unit='radec', az_el_unit='deg',
-                                   time_format="%d %h %Y, %H:%M:%S", precision='.1f'):
+def format_general_information(obs_dict, tab, ident, key_size, az_el_key='mean', phase_center_unit='radec',
+                               az_el_unit='deg', time_format="%d %h %Y, %H:%M:%S", precision='.1f'):
     outstr = f'{ident}General:\n'
     tab = tab+ident
     for key, item in obs_dict.items():
@@ -708,6 +745,8 @@ def format_observation_information(obs_dict, tab, ident, key_size, az_el_key='me
             line += f'{date.strftime(time_format)} (UTC)'
         elif 'az el info' in key:
             line += f'{format_az_el_information(item, az_el_key, unit=az_el_unit, precision=precision)}'
+        elif 'duration' == key:
+            line += f'{format_duration(item)}'
         else:
             line += str(item)
         outstr += f'{line}\n'
@@ -746,7 +785,7 @@ def format_beam_information(beam_dict, tab, ident, key_size):
     return outstr
 
 
-def format_aperture_information(aperture_dict, tab, ident, key_size, resolution_unit='cm'):
+def format_aperture_information(aperture_dict, tab, ident, key_size):
     outstr = f'{ident}Aperture:\n'
     tab += ident
     for key, item in aperture_dict.items():
@@ -766,10 +805,10 @@ def format_observation_summary(obs_sum, tab_size=3, tab_count=0, az_el_key='mean
     one_tab = tab_size*spc
     ident = major_tab
 
-    outstr = format_observation_information(obs_sum["general"], az_el_key=az_el_key,
-                                            phase_center_unit=phase_center_unit, az_el_unit=az_el_unit,
-                                            time_format=time_format, precision=precision, tab=one_tab,
-                                            ident=ident, key_size=key_size)
+    outstr = format_general_information(obs_sum["general"], az_el_key=az_el_key,
+                                        phase_center_unit=phase_center_unit, az_el_unit=az_el_unit,
+                                        time_format=time_format, precision=precision, tab=one_tab,
+                                        ident=ident, key_size=key_size)
     outstr += '\n'
     outstr += format_spectral_information(obs_sum["spectral"], one_tab, ident, key_size)
 
@@ -796,5 +835,3 @@ def make_header(heading, separator, header_width, buffer_width):
     outstr += f'{buffer}{before_blank*spc}{heading}{after_blank*spc}{buffer}\n'
     outstr += sep_line+'\n'
     return outstr
-
-
