@@ -280,7 +280,7 @@ def export_screws_chunk(parm_dict):
     ddi = parm_dict["this_ddi"]
     export_name = parm_dict["destination"] + f"/panel_screws_{antenna}_{ddi}."
     xds = parm_dict["xds_data"]
-    telescope = Telescope(xds.attrs["telescope_name"])
+    telescope = Telescope.from_xds(xds)
     surface = AntennaSurface(xds, telescope, reread=True)
     surface.export_screws(export_name + "txt", unit=parm_dict["unit"])
     surface.plot_screw_adjustments(export_name + "png", parm_dict)
