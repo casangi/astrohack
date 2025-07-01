@@ -93,7 +93,7 @@ def process_extract_holog_chunk(extract_holog_params):
     scan_list = ctb.getcol("SCAN_NUMBER")
     field_ids = ctb.getcol("FIELD_ID")
 
-    obs_info = _get_obs_summary(ms_name, field_ids)
+    gen_info = _get_general_summary(ms_name, field_ids)
 
     # Here we use the median of the differences between dumps as this is a good proxy for the integration time
     if time_interval is None:
@@ -140,7 +140,7 @@ def process_extract_holog_chunk(extract_holog_params):
     for ant_index in vis_map_dict.keys():
         antenna_name = "_".join(("ant", ant_names[ant_index]))
         n_pix, cell_size = calculate_optimal_grid_parameters(
-            pnt_map_dict, antenna_name, Telescope(obs_info["telescope name"]).diam, chan_freq, ddi
+            pnt_map_dict, antenna_name, Telescope(gen_info["telescope name"]).diam, chan_freq, ddi
         )
 
         grid_params[antenna_name] = {"n_pix": n_pix, "cell_size": cell_size}
@@ -167,7 +167,7 @@ def process_extract_holog_chunk(extract_holog_params):
         ant_names,
         grid_params,
         time_interval,
-        obs_info,
+        gen_info,
         map_ref_dict
     )
 
@@ -390,7 +390,7 @@ def _create_holog_file(
     ant_names,
     grid_params,
     time_interval,
-    obs_info,
+    gen_info,
     map_ref_dict
 ):
     """Create holog-structured, formatted output file and save to zarr.
@@ -468,7 +468,7 @@ def _create_holog_file(
             xds.attrs["parallactic_samples"] = parallactic_samples
             xds.attrs["time_smoothing_interval"] = time_interval
 
-            xds.attrs["summary"] = _crate_observation_summary(ant_names[map_ant_index], obs_info, grid_params,
+            xds.attrs["summary"] = _crate_observation_summary(ant_names[map_ant_index], gen_info, grid_params,
                                                               xds["DIRECTIONAL_COSINES"].values, chan,
                                                               pnt_map_dict[map_ant_tag], valid_data, map_ref_dict)
 
@@ -809,7 +809,7 @@ def _get_time_index(data_time, i_time, time_axis, half_int):
     return i_time
 
 
-def _get_obs_summary(ms_name, field_ids):
+def _get_general_summary(ms_name, field_ids):
     unq_ids = np.unique(field_ids)
     field_tbl = ctables.table(
         ms_name + "::FIELD",
@@ -838,14 +838,15 @@ def _get_obs_summary(ms_name, field_ids):
         phase_center_fk5[:, 0],
     )
 
-    obs_info = {
+    gen_info = {
         "source": src_name[i_src],
         "phase center": phase_center_fk5[i_src].tolist(),
         "telescope name": telescope_name,
         "start time": time_range[0],
-        "stop time": time_range[-1]
+        "stop time": time_range[-1],
+        "duration": (time_range[-1]-time_range[0])*86400 # Store it in seconds rather than days
     }
-    return obs_info
+    return gen_info
 
 
 def _get_az_el_characteristics(pnt_map_xds, valid_data):
