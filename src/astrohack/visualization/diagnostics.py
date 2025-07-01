@@ -92,7 +92,7 @@ def calibration_plot_chunk(param_dict):
 
     UNIX_CONVERSION = 3506716800
 
-    radius = np.power(data.grid_params["cell_size"] * delta, 2)
+    radius = np.power(data.attrs["summary"]["beam"]["cell size"] * delta, 2)
 
     l_axis = data.DIRECTIONAL_COSINES.values[..., 0]
     m_axis = data.DIRECTIONAL_COSINES.values[..., 1]
