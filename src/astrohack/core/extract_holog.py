@@ -842,9 +842,9 @@ def _get_general_summary(ms_name, field_ids):
         "source": src_name[i_src],
         "phase center": phase_center_fk5[i_src].tolist(),
         "telescope name": telescope_name,
-        "start time": time_range[0],
-        "stop time": time_range[-1],
-        "duration": (time_range[-1]-time_range[0])*86400 # Store it in seconds rather than days
+        "start time": time_range[0],  # start time is in MJD in days
+        "stop time": time_range[-1],  # stop time is in MJD in days
+        "duration": (time_range[-1]-time_range[0])*86400  # Store it in seconds rather than days
     }
     return gen_info
 
