@@ -732,7 +732,10 @@ def format_general_information(obs_dict, tab, ident, key_size, az_el_key='mean',
                                az_el_unit='deg', time_format="%d %h %Y, %H:%M:%S", precision='.1f'):
     outstr = f'{ident}General:\n'
     tab = tab+ident
-    for key, item in obs_dict.items():
+    key_order = ['telescope name', 'antenna name', 'station', 'reference antennas', 'source', 'phase center',
+                 'az el info', 'start time', 'stop time', 'duration']
+    for key in key_order:
+        item = obs_dict[key]
         line = f'{tab}{key.capitalize().replace('_', ' '):{key_size}s} => '
         if 'phase center' in key:
             if phase_center_unit == 'radec':
