@@ -14,9 +14,9 @@ from casacore import tables as ctables
 from astrohack.antenna import Telescope
 from astrohack.utils import create_dataset_label
 from astrohack.utils.imaging import calculate_parallactic_angle_chunk
-from astrohack.utils.algorithms import calculate_optimal_grid_parameters, phase_wrapping
+from astrohack.utils.algorithms import calculate_optimal_grid_parameters
 from astrohack.utils.conversion import casa_time_to_mjd
-from astrohack.utils.constants import twopi
+from astrohack.utils.constants import twopi, clight
 
 from astrohack.utils.file import load_point_file
 
@@ -871,11 +871,13 @@ def _get_az_el_characteristics(pnt_map_xds, valid_data):
 
 def _get_freq_summary(chan_axis):
     chan_width = np.abs(chan_axis[1]-chan_axis[0])
+    rep_freq = chan_axis[chan_axis.shape[0]//2]
     freq_info = {
         "channel width": chan_width,
         "number of channels": chan_axis.shape[0],
-        "range": [chan_axis[0]-chan_width/2, chan_axis[-1]+chan_width/2],
-        "representative": chan_axis[chan_axis.shape[0]//2]
+        "frequency range": [chan_axis[0]-chan_width/2, chan_axis[-1]+chan_width/2],
+        "rep. frequency": rep_freq,
+        "rep. wavelength": clight/rep_freq
     }
 
     return freq_info

@@ -766,6 +766,8 @@ def format_spectral_information(freq_dict, tab, ident, key_size):
             outstr += f'{format_frequency(item[0], decimal_places=3)} to {format_frequency(item[1], decimal_places=3)}'
         elif 'number' in key:
             outstr += f'{item}'
+        elif 'wavelength' in key:
+            outstr += format_wavelength(item, decimal_places=3)
         else:
             outstr += format_frequency(item, decimal_places=3)
         outstr += '\n'
