@@ -3,9 +3,8 @@ import pathlib
 import toolviper.utils.parameter
 import toolviper.utils.logger as logger
 
-from astrohack import check_if_file_can_be_opened
 from astrohack.utils.graph import compute_graph
-from astrohack.utils.file import overwrite_file
+from astrohack.utils.file import overwrite_file, check_if_file_can_be_opened
 from astrohack.utils.data import write_meta_data
 from astrohack.core.locit import (
     locit_separated_chunk,
