@@ -19,7 +19,7 @@ colorize = Colorize()
 
 
 def check_if_file_can_be_opened(filename, minimal_version):
-    meta_list = ['.holog_input', '.panel_input', '.image_input', '.locit_input', '.position_input']
+    meta_list = ['.point_input', '.holog_input', '.panel_input', '.image_input', '.locit_input', '.position_input']
     found_meta = False
     metadata = None
 
@@ -36,8 +36,8 @@ def check_if_file_can_be_opened(filename, minimal_version):
     file_version = metadata["version"]
 
     if data_from_version_needs_patch(file_version, minimal_version):
-        raise ValueError(f'{filename} was created by astrohack version {file_version} which has a deprecated file,'
-                         f' format, please rerun astrohack on this dataset from scratch.')
+        raise ValueError(f'{filename} was created by astrohack version {file_version} which has a deprecated file'
+                         f' format, please rerun astrohack on this dataset from scratch to access the data in it.')
 
 
 def load_panel_file(file=None, panel_dict=None, dask_load=True):
