@@ -22,7 +22,7 @@ from rich.table import Table
 
 from astrohack.utils.constants import pol_str
 
-from astrohack.utils.file import overwrite_file
+from astrohack.utils.file import overwrite_file, check_if_file_can_be_opened
 from astrohack.utils.file import load_holog_file
 from astrohack.utils.file import load_point_file
 from astrohack.utils.data import write_meta_data
@@ -429,6 +429,10 @@ def extract_holog(
             }
 
     """
+
+
+    check_if_file_can_be_opened(point_name, '0.7.2')
+
     # Doing this here allows it to get captured by locals()
     if holog_name is None:
         holog_name = get_default_file_name(
