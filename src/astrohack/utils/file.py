@@ -11,10 +11,33 @@ import xarray as xr
 import toolviper.utils.logger as logger
 from toolviper.utils.console import Colorize
 
+from astrohack.utils import data_from_version_needs_patch
 from astrohack.utils.data import read_meta_data
 
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
 colorize = Colorize()
+
+
+def check_if_file_can_be_opened(filename, minimal_version):
+    meta_list = ['.holog_input', '.panel_input', '.image_input', '.locit_input', '.position_input']
+    found_meta = False
+    metadata = None
+
+    for meta_name in meta_list:
+        try:
+            metadata = read_meta_data(f'{filename}/{meta_name}')
+            found_meta = True
+        except FileNotFoundError:
+            continue
+
+    if not found_meta:
+        raise ValueError(f'{filename} does not contain valid metadata, it might not be a valid Astrohack file.')
+
+    file_version = metadata["version"]
+
+    if data_from_version_needs_patch(file_version, minimal_version):
+        raise ValueError(f'{filename} was created by astrohack version {file_version} which has a deprecated file,'
+                         f' format, please rerun astrohack on this dataset from scratch.')
 
 
 def load_panel_file(file=None, panel_dict=None, dask_load=True):
