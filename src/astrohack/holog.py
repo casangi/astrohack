@@ -8,6 +8,7 @@ import toolviper
 from numbers import Number
 from typing import List, Union, NewType, Tuple
 
+from astrohack import check_if_file_can_be_opened
 from astrohack.utils.graph import compute_graph
 from astrohack.utils.file import overwrite_file
 from astrohack.utils.data import write_meta_data
@@ -160,6 +161,9 @@ def holog(
         )
 
     """
+
+    check_if_file_can_be_opened(holog_name, '0.7.2')
+
     # Doing this here allows it to get captured by locals()
     if image_name is None:
         image_name = get_default_file_name(
