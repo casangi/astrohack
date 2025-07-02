@@ -483,6 +483,7 @@ def extract_holog(
     ant_names = np.array(ctb.getcol("NAME"))
     ant_id = np.arange(len(ant_names))
     ant_pos = ctb.getcol("POSITION")
+    ant_station = ctb.getcol("STATION")
 
     ctb.close()
 
@@ -688,6 +689,7 @@ def extract_holog(
                     extract_holog_params["sel_state_ids"] = state_ids
                     extract_holog_params["holog_map_key"] = holog_map_key
                     extract_holog_params["ant_names"] = ant_names
+                    extract_holog_params["ant_station"] = ant_station
 
                     if parallel:
                         delayed_list.append(

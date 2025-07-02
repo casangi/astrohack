@@ -43,6 +43,7 @@ def process_extract_holog_chunk(extract_holog_params):
     ddi = extract_holog_params["ddi"]
     scans = extract_holog_params["scans"]
     ant_names = extract_holog_params["ant_names"]
+    ant_station = extract_holog_params["ant_station"]
     ref_ant_per_map_ant_tuple = extract_holog_params["ref_ant_per_map_ant_tuple"]
     map_ant_tuple = extract_holog_params["map_ant_tuple"]
     map_ant_name_tuple = extract_holog_params["map_ant_name_tuple"]
@@ -102,7 +103,7 @@ def process_extract_holog_chunk(extract_holog_params):
     ctb.close()
     table_obj.close()
 
-    map_ref_dict = _get_map_ref_dict(map_ant_tuple, ref_ant_per_map_ant_tuple, ant_names)
+    map_ref_dict = _get_map_ref_dict(map_ant_tuple, ref_ant_per_map_ant_tuple, ant_names, ant_station)
 
     (
         time_vis,
@@ -165,6 +166,7 @@ def process_extract_holog_chunk(extract_holog_params):
         ddi,
         ms_name,
         ant_names,
+        ant_station,
         grid_params,
         time_interval,
         gen_info,
@@ -178,13 +180,13 @@ def process_extract_holog_chunk(extract_holog_params):
     )
 
 
-def _get_map_ref_dict(map_ant_tuple, ref_ant_per_map_ant_tuple, ant_names):
+def _get_map_ref_dict(map_ant_tuple, ref_ant_per_map_ant_tuple, ant_names, ant_station):
     map_dict = {}
     for ii, map_id in enumerate(map_ant_tuple):
         map_name = ant_names[map_id]
         ref_list = []
         for ref_id in ref_ant_per_map_ant_tuple[ii]:
-            ref_list.append(ant_names[ref_id])
+            ref_list.append(f'{ant_names[ref_id]} @ {ant_station[ref_id]}')
         map_dict[map_name] = ref_list
     return map_dict
 
@@ -388,6 +390,7 @@ def _create_holog_file(
     ddi,
     ms_name,
     ant_names,
+    ant_station,
     grid_params,
     time_interval,
     gen_info,
@@ -468,9 +471,9 @@ def _create_holog_file(
             xds.attrs["parallactic_samples"] = parallactic_samples
             xds.attrs["time_smoothing_interval"] = time_interval
 
-            xds.attrs["summary"] = _crate_observation_summary(ant_names[map_ant_index], gen_info, grid_params,
-                                                              xds["DIRECTIONAL_COSINES"].values, chan,
-                                                              pnt_map_dict[map_ant_tag], valid_data, map_ref_dict)
+            xds.attrs["summary"] = _crate_observation_summary(ant_names[map_ant_index], ant_station[map_ant_index],
+                                                              gen_info, grid_params, xds["DIRECTIONAL_COSINES"].values,
+                                                              chan, pnt_map_dict[map_ant_tag], valid_data, map_ref_dict)
 
             holog_file = holog_name
 
@@ -878,12 +881,13 @@ def _get_freq_summary(chan_axis):
     return freq_info
 
 
-def _crate_observation_summary(antenna_name, obs_info, grid_params, lm, chan_axis, pnt_map_xds, valid_data,
+def _crate_observation_summary(antenna_name, station, obs_info, grid_params, lm, chan_axis, pnt_map_xds, valid_data,
                                map_ref_dict):
     spw_info = _get_freq_summary(chan_axis)
     obs_info['az el info'] = _get_az_el_characteristics(pnt_map_xds, valid_data)
     obs_info['reference antennas'] = map_ref_dict[antenna_name]
     obs_info['antenna name'] = antenna_name
+    obs_info['station'] = station
 
     l_max = np.max(lm[:, 0])
     l_min = np.min(lm[:, 0])
