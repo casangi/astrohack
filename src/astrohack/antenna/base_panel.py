@@ -164,8 +164,8 @@ class BasePanel:
         else:
             angle = 0
         ax.text(
-            self.center.yc,
             self.center.xc,
+            self.center.yc,
             self.label,
             fontsize=fontsize,
             ha="center",
@@ -181,8 +181,8 @@ class BasePanel:
         """
         for iscrew, screw in enumerate(self.screws):
             ax.scatter(
-                screw.yc,
                 screw.xc,
+                screw.yc,
                 marker=self.markers[iscrew],
                 lw=self.linewidth,
                 s=markersize,
@@ -208,7 +208,7 @@ class BasePanel:
             else:
                 corr = corrections[iscrew]
             circle = plt.Circle(
-                (screw.yc, screw.xc),
+                (screw.xc, screw.yc),
                 self.plot_screw_size,
                 color=cmap(norm(corr)),
                 fill=True,
