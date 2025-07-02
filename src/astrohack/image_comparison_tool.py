@@ -1,6 +1,7 @@
-from typing import Union, List
+from typing import Union, List, Tuple
 import xarray as xr
 import pathlib
+import numpy as np
 
 import toolviper.utils.logger as logger
 import toolviper
@@ -26,10 +27,11 @@ def compare_fits_images(
     plot_original: bool = False,
     plot_divided_image: bool = False,
     plot_scatter: bool = True,
-    export_to_fits: bool = False,
+    z_scale_limits: Union[List[float], Tuple, np.array] = None,
     colormap: str = "viridis",
     dpi: int = 300,
     display: bool = False,
+    export_to_fits: bool = False,
     parallel: bool = False,
 ):
     """
@@ -72,8 +74,9 @@ def compare_fits_images(
     :param plot_scatter: Make a scatter plot of the Image against its reference image, default is True.
     :type plot_scatter: bool, optional
 
-    :param export_to_fits: Export created images to FITS files inside destination, default is False.
-    :type export_to_fits: bool, optional
+    :param z_scale_limits: Z scale for original, resampled, reference and residual images in the image units, default \
+    is None (get z scale limits from data)
+    :type z_scale_limits: list, np.array, tuple, optional
 
     :param colormap: Colormap to be used on image plots, default is "viridis".
     :type colormap: str, optional
@@ -83,6 +86,9 @@ def compare_fits_images(
 
     :param display: Display plots inline or suppress, defaults to True
     :type display: bool, optional
+
+    :param export_to_fits: Export created images to FITS files inside destination, default is False.
+    :type export_to_fits: bool, optional
 
     :param parallel: If True will use an existing astrohack client to do comparison in parallel, default is False
     :type parallel: bool, optional
@@ -136,7 +142,7 @@ def compare_fits_images(
     if len(image) != len(reference_image):
         msg = "List of reference images has a different size from the list of images"
         logger.error(msg)
-        return
+        return None
 
     param_dict = locals()
     pathlib.Path(param_dict["destination"]).mkdir(exist_ok=True)

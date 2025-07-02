@@ -63,10 +63,13 @@
             "required": false,
             "type": ["boolean"]
         },
-        "export_to_fits":{
-            "nullable": false,
+        "z_scale_limits": {
+            "nullable": true,
             "required": false,
-            "type": ["boolean"]
+            "type": ["list", "tuple", "ndarray"],
+            "struct_type": ["float"],
+            "minlength": 2,
+            "maxlength": 2
         },
         "colormap":{
             "nullable": false,
@@ -82,6 +85,11 @@
             "max": 1200
         },
         "display":{
+            "nullable": false,
+            "required": false,
+            "type": ["boolean"]
+        },
+        "export_to_fits":{
             "nullable": false,
             "required": false,
             "type": ["boolean"]
