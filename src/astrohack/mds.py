@@ -526,7 +526,7 @@ class AstrohackImageFile(dict):
         summary_file: str,
         ant: Union[str, List[str]] = "all",
         ddi: Union[int, List[int]] = "all",
-        az_el_key: str = 'mean',
+        az_el_key: str = 'center',
         phase_center_unit: str = 'radec',
         az_el_unit: str = 'deg',
         time_format: str = "%d %h %Y, %H:%M:%S",
@@ -543,7 +543,7 @@ class AstrohackImageFile(dict):
         :param ddi: data description ID to use in subselection, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param az_el_key: What type of Azimuth & Elevation information to print, 'mean', 'median' or 'center', default\
-        is 'mean'
+        is 'center'
         :type az_el_key: str, optional
         :param phase_center_unit: What unit to display phase center coordinates, 'radec' and angle units supported, \
         default is 'radec'
@@ -853,7 +853,7 @@ class AstrohackHologFile(dict):
             ant: Union[str, List[str]] = "all",
             ddi: Union[int, List[int]] = "all",
             map_id: Union[int, List[int]] = "all",
-            az_el_key: str = 'mean',
+            az_el_key: str = 'center',
             phase_center_unit: str = 'radec',
             az_el_unit: str = 'deg',
             time_format: str = "%d %h %Y, %H:%M:%S",
@@ -873,7 +873,7 @@ class AstrohackHologFile(dict):
         configuration,  defaults to "all" when None, ex. 0
         :type map_id: list or int, optional
         :param az_el_key: What type of Azimuth & Elevation information to print, 'mean', 'median' or 'center', default\
-        is 'mean'
+        is 'center'
         :type az_el_key: str, optional
         :param phase_center_unit: What unit to display phase center coordinates, 'radec' and angle units supported, \
         default is 'radec'
@@ -1261,7 +1261,7 @@ class AstrohackPanelFile(dict):
         summary_file: str,
         ant: Union[str, List[str]] = "all",
         ddi: Union[int, List[int]] = "all",
-        az_el_key: str = 'mean',
+        az_el_key: str = 'center',
         phase_center_unit: str = 'radec',
         az_el_unit: str = 'deg',
         time_format: str = "%d %h %Y, %H:%M:%S",
@@ -1278,7 +1278,7 @@ class AstrohackPanelFile(dict):
         :param ddi: data description ID to use in subselection, defaults to "all" when None, ex. 0
         :type ddi: list or int, optional
         :param az_el_key: What type of Azimuth & Elevation information to print, 'mean', 'median' or 'center', default\
-        is 'mean'
+        is 'center'
         :type az_el_key: str, optional
         :param phase_center_unit: What unit to display phase center coordinates, 'radec' and angle units supported, \
         default is 'radec'
