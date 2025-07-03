@@ -80,7 +80,7 @@ def process_holog_chunk(holog_chunk_params):
     except KeyError:
         is_near_field = False
 
-    beam_grid, time_centroid, freq_axis, pol_axis, l_axis, m_axis, grid_corr, summary["spectral"] = (
+    beam_grid, time_centroid, freq_axis, pol_axis, l_axis, m_axis, grid_corr, summary = (
         grid_beam(
             ant_ddi_dict=ant_data_dict[ddi],
             grid_size=grid_size,
@@ -89,7 +89,7 @@ def process_holog_chunk(holog_chunk_params):
             chan_tol_fac=holog_chunk_params["chan_tolerance_factor"],
             telescope=telescope,
             grid_interpolation_mode=holog_chunk_params["grid_interpolation_mode"],
-            frequency_information=summary["spectral"],
+            observation_summary=summary,
             label=label,
         )
     )

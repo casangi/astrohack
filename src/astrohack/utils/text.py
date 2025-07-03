@@ -781,7 +781,10 @@ def format_beam_information(beam_dict, tab, ident, key_size):
     for key, item in beam_dict.items():
         outstr += f'{tab}{key.capitalize().replace('_', ' '):{key_size}s} => '
         if key == 'cell size':
-            outstr += format_angular_distance(item)
+            if isinstance(item, list):
+                outstr += f'{format_angular_distance(item[0])} by {format_angular_distance(item[1])}'
+            else:
+                outstr += format_angular_distance(item)
         elif key == 'grid size':
             outstr += f'{item[0]} by {item[1]} pixels'
         else:
