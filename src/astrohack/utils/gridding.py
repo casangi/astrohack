@@ -61,7 +61,9 @@ def grid_beam(
         n_chan = 1
         avg_chan_map, avg_freq_axis = _create_average_chan_map(freq_axis, chan_tol_fac)
         output_freq_axis = [np.mean(avg_freq_axis)]
-        observation_summary["spectral"]["channel width"] *= observation_summary["spectral"]["number of channels"]
+        observation_summary["spectral"]["channel width"] *= observation_summary[
+            "spectral"
+        ]["number of channels"]
         observation_summary["spectral"]["number of channels"] = 1
     else:
         avg_chan_map = None
@@ -140,7 +142,7 @@ def grid_beam(
         l_axis,
         m_axis,
         grid_corr,
-        observation_summary
+        observation_summary,
     )
 
 

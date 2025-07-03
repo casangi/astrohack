@@ -57,7 +57,14 @@ def _construct_general_graph_recursively(
                     logger.warning(f"{item} is not present for {oneup}")
 
 
-def compute_graph(looping_dict, chunk_function, param_dict, key_order, parallel=False, fetch_returns=False):
+def compute_graph(
+    looping_dict,
+    chunk_function,
+    param_dict,
+    key_order,
+    parallel=False,
+    fetch_returns=False,
+):
     """
     General tool for looping over the data and constructing graphs for dask parallel processing
     Args:

@@ -202,7 +202,7 @@ def panel(
         )
 
     """
-    check_if_file_can_be_opened(image_name, '0.7.2')
+    check_if_file_can_be_opened(image_name, "0.7.2")
 
     # Doing this here allows it to get captured by locals()
     if panel_name is None:

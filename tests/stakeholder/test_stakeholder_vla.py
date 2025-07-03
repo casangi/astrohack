@@ -183,8 +183,13 @@ def test_holography_pipeline(set_data):
     before_image = str(set_data / "vla.before.split.image.zarr")
     after_image = str(set_data / "vla.after.split.image.zarr")
 
-    holog(holog_name=before_holog, overwrite=True, parallel=False, grid_size=[31, 31],
-          cell_size=[-0.0006386556122807017, 0.0006386556122807017])
+    holog(
+        holog_name=before_holog,
+        overwrite=True,
+        parallel=False,
+        grid_size=[31, 31],
+        cell_size=[-0.0006386556122807017, 0.0006386556122807017],
+    )
 
     assert verify_center_pixels(
         file=before_image,
@@ -194,8 +199,13 @@ def test_holography_pipeline(set_data):
         tolerance=1.5e-6,
     ), "Verifiy center pixels-before"
 
-    holog(holog_name=after_holog, overwrite=True, parallel=False, grid_size=[31, 31],
-          cell_size=[-0.0006386556122807017, 0.0006386556122807017])
+    holog(
+        holog_name=after_holog,
+        overwrite=True,
+        parallel=False,
+        grid_size=[31, 31],
+        cell_size=[-0.0006386556122807017, 0.0006386556122807017],
+    )
 
     assert verify_center_pixels(
         file=after_image,

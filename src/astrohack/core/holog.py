@@ -38,39 +38,49 @@ def process_holog_chunk(holog_chunk_params):
         ddi_id=holog_chunk_params["this_ddi"],
     )
     label = create_dataset_label(
-        holog_chunk_params["this_ant"], holog_chunk_params["this_ddi"], separator=','
+        holog_chunk_params["this_ant"], holog_chunk_params["this_ddi"], separator=","
     )
     logger.info(f"Processing {label}")
     ddi = holog_chunk_params["this_ddi"]
     convert_to_stokes = holog_chunk_params["to_stokes"]
     ref_xds = ant_data_dict[ddi]["map_0"]
-    summary = ref_xds.attrs['summary']
+    summary = ref_xds.attrs["summary"]
 
     user_grid_size = holog_chunk_params["grid_size"]
 
     if user_grid_size is None:
-        grid_size = np.array(summary['beam']['grid size'])
+        grid_size = np.array(summary["beam"]["grid size"])
     elif isinstance(user_grid_size, int):
         grid_size = np.array([user_grid_size, user_grid_size])
     elif isinstance(user_grid_size, (list, np.ndarray)):
         grid_size = np.array(user_grid_size)
     else:
-        raise Exception(f"Don't know what due with grid size of type {type(user_grid_size)}")
+        raise Exception(
+            f"Don't know what due with grid size of type {type(user_grid_size)}"
+        )
 
-    logger.info(f'{label}: Using a grid of {grid_size[0]} by {grid_size[1]} pixels for the beam')
+    logger.info(
+        f"{label}: Using a grid of {grid_size[0]} by {grid_size[1]} pixels for the beam"
+    )
 
     user_cell_size = holog_chunk_params["cell_size"]
     if user_cell_size is None:
-        cell_size = np.array([-summary['beam']['cell size'], summary['beam']['cell size']])
+        cell_size = np.array(
+            [-summary["beam"]["cell size"], summary["beam"]["cell size"]]
+        )
     elif isinstance(user_cell_size, (int, float)):
         cell_size = np.array([-user_cell_size, user_cell_size])
     elif isinstance(user_cell_size, (list, np.ndarray)):
         cell_size = np.array(user_cell_size)
     else:
-        raise Exception(f"Don't know what due with cell size of type {type(user_cell_size)}")
+        raise Exception(
+            f"Don't know what due with cell size of type {type(user_cell_size)}"
+        )
 
-    logger.info(f'{label}: Using a cell size of {format_angular_distance(cell_size[0])} by '
-                f'{format_angular_distance(cell_size[1])} for the beam')
+    logger.info(
+        f"{label}: Using a cell size of {format_angular_distance(cell_size[0])} by "
+        f"{format_angular_distance(cell_size[1])} for the beam"
+    )
 
     telescope = _get_correct_telescope(
         summary["general"]["antenna name"], summary["general"]["telescope name"]
@@ -80,18 +90,25 @@ def process_holog_chunk(holog_chunk_params):
     except KeyError:
         is_near_field = False
 
-    beam_grid, time_centroid, freq_axis, pol_axis, l_axis, m_axis, grid_corr, summary = (
-        grid_beam(
-            ant_ddi_dict=ant_data_dict[ddi],
-            grid_size=grid_size,
-            sky_cell_size=cell_size,
-            avg_chan=holog_chunk_params["chan_average"],
-            chan_tol_fac=holog_chunk_params["chan_tolerance_factor"],
-            telescope=telescope,
-            grid_interpolation_mode=holog_chunk_params["grid_interpolation_mode"],
-            observation_summary=summary,
-            label=label,
-        )
+    (
+        beam_grid,
+        time_centroid,
+        freq_axis,
+        pol_axis,
+        l_axis,
+        m_axis,
+        grid_corr,
+        summary,
+    ) = grid_beam(
+        ant_ddi_dict=ant_data_dict[ddi],
+        grid_size=grid_size,
+        sky_cell_size=cell_size,
+        avg_chan=holog_chunk_params["chan_average"],
+        chan_tol_fac=holog_chunk_params["chan_tolerance_factor"],
+        telescope=telescope,
+        grid_interpolation_mode=holog_chunk_params["grid_interpolation_mode"],
+        observation_summary=summary,
+        label=label,
     )
 
     if not is_near_field:
@@ -194,8 +211,9 @@ def process_holog_chunk(holog_chunk_params):
                 logger.error(f"Unsupported phase fitting engine: {phase_fit_engine}")
                 raise ValueError
 
-    summary['aperture'] = _get_aperture_summary(u_axis, v_axis,
-                                                _compute_aperture_resolution(l_axis, m_axis, used_wavelength))
+    summary["aperture"] = _get_aperture_summary(
+        u_axis, v_axis, _compute_aperture_resolution(l_axis, m_axis, used_wavelength)
+    )
 
     _export_to_xds(
         beam_grid,
@@ -221,7 +239,7 @@ def process_holog_chunk(holog_chunk_params):
         zernike_rms,
         zernike_n_order,
         holog_chunk_params["image_name"],
-        summary
+        summary,
     )
 
     logger.info(f"Finished processing {label}")
@@ -270,16 +288,16 @@ def _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope, scaling=1
     end_cut = center_pixel + radius
 
     amplitude = np.absolute(
-        aperture_grid[..., start_cut[0]: end_cut[0], start_cut[1]: end_cut[1]]
+        aperture_grid[..., start_cut[0] : end_cut[0], start_cut[1] : end_cut[1]]
     )
     phase = np.angle(
-        aperture_grid[..., start_cut[0]: end_cut[0], start_cut[1]: end_cut[1]]
+        aperture_grid[..., start_cut[0] : end_cut[0], start_cut[1] : end_cut[1]]
     )
     return (
         amplitude,
         phase,
-        u_axis[start_cut[0]: end_cut[0]],
-        v_axis[start_cut[1]: end_cut[1]],
+        u_axis[start_cut[0] : end_cut[0]],
+        v_axis[start_cut[1] : end_cut[1]],
     )
 
 
@@ -317,7 +335,7 @@ def _export_to_xds(
     zernike_rms,
     zernike_n_order,
     image_name,
-    summary
+    summary,
 ):
     # Todo: Add Paralactic angle as a non-dimension coordinate dependant on time.
     xds = xr.Dataset()
@@ -371,8 +389,8 @@ def _export_to_xds(
 
 def _get_aperture_summary(u_axis, v_axis, aperture_resolution):
     aperture_dict = {
-        'grid size': [u_axis.shape[0], v_axis.shape[0]],
-        'cell size': [u_axis[1]-u_axis[0], v_axis[1]-v_axis[0]],
-        'resolution': aperture_resolution.tolist()
+        "grid size": [u_axis.shape[0], v_axis.shape[0]],
+        "cell size": [u_axis[1] - u_axis[0], v_axis[1] - v_axis[0]],
+        "resolution": aperture_resolution.tolist(),
     }
     return aperture_dict

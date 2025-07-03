@@ -88,7 +88,7 @@ class AntennaSurface:
         self.pol_state = pol_state
         self._read_xds(inputxds)
         self.telescope = telescope
-        
+
         if patch_phase:
             self.phase = phase_wrapping(self.phase)
 
@@ -196,13 +196,11 @@ class AntennaSurface:
             self._read_holog_xds(inputxds)
 
         # Common elements
-        self.summary = inputxds.attrs['summary']
+        self.summary = inputxds.attrs["summary"]
         self.antenna_name = inputxds.attrs["summary"]["general"]["antenna name"]
         self.resolution = inputxds.summary["aperture"]["resolution"]
         self.ddi = inputxds.attrs["ddi"]
-        self.label = create_dataset_label(
-            self.antenna_name, inputxds.attrs["ddi"]
-        )
+        self.label = create_dataset_label(self.antenna_name, inputxds.attrs["ddi"])
 
     def _define_amp_clip(self, clip_type, clip_level):
         self.amplitude_noise = np.where(self.base_mask, np.nan, self.amplitude)
@@ -893,7 +891,7 @@ class AntennaSurface:
         xds.attrs["fitted"] = self.fitted
         xds.attrs["aperture_resolution"] = self.resolution
         xds.attrs["pol_state"] = self.pol_state
-        xds.attrs['summary'] = self.summary
+        xds.attrs["summary"] = self.summary
 
         xds["AMPLITUDE"] = xr.DataArray(self.amplitude, dims=["u", "v"])
         xds["PHASE"] = xr.DataArray(self.phase, dims=["u", "v"])

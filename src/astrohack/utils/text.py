@@ -457,41 +457,43 @@ def format_wavelength(wave_value, unit="m", decimal_places=2):
     return format_value_unit(fac * wave_value, unitout, decimal_places)
 
 
-def format_duration(duration, unit='sec', decimal_places=2):
-    duration = np.abs(duration*convert_unit(unit, 'sec', 'time'))
-    oneminu = convert_unit('min', 'sec', 'time')
-    onehour = convert_unit('hour', 'sec', 'time')
-    oneday = convert_unit('day', 'sec', 'time')
+def format_duration(duration, unit="sec", decimal_places=2):
+    duration = np.abs(duration * convert_unit(unit, "sec", "time"))
+    oneminu = convert_unit("min", "sec", "time")
+    onehour = convert_unit("hour", "sec", "time")
+    oneday = convert_unit("day", "sec", "time")
 
     if duration < 1:
         if duration < 1e-6:
-            unitout = 'nsec'
+            unitout = "nsec"
         elif duration < 1e-3:
-            unitout = 'usec'
+            unitout = "usec"
         else:
-            unitout = 'msec'
-        fac = convert_unit('sec', unitout, "time")
+            unitout = "msec"
+        fac = convert_unit("sec", unitout, "time")
         return format_value_unit(fac * duration, unitout, decimal_places)
     elif duration < oneminu:
-        return format_value_unit(duration, 'sec', decimal_places)
+        return format_value_unit(duration, "sec", decimal_places)
     elif oneminu <= duration < onehour:
-        minu = int(np.floor(duration/oneminu))
-        seco = duration - minu*oneminu
-        return f'{minu} min, {format_value_unit(seco, 'sec', decimal_places)}'
+        minu = int(np.floor(duration / oneminu))
+        seco = duration - minu * oneminu
+        return f"{minu} min, {format_value_unit(seco, 'sec', decimal_places)}"
     elif onehour <= duration < oneday:
-        hour = int(np.floor(duration/onehour))
-        rest = duration - hour*onehour
-        minu = int(np.floor(rest/oneminu))
-        seco = rest - minu*oneminu
-        return f'{hour} hour, {minu} min, {format_value_unit(seco, 'sec', decimal_places)}'
+        hour = int(np.floor(duration / onehour))
+        rest = duration - hour * onehour
+        minu = int(np.floor(rest / oneminu))
+        seco = rest - minu * oneminu
+        return (
+            f"{hour} hour, {minu} min, {format_value_unit(seco, 'sec', decimal_places)}"
+        )
     else:
-        day = int(np.floor(duration/oneday))
-        rest = duration - day*oneday
-        hour = int(np.floor(rest/onehour))
-        rest -= hour*onehour
-        minu = int(np.floor(rest/oneminu))
-        seco = rest - minu*oneminu
-        return f'{day} day, {hour} hour, {minu} min, {format_value_unit(seco, 'sec', decimal_places)}'
+        day = int(np.floor(duration / oneday))
+        rest = duration - day * oneday
+        hour = int(np.floor(rest / onehour))
+        rest -= hour * onehour
+        minu = int(np.floor(rest / oneminu))
+        seco = rest - minu * oneminu
+        return f"{day} day, {hour} hour, {minu} min, {format_value_unit(seco, 'sec', decimal_places)}"
 
 
 def format_angular_distance(user_value, unit="rad", decimal_places=2):
@@ -714,132 +716,171 @@ def format_object_contents(obj):
     return outstr
 
 
-def format_az_el_information(az_el_dict, key='center', unit='deg', precision='.1f'):
-    if key == 'center':
-        prefix = '@ l,m = (0,0),'
-    elif key in ['mean', 'median']:
+def format_az_el_information(az_el_dict, key="center", unit="deg", precision=".1f"):
+    if key == "center":
+        prefix = "@ l,m = (0,0),"
+    elif key in ["mean", "median"]:
         prefix = key.capitalize()
     else:
         raise ValueError(f"Unrecognized key: {key}")
 
-    az_el = np.array(az_el_dict[key])*convert_unit('rad', unit, 'trigonometric')
-    prefix += ' Az, El'
-    az_el_label = f'{prefix} = ({az_el[0]:{precision}}, {az_el[1]:{precision}}) [{unit}]'
+    az_el = np.array(az_el_dict[key]) * convert_unit("rad", unit, "trigonometric")
+    prefix += " Az, El"
+    az_el_label = (
+        f"{prefix} = ({az_el[0]:{precision}}, {az_el[1]:{precision}}) [{unit}]"
+    )
     return az_el_label
 
 
-def format_general_information(obs_dict, tab, ident, key_size, az_el_key='mean', phase_center_unit='radec',
-                               az_el_unit='deg', time_format="%d %h %Y, %H:%M:%S", precision='.1f'):
-    outstr = f'{ident}General:\n'
-    tab = tab+ident
-    key_order = ['telescope name', 'antenna name', 'station', 'reference antennas', 'source', 'phase center',
-                 'az el info', 'start time', 'stop time', 'duration']
+def format_general_information(
+    obs_dict,
+    tab,
+    ident,
+    key_size,
+    az_el_key="mean",
+    phase_center_unit="radec",
+    az_el_unit="deg",
+    time_format="%d %h %Y, %H:%M:%S",
+    precision=".1f",
+):
+    outstr = f"{ident}General:\n"
+    tab = tab + ident
+    key_order = [
+        "telescope name",
+        "antenna name",
+        "station",
+        "reference antennas",
+        "source",
+        "phase center",
+        "az el info",
+        "start time",
+        "stop time",
+        "duration",
+    ]
     for key in key_order:
         item = obs_dict[key]
-        line = f'{tab}{key.capitalize().replace('_', ' '):{key_size}s} => '
-        if 'phase center' in key:
-            if phase_center_unit == 'radec':
-                line += f'{rad_to_hour_str(item[0])} {rad_to_deg_str(item[1])} [FK5]'
+        line = f"{tab}{key.capitalize().replace('_', ' '):{key_size}s} => "
+        if "phase center" in key:
+            if phase_center_unit == "radec":
+                line += f"{rad_to_hour_str(item[0])} {rad_to_deg_str(item[1])} [FK5]"
             else:
-                fac = convert_unit('rad', phase_center_unit, 'trigonometric')
-                line += f'({fac*item[0]:{precision}}, {fac*item[1]:{precision}}) [{phase_center_unit}]'
-        elif 'time' in key:
-            date = Time(item, format='mjd').to_datetime()
-            line += f'{date.strftime(time_format)} (UTC)'
-        elif 'az el info' in key:
-            line += f'{format_az_el_information(item, az_el_key, unit=az_el_unit, precision=precision)}'
-        elif 'duration' == key:
-            line += f'{format_duration(item)}'
+                fac = convert_unit("rad", phase_center_unit, "trigonometric")
+                line += f"({fac*item[0]:{precision}}, {fac*item[1]:{precision}}) [{phase_center_unit}]"
+        elif "time" in key:
+            date = Time(item, format="mjd").to_datetime()
+            line += f"{date.strftime(time_format)} (UTC)"
+        elif "az el info" in key:
+            line += f"{format_az_el_information(item, az_el_key, unit=az_el_unit, precision=precision)}"
+        elif "duration" == key:
+            line += f"{format_duration(item)}"
         else:
             line += str(item)
-        outstr += f'{line}\n'
+        outstr += f"{line}\n"
 
     return outstr
 
 
 def format_spectral_information(freq_dict, tab, ident, key_size):
-    outstr = f'{ident}Spectral:\n'
+    outstr = f"{ident}Spectral:\n"
     tab += ident
     for key, item in freq_dict.items():
-        outstr += f'{tab}{key.capitalize().replace('_', ' '):{key_size}s} => '
-        if 'range' in key:
-            outstr += f'{format_frequency(item[0], decimal_places=3)} to {format_frequency(item[1], decimal_places=3)}'
-        elif 'number' in key:
-            outstr += f'{item}'
-        elif 'wavelength' in key:
+        outstr += f"{tab}{key.capitalize().replace('_', ' '):{key_size}s} => "
+        if "range" in key:
+            outstr += f"{format_frequency(item[0], decimal_places=3)} to {format_frequency(item[1], decimal_places=3)}"
+        elif "number" in key:
+            outstr += f"{item}"
+        elif "wavelength" in key:
             outstr += format_wavelength(item, decimal_places=3)
         else:
             outstr += format_frequency(item, decimal_places=3)
-        outstr += '\n'
+        outstr += "\n"
 
     return outstr
 
 
 def format_beam_information(beam_dict, tab, ident, key_size):
-    outstr = f'{ident}Beam:\n'
+    outstr = f"{ident}Beam:\n"
     tab += ident
     for key, item in beam_dict.items():
-        outstr += f'{tab}{key.capitalize().replace('_', ' '):{key_size}s} => '
-        if key == 'cell size':
+        outstr += f"{tab}{key.capitalize().replace('_', ' '):{key_size}s} => "
+        if key == "cell size":
             if isinstance(item, list):
-                outstr += f'{format_angular_distance(item[0])} by {format_angular_distance(item[1])}'
+                outstr += f"{format_angular_distance(item[0])} by {format_angular_distance(item[1])}"
             else:
                 outstr += format_angular_distance(item)
-        elif key == 'grid size':
-            outstr += f'{item[0]} by {item[1]} pixels'
+        elif key == "grid size":
+            outstr += f"{item[0]} by {item[1]} pixels"
         else:
-            outstr += f'From {format_angular_distance(item[0])} to {format_angular_distance(item[1])}'
-        outstr += '\n'
+            outstr += f"From {format_angular_distance(item[0])} to {format_angular_distance(item[1])}"
+        outstr += "\n"
     return outstr
 
 
 def format_aperture_information(aperture_dict, tab, ident, key_size):
-    outstr = f'{ident}Aperture:\n'
+    outstr = f"{ident}Aperture:\n"
     tab += ident
     for key, item in aperture_dict.items():
-        outstr += f'{tab}{key.capitalize().replace('_', ' '):{key_size}s} => '
-        if key == 'grid size':
-            outstr += f'{item[0]} by {item[1]} pixels'
+        outstr += f"{tab}{key.capitalize().replace('_', ' '):{key_size}s} => "
+        if key == "grid size":
+            outstr += f"{item[0]} by {item[1]} pixels"
         else:
-            outstr += f'{format_wavelength(item[0])} by {format_wavelength(item[1])}'
-        outstr += '\n'
+            outstr += f"{format_wavelength(item[0])} by {format_wavelength(item[1])}"
+        outstr += "\n"
     return outstr
 
 
-def format_observation_summary(obs_sum, tab_size=3, tab_count=0, az_el_key='mean', phase_center_unit='radec',
-                               az_el_unit='deg', time_format="%d %h %Y, %H:%M:%S", precision='.1f', key_size=18):
-    spc = ' '
-    major_tab = tab_count*tab_size*spc
-    one_tab = tab_size*spc
+def format_observation_summary(
+    obs_sum,
+    tab_size=3,
+    tab_count=0,
+    az_el_key="mean",
+    phase_center_unit="radec",
+    az_el_unit="deg",
+    time_format="%d %h %Y, %H:%M:%S",
+    precision=".1f",
+    key_size=18,
+):
+    spc = " "
+    major_tab = tab_count * tab_size * spc
+    one_tab = tab_size * spc
     ident = major_tab
 
-    outstr = format_general_information(obs_sum["general"], az_el_key=az_el_key,
-                                        phase_center_unit=phase_center_unit, az_el_unit=az_el_unit,
-                                        time_format=time_format, precision=precision, tab=one_tab,
-                                        ident=ident, key_size=key_size)
-    outstr += '\n'
+    outstr = format_general_information(
+        obs_sum["general"],
+        az_el_key=az_el_key,
+        phase_center_unit=phase_center_unit,
+        az_el_unit=az_el_unit,
+        time_format=time_format,
+        precision=precision,
+        tab=one_tab,
+        ident=ident,
+        key_size=key_size,
+    )
+    outstr += "\n"
     outstr += format_spectral_information(obs_sum["spectral"], one_tab, ident, key_size)
 
-    outstr += '\n'
+    outstr += "\n"
     outstr += format_beam_information(obs_sum["beam"], one_tab, ident, key_size)
 
     if obs_sum["aperture"] is not None:
-        outstr += '\n'
-        outstr += format_aperture_information(obs_sum["aperture"], one_tab, ident, key_size)
+        outstr += "\n"
+        outstr += format_aperture_information(
+            obs_sum["aperture"], one_tab, ident, key_size
+        )
     return outstr
 
 
 def make_header(heading, separator, header_width, buffer_width):
-    spc = ' '
-    sep_line = f'{header_width * separator}\n'
+    spc = " "
+    sep_line = f"{header_width * separator}\n"
     len_head = len(heading)
-    before_blank = (header_width - 2*buffer_width - len_head)//2
-    if 2*buffer_width+len_head+2*before_blank < header_width:
-        after_blank = before_blank+1
+    before_blank = (header_width - 2 * buffer_width - len_head) // 2
+    if 2 * buffer_width + len_head + 2 * before_blank < header_width:
+        after_blank = before_blank + 1
     else:
         after_blank = before_blank
     outstr = sep_line
-    buffer = buffer_width*separator
-    outstr += f'{buffer}{before_blank*spc}{heading}{after_blank*spc}{buffer}\n'
-    outstr += sep_line+'\n'
+    buffer = buffer_width * separator
+    outstr += f"{buffer}{before_blank*spc}{heading}{after_blank*spc}{buffer}\n"
+    outstr += sep_line + "\n"
     return outstr

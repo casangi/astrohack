@@ -161,7 +161,7 @@ def holog(
 
     """
 
-    check_if_file_can_be_opened(holog_name, '0.7.2')
+    check_if_file_can_be_opened(holog_name, "0.7.2")
 
     # Doing this here allows it to get captured by locals()
     if image_name is None:

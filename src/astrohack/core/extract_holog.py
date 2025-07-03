@@ -80,7 +80,8 @@ def process_extract_holog_chunk(extract_holog_params):
     else:
         ctb = ctables.taql(
             "select %s, SCAN_NUMBER, ANTENNA1, ANTENNA2, TIME, TIME_CENTROID, WEIGHT, FLAG_ROW, FLAG, FIELD_ID from "
-            "$table_obj WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s" % (data_column, ddi, scans)
+            "$table_obj WHERE DATA_DESC_ID == %s AND SCAN_NUMBER in %s"
+            % (data_column, ddi, scans)
         )
     vis_data = ctb.getcol(data_column)
     weight = ctb.getcol("WEIGHT")
@@ -103,7 +104,9 @@ def process_extract_holog_chunk(extract_holog_params):
     ctb.close()
     table_obj.close()
 
-    map_ref_dict = _get_map_ref_dict(map_ant_tuple, ref_ant_per_map_ant_tuple, ant_names, ant_station)
+    map_ref_dict = _get_map_ref_dict(
+        map_ant_tuple, ref_ant_per_map_ant_tuple, ant_names, ant_station
+    )
 
     (
         time_vis,
@@ -141,7 +144,11 @@ def process_extract_holog_chunk(extract_holog_params):
     for ant_index in vis_map_dict.keys():
         antenna_name = "_".join(("ant", ant_names[ant_index]))
         n_pix, cell_size = calculate_optimal_grid_parameters(
-            pnt_map_dict, antenna_name, Telescope(gen_info["telescope name"]).diam, chan_freq, ddi
+            pnt_map_dict,
+            antenna_name,
+            Telescope(gen_info["telescope name"]).diam,
+            chan_freq,
+            ddi,
         )
 
         grid_params[antenna_name] = {"n_pix": n_pix, "cell_size": cell_size}
@@ -170,7 +177,7 @@ def process_extract_holog_chunk(extract_holog_params):
         grid_params,
         time_interval,
         gen_info,
-        map_ref_dict
+        map_ref_dict,
     )
 
     logger.info(
@@ -186,7 +193,7 @@ def _get_map_ref_dict(map_ant_tuple, ref_ant_per_map_ant_tuple, ant_names, ant_s
         map_name = ant_names[map_id]
         ref_list = []
         for ref_id in ref_ant_per_map_ant_tuple[ii]:
-            ref_list.append(f'{ant_names[ref_id]} @ {ant_station[ref_id]}')
+            ref_list.append(f"{ant_names[ref_id]} @ {ant_station[ref_id]}")
         map_dict[map_name] = ref_list
     return map_dict
 
@@ -394,7 +401,7 @@ def _create_holog_file(
     grid_params,
     time_interval,
     gen_info,
-    map_ref_dict
+    map_ref_dict,
 ):
     """Create holog-structured, formatted output file and save to zarr.
 
@@ -471,9 +478,17 @@ def _create_holog_file(
             xds.attrs["parallactic_samples"] = parallactic_samples
             xds.attrs["time_smoothing_interval"] = time_interval
 
-            xds.attrs["summary"] = _crate_observation_summary(ant_names[map_ant_index], ant_station[map_ant_index],
-                                                              gen_info, grid_params, xds["DIRECTIONAL_COSINES"].values,
-                                                              chan, pnt_map_dict[map_ant_tag], valid_data, map_ref_dict)
+            xds.attrs["summary"] = _crate_observation_summary(
+                ant_names[map_ant_index],
+                ant_station[map_ant_index],
+                gen_info,
+                grid_params,
+                xds["DIRECTIONAL_COSINES"].values,
+                chan,
+                pnt_map_dict[map_ant_tag],
+                valid_data,
+                map_ref_dict,
+            )
 
             holog_file = holog_name
 
@@ -847,7 +862,8 @@ def _get_general_summary(ms_name, field_ids):
         "telescope name": telescope_name,
         "start time": time_range[0],  # start time is in MJD in days
         "stop time": time_range[-1],  # stop time is in MJD in days
-        "duration": (time_range[-1]-time_range[0])*86400  # Store it in seconds rather than days
+        "duration": (time_range[-1] - time_range[0])
+        * 86400,  # Store it in seconds rather than days
     }
     return gen_info
 
@@ -857,39 +873,53 @@ def _get_az_el_characteristics(pnt_map_xds, valid_data):
     lm = pnt_map_xds["DIRECTIONAL_COSINES"].values[valid_data, ...]
     mean_az_el = np.mean(az_el, axis=0)
     median_az_el = np.median(az_el, axis=0)
-    lmmid = lm.shape[0]//2
-    lmquart = lmmid//2
-    ilow = lmmid-lmquart
-    iupper = lmmid+lmquart+1
+    lmmid = lm.shape[0] // 2
+    lmquart = lmmid // 2
+    ilow = lmmid - lmquart
+    iupper = lmmid + lmquart + 1
     ic = np.argmin((lm[ilow:iupper, 0] ** 2 + lm[ilow:iupper, 1]) ** 2) + ilow
     center_az_el = az_el[ic]
-    az_el_info = {'center': center_az_el.tolist(),
-                  'mean': mean_az_el.tolist(),
-                  'median': median_az_el.tolist()}
+    az_el_info = {
+        "center": center_az_el.tolist(),
+        "mean": mean_az_el.tolist(),
+        "median": median_az_el.tolist(),
+    }
     return az_el_info
 
 
 def _get_freq_summary(chan_axis):
-    chan_width = np.abs(chan_axis[1]-chan_axis[0])
-    rep_freq = chan_axis[chan_axis.shape[0]//2]
+    chan_width = np.abs(chan_axis[1] - chan_axis[0])
+    rep_freq = chan_axis[chan_axis.shape[0] // 2]
     freq_info = {
         "channel width": chan_width,
         "number of channels": chan_axis.shape[0],
-        "frequency range": [chan_axis[0]-chan_width/2, chan_axis[-1]+chan_width/2],
+        "frequency range": [
+            chan_axis[0] - chan_width / 2,
+            chan_axis[-1] + chan_width / 2,
+        ],
         "rep. frequency": rep_freq,
-        "rep. wavelength": clight/rep_freq
+        "rep. wavelength": clight / rep_freq,
     }
 
     return freq_info
 
 
-def _crate_observation_summary(antenna_name, station, obs_info, grid_params, lm, chan_axis, pnt_map_xds, valid_data,
-                               map_ref_dict):
+def _crate_observation_summary(
+    antenna_name,
+    station,
+    obs_info,
+    grid_params,
+    lm,
+    chan_axis,
+    pnt_map_xds,
+    valid_data,
+    map_ref_dict,
+):
     spw_info = _get_freq_summary(chan_axis)
-    obs_info['az el info'] = _get_az_el_characteristics(pnt_map_xds, valid_data)
-    obs_info['reference antennas'] = map_ref_dict[antenna_name]
-    obs_info['antenna name'] = antenna_name
-    obs_info['station'] = station
+    obs_info["az el info"] = _get_az_el_characteristics(pnt_map_xds, valid_data)
+    obs_info["reference antennas"] = map_ref_dict[antenna_name]
+    obs_info["antenna name"] = antenna_name
+    obs_info["station"] = station
 
     l_max = np.max(lm[:, 0])
     l_min = np.min(lm[:, 0])
@@ -897,17 +927,17 @@ def _crate_observation_summary(antenna_name, station, obs_info, grid_params, lm,
     m_min = np.min(lm[:, 1])
 
     beam_info = {
-        'grid size': grid_params[f'ant_{antenna_name}']['n_pix'],
-        'cell size': grid_params[f'ant_{antenna_name}']['cell_size'],
-        'l extent': [l_min, l_max],
-        'm extent': [m_min, m_max],
+        "grid size": grid_params[f"ant_{antenna_name}"]["n_pix"],
+        "cell size": grid_params[f"ant_{antenna_name}"]["cell_size"],
+        "l extent": [l_min, l_max],
+        "m extent": [m_min, m_max],
     }
 
     summary = {
         "spectral": spw_info,
         "beam": beam_info,
         "general": obs_info,
-        "aperture": None
+        "aperture": None,
     }
     return summary
 
@@ -947,4 +977,3 @@ def create_holog_json(holog_file, holog_dict):
         logger.error(f"{error}")
 
         raise Exception(error)
-

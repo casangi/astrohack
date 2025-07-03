@@ -430,8 +430,7 @@ def extract_holog(
 
     """
 
-
-    check_if_file_can_be_opened(point_name, '0.7.2')
+    check_if_file_can_be_opened(point_name, "0.7.2")
 
     # Doing this here allows it to get captured by locals()
     if holog_name is None:

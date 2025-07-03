@@ -146,7 +146,7 @@ def locit(
        difference delays in "myphase.locit.zarr" for all antennas but only using sources above 30 degrees elevation.
     """
 
-    check_if_file_can_be_opened(locit_name, '0.3.0')
+    check_if_file_can_be_opened(locit_name, "0.3.0")
 
     # Doing this here allows it to get captured by locals()
     if position_name is None:

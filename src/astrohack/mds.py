@@ -41,7 +41,8 @@ from astrohack.visualization.textual_data import (
     export_phase_fit_chunk,
     print_array_configuration,
     export_to_parminator,
-    export_zernike_fit_chunk, generate_observation_summary,
+    export_zernike_fit_chunk,
+    generate_observation_summary,
 )
 from astrohack.visualization.fits import (
     export_to_fits_panel_chunk,
@@ -200,7 +201,7 @@ class AstrohackImageFile(dict):
                 self.export_phase_fit_results,
                 self.export_zernike_fit_results,
                 self.plot_zernike_model,
-                self.observation_summary
+                self.observation_summary,
             ]
         )
 
@@ -526,9 +527,9 @@ class AstrohackImageFile(dict):
         summary_file: str,
         ant: Union[str, List[str]] = "all",
         ddi: Union[int, List[int]] = "all",
-        az_el_key: str = 'center',
-        phase_center_unit: str = 'radec',
-        az_el_unit: str = 'deg',
+        az_el_key: str = "center",
+        phase_center_unit: str = "radec",
+        az_el_unit: str = "deg",
         time_format: str = "%d %h %Y, %H:%M:%S",
         tab_size: int = 3,
         print_summary: bool = True,
@@ -568,10 +569,16 @@ class AstrohackImageFile(dict):
 
         param_dict = locals()
         key_order = ["ant", "ddi"]
-        execution, summary = compute_graph(self, generate_observation_summary, param_dict, key_order, parallel,
-                                           fetch_returns=True)
+        execution, summary = compute_graph(
+            self,
+            generate_observation_summary,
+            param_dict,
+            key_order,
+            parallel,
+            fetch_returns=True,
+        )
         summary = "".join(summary)
-        with open(summary_file, 'w') as output_file:
+        with open(summary_file, "w") as output_file:
             output_file.write(summary)
         if print_summary:
             print(summary)
@@ -652,7 +659,7 @@ class AstrohackHologFile(dict):
                 self.plot_diagnostics,
                 self.plot_lm_sky_coverage,
                 self.export_to_aips,
-                self.observation_summary
+                self.observation_summary,
             ]
         )
 
@@ -848,18 +855,18 @@ class AstrohackHologFile(dict):
 
     @toolviper.utils.parameter.validate(custom_checker=custom_unit_checker)
     def observation_summary(
-            self,
-            summary_file: str,
-            ant: Union[str, List[str]] = "all",
-            ddi: Union[int, List[int]] = "all",
-            map_id: Union[int, List[int]] = "all",
-            az_el_key: str = 'center',
-            phase_center_unit: str = 'radec',
-            az_el_unit: str = 'deg',
-            time_format: str = "%d %h %Y, %H:%M:%S",
-            tab_size: int = 3,
-            print_summary: bool = True,
-            parallel: bool = False,
+        self,
+        summary_file: str,
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[int]] = "all",
+        map_id: Union[int, List[int]] = "all",
+        az_el_key: str = "center",
+        phase_center_unit: str = "radec",
+        az_el_unit: str = "deg",
+        time_format: str = "%d %h %Y, %H:%M:%S",
+        tab_size: int = 3,
+        print_summary: bool = True,
+        parallel: bool = False,
     ) -> None:
         """ Create a Summary of observation information
 
@@ -899,10 +906,16 @@ class AstrohackHologFile(dict):
         param_dict = locals()
         param_dict["map"] = map_id
         key_order = ["ddi", "map", "ant"]
-        execution, summary = compute_graph(self, generate_observation_summary, param_dict, key_order, parallel,
-                                           fetch_returns=True)
+        execution, summary = compute_graph(
+            self,
+            generate_observation_summary,
+            param_dict,
+            key_order,
+            parallel,
+            fetch_returns=True,
+        )
         summary = "".join(summary)
-        with open(summary_file, 'w') as output_file:
+        with open(summary_file, "w") as output_file:
             output_file.write(summary)
         if print_summary:
             print(summary)
@@ -980,7 +993,7 @@ class AstrohackPanelFile(dict):
                 self.export_to_fits,
                 self.plot_antennas,
                 self.export_gain_tables,
-                self.observation_summary
+                self.observation_summary,
             ]
         )
 
@@ -1261,9 +1274,9 @@ class AstrohackPanelFile(dict):
         summary_file: str,
         ant: Union[str, List[str]] = "all",
         ddi: Union[int, List[int]] = "all",
-        az_el_key: str = 'center',
-        phase_center_unit: str = 'radec',
-        az_el_unit: str = 'deg',
+        az_el_key: str = "center",
+        phase_center_unit: str = "radec",
+        az_el_unit: str = "deg",
         time_format: str = "%d %h %Y, %H:%M:%S",
         tab_size: int = 3,
         print_summary: bool = True,
@@ -1303,10 +1316,16 @@ class AstrohackPanelFile(dict):
 
         param_dict = locals()
         key_order = ["ant", "ddi"]
-        execution, summary = compute_graph(self, generate_observation_summary, param_dict, key_order, parallel,
-                                           fetch_returns=True)
+        execution, summary = compute_graph(
+            self,
+            generate_observation_summary,
+            param_dict,
+            key_order,
+            parallel,
+            fetch_returns=True,
+        )
         summary = "".join(summary)
-        with open(summary_file, 'w') as output_file:
+        with open(summary_file, "w") as output_file:
             output_file.write(summary)
         if print_summary:
             print(summary)

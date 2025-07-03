@@ -50,7 +50,9 @@ def calculate_parallactic_angle_chunk(
     )
 
     direction = coord.SkyCoord(
-        ra=direction[:, 0] * units.rad, dec=direction[:, 1] * units.rad, frame=dir_frame.lower()
+        ra=direction[:, 0] * units.rad,
+        dec=direction[:, 1] * units.rad,
+        frame=dir_frame.lower(),
     )
     zenith = coord.SkyCoord(0, 90, unit=units.deg, frame=zenith_frame.lower())
 

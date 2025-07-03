@@ -116,11 +116,15 @@ class TestAstrohackDio:
             assert key in expected_keys
 
     def test_open_locit(self):
-        locit_data = open_locit(self.datafolder + "/locit-input-pha.locit.zarr",)
+        locit_data = open_locit(
+            self.datafolder + "/locit-input-pha.locit.zarr",
+        )
 
         assert locit_data == self.locit_mds
 
     def test_open_position(self):
-        locit_data = open_position(self.datafolder + "/locit-input-pha.position.zarr",)
+        locit_data = open_position(
+            self.datafolder + "/locit-input-pha.position.zarr",
+        )
 
         assert locit_data == self.position_mds

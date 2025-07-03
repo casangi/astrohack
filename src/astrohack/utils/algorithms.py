@@ -349,7 +349,9 @@ def calculate_optimal_grid_parameters(
     cell_size = 0.85 * reference_lambda / telescope_diameter
     lm = pnt_map_dict[antenna_name].POINTING_OFFSET.values
     # Get data range
-    data_range = np.array([lm[:, 0].max()-lm[:, 0].min(), lm[:, 1].max()-lm[:, 1].min()])
+    data_range = np.array(
+        [lm[:, 0].max() - lm[:, 0].min(), lm[:, 1].max() - lm[:, 1].min()]
+    )
 
     logger.info(
         f"{create_dataset_label(antenna_name, ddi)}: Suggested cell size {format_angular_distance(cell_size)}, "
