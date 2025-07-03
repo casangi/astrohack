@@ -366,6 +366,9 @@ def calculate_optimal_grid_parameters(
         )
         raise ZeroDivisionError
 
+    if n_pix[0] != n_pix[1]:
+        n_pix[:] = np.max(n_pix)
+
     return [int(n_pix[0]), int(n_pix[1])], cell_size.tolist()
 
 
