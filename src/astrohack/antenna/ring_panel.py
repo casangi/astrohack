@@ -58,7 +58,7 @@ class RingPanel(BasePanel):
         self.first = ipanel == 0
         zeta = (ipanel + 0.5) * angle
         rt = (self.inrad + self.ourad) / 2
-        self.center = PanelPoint(-rt * np.cos(zeta), -rt * np.sin(zeta))
+        self.center = PanelPoint(rt * np.cos(zeta), rt * np.sin(zeta))
         screws = self._init_screws(screw_scheme, screw_offset)
         plot_screw_pos = self._init_screws(screw_scheme, 2 * plot_screw_size)
         fi = self.theta2 - self.theta1
