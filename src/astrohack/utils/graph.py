@@ -27,8 +27,7 @@ def _construct_general_graph_recursively(
             delayed_list.append(dask.delayed(chunk_function)(dask.delayed(param_dict)))
 
         else:
-            delayed_list.append(0)
-            chunk_function(param_dict)
+            delayed_list.append((chunk_function, param_dict))
     else:
         key = key_order[0]
 
@@ -58,7 +57,14 @@ def _construct_general_graph_recursively(
                     logger.warning(f"{item} is not present for {oneup}")
 
 
-def compute_graph(looping_dict, chunk_function, param_dict, key_order, parallel=False):
+def compute_graph(
+    looping_dict,
+    chunk_function,
+    param_dict,
+    key_order,
+    parallel=False,
+    fetch_returns=False,
+):
     """
     General tool for looping over the data and constructing graphs for dask parallel processing
     Args:
@@ -67,6 +73,7 @@ def compute_graph(looping_dict, chunk_function, param_dict, key_order, parallel=
         param_dict: The parameter dictionary for the chunk function
         key_order: The order over which to loop over the keys inside the looping dictionary
         parallel: Are loops to be executed in parallel?
+        fetch_returns: retrieve returns and return them to the caller
 
     Returns: True if processing has occurred, False if no data was processed
 
@@ -89,8 +96,16 @@ def compute_graph(looping_dict, chunk_function, param_dict, key_order, parallel=
 
     else:
         if parallel:
-            dask.compute(delayed_list)
-        return True
+            return_list = dask.compute(delayed_list)[0]
+        else:
+            return_list = []
+            for pair in delayed_list:
+                return_list.append(pair[0](pair[1]))
+
+        if fetch_returns:
+            return True, return_list
+        else:
+            return True
 
 
 def compute_graph_from_lists(

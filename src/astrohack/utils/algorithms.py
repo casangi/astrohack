@@ -92,8 +92,8 @@ def calc_coords(image_size, cell_size):
     """Calculate the center pixel of the image given a cell and image size
 
     Args:
-        image_size (float): image size
-        cell_size (float): cell size
+        image_size (np.array): image size
+        cell_size (np.array): cell size
 
     Returns:
         float, float: center pixel location in coordinates x, y
@@ -347,22 +347,19 @@ def calculate_optimal_grid_parameters(
     # Since this is just an estimate for the situation where the user doesn't specify a values, I am picking
     # a values according to the developer heuristic, i.e. it seems to be good.
     cell_size = 0.85 * reference_lambda / telescope_diameter
-
+    lm = pnt_map_dict[antenna_name].POINTING_OFFSET.values
     # Get data range
-    data_range = (
-        pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].max()
-        - pnt_map_dict[antenna_name].POINTING_OFFSET.values[:, 1].min()
+    data_range = np.array(
+        [lm[:, 0].max() - lm[:, 0].min(), lm[:, 1].max() - lm[:, 1].min()]
     )
 
     logger.info(
-        f"{create_dataset_label(antenna_name, ddi)}: Cell size {format_angular_distance(cell_size)}, "
-        f"FOV: {format_angular_distance(data_range)}"
+        f"{create_dataset_label(antenna_name, ddi)}: Suggested cell size {format_angular_distance(cell_size)}, "
+        f"FOV: ({format_angular_distance(data_range[0])}, {format_angular_distance(data_range[1])})"
     )
-    # logger.info(f"cell_size: {cell_size}")
-    # logger.info(f"data_range: {data_range}")
 
     try:
-        n_pix = int(np.ceil(data_range / cell_size)) ** 2
+        n_pix = np.ceil(data_range / cell_size)
 
     except ZeroDivisionError:
         logger.error(
@@ -371,7 +368,10 @@ def calculate_optimal_grid_parameters(
         )
         raise ZeroDivisionError
 
-    return n_pix, cell_size
+    if n_pix[0] != n_pix[1]:
+        n_pix[:] = np.max(n_pix)
+
+    return [int(n_pix[0]), int(n_pix[1])], cell_size.tolist()
 
 
 def compute_average_stokes_visibilities(vis, stokes):

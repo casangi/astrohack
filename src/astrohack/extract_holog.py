@@ -9,25 +9,24 @@ import multiprocessing
 
 import toolviper.utils.parameter
 import dask
+
 import astrohack
 import psutil
 
 import numpy as np
 import toolviper.utils.logger as logger
 
-from astropy.time import Time
 from casacore import tables as ctables
 from rich.console import Console
 from rich.table import Table
 
 from astrohack.utils.constants import pol_str
 
-from astrohack.utils.file import overwrite_file
+from astrohack.utils.file import overwrite_file, check_if_file_can_be_opened
 from astrohack.utils.file import load_holog_file
 from astrohack.utils.file import load_point_file
 from astrohack.utils.data import write_meta_data
-from astrohack.core.extract_holog import create_holog_meta_data
-from astrohack.core.extract_holog import create_holog_obs_dict
+from astrohack.core.extract_holog import create_holog_obs_dict, create_holog_json
 from astrohack.core.extract_holog import process_extract_holog_chunk
 from astrohack.utils.tools import get_valid_state_ids
 from astrohack.utils.text import get_default_file_name
@@ -430,6 +429,9 @@ def extract_holog(
             }
 
     """
+
+    check_if_file_can_be_opened(point_name, "0.7.2")
+
     # Doing this here allows it to get captured by locals()
     if holog_name is None:
         holog_name = get_default_file_name(
@@ -484,6 +486,7 @@ def extract_holog(
     ant_names = np.array(ctb.getcol("NAME"))
     ant_id = np.arange(len(ant_names))
     ant_pos = ctb.getcol("POSITION")
+    ant_station = ctb.getcol("STATION")
 
     ctb.close()
 
@@ -616,8 +619,6 @@ def extract_holog(
             pol_ctb.getcol("CORR_TYPE", startrow=pol_setup_id, nrow=1)[0, :]
         ]
 
-        extract_holog_params["telescope_name"] = obs_ctb.getcol("TELESCOPE_NAME")[0]
-
         # Loop over all beam_scan_ids, a beam_scan_id can consist of more than one scan in a measurement set (this is
         # the case for the VLA pointed mosaics).
         for holog_map_key in holog_obs_dict[ddi_name].keys():
@@ -691,6 +692,7 @@ def extract_holog(
                     extract_holog_params["sel_state_ids"] = state_ids
                     extract_holog_params["holog_map_key"] = holog_map_key
                     extract_holog_params["ant_names"] = ant_names
+                    extract_holog_params["ant_station"] = ant_station
 
                     if parallel:
                         delayed_list.append(
@@ -722,18 +724,7 @@ def extract_holog(
             file=extract_holog_params["holog_name"], dask_load=True, load_pnt_dict=False
         )
 
-        extract_holog_params["telescope_name"] = telescope_name
-
-        meta_data = create_holog_meta_data(
-            holog_file=extract_holog_params["holog_name"],
-            holog_dict=holog_dict,
-            input_params=extract_holog_params.copy(),
-        )
-
-        holog_attr_file = "{name}/{ext}".format(
-            name=extract_holog_params["holog_name"], ext=".holog_attr"
-        )
-        write_meta_data(holog_attr_file, meta_data)
+        create_holog_json(extract_holog_params["holog_name"], holog_dict)
 
         holog_attr_file = "{name}/{ext}".format(
             name=extract_holog_params["holog_name"], ext=".holog_input"

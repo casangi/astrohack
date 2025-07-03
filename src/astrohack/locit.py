@@ -4,7 +4,7 @@ import toolviper.utils.parameter
 import toolviper.utils.logger as logger
 
 from astrohack.utils.graph import compute_graph
-from astrohack.utils.file import overwrite_file
+from astrohack.utils.file import overwrite_file, check_if_file_can_be_opened
 from astrohack.utils.data import write_meta_data
 from astrohack.core.locit import (
     locit_separated_chunk,
@@ -145,6 +145,8 @@ def locit(
     - `position_mds = locit("myphase.locit.zarr", combine_ddis='difference', elevation_limit=30.0)` -> Fit the phase \
        difference delays in "myphase.locit.zarr" for all antennas but only using sources above 30 degrees elevation.
     """
+
+    check_if_file_can_be_opened(locit_name, "0.3.0")
 
     # Doing this here allows it to get captured by locals()
     if position_name is None:

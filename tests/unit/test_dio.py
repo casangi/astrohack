@@ -2,7 +2,7 @@ import shutil
 
 import toolviper
 
-from astrohack import holog
+from astrohack import holog, open_locit, open_position
 from astrohack.dio import open_holog
 from astrohack.dio import open_image
 from astrohack.dio import open_panel
@@ -10,7 +10,7 @@ from astrohack.dio import open_pointing
 
 from astrohack.extract_holog import extract_holog
 from astrohack.extract_pointing import extract_pointing
-
+from astrohack import locit, extract_locit
 from astrohack.panel import panel
 
 
@@ -56,6 +56,24 @@ class TestAstrohackDio:
             overwrite=True,
         )
 
+        toolviper.utils.data.download("locit-input-pha.cal", folder=cls.datafolder)
+
+        cls.locit_mds = extract_locit(
+            cal_table=cls.datafolder + "/locit-input-pha.cal",
+            locit_name=cls.datafolder + "/locit-input-pha.locit.zarr",
+            overwrite=True,
+        )
+
+        cls.position_mds = locit(
+            locit_name=cls.datafolder + "/locit-input-pha.locit.zarr",
+            position_name=cls.datafolder + "/locit-input-pha.position.zarr",
+            elevation_limit=10.0,
+            polarization="both",
+            fit_engine="scipy",
+            parallel=False,
+            overwrite=True,
+        )
+
     @classmethod
     def teardown_class(cls):
         shutil.rmtree(cls.datafolder)
@@ -96,3 +114,17 @@ class TestAstrohackDio:
 
         for key in pointing_data.keys():
             assert key in expected_keys
+
+    def test_open_locit(self):
+        locit_data = open_locit(
+            self.datafolder + "/locit-input-pha.locit.zarr",
+        )
+
+        assert locit_data == self.locit_mds
+
+    def test_open_position(self):
+        locit_data = open_position(
+            self.datafolder + "/locit-input-pha.position.zarr",
+        )
+
+        assert locit_data == self.position_mds

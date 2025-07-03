@@ -28,7 +28,10 @@ def custom_unit_checker(unit_type):
 
     elif unit_type == "units.frequency":
         return freq_units
-
+    elif unit_type == "units.radec":
+        valid_units = trigo_units.copy()
+        valid_units.append("radec")
+        return valid_units
     else:
         return "Not found"
 

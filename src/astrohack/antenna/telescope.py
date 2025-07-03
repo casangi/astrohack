@@ -51,21 +51,15 @@ class Telescope:
 
     @classmethod
     def from_xds(cls, xds):
-        if xds.attrs["telescope_name"] == "ALMA":
-            telescope_name = "_".join(
-                (xds.attrs["telescope_name"], xds.attrs["ant_name"][0:2])
-            )
+        tel_name = xds.attrs["summary"]["general"]["telescope name"]
+        if tel_name == "ALMA":
+            telescope_name = "_".join((tel_name, xds.attrs["ant_name"][0:2]))
             return cls(telescope_name)
-        elif (
-            xds.attrs["telescope_name"] == "EVLA"
-            or xds.attrs["telescope_name"] == "VLA"
-        ):
+        elif tel_name == "EVLA" or tel_name == "VLA":
             telescope_name = "VLA"
             return cls(telescope_name)
         else:
-            raise ValueError(
-                "Unsupported telescope {0:s}".format(xds.attrs["telescope_name"])
-            )
+            raise ValueError("Unsupported telescope {0:s}".format(tel_name))
 
     @staticmethod
     def _get_telescope_file_name(name):

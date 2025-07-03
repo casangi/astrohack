@@ -24,6 +24,7 @@ def grid_beam(
     chan_tol_fac,
     telescope,
     grid_interpolation_mode,
+    observation_summary,
     label,
 ):
     """
@@ -37,6 +38,8 @@ def grid_beam(
         chan_tol_fac: Frequency tolerance to chunk channels together
         telescope: Telescope object containing optical description of the telescope
         grid_interpolation_mode: linear, nearest, cubic or gaussian (convolution)
+        observation_summary: Dictionaty containing a summary of observation information.
+        label: label to be used in messages
 
     Returns:
         The gridded beam, its time centroid, frequency axis, polarization axis, L and M axes and a boolean about the
@@ -50,11 +53,18 @@ def grid_beam(
     n_chan = ant_ddi_dict[map0].sizes["chan"]
     n_pol = ant_ddi_dict[map0].sizes["pol"]
 
+    observation_summary["beam"]["grid size"] = [int(grid_size[0]), int(grid_size[1])]
+    observation_summary["beam"]["cell size"] = [sky_cell_size[0], sky_cell_size[1]]
+
     reference_scaling_frequency = np.mean(freq_axis)
     if avg_chan:
         n_chan = 1
         avg_chan_map, avg_freq_axis = _create_average_chan_map(freq_axis, chan_tol_fac)
         output_freq_axis = [np.mean(avg_freq_axis)]
+        observation_summary["spectral"]["channel width"] *= observation_summary[
+            "spectral"
+        ]["number of channels"]
+        observation_summary["spectral"]["number of channels"] = 1
     else:
         avg_chan_map = None
         avg_freq_axis = None
@@ -132,6 +142,7 @@ def grid_beam(
         l_axis,
         m_axis,
         grid_corr,
+        observation_summary,
     )
 
 

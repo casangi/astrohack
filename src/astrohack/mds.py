@@ -42,6 +42,7 @@ from astrohack.visualization.textual_data import (
     print_array_configuration,
     export_to_parminator,
     export_zernike_fit_chunk,
+    generate_observation_summary,
 )
 from astrohack.visualization.fits import (
     export_to_fits_panel_chunk,
@@ -198,6 +199,9 @@ class AstrohackImageFile(dict):
                 self.plot_beams,
                 self.plot_apertures,
                 self.export_phase_fit_results,
+                self.export_zernike_fit_results,
+                self.plot_zernike_model,
+                self.observation_summary,
             ]
         )
 
@@ -517,6 +521,68 @@ class AstrohackImageFile(dict):
             parallel=parallel,
         )
 
+    @toolviper.utils.parameter.validate(custom_checker=custom_unit_checker)
+    def observation_summary(
+        self,
+        summary_file: str,
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[int]] = "all",
+        az_el_key: str = "center",
+        phase_center_unit: str = "radec",
+        az_el_unit: str = "deg",
+        time_format: str = "%d %h %Y, %H:%M:%S",
+        tab_size: int = 3,
+        print_summary: bool = True,
+        parallel: bool = False,
+    ) -> None:
+        """ Create a Summary of observation information
+
+        :param summary_file: Text file to put the observation summary
+        :type summary_file: str
+        :param ant: antenna ID to use in subselection, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+        :param ddi: data description ID to use in subselection, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param az_el_key: What type of Azimuth & Elevation information to print, 'mean', 'median' or 'center', default\
+        is 'center'
+        :type az_el_key: str, optional
+        :param phase_center_unit: What unit to display phase center coordinates, 'radec' and angle units supported, \
+        default is 'radec'
+        :type phase_center_unit: str, optional
+        :param az_el_unit: Angle unit used to display Azimuth & Elevation information, default is 'deg'
+        :type az_el_unit: str, optional
+        :param time_format: datetime time format for the start and end dates of observation, default is \
+        "%d %h %Y, %H:%M:%S"
+        :type time_format: str, optional
+        :param tab_size: Number of spaces in the tab levels, default is 3
+        :type tab_size: int, optional
+        :param print_summary: Print the summary at the end of execution, default is True
+        :type print_summary: bool, optional
+        :param parallel: Run in parallel, defaults to False
+        :type parallel: bool, optional
+
+        **Additional Information**
+
+        This method produces a summary of the data in the AstrohackImageFile displaying general information,
+        spectral information, beam image characteristics and aperture image characteristics.
+        """
+
+        param_dict = locals()
+        key_order = ["ant", "ddi"]
+        execution, summary = compute_graph(
+            self,
+            generate_observation_summary,
+            param_dict,
+            key_order,
+            parallel,
+            fetch_returns=True,
+        )
+        summary = "".join(summary)
+        with open(summary_file, "w") as output_file:
+            output_file.write(summary)
+        if print_summary:
+            print(summary)
+
 
 class AstrohackHologFile(dict):
     """Data Class for extracted holography data
@@ -572,7 +638,6 @@ class AstrohackHologFile(dict):
             load_holog_file(
                 file=file, dask_load=dask_load, load_pnt_dict=False, holog_dict=self
             )
-            self._meta_data = read_meta_data(file + "/.holog_attr")
             self._input_pars = read_meta_data(file + "/.holog_input")
             self._file_is_open = True
 
@@ -593,6 +658,8 @@ class AstrohackHologFile(dict):
                 self.select,
                 self.plot_diagnostics,
                 self.plot_lm_sky_coverage,
+                self.export_to_aips,
+                self.observation_summary,
             ]
         )
 
@@ -620,16 +687,6 @@ class AstrohackHologFile(dict):
             return self
         else:
             return self[ddi][map_id][ant]
-
-    @property
-    def meta_data(self):
-        """Retrieve AstrohackHologFile JSON metadata.
-
-        :return: JSON metadata for this AstrohackHologFile object
-        :rtype: dict
-        """
-
-        return self._meta_data
 
     @toolviper.utils.parameter.validate(custom_checker=custom_plots_checker)
     def plot_diagnostics(
@@ -796,6 +853,73 @@ class AstrohackHologFile(dict):
         compute_graph(self, export_to_aips, param_dict, key_order, parallel)
         return
 
+    @toolviper.utils.parameter.validate(custom_checker=custom_unit_checker)
+    def observation_summary(
+        self,
+        summary_file: str,
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[int]] = "all",
+        map_id: Union[int, List[int]] = "all",
+        az_el_key: str = "center",
+        phase_center_unit: str = "radec",
+        az_el_unit: str = "deg",
+        time_format: str = "%d %h %Y, %H:%M:%S",
+        tab_size: int = 3,
+        print_summary: bool = True,
+        parallel: bool = False,
+    ) -> None:
+        """ Create a Summary of observation information
+
+        :param summary_file: Text file to put the observation summary
+        :type summary_file: str
+        :param ant: antenna ID to use in subselection, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+        :param ddi: data description ID to use in subselection, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param map_id: map ID to use in subselection. This relates to which antenna are in the mapping vs. scanning \
+        configuration,  defaults to "all" when None, ex. 0
+        :type map_id: list or int, optional
+        :param az_el_key: What type of Azimuth & Elevation information to print, 'mean', 'median' or 'center', default\
+        is 'center'
+        :type az_el_key: str, optional
+        :param phase_center_unit: What unit to display phase center coordinates, 'radec' and angle units supported, \
+        default is 'radec'
+        :type phase_center_unit: str, optional
+        :param az_el_unit: Angle unit used to display Azimuth & Elevation information, default is 'deg'
+        :type az_el_unit: str, optional
+        :param time_format: datetime time format for the start and end dates of observation, default is \
+        "%d %h %Y, %H:%M:%S"
+        :type time_format: str, optional
+        :param tab_size: Number of spaces in the tab levels, default is 3
+        :type tab_size: int, optional
+        :param print_summary: Print the summary at the end of execution, default is True
+        :type print_summary: bool, optional
+        :param parallel: Run in parallel, defaults to False
+        :type parallel: bool, optional
+
+        **Additional Information**
+
+        This method produces a summary of the data in the AstrohackHologFile displaying general information,
+        spectral information and suggested beam image characteristics.
+        """
+
+        param_dict = locals()
+        param_dict["map"] = map_id
+        key_order = ["ddi", "map", "ant"]
+        execution, summary = compute_graph(
+            self,
+            generate_observation_summary,
+            param_dict,
+            key_order,
+            parallel,
+            fetch_returns=True,
+        )
+        summary = "".join(summary)
+        with open(summary_file, "w") as output_file:
+            output_file.write(summary)
+        if print_summary:
+            print(summary)
+
 
 class AstrohackPanelFile(dict):
     """Data class for holography panel data.
@@ -869,6 +993,7 @@ class AstrohackPanelFile(dict):
                 self.export_to_fits,
                 self.plot_antennas,
                 self.export_gain_tables,
+                self.observation_summary,
             ]
         )
 
@@ -1142,6 +1267,68 @@ class AstrohackPanelFile(dict):
             ["ant", "ddi"],
             parallel=parallel,
         )
+
+    @toolviper.utils.parameter.validate(custom_checker=custom_unit_checker)
+    def observation_summary(
+        self,
+        summary_file: str,
+        ant: Union[str, List[str]] = "all",
+        ddi: Union[int, List[int]] = "all",
+        az_el_key: str = "center",
+        phase_center_unit: str = "radec",
+        az_el_unit: str = "deg",
+        time_format: str = "%d %h %Y, %H:%M:%S",
+        tab_size: int = 3,
+        print_summary: bool = True,
+        parallel: bool = False,
+    ) -> None:
+        """ Create a Summary of observation information
+
+        :param summary_file: Text file to put the observation summary
+        :type summary_file: str
+        :param ant: antenna ID to use in subselection, defaults to "all" when None, ex. ea25
+        :type ant: list or str, optional
+        :param ddi: data description ID to use in subselection, defaults to "all" when None, ex. 0
+        :type ddi: list or int, optional
+        :param az_el_key: What type of Azimuth & Elevation information to print, 'mean', 'median' or 'center', default\
+        is 'center'
+        :type az_el_key: str, optional
+        :param phase_center_unit: What unit to display phase center coordinates, 'radec' and angle units supported, \
+        default is 'radec'
+        :type phase_center_unit: str, optional
+        :param az_el_unit: Angle unit used to display Azimuth & Elevation information, default is 'deg'
+        :type az_el_unit: str, optional
+        :param time_format: datetime time format for the start and end dates of observation, default is \
+        "%d %h %Y, %H:%M:%S"
+        :type time_format: str, optional
+        :param tab_size: Number of spaces in the tab levels, default is 3
+        :type tab_size: int, optional
+        :param print_summary: Print the summary at the end of execution, default is True
+        :type print_summary: bool, optional
+        :param parallel: Run in parallel, defaults to False
+        :type parallel: bool, optional
+
+        **Additional Information**
+
+        This method produces a summary of the data in the AstrohackPanelFile displaying general information,
+        spectral information, beam image characteristics and aperture image characteristics.
+        """
+
+        param_dict = locals()
+        key_order = ["ant", "ddi"]
+        execution, summary = compute_graph(
+            self,
+            generate_observation_summary,
+            param_dict,
+            key_order,
+            parallel,
+            fetch_returns=True,
+        )
+        summary = "".join(summary)
+        with open(summary_file, "w") as output_file:
+            output_file.write(summary)
+        if print_summary:
+            print(summary)
 
 
 class AstrohackPointFile(dict):

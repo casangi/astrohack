@@ -22,13 +22,8 @@ def read_meta_data(file_name):
         dict: dictionary containing dimension data.
     """
 
-    try:
-        with open(file_name) as json_file:
-            json_dict = json.load(json_file)
-
-    except Exception as error:
-        logger.error(str(error))
-        raise Exception
+    with open(file_name) as json_file:
+        json_dict = json.load(json_file)
 
     return json_dict
 

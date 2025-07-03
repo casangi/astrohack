@@ -7,6 +7,7 @@ import numpy as np
 from casacore import tables
 from rich.console import Console
 
+from astrohack.utils.file import check_if_file_can_be_opened
 from astrohack.mds import AstrohackImageFile
 from astrohack.mds import AstrohackHologFile
 from astrohack.mds import AstrohackPanelFile
@@ -53,7 +54,7 @@ def open_holog(file: str) -> Union[AstrohackHologFile, None]:
             ddi_m: …
             }
     """
-
+    check_if_file_can_be_opened(file, "0.7.2")
     _data_file = AstrohackHologFile(file=file)
 
     if _data_file.open():
@@ -92,7 +93,7 @@ def open_image(file: str) -> Union[AstrohackImageFile, None]:
            }
 
     """
-
+    check_if_file_can_be_opened(file, "0.7.2")
     _data_file = AstrohackImageFile(file=file)
 
     if _data_file.open():
@@ -131,7 +132,7 @@ def open_panel(file: str) -> Union[AstrohackPanelFile, None]:
             }
 
     """
-
+    check_if_file_can_be_opened(file, "0.7.2")
     _data_file = AstrohackPanelFile(file=file)
 
     if _data_file.open():
@@ -170,6 +171,7 @@ def open_locit(file: str) -> Union[AstrohackLocitFile, None]:
             }
 
     """
+    check_if_file_can_be_opened(file, "0.3.0")
 
     _data_file = AstrohackLocitFile(file=file)
 
@@ -177,7 +179,7 @@ def open_locit(file: str) -> Union[AstrohackLocitFile, None]:
         return _data_file
 
     else:
-        return
+        return None
 
 
 def open_position(file: str) -> Union[AstrohackPositionFile, None]:
@@ -209,7 +211,7 @@ def open_position(file: str) -> Union[AstrohackPositionFile, None]:
             }
 
     """
-
+    check_if_file_can_be_opened(file, "0.3.0")
     _data_file = AstrohackPositionFile(file=file)
 
     if _data_file.open():
@@ -245,7 +247,7 @@ def open_pointing(file: str) -> Union[AstrohackPointFile, None]:
             }
 
     """
-
+    check_if_file_can_be_opened(file, "0.7.2")
     _data_file = AstrohackPointFile(file=file)
 
     if _data_file.open():
@@ -428,3 +430,4 @@ def inspect_holog_obs_dict(
     else:
         console = Console()
         console.log(json_object, log_locals=False)
+        return None

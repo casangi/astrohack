@@ -4,7 +4,7 @@ import toolviper.utils.logger as logger
 import toolviper.utils.parameter
 
 from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT
-from astrohack.utils.file import overwrite_file
+from astrohack.utils.file import overwrite_file, check_if_file_can_be_opened
 
 from astrohack.utils.data import write_meta_data
 from astrohack.core.panel import process_panel_chunk
@@ -202,6 +202,8 @@ def panel(
         )
 
     """
+    check_if_file_can_be_opened(image_name, "0.7.2")
+
     # Doing this here allows it to get captured by locals()
     if panel_name is None:
         panel_name = get_default_file_name(
@@ -226,6 +228,11 @@ def panel(
     if os.path.exists(panel_params["image_name"] + "/.aips"):
         panel_params["origin"] = "AIPS"
         process_panel_chunk(panel_params)
+
+        panel_mds = AstrohackPanelFile(panel_params["panel_name"])
+        panel_mds.open()
+
+        return panel_mds
 
     else:
         panel_params["origin"] = "astrohack"

@@ -24,7 +24,7 @@ def export_to_fits_panel_chunk(parm_dict):
         f"Exporting panel contents of {antenna} {ddi} to FITS files in {destination}"
     )
     xds = parm_dict["xds_data"]
-    telescope = Telescope(xds.attrs["telescope_name"])
+    telescope = Telescope.from_xds(xds)
     surface = AntennaSurface(xds, telescope, reread=True)
     basename = f"{destination}/{antenna}_{ddi}"
     surface.export_to_fits(basename)
@@ -67,7 +67,7 @@ def export_to_fits_holog_chunk(parm_dict):
     else:
         reffreq = input_xds.chan.values[nchan // 2]
 
-    telname = input_xds.attrs["telescope_name"]
+    telname = input_xds.attrs["summary"]["general"]["telescope name"]
 
     if telname in ["EVLA", "VLA", "JVLA"]:
         telname = "VLA"
@@ -81,7 +81,7 @@ def export_to_fits_holog_chunk(parm_dict):
         "STOKES": ", ".join(polist),
         "WAVELENG": clight / reffreq,
         "FREQUENC": reffreq,
-        "TELESCOP": input_xds.attrs["ant_name"],
+        "TELESCOP": input_xds.attrs["summary"]["general"]["antenna name"],
         "INSTRUME": telname,
         "TIME_CEN": input_xds.attrs["time_centroid"],
         "PADDING": metadata["padding_factor"],

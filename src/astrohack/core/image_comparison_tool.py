@@ -310,6 +310,7 @@ class FITSImage:
         plot_reference=False,
         plot_original=False,
         plot_divided_image=False,
+        z_scale=None,
         colormap="viridis",
         dpi=300,
         display=False,
@@ -324,6 +325,7 @@ class FITSImage:
             plot_reference: Also plot reference image?
             plot_original: Also plot original unresampled image?
             plot_divided_image: Also plot divided image?
+            z_scale: Z scale for original, resampled, reference and residual images
             colormap: Colormap name for image plots
             dpi: png resolution on disk
             display: Show interactive view of plots
@@ -345,7 +347,7 @@ class FITSImage:
             f"{base_name}residuals.png",
             cmap,
             extent,
-            "symmetrical",
+            z_scale,
             dpi,
             display,
             add_statistics=True,
@@ -359,7 +361,7 @@ class FITSImage:
                 f"{base_name}resampled.png",
                 cmap,
                 extent,
-                [None, None],
+                z_scale,
                 dpi,
                 display,
                 add_statistics=True,
@@ -373,7 +375,7 @@ class FITSImage:
                 f"{base_name}reference.png",
                 cmap,
                 extent,
-                [None, None],
+                z_scale,
                 dpi,
                 display,
                 add_statistics=True,
@@ -386,7 +388,7 @@ class FITSImage:
                 f"{base_name}original.png",
                 cmap,
                 extent,
-                [None, None],
+                z_scale,
                 dpi,
                 display,
                 add_statistics=True,
@@ -419,7 +421,7 @@ class FITSImage:
                     f"{base_name}divided.png",
                     cmap,
                     extent,
-                    [None, None],
+                    None,
                     dpi,
                     display,
                     add_statistics=True,
@@ -459,6 +461,9 @@ class FITSImage:
         if zscale == "symmetrical":
             scale = max(np.abs(np.nanmin(data)), np.abs(np.nanmax(data)))
             vmin, vmax = -scale, scale
+        elif zscale is None:
+            vmin = np.nanmin(data)
+            vmax = np.nanmax(data)
         else:
             vmin, vmax = zscale
             if vmin == "None" or vmin is None:
@@ -654,6 +659,7 @@ def image_comparison_chunk(compare_params):
     plot_reference = compare_params["plot_reference"]
     plot_original = compare_params["plot_original"]
     destination = compare_params["destination"]
+    z_scale = compare_params["z_scale_limits"]
     colormap = compare_params["colormap"]
     dpi = compare_params["dpi"]
     display = compare_params["display"]
@@ -668,6 +674,7 @@ def image_comparison_chunk(compare_params):
             plot_reference,
             plot_original,
             False,
+            z_scale=z_scale,
             colormap=colormap,
             dpi=dpi,
             display=display,
@@ -682,6 +689,7 @@ def image_comparison_chunk(compare_params):
             plot_reference,
             plot_original,
             plot_divided,
+            z_scale=z_scale,
             colormap=colormap,
             dpi=dpi,
             display=display,

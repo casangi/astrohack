@@ -1,7 +1,7 @@
 import math
 import scipy.ndimage
 import numpy as np
-import astropy.units as u
+import astropy.units as units
 import astropy.coordinates as coord
 from numba import njit
 import scipy.fftpack
@@ -44,15 +44,17 @@ def calculate_parallactic_angle_chunk(
     """
 
     observing_location = coord.EarthLocation.from_geocentric(
-        x=observing_location[0] * u.m,
-        y=observing_location[1] * u.m,
-        z=observing_location[2] * u.m,
+        x=observing_location[0] * units.m,
+        y=observing_location[1] * units.m,
+        z=observing_location[2] * units.m,
     )
 
     direction = coord.SkyCoord(
-        ra=direction[:, 0] * u.rad, dec=direction[:, 1] * u.rad, frame=dir_frame.lower()
+        ra=direction[:, 0] * units.rad,
+        dec=direction[:, 1] * units.rad,
+        frame=dir_frame.lower(),
     )
-    zenith = coord.SkyCoord(0, 90, unit=u.deg, frame=zenith_frame.lower())
+    zenith = coord.SkyCoord(0, 90, unit=units.deg, frame=zenith_frame.lower())
 
     altaz_frame = coord.AltAz(location=observing_location, obstime=time_samples)
     zenith_altaz = zenith.transform_to(altaz_frame)
@@ -105,12 +107,13 @@ def calculate_far_field_aperture(
 
     Args:
         grid (numpy.ndarray): gridded beam data
-        padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edged of
-                                        each beam data grid and not between layers. Defaults to 20.
+        padding_factor (int, optional): Padding to apply to beam data grid before FFT. Padding is applied on outer edged
+                                        of each beam data grid and not between layers. Defaults to 20.
         freq: Beam grid frequency axis
         telescope: telescope object with optical parameters
         sky_cell_size: Sky cell size (radians)
         apply_grid_correction: Apply grid correction (True for gaussian convolution of the beam)
+        label: Data label for messages
 
     Returns:
         aperture grid, u-coordinate array, v-coordinate array, aperture cell size, representative wavelength
@@ -160,6 +163,7 @@ def calculate_near_field_aperture(
         telescope: telescope object with optical parameters
         apply_grid_correction: Apply grid correction (True for gaussian convolution of the beam)
         apodize: Apodize beam to avoid boxing effects in the FFT (the dashed line cross)
+        label: Data label for messages
 
     Returns:
         aperture grid, u-coordinate array, v-coordinate array, aperture cell size, representative wavelength

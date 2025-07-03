@@ -92,7 +92,7 @@ def calibration_plot_chunk(param_dict):
 
     UNIX_CONVERSION = 3506716800
 
-    radius = np.power(data.grid_params["cell_size"] * delta, 2)
+    radius = np.power(data.attrs["summary"]["beam"]["cell size"] * delta, 2)
 
     l_axis = data.DIRECTIONAL_COSINES.values[..., 0]
     m_axis = data.DIRECTIONAL_COSINES.values[..., 1]
@@ -780,7 +780,7 @@ def plot_antenna_chunk(parm_dict):
     plot_type = parm_dict["plot_type"]
     basename = f"{destination}/{antenna}_{ddi}"
     xds = parm_dict["xds_data"]
-    telescope = Telescope(xds.attrs["telescope_name"])
+    telescope = Telescope.from_xds(xds)
     surface = AntennaSurface(xds, telescope, reread=True)
     if plot_type == plot_types[0]:  # deviation plot
         surface.plot_deviation(basename, "panel", parm_dict)

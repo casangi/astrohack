@@ -1,7 +1,14 @@
 import numpy as np
 
 from astrohack.core.image_comparison_tool import extract_rms_from_xds
-from astrohack.utils import rad_to_deg_str, twopi, fixed_format_error, dynamic_format
+from astrohack.utils import (
+    rad_to_deg_str,
+    twopi,
+    fixed_format_error,
+    dynamic_format,
+    format_observation_summary,
+    make_header,
+)
 from astrohack.antenna import Telescope, AntennaSurface
 from astrohack.utils import (
     convert_unit,
@@ -279,7 +286,7 @@ def export_screws_chunk(parm_dict):
     ddi = parm_dict["this_ddi"]
     export_name = parm_dict["destination"] + f"/panel_screws_{antenna}_{ddi}."
     xds = parm_dict["xds_data"]
-    telescope = Telescope(xds.attrs["telescope_name"])
+    telescope = Telescope.from_xds(xds)
     surface = AntennaSurface(xds, telescope, reread=True)
     surface.export_screws(export_name + "txt", unit=parm_dict["unit"])
     surface.plot_screw_adjustments(export_name + "png", parm_dict)
@@ -542,3 +549,42 @@ def create_fits_comparison_rms_table(parameters, xdt):
     if parameters["print_table"]:
         print(table)
     return
+
+
+def generate_observation_summary(parm_dict):
+    antenna = parm_dict["this_ant"]
+    ddi = parm_dict["this_ddi"]
+    try:
+        map_id = parm_dict["this_map"]
+        is_holog_zarr = True
+    except KeyError:
+        map_id = None
+        is_holog_zarr = False
+
+    xds = parm_dict["xds_data"]
+    obs_sum = xds.attrs["summary"]
+
+    tab_size = parm_dict["tab_size"]
+    tab_count = 1
+
+    if is_holog_zarr:
+        header = f"{ddi}, {map_id}, {antenna}"
+    else:
+        header = f"{antenna}, {ddi}"
+
+    outstr = make_header(header, "#", 60, 3)
+
+    outstr += (
+        format_observation_summary(
+            obs_sum,
+            tab_size,
+            tab_count,
+            az_el_key=parm_dict["az_el_key"],
+            phase_center_unit=parm_dict["phase_center_unit"],
+            az_el_unit=parm_dict["az_el_unit"],
+            time_format=parm_dict["time_format"],
+        )
+        + "\n"
+    )
+
+    return outstr
