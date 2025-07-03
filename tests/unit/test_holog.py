@@ -57,6 +57,8 @@ class TestHolog:
         holog(
             holog_name="data/ea25_cal_small_before_fixed.split.holog.zarr",
             image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            grid_size=[31, 31],
+            cell_size=[-0.0006386556122807017, 0.0006386556122807017],
             overwrite=True,
             parallel=False,
         )
@@ -206,7 +208,7 @@ class TestHolog:
         ) as json_attr:
             json_file = json.load(json_attr)
 
-        assert json_file["scan_average"] == False
+        assert not json_file["scan_average"]
 
     def test_holog_grid_interpolation(self):
         """
@@ -263,7 +265,7 @@ class TestHolog:
         ) as json_attr:
             json_file = json.load(json_attr)
 
-        assert json_file["to_stokes"] == True
+        assert json_file["to_stokes"]
 
         assert (
             image_mds["ant_ea25"]["ddi_0"].pol.values == np.array(["I", "Q", "U", "V"])
@@ -295,6 +297,8 @@ class TestHolog:
             holog_name="data/ea25_cal_small_before_fixed.split.holog.zarr",
             image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
             phase_fit_engine="perturbations",
+            grid_size=[31, 31],
+            cell_size=[-0.0006386556122807017, 0.0006386556122807017],
             overwrite=True,
             parallel=False,
         )
@@ -376,6 +380,8 @@ class TestHolog:
         image_mds = holog(
             holog_name="data/ea25_cal_small_before_fixed.split.holog.zarr",
             image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            grid_size=[31, 31],
+            cell_size=[-0.0006386556122807017, 0.0006386556122807017],
             phase_fit_engine="zernike",
             zernike_n_order=4,
             overwrite=True,
@@ -399,6 +405,8 @@ class TestHolog:
         image_mds = holog(
             holog_name="data/ea25_cal_small_before_fixed.split.holog.zarr",
             image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
+            grid_size=[31, 31],
+            cell_size=[-0.0006386556122807017, 0.0006386556122807017],
             phase_fit_engine="none",
             zernike_n_order=10,
             overwrite=True,
