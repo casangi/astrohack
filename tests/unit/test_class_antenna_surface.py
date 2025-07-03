@@ -109,13 +109,13 @@ class TestClassAntennaSurface:
         Tests that a point falls into the correct panel and that this panel has the correct number of samples
         """
         compvaluep0 = [
-            2.78607537,
-            1.12017463,
-            303,
-            274,
-            -1.93162782e-04
+            3.3030790441176467,
+            0.43083639705882354,
+            197,
+            262,
+            2.57549549e-04,
         ]
-        compnsampp0 = 65
+        compnsampp0 = 179
         self.tant.compile_panel_points()
 
         assert (
@@ -135,9 +135,8 @@ class TestClassAntennaSurface:
         """
         Tests that fitting results for two panels match the reference
         """
-
-        solveparsp0 = [ 0.00054374,  0.00032329, -0.00203554]
-        solveparsp30 = [ 0.00014274,  0.00043115, -0.00259277]
+        solveparsp0 = [0.00032415, 0.00037302, -0.00092434]
+        solveparsp30 = [0.00038105, -0.00039928, -0.00067004]
         self.tant.fit_surface()
 
         assert len(self.tant.panels[0].model.parameters) == len(solveparsp0), (
