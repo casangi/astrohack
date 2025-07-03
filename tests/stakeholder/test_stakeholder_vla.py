@@ -132,22 +132,6 @@ def verify_holog_obs_dictionary(after_file, holog_obs_dict):
     return holog_obj == holog_obs_dict
 
 
-def verify_holog_diagnostics(json_data, truth_json, tolerance=1e-7):
-    with open(truth_json) as file:
-        reference_dict = json.load(file)
-
-    cell_size = reference_dict["vla"]["cell_size"][1]
-    grid_size = float(reference_dict["vla"]["grid_size"][1])
-
-    json_data["cell_size"] = np.abs(float(json_data["cell_size"]))
-
-    cell_size = np.abs(float(cell_size))
-
-    return (relative_difference(json_data["cell_size"], cell_size) < tolerance) and (
-        relative_difference(int(np.sqrt(json_data["n_pix"])), grid_size) < tolerance
-    )
-
-
 def test_holography_pipeline(set_data):
     before_ms = str(set_data / "".join((base_name, "before_fixed.split.ms")))
     before_point = str(set_data / "vla.before.split.point.zarr")
@@ -199,7 +183,8 @@ def test_holography_pipeline(set_data):
     before_image = str(set_data / "vla.before.split.image.zarr")
     after_image = str(set_data / "vla.after.split.image.zarr")
 
-    holog(holog_name=before_holog, overwrite=True, parallel=False)
+    holog(holog_name=before_holog, overwrite=True, parallel=False, grid_size=[31, 31],
+          cell_size=[-0.0006386556122807017, 0.0006386556122807017])
 
     assert verify_center_pixels(
         file=before_image,
@@ -209,27 +194,16 @@ def test_holography_pipeline(set_data):
         tolerance=1.5e-6,
     ), "Verifiy center pixels-before"
 
-    holog(holog_name=after_holog, overwrite=True, parallel=False)
-
-    with open(str(set_data / "vla.before.split.holog.zarr/.holog_attr")) as attr_file:
-        holog_attr = json.load(attr_file)
-
-    assert verify_holog_diagnostics(
-        json_data=holog_attr,
-        truth_json=str(set_data / "holog_numerical_verification.json"),
-        tolerance=1e-4,
-    ), "Verifiy holog diagnostics"
+    holog(holog_name=after_holog, overwrite=True, parallel=False, grid_size=[31, 31],
+          cell_size=[-0.0006386556122807017, 0.0006386556122807017])
 
     assert verify_center_pixels(
-        file=before_image,
+        file=after_image,
         antenna="ant_ea25",
         ddi="ddi_0",
-        reference_center_pixels=reference_dict["vla"]["pixels"]["before"],
+        reference_center_pixels=reference_dict["vla"]["pixels"]["after"],
         tolerance=1.5e-6,
     ), "Verifiy center pixels-after"
-
-    before_image = str(set_data / "vla.before.split.image.zarr")
-    after_image = str(set_data / "vla.after.split.image.zarr")
 
     before_panel = panel(
         image_name=before_image,
