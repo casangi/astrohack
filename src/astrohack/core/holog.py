@@ -53,7 +53,7 @@ def process_holog_chunk(holog_chunk_params):
     elif isinstance(user_grid_size, int):
         grid_size = np.array([user_grid_size, user_grid_size])
     elif isinstance(user_grid_size, (list, np.ndarray)):
-        grid_size = user_grid_size
+        grid_size = np.array(user_grid_size)
     else:
         raise Exception(f"Don't know what due with grid size of type {type(user_grid_size)}")
 
@@ -61,11 +61,11 @@ def process_holog_chunk(holog_chunk_params):
 
     user_cell_size = holog_chunk_params["cell_size"]
     if user_cell_size is None:
-        cell_size = np.array([summary['beam']['cell size'], summary['beam']['cell size']])
+        cell_size = np.array([-summary['beam']['cell size'], summary['beam']['cell size']])
     elif isinstance(user_cell_size, (int, float)):
-        cell_size = np.array([user_cell_size, user_cell_size])
+        cell_size = np.array([-user_cell_size, user_cell_size])
     elif isinstance(user_cell_size, (list, np.ndarray)):
-        cell_size = user_cell_size
+        cell_size = np.array(user_cell_size)
     else:
         raise Exception(f"Don't know what due with cell size of type {type(user_cell_size)}")
 
