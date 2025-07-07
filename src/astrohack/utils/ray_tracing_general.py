@@ -84,6 +84,25 @@ def np_qps_fitting(pcd):
     return qps_coeffs
 
 
+def degrade_pcd(pcd, degrading_factor):
+    """
+    Degrades de number of points in a pcd by an integer factor
+    Args:
+        pcd: pcd data, assumes [:, 3]
+        degrading_factor: integer pcd degrading factor
+
+    Returns: degraded pcd
+    """
+    n_out = int(np.ceil(pcd.shape[0]/degrading_factor))
+    rng = np.random.default_rng()
+    rand_item = rng.integers(degrading_factor, size=n_out)
+    rand_idx = degrading_factor*np.arange(n_out) + rand_item
+    if rand_idx[-1] >= pcd.shape[0]:  # Last item goes overboard
+        rand_idx[-1] = pcd.shape[0] - 1
+    degraded_pcd = pcd[rand_idx, :]
+    return degraded_pcd
+
+
 def qps_compute_point_and_normal(pnt, qps_coeffs, pcd):
     npnt = pcd.shape[0]
     acoeffs = qps_coeffs[:npnt]
@@ -146,7 +165,7 @@ def qps_compute_point_and_normal_jit(pnt, qps_coeffs, pcd):
 
 
 @njit()
-def qps_image_jit(global_pcd, local_qps_coeffs, local_pcds, points):
+def local_qps_image_jit(global_pcd, local_qps_coeffs, local_pcds, points):
     npnt = points.shape[0]
     new_zval = np.empty(npnt, dtype=np.float64)
     new_norm = np.empty((npnt, 3), dtype=np.float64)
@@ -160,6 +179,44 @@ def qps_image_jit(global_pcd, local_qps_coeffs, local_pcds, points):
         new_norm[ipnt] = norm
     print('Done')
     return new_zval, new_norm
+
+
+class GlobalQPS:
+    n_qps_extra_vars = 6
+
+    def __init__(self):
+        # Meta data
+        self.npnt = -1
+        self.local_qps_n_pnt = -1
+
+        # Data arrays
+        self.pcd = None
+        self.qps_coeffs = None
+
+        self.current_z_val = None
+        self.current_z_cos = None
+        self.current_u_axis = None
+        self.current_v_axis = None
+
+        self.high_res_z_val = None
+        self.high_res_z_cos = None
+        self.high_res_u_axis = None
+        self.high_res_v_axis = None
+
+    @classmethod
+    def from_pcd(cls, pcd_data, degradation_factor=None, displacement=(0, 0, 0)):
+        new_obj = cls()
+        new_obj._init_from_pcd(pcd_data, degradation_factor, displacement)
+        return new_obj
+
+    def _init_from_pcd(self, pcd_data, degradation_factor, displacement):
+        if degradation_factor is None:
+            self.pcd = pcd_data
+        else:
+            self.pcd = degrade_pcd(pcd_data, degradation_factor)
+
+        self.pcd[:, ] -= np.array(displacement)
+        self.qps_coeffs = np_qps_fitting(self.pcd)
 
 
 class LocalQPS:
@@ -292,7 +349,7 @@ class LocalQPS:
         uv_points[:, 1] = v_mesh[mask]
 
         if vectorized:
-            z_val, z_norm = qps_image_jit(self.global_pcd, self.local_qps_coeffs, self.local_pcds, uv_points)
+            z_val, z_norm = local_qps_image_jit(self.global_pcd, self.local_qps_coeffs, self.local_pcds, uv_points)
         else:
             z_val = np.empty([uv_points.shape[0]])
             z_norm = np.empty([uv_points.shape[0], 3])
