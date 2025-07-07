@@ -3,7 +3,6 @@ import xarray as xr
 
 from astrohack.utils import format_angular_distance
 from astrohack.antenna.telescope import get_proper_telescope
- with a similar purpose.)
 from astrohack.utils.text import create_dataset_label
 from astrohack.utils.conversion import convert_5d_grid_to_stokes
 from astrohack.utils.algorithms import phase_wrapping
