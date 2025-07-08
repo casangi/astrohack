@@ -3,8 +3,10 @@ import pickle
 from scipy.spatial import distance_matrix
 from numba import njit
 from numpy.linalg import LinAlgError
+from scipy.interpolate import griddata
 
-from astrohack.utils.algorithms import least_squares, create_2d_array_reconstruction_array, create_coordinate_images, regrid_data_onto_2d_grid
+from astrohack.utils.algorithms import (least_squares, create_2d_array_reconstruction_array, create_coordinate_images,
+                                        regrid_data_onto_2d_grid)
 from astrohack.visualization.plot_tools import *
 
 nanvec3d = np.array([np.nan, np.nan, np.nan])
@@ -286,6 +288,46 @@ class GlobalQPS:
         self.current_v_axis = v_axis
 
         return z_val_grid, z_cos_grid
+
+    def compute_high_resolution_z_val_and_z_cos(self, u_axis, v_axis, mask, gridding_engine='2D regrid',
+                                                light=(0, 0, -1)):
+        self.high_res_z_val, self.high_res_z_cos = self.compute_gridded_z_val_and_z_cos(u_axis, v_axis, mask,
+                                                                                        gridding_engine, light)
+        self.high_res_u_axis = u_axis
+        self.high_res_v_axis = v_axis
+        return
+
+    def downgrid_high_resolution_z_val_and_z_cos(self, u_axis, v_axis, grid_interpolation_mode='linear'):
+        mask = np.isfinite(self.high_res_z_val)
+        high_res_u_mesh, high_res_v_mesh = create_coordinate_images(self.high_res_u_axis, self.high_res_v_axis)
+        n_high_res = np.sum(mask)
+        high_res_uv = np.empty((n_high_res, 2))
+        high_res_uv[:, 0] = high_res_u_mesh[mask]
+        high_res_uv[:, 1] = high_res_v_mesh[mask]
+        print(high_res_uv.shape)
+        u_mesh, v_mesh = create_coordinate_images(u_axis, v_axis)
+        down_gridded_z_val = griddata(
+            high_res_uv,
+            self.high_res_z_val[mask],
+            (u_mesh, v_mesh),
+            method=grid_interpolation_mode,
+            fill_value=np.nan,
+            )
+        down_gridded_z_cos = griddata(
+            high_res_uv,
+            self.high_res_z_cos[mask],
+            (u_mesh, v_mesh),
+            method=grid_interpolation_mode,
+            fill_value=np.nan,
+            )
+
+        self.current_u_axis = u_axis
+        self.current_v_axis = v_axis
+        self.current_z_val = down_gridded_z_val
+        self.current_z_cos = down_gridded_z_cos
+
+        return
+
 
 
 class LocalQPS:
