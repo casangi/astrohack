@@ -389,6 +389,7 @@ def simple_imshow_map_plot(
     extent=None,
     extent_margin=0,
     add_colorbar=True,
+    interpolation='nearest'
 ):
     cmap = get_proper_color_map(colormap)
     if zlim is None:
@@ -404,7 +405,7 @@ def simple_imshow_map_plot(
             gridded_2d_arr.T,
             cmap=cmap,
             extent=extent,
-            interpolation="nearest",
+            interpolation=interpolation,
             vmin=minmax[0],
             vmax=minmax[1],
             origin="lower",
@@ -414,7 +415,7 @@ def simple_imshow_map_plot(
             gridded_2d_arr,
             cmap=cmap,
             extent=extent,
-            interpolation="nearest",
+            interpolation=interpolation,
             vmin=minmax[0],
             vmax=minmax[1],
         )
