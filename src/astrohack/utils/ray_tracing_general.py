@@ -181,6 +181,21 @@ def local_qps_image_jit(global_pcd, local_qps_coeffs, local_pcds, points):
     return new_zval, new_norm
 
 
+@njit()
+def global_qps_image_fit(pcd, qps_coeffs, points):
+    npnt = points.shape[0]
+    new_zval = np.empty(npnt, dtype=np.float64)
+    new_norm = np.empty((npnt, 3), dtype=np.float64)
+    print()
+    for ipnt in range(npnt):
+        print(return_line, 100*ipnt/npnt, '% done     ')
+        pnt, norm = qps_compute_point_and_normal_jit(points[ipnt], qps_coeffs, pcd)
+        new_zval[ipnt] = pnt[2]
+        new_norm[ipnt] = norm
+    print('Done')
+    return new_zval, new_norm
+
+
 class GlobalQPS:
     n_qps_extra_vars = 6
 
@@ -217,6 +232,60 @@ class GlobalQPS:
 
         self.pcd[:, ] -= np.array(displacement)
         self.qps_coeffs = np_qps_fitting(self.pcd)
+
+    @classmethod
+    def from_pickle(cls, filename):
+        with open(filename, "rb") as pickled_file:
+            pkl_obj = pickle.load(pickled_file)
+            return pkl_obj
+
+    def to_pickle(self, filename):
+        with open(filename, "wb") as pickle_file:
+            # noinspection PyTypeChecker
+            pickle.dump(self, pickle_file)
+
+    def __sizeof__(self):
+        total_size = 0
+        for key, item in self.__dict__.items():
+            total_size += item.__sizeof__()
+        return total_size
+
+    def plot_z_val_and_z_cos(self, colormap='viridis', zlim=None, dpi=300, display=False):
+        fig, ax = create_figure_and_axes(None, [1, 2])
+        simple_imshow_map_plot(ax[0], fig, self.current_u_axis, self.current_v_axis, self.current_z_val,
+                               'Z value', colormap, zlim, z_label='Z value [m]', transpose=True)
+        simple_imshow_map_plot(ax[1], fig, self.current_u_axis, self.current_v_axis, self.current_z_cos,
+                               'Z Cosine', colormap, zlim, z_label='Z cosine []', transpose=True)
+        close_figure(fig, 'Gridded surface and cosine of surface angle to Z axis', 'zval_zcos_gqps.png',
+                     dpi, display)
+        return
+
+    def compute_gridded_z_val_and_z_cos(self, u_axis, v_axis, mask, gridding_engine='2D regrid', light=(0, 0, -1)):
+        light = np.array(light)
+
+        u_mesh, v_mesh = create_coordinate_images(u_axis, v_axis)
+        uv_idx_grid = create_2d_array_reconstruction_array(u_axis, v_axis, mask)
+
+        uv_points = np.empty_like(uv_idx_grid)
+        uv_points[:, 0] = u_mesh[mask]
+        uv_points[:, 1] = v_mesh[mask]
+
+        z_val, z_norm = global_qps_image_fit(self.pcd, self.qps_coeffs, uv_points)
+
+        z_angle = (generalized_dot(z_norm, light))/(generalized_norm(z_norm)*generalized_norm(light))
+
+        if gridding_engine == '2D regrid':
+            z_val_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_val, uv_idx_grid)
+            z_cos_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_angle, uv_idx_grid)
+        else:
+            raise Exception('only 2D regrid available now')
+
+        self.current_z_val = z_val_grid
+        self.current_z_cos = z_cos_grid
+        self.current_u_axis = u_axis
+        self.current_v_axis = v_axis
+
+        return z_val_grid, z_cos_grid
 
 
 class LocalQPS:
