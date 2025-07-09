@@ -167,6 +167,26 @@ def qps_compute_point_and_normal_jit(pnt, qps_coeffs, pcd):
 
 
 @njit()
+def qps_compute_normal_jit(pnt, qps_coeffs, pcd):
+    npnt = pcd.shape[0]
+    acoeffs = qps_coeffs[:npnt]
+    bcoeffs = qps_coeffs[npnt:]
+    pnt_xy = pnt[0:2]
+    diff = pcd[:, 0:2] - pnt_xy
+    dist = np.sqrt(np.sum(diff**2, axis=-1))
+    cubic_rterm = acoeffs * dist**3
+    aterm_dx = 5 * np.sum(diff[:, 0] * cubic_rterm)
+    aterm_dy = 5 * np.sum(diff[:, 1] * cubic_rterm)
+
+    dqps_dx = aterm_dx + 2 * bcoeffs[0] * pnt[0] + bcoeffs[1] * pnt[1] + bcoeffs[3]
+    dqps_dy = aterm_dy + bcoeffs[1] * pnt[0] + 2 * bcoeffs[2] * pnt[1] + bcoeffs[4]
+
+    normal = np.array([-dqps_dx, -dqps_dy, 1])
+    normal /= np.sqrt(np.sum(normal**2))
+    return normal
+
+
+@njit()
 def local_qps_image_jit(global_pcd, local_qps_coeffs, local_pcds, points):
     npnt = points.shape[0]
     new_zval = np.empty(npnt, dtype=np.float64)
@@ -188,15 +208,30 @@ def global_qps_image_jit(pcd, qps_coeffs, points):
     npnt = points.shape[0]
     new_zval = np.empty(npnt, dtype=np.float64)
     new_norm = np.empty((npnt, 3), dtype=np.float64)
-    print()
+    # print()
     for ipnt in range(npnt):
-        if ipnt%100 == 0:
-            print(return_line, 100*ipnt/npnt, '% done     ')
+        # if ipnt%100 == 0:
+        #     print(return_line, 100*ipnt/npnt, '% done     ')
         pnt, norm = qps_compute_point_and_normal_jit(points[ipnt], qps_coeffs, pcd)
         new_zval[ipnt] = pnt[2]
         new_norm[ipnt] = norm
-    print(return_line, '100% Done                  ')
+    # print(return_line, '100% Done                  ')
     return new_zval, new_norm
+
+@njit()
+def global_qps_normal_image_jit(pcd, qps_coeffs, points):
+    npnt = points.shape[0]
+    new_norm = np.empty((npnt, 3), dtype=np.float64)
+    # print()
+    for ipnt in range(npnt):
+        # if ipnt%100 == 0:
+        #     print(return_line, 100*ipnt/npnt, '% done     ')
+        norm = qps_compute_normal_jit(points[ipnt], qps_coeffs, pcd)
+        new_norm[ipnt] = norm
+    #print(return_line, '100% Done                  ')
+    return new_norm
+
+
 
 
 class GlobalQPS:
@@ -284,11 +319,11 @@ class GlobalQPS:
 
         return z_val_grid, z_cos_grid
 
-    def to_xds(self, filepath):
+    def to_zarr(self, filepath):
         xds = xr.Dataset()
 
         xds.attrs = {
-            "n_pnt": self.npnt
+            "n_points": self.npnt
         }
 
         xds['qps_coefficients'] = xr.DataArray(self.qps_coeffs, dims=['qps_axis'])
@@ -303,6 +338,40 @@ class GlobalQPS:
         }
         xds = xds.assign_coords(coords)
         xds.to_zarr(filepath, mode="w", compute=True, consolidated=True)
+
+    @classmethod
+    def from_zarr(cls, filepath):
+        new_obj = cls()
+        xds = xr.open_zarr(filepath)
+        new_obj.npnt = xds.attrs["n_points"]
+        new_obj.pcd = xds['point_cloud'].values
+        new_obj.qps_coeffs = xds['qps_coefficients'].values
+
+    def compute_gridded_z_cos(self, u_axis, v_axis, mask, gridding_engine='2D regrid', light=(0, 0, -1)):
+        light = np.array(light)
+
+        u_mesh, v_mesh = create_coordinate_images(u_axis, v_axis)
+        uv_idx_grid = create_2d_array_reconstruction_array(u_axis, v_axis, mask)
+
+        uv_points = np.empty_like(uv_idx_grid)
+        uv_points[:, 0] = u_mesh[mask]
+        uv_points[:, 1] = v_mesh[mask]
+
+        z_norm = global_qps_normal_image_jit(self.pcd, self.qps_coeffs, uv_points)
+
+        z_angle = (generalized_dot(z_norm, light))/(generalized_norm(z_norm)*generalized_norm(light))
+
+        if gridding_engine == '2D regrid':
+            # z_val_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_val, uv_idx_grid)
+            z_cos_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_angle, uv_idx_grid)
+        else:
+            raise Exception('only 2D regrid available now')
+
+        self.current_z_cos = z_cos_grid
+        self.current_u_axis = u_axis
+        self.current_v_axis = v_axis
+
+        return z_cos_grid
 
 
 class LocalQPS:
