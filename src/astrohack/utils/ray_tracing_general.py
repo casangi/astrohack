@@ -1,4 +1,4 @@
-import numpy as np
+import xarray as xr
 import pickle
 from scipy.spatial import distance_matrix
 from numba import njit
@@ -204,7 +204,6 @@ class GlobalQPS:
     def __init__(self):
         # Meta data
         self.npnt = -1
-        self.local_qps_n_pnt = -1
 
         # Data arrays
         self.pcd = None
@@ -299,7 +298,7 @@ class GlobalQPS:
 
     def downgrid_high_resolution_z_val_and_z_cos(self, u_axis, v_axis, grid_interpolation_mode='linear'):
         mask = np.isfinite(self.high_res_z_val)
-        high_res_u_mesh, high_res_v_mesh = create_coordinate_images(self.high_res_u_axis, self.high_res_v_axis)
+        high_res_u_mesh, high_res_v_mesh = list(map(np.transpose, np.meshgrid(self.high_res_u_axis, self.high_res_v_axis)))
         n_high_res = np.sum(mask)
         high_res_uv = np.empty((n_high_res, 2))
         high_res_uv[:, 0] = high_res_u_mesh[mask]
@@ -328,6 +327,25 @@ class GlobalQPS:
 
         return
 
+    def to_xds(self, filepath):
+        xds = xr.Dataset()
+
+        xds.attrs = {
+            "n_pnt": self.npnt
+        }
+
+        xds['qps_coefficients'] = xr.DataArray(self.qps_coeffs, dims=['qps_axis'])
+        xds['point_cloud'] = xr.DataArray(self.pcd, dims=['point_axis', 'xyz'])
+        qps_axis = [f'A{ipnt}' for ipnt in range(self.npnt)]
+        qps_axis.extend([f'B{ipnt}' for ipnt in range(self.n_qps_extra_vars)])
+
+        coords = {
+            "xyz": ['x', 'y', 'z'],
+            'point': list(range(self.npnt)),
+            'qps': qps_axis
+        }
+        xds = xds.assign_coords(coords)
+        xds.to_zarr(filepath, mode="w", compute=True, consolidated=True)
 
 
 class LocalQPS:
