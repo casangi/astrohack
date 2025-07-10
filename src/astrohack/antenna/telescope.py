@@ -371,13 +371,13 @@ class RingedCassegrain(Telescope):
         else:
             return mask
 
-    def phase_to_deviation(self, u_axis, v_axis, _, phase, wavelength):
+    def phase_to_deviation(self, u_axis, v_axis, mask, phase, wavelength):
         """
         Transform phase image to physical deviation image based on wavelength.
         Args:
             u_axis: Aperture U axis
             v_axis: Aperture V axis
-            _: dummy argument for interface compatibility
+            mask: dummy argument for interface compatibility
             phase: Phase image in Radians
             wavelength: Observation wavelength in meters
 
@@ -389,13 +389,13 @@ class RingedCassegrain(Telescope):
         bcoeff = 4 * self.focus**2
         return acoeff * phase * np.sqrt(radius**2 + bcoeff)
 
-    def deviation_to_phase(self, u_axis, v_axis, _, deviation, wavelength):
+    def deviation_to_phase(self, u_axis, v_axis, mask, deviation, wavelength):
         """ "
         Transform deviation image to physical phase image based on wavelength.
         Args:
             u_axis: Aperture U axis
             v_axis: Aperture V axis
-            _: dummy argument for interface compatibility
+            mask: dummy argument for interface compatibility
             deviation: Deviation image in meters
             wavelength: Observation wavelength in meters
 
@@ -461,7 +461,7 @@ class NgvlaPrototype(Telescope):
         self,
         u_axis,
         v_axis,
-        _=True,
+        exclude_arms=True,
         return_polar_meshes=False,
         use_outer_limit=False,
     ):
