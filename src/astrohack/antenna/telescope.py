@@ -16,6 +16,10 @@ class Telescope:
     Base telescope class containing IO methods and attributes that are common to all telescopes.
     """
 
+    data_array_keys = ["point_cloud", "qps_coefficients"]
+    data_array_dims = [["point_axis", "xyz"], ['qps_coefficients']]
+    excluded_keys = ["filepath", "filename", "z_cos_image"]
+
     def __init__(self):
         self.diameter = None
         self.antenna_list = None
@@ -35,11 +39,18 @@ class Telescope:
         Args:
             filename: name of the input file
         """
+
         try:
             logger.debug("Reading telescope data from: filename")
             xds = xr.open_zarr(filename)
             for key in xds.attrs:
                 setattr(self, key, xds.attrs[key])
+
+            for key in self.data_array_keys:
+                try:
+                    setattr(self, key, xds[key].values)
+                except KeyError:
+                    pass
 
         except FileNotFoundError:
             logger.error(f"Telescope file not found: {filename}")
@@ -71,14 +82,17 @@ class Telescope:
             filename: Name of the output file
         """
         obj_dict = vars(self)
-        obj_dict.pop("filepath", None)
-        obj_dict.pop("filename", None)
-        try:
-            obj_dict.pop("z_cos_image", None)
-        except KeyError:
-            pass
+        for key in self.excluded_keys:
+            obj_dict.pop(key, None)
 
         xds = xr.Dataset()
+        for ikey, key in enumerate(self.data_array_keys):
+            try:
+                data = obj_dict.pop(key)
+                xds[key] = xr.DataArray(data, dims=self.data_array_dims[ikey])
+            except KeyError:
+                pass
+
         xds.attrs = obj_dict
         logger.debug("Writing telescope data to: filename")
         xds.to_zarr(filename, mode="w", compute=True, consolidated=True)
