@@ -256,6 +256,7 @@ class GlobalQPS:
         new_obj.point_cloud = point_cloud
         new_obj.qps_coefficients = qps_coefficients
         new_obj.n_points = point_cloud.shape[0]
+        return new_obj
 
     def _init_from_point_cloud(self, pcd_data, degradation_factor, displacement):
         if degradation_factor is None:
