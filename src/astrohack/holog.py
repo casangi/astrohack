@@ -49,8 +49,8 @@ def holog(
     grid_size is calculated using POINTING_OFFSET in pointing table.
     :type grid_size: numpy.ndarray, dtype int, list optional
 
-    :param cell_size: Numpy array defining the cell size of each grid bin. If not specified cell_size is calculated \
-    using POINTING_OFFSET in pointing table.
+    :param cell_size: Size 2 array defining the cell size of each beam grid bin in radians. If not specified, the used \
+    cell_size is the one given in the observation_summary of the input holog file.
     :type cell_size: numpy.ndarray, dtype float, list optional
 
     :param image_name: Defines the name of the output image name. If value is None, the name will be set to \
