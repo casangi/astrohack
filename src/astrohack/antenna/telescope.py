@@ -440,7 +440,6 @@ class NgvlaPrototype(Telescope):
     def attribute_pixels_to_panels(
         panel_list, u_axis, v_axis, radius, _, deviation, mask
     ):
-
         panel_map = np.full_like(radius, np.nan)
         for ix, xc in enumerate(u_axis):
             for iy, yc in enumerate(v_axis):
@@ -449,9 +448,9 @@ class NgvlaPrototype(Telescope):
                         issample, inpanel = panel.is_inside(xc, yc)
                         if inpanel:
                             if issample:
-                                panel.add_margin([xc, yc, ix, iy, deviation[ix, iy]])
-                            else:
                                 panel.add_sample([xc, yc, ix, iy, deviation[ix, iy]])
+                            else:
+                                panel.add_margin([xc, yc, ix, iy, deviation[ix, iy]])
                             panel_map[ix, iy] = ipanel
                             break
 
