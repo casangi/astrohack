@@ -9,6 +9,7 @@ from astrohack.antenna.polygon_panel import PolygonPanel
 from astrohack.utils.constants import *
 from astrohack.antenna.ring_panel import RingPanel
 from astrohack.utils.algorithms import create_coordinate_images, arm_shadow_masking
+from astrohack.utils.ray_tracing_general import GlobalQPS
 
 
 class Telescope:
@@ -370,32 +371,38 @@ class RingedCassegrain(Telescope):
         else:
             return mask
 
-    def phase_to_deviation(self, radius, phase, wavelength):
+    def phase_to_deviation(self, u_axis, v_axis, _, phase, wavelength):
         """
         Transform phase image to physical deviation image based on wavelength.
         Args:
-            radius: Radius image used for inclination determination
+            u_axis: Aperture U axis
+            v_axis: Aperture V axis
+            _: dummy argument for interface compatibility
             phase: Phase image in Radians
             wavelength: Observation wavelength in meters
 
         Returns:
             Deviation image.
         """
+        _, _, radius, _ = create_coordinate_images(u_axis, v_axis, create_polar_coordinates=True)
         acoeff = (wavelength / twopi) / (4.0 * self.focus)
         bcoeff = 4 * self.focus**2
         return acoeff * phase * np.sqrt(radius**2 + bcoeff)
 
-    def deviation_to_phase(self, radius, deviation, wavelength):
+    def deviation_to_phase(self, u_axis, v_axis, _, deviation, wavelength):
         """ "
         Transform deviation image to physical phase image based on wavelength.
         Args:
-            radius: Radius image used for inclination determination
+            u_axis: Aperture U axis
+            v_axis: Aperture V axis
+            _: dummy argument for interface compatibility
             deviation: Deviation image in meters
             wavelength: Observation wavelength in meters
 
         Returns:
             Phase image.
         """
+        _, _, radius, _ = create_coordinate_images(u_axis, v_axis, create_polar_coordinates=True)
         acoeff = (wavelength / twopi) / (4.0 * self.focus)
         bcoeff = 4 * self.focus**2
         return deviation / (acoeff * np.sqrt(radius**2 + bcoeff))
@@ -477,11 +484,21 @@ class NgvlaPrototype(Telescope):
         else:
             return mask
 
-    def phase_to_deviation(self, radius, phase, wavelength):
-        return
+    def phase_to_deviation(self, u_axis, v_axis, mask, phase, wavelength):
+        if self.z_cos_image is None:
+            global_qps = GlobalQPS.from_point_cloud_and_coefficients(self.point_cloud, self.qps_coefficients)
+            self.z_cos_image = global_qps.compute_gridded_z_cos(u_axis, v_axis, mask)
 
-    def deviation_to_phase(self, radius, deviation, wavelength):
-        return
+        deviation = phase * wavelength / fourpi / self.z_cos_image
+        return deviation
+
+    def deviation_to_phase(self, u_axis, v_axis, mask, deviation, wavelength):
+        if self.z_cos_image is None:
+            global_qps = GlobalQPS.from_point_cloud_and_coefficients(self.point_cloud, self.qps_coefficients)
+            self.z_cos_image = global_qps.compute_gridded_z_cos(u_axis, v_axis, mask)
+
+        phase = fourpi * self.z_cos_image * deviation / wavelength
+        return phase
 
 
 def get_proper_telescope(name: str, antenna_name: str = None):
