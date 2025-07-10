@@ -1,6 +1,8 @@
 from shapely import Polygon, Point
 from shapely.plotting import plot_polygon
 from astrohack.antenna.base_panel import BasePanel
+from astrohack.antenna.panel_fitting import PanelPoint
+import numpy as np
 
 
 class PolygonPanel(BasePanel):
@@ -27,14 +29,19 @@ class PolygonPanel(BasePanel):
 
         poly = Polygon(panel_info["polygon"])
 
-        screws = panel_info["screws"]
+        array_screws = panel_info["screws"]
+        screw_list = []
+        for screw in array_screws:
+            screw_list.append(PanelPoint(screw[0], screw[1]))
+
+        screws = np.array(screw_list, dtype=np.object_)
         super().__init__(
             model,
             screws,
             screws,
             plot_screw_size,
             label,
-            center=[poly.centroid.x, poly.centroid.y],
+            center=PanelPoint(poly.centroid.x, poly.centroid.y),
             zeta=None,
             ref_points=None,
         )
@@ -50,7 +57,7 @@ class PolygonPanel(BasePanel):
             xc: point x coordinate
             yc: point y coordinate
         """
-        inpanel = self.polygon.intersects(Point([xc, yc]))
+        inpanel = self.polygon.intersects(Point([yc, xc]))
         issample = True
         return issample, inpanel
 
@@ -69,12 +76,13 @@ class PolygonPanel(BasePanel):
                 print(sample)
         print()
 
-    def plot(self, ax, screws=False):
+    def plot(self, ax, screws=False, label=False):
         """
         Plot panel outline to ax
         Args:
             ax: matplotlib axes instance
             screws: Display screws in plot
+            label: add panel label to plot
         """
         plot_polygon(
             self.polygon,
@@ -83,7 +91,8 @@ class PolygonPanel(BasePanel):
             color=self.linecolor,
             linewidth=self.linewidth,
         )
-        self.plot_label(ax)
+        if label:
+            self.plot_label(ax, rotate=False)
         if screws:
             self.plot_screws(ax)
         return
