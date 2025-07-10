@@ -1,9 +1,9 @@
 import xarray as xr
 import pickle
+
 from scipy.spatial import distance_matrix
 from numba import njit
 from numpy.linalg import LinAlgError
-from scipy.interpolate import griddata
 
 from astrohack.utils.algorithms import (least_squares, create_2d_array_reconstruction_array, create_coordinate_images,
                                         regrid_data_onto_2d_grid)
@@ -218,6 +218,7 @@ def global_qps_image_jit(pcd, qps_coeffs, points):
     # print(return_line, '100% Done                  ')
     return new_zval, new_norm
 
+
 @njit()
 def global_qps_normal_image_jit(pcd, qps_coeffs, points):
     npnt = points.shape[0]
@@ -232,38 +233,38 @@ def global_qps_normal_image_jit(pcd, qps_coeffs, points):
     return new_norm
 
 
-
-
 class GlobalQPS:
     n_qps_extra_vars = 6
 
     def __init__(self):
         # Meta data
-        self.npnt = -1
+        self.n_points = None
 
         # Data arrays
-        self.pcd = None
-        self.qps_coeffs = None
-
-        self.current_z_val = None
-        self.current_z_cos = None
-        self.current_u_axis = None
-        self.current_v_axis = None
+        self.point_cloud = None
+        self.qps_coefficients = None
 
     @classmethod
-    def from_pcd(cls, pcd_data, degradation_factor=None, displacement=(0, 0, 0)):
+    def from_point_cloud(cls, pcd_data, degradation_factor=None, displacement=(0, 0, 0)):
         new_obj = cls()
-        new_obj._init_from_pcd(pcd_data, degradation_factor, displacement)
+        new_obj._init_from_point_cloud(pcd_data, degradation_factor, displacement)
         return new_obj
 
-    def _init_from_pcd(self, pcd_data, degradation_factor, displacement):
-        if degradation_factor is None:
-            self.pcd = pcd_data
-        else:
-            self.pcd = degrade_pcd(pcd_data, degradation_factor)
+    @classmethod
+    def from_point_cloud_and_coefficients(cls, point_cloud, qps_coefficients):
+        new_obj = cls()
+        new_obj.point_cloud = point_cloud
+        new_obj.qps_coefficients = qps_coefficients
+        new_obj.n_points = point_cloud.shape[0]
 
-        self.pcd[:, ] -= np.array(displacement)
-        self.qps_coeffs = np_qps_fitting(self.pcd)
+    def _init_from_point_cloud(self, pcd_data, degradation_factor, displacement):
+        if degradation_factor is None:
+            self.point_cloud = pcd_data
+        else:
+            self.point_cloud = degrade_pcd(pcd_data, degradation_factor)
+
+        self.point_cloud[:, ] -= np.array(displacement)
+        self.qps_coefficients = np_qps_fitting(self.point_cloud)
 
     @classmethod
     def from_pickle(cls, filename):
@@ -282,72 +283,35 @@ class GlobalQPS:
             total_size += item.__sizeof__()
         return total_size
 
-    def plot_z_val_and_z_cos(self, colormap='viridis', zlim=None, dpi=300, display=False):
-        fig, ax = create_figure_and_axes(None, [1, 2])
-        simple_imshow_map_plot(ax[0], fig, self.current_u_axis, self.current_v_axis, self.current_z_val,
-                               'Z value', colormap, zlim, z_label='Z value [m]', transpose=True)
-        simple_imshow_map_plot(ax[1], fig, self.current_u_axis, self.current_v_axis, self.current_z_cos,
-                               'Z Cosine', colormap, zlim, z_label='Z cosine []', transpose=True)
-        close_figure(fig, 'Gridded surface and cosine of surface angle to Z axis', 'zval_zcos_gqps.png',
-                     dpi, display)
-        return
-
-    def compute_gridded_z_val_and_z_cos(self, u_axis, v_axis, mask, gridding_engine='2D regrid', light=(0, 0, -1)):
-        light = np.array(light)
-
-        u_mesh, v_mesh = create_coordinate_images(u_axis, v_axis)
-        uv_idx_grid = create_2d_array_reconstruction_array(u_axis, v_axis, mask)
-
-        uv_points = np.empty_like(uv_idx_grid)
-        uv_points[:, 0] = u_mesh[mask]
-        uv_points[:, 1] = v_mesh[mask]
-
-        z_val, z_norm = global_qps_image_jit(self.pcd, self.qps_coeffs, uv_points)
-
-        z_angle = (generalized_dot(z_norm, light))/(generalized_norm(z_norm)*generalized_norm(light))
-
-        if gridding_engine == '2D regrid':
-            z_val_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_val, uv_idx_grid)
-            z_cos_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_angle, uv_idx_grid)
-        else:
-            raise Exception('only 2D regrid available now')
-
-        self.current_z_val = z_val_grid
-        self.current_z_cos = z_cos_grid
-        self.current_u_axis = u_axis
-        self.current_v_axis = v_axis
-
-        return z_val_grid, z_cos_grid
+    @classmethod
+    def from_zarr(cls, filepath):
+        new_obj = cls()
+        xds = xr.open_zarr(filepath)
+        new_obj.n_points = xds.attrs["n_points"]
+        new_obj.point_cloud = xds['point_cloud'].values
+        new_obj.qps_coefficients = xds['qps_coefficients'].values
 
     def to_zarr(self, filepath):
         xds = xr.Dataset()
 
         xds.attrs = {
-            "n_points": self.npnt
+            "n_points": self.n_points
         }
 
-        xds['qps_coefficients'] = xr.DataArray(self.qps_coeffs, dims=['qps_axis'])
-        xds['point_cloud'] = xr.DataArray(self.pcd, dims=['point_axis', 'xyz'])
-        qps_axis = [f'A{ipnt}' for ipnt in range(self.npnt)]
+        xds['qps_coefficients'] = xr.DataArray(self.qps_coefficients, dims=['qps_axis'])
+        xds['point_cloud'] = xr.DataArray(self.point_cloud, dims=['point_axis', 'xyz'])
+        qps_axis = [f'A{ipnt}' for ipnt in range(self.n_points)]
         qps_axis.extend([f'B{ipnt}' for ipnt in range(self.n_qps_extra_vars)])
 
         coords = {
             "xyz": ['x', 'y', 'z'],
-            'point': list(range(self.npnt)),
+            'point': list(range(self.n_points)),
             'qps': qps_axis
         }
         xds = xds.assign_coords(coords)
         xds.to_zarr(filepath, mode="w", compute=True, consolidated=True)
 
-    @classmethod
-    def from_zarr(cls, filepath):
-        new_obj = cls()
-        xds = xr.open_zarr(filepath)
-        new_obj.npnt = xds.attrs["n_points"]
-        new_obj.pcd = xds['point_cloud'].values
-        new_obj.qps_coeffs = xds['qps_coefficients'].values
-
-    def compute_gridded_z_cos(self, u_axis, v_axis, mask, gridding_engine='2D regrid', light=(0, 0, -1)):
+    def compute_gridded_z_cos(self, u_axis, v_axis, mask, light=(0, 0, -1)):
         light = np.array(light)
 
         u_mesh, v_mesh = create_coordinate_images(u_axis, v_axis)
@@ -357,21 +321,32 @@ class GlobalQPS:
         uv_points[:, 0] = u_mesh[mask]
         uv_points[:, 1] = v_mesh[mask]
 
-        z_norm = global_qps_normal_image_jit(self.pcd, self.qps_coeffs, uv_points)
+        z_norm = global_qps_normal_image_jit(self.point_cloud, self.qps_coefficients, uv_points)
 
         z_angle = (generalized_dot(z_norm, light))/(generalized_norm(z_norm)*generalized_norm(light))
 
-        if gridding_engine == '2D regrid':
-            # z_val_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_val, uv_idx_grid)
-            z_cos_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_angle, uv_idx_grid)
-        else:
-            raise Exception('only 2D regrid available now')
-
-        self.current_z_cos = z_cos_grid
-        self.current_u_axis = u_axis
-        self.current_v_axis = v_axis
+        z_cos_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_angle, uv_idx_grid)
 
         return z_cos_grid
+
+    def compute_gridded_z_val_and_z_cos(self, u_axis, v_axis, mask, light=(0, 0, -1)):
+        light = np.array(light)
+
+        u_mesh, v_mesh = create_coordinate_images(u_axis, v_axis)
+        uv_idx_grid = create_2d_array_reconstruction_array(u_axis, v_axis, mask)
+
+        uv_points = np.empty_like(uv_idx_grid)
+        uv_points[:, 0] = u_mesh[mask]
+        uv_points[:, 1] = v_mesh[mask]
+
+        z_val, z_norm = global_qps_image_jit(self.point_cloud, self.qps_coefficients, uv_points)
+
+        z_angle = (generalized_dot(z_norm, light)) / (generalized_norm(z_norm) * generalized_norm(light))
+
+        z_val_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_val, uv_idx_grid)
+        z_cos_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_angle, uv_idx_grid)
+
+        return z_val_grid, z_cos_grid
 
 
 class LocalQPS:
