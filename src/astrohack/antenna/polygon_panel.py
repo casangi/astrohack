@@ -41,8 +41,6 @@ class PolygonPanel(BasePanel):
         self.polygon = poly
         self.margin = panel_margin
 
-        if not self.polygon.is_simple:
-            raise Exception("Polygon must not intersect itself")
         return
 
     def is_inside(self, xc, yc):
