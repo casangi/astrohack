@@ -23,8 +23,8 @@
             "comment": "Panel data obtained from a CAD model of the antenna provided by R. Lehmensiek",
             "diameter": 18.0,
             "el_axis_offset": null,
-            "file_name": null,
-            "file_path": null,
+            "file_name": "ngvla_proto_2025.zarr",
+            "file_path": "/export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack/data/telescopes",
             "inner_radial_limit": 0.0,
             "name": "ngVLA proto 2025",
             "outer_radial_limit": 9.0,
@@ -5808,6 +5808,59 @@
         },
         ".zgroup": {
             "zarr_format": 2
+        },
+        "point_cloud/.zarray": {
+            "chunks": [
+                8633,
+                3
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f8",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                8633,
+                3
+            ],
+            "zarr_format": 2
+        },
+        "point_cloud/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "point_axis",
+                "xyz"
+            ]
+        },
+        "qps_coefficients/.zarray": {
+            "chunks": [
+                8639
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f8",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                8639
+            ],
+            "zarr_format": 2
+        },
+        "qps_coefficients/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "qps_coefficients"
+            ]
         }
     },
     "zarr_consolidated_format": 1
