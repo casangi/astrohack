@@ -73,6 +73,11 @@ class Telescope:
         obj_dict = vars(self)
         obj_dict.pop("filepath", None)
         obj_dict.pop("filename", None)
+        try:
+            obj_dict.pop("z_cos_image", None)
+        except KeyError:
+            pass
+
         xds = xr.Dataset()
         xds.attrs = obj_dict
         logger.debug("Writing telescope data to: filename")
@@ -391,7 +396,11 @@ class NgvlaPrototype(Telescope):
         super().__init__()
         self.panel_dict = None
         self.screw_description = None
-        self.localqps = None
+        self.point_cloud = None
+        self.qps_coefficients = None
+
+        # This is not to be written to disk
+        self.z_cos_image = None
 
     @classmethod
     def from_name(cls, name):
