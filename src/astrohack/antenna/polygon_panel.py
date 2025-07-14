@@ -90,6 +90,7 @@ class PolygonPanel(BasePanel):
             add_points=False,
             color=self.linecolor,
             linewidth=self.linewidth,
+            facecolor='none',
         )
         if label:
             self.plot_label(ax, rotate=False)
