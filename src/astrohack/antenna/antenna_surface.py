@@ -570,18 +570,19 @@ class AntennaSurface:
             panel.plot(
                 ax, screws=parm_dict["plot_screws"], label=parm_dict["panel_labels"]
             )
+        self.panels[50].plot(ax, screws=parm_dict["plot_screws"], label=parm_dict["panel_labels"])
 
         suptitle = f"{self.label}, Pol. state: {self.pol_state}"
         close_figure(fig, suptitle, filename, parm_dict["dpi"], parm_dict["display"])
 
-    def _add_resolution_to_plot(self, ax, xpos=0.1, ypos=0.9):
+    def _add_resolution_to_plot(self, ax, xpos=0.9, ypos=0.1):
         lw = 0.5
         if self.resolution is None:
             return
-        minx = np.min(self.u_axis)
-        miny = np.min(self.v_axis)
-        dx = np.max(self.u_axis) - minx
-        dy = np.max(self.v_axis) - miny
+        minx = self.u_axis[0]
+        miny = self.v_axis[1]
+        dx = self.u_axis[-1] - minx
+        dy = self.v_axis[-1] - miny
         center = (minx + xpos * dx, miny + ypos * dy)
         resolution = patches.Ellipse(
             center,
@@ -597,15 +598,15 @@ class AntennaSurface:
         halfbeam = self.resolution / dy / 2
         ax.axvline(
             x=center[0],
-            ymin=xpos - halfbeam[1],
-            ymax=xpos + halfbeam[1],
+            ymin=ypos - halfbeam[1],
+            ymax=ypos + halfbeam[1],
             color="black",
             lw=lw / 2,
         )
         ax.axhline(
             y=center[1],
-            xmin=ypos - halfbeam[0],
-            xmax=ypos + halfbeam[0],
+            xmin=xpos - halfbeam[0],
+            xmax=xpos + halfbeam[0],
             color="black",
             lw=lw / 2,
         )
