@@ -162,7 +162,7 @@ class AntennaSurface:
         self.amplitude = inputxds["AMPLITUDE"].values
         self.phase = inputxds["PHASE"].values
         self.deviation = inputxds["DEVIATION"].values
-        self.mask = inputxds["MASK"]
+        self.mask = inputxds["MASK"].values
         self.u_axis = inputxds.u.values
         self.v_axis = inputxds.u.values
         self.panel_distribution = inputxds["PANEL_DISTRIBUTION"].values
