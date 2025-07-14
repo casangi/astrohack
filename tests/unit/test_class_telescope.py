@@ -25,7 +25,7 @@ class TestClassTelescope:
             vla_ns = get_proper_telescope("vla", "teletubies")
 
         ngvla = get_proper_telescope("VLA", "na")
-        assert ngvla == "ngVLA proto 2025", "ngVLA prototype is not properly initialized"
+        assert ngvla.name == "ngVLA proto 2025", "ngVLA prototype is not properly initialized"
 
         alma_da = get_proper_telescope("ALMA", "DA13")
         assert alma_da.name == "ALMA DA", "ALMA DA is not properly initialized"
