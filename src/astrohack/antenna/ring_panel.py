@@ -1,6 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from astrohack.antenna.base_panel import BasePanel
+from astrohack.antenna.base_panel import BasePanel, markersize
 from astrohack.antenna.panel_fitting import PanelPoint
 
 
@@ -58,7 +58,7 @@ class RingPanel(BasePanel):
         self.first = ipanel == 0
         zeta = (ipanel + 0.5) * angle
         rt = (self.inrad + self.ourad) / 2
-        self.center = PanelPoint(-rt * np.sin(zeta), -rt * np.cos(zeta))
+        self.center = PanelPoint(-rt * np.sin(zeta), rt * np.cos(zeta))
         screws = self._init_screws(screw_scheme, screw_offset)
         plot_screw_pos = self._init_screws(screw_scheme, 2 * plot_screw_size)
         fi = self.theta2 - self.theta1
@@ -108,7 +108,7 @@ class RingPanel(BasePanel):
                 else:
                     theta = self.theta2 - deltatheta
                 screws[iscrew] = PanelPoint(
-                    -radius * np.sin(theta), -radius * np.cos(theta)
+                    radius * np.cos(theta), radius * np.sin(theta)
                 )
         return screws
 
@@ -181,3 +181,19 @@ class RingPanel(BasePanel):
             self.plot_label(ax)
         if screws:
             self.plot_screws(ax)
+
+    def plot_screws(self, ax):
+        """
+        Plots panel screws to ax
+        Args:
+            ax: matplotlib axes instance
+        """
+        for iscrew, screw in enumerate(self.screws):
+            ax.scatter(
+                -screw.yc,
+                screw.xc,
+                marker=self.markers[iscrew],
+                lw=self.linewidth,
+                s=markersize,
+                color=self.colors[iscrew],
+            )
