@@ -27,6 +27,7 @@ from astrohack.visualization.plot_tools import (
     simple_imshow_map_plot,
     get_proper_color_map,
     well_positioned_colorbar,
+    compute_extent
 )
 
 from astrohack.utils.fits import (
@@ -573,7 +574,7 @@ class AntennaSurface:
         suptitle = f"{self.label}, Pol. state: {self.pol_state}"
         close_figure(fig, suptitle, filename, parm_dict["dpi"], parm_dict["display"])
 
-    def _add_resolution_to_plot(self, ax, xpos=0.9, ypos=0.1):
+    def _add_resolution_to_plot(self, ax, xpos=0.1, ypos=0.9):
         lw = 0.5
         if self.resolution is None:
             return
@@ -596,15 +597,15 @@ class AntennaSurface:
         halfbeam = self.resolution / dy / 2
         ax.axvline(
             x=center[0],
-            ymin=ypos - halfbeam[1],
-            ymax=ypos + halfbeam[1],
+            ymin=xpos - halfbeam[1],
+            ymax=xpos + halfbeam[1],
             color="black",
             lw=lw / 2,
         )
         ax.axhline(
             y=center[1],
-            xmin=xpos - halfbeam[0],
-            xmax=xpos + halfbeam[0],
+            xmin=ypos - halfbeam[0],
+            xmax=ypos + halfbeam[0],
             color="black",
             lw=lw / 2,
         )
@@ -631,12 +632,7 @@ class AntennaSurface:
 
         ax.set_title(f"\nThreshold = {threshold:.2f} {unit}", fontsize="small")
         # set the limits of the plot to the limits of the data
-        extent = [
-            np.min(self.u_axis),
-            np.max(self.u_axis),
-            np.min(self.v_axis),
-            np.max(self.v_axis),
-        ]
+        extent = compute_extent(self.u_axis, self.v_axis)
         im = ax.imshow(
             np.full_like(self.deviation, fill_value=np.nan),
             cmap=cmap,
