@@ -113,8 +113,8 @@ def compute_extent(x_axis, y_axis, margin=0.0):
     Returns:
         len=4 list with [xmin, xmax, ymin, ymax]
     """
-    mins = np.array([np.min(x_axis), np.min(y_axis)])
-    maxs = np.array([np.max(x_axis), np.max(y_axis)])
+    mins = np.array([x_axis[0], y_axis[0]])
+    maxs = np.array([x_axis[-1], y_axis[-1]])
     data_range = maxs - mins
     mins -= margin * data_range
     maxs += margin * data_range
