@@ -1,5 +1,7 @@
 from shapely import Polygon, Point
 from shapely.plotting import plot_polygon
+
+from astrohack.utils.ray_tracing_general import generalized_norm
 from astrohack.antenna.base_panel import BasePanel
 from astrohack.antenna.panel_fitting import PanelPoint
 import numpy as np
@@ -48,7 +50,29 @@ class PolygonPanel(BasePanel):
         self.polygon = poly
         self.margin = panel_margin
 
+        self.margin_polygon = self._init_margin_polygon()
+
         return
+
+    def _init_margin_polygon(self):
+        """
+        This method assumes simple convex shapes for the polygons
+        Returns:
+            polygon separating margins from samples.
+        """
+
+        xc, yc = self.polygon.centroid.x, self.polygon.centroid.y
+        center = np.array([xc, yc])
+
+        corners = []
+        for point in self.polygon.exterior.coords:
+            corners.append(point)
+        corners = np.array(corners)
+
+        diff = corners - center
+        margin_corners = center + ((1-self.margin) * diff[:])
+
+        return Polygon(margin_corners)
 
     def is_inside(self, xc, yc):
         """
@@ -58,7 +82,7 @@ class PolygonPanel(BasePanel):
             yc: point y coordinate
         """
         inpanel = self.polygon.intersects(Point([yc, xc]))
-        issample = True
+        issample = self.margin_polygon.intersects(Point([yc, xc]))
         return issample, inpanel
 
     def print_misc(self, verbose=False):
@@ -90,6 +114,14 @@ class PolygonPanel(BasePanel):
             add_points=False,
             color=self.linecolor,
             linewidth=self.linewidth,
+            facecolor='none',
+        )
+        plot_polygon(
+            self.margin_polygon,
+            ax=ax,
+            add_points=False,
+            color=self.linecolor,
+            linewidth=self.linewidth/3,
             facecolor='none',
         )
         if label:
