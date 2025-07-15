@@ -21,8 +21,12 @@
     "comment": "Panel data obtained from a CAD model of the antenna provided by R. Lehmensiek",
     "diameter": 18.0,
     "el_axis_offset": null,
-    "file_name": "ngvla_local.zarr",
-    "file_path": "/home/victor/work/Holography-1022/git-shared/ngvla-proto-antenna/main-reflector-panels",
+    "file_name": "ngvla_proto_2025.zarr",
+    "file_path": "/export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack/data/telescopes",
+    "gain_wavelengths": [
+        0.03,
+        0.007
+    ],
     "inner_radial_limit": 0.0,
     "name": "ngVLA proto 2025",
     "outer_radial_limit": 9.0,

@@ -33,6 +33,7 @@ class Telescope:
         self.name = None
         self.el_axis_offset = None
         self.station_distance_dict = None
+        self.gain_wavelengths = None
 
     def read(self, filename):
         """
@@ -139,7 +140,6 @@ class RingedCassegrain(Telescope):
         self.focus = None
         self.arm_shadow_rotation = None
         self.arm_shadow_width = None
-        self.gain_wavelengths = None
         self.magnification = None
         self.n_panel_per_ring = None
         self.panel_numbering = None
