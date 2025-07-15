@@ -323,8 +323,7 @@ class AntennaSurface:
         # This is valid for the VLA not sure if valid for anything else...
         wavelength_scaling = self.wavelength / wavelength
 
-        dish_mask = np.where(self.rad > self.telescope.inner_radial_limit, True, False)
-        dish_mask = np.where(self.rad < self.telescope.diameter / 2, dish_mask, False)
+        dish_mask = self.base_mask
 
         if corrected:
             if self.fitted:
