@@ -95,7 +95,7 @@ class TestClassTelescope:
         with pytest.raises(Exception):
             tel.consistency_check()
 
-    def test_create_aperture_mask(self):
+    def test_create_ringed_aperture_mask(self):
         tel = get_proper_telescope("vla")
         u_axis = simple_axis([-15, 15], 0.1, 0.0)
         v_axis = simple_axis([-15, 15], 0.1, 0.0)
@@ -111,7 +111,19 @@ class TestClassTelescope:
         assert not mask[mid_point, mid_point], "Mask should be False inside blockage"
         assert mask[130, 150], "Mask should be True in an arm shadow"
 
-    def test_build_panel_list(self):
+    def test_create_ngvla_aperture_mask(self):
+        tel = get_proper_telescope("ngvla")
+        u_axis = simple_axis([-10, 10], 0.1, 0.0)
+        v_axis = simple_axis([-10, 10], 0.1, 0.0)
+        mid_point = u_axis.shape[0] // 2
+
+        mask = tel.create_aperture_mask(u_axis, v_axis)
+        radius = np.sqrt(u_axis[np.newaxis, :]**2+v_axis[:, np.newaxis]**2)
+        ref_mask = np.where(radius <= tel.diameter/2, True, False)
+        assert mask[mid_point, mid_point], "Mask should be true at the center of an unblocked aperture"
+        assert np.all(ref_mask == mask), "Mask is not identical to reference"
+
+    def test_build_ringed_panel_list(self):
         tel = get_proper_telescope("vla")
         panel_list = tel.build_panel_list("flexible", 0.2)
         assert isinstance(
@@ -186,7 +198,17 @@ class TestClassTelescope:
 
         return
 
-    def test_assign_panel(self):
+    def test_build_ngvla_panel_list(self):
+        model = "flexible"
+        margin = 0.2
+        tel = get_proper_telescope("ngvla")
+        panel_list = tel.build_panel_list(model, margin)
+
+        assert len(panel_list) == len(tel.panel_dict.keys()), "Panel list has the wrong number of elements"
+        assert panel_list[0].model_name == model, "Panels have initialized with the wrong model"
+        assert panel_list[0].margin == margin, "Panels have initialized with the wrong margin"
+
+    def test_assign_ringed_panel(self):
         tel = get_proper_telescope("vla")
         u_axis = simple_axis([-15, 15], 0.1, 0.0)
         v_axis = simple_axis([-15, 15], 0.1, 0.0)
@@ -207,14 +229,28 @@ class TestClassTelescope:
             panel_map[u_axis.shape[0] // 2, v_axis.shape[0] // 2]
         ), "Panel map has a valid value for blocked region in aperture"
         assert np.isnan(panel_map[0, 0]), "Panel map has a valid value outside aperture"
-        assert panel_map[220, 150] == 51.0, "Wrong panel assignment"
-        assert panel_map[100, 150] == 20.0, "Wrong panel assignment"
+        assert panel_map[220, 150] == 39.0, "Wrong panel assignment"
+        assert panel_map[100, 150] == 12.0, "Wrong panel assignment"
 
         return
 
-    def test_general_consistency(self):
-        """
-        Tests the consistency on a general layout Telescope Object
-        This test is currently mute as this routine no longer raises an exception
-        """
-        return
+    def test_assign_ngvla_panel(self):
+        tel = get_proper_telescope("ngvla")
+        u_axis = simple_axis([-10, 10], 0.1, 0.0)
+        v_axis = simple_axis([-10, 10], 0.1, 0.0)
+        panel_list = tel.build_panel_list("flexible", 0.2)
+        mask, radius, phi = tel.create_aperture_mask(
+            u_axis, v_axis, return_polar_meshes=True
+        )
+        dev = np.where(mask, 0.0, np.nan)
+        panel_map = tel.attribute_pixels_to_panels(
+            panel_list, u_axis, v_axis, radius, phi, dev, mask
+        )
+        assert (
+            panel_map.shape[0] == u_axis.shape[0]
+            and panel_map.shape[1] == v_axis.shape[0]
+        ), "panel map has the wrong shape"
+
+        assert np.isnan(panel_map[0, 0]), "Panel map has a valid value outside aperture"
+        assert panel_map[100, 120] == 40.0, "Wrong panel assignment"
+        assert panel_map[50, 150] == 66.0, "Wrong panel assignment"
