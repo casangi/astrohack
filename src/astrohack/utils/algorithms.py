@@ -520,9 +520,15 @@ def create_coordinate_images(x_axis, y_axis, create_polar_coordinates=False):
         x_mesh and y_mesh, plus radius_mesh and polar_angle_mesh if create_polar_coordinates
     """
     x_mesh, y_mesh = np.meshgrid(x_axis, y_axis, indexing="ij")
+    shape = [x_axis.shape[0], y_axis.shape[0]]
+    x_mesh = np.empty(shape)
+    y_mesh = np.empty(shape)
+    x_mesh[:, :] = x_axis[np.newaxis, :]
+    y_mesh[:, :] = -y_axis[:, np.newaxis]
+
     if create_polar_coordinates:
         radius_mesh = np.sqrt(x_mesh**2 + y_mesh**2)
-        polar_angle_mesh = np.arctan2(x_mesh, -y_mesh) - np.pi / 2
+        polar_angle_mesh = phase_wrapping(np.arctan2(y_mesh, x_mesh)+np.pi/2) + np.pi
         polar_angle_mesh = np.where(
             polar_angle_mesh < 0, polar_angle_mesh + twopi, polar_angle_mesh
         )
