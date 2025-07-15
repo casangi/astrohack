@@ -26,7 +26,7 @@ class PolygonPanel(BasePanel):
             panel_info: Dictionary with panel information
         """
         if "corotated" in model:
-            raise Exception(
+            raise ValueError(
                 f"corotated models such as {model} are not supported for Polygon based panels"
             )
 
@@ -64,11 +64,7 @@ class PolygonPanel(BasePanel):
 
         xc, yc = self.polygon.centroid.x, self.polygon.centroid.y
         center = np.array([xc, yc])
-
-        corners = []
-        for point in self.polygon.exterior.coords:
-            corners.append(point)
-        corners = np.array(corners)
+        corners = np.array(self.polygon.exterior.coords)
 
         diff = corners - center
         margin_corners = center + ((1-self.margin) * diff[:])
