@@ -1,7 +1,8 @@
 import numpy as np
 
 from astrohack.core.image_comparison_tool import extract_rms_from_xds
-from astrohack.utils import rad_to_deg_str, twopi, fixed_format_error, dynamic_format, format_observation_summary, make_header
+from astrohack.utils import (rad_to_deg_str, twopi, fixed_format_error, dynamic_format, format_observation_summary,
+                             make_header)
 from astrohack.antenna import get_proper_telescope, AntennaSurface
 from astrohack.utils import (
     convert_unit,
@@ -292,15 +293,14 @@ def export_gains_table_chunk(parm_dict):
     ant = parm_dict["this_ant"]
     ddi = parm_dict["this_ddi"]
     xds = parm_dict["xds_data"]
-    telescope = get_proper_telescope(xds.attrs["telescope_name"], ant)
     antenna = AntennaSurface(xds, reread=True)
     frequency = clight / antenna.wavelength
 
     if in_waves is None and in_freqs is None:
         try:
-            wavelengths = telescope.gain_wavelengths
+            wavelengths = antenna.telescope.gain_wavelengths
         except AttributeError:
-            msg = f"Telescope {telescope.name} has no predefined list of wavelengths to compute gains"
+            msg = f"Telescope {antenna.telescope.name} has no predefined list of wavelengths to compute gains"
             logger.error(msg)
             logger.info("Please provide one in the arguments")
             raise Exception(msg)
@@ -332,7 +332,7 @@ def export_gains_table_chunk(parm_dict):
     ]
     table = create_pretty_table(field_names)
 
-    outstr = f'# Gain estimates for {telescope.name} antenna {ant.split("_")[1]}\n'
+    outstr = f'# Gain estimates for {antenna.telescope.name} antenna {ant.split("_")[1]}\n'
     outstr += f"# Based on a measurement at {format_frequency(frequency)}, {format_wavelength(antenna.wavelength)}\n"
     outstr += f"# Antenna surface RMS before adjustment: {format_value_unit(rmses[0], rmsunit)}\n"
     outstr += f"# Antenna surface RMS after adjustment: {format_value_unit(rmses[1], rmsunit)}\n"
