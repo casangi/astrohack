@@ -570,7 +570,6 @@ class AntennaSurface:
             panel.plot(
                 ax, screws=parm_dict["plot_screws"], label=parm_dict["panel_labels"]
             )
-        self.panels[50].plot(ax, screws=parm_dict["plot_screws"], label=parm_dict["panel_labels"])
 
         suptitle = f"{self.label}, Pol. state: {self.pol_state}"
         close_figure(fig, suptitle, filename, parm_dict["dpi"], parm_dict["display"])
