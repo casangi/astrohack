@@ -51,7 +51,6 @@ def process_panel_chunk(panel_chunk_params):
         "display": False,
         "figure_size": None
     }
-    surface._plot_map('panel_map.png', surface.panel_distribution, 'panel_map', parm_dict, add_colorbar=True)
 
     surface.fit_surface()
     surface.correct_surface()
