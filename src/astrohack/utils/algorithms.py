@@ -528,7 +528,9 @@ def create_coordinate_images(x_axis, y_axis, create_polar_coordinates=False):
 
     if create_polar_coordinates:
         radius_mesh = np.sqrt(x_mesh**2 + y_mesh**2)
-        polar_angle_mesh = phase_wrapping(np.arctan2(y_mesh, x_mesh)+np.pi/2) + np.pi
+        polar_angle_mesh = (
+            phase_wrapping(np.arctan2(y_mesh, x_mesh) + np.pi / 2) + np.pi
+        )
         polar_angle_mesh = np.where(
             polar_angle_mesh < 0, polar_angle_mesh + twopi, polar_angle_mesh
         )

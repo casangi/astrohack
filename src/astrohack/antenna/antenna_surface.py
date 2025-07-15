@@ -27,7 +27,7 @@ from astrohack.visualization.plot_tools import (
     simple_imshow_map_plot,
     get_proper_color_map,
     well_positioned_colorbar,
-    compute_extent
+    compute_extent,
 )
 
 from astrohack.utils.fits import (
@@ -92,8 +92,9 @@ class AntennaSurface:
             self.phase = phase_wrapping(self.phase)
 
         self._create_aperture_mask(clip_type, clip_level, exclude_shadows)
-        self.deviation = self.telescope.phase_to_deviation(self.u_axis, self.v_axis, self.mask, self.phase,
-                                                           self.wavelength)
+        self.deviation = self.telescope.phase_to_deviation(
+            self.u_axis, self.v_axis, self.mask, self.phase, self.wavelength
+        )
         self.panels = self.telescope.build_panel_list(pmodel, panel_margins)
         if not self.reread:
             self.panelmodel = pmodel
@@ -205,9 +206,7 @@ class AntennaSurface:
         self.antenna_name = inputxds.attrs["summary"]["general"]["antenna name"]
         self.resolution = inputxds.summary["aperture"]["resolution"]
         self.ddi = inputxds.attrs["ddi"]
-        self.label = create_dataset_label(
-            self.antenna_name, inputxds.attrs["ddi"]
-        )
+        self.label = create_dataset_label(self.antenna_name, inputxds.attrs["ddi"])
         self.telescope = get_proper_telescope(
             self.summary["general"]["telescope name"], self.antenna_name
         )
@@ -404,11 +403,13 @@ class AntennaSurface:
                 ix, iy = int(corr[0]), int(corr[1])
                 self.residuals[ix, iy] -= corr[-1]
                 self.corrections[ix, iy] = -corr[-1]
-        self.phase_corrections = self.telescope.deviation_to_phase(self.u_axis, self.v_axis, self.mask,
-                                                                   self.corrections, self.wavelength)
+        self.phase_corrections = self.telescope.deviation_to_phase(
+            self.u_axis, self.v_axis, self.mask, self.corrections, self.wavelength
+        )
 
-        self.phase_residuals = self.telescope.deviation_to_phase(self.u_axis, self.v_axis, self.mask, self.residuals,
-                                                                 self.wavelength)
+        self.phase_residuals = self.telescope.deviation_to_phase(
+            self.u_axis, self.v_axis, self.mask, self.residuals, self.wavelength
+        )
 
         self._build_panel_data_arrays()
         self.solved = True

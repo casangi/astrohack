@@ -18,7 +18,7 @@ class Telescope:
     """
 
     data_array_keys = ["point_cloud", "qps_coefficients"]
-    data_array_dims = [["point_axis", "xyz"], ['qps_coefficients']]
+    data_array_dims = [["point_axis", "xyz"], ["qps_coefficients"]]
     excluded_keys = ["filepath", "filename", "z_cos_image"]
 
     def __init__(self):
@@ -387,7 +387,9 @@ class RingedCassegrain(Telescope):
         Returns:
             Deviation image.
         """
-        _, _, radius, _ = create_coordinate_images(u_axis, v_axis, create_polar_coordinates=True)
+        _, _, radius, _ = create_coordinate_images(
+            u_axis, v_axis, create_polar_coordinates=True
+        )
         acoeff = (wavelength / twopi) / (4.0 * self.focus)
         bcoeff = 4 * self.focus**2
         return acoeff * phase * np.sqrt(radius**2 + bcoeff)
@@ -405,7 +407,9 @@ class RingedCassegrain(Telescope):
         Returns:
             Phase image.
         """
-        _, _, radius, _ = create_coordinate_images(u_axis, v_axis, create_polar_coordinates=True)
+        _, _, radius, _ = create_coordinate_images(
+            u_axis, v_axis, create_polar_coordinates=True
+        )
         acoeff = (wavelength / twopi) / (4.0 * self.focus)
         bcoeff = 4 * self.focus**2
         return deviation / (acoeff * np.sqrt(radius**2 + bcoeff))
@@ -491,7 +495,9 @@ class NgvlaPrototype(Telescope):
 
     def phase_to_deviation(self, u_axis, v_axis, mask, phase, wavelength):
         if self.z_cos_image is None:
-            global_qps = GlobalQPS.from_point_cloud_and_coefficients(self.point_cloud, self.qps_coefficients)
+            global_qps = GlobalQPS.from_point_cloud_and_coefficients(
+                self.point_cloud, self.qps_coefficients
+            )
             self.z_cos_image = global_qps.compute_gridded_z_cos(u_axis, v_axis, mask)
 
         deviation = phase * wavelength / fourpi / self.z_cos_image
@@ -499,7 +505,9 @@ class NgvlaPrototype(Telescope):
 
     def deviation_to_phase(self, u_axis, v_axis, mask, deviation, wavelength):
         if self.z_cos_image is None:
-            global_qps = GlobalQPS.from_point_cloud_and_coefficients(self.point_cloud, self.qps_coefficients)
+            global_qps = GlobalQPS.from_point_cloud_and_coefficients(
+                self.point_cloud, self.qps_coefficients
+            )
             self.z_cos_image = global_qps.compute_gridded_z_cos(u_axis, v_axis, mask)
 
         phase = fourpi * self.z_cos_image * deviation / wavelength

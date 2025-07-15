@@ -186,6 +186,6 @@ class RingPanel(BasePanel):
 
         if samples and len(self.samples) > 0:
             for sample in self.samples:
-                ax.scatter(sample.xc, sample.yc, color='black', s=markersize)
+                ax.scatter(sample.xc, sample.yc, color="black", s=markersize)
             for marg in self.margins:
-                ax.scatter(marg.xc, marg.yc, color='red', s=markersize)
+                ax.scatter(marg.xc, marg.yc, color="red", s=markersize)

@@ -1,8 +1,14 @@
 import numpy as np
 
 from astrohack.core.image_comparison_tool import extract_rms_from_xds
-from astrohack.utils import (rad_to_deg_str, twopi, fixed_format_error, dynamic_format, format_observation_summary,
-                             make_header)
+from astrohack.utils import (
+    rad_to_deg_str,
+    twopi,
+    fixed_format_error,
+    dynamic_format,
+    format_observation_summary,
+    make_header,
+)
 from astrohack.antenna import get_proper_telescope, AntennaSurface
 from astrohack.utils import (
     convert_unit,
@@ -332,7 +338,9 @@ def export_gains_table_chunk(parm_dict):
     ]
     table = create_pretty_table(field_names)
 
-    outstr = f'# Gain estimates for {antenna.telescope.name} antenna {ant.split("_")[1]}\n'
+    outstr = (
+        f'# Gain estimates for {antenna.telescope.name} antenna {ant.split("_")[1]}\n'
+    )
     outstr += f"# Based on a measurement at {format_frequency(frequency)}, {format_wavelength(antenna.wavelength)}\n"
     outstr += f"# Antenna surface RMS before adjustment: {format_value_unit(rmses[0], rmsunit)}\n"
     outstr += f"# Antenna surface RMS after adjustment: {format_value_unit(rmses[1], rmsunit)}\n"

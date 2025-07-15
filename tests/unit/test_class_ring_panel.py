@@ -44,7 +44,7 @@ class TestRingPanel:
         test_screws[1, :] = [-np.sin(2 * self.angle), np.cos(2 * self.angle)]
         test_screws[2, :] = [-np.sin(self.angle), np.cos(self.angle)]
         test_screws[3, :] = [-np.sin(2 * self.angle), np.cos(2 * self.angle)]
-        
+
         test_screws[0:2, :] *= self.inrad
         test_screws[2:, :] *= self.ourad
         code_screws = self.panel._init_screws(scheme, offset)
@@ -58,11 +58,23 @@ class TestRingPanel:
         assert np.abs(diffsum) < 1e-15, "Screws with no offset do not match"
 
         offset = 6e-2  # 6 cm offset from panel edge
-        radii = [self.inrad + offset, self.inrad + offset, self.ourad - offset, self.ourad - offset]
-        theta = [self.angle+offset/radii[0], 2*self.angle-offset/radii[1],
-                 self.angle+offset/radii[2], 2*self.angle-offset/radii[3]]
+        radii = [
+            self.inrad + offset,
+            self.inrad + offset,
+            self.ourad - offset,
+            self.ourad - offset,
+        ]
+        theta = [
+            self.angle + offset / radii[0],
+            2 * self.angle - offset / radii[1],
+            self.angle + offset / radii[2],
+            2 * self.angle - offset / radii[3],
+        ]
         for i in range(4):
-            test_screws[i, :] = [-radii[i]*np.sin(theta[i]), radii[i]*np.cos(theta[i])]
+            test_screws[i, :] = [
+                -radii[i] * np.sin(theta[i]),
+                radii[i] * np.cos(theta[i]),
+            ]
         code_screws = self.panel._init_screws(scheme, offset)
         diffsum = 0
         for iscrew, test_screw in enumerate(test_screws):

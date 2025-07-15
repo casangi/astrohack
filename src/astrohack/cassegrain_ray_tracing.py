@@ -3,7 +3,12 @@ import xarray as xr
 
 from astrohack.utils.validation import custom_unit_checker, custom_plots_checker
 from astrohack.core.cassegrain_ray_tracing import *
-from astrohack.utils import convert_unit, clight, add_caller_and_version_to_dict, regrid_data_onto_2d_grid
+from astrohack.utils import (
+    convert_unit,
+    clight,
+    add_caller_and_version_to_dict,
+    regrid_data_onto_2d_grid,
+)
 from astrohack.utils.phase_fitting import aips_like_phase_fitting
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
 from typing import Union
@@ -285,8 +290,8 @@ def plot_2d_maps_from_rt_xds(
             zlim = None
 
         gridded_array = fac * regrid_data_onto_2d_grid(
-            rt_xds['x_axis'],
-            rt_xds['y_axis'],
+            rt_xds["x_axis"],
+            rt_xds["y_axis"],
             rt_xds[key].values,
             rt_xds["image_indexes"].values,
         )
@@ -510,8 +515,8 @@ def apply_holog_phase_fitting_to_rt_xds(
     # Create Amplitude and phase images on the shape expected by phase fitting engine.
     shape_5d = [ntime, npol, nfreq, npnt, npnt]
     amplitude_5d = np.empty(shape_5d)
-    phase_2d = regrid_data_onto_2d_grid(u_axis, v_axis,
-                                        rt_xds["phase"].values, rt_xds["image_indexes"].values
+    phase_2d = regrid_data_onto_2d_grid(
+        u_axis, v_axis, rt_xds["phase"].values, rt_xds["image_indexes"].values
     )
     phase_5d = np.empty_like(amplitude_5d)
     phase_5d[..., :, :] = phase_2d

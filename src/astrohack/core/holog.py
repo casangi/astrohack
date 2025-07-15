@@ -82,7 +82,9 @@ def process_holog_chunk(holog_chunk_params):
         f"{format_angular_distance(cell_size[1])} for the beam"
     )
 
-    telescope = get_proper_telescope(summary["general"]["telescope name"], summary["general"]["antenna name"])
+    telescope = get_proper_telescope(
+        summary["general"]["telescope name"], summary["general"]["antenna name"]
+    )
     try:
         is_near_field = ref_xds.attrs["near_field"]
     except KeyError:

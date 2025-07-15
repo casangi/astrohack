@@ -67,7 +67,7 @@ class PolygonPanel(BasePanel):
         corners = np.array(self.polygon.exterior.coords)
 
         diff = corners - center
-        margin_corners = center + ((1-self.margin) * diff[:])
+        margin_corners = center + ((1 - self.margin) * diff[:])
 
         return Polygon(margin_corners)
 
@@ -113,7 +113,7 @@ class PolygonPanel(BasePanel):
             add_points=False,
             color=self.linecolor,
             linewidth=self.linewidth,
-            facecolor='none',
+            facecolor="none",
         )
         if margins:
             plot_polygon(
@@ -121,14 +121,14 @@ class PolygonPanel(BasePanel):
                 ax=ax,
                 add_points=False,
                 color=self.linecolor,
-                linewidth=self.linewidth/3,
-                facecolor='none',
+                linewidth=self.linewidth / 3,
+                facecolor="none",
             )
         if samples and len(self.samples) > 0:
             for sample in self.samples:
-                ax.scatter(sample.xc, sample.yc, color='black', s=markersize)
+                ax.scatter(sample.xc, sample.yc, color="black", s=markersize)
             for marg in self.margins:
-                ax.scatter(marg.xc, marg.yc, color='red', s=markersize)
+                ax.scatter(marg.xc, marg.yc, color="red", s=markersize)
         if label:
             self.plot_label(ax, rotate=False)
         if screws:

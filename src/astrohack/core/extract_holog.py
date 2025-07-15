@@ -134,7 +134,7 @@ def process_extract_holog_chunk(extract_holog_params):
     # function more general use (hopefully). I honestly couldn't see a reason to keep it inside.
     for ant_index in vis_map_dict.keys():
         antenna_name = "_".join(("ant", ant_names[ant_index]))
-        telescope = get_proper_telescope(gen_info['telescope name'], antenna_name)
+        telescope = get_proper_telescope(gen_info["telescope name"], antenna_name)
         n_pix, cell_size = calculate_optimal_grid_parameters(
             pnt_map_dict, antenna_name, telescope.diameter, chan_freq, ddi
         )

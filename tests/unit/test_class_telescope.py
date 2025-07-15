@@ -25,7 +25,9 @@ class TestClassTelescope:
             vla_ns = get_proper_telescope("vla", "teletubies")
 
         ngvla = get_proper_telescope("VLA", "na")
-        assert ngvla.name == "ngVLA proto 2025", "ngVLA prototype is not properly initialized"
+        assert (
+            ngvla.name == "ngVLA proto 2025"
+        ), "ngVLA prototype is not properly initialized"
 
         alma_da = get_proper_telescope("ALMA", "DA13")
         assert alma_da.name == "ALMA DA", "ALMA DA is not properly initialized"
@@ -70,7 +72,7 @@ class TestClassTelescope:
         assert (
             filecmp.cmp(tel.file_path + "/vlba.zarr/.zattrs", testfile + "/.zattrs")
             == 0
-        ), "Telescope configuration " "file is not equal to the " "reference"
+        ), ("Telescope configuration " "file is not equal to the " "reference")
         shutil.rmtree(testfile)
 
         tel.name = "teletubies"
@@ -118,9 +120,11 @@ class TestClassTelescope:
         mid_point = u_axis.shape[0] // 2
 
         mask = tel.create_aperture_mask(u_axis, v_axis)
-        radius = np.sqrt(u_axis[np.newaxis, :]**2+v_axis[:, np.newaxis]**2)
-        ref_mask = np.where(radius <= tel.diameter/2, True, False)
-        assert mask[mid_point, mid_point], "Mask should be true at the center of an unblocked aperture"
+        radius = np.sqrt(u_axis[np.newaxis, :] ** 2 + v_axis[:, np.newaxis] ** 2)
+        ref_mask = np.where(radius <= tel.diameter / 2, True, False)
+        assert mask[
+            mid_point, mid_point
+        ], "Mask should be true at the center of an unblocked aperture"
         assert np.all(ref_mask == mask), "Mask is not identical to reference"
 
     def test_build_ringed_panel_list(self):
@@ -204,9 +208,15 @@ class TestClassTelescope:
         tel = get_proper_telescope("ngvla")
         panel_list = tel.build_panel_list(model, margin)
 
-        assert len(panel_list) == len(tel.panel_dict.keys()), "Panel list has the wrong number of elements"
-        assert panel_list[0].model_name == model, "Panels have initialized with the wrong model"
-        assert panel_list[0].margin == margin, "Panels have initialized with the wrong margin"
+        assert len(panel_list) == len(
+            tel.panel_dict.keys()
+        ), "Panel list has the wrong number of elements"
+        assert (
+            panel_list[0].model_name == model
+        ), "Panels have initialized with the wrong model"
+        assert (
+            panel_list[0].margin == margin
+        ), "Panels have initialized with the wrong margin"
 
     def test_assign_ringed_panel(self):
         tel = get_proper_telescope("vla")

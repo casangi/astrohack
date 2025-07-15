@@ -389,7 +389,7 @@ def simple_imshow_map_plot(
     extent=None,
     extent_margin=0,
     add_colorbar=True,
-    interpolation='nearest'
+    interpolation="nearest",
 ):
     cmap = get_proper_color_map(colormap)
     if zlim is None:
