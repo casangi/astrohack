@@ -1,6 +1,7 @@
 from shapely import Polygon, Point
 from shapely.plotting import plot_polygon
 
+from astrohack.utils import markersize
 from astrohack.utils.ray_tracing_general import generalized_norm
 from astrohack.antenna.base_panel import BasePanel
 from astrohack.antenna.panel_fitting import PanelPoint
@@ -81,8 +82,8 @@ class PolygonPanel(BasePanel):
             xc: point x coordinate
             yc: point y coordinate
         """
-        inpanel = self.polygon.intersects(Point([yc, xc]))
-        issample = self.margin_polygon.intersects(Point([yc, xc]))
+        inpanel = self.polygon.intersects(Point([xc, yc]))
+        issample = self.margin_polygon.intersects(Point([xc, yc]))
         return issample, inpanel
 
     def print_misc(self, verbose=False):
@@ -100,13 +101,15 @@ class PolygonPanel(BasePanel):
                 print(sample)
         print()
 
-    def plot(self, ax, screws=False, label=False):
+    def plot(self, ax, screws=False, label=False, margins=False, samples=False):
         """
         Plot panel outline to ax
         Args:
             ax: matplotlib axes instance
             screws: Display screws in plot
             label: add panel label to plot
+            margins: plot margin polygon
+            samples: plot samples
         """
         plot_polygon(
             self.polygon,
@@ -116,14 +119,20 @@ class PolygonPanel(BasePanel):
             linewidth=self.linewidth,
             facecolor='none',
         )
-        plot_polygon(
-            self.margin_polygon,
-            ax=ax,
-            add_points=False,
-            color=self.linecolor,
-            linewidth=self.linewidth/3,
-            facecolor='none',
-        )
+        if margins:
+            plot_polygon(
+                self.margin_polygon,
+                ax=ax,
+                add_points=False,
+                color=self.linecolor,
+                linewidth=self.linewidth/3,
+                facecolor='none',
+            )
+        if samples and len(self.samples) > 0:
+            for sample in self.samples:
+                ax.scatter(sample.xc, sample.yc, color='black', s=markersize)
+            for marg in self.margins:
+                ax.scatter(marg.xc, marg.yc, color='red', s=markersize)
         if label:
             self.plot_label(ax, rotate=False)
         if screws:

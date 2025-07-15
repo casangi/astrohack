@@ -108,7 +108,7 @@ class RingPanel(BasePanel):
                 else:
                     theta = self.theta2 - deltatheta
                 screws[iscrew] = PanelPoint(
-                    radius * np.cos(theta), radius * np.sin(theta)
+                    -radius * np.sin(theta), radius * np.cos(theta)
                 )
         return screws
 
@@ -147,13 +147,15 @@ class RingPanel(BasePanel):
         print("{0:20s}={1:8.5f}".format("zeta", self.zeta))
         print()
 
-    def plot(self, ax, screws=False, label=False):
+    def plot(self, ax, screws=False, label=False, margins=False, samples=False):
         """
         Plot panel outline to ax
         Args:
             ax: matplotlib axes instance
             screws: Display screws in plot
             label: Add panel labels to plot
+            margins: does nothing (interface compatibility)
+            samples: plot samples and margins
         """
         x1 = self.inrad * np.sin(self.theta1)
         y1 = self.inrad * np.cos(self.theta1)
@@ -182,18 +184,8 @@ class RingPanel(BasePanel):
         if screws:
             self.plot_screws(ax)
 
-    def plot_screws(self, ax):
-        """
-        Plots panel screws to ax
-        Args:
-            ax: matplotlib axes instance
-        """
-        for iscrew, screw in enumerate(self.screws):
-            ax.scatter(
-                -screw.yc,
-                screw.xc,
-                marker=self.markers[iscrew],
-                lw=self.linewidth,
-                s=markersize,
-                color=self.colors[iscrew],
-            )
+        if samples and len(self.samples) > 0:
+            for sample in self.samples:
+                ax.scatter(sample.xc, sample.yc, color='black', s=markersize)
+            for marg in self.margins:
+                ax.scatter(marg.xc, marg.yc, color='red', s=markersize)

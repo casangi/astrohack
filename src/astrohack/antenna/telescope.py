@@ -298,11 +298,14 @@ class RingedCassegrain(Telescope):
             panelsum += self.n_panel_per_ring[iring]
         panel_map = np.where(radius >= self.panel_inner_radii[0], panel_map, np.nan)
         panel_map = np.where(radius > self.panel_outer_radii[-1], np.nan, panel_map)
+        u_mesh, v_mesh = create_coordinate_images(u_axis, v_axis)
 
         for ix, xc in enumerate(u_axis):
             for iy, yc in enumerate(v_axis):
                 ipanel = panel_map[ix, iy]
                 if ipanel >= 0:
+                    xc = u_mesh[ix, iy]
+                    yc = v_mesh[ix, iy]
                     panel = panel_list[int(ipanel)]
                     issample, inpanel = panel.is_inside(radius[ix, iy], phi[ix, iy])
                     if inpanel:
@@ -440,10 +443,13 @@ class NgvlaPrototype(Telescope):
     def attribute_pixels_to_panels(
         panel_list, u_axis, v_axis, radius, _, deviation, mask
     ):
+        u_mesh, v_mesh = create_coordinate_images(u_axis, v_axis)
         panel_map = np.full_like(radius, np.nan)
         for ix, xc in enumerate(u_axis):
             for iy, yc in enumerate(v_axis):
                 if mask[ix, iy]:
+                    xc = u_mesh[ix, iy]
+                    yc = v_mesh[ix, iy]
                     for ipanel, panel in enumerate(panel_list):
                         issample, inpanel = panel.is_inside(xc, yc)
                         if inpanel:
