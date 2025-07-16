@@ -1,6 +1,5 @@
 from astrohack.antenna.antenna_surface import AntennaSurface
-from astrohack.antenna.panel_fitting import PanelPoint
-from astrohack.antenna.telescope import Telescope
+from astrohack.antenna.telescope import get_proper_telescope
 from astrohack import extract_holog, extract_pointing, holog
 from astrohack.utils.conversion import convert_unit
 
@@ -58,12 +57,12 @@ class TestClassAntennaSurface:
     inputxds = xr.open_zarr(
         f"{datafolder}/ea25_cal_small_after_fixed.split.image.zarr/ant_ea25/ddi_0"
     )
-    inputxds.attrs["ant_name"] = "test"
+    inputxds.attrs["ant_name"] = "ea00"
     inputxds.attrs["ddi"] = "test"
-    tel = Telescope("vla")
+    tel = get_proper_telescope("vla")
     datashape = (510, 510)
     middlepix = 255
-    tant = AntennaSurface(inputxds, tel, panel_margins=0.2)
+    tant = AntennaSurface(inputxds, panel_margins=0.2)
     tolerance = 1e-6
     sigma = 20
     rand = sigma * np.random.randn(*datashape)
@@ -93,7 +92,7 @@ class TestClassAntennaSurface:
             < 0.01
         ), "Azimuth at the horizontal axis is more than 1% different from pi/2"
         # tests _build_ring_panels
-        assert len(self.tant.panels) == np.sum(self.tant.telescope.npanel), (
+        assert len(self.tant.panels) == np.sum(self.tant.telescope.n_panel_per_ring), (
             "Number of panels do not " "match the expected number"
         )
         # tests _build_ring_mask
@@ -104,54 +103,28 @@ class TestClassAntennaSurface:
             0, 0
         ], "Mask is True at edges, where it should be False"
 
-    def test_compile_panel_points_ringed(self):
-        """
-        Tests that a point falls into the correct panel and that this panel has the correct number of samples
-        """
-        compvaluep0 = [
-            3.3030790441176467,
-            0.43083639705882354,
-            197,
-            262,
-            2.57549549e-04,
-        ]
-        compnsampp0 = 179
-        self.tant.compile_panel_points()
-
-        assert (
-            len(self.tant.panels[0].samples) == compnsampp0
-        ), "Number of samples in panel is different from reference"
-
-        assert np.allclose(
-            self.tant.panels[0].samples[0].get_array(), compvaluep0, atol=self.tolerance
-        ), (
-            "Point data in Panel is different from what is expected. Given values: "
-            + str(self.tant.panels[0].samples[0].get_array())
-            + " Expected values: "
-            + str(compvaluep0)
-        )
-
     def test_fit_surface(self):
         """
         Tests that fitting results for two panels match the reference
         """
-        solveparsp0 = [0.00032415, 0.00037302, -0.00092434]
-        solveparsp30 = [0.00038105, -0.00039928, -0.00067004]
+        solveparsp0 = [-0.00037302, 0.00032415, -0.00092434]
+        solveparsp30 = [0.00039928, 0.00038105, -0.00067004]
         self.tant.fit_surface()
 
         assert len(self.tant.panels[0].model.parameters) == len(solveparsp0), (
             "Fitted results have a different length" " from reference"
         )
 
-        for i in range(len(solveparsp30)):
-            assert (
-                abs(self.tant.panels[0].model.parameters[i] - solveparsp0[i])
-                < self.tolerance
-            ), "Fitting results for Panel 0 do not match reference within tolerance"
-            assert (
-                abs(self.tant.panels[30].model.parameters[i] - solveparsp30[i])
-                < self.tolerance
-            ), "Fitting results for Panel 30 do not match reference within tolerance"
+        assert np.all(
+            np.isclose(
+                self.tant.panels[0].model.parameters, solveparsp0, atol=self.tolerance
+            )
+        ), "Fitting results for Panel 0 do not match reference within tolerance"
+        assert np.all(
+            np.isclose(
+                self.tant.panels[30].model.parameters, solveparsp30, atol=self.tolerance
+            )
+        ), "Fitting results for Panel 30 do not match reference within tolerance"
 
     def test_correct_surface(self):
         """

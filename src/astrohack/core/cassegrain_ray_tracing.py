@@ -9,7 +9,6 @@ from astrohack.utils import (
     data_statistics,
     clight,
     statistics_to_text,
-    create_aperture_mask,
 )
 from astrohack.utils.constants import twopi
 from astrohack.utils.conversion import convert_unit
@@ -30,6 +29,7 @@ from astrohack.visualization.plot_tools import (
 )
 from astrohack.visualization.textual_data import create_pretty_table
 from astrohack.utils.text import format_value_error, format_label
+from astrohack.antenna.telescope import get_proper_telescope
 
 nanvec3d = np.full([3], np.nan)
 
@@ -90,12 +90,10 @@ def make_gridded_cassegrain_primary(grid_size, resolution, telescope_pars):
         axis, axis, create_polar_coordinates=True
     )
     x_idx_mesh, y_idx_mesh = np.meshgrid(axis_idx, axis_idx, indexing="ij")
-    radial_mask = create_aperture_mask(
-        axis,
-        axis,
-        telescope_pars["inner_radius"],
-        telescope_pars["primary_diameter"] / 2,
-    )
+    tel = get_proper_telescope("vla")
+    tel.inner_radial_limit = telescope_pars["inner_radius"]
+    tel.diameter = telescope_pars["primary_diameter"]
+    radial_mask = tel.create_aperture_mask(axis, axis, exclude_arms=False)
     img_radius = img_radius[radial_mask]
     npnt_1d = img_radius.shape[0]
     idx_1d = np.empty([npnt_1d, 2], dtype=int)
@@ -339,29 +337,6 @@ def compute_phase(rt_xds, wavelength, phase_offset):
 ###########################################################
 # Plotting routines and plotting aids, such as regridding #
 ###########################################################
-def regrid_data_onto_2d_grid(npnt, data, indexes):
-    """
-    Use index information to get 1D data back onto a 2D grid.
-    Args:
-        npnt: Number of points on the 2d grid (assumed to be a square)
-        data: 1D data to be regridded
-        indexes: 1D array of 2D indexes
-
-    Returns:
-        Data regridded onto a 2D array
-    """
-    npnt_1d = data.shape[0]
-    if len(data.shape) == 2:
-        gridded_2d = np.full([npnt, npnt, data.shape[1]], np.nan)
-        for ipnt in range(npnt_1d):
-            ix, iy = indexes[ipnt]
-            gridded_2d[ix, iy, :] = data[ipnt, :]
-    else:
-        gridded_2d = np.full([npnt, npnt], np.nan)
-        for ipnt in range(npnt_1d):
-            ix, iy = indexes[ipnt]
-            gridded_2d[ix, iy] = data[ipnt]
-    return gridded_2d
 
 
 def title_from_input_parameters(inpt_dict):

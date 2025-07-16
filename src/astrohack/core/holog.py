@@ -1,8 +1,8 @@
 import numpy as np
 import xarray as xr
 
-from astrohack.antenna.telescope import Telescope
 from astrohack.utils import format_angular_distance
+from astrohack.antenna.telescope import get_proper_telescope
 from astrohack.utils.text import create_dataset_label
 from astrohack.utils.conversion import convert_5d_grid_to_stokes
 from astrohack.utils.algorithms import phase_wrapping
@@ -82,8 +82,8 @@ def process_holog_chunk(holog_chunk_params):
         f"{format_angular_distance(cell_size[1])} for the beam"
     )
 
-    telescope = _get_correct_telescope(
-        summary["general"]["antenna name"], summary["general"]["telescope name"]
+    telescope = get_proper_telescope(
+        summary["general"]["telescope name"], summary["general"]["antenna name"]
     )
     try:
         is_near_field = ref_xds.attrs["near_field"]
@@ -122,7 +122,9 @@ def process_holog_chunk(holog_chunk_params):
 
     # Current bottleneck
     if is_near_field:
-        distance, focus_offset = telescope.dist_dict[holog_chunk_params["alma_osf_pad"]]
+        distance, focus_offset = telescope.station_distance_dict[
+            holog_chunk_params["alma_osf_pad"]
+        ]
         aperture_grid, u_axis, v_axis, _, used_wavelength = (
             calculate_near_field_aperture(
                 grid=beam_grid,
@@ -245,28 +247,11 @@ def process_holog_chunk(holog_chunk_params):
     logger.info(f"Finished processing {label}")
 
 
-def _get_correct_telescope(ant_name, telescope_name):
-    # Get telescope info
-    if ant_name.upper().__contains__("DV"):
-        telescope_name = "_".join((telescope_name, "DV"))
-
-    elif ant_name.upper().__contains__("DA"):
-        telescope_name = "_".join((telescope_name, "DA"))
-
-    elif ant_name.upper().__contains__("EA"):
-        telescope_name = "VLA"
-
-    else:
-        raise Exception("Antenna type not found: {name}".format(name=ant_name))
-
-    return Telescope(telescope_name)
-
-
 def _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope, scaling=1.5):
     # Default scaling factor is now 1.5 to allow for better analysis of the noise around the aperture.
     # This will probably mean no cropping for most apertures, but may be important if dish appears too small in the
     # aperture.
-    max_aperture_radius = 0.5 * telescope.diam
+    max_aperture_radius = 0.5 * telescope.diameter
 
     image_slice = aperture_grid[0, 0, 0, ...]
     center_pixel = np.array(image_slice.shape[0:2]) // 2

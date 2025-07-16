@@ -27,6 +27,12 @@ def check_if_file_can_be_opened(filename, minimal_version):
         ".locit_input",
         ".position_input",
     ]
+
+    if os.path.exists(filename):
+        pass
+    else:
+        raise FileNotFoundError(f"{filename} cannot be found.")
+
     found_meta = False
     metadata = None
 

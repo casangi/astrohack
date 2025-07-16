@@ -224,7 +224,7 @@ def get_default_file_name(input_file: str, output_type: str) -> str:
 
     for suffix in known_data_types:
         if input_file.endswith(suffix):
-            base_name = input_file.rstrip(suffix)
+            base_name = input_file.removesuffix(suffix)
             output_file = "".join((base_name, output_type))
 
     if not output_file:
@@ -438,7 +438,8 @@ def format_frequency(freq_value, unit="Hz", decimal_places=4):
     return format_value_unit(fac * freq_value, unitout, decimal_places)
 
 
-def format_wavelength(wave_value, unit="m", decimal_places=2):
+def format_wavelength(user_value, unit="m", decimal_places=2):
+    wave_value = np.abs(user_value)
     if isinstance(wave_value, str):
         wave_value = float(wave_value)
     if wave_value >= 1:
@@ -454,7 +455,7 @@ def format_wavelength(wave_value, unit="m", decimal_places=2):
     else:
         unitout = unit
     fac = convert_unit(unit, unitout, "length")
-    return format_value_unit(fac * wave_value, unitout, decimal_places)
+    return format_value_unit(fac * user_value, unitout, decimal_places)
 
 
 def format_duration(duration, unit="sec", decimal_places=2):

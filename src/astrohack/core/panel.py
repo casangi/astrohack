@@ -1,7 +1,6 @@
 import toolviper.utils.logger as logger
 
 from astrohack.antenna.antenna_surface import AntennaSurface
-from astrohack.antenna.telescope import Telescope
 from astrohack.utils import create_dataset_label, data_from_version_needs_patch
 
 
@@ -17,7 +16,6 @@ def process_panel_chunk(panel_chunk_params):
     antenna = panel_chunk_params["this_ant"]
     inputxds = panel_chunk_params["xds_data"]
     logger.info(f"processing {create_dataset_label(antenna, ddi)}")
-    telescope = Telescope.from_xds(inputxds)
     if isinstance(clip_level, dict):
         ant_name = antenna.split("_")[1]
         ddi_name = int(ddi.split("_")[1])
@@ -34,7 +32,6 @@ def process_panel_chunk(panel_chunk_params):
 
     surface = AntennaSurface(
         inputxds,
-        telescope,
         clip_type=panel_chunk_params["clip_type"],
         pol_state=panel_chunk_params["polarization_state"],
         clip_level=clip_level,
@@ -44,7 +41,17 @@ def process_panel_chunk(panel_chunk_params):
         exclude_shadows=panel_chunk_params["exclude_shadows"],
     )
 
-    surface.compile_panel_points()
+    parm_dict = {
+        "dpi": 300,
+        "colormap": "viridis",
+        "z_lim": None,
+        "unit": " ",
+        "plot_screws": True,
+        "panel_labels": True,
+        "display": False,
+        "figure_size": None,
+    }
+
     surface.fit_surface()
     surface.correct_surface()
 

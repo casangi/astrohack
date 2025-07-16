@@ -8,7 +8,7 @@ from casacore import tables as ctables
 from astropy.coordinates import SkyCoord, CIRS
 from astropy.time import Time
 
-from astrohack.antenna.telescope import Telescope
+from astrohack.antenna.telescope import get_proper_telescope
 from astrohack.utils.conversion import convert_unit, casa_time_to_mjd
 from astrohack.utils.constants import figsize, twopi
 from astrohack.utils.data import write_meta_data
@@ -435,7 +435,7 @@ def plot_array_configuration(ant_dict, telescope_name, parm_dict):
         parm_dict: Parameter dictionary crafted by the calling function
     """
 
-    telescope = Telescope(telescope_name)
+    telescope = get_proper_telescope(telescope_name)
     stations = parm_dict["stations"]
     display = parm_dict["display"]
     figure_size = parm_dict["figure_size"]

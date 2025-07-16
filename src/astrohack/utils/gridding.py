@@ -112,7 +112,7 @@ def grid_beam(
                 vis_avg,
                 weight_sum,
                 lm_freq_scaled,
-                telescope.diam,
+                telescope.diameter,
                 l_axis,
                 m_axis,
                 sky_cell_size,

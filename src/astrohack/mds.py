@@ -54,8 +54,6 @@ from astrohack.core.extract_locit import plot_array_configuration
 
 from astrohack.antenna.antenna_surface import AntennaSurface
 
-from astrohack.antenna.telescope import Telescope
-
 from astrohack.utils.text import print_method_list
 from astrohack.utils.text import print_dict_table
 from astrohack.utils.text import print_data_contents
@@ -1012,8 +1010,7 @@ class AstrohackPanelFile(dict):
         ant = "ant_" + ant
         ddi = f"ddi_{ddi}"
         xds = self[ant][ddi]
-        telescope = Telescope(xds.attrs["telescope_name"])
-        return AntennaSurface(xds, telescope, reread=True)
+        return AntennaSurface(xds, reread=True)
 
     @toolviper.utils.parameter.validate(custom_checker=custom_plots_checker)
     def export_screws(

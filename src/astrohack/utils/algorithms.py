@@ -92,8 +92,8 @@ def calc_coords(image_size, cell_size):
     """Calculate the center pixel of the image given a cell and image size
 
     Args:
-        image_size (np.array): image size
-        cell_size (np.array): cell size
+        image_size (np.ndarray): image size
+        cell_size (np.ndarray): cell size
 
     Returns:
         float, float: center pixel location in coordinates x, y
@@ -188,12 +188,12 @@ def _calculate_euclidean_distance(x, y, center):
     """Calculates the Euclidean distance between a pair of input points.
 
     Args:
-        x (float): x-coordinate
-        y (float): y-coordinate
+        x (float, np.ndarray): x-coordinate
+        y (float, np.ndarray): y-coordinate
         center (tuple (float)): float tuple containing the coordinates to the center pixel
 
     Returns:
-        float: euclidean distance of points from center pixel
+        float, np.ndarray: euclidean distance of points from center pixel
     """
 
     return np.sqrt(np.power(x - center[0], 2) + np.power(y - center[1], 2))
@@ -520,9 +520,17 @@ def create_coordinate_images(x_axis, y_axis, create_polar_coordinates=False):
         x_mesh and y_mesh, plus radius_mesh and polar_angle_mesh if create_polar_coordinates
     """
     x_mesh, y_mesh = np.meshgrid(x_axis, y_axis, indexing="ij")
+    shape = [x_axis.shape[0], y_axis.shape[0]]
+    x_mesh = np.empty(shape)
+    y_mesh = np.empty(shape)
+    x_mesh[:, :] = x_axis[np.newaxis, :]
+    y_mesh[:, :] = -y_axis[:, np.newaxis]
+
     if create_polar_coordinates:
         radius_mesh = np.sqrt(x_mesh**2 + y_mesh**2)
-        polar_angle_mesh = np.arctan2(x_mesh, -y_mesh) - np.pi / 2
+        polar_angle_mesh = (
+            phase_wrapping(np.arctan2(y_mesh, x_mesh) + np.pi / 2) + np.pi
+        )
         polar_angle_mesh = np.where(
             polar_angle_mesh < 0, polar_angle_mesh + twopi, polar_angle_mesh
         )
@@ -531,75 +539,7 @@ def create_coordinate_images(x_axis, y_axis, create_polar_coordinates=False):
         return x_mesh, y_mesh
 
 
-def create_aperture_mask(
-    x_axis,
-    y_axis,
-    inner_rad,
-    outer_rad,
-    arm_width=None,
-    arm_angle=0,
-    return_polar_meshes=False,
-):
-    """
-    Create a basic aperture mask with support for feed supporting arms shadows
-    Args:
-        x_axis: The X axis of the Aperture
-        y_axis: The Y axis of the Aperture
-        inner_rad: The innermost radius for valid data in aperture
-        outer_rad: The outermost radius for valid data in aperture
-        arm_width: The width of the feed arm shadows, can be a list with limiting radii or a single value.
-        arm_angle: The angle between the arm shadows and the X axis
-        return_polar_meshes: Return the radial and polar meshes to avoid duplicate computations.
-
-    Returns:
-
-    """
-    x_mesh, y_mesh, radius_mesh, polar_angle_mesh = create_coordinate_images(
-        x_axis, y_axis, create_polar_coordinates=True
-    )
-    mask = np.full_like(radius_mesh, True, dtype=bool)
-    mask = np.where(radius_mesh > outer_rad, False, mask)
-    mask = np.where(radius_mesh < inner_rad, False, mask)
-
-    if arm_width is None:
-        pass
-    elif isinstance(arm_width, (float, int)):
-        mask = _arm_shadow_masking(
-            mask,
-            x_mesh,
-            y_mesh,
-            radius_mesh,
-            inner_rad,
-            outer_rad,
-            arm_width,
-            arm_angle,
-        )
-    elif isinstance(arm_width, list):
-        for section in arm_width:
-            minradius, maxradius, width = section
-            mask = _arm_shadow_masking(
-                mask,
-                x_mesh,
-                y_mesh,
-                radius_mesh,
-                minradius,
-                maxradius,
-                width,
-                arm_angle,
-            )
-
-    else:
-        raise Exception(
-            f"Don't know how to handle an arm width of class {type(arm_width)}"
-        )
-
-    if return_polar_meshes:
-        return mask, radius_mesh, polar_angle_mesh
-    else:
-        return mask
-
-
-def _arm_shadow_masking(
+def arm_shadow_masking(
     inmask, x_mesh, y_mesh, radius_mesh, minradius, maxradius, width, angle
 ):
     radial_mask = np.where(radius_mesh < minradius, False, inmask)
@@ -639,8 +579,32 @@ def create_2d_array_reconstruction_array(x_axis, y_axis, mask):
     x_idx = np.arange(x_axis.shape[0], dtype=int)
     y_idx = np.arange(y_axis.shape[0], dtype=int)
     x_idx_grd, y_idx_grd = np.meshgrid(x_idx, y_idx, indexing="ij")
-    uv_idx_grid = np.empty([n_valid, 2], dtype=int)
-    uv_idx_grid[:, 0] = x_idx_grd[mask]
-    uv_idx_grid[:, 1] = y_idx_grd[mask]
+    xy_idx_grid = np.empty([n_valid, 2], dtype=int)
+    xy_idx_grid[:, 0] = x_idx_grd[mask]
+    xy_idx_grid[:, 1] = y_idx_grd[mask]
 
-    return uv_idx_grid
+    return xy_idx_grid
+
+
+def regrid_data_onto_2d_grid(x_axis, y_axis, linear_array, grid_idx):
+    """
+    Use index information to get 1D data back onto a 2D grid.
+    Args:
+        x_axis: X axis of the data on the 2 D grid
+        y_axis: Y axis of the data on the 2 D grid
+        linear_array: Linearized masked array
+        grid_idx: Linearized 2 D indexes onto the original grid
+
+    Returns:
+    Data regridded onto a 2D array
+    """
+    nx = x_axis.shape[0]
+    ny = y_axis.shape[0]
+    if linear_array.ndim == 1:
+        grid_shape = [nx, ny]
+    else:
+        grid_shape = [nx, ny, linear_array.shape[1]]
+
+    gridded = np.full(grid_shape, np.nan)
+    gridded[grid_idx[:, 0], grid_idx[:, 1]] = linear_array[:]
+    return gridded

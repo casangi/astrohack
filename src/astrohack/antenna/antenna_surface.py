@@ -4,14 +4,13 @@ from matplotlib import patches
 
 import toolviper.utils.logger as logger
 
-from astrohack.antenna.ring_panel import RingPanel
+from astrohack.antenna.telescope import get_proper_telescope
 from astrohack.utils import (
     string_to_ascii_file,
     create_dataset_label,
     data_statistics,
     statistics_to_text,
     phase_wrapping,
-    create_aperture_mask,
 )
 from astrohack.utils.constants import *
 from astrohack.utils.conversion import to_db
@@ -28,6 +27,7 @@ from astrohack.visualization.plot_tools import (
     simple_imshow_map_plot,
     get_proper_color_map,
     well_positioned_colorbar,
+    compute_extent,
 )
 
 from astrohack.utils.fits import (
@@ -44,7 +44,6 @@ class AntennaSurface:
     def __init__(
         self,
         inputxds,
-        telescope,
         clip_type="sigma",
         clip_level=3,
         pmodel="rigid",
@@ -60,7 +59,6 @@ class AntennaSurface:
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
         Args:
             inputxds: Input xarray dataset
-            telescope: Telescope object
             clip_type: Type of clipping to be applied to amplitude
             clip_level: Level of clipping
             pmodel: model of panel surface fitting, if is None defaults to telescope default
@@ -86,27 +84,35 @@ class AntennaSurface:
         self.out_rms = np.nan
         self.fitted = False
         self.pol_state = pol_state
+
+        # Read the data in an XDS
         self._read_xds(inputxds)
-        self.telescope = telescope
 
         if patch_phase:
             self.phase = phase_wrapping(self.phase)
 
+        self._create_aperture_mask(clip_type, clip_level, exclude_shadows)
+        self.deviation = self.telescope.phase_to_deviation(
+            self.u_axis, self.v_axis, self.mask, self.phase, self.wavelength
+        )
+        self.panels = self.telescope.build_panel_list(pmodel, panel_margins)
         if not self.reread:
             self.panelmodel = pmodel
             self.panel_margins = panel_margins
             if crop:
                 self._crop_maps()
+            self.panel_distribution = self.telescope.attribute_pixels_to_panels(
+                self.panels,
+                self.u_axis,
+                self.v_axis,
+                self.rad,
+                self.phi,
+                self.deviation,
+                self.mask,
+            )
 
-        self._create_aperture_mask(clip_type, clip_level, exclude_shadows)
         if nan_out_of_bounds:
             self._nan_out_of_bounds()
-        self.deviation = self._phase_to_deviation()
-
-        if self.telescope.ringed:
-            self._init_ringed()
-        else:
-            raise Exception("Non ringed telescopes not yet supported...")
 
     def _read_holog_xds(self, inputxds):
         if "chan" in inputxds.dims:
@@ -157,9 +163,9 @@ class AntennaSurface:
         self.amplitude = inputxds["AMPLITUDE"].values
         self.phase = inputxds["PHASE"].values
         self.deviation = inputxds["DEVIATION"].values
-        self.mask = inputxds["MASK"]
+        self.mask = inputxds["MASK"].values
         self.u_axis = inputxds.u.values
-        self.v_axis = inputxds.u.values
+        self.v_axis = inputxds.v.values
         self.panel_distribution = inputxds["PANEL_DISTRIBUTION"].values
         self.amplitude_noise = inputxds["AMP_NOISE"].values
 
@@ -201,6 +207,9 @@ class AntennaSurface:
         self.resolution = inputxds.summary["aperture"]["resolution"]
         self.ddi = inputxds.attrs["ddi"]
         self.label = create_dataset_label(self.antenna_name, inputxds.attrs["ddi"])
+        self.telescope = get_proper_telescope(
+            self.summary["general"]["telescope name"], self.antenna_name
+        )
 
     def _define_amp_clip(self, clip_type, clip_level):
         self.amplitude_noise = np.where(self.base_mask, np.nan, self.amplitude)
@@ -223,8 +232,10 @@ class AntennaSurface:
     def _compute_noise_threshold_clip(self, threshold, step_multiplier=0.95):
         noise_stats = data_statistics(self.amplitude_noise)
 
-        in_disk = np.where(self.rad < self.telescope.diam / 2.0, 1.0, np.nan)
-        in_disk = np.where(self.rad < self.telescope.inlim, np.nan, in_disk)
+        in_disk = np.where(self.rad < self.telescope.diameter / 2.0, 1.0, np.nan)
+        in_disk = np.where(
+            self.rad < self.telescope.inner_radial_limit, np.nan, in_disk
+        )
         n_in_disk = np.nansum(in_disk)
         in_disk_amp = in_disk * self.amplitude
 
@@ -239,64 +250,13 @@ class AntennaSurface:
 
         return clip
 
-    def _init_ringed(self):
-        """
-        Do the proper initialization and method association for the case of a ringed antenna
-        """
-        if self.telescope.panel_numbering == "ring, clockwise, top":
-            self._panel_label = self._vla_panel_labeling
-        elif self.telescope.panel_numbering == "sector, counterclockwise, right":
-            self._panel_label = self._alma_panel_labeling
-        else:
-            raise Exception("Unknown panel labeling: " + self.telescope.panel_numbering)
-
-        self._build_ring_panels()
-        self.fetch_panel = self._fetch_panel_ringed
-        self.compile_panel_points = self._compile_panel_points_ringed
-
-    @staticmethod
-    def _vla_panel_labeling(iring, ipanel):
-        """
-        Provide the correct panel label for VLA style panels
-        Args:
-            iring: Number of the ring the panel is in
-            ipanel: Number of the panel in that ring clockwise from the top
-        Returns:
-            The proper label for the panel at iring, ipanel
-        """
-        return "{0:d}-{1:d}".format(iring + 1, ipanel + 1)
-
-    def _alma_panel_labeling(self, iring, ipanel):
-        """
-        Provide the correct panel label for ALMA style panels, which is more complicated than VLA panels due to the
-        implementation of panel sectors
-        Args:
-            iring: Number of the ring the panel is in
-            ipanel: Number of the panel in that ring clockwise from the top
-
-        Returns:
-            The proper label for the panel at iring, ipanel
-        """
-        angle = twopi / self.telescope.npanel[iring]
-        sector_angle = twopi / self.telescope.npanel[0]
-        theta = twopi - (ipanel + 0.5) * angle
-        sector = int(
-            ((theta / sector_angle) + 1 + self.telescope.npanel[0] / 4)
-            % self.telescope.npanel[0]
-        )
-        if sector == 0:
-            sector = self.telescope.npanel[0]
-        nppersec = self.telescope.npanel[iring] / self.telescope.npanel[0]
-        jpanel = int(nppersec - (ipanel % nppersec))
-        return "{0:1d}-{1:1d}{2:1d}".format(sector, iring + 1, jpanel)
-
     def _crop_maps(self, margin=0.025):
         """
         Crop the amplitude and phase/deviation maps to decrease that usage and speedup calculations
         Args:
             margin: How much margin should be left outside the dish diameter
         """
-        edge = (0.5 + margin) * self.telescope.diam
+        edge = (0.5 + margin) * self.telescope.diameter
         iumin = np.argmax(self.u_axis > -edge)
         iumax = np.argmax(self.u_axis > edge)
         ivmin = np.argmax(self.v_axis > -edge)
@@ -306,46 +266,14 @@ class AntennaSurface:
         self.amplitude = self.amplitude[iumin:iumax, ivmin:ivmax]
         self.phase = self.phase[iumin:iumax, ivmin:ivmax]
 
-    def _phase_to_deviation(self):
-        """
-        Transforms a phase map to a physical deviation map
-
-        Returns:
-            Physical deviation map
-        """
-        acoeff = (self.wavelength / twopi) / (4.0 * self.telescope.focus)
-        bcoeff = 4 * self.telescope.focus**2
-        return acoeff * self.phase * np.sqrt(self.rad**2 + bcoeff)
-
-    def _deviation_to_phase(self, deviation):
-        """
-        Transforms a physical deviation map to a phase map
-        Args:
-            deviation: Input physical deviation map
-
-        Returns:
-            Phase map
-        """
-        acoeff = (self.wavelength / twopi) / (4.0 * self.telescope.focus)
-        bcoeff = 4 * self.telescope.focus**2
-        return deviation / (acoeff * np.sqrt(self.rad**2 + bcoeff))
-
     def _create_aperture_mask(self, clip_type, clip_level, exclude_shadows):
-        if exclude_shadows:
-            arm_width = self.telescope.arm_shadow_width
-            arm_angle = self.telescope.arm_shadow_rotation
-        else:
-            arm_width = None
-            arm_angle = 0.0
 
-        self.base_mask, self.rad, self.phi = create_aperture_mask(
+        self.base_mask, self.rad, self.phi = self.telescope.create_aperture_mask(
             self.u_axis,
             self.v_axis,
-            self.telescope.inlim,
-            self.telescope.oulim,
-            arm_width=arm_width,
-            arm_angle=arm_angle,
+            exclude_arms=exclude_shadows,
             return_polar_meshes=True,
+            use_outer_limit=True,
         )
 
         if self.reread:
@@ -358,55 +286,6 @@ class AntennaSurface:
     def _nan_out_of_bounds(self):
         self.phase = np.where(self.base_mask, self.phase, np.nan)
         self.amplitude = np.where(self.base_mask, self.amplitude, np.nan)
-
-    def _build_ring_panels(self):
-        """
-        Build list of panels, specific for circular antennas with panels arranged in rings
-        """
-        self.panels = []
-        for iring in range(self.telescope.nrings):
-            angle = 2.0 * np.pi / self.telescope.npanel[iring]
-            for ipanel in range(self.telescope.npanel[iring]):
-                panel = RingPanel(
-                    self.panelmodel,
-                    angle,
-                    ipanel,
-                    self._panel_label(iring, ipanel),
-                    self.telescope.inrad[iring],
-                    self.telescope.ourad[iring],
-                    margin=self.panel_margins,
-                    screw_scheme=self.telescope.screw_description,
-                    screw_offset=self.telescope.screw_offset,
-                    plot_screw_size=0.006 * self.telescope.diam,
-                )
-                self.panels.append(panel)
-        return
-
-    def _compile_panel_points_ringed(self):
-        panels = np.full_like(self.rad, -1)
-        panelsum = 0
-        for iring in range(self.telescope.nrings):
-            angle = twopi / self.telescope.npanel[iring]
-            panels = np.where(
-                self.rad >= self.telescope.inrad[iring],
-                np.floor(self.phi / angle) + panelsum,
-                panels,
-            )
-            panelsum += self.telescope.npanel[iring]
-        for ix, xc in enumerate(self.u_axis):
-            for iy, yc in enumerate(self.v_axis):
-                ipanel = panels[ix, iy]
-                if ipanel >= 0:
-                    panel = self.panels[int(ipanel)]
-                    issample, inpanel = panel.is_inside(
-                        self.rad[ix, iy], self.phi[ix, iy]
-                    )
-                    if inpanel:
-                        if issample and self.mask[ix, iy]:
-                            panel.add_sample([xc, yc, ix, iy, self.deviation[ix, iy]])
-                        else:
-                            panel.add_margin([xc, yc, ix, iy, self.deviation[ix, iy]])
-        self.panel_distribution = panels
 
     def _fetch_panel_ringed(self, ring, panel):
         """
@@ -422,7 +301,7 @@ class AntennaSurface:
         if ring == 1:
             ipanel = panel - 1
         else:
-            ipanel = np.sum(self.telescope.npanel[: ring - 1]) + panel - 1
+            ipanel = np.sum(self.telescope.n_panel_per_ring[: ring - 1]) + panel - 1
         return self.panels[ipanel]
 
     def gains(self):
@@ -443,8 +322,7 @@ class AntennaSurface:
         # This is valid for the VLA not sure if valid for anything else...
         wavelength_scaling = self.wavelength / wavelength
 
-        dish_mask = np.where(self.rad > self.telescope.inlim, True, False)
-        dish_mask = np.where(self.rad < self.telescope.diam / 2, dish_mask, False)
+        dish_mask = self.base_mask
 
         if corrected:
             if self.fitted:
@@ -462,7 +340,7 @@ class AntennaSurface:
         sinsum = np.nansum(np.sin(scaled_phase[dish_mask]))
         real_factor = np.sqrt(cossum**2 + sinsum**2) / np.sum(dish_mask)
 
-        theo_gain = fourpi * self.telescope.diam / wavelength
+        theo_gain = fourpi * self.telescope.diameter / wavelength
         real_gain = theo_gain * real_factor
         return to_db(real_gain), to_db(theo_gain)
 
@@ -525,8 +403,14 @@ class AntennaSurface:
                 ix, iy = int(corr[0]), int(corr[1])
                 self.residuals[ix, iy] -= corr[-1]
                 self.corrections[ix, iy] = -corr[-1]
-        self.phase_corrections = self._deviation_to_phase(self.corrections)
-        self.phase_residuals = self._deviation_to_phase(self.residuals)
+        self.phase_corrections = self.telescope.deviation_to_phase(
+            self.u_axis, self.v_axis, self.mask, self.corrections, self.wavelength
+        )
+
+        self.phase_residuals = self.telescope.deviation_to_phase(
+            self.u_axis, self.v_axis, self.mask, self.residuals, self.wavelength
+        )
+
         self._build_panel_data_arrays()
         self.solved = True
 
@@ -694,10 +578,10 @@ class AntennaSurface:
         lw = 0.5
         if self.resolution is None:
             return
-        minx = np.min(self.u_axis)
-        miny = np.min(self.v_axis)
-        dx = np.max(self.u_axis) - minx
-        dy = np.max(self.v_axis) - miny
+        minx = self.u_axis[0]
+        miny = self.v_axis[1]
+        dx = self.u_axis[-1] - minx
+        dy = self.v_axis[-1] - miny
         center = (minx + xpos * dx, miny + ypos * dy)
         resolution = patches.Ellipse(
             center,
@@ -748,12 +632,7 @@ class AntennaSurface:
 
         ax.set_title(f"\nThreshold = {threshold:.2f} {unit}", fontsize="small")
         # set the limits of the plot to the limits of the data
-        extent = [
-            np.min(self.u_axis),
-            np.max(self.u_axis),
-            np.min(self.v_axis),
-            np.max(self.v_axis),
-        ]
+        extent = compute_extent(self.u_axis, self.v_axis)
         im = ax.imshow(
             np.full_like(self.deviation, fill_value=np.nan),
             cmap=cmap,

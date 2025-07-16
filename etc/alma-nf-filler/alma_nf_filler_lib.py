@@ -2,7 +2,8 @@ from asdm import *
 import numpy as np
 import xarray as xr
 import scipy
-from astrohack.antenna.telescope import Telescope
+
+from astrohack.antenna.telescope import get_proper_telescope
 from matplotlib import pyplot as plt
 from scipy import interpolate
 import time as timer
@@ -1229,10 +1230,11 @@ def _compute_grid_params(meta_dict, extent):
     clight = scipy.constants.speed_of_light
     wavelength = clight / meta_dict["spw"]["frequency"][0]
 
-    tel_name = meta_dict["ant"]["telescope"] + "_" + meta_dict["ant"]["antenna"][0:2]
-    telescope = Telescope(tel_name.lower())
+    telescope = get_proper_telescope(
+        meta_dict["ant"]["telescope"], meta_dict["ant"]["antenna"]
+    )
 
-    cell_size = wavelength / telescope.diam / 3.0
+    cell_size = wavelength / telescope.diameter / 3.0
 
     min_range = np.min(
         [extent["l_max"] - extent["l_min"], extent["m_max"] - extent["m_min"]]

@@ -9,7 +9,7 @@ from astrohack.utils import (
     format_observation_summary,
     make_header,
 )
-from astrohack.antenna import Telescope, AntennaSurface
+from astrohack.antenna import get_proper_telescope, AntennaSurface
 from astrohack.utils import (
     convert_unit,
     clight,
@@ -39,7 +39,8 @@ def export_to_parminator(data_dict, parm_dict):
 
     kterm_present = data_dict._meta_data["fit_kterm"]
 
-    full_antenna_list = Telescope(data_dict._meta_data["telescope_name"]).ant_list
+    telescope = get_proper_telescope(data_dict._meta_data["telescope_name"])
+    full_antenna_list = telescope.antenna_list
     selected_antenna_list = param_to_list(parm_dict["ant"], data_dict, "ant")
     threshold = parm_dict["correction_threshold"]
 
@@ -142,7 +143,8 @@ def export_locit_fit_results(data_dict, parm_dict):
         slo_fact = 1.0
 
     table = create_pretty_table(field_names)
-    full_antenna_list = Telescope(data_dict._meta_data["telescope_name"]).ant_list
+    telescope = get_proper_telescope(data_dict._meta_data["telescope_name"])
+    full_antenna_list = telescope.antenna_list
     selected_antenna_list = param_to_list(parm_dict["ant"], data_dict, "ant")
 
     for ant_name in full_antenna_list:
@@ -286,8 +288,7 @@ def export_screws_chunk(parm_dict):
     ddi = parm_dict["this_ddi"]
     export_name = parm_dict["destination"] + f"/panel_screws_{antenna}_{ddi}."
     xds = parm_dict["xds_data"]
-    telescope = Telescope.from_xds(xds)
-    surface = AntennaSurface(xds, telescope, reread=True)
+    surface = AntennaSurface(xds, reread=True)
     surface.export_screws(export_name + "txt", unit=parm_dict["unit"])
     surface.plot_screw_adjustments(export_name + "png", parm_dict)
 
@@ -298,15 +299,14 @@ def export_gains_table_chunk(parm_dict):
     ant = parm_dict["this_ant"]
     ddi = parm_dict["this_ddi"]
     xds = parm_dict["xds_data"]
-    telescope = Telescope.from_xds(xds)
-    antenna = AntennaSurface(xds, telescope, reread=True)
+    antenna = AntennaSurface(xds, reread=True)
     frequency = clight / antenna.wavelength
 
     if in_waves is None and in_freqs is None:
         try:
-            wavelengths = telescope.gain_wavelengths
+            wavelengths = antenna.telescope.gain_wavelengths
         except AttributeError:
-            msg = f"Telescope {telescope.name} has no predefined list of wavelengths to compute gains"
+            msg = f"Telescope {antenna.telescope.name} has no predefined list of wavelengths to compute gains"
             logger.error(msg)
             logger.info("Please provide one in the arguments")
             raise Exception(msg)
@@ -338,7 +338,9 @@ def export_gains_table_chunk(parm_dict):
     ]
     table = create_pretty_table(field_names)
 
-    outstr = f'# Gain estimates for {telescope.name} antenna {ant.split("_")[1]}\n'
+    outstr = (
+        f'# Gain estimates for {antenna.telescope.name} antenna {ant.split("_")[1]}\n'
+    )
     outstr += f"# Based on a measurement at {format_frequency(frequency)}, {format_wavelength(antenna.wavelength)}\n"
     outstr += f"# Antenna surface RMS before adjustment: {format_value_unit(rmses[0], rmsunit)}\n"
     outstr += f"# Antenna surface RMS after adjustment: {format_value_unit(rmses[1], rmsunit)}\n"
@@ -446,7 +448,7 @@ def print_array_configuration(params, ant_dict, telescope_name):
         ant_dict: Parameter dictionary crafted by the calling function
         telescope_name: Name of the telescope used in observations
     """
-    telescope = Telescope(telescope_name)
+    telescope = get_proper_telescope(telescope_name)
     relative = params["relative"]
 
     print(f"\n{telescope_name} antennas, # of antennas {len(ant_dict.keys())}:")
@@ -466,7 +468,7 @@ def print_array_configuration(params, ant_dict, telescope_name):
         field_names = ["Name", "Station", "Longitude", "Latitude", "Radius [m]"]
 
     table = create_pretty_table(field_names)
-    for ant_name in telescope.ant_list:
+    for ant_name in telescope.antenna_list:
         ant_key = "ant_" + ant_name
         if ant_key in ant_dict:
             antenna = ant_dict[ant_key]

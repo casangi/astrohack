@@ -636,7 +636,7 @@ class PanelModel:
         nmarg = len(margins)
 
         if nsamp == 0 and nmarg == 0:
-            raise Exception("Nothing to correct")
+            corrections = np.array([])
         elif nmarg == 0:
             corrections = np.array(self._correct_sub(self, samples))
         elif nsamp == 0:

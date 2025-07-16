@@ -1,7 +1,7 @@
 {
     "metadata": {
         ".zattrs": {
-            "ant_list": [],
+            "antenna_list": [],
             "array_center": {
                 "m0": {
                     "unit": "rad",
@@ -18,9 +18,9 @@
                 "refer": "WGS84",
                 "valid": true
             },
-            "comment": "Preliminary data for ALMA Vertex antennas. Diameter, focus, magnification and secondary distance taken from ALMA memo 339. npanel, nrings and inlim from ALMA cycle 9 technical handbook. inrad and ourad fetched from the CLIC (GILDAS) script for ALMA holography (J. Magnum, private communication). surp_slope assumed to be zero. Numbering of panels and screw positions taken from ALMA Holography memo: Baars, Lucas & Mangum 2004, Array center location from CASA 6.5.5.21",
-            "diam": 12.0,
-            "dist_dict": {
+            "comment": "Preliminary data for ALMA Vertex antennas. Diameter, focus, magnification and secondary distance taken from ALMA memo 339. n_panel_per_ring, n_rings_of_panels and inner_radial_limit from ALMA cycle 9 technical handbook. panel_inner_radii and panel_outer_radii fetched from the CLIC (GILDAS) script for ALMA holography (J. Magnum, private communication). surp_slope assumed to be zero. Numbering of panels and screw positions taken from ALMA Holography memo: Baars, Lucas & Mangum 2004, Array center location from CASA 6.5.5.21",
+            "diameter": 12.0,
+            "station_distance_dict": {
                 "TF01": [
                     349.847,
                     0.0785
@@ -67,11 +67,11 @@
                 ]
             },
             "el_axis_off": 2.18,
-            "filename": "alma_dv.zarr",
-            "filepath": "/export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack/data/telescopes",
+            "file_name": "alma_dv.zarr",
+            "file_path": "/export/home/figs/vdesouza/work/Holography-1022/astrohack/src/astrohack/data/telescopes",
             "focus": 4.800000000000001,
-            "inlim": 0.375,
-            "inrad": [
+            "inner_radial_limit": 0.375,
+            "panel_inner_radii": [
                 0.375,
                 1.265,
                 1.861,
@@ -83,7 +83,7 @@
             ],
             "magnification": 20.0,
             "name": "ALMA DV",
-            "npanel": [
+            "n_panel_per_ring": [
                 12,
                 12,
                 24,
@@ -93,10 +93,10 @@
                 48,
                 48
             ],
-            "nrings": 8,
+            "n_rings_of_panels": 8,
             "onaxisoptics": true,
-            "oulim": 6.0,
-            "ourad": [
+            "outer_radial_limit": 6.0,
+            "panel_outer_radii": [
                 1.265,
                 1.861,
                 2.605,
@@ -116,7 +116,7 @@
                 "c"
             ],
             "screw_offset": null,
-            "secondary_dist": 0.294,
+            "secondary_distance_to_focus": 0.294,
             "secondary_support": "+",
             "surp_slope": 0.0
         },

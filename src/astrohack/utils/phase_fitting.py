@@ -277,8 +277,8 @@ def _aips_phase_fitting_block(
     """
     matrix, vector = _build_design_matrix_block(
         pol_indexes,
-        telescope.inlim,
-        telescope.diam / 2,
+        telescope.inner_radial_limit,
+        telescope.diameter / 2,
         u_axis,
         v_axis,
         phase_image,
@@ -345,7 +345,7 @@ def _internal_to_external_parameters(parameters, wavelength, telescope):
     results[3:] *= scaling
     # Sub-reflector tilt to degrees
     rad2deg = convert_unit("rad", "deg", "trigonometric")
-    results[6:8] *= rad2deg / (1000.0 * telescope.secondary_dist)
+    results[6:8] *= rad2deg / (1000.0 * telescope.secondary_distance_to_focus)
     # rescale phase ramp to pointing offset
     results[1:3] *= wavelength * rad2deg / 360.0
     return results * rad2deg
@@ -368,7 +368,7 @@ def _external_to_internal_parameters(exparameters, wavelength, telescope):
     iNPARameters[3:] /= scaling
     # Sub-reflector tilt from degrees
     rad2deg = convert_unit("rad", "deg", "trigonometric")
-    iNPARameters[6:8] /= rad2deg / (1000.0 * telescope.secondary_dist)
+    iNPARameters[6:8] /= rad2deg / (1000.0 * telescope.secondary_distance_to_focus)
     # rescale phase ramp to pointing offset
     iNPARameters[1:3] /= wavelength * rad2deg / 360.0
     iNPARameters /= rad2deg
@@ -1051,8 +1051,8 @@ def clic_like_phase_fitting(
     best_fit, phase_model = _clic_full_phase_fitting(
         8,
         freq,
-        telescope.diam,
-        telescope.inlim,
+        telescope.diameter,
+        telescope.inner_radial_limit,
         telescope.focus,
         focus_offset,
         phase_i,

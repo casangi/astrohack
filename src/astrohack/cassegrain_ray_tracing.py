@@ -1,10 +1,14 @@
 import toolviper
 import xarray as xr
 
-from astrohack.antenna.telescope import Telescope
 from astrohack.utils.validation import custom_unit_checker, custom_plots_checker
 from astrohack.core.cassegrain_ray_tracing import *
-from astrohack.utils import convert_unit, clight, add_caller_and_version_to_dict
+from astrohack.utils import (
+    convert_unit,
+    clight,
+    add_caller_and_version_to_dict,
+    regrid_data_onto_2d_grid,
+)
 from astrohack.utils.phase_fitting import aips_like_phase_fitting
 from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
 from typing import Union
@@ -286,7 +290,8 @@ def plot_2d_maps_from_rt_xds(
             zlim = None
 
         gridded_array = fac * regrid_data_onto_2d_grid(
-            rt_xds.attrs["image_size"],
+            rt_xds["x_axis"],
+            rt_xds["y_axis"],
             rt_xds[key].values,
             rt_xds["image_indexes"].values,
         )
@@ -492,6 +497,7 @@ def apply_holog_phase_fitting_to_rt_xds(
 
     """
     rt_xds = open_rt_zarr(rt_xds_filename)
+    telescope = get_proper_telescope("VLA")
 
     ntime = 1
     npol = 1
@@ -510,16 +516,13 @@ def apply_holog_phase_fitting_to_rt_xds(
     shape_5d = [ntime, npol, nfreq, npnt, npnt]
     amplitude_5d = np.empty(shape_5d)
     phase_2d = regrid_data_onto_2d_grid(
-        npnt, rt_xds["phase"].values, rt_xds["image_indexes"].values
+        u_axis, v_axis, rt_xds["phase"].values, rt_xds["image_indexes"].values
     )
     phase_5d = np.empty_like(amplitude_5d)
     phase_5d[..., :, :] = phase_2d
-    radial_mask, radius, _ = create_aperture_mask(
-        u_axis,
-        v_axis,
-        telescope_pars["inner_radius"],
-        telescope_pars["primary_diameter"] / 2,
-        return_polar_meshes=True,
+
+    radial_mask, radius, _ = telescope.create_aperture_mask(
+        u_axis, v_axis, exclude_arms=False, return_polar_meshes=True
     )
     amplitude_5d[..., :, :] = np.where(radial_mask, 1.0, np.nan)
 
@@ -529,9 +532,6 @@ def apply_holog_phase_fitting_to_rt_xds(
 
     # Misc Parameters
     label = "Cassegrain-RT-Model"  # Relevant only for logger messages
-    uv_cell_size = np.array(
-        [u_axis[1] - u_axis[0], v_axis[1] - v_axis[0]]
-    )  # This should be computed from the axis we are passing the engine...
 
     # Initiate Control toggles
     phase_fit_control = [
@@ -543,12 +543,11 @@ def apply_holog_phase_fitting_to_rt_xds(
     ]
 
     # Manipulate VLA telescope object so that it has compatible parameters to the ones in the RT model.
-    telescope = Telescope("VLA")
     telescope.focus = telescope_pars["focal_length"]
     c_fact = telescope_pars["foci_half_distance"]
     a_fact = telescope_pars["z_intercept"]
     telescope.magnification = (c_fact + a_fact) / (c_fact - a_fact)
-    telescope.secondary_dist = c_fact - a_fact
+    telescope.secondary_distance_to_focus = c_fact - a_fact
     # Disable secondary slope
     telescope.surp_slope = 0
 

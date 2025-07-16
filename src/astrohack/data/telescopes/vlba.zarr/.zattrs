@@ -1,5 +1,5 @@
 {
-    "ant_list": [],
+    "antenna_list": [],
     "array_center": {
         "m0": {
             "unit": "rad",
@@ -17,10 +17,10 @@
         "valid": false
     },
     "comment": "Data taken from AIPS source code and EVLA memo 212, Screw offset taken from measurements done insitu by VSM on March 14 2023, Array center location from CASA 6.5.5.21",
-    "diam": 25.0,
+    "diameter": 25.0,
     "focus": 8.75,
-    "inlim": 2.0,
-    "inrad": [
+    "inner_radial_limit": 2.0,
+    "panel_inner_radii": [
         1.676,
         3.518,
         5.423,
@@ -30,7 +30,7 @@
     ],
     "magnification": 13.0,
     "name": "VLBA",
-    "npanel": [
+    "n_panel_per_ring": [
         20,
         20,
         40,
@@ -38,10 +38,10 @@
         40,
         40
     ],
-    "nrings": 6,
+    "n_rings_of_panels": 6,
     "onaxisoptics": true,
-    "oulim": 12.0,
-    "ourad": [
+    "outer_radial_limit": 12.0,
+    "panel_outer_radii": [
         3.518,
         5.423,
         7.277,
@@ -58,7 +58,7 @@
         "or"
     ],
     "screw_offset": 0.0635,
-    "secondary_dist": 0.522,
+    "secondary_distance_to_focus": 0.522,
     "secondary_support": "X",
     "surp_slope": 0.65
 }
