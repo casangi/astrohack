@@ -347,10 +347,11 @@ def calculate_optimal_grid_parameters(
     # Since this is just an estimate for the situation where the user doesn't specify a values, I am picking
     # a values according to the developer heuristic, i.e. it seems to be good.
     cell_size = 0.85 * reference_lambda / telescope_diameter
-    lm = pnt_map_dict[antenna_name].POINTING_OFFSET.values
+    pnt_off = pnt_map_dict[antenna_name].POINTING_OFFSET.values
     # Get data range
     data_range = np.array(
-        [lm[:, 0].max() - lm[:, 0].min(), lm[:, 1].max() - lm[:, 1].min()]
+        [np.nanmax(pnt_off[:, 0]) - np.nanmin(pnt_off[:, 0]),
+         np.nanmax(pnt_off[:, 1]) - np.nanmin(pnt_off[:, 1])]
     )
 
     logger.info(
@@ -368,6 +369,9 @@ def calculate_optimal_grid_parameters(
         )
         raise ZeroDivisionError
 
+    print(reference_lambda, telescope_diameter)
+    print(data_range, cell_size)
+    
     if n_pix[0] != n_pix[1]:
         n_pix[:] = np.max(n_pix)
 
