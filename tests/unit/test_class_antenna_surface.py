@@ -107,18 +107,24 @@ class TestClassAntennaSurface:
         """
         Tests that fitting results for two panels match the reference
         """
-        solveparsp0 = [-0.00037302,  0.00032415, -0.00092434]
-        solveparsp30 = [ 0.00039928,  0.00038105, -0.00067004]
+        solveparsp0 = [-0.00037302, 0.00032415, -0.00092434]
+        solveparsp30 = [0.00039928, 0.00038105, -0.00067004]
         self.tant.fit_surface()
 
         assert len(self.tant.panels[0].model.parameters) == len(solveparsp0), (
             "Fitted results have a different length" " from reference"
         )
-        
-        assert np.all(np.isclose(self.tant.panels[0].model.parameters, solveparsp0, atol=self.tolerance)), \
-            "Fitting results for Panel 0 do not match reference within tolerance"
-        assert np.all(np.isclose(self.tant.panels[30].model.parameters, solveparsp30, atol=self.tolerance)), \
-            "Fitting results for Panel 30 do not match reference within tolerance"
+
+        assert np.all(
+            np.isclose(
+                self.tant.panels[0].model.parameters, solveparsp0, atol=self.tolerance
+            )
+        ), "Fitting results for Panel 0 do not match reference within tolerance"
+        assert np.all(
+            np.isclose(
+                self.tant.panels[30].model.parameters, solveparsp30, atol=self.tolerance
+            )
+        ), "Fitting results for Panel 30 do not match reference within tolerance"
 
     def test_correct_surface(self):
         """
