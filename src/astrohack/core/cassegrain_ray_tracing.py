@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import xarray as xr
 import toolviper.utils.logger as logger
 
-from astrohack import overwrite_file
+from astrohack.utils.file import overwrite_file
 from astrohack.utils import (
     data_statistics,
     clight,
