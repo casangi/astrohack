@@ -713,71 +713,8 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     return pnt_map_dict
 
 
-@njit(cache=False, nogil=True)
-def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt):
-    half_int = (time_vis[1] - time_vis[0]) / 2
-    n_samples = time_vis.shape[0]
-    the_shape = (n_samples, 2)
-    n_row = pnt_time.shape[0]
-
-    avg_dir = np.zeros(the_shape)
-    avg_dir_cos = np.zeros(the_shape)
-    avg_enc = np.zeros(the_shape)
-    avg_pnt_off = np.zeros(the_shape)
-    avg_tgt = np.zeros(the_shape)
-    avg_wgt = np.zeros(the_shape)
-
-    i_time = 0
-    for i_row in range(n_row):
-        if pnt_time[i_row] < time_vis[i_time] - half_int:
-            continue
-        else:
-            i_time = _get_time_index(pnt_time[i_row], i_time, time_vis, half_int)
-            if i_time < 0:
-                break
-
-        avg_dir[i_time] += dire[i_row]
-        avg_dir_cos[i_time] += dir_cos[i_row]
-        avg_enc[i_time] += enc[i_row]
-        avg_pnt_off[i_time] += pnt_off[i_row]
-        avg_tgt[i_time] += tgt[i_row]
-        avg_wgt[i_time] += 1
-
-    avg_dir /= avg_wgt
-    avg_dir_cos /= avg_wgt
-    avg_enc /= avg_wgt
-    avg_pnt_off /= avg_wgt
-    avg_tgt /= avg_wgt
-
-    return avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt
 
 
-@njit(cache=False, nogil=True)
-def _interpolate_pointing(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt):
-    n_samples = time_vis.shape[0]
-    the_shape = (n_samples, 2)
-    n_row = pnt_time.shape[0]
-    pnt_int = np.average(np.diff(pnt_time))
-    half_int = (time_vis[1] - time_vis[0]) / 2
-
-    avg_dir = np.zeros(the_shape)
-    avg_dir_cos = np.zeros(the_shape)
-    avg_enc = np.zeros(the_shape)
-    avg_pnt_off = np.zeros(the_shape)
-    avg_tgt = np.zeros(the_shape)
-    avg_wgt = np.zeros(the_shape)
-
-    for i_time in range(n_samples):
-        i_row = int(np.floor((time_vis[i_time] - half_int - pnt_time[0]) / pnt_int))
-
-        avg_dir[i_time] += dire[i_row]
-        avg_dir_cos[i_time] += dir_cos[i_row]
-        avg_enc[i_time] += enc[i_row]
-        avg_pnt_off[i_time] += pnt_off[i_row]
-        avg_tgt[i_time] += tgt[i_row]
-        avg_wgt[i_time] += 1
-
-    return avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt
 
 
 @njit(cache=False, nogil=True)
