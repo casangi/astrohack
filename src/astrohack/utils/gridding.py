@@ -4,6 +4,7 @@ from toolviper.utils import logger as logger
 from scipy.interpolate import griddata
 from numba import njit
 from numba.core import types
+from numba.typed import List as numbaList
 import math
 
 from astrohack.utils import (
@@ -323,6 +324,8 @@ def linear_1d_gridding(dest_ax, orig_ax, y_data, method, return_weights=False, s
     else:
         raise_type_error('y_data', 'list or numpy array')
 
+    y_data = numbaList(y_data)
+
     check_is_proper_array(dest_ax, 1)
     check_is_proper_array(orig_ax, 1)
     for datum in y_data:
@@ -330,13 +333,6 @@ def linear_1d_gridding(dest_ax, orig_ax, y_data, method, return_weights=False, s
 
     dest_delta = np.median(np.diff(dest_ax))
     orig_delta = np.median(np.diff(orig_ax))
-
-    if isinstance(y_data, np.ndarray):
-        y_data = [y_data]
-    elif isinstance(y_data, list):
-        pass
-    else:
-        raise_type_error('y_data', 'list or numpy array')
 
     if method == 'linear':
         if orig_delta < dest_delta:
