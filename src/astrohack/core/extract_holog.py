@@ -689,12 +689,11 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     Returns:
         dict:  Dictionary of directional cosine data mapped to nearest MAIN table sample times.
     """
-
+    keys = ["DIRECTION", "DIRECTIONAL_COSINES", "ENCODER", "POINTING_OFFSET", "TARGET"]
     pnt_map_dict = {}
     coords = {"time": time_vis}
     for antenna in map_ant_ids:
         pnt_xds = pnt_ant_dict[antenna]
-        keys = ["DIRECTION", "DIRECTIONAL_COSINES", "ENCODER", "POINTING_OFFSET", "TARGET"]
         y_data = []
         for key in keys:
             y_data.append(pnt_xds[key].values)
@@ -707,6 +706,12 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
 
         for i_key, key in enumerate(keys):
             new_pnt_xds[key] = xr.DataArray(resample_pnt[i_key], dims=("time", "az_el"))
+
+        # Pointing offset test
+        n_nans = np.sum(np.isnan(new_pnt_xds[3]))/2
+        if n_nans != 0:
+            logger.warning(f'Antenna {antenna} has {n_nans} NaNs in the intepolated pointings, try increasing the '
+                           'time_smoothing_interval or changing the pointing_interpolation_method')
 
         new_pnt_xds.attrs = pnt_xds.attrs
         pnt_map_dict[antenna] = new_pnt_xds
