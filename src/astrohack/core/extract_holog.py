@@ -709,7 +709,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict, pointing_interp
             new_pnt_xds[key] = xr.DataArray(resample_pnt[i_key], dims=("time", "az_el"))
 
         # Pointing offset test
-        n_nans = np.sum(np.isnan(new_pnt_xds[3]))/2
+        n_nans = int(np.sum(np.isnan(resample_pnt[3]))/2)
         if n_nans != 0:
             logger.warning(f'Antenna {antenna} has {n_nans} NaNs in the intepolated pointings, try increasing the '
                            'time_smoothing_interval or changing the pointing_interpolation_method')
@@ -717,10 +717,6 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict, pointing_interp
         new_pnt_xds.attrs = pnt_xds.attrs
         pnt_map_dict[antenna] = new_pnt_xds
     return pnt_map_dict
-
-
-
-
 
 
 @njit(cache=False, nogil=True)
