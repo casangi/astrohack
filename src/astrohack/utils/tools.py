@@ -138,3 +138,33 @@ def get_str_idx_in_list(target, array):
             return i_tgt
     logger.error(f"Target {target} not found in {array}")
     return None
+
+
+def raise_type_error(var_name, class_name):
+    raise TypeError(f'{var_name} is not an object of {class_name}')
+
+
+def check_is_proper_type(var, class_ref):
+    if isinstance(var, class_ref):
+        return True
+    else:
+        raise_type_error(var.__name__, class_ref.__name__)
+
+
+def check_is_proper_array(array, ndim=None):
+    check_is_proper_type(array, np.ndarray)
+    if ndim is None:
+        pass
+    else:
+        if isinstance(ndim, int):
+            if len(array.shape) != ndim:
+                raise ValueError(f'{array.__name__} has a different number of dimensions ({len(array.shape)}) '
+                                 f'from what is expected ({ndim}).')
+        else:
+            raise TypeError(f'{ndim.__name__} must be set to an integer value.')
+
+
+def check_is_proper_shape(array, shape):
+    check_is_proper_array(array, len(shape))
+    if not np.all(np.isclose(array.shape, shape)):
+        raise ValueError(f'{array.__name__} shape ({array.shape}) is not what was expected({shape}).')
