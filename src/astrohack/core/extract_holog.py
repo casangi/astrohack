@@ -17,7 +17,7 @@ from astrohack.utils.imaging import calculate_parallactic_angle_chunk
 from astrohack.utils.algorithms import calculate_optimal_grid_parameters
 from astrohack.utils.conversion import casa_time_to_mjd
 from astrohack.utils.constants import twopi, clight
-from astrohack.utils.gridding import linear_1d_gridding
+from astrohack.utils.gridding import gridding_1d_data
 
 from astrohack.utils.file import load_point_file
 
@@ -700,7 +700,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
             y_data.append(pnt_xds[key].values)
         pnt_time = pnt_xds.time.values
 
-        resample_pnt = linear_1d_gridding(time_vis, pnt_time, y_data, 'linear')
+        resample_pnt = gridding_1d_data(time_vis, pnt_time, y_data, 'linear')
 
         new_pnt_xds = xr.Dataset()
         new_pnt_xds.assign_coords(coords)
