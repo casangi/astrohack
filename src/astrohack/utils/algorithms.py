@@ -369,9 +369,6 @@ def calculate_optimal_grid_parameters(
         )
         raise ZeroDivisionError
 
-    print(reference_lambda, telescope_diameter)
-    print(data_range, cell_size)
-    
     if n_pix[0] != n_pix[1]:
         n_pix[:] = np.max(n_pix)
 
