@@ -701,7 +701,7 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict, pointing_interp
         pnt_time = pnt_xds.time.values
 
         resample_pnt = gridding_1d_data(time_vis, pnt_time, y_data, pointing_interpolation_method,
-                                        f'{antenna} pointing data', 'visibility times')
+                                        f'{antenna.split('_')[1]} pointing data', 'visibility times')
 
         new_pnt_xds = xr.Dataset()
         new_pnt_xds.assign_coords(coords)
