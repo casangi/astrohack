@@ -700,19 +700,14 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict, pointing_interp
             y_data.append(pnt_xds[key].values)
         pnt_time = pnt_xds.time.values
 
-        resample_pnt = gridding_1d_data(time_vis, pnt_time, y_data, pointing_interpolation_method)
+        resample_pnt = gridding_1d_data(time_vis, pnt_time, y_data, pointing_interpolation_method,
+                                        f'{antenna} pointing data', 'visibility times')
 
         new_pnt_xds = xr.Dataset()
         new_pnt_xds.assign_coords(coords)
 
         for i_key, key in enumerate(keys):
             new_pnt_xds[key] = xr.DataArray(resample_pnt[i_key], dims=("time", "az_el"))
-
-        # Pointing offset test
-        n_nans = int(np.sum(np.isnan(resample_pnt[3]))/2)
-        if n_nans != 0:
-            logger.warning(f'Antenna {antenna} has {n_nans} NaNs in the intepolated pointings, try increasing the '
-                           'time_smoothing_interval or changing the pointing_interpolation_method')
 
         new_pnt_xds.attrs = pnt_xds.attrs
         pnt_map_dict[antenna] = new_pnt_xds
