@@ -316,8 +316,8 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
     return cf_chan_map, pb_freq
 
 
-def gridding_1d_data(dest_ax, orig_ax, y_data, method, orig_label, dest_label, gaussian_fallback=True,
-                     return_weights=False, second_dim_len=2):
+def grid_1d_data(dest_ax, orig_ax, y_data, method, orig_label, dest_label, gaussian_fallback=True,
+                 return_weights=False, second_dim_len=2):
     if isinstance(y_data, np.ndarray):
         y_data = [y_data]
     elif isinstance(y_data, list):
