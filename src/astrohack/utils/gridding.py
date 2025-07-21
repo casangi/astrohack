@@ -316,7 +316,8 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
     return cf_chan_map, pb_freq
 
 
-def gridding_1d_data(dest_ax, orig_ax, y_data, method, return_weights=False, second_dim_len=2):
+def gridding_1d_data(dest_ax, orig_ax, y_data, method, orig_label, dest_label, gaussian_fallback=True,
+                     return_weights=False, second_dim_len=2):
     if isinstance(y_data, np.ndarray):
         y_data = [y_data]
     elif isinstance(y_data, list):
@@ -339,6 +340,7 @@ def gridding_1d_data(dest_ax, orig_ax, y_data, method, return_weights=False, sec
             new_y_data, weights = _linear_interpolate_under_sample(dest_ax, orig_ax, dest_delta, y_data)
         else:
             new_y_data, weights = _liner_interpolate_over_sample(dest_ax, orig_ax, orig_delta, y_data)
+
     elif method == "gaussian":
         new_y_data, weights = _gaussian_convolution_1d_jit(dest_ax, orig_ax, dest_delta, y_data)
     else:
@@ -346,6 +348,20 @@ def gridding_1d_data(dest_ax, orig_ax, y_data, method, return_weights=False, sec
 
     with np.errstate(divide='ignore', invalid='ignore'):
         new_y_data /= weights[np.newaxis, :, np.newaxis]
+
+    n_nans = int(np.sum(np.isnan(new_y_data[0]))/2)
+    if n_nans != 0:
+        if method == 'linear':
+            logger.warning(f'{orig_label} have produced NaNs when resampled onto {dest_label} using linear '
+                           'interpolation.')
+            if gaussian_fallback:
+                logger.warning(f'Falling back to Gaussian convolution.')
+                new_y_data, weights = _gaussian_convolution_1d_jit(dest_ax, orig_ax, dest_delta, y_data)
+            else:
+                logger.warning(f'Fallback to gaussian convolution is off.')
+        else:
+            logger.warning(f'{orig_label} have produced NaNs when resampled onto {dest_label} using gaussian '
+                           'convolution.')
 
     if return_weights:
         return new_y_data, weights
