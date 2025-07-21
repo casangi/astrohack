@@ -10,7 +10,7 @@ from astrohack.extract_pointing import extract_pointing
 from astrohack.extract_holog import extract_holog
 from astrohack.holog import holog
 from astrohack.panel import panel
-from astrohack.dio import open_panel
+from astrohack.dio import open_panel, open_holog
 
 from dropbox.exceptions import AuthError
 from astrohack.dio import open_image
@@ -34,17 +34,17 @@ def get_center_pixel(file, antenna, ddi):
     }
 
 
-def get_grid_parameters(file):
-    with open(f"{file}/.holog_attr") as json_file:
-        json_object = json.load(json_file)
+def get_grid_parameters(file, antenna, mapping, ddi):
+    holog_mds = open_holog(file)
+    xds = holog_mds[ddi][mapping][antenna]
 
-    cell_size = json_object["cell_size"]
-    grid_size = int(np.sqrt(json_object["n_pix"]))
-
+    beam_summary = xds.attrs["summary"]["beam"]
+    cell_size = beam_summary["cell size"]
+    grid_size = beam_summary["grid size"]
     return cell_size, grid_size
 
 
-def generate_verification_json(path, antenna, ddi, write=False, generate_files=True):
+def generate_verification_json(antenna, ddi, path='./data', write=True, generate_files=True):
     from astrohack.dio import open_panel
 
     if generate_files:
@@ -72,10 +72,10 @@ def generate_verification_json(path, antenna, ddi, write=False, generate_files=T
         )
         numerical_dict["vla"]["pixels"][tag]["beam"] = list(map(str, pixels["beam"]))
 
-    cell_size, grid_size = get_grid_parameters(file=f"{path}/before.split.holog.zarr")
+    cell_size, grid_size = get_grid_parameters(f"{path}/before.split.holog.zarr", antenna, 'map_0', ddi)
 
     numerical_dict["vla"]["cell_size"] = [-cell_size, cell_size]
-    numerical_dict["vla"]["grid_size"] = [grid_size, grid_size]
+    numerical_dict["vla"]["grid_size"] = [grid_size[0], grid_size[1]]
 
     # Fill panel offsets
     panel_list = ["3-4", "5-27", "5-37", "5-38"]
@@ -98,7 +98,7 @@ def generate_verification_json(path, antenna, ddi, write=False, generate_files=T
     print(np.mean(after_shift - before_shift, axis=1).tolist())
 
     if write:
-        with open("data/holog_numerical_verification.json", "w") as json_file:
+        with open("./holog_numerical_verification.json", "w") as json_file:
             json.dump(numerical_dict, json_file)
 
     return numerical_dict
