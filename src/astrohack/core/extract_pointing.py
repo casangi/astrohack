@@ -373,5 +373,5 @@ def evaluate_time_samping(time_sampling, data_label, threshold=0.01,
     outlier_fraction = 1 - hist[i_mid]/n_total
 
     if outlier_fraction > threshold:
-        logger.warning(f'{data_label} pointing table has {100*outlier_fraction:.2}% of data with inconsistent '
+        logger.warning(f'{data_label} pointing table has {100*outlier_fraction:.2}% of data with irregular '
                        f'time sampling')
