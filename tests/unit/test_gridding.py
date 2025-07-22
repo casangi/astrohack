@@ -230,4 +230,68 @@ class TestGridAlgorithms:
         for idx, val in reference_values:
             assert np.isclose(corr_aperture[0,0,0, *idx], val), f"Aperture correction at {idx} is not what was expected"
 
+    def test_1d_linear_gridding(self):
+        fill_value = 2.0
+        orig_x_axis = np.arange(0, 1000, 0.05)
+        dest_x_under = np.arange(0, 1000, 0.1)
+        dest_x_over = np.arange(0, 1000, 0.025)
 
+        y_data = [np.full([orig_x_axis.shape[0], 1], fill_value)]
+
+        resamp_over, weights_over = grid_1d_data(dest_x_over, orig_x_axis, y_data, 'linear', 'test origin',
+                                                   'test over', gaussian_fallback=False, return_weights=True, second_dim_len=1)
+
+        assert np.allclose(resamp_over, fill_value), "Resampled data does not have the expected values"
+        assert np.allclose(weights_over, 1.0), "Weights should be 1 everywhere"
+        
+        resamp_under, weights_under = grid_1d_data(dest_x_under, orig_x_axis, y_data, 'linear', 'test origin',
+                                                   'test under', gaussian_fallback=False, return_weights=True, second_dim_len=1)
+
+        assert np.allclose(resamp_under, fill_value), "Resampled data does not have the expected values"
+        assert np.allclose(np.unique(weights_under), [1.0, 2.0, 3.0]), "Weights should be 1, 2 or 3 everywhere"
+
+
+        orig_x_axis[5000:] += 0.34
+        resamp_under, weights_under = grid_1d_data(dest_x_under, orig_x_axis, y_data, 'linear', 'test origin',
+                                                   'test under', gaussian_fallback=False, return_weights=True, second_dim_len=1)
+
+        n_nan = np.sum(np.isnan(resamp_under))
+        assert n_nan == 3, 'Number of NaNs is not what is expected when introducing an irregularity in the origin axis'
+
+        resamp_under, weights_under = grid_1d_data(dest_x_under, orig_x_axis, y_data, 'linear', 'test origin',
+                                                   'test under', gaussian_fallback=True, return_weights=True, second_dim_len=1)
+        n_nan = np.sum(np.isnan(resamp_under))
+        assert n_nan == 0, 'There should be no NaNs when falling back to gaussian interpolation'
+
+    def test_1d_gaussian_gridding(self):
+        fill_value = 2.0
+        orig_x_axis = np.arange(0, 1000, 0.05)
+        dest_x_under = np.arange(0, 1000, 0.1)
+        dest_x_over = np.arange(0, 1000, 0.025)
+
+        y_data = [np.full([orig_x_axis.shape[0], 1], fill_value)]
+
+        resamp_over, weights_over = grid_1d_data(dest_x_over, orig_x_axis, y_data, 'gaussian', 'test origin',
+                                                   'test over', return_weights=True, second_dim_len=1)
+
+        reference_weights = [0.00390625, 0.0078125, 1., 1.]
+        assert np.allclose(resamp_over, fill_value), "Resampled data does not have the expected values"
+        assert np.allclose(np.unique(weights_over), reference_weights, atol=1e-8), "weights are not what is expected"
+
+        resamp_under, weights_under = grid_1d_data(dest_x_under, orig_x_axis, y_data, 'gaussian', 'test origin',
+                                                   'test under', return_weights=True, second_dim_len=1)
+
+        assert np.allclose(resamp_under, fill_value), "Resampled data does not have the expected values"
+
+        reference_weights = [1.25391006, 1.50391006, 1.50781631, 1.50782013, 1.50782013, 1.50782013]
+        assert np.allclose(np.unique(weights_under), reference_weights, atol=1e-8), "weights are not what is expected"
+
+        orig_x_axis[5000:] += 0.34
+        resamp_under, weights_under = grid_1d_data(dest_x_under, orig_x_axis, y_data, 'gaussian', 'test origin',
+                                                   'test under', return_weights=True, second_dim_len=1)
+
+        reference_weights = [3.81493011e-06, 1.90500367e-05, 2.53910065e-01, 4.23017334e-01,
+                             1.25391006e+00, 1.50391006e+00, 1.50491684e+00, 1.50613660e+00,
+                             1.50613660e+00, 1.50781631e+00, 1.50782013e+00, 1.50782013e+00,
+                             1.50782013e+00]
+        assert np.allclose(np.unique(weights_under), reference_weights, atol=1e-8), "weights are not what is expected"
