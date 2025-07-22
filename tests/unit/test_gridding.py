@@ -1,8 +1,11 @@
 import numpy as np
 import toolviper
-from astrohack.utils.gridding import grid_beam, grid_1d_data
+
+from astrohack.utils import clight
+from astrohack.utils.gridding import grid_beam, grid_1d_data, gridding_correction
 from astrohack import get_proper_telescope, extract_holog, extract_pointing
 from astrohack.utils.file import load_holog_file
+from astrohack.utils.ray_tracing_general import simple_axis
 
 
 class TestGridAlgorithms:
@@ -204,3 +207,27 @@ class TestGridAlgorithms:
         assert obs_sum == self.obs_sum, "Observation summary differs from the expected"
 
         return
+
+    def test_gaussian_convolution_grid_correction(self):
+        fake_aperture = np.full([1, 1, 1, 512, 512], 1.0 + 0j)
+        fake_axis = simple_axis([-15, 15], 0.06458)
+        vla = get_proper_telescope('vla')
+        reference_lambda = 0.03
+        freq = clight/reference_lambda
+        cell_size = 0.85 * reference_lambda / vla.diameter
+        sky_cell_size = np.array([-cell_size, cell_size])
+
+        corr_aperture = gridding_correction(fake_aperture, freq, vla.diameter, sky_cell_size, fake_axis, fake_axis)
+
+        reference_values = [
+            [[256, 256], 1.0000487915970857+0j],
+            [[310, 256], 1.0709547299089732+0j],
+            [[128, 12], 6.490130669999345+0j],
+            [[256, 140], 1.3965017152774735+0j],
+            [[500, 256], 4.2229619313395865+0j],
+        ]
+
+        for idx, val in reference_values:
+            assert np.isclose(corr_aperture[0,0,0, *idx], val), f"Aperture correction at {idx} is not what was expected"
+
+
