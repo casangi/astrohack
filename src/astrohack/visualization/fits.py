@@ -47,16 +47,7 @@ def export_to_fits_holog_chunk(parm_dict):
         f"Exporting image contents of {antenna} {ddi} to FITS files in {destination}"
     )
 
-    try:
-        aperture_resolution = input_xds.attrs["aperture_resolution"]
-
-    except KeyError:
-        logger.warning("Holog image does not have resolution information")
-        logger.warning(
-            "Rerun holog with astrohack v>0.1.5 for aperture resolution information"
-        )
-
-        aperture_resolution = None
+    aperture_resolution = input_xds.attrs['summary']['aperture']['cell size']
 
     nchan = len(input_xds.chan)
 
