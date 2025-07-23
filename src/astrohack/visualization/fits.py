@@ -47,7 +47,7 @@ def export_to_fits_holog_chunk(parm_dict):
         f"Exporting image contents of {antenna} {ddi} to FITS files in {destination}"
     )
 
-    aperture_resolution = input_xds.attrs['summary']['aperture']['cell size']
+    aperture_resolution = input_xds.attrs["summary"]["aperture"]["cell size"]
 
     nchan = len(input_xds.chan)
 
