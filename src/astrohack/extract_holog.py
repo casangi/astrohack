@@ -275,7 +275,7 @@ class HologObsDict(dict):
         return obs_dict
 
 
-#@toolviper.utils.parameter.validate(add_data_type=HologObsDict)
+# @toolviper.utils.parameter.validate(add_data_type=HologObsDict)
 def extract_holog(
     ms_name: str,
     point_name: str,
@@ -287,7 +287,7 @@ def extract_holog(
     exclude_antennas: Union[list[str], str] = None,
     data_column: str = "CORRECTED_DATA",
     time_smoothing_interval: float = None,
-    pointing_interpolation_method: str = 'linear',
+    pointing_interpolation_method: str = "linear",
     parallel: bool = False,
     overwrite: bool = False,
 ) -> Union[AstrohackHologFile, None]:

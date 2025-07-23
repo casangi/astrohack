@@ -44,7 +44,9 @@ def get_grid_parameters(file, antenna, mapping, ddi):
     return cell_size, grid_size
 
 
-def generate_verification_json(antenna, ddi, path='./data', write=True, generate_files=True):
+def generate_verification_json(
+    antenna, ddi, path="./data", write=True, generate_files=True
+):
     from astrohack.dio import open_panel
 
     if generate_files:
@@ -72,7 +74,9 @@ def generate_verification_json(antenna, ddi, path='./data', write=True, generate
         )
         numerical_dict["vla"]["pixels"][tag]["beam"] = list(map(str, pixels["beam"]))
 
-    cell_size, grid_size = get_grid_parameters(f"{path}/before.split.holog.zarr", antenna, 'map_0', ddi)
+    cell_size, grid_size = get_grid_parameters(
+        f"{path}/before.split.holog.zarr", antenna, "map_0", ddi
+    )
 
     numerical_dict["vla"]["cell_size"] = [-cell_size, cell_size]
     numerical_dict["vla"]["grid_size"] = [grid_size[0], grid_size[1]]

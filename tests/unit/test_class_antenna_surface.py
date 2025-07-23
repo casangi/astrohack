@@ -108,8 +108,8 @@ class TestClassAntennaSurface:
         Tests that fitting results for two panels match the reference
         """
 
-        solveparsp0 = [-0.00046085,  0.00024772, -0.00074025]
-        solveparsp30 = [0.00032915,  0.00024761, -0.00017642]
+        solveparsp0 = [-0.00046085, 0.00024772, -0.00074025]
+        solveparsp30 = [0.00032915, 0.00024761, -0.00017642]
         self.tant.fit_surface()
 
         assert len(self.tant.panels[0].model.parameters) == len(solveparsp0), (

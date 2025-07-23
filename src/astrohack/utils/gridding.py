@@ -12,8 +12,14 @@ from astrohack.utils import (
     find_nearest,
     calc_coords,
     find_peak_beam_value,
-    chunked_average, )
-from astrohack.utils.tools import get_str_idx_in_list, raise_type_error, check_is_proper_array, check_is_proper_shape
+    chunked_average,
+)
+from astrohack.utils.tools import (
+    get_str_idx_in_list,
+    raise_type_error,
+    check_is_proper_array,
+    check_is_proper_shape,
+)
 
 
 def grid_beam(
@@ -316,14 +322,23 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
     return cf_chan_map, pb_freq
 
 
-def grid_1d_data(dest_ax, orig_ax, y_data, method, orig_label, dest_label, gaussian_fallback=True,
-                 return_weights=False, second_dim_len=2):
+def grid_1d_data(
+    dest_ax,
+    orig_ax,
+    y_data,
+    method,
+    orig_label,
+    dest_label,
+    gaussian_fallback=True,
+    return_weights=False,
+    second_dim_len=2,
+):
     if isinstance(y_data, np.ndarray):
         y_data = [y_data]
     elif isinstance(y_data, list):
         pass
     else:
-        raise_type_error('y_data', 'list or numpy array')
+        raise_type_error("y_data", "list or numpy array")
 
     y_data = numbaList(y_data)
 
@@ -335,33 +350,45 @@ def grid_1d_data(dest_ax, orig_ax, y_data, method, orig_label, dest_label, gauss
     dest_delta = np.median(np.diff(dest_ax))
     orig_delta = np.median(np.diff(orig_ax))
 
-    if method == 'linear':
+    if method == "linear":
         if orig_delta < dest_delta:
-            new_y_data, weights = _linear_interpolate_under_sample(dest_ax, orig_ax, dest_delta, y_data)
+            new_y_data, weights = _linear_interpolate_under_sample(
+                dest_ax, orig_ax, dest_delta, y_data
+            )
         else:
-            new_y_data, weights = _liner_interpolate_over_sample(dest_ax, orig_ax, orig_delta, y_data)
+            new_y_data, weights = _liner_interpolate_over_sample(
+                dest_ax, orig_ax, orig_delta, y_data
+            )
 
     elif method == "gaussian":
-        new_y_data, weights = _gaussian_convolution_1d_jit(dest_ax, orig_ax, dest_delta, y_data)
+        new_y_data, weights = _gaussian_convolution_1d_jit(
+            dest_ax, orig_ax, dest_delta, y_data
+        )
     else:
         raise ValueError(f"{method} is not a valid interpolation methods")
 
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         new_y_data /= weights[np.newaxis, :, np.newaxis]
 
-    n_nans = int(np.sum(np.isnan(new_y_data[0]))/2)
+    n_nans = int(np.sum(np.isnan(new_y_data[0])) / 2)
     if n_nans != 0:
-        if method == 'linear':
-            logger.warning(f'{orig_label} have produced NaNs when resampled onto {dest_label} using linear '
-                           'interpolation.')
+        if method == "linear":
+            logger.warning(
+                f"{orig_label} have produced NaNs when resampled onto {dest_label} using linear "
+                "interpolation."
+            )
             if gaussian_fallback:
-                logger.warning(f'Falling back to Gaussian convolution.')
-                new_y_data, weights = _gaussian_convolution_1d_jit(dest_ax, orig_ax, dest_delta, y_data)
+                logger.warning(f"Falling back to Gaussian convolution.")
+                new_y_data, weights = _gaussian_convolution_1d_jit(
+                    dest_ax, orig_ax, dest_delta, y_data
+                )
             else:
-                logger.warning(f'Fallback to gaussian convolution is off.')
+                logger.warning(f"Fallback to gaussian convolution is off.")
         else:
-            logger.warning(f'{orig_label} have produced NaNs when resampled onto {dest_label} using gaussian '
-                           'convolution.')
+            logger.warning(
+                f"{orig_label} have produced NaNs when resampled onto {dest_label} using gaussian "
+                "convolution."
+            )
 
     if return_weights:
         return new_y_data, weights
@@ -400,7 +427,7 @@ def _get_ordered_axis_index(coor, i_pos, axis, half_int):
 
 @njit(cache=False, nogil=True)
 def _linear_interpolate_under_sample(dest_ax, orig_ax, dest_delta, y_data):
-    half_int_dest = dest_delta/2
+    half_int_dest = dest_delta / 2
 
     new_y_data, weights = _create_new_data_and_weights(dest_ax, y_data)
 
@@ -423,7 +450,7 @@ def _linear_interpolate_under_sample(dest_ax, orig_ax, dest_delta, y_data):
 
 @njit(cache=False, nogil=True)
 def _liner_interpolate_over_sample(dest_ax, orig_ax, orig_delta, y_data):
-    half_int_orig = orig_delta/2
+    half_int_orig = orig_delta / 2
     new_y_data, weights = _create_new_data_and_weights(dest_ax, y_data)
 
     i_orig = 0
@@ -450,7 +477,9 @@ def _gaussian_convolution_1d_jit(dest_ax, orig_ax, hpkw, y_data):
             weights[i_dest] += conv_fact
             for i_data, datum in enumerate(y_data):
                 for i_3dim in range(new_y_data.shape[2]):
-                    new_y_data[i_data, i_dest, i_3dim] += conv_fact * y_data[i_data][i_orig, i_3dim]
+                    new_y_data[i_data, i_dest, i_3dim] += (
+                        conv_fact * y_data[i_data][i_orig, i_3dim]
+                    )
 
     return new_y_data, weights
 
@@ -567,7 +596,9 @@ def _find_nearest(value, array):
 
 
 @njit(cache=False, nogil=True)
-def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2, oversampling=100, hpbw_width=4):
+def _create_exponential_kernel(
+    beam_size, sky_cell_size, exponent=2, oversampling=100, hpbw_width=4
+):
     """
     Creates an exponential kernel to use in convolution
     Args:
@@ -607,7 +638,7 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2, oversamplin
         "pix_support": pix_support,
         "oversampling": oversampling,
         "sky_cell_size": sky_cell_size,
-        "kernel_size": kernel_size
+        "kernel_size": kernel_size,
     }
     return ker_dict
 
@@ -648,7 +679,7 @@ def _convolution_factor(kernel, delta):
     """
     pix_delta = delta / np.abs(kernel["sky_cell_size"])
     ikern = round(kernel["oversampling"] * pix_delta + kernel["bias"])
-    if ikern < 0 or ikern > kernel["kernel_size"]-1:
+    if ikern < 0 or ikern > kernel["kernel_size"] - 1:
         return 0
     else:
         return kernel["kernel"][ikern]

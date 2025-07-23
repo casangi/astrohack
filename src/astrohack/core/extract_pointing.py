@@ -360,18 +360,21 @@ def _extract_scan_time_dict_jit(time, scan_ids, state_ids, ddi_ids, mapping_stat
     return scan_time_dict
 
 
-def evaluate_time_samping(time_sampling, data_label, threshold=0.01,
-                          expected_interval=0.1):
-    bin_sz = expected_interval/4
-    time_bin_edge = np.arange(-bin_sz/2, 2.5*expected_interval, bin_sz)
-    time_bin_axis = time_bin_edge[:-1] + bin_sz/2
-    i_mid = int(np.argmin(np.abs(time_bin_axis-expected_interval)))
+def evaluate_time_samping(
+    time_sampling, data_label, threshold=0.01, expected_interval=0.1
+):
+    bin_sz = expected_interval / 4
+    time_bin_edge = np.arange(-bin_sz / 2, 2.5 * expected_interval, bin_sz)
+    time_bin_axis = time_bin_edge[:-1] + bin_sz / 2
+    i_mid = int(np.argmin(np.abs(time_bin_axis - expected_interval)))
 
     intervals = np.diff(time_sampling)
     hist, edges = np.histogram(intervals, bins=time_bin_edge)
     n_total = np.sum(hist)
-    outlier_fraction = 1 - hist[i_mid]/n_total
+    outlier_fraction = 1 - hist[i_mid] / n_total
 
     if outlier_fraction > threshold:
-        logger.warning(f'{data_label} pointing table has {100*outlier_fraction:.2}% of data with irregular '
-                       f'time sampling')
+        logger.warning(
+            f"{data_label} pointing table has {100*outlier_fraction:.2}% of data with irregular "
+            f"time sampling"
+        )

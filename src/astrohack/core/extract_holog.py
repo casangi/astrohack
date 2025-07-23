@@ -41,7 +41,9 @@ def process_extract_holog_chunk(extract_holog_params):
     map_ant_name_tuple = extract_holog_params["map_ant_name_tuple"]
     holog_map_key = extract_holog_params["holog_map_key"]
     time_interval = extract_holog_params["time_smoothing_interval"]
-    pointing_interpolation_method = extract_holog_params["pointing_interpolation_method"]
+    pointing_interpolation_method = extract_holog_params[
+        "pointing_interpolation_method"
+    ]
 
     # This piece of information is no longer used leaving them here commented out for completeness
     # ref_ant_per_map_ant_name_tuple = extract_holog_params["ref_ant_per_map_ant_name_tuple"]
@@ -128,7 +130,9 @@ def process_extract_holog_chunk(extract_holog_params):
     map_ant_name_list = ["_".join(("ant", i)) for i in map_ant_name_list]
 
     pnt_ant_dict = load_point_file(pnt_name, map_ant_name_list, dask_load=False)
-    pnt_map_dict = _extract_pointing_chunk(map_ant_name_list, time_vis, pnt_ant_dict, pointing_interpolation_method)
+    pnt_map_dict = _extract_pointing_chunk(
+        map_ant_name_list, time_vis, pnt_ant_dict, pointing_interpolation_method
+    )
 
     grid_params = {}
 
@@ -678,7 +682,9 @@ def _check_if_array_in_dict(array_dict, array):
     return False
 
 
-def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict, pointing_interpolation_method):
+def _extract_pointing_chunk(
+    map_ant_ids, time_vis, pnt_ant_dict, pointing_interpolation_method
+):
     """Averages pointing within the time sampling of the visibilities
 
     Args:
@@ -700,8 +706,14 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict, pointing_interp
             y_data.append(pnt_xds[key].values)
         pnt_time = pnt_xds.time.values
 
-        resample_pnt = grid_1d_data(time_vis, pnt_time, y_data, pointing_interpolation_method,
-                                        f'{antenna.split("_")[1]} pointing data', 'visibility times')
+        resample_pnt = grid_1d_data(
+            time_vis,
+            pnt_time,
+            y_data,
+            pointing_interpolation_method,
+            f'{antenna.split("_")[1]} pointing data',
+            "visibility times",
+        )
 
         new_pnt_xds = xr.Dataset()
         new_pnt_xds.assign_coords(coords)

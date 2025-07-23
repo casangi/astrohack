@@ -35,9 +35,10 @@ def set_data(tmp_path_factory):
     # toolviper.utils.data.download(
     #      file="holog_numerical_verification.json", folder=str(data_dir)
     # )
-    verification_json = "/".join([astrohack.__path__[0], f"data/verification/holog_numerical_verification.json"])
+    verification_json = "/".join(
+        [astrohack.__path__[0], f"data/verification/holog_numerical_verification.json"]
+    )
     shutil.copy2(verification_json, data_dir)
-
 
     return data_dir
 

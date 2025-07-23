@@ -350,8 +350,10 @@ def calculate_optimal_grid_parameters(
     pnt_off = pnt_map_dict[antenna_name].POINTING_OFFSET.values
     # Get data range
     data_range = np.array(
-        [np.nanmax(pnt_off[:, 0]) - np.nanmin(pnt_off[:, 0]),
-         np.nanmax(pnt_off[:, 1]) - np.nanmin(pnt_off[:, 1])]
+        [
+            np.nanmax(pnt_off[:, 0]) - np.nanmin(pnt_off[:, 0]),
+            np.nanmax(pnt_off[:, 1]) - np.nanmin(pnt_off[:, 1]),
+        ]
     )
 
     logger.info(
