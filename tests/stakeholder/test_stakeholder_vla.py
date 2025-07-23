@@ -1,6 +1,7 @@
 import json
 import pytest
 import toolviper
+import shutil
 
 import numpy as np
 
@@ -9,6 +10,7 @@ from astrohack.extract_holog import extract_holog
 from astrohack.extract_pointing import extract_pointing
 from astrohack.holog import holog
 from astrohack.panel import panel
+import astrohack
 
 base_name = "ea25_cal_small_"
 
@@ -29,9 +31,14 @@ def set_data(tmp_path_factory):
     toolviper.utils.data.download(
         file="extract_holog_verification.json", folder=str(data_dir)
     )
-    toolviper.utils.data.download(
-        file="holog_numerical_verification.json", folder=str(data_dir)
+
+    # toolviper.utils.data.download(
+    #      file="holog_numerical_verification.json", folder=str(data_dir)
+    # )
+    verification_json = "/".join(
+        [astrohack.__path__[0], f"data/verification/holog_numerical_verification.json"]
     )
+    shutil.copy2(verification_json, data_dir)
 
     return data_dir
 
@@ -187,8 +194,6 @@ def test_holography_pipeline(set_data):
         holog_name=before_holog,
         overwrite=True,
         parallel=False,
-        grid_size=[31, 31],
-        cell_size=[-0.0006386556122807017, 0.0006386556122807017],
     )
 
     assert verify_center_pixels(
@@ -203,8 +208,6 @@ def test_holography_pipeline(set_data):
         holog_name=after_holog,
         overwrite=True,
         parallel=False,
-        grid_size=[31, 31],
-        cell_size=[-0.0006386556122807017, 0.0006386556122807017],
     )
 
     assert verify_center_pixels(
@@ -220,7 +223,6 @@ def test_holography_pipeline(set_data):
         panel_model="rigid",
         parallel=False,
         overwrite=True,
-        exclude_shadows=False,
     )
 
     after_panel = panel(
@@ -228,14 +230,8 @@ def test_holography_pipeline(set_data):
         panel_model="rigid",
         parallel=False,
         overwrite=True,
-        exclude_shadows=False,
     )
 
-    reference_shifts = np.array([-91.6455227, 61.69666059, 4.39843319, 122.26547831])
     assert verify_panel_shifts(
-        data_dir=str(set_data), ref_mean_shift=reference_shifts
+        data_dir=str(set_data), ref_mean_shift=reference_dict["vla"]["offsets"]
     ), "Verify panel shifts"
-    # This test using reference values is very hard to be updated, using this hardcoded reference_shifts is a
-    # temporary work around
-    # assert verify_panel_shifts(data_dir=str(set_data), ref_mean_shift=reference_dict["vla"]["offsets"]), \
-    #     "Verify panel shifts"

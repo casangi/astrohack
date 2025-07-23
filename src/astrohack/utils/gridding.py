@@ -4,6 +4,7 @@ from toolviper.utils import logger as logger
 from scipy.interpolate import griddata
 from numba import njit
 from numba.core import types
+from numba.typed import List as numbaList
 import math
 
 from astrohack.utils import (
@@ -13,7 +14,12 @@ from astrohack.utils import (
     find_peak_beam_value,
     chunked_average,
 )
-from astrohack.utils.tools import get_str_idx_in_list
+from astrohack.utils.tools import (
+    get_str_idx_in_list,
+    raise_type_error,
+    check_is_proper_array,
+    check_is_proper_shape,
+)
 
 
 def grid_beam(
@@ -316,6 +322,168 @@ def _create_average_chan_map(freq_chan, chan_tolerance_factor):
     return cf_chan_map, pb_freq
 
 
+def grid_1d_data(
+    dest_ax,
+    orig_ax,
+    y_data,
+    method,
+    orig_label,
+    dest_label,
+    gaussian_fallback=True,
+    return_weights=False,
+    second_dim_len=2,
+):
+    if isinstance(y_data, np.ndarray):
+        y_data = [y_data]
+    elif isinstance(y_data, list):
+        pass
+    else:
+        raise_type_error("y_data", "list or numpy array")
+
+    y_data = numbaList(y_data)
+
+    check_is_proper_array(dest_ax, 1)
+    check_is_proper_array(orig_ax, 1)
+    for datum in y_data:
+        check_is_proper_shape(datum, [orig_ax.shape[0], second_dim_len])
+
+    dest_delta = np.median(np.diff(dest_ax))
+    orig_delta = np.median(np.diff(orig_ax))
+
+    if method == "linear":
+        if orig_delta < dest_delta:
+            new_y_data, weights = _linear_interpolate_under_sample(
+                dest_ax, orig_ax, dest_delta, y_data
+            )
+        else:
+            new_y_data, weights = _liner_interpolate_over_sample(
+                dest_ax, orig_ax, orig_delta, y_data
+            )
+
+    elif method == "gaussian":
+        new_y_data, weights = _gaussian_convolution_1d_jit(
+            dest_ax, orig_ax, dest_delta, y_data
+        )
+    else:
+        raise ValueError(f"{method} is not a valid interpolation methods")
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        new_y_data /= weights[np.newaxis, :, np.newaxis]
+
+    n_nans = int(np.sum(np.isnan(new_y_data[0])) / 2)
+    if n_nans != 0:
+        if method == "linear":
+            logger.warning(
+                f"{orig_label} have produced NaNs when resampled onto {dest_label} using linear "
+                "interpolation."
+            )
+            if gaussian_fallback:
+                logger.warning(f"Falling back to Gaussian convolution.")
+                new_y_data, weights = _gaussian_convolution_1d_jit(
+                    dest_ax, orig_ax, dest_delta, y_data
+                )
+            else:
+                logger.warning(f"Fallback to gaussian convolution is off.")
+        else:
+            logger.warning(
+                f"{orig_label} have produced NaNs when resampled onto {dest_label} using gaussian "
+                "convolution."
+            )
+
+    if return_weights:
+        return new_y_data, weights
+    else:
+        return new_y_data
+
+
+@njit(cache=False, nogil=True)
+def _create_new_data_and_weights(dest_ax, y_data):
+    """
+    Assumes y_data is a list of [n, m] arrays
+    Args:
+        dest_ax: destiniy axis
+        y_data: Y data list
+
+    Returns:
+        new_y_data and weights of the proper shapes
+    """
+    n_data = len(y_data)
+    new_shape = (n_data, dest_ax.shape[0], y_data[0].shape[1])
+    new_y_data = np.zeros(new_shape)
+    weights = np.zeros_like(dest_ax)
+    return new_y_data, weights
+
+
+@njit(cache=False, nogil=True)
+def _get_ordered_axis_index(coor, i_pos, axis, half_int):
+    if i_pos == axis.shape[0]:
+        return -1
+    while coor > axis[i_pos] + half_int:
+        i_pos += 1
+        if i_pos == axis.shape[0]:
+            return -1
+    return i_pos
+
+
+@njit(cache=False, nogil=True)
+def _linear_interpolate_under_sample(dest_ax, orig_ax, dest_delta, y_data):
+    half_int_dest = dest_delta / 2
+
+    new_y_data, weights = _create_new_data_and_weights(dest_ax, y_data)
+
+    i_dest = 0
+    for i_orig, coor in enumerate(orig_ax):
+        if coor < dest_ax[i_dest] - half_int_dest:
+            continue
+        else:
+            i_dest = _get_ordered_axis_index(coor, i_dest, dest_ax, half_int_dest)
+            if i_dest < 0:
+                break
+
+        weights[i_dest] += 1
+        for i_data, datum in enumerate(y_data):
+            for i_3dim in range(new_y_data.shape[2]):
+                new_y_data[i_data, i_dest, i_3dim] += datum[i_orig, i_3dim]
+
+    return new_y_data, weights
+
+
+@njit(cache=False, nogil=True)
+def _liner_interpolate_over_sample(dest_ax, orig_ax, orig_delta, y_data):
+    half_int_orig = orig_delta / 2
+    new_y_data, weights = _create_new_data_and_weights(dest_ax, y_data)
+
+    i_orig = 0
+    for i_dest, coor in enumerate(dest_ax):
+        i_orig = _get_ordered_axis_index(coor, i_orig, orig_ax, half_int_orig)
+
+        weights[i_dest] += 1
+        for i_data, datum in enumerate(y_data):
+            for i_3dim in range(new_y_data.shape[2]):
+                new_y_data[i_data, i_dest, i_3dim] += datum[i_orig, i_3dim]
+
+    return new_y_data, weights
+
+
+@njit(cache=True, nogil=True)
+def _gaussian_convolution_1d_jit(dest_ax, orig_ax, hpkw, y_data):
+    kernel = _create_exponential_kernel(hpkw, hpkw)
+    new_y_data, weights = _create_new_data_and_weights(dest_ax, y_data)
+
+    for i_orig, coor in enumerate(orig_ax):
+        i_min, i_max = _compute_kernel_range(kernel, coor, dest_ax)
+        for i_dest in range(i_min, i_max):
+            conv_fact = _convolution_factor(kernel, dest_ax[i_dest] - coor)
+            weights[i_dest] += conv_fact
+            for i_data, datum in enumerate(y_data):
+                for i_3dim in range(new_y_data.shape[2]):
+                    new_y_data[i_data, i_dest, i_3dim] += (
+                        conv_fact * y_data[i_data][i_orig, i_3dim]
+                    )
+
+    return new_y_data, weights
+
+
 def _convolution_gridding(
     visibilities,
     weights,
@@ -428,7 +596,9 @@ def _find_nearest(value, array):
 
 
 @njit(cache=False, nogil=True)
-def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
+def _create_exponential_kernel(
+    beam_size, sky_cell_size, exponent=2, oversampling=100, hpbw_width=4
+):
     """
     Creates an exponential kernel to use in convolution
     Args:
@@ -439,9 +609,8 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
     Returns:
         Adictionary containing the convolution kernel
     """
-    oversampling = 100
     smoothing = beam_size
-    support = 4 * smoothing
+    support = hpbw_width * smoothing
     width = smoothing / sig_2_fwhm
 
     pix_support = support / np.abs(sky_cell_size)
@@ -462,13 +631,14 @@ def _create_exponential_kernel(beam_size, sky_cell_size, exponent=2):
 
     ker_dict = {
         "bias": bias,
-        "u-axis": u_axis,
+        "u_axis": u_axis,
         "kernel": kernel,
         "user_support": support,
         "user_width": width,
         "pix_support": pix_support,
         "oversampling": oversampling,
         "sky_cell_size": sky_cell_size,
+        "kernel_size": kernel_size,
     }
     return ker_dict
 
@@ -492,7 +662,7 @@ def _compute_kernel_range(kernel, coor, axis):
     if i_min < 0:
         i_min = 0
     if i_max >= axis.shape[0]:
-        i_max = axis.shape[0] - 1
+        i_max = axis.shape[0]
     return i_min, i_max
 
 
@@ -509,7 +679,10 @@ def _convolution_factor(kernel, delta):
     """
     pix_delta = delta / np.abs(kernel["sky_cell_size"])
     ikern = round(kernel["oversampling"] * pix_delta + kernel["bias"])
-    return kernel["kernel"][ikern]
+    if ikern < 0 or ikern > kernel["kernel_size"] - 1:
+        return 0
+    else:
+        return kernel["kernel"][ikern]
 
 
 @njit(cache=False, nogil=True)

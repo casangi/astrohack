@@ -38,6 +38,11 @@
             "nullable": true,
             "min": 1e-15
         },
+        "pointing_interpolation_method": {
+            "type": ["str"],
+            "nullable": false,
+            "allowed": ["linear", "gaussian"]
+        },
         "parallel":{
             "type":["boolean"]
         },

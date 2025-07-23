@@ -17,6 +17,7 @@ from astrohack.utils.imaging import calculate_parallactic_angle_chunk
 from astrohack.utils.algorithms import calculate_optimal_grid_parameters
 from astrohack.utils.conversion import casa_time_to_mjd
 from astrohack.utils.constants import twopi, clight
+from astrohack.utils.gridding import grid_1d_data
 
 from astrohack.utils.file import load_point_file
 
@@ -40,6 +41,9 @@ def process_extract_holog_chunk(extract_holog_params):
     map_ant_name_tuple = extract_holog_params["map_ant_name_tuple"]
     holog_map_key = extract_holog_params["holog_map_key"]
     time_interval = extract_holog_params["time_smoothing_interval"]
+    pointing_interpolation_method = extract_holog_params[
+        "pointing_interpolation_method"
+    ]
 
     # This piece of information is no longer used leaving them here commented out for completeness
     # ref_ant_per_map_ant_name_tuple = extract_holog_params["ref_ant_per_map_ant_name_tuple"]
@@ -126,7 +130,9 @@ def process_extract_holog_chunk(extract_holog_params):
     map_ant_name_list = ["_".join(("ant", i)) for i in map_ant_name_list]
 
     pnt_ant_dict = load_point_file(pnt_name, map_ant_name_list, dask_load=False)
-    pnt_map_dict = _extract_pointing_chunk(map_ant_name_list, time_vis, pnt_ant_dict)
+    pnt_map_dict = _extract_pointing_chunk(
+        map_ant_name_list, time_vis, pnt_ant_dict, pointing_interpolation_method
+    )
 
     grid_params = {}
 
@@ -676,7 +682,9 @@ def _check_if_array_in_dict(array_dict, array):
     return False
 
 
-def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
+def _extract_pointing_chunk(
+    map_ant_ids, time_vis, pnt_ant_dict, pointing_interpolation_method
+):
     """Averages pointing within the time sampling of the visibilities
 
     Args:
@@ -688,120 +696,34 @@ def _extract_pointing_chunk(map_ant_ids, time_vis, pnt_ant_dict):
     Returns:
         dict:  Dictionary of directional cosine data mapped to nearest MAIN table sample times.
     """
-
+    keys = ["DIRECTION", "DIRECTIONAL_COSINES", "ENCODER", "POINTING_OFFSET", "TARGET"]
     pnt_map_dict = {}
     coords = {"time": time_vis}
     for antenna in map_ant_ids:
         pnt_xds = pnt_ant_dict[antenna]
+        y_data = []
+        for key in keys:
+            y_data.append(pnt_xds[key].values)
         pnt_time = pnt_xds.time.values
-        pnt_int = np.average(np.diff(pnt_time))
-        vis_int = time_vis[1] - time_vis[0]
 
-        if pnt_int < vis_int:
-            avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = (
-                _time_avg_pointing_jit(
-                    time_vis,
-                    pnt_xds.time.values,
-                    pnt_xds["DIRECTION"].values,
-                    pnt_xds["DIRECTIONAL_COSINES"].values,
-                    pnt_xds["ENCODER"].values,
-                    pnt_xds["POINTING_OFFSET"].values,
-                    pnt_xds["TARGET"].values,
-                )
-            )
-        else:
-            avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt = _interpolate_pointing(
-                time_vis,
-                pnt_xds.time.values,
-                pnt_xds["DIRECTION"].values,
-                pnt_xds["DIRECTIONAL_COSINES"].values,
-                pnt_xds["ENCODER"].values,
-                pnt_xds["POINTING_OFFSET"].values,
-                pnt_xds["TARGET"].values,
-            )
+        resample_pnt = grid_1d_data(
+            time_vis,
+            pnt_time,
+            y_data,
+            pointing_interpolation_method,
+            f'{antenna.split("_")[1]} pointing data',
+            "visibility times",
+        )
 
         new_pnt_xds = xr.Dataset()
         new_pnt_xds.assign_coords(coords)
 
-        new_pnt_xds["DIRECTION"] = xr.DataArray(avg_dir, dims=("time", "az_el"))
-        new_pnt_xds["DIRECTIONAL_COSINES"] = xr.DataArray(
-            avg_dir_cos, dims=("time", "az_el")
-        )
-        new_pnt_xds["ENCODER"] = xr.DataArray(avg_enc, dims=("time", "az_el"))
-        new_pnt_xds["POINTING_OFFSET"] = xr.DataArray(
-            avg_pnt_off, dims=("time", "az_el")
-        )
-        new_pnt_xds["TARGET"] = xr.DataArray(avg_tgt, dims=("time", "az_el"))
+        for i_key, key in enumerate(keys):
+            new_pnt_xds[key] = xr.DataArray(resample_pnt[i_key], dims=("time", "az_el"))
+
         new_pnt_xds.attrs = pnt_xds.attrs
         pnt_map_dict[antenna] = new_pnt_xds
     return pnt_map_dict
-
-
-@njit(cache=False, nogil=True)
-def _time_avg_pointing_jit(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt):
-    half_int = (time_vis[1] - time_vis[0]) / 2
-    n_samples = time_vis.shape[0]
-    the_shape = (n_samples, 2)
-    n_row = pnt_time.shape[0]
-
-    avg_dir = np.zeros(the_shape)
-    avg_dir_cos = np.zeros(the_shape)
-    avg_enc = np.zeros(the_shape)
-    avg_pnt_off = np.zeros(the_shape)
-    avg_tgt = np.zeros(the_shape)
-    avg_wgt = np.zeros(the_shape)
-
-    i_time = 0
-    for i_row in range(n_row):
-        if pnt_time[i_row] < time_vis[i_time] - half_int:
-            continue
-        else:
-            i_time = _get_time_index(pnt_time[i_row], i_time, time_vis, half_int)
-            if i_time < 0:
-                break
-
-        avg_dir[i_time] += dire[i_row]
-        avg_dir_cos[i_time] += dir_cos[i_row]
-        avg_enc[i_time] += enc[i_row]
-        avg_pnt_off[i_time] += pnt_off[i_row]
-        avg_tgt[i_time] += tgt[i_row]
-        avg_wgt[i_time] += 1
-
-    avg_dir /= avg_wgt
-    avg_dir_cos /= avg_wgt
-    avg_enc /= avg_wgt
-    avg_pnt_off /= avg_wgt
-    avg_tgt /= avg_wgt
-
-    return avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt
-
-
-@njit(cache=False, nogil=True)
-def _interpolate_pointing(time_vis, pnt_time, dire, dir_cos, enc, pnt_off, tgt):
-    n_samples = time_vis.shape[0]
-    the_shape = (n_samples, 2)
-    n_row = pnt_time.shape[0]
-    pnt_int = np.average(np.diff(pnt_time))
-    half_int = (time_vis[1] - time_vis[0]) / 2
-
-    avg_dir = np.zeros(the_shape)
-    avg_dir_cos = np.zeros(the_shape)
-    avg_enc = np.zeros(the_shape)
-    avg_pnt_off = np.zeros(the_shape)
-    avg_tgt = np.zeros(the_shape)
-    avg_wgt = np.zeros(the_shape)
-
-    for i_time in range(n_samples):
-        i_row = int(np.floor((time_vis[i_time] - half_int - pnt_time[0]) / pnt_int))
-
-        avg_dir[i_time] += dire[i_row]
-        avg_dir_cos[i_time] += dir_cos[i_row]
-        avg_enc[i_time] += enc[i_row]
-        avg_pnt_off[i_time] += pnt_off[i_row]
-        avg_tgt[i_time] += tgt[i_row]
-        avg_wgt[i_time] += 1
-
-    return avg_dir, avg_dir_cos, avg_enc, avg_pnt_off, avg_tgt
 
 
 @njit(cache=False, nogil=True)
