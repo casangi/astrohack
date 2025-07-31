@@ -212,7 +212,8 @@ def process_holog_chunk(holog_chunk_params):
                     zernike_grid, u_axis, v_axis, telescope
                 )
 
-                phase_corrected_angle = phase_wrapping(phase - zernike_phase)
+                phase_corrected_angle = phase_wrapping(np.where(np.isfinite(zernike_phase),
+                                                                phase - zernike_phase, phase))
                 phase_fit_results = None
             else:
                 logger.error(f"Unsupported phase fitting engine: {phase_fit_engine}")
