@@ -93,6 +93,7 @@ class AntennaSurface:
         self.deviation = self.telescope.phase_to_deviation(
             self.u_axis, self.v_axis, self.mask, self.phase, self.wavelength
         )
+
         self.panels = self.telescope.build_panel_list(pmodel, panel_margins)
         if not self.reread:
             self.panelmodel = pmodel
@@ -527,10 +528,8 @@ class AntennaSurface:
             self._plot_map(plotname, factor * maps[iplot], title, parm_dict)
 
     def _plot_map(self, filename, data, title, parm_dict, add_colorbar=True):
-
         cmap = parm_dict["colormap"]
         fig, ax = create_figure_and_axes(parm_dict["figure_size"], [1, 1])
-
         simple_imshow_map_plot(
             ax,
             fig,
