@@ -2,7 +2,7 @@ import numpy as np
 import xarray as xr
 
 from astrohack.utils import format_angular_distance
-from astrohack.antenna.telescope import get_proper_telescope
+from astrohack.antenna.telescope import get_proper_telescope, RingedCassegrain
 from astrohack.utils.text import create_dataset_label
 from astrohack.utils.conversion import convert_5d_grid_to_stokes
 from astrohack.utils.algorithms import phase_wrapping
@@ -169,6 +169,14 @@ def process_holog_chunk(holog_chunk_params):
     )
 
     phase_fit_engine = holog_chunk_params["phase_fit_engine"]
+    if phase_fit_engine == "perturbations" and not isinstance(
+        telescope, RingedCassegrain
+    ):
+        logger.warning(
+            f"Pertubation phase fitting is not supported for {telescope.name}, changing phase fit engine to"
+            f" zernike"
+        )
+        phase_fit_engine = "zernike"
 
     if phase_fit_engine is None or phase_fit_engine == "none":
         phase_corrected_angle, phase_fit_results = skip_phase_fitting(label, phase)
@@ -207,7 +215,9 @@ def process_holog_chunk(holog_chunk_params):
                     zernike_grid, u_axis, v_axis, telescope
                 )
 
-                phase_corrected_angle = phase_wrapping(phase - zernike_phase)
+                phase_corrected_angle = phase_wrapping(
+                    np.where(np.isfinite(zernike_phase), phase - zernike_phase, phase)
+                )
                 phase_fit_results = None
             else:
                 logger.error(f"Unsupported phase fitting engine: {phase_fit_engine}")

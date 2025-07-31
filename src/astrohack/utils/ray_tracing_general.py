@@ -318,7 +318,7 @@ class GlobalQPS:
         xds = xds.assign_coords(coords)
         xds.to_zarr(filepath, mode="w", compute=True, consolidated=True)
 
-    def compute_gridded_z_cos(self, u_axis, v_axis, mask, light=(0, 0, -1)):
+    def compute_gridded_z_cos(self, u_axis, v_axis, mask, light=(0, 0, 1)):
         light = np.array(light)
 
         u_mesh, v_mesh = create_coordinate_images(u_axis, v_axis)
@@ -332,15 +332,15 @@ class GlobalQPS:
             self.point_cloud, self.qps_coefficients, uv_points
         )
 
-        z_angle = (generalized_dot(z_norm, light)) / (
+        z_cos = (generalized_dot(z_norm, light)) / (
             generalized_norm(z_norm) * generalized_norm(light)
         )
 
-        z_cos_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_angle, uv_idx_grid)
+        z_cos_grid = regrid_data_onto_2d_grid(u_axis, v_axis, z_cos, uv_idx_grid)
 
         return z_cos_grid
 
-    def compute_gridded_z_val_and_z_cos(self, u_axis, v_axis, mask, light=(0, 0, -1)):
+    def compute_gridded_z_val_and_z_cos(self, u_axis, v_axis, mask, light=(0, 0, 1)):
         light = np.array(light)
 
         u_mesh, v_mesh = create_coordinate_images(u_axis, v_axis)
