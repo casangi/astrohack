@@ -426,6 +426,7 @@ class NgvlaPrototype(Telescope):
         self.screw_description = None
         self.point_cloud = None
         self.qps_coefficients = None
+        self.aperture_polygon = None
 
         # This is not to be written to disk
         self.z_cos_image = None
