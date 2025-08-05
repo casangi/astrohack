@@ -108,7 +108,7 @@ class TestClassTelescope:
         assert not mask[mid_point, mid_point], "Mask should be False inside blockage"
         assert not mask[130, 150], "Mask should be False in an arm shadow"
 
-        mask = tel.create_aperture_mask(u_axis, v_axis, exclude_arms=False)
+        mask = tel.create_aperture_mask(u_axis, v_axis, use_detailed_mask=False)
         assert mask[130, 130], "Mask should be True here"
         assert not mask[mid_point, mid_point], "Mask should be False inside blockage"
         assert mask[130, 150], "Mask should be True in an arm shadow"

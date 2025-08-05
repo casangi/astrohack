@@ -252,7 +252,7 @@ class AntennaSurface:
         self.base_mask, self.rad, self.phi = self.telescope.create_aperture_mask(
             self.u_axis,
             self.v_axis,
-            exclude_arms=exclude_shadows,
+            use_detailed_mask=exclude_shadows,
             return_polar_meshes=True,
             use_outer_limit=True,
         )
