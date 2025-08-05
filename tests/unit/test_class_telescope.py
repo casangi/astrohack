@@ -133,7 +133,9 @@ class TestClassTelescope:
             poly = Polygon(tel.panel_dict[panel_label]["polygon"])
             iu = np.argmin(np.abs(u_axis - poly.centroid.x))
             iv = np.argmin(np.abs(v_axis - poly.centroid.y))
-            assert mask[iu, iv], f'Panel {panel_label} centroid should be included in mask'
+            assert mask[
+                iu, iv
+            ], f"Panel {panel_label} centroid should be included in mask"
 
     def test_build_ringed_panel_list(self):
         tel = get_proper_telescope("vla")
