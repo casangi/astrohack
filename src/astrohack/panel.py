@@ -23,7 +23,7 @@ def panel(
     panel_name: str = None,
     clip_type: str = "sigma",
     clip_level: Union[float, dict[dict[float]]] = 3.0,
-    exclude_shadows: bool = True,
+    use_detailed_mask: bool = True,
     panel_model: str = "rigid",
     panel_margins: float = 0.05,
     polarization_state: str = "I",
@@ -50,9 +50,9 @@ def panel(
     passing a dictionary, default is 3 (appropriate for sigma clipping)
     :type clip_level: float, dict, optional
 
-    :param exclude_shadows: Exclude regions with significant shadowing from analysis, e.g. secondary supporting arms, \
-    default is True.
-    :type exclude_shadows: bool, optional
+    :param use_detailed_mask: Use a detailed aperture mask, ie. include arm shadows for the VLA or include regions \
+    outside central circular aperture for the ngvla, default is True.
+    :type use_detailed_mask: bool, optional
 
     :param panel_model: Model of surface fitting function used to fit panel surfaces, None will default to "rigid". \
     Possible models are listed below.

@@ -52,7 +52,7 @@ class AntennaSurface:
         reread=False,
         pol_state="I",
         patch_phase=False,
-        exclude_shadows=True,
+        use_detailed_mask=True,
     ):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
@@ -66,7 +66,7 @@ class AntennaSurface:
             reread: Read a previously processed holography
             pol_state: Polarization state to select
             patch_phase: Phase data from inputxds needs to be wrapped to -pi to pi interval
-            exclude_shadows: Excluded shadowed regions from analysis
+            use_detailed_mask: use detailed mask (arms shadows, ngvla outer panels)
         """
         self.reread = reread
         self.phase = None
@@ -89,7 +89,7 @@ class AntennaSurface:
         if patch_phase:
             self.phase = phase_wrapping(self.phase)
 
-        self._create_aperture_mask(clip_type, clip_level, exclude_shadows)
+        self._create_aperture_mask(clip_type, clip_level, use_detailed_mask)
         self.deviation = self.telescope.phase_to_deviation(
             self.u_axis, self.v_axis, self.mask, self.phase, self.wavelength
         )
@@ -247,12 +247,12 @@ class AntennaSurface:
 
         return clip
 
-    def _create_aperture_mask(self, clip_type, clip_level, exclude_shadows):
+    def _create_aperture_mask(self, clip_type, clip_level, use_detailed_mask):
 
         self.base_mask, self.rad, self.phi = self.telescope.create_aperture_mask(
             self.u_axis,
             self.v_axis,
-            use_detailed_mask=exclude_shadows,
+            use_detailed_mask=use_detailed_mask,
             return_polar_meshes=True,
             use_outer_limit=True,
         )

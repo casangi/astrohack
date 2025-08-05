@@ -38,7 +38,7 @@ def process_panel_chunk(panel_chunk_params):
         pmodel=panel_chunk_params["panel_model"],
         panel_margins=panel_chunk_params["panel_margins"],
         patch_phase=needs_phase_wrapping_patch,
-        exclude_shadows=panel_chunk_params["exclude_shadows"],
+        use_detailed_mask=panel_chunk_params["use_detailed_mask"],
     )
 
     surface.fit_surface()

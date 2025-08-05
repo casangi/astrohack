@@ -213,7 +213,7 @@ class TestPanel:
             image_name="data/ea25_cal_small_before_fixed.split.image.zarr",
             clip_type="absolute",
             clip_level=0.0,
-            exclude_shadows=False,
+            use_detailed_mask=False,
             parallel=False,
             overwrite=True,
         )

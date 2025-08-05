@@ -19,7 +19,7 @@
             "nullable": false,
             "struct type": ["dict"]
         },
-        "exclude_shadows": {
+        "use_detailed_mask": {
             "type":["boolean"],
             "nullable": false
         },
