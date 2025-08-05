@@ -3,6 +3,7 @@ import os
 import filecmp
 import shutil
 import numpy as np
+from shapely.geometry.polygon import Polygon
 
 from astrohack.utils.ray_tracing_general import simple_axis
 from astrohack.antenna import RingPanel
@@ -108,7 +109,7 @@ class TestClassTelescope:
         assert not mask[mid_point, mid_point], "Mask should be False inside blockage"
         assert not mask[130, 150], "Mask should be False in an arm shadow"
 
-        mask = tel.create_aperture_mask(u_axis, v_axis, exclude_arms=False)
+        mask = tel.create_aperture_mask(u_axis, v_axis, use_detailed_mask=False)
         assert mask[130, 130], "Mask should be True here"
         assert not mask[mid_point, mid_point], "Mask should be False inside blockage"
         assert mask[130, 150], "Mask should be True in an arm shadow"
@@ -119,13 +120,22 @@ class TestClassTelescope:
         v_axis = simple_axis([-10, 10], 0.1, 0.0)
         mid_point = u_axis.shape[0] // 2
 
-        mask = tel.create_aperture_mask(u_axis, v_axis)
+        mask = tel.create_aperture_mask(u_axis, v_axis, use_detailed_mask=False)
         radius = np.sqrt(u_axis[np.newaxis, :] ** 2 + v_axis[:, np.newaxis] ** 2)
         ref_mask = np.where(radius <= tel.diameter / 2, True, False)
         assert mask[
             mid_point, mid_point
         ], "Mask should be true at the center of an unblocked aperture"
         assert np.all(ref_mask == mask), "Mask is not identical to reference"
+
+        mask = tel.create_aperture_mask(u_axis, v_axis, use_detailed_mask=True)
+        for panel_label, panel_data in tel.panel_dict.items():
+            poly = Polygon(tel.panel_dict[panel_label]["polygon"])
+            iu = np.argmin(np.abs(u_axis - poly.centroid.x))
+            iv = np.argmin(np.abs(v_axis - poly.centroid.y))
+            assert mask[
+                iu, iv
+            ], f"Panel {panel_label} centroid should be included in mask"
 
     def test_build_ringed_panel_list(self):
         tel = get_proper_telescope("vla")

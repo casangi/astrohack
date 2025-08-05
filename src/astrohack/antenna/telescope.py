@@ -1,3 +1,9 @@
+import time
+
+from shapely.geometry.point import Point
+from shapely.geometry.polygon import Polygon
+from shapely.strtree import STRtree
+
 import astrohack
 import pathlib
 
@@ -320,7 +326,7 @@ class RingedCassegrain(Telescope):
         self,
         u_axis,
         v_axis,
-        exclude_arms=True,
+        use_detailed_mask=True,
         return_polar_meshes=False,
         use_outer_limit=False,
     ):
@@ -337,7 +343,7 @@ class RingedCassegrain(Telescope):
         mask = np.where(radius_mesh > outer_radius, False, mask)
         mask = np.where(radius_mesh < self.inner_radial_limit, False, mask)
 
-        if self.arm_shadow_width is None or not exclude_arms:
+        if self.arm_shadow_width is None or not use_detailed_mask:
             pass
         elif isinstance(self.arm_shadow_width, (float, int)):
             mask = arm_shadow_masking(
@@ -426,6 +432,7 @@ class NgvlaPrototype(Telescope):
         self.screw_description = None
         self.point_cloud = None
         self.qps_coefficients = None
+        self.aperture_polygon = None
 
         # This is not to be written to disk
         self.z_cos_image = None
@@ -470,23 +477,32 @@ class NgvlaPrototype(Telescope):
         self,
         u_axis,
         v_axis,
-        exclude_arms=True,
+        use_detailed_mask=True,
         return_polar_meshes=False,
         use_outer_limit=False,
     ):
         u_mesh, v_mesh, radius_mesh, polar_angle_mesh = create_coordinate_images(
             u_axis, v_axis, create_polar_coordinates=True
         )
-
-        if use_outer_limit:
-            outer_radius = self.outer_radial_limit
+        if use_detailed_mask:
+            # This is the slowest line, means of optimizing this would be great
+            point_list = [Point(u_val, -v_val) for v_val in v_axis for u_val in u_axis]
+            pnt_str_tree = STRtree(point_list)
+            ap_polygon = Polygon(self.aperture_polygon)
+            intersection = pnt_str_tree.query(ap_polygon, predicate="intersects")
+            mask_1d = np.full((v_axis.shape[0] * u_axis.shape[0]), False)
+            mask_1d[intersection] = True
+            mask = mask_1d.reshape((u_axis.shape[0], v_axis.shape[0]))
         else:
-            outer_radius = self.diameter / 2.0
+            if use_outer_limit:
+                outer_radius = self.outer_radial_limit
+            else:
+                outer_radius = self.diameter / 2.0
 
-        mask = np.full_like(radius_mesh, True, dtype=bool)
-        mask = np.where(radius_mesh > outer_radius, False, mask)
-        # This line does not need to be included as there is no blockage in the ngvla!
-        # mask = np.where(radius_mesh < self.inner_radial_limit, False, mask)
+            mask = np.full_like(radius_mesh, True, dtype=bool)
+            mask = np.where(radius_mesh > outer_radius, False, mask)
+            # This line does not need to be included as there is no blockage in the ngvla!
+            # mask = np.where(radius_mesh < self.inner_radial_limit, False, mask)
 
         if return_polar_meshes:
             return mask, radius_mesh, polar_angle_mesh

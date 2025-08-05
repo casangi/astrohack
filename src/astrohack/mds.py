@@ -411,7 +411,7 @@ class AstrohackImageFile(dict):
         length_unit: str = "mm",
         parallel: bool = False,
     ) -> None:
-        """Export phase fit results from the data in an AstrohackImageFIle object to ASCII files.
+        """Export perturbations phase fit results from the data in an AstrohackImageFIle object to ASCII files.
 
         :param destination: Name of the destination folder to contain ASCII files
         :type destination: str

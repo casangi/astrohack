@@ -93,7 +93,7 @@ def make_gridded_cassegrain_primary(grid_size, resolution, telescope_pars):
     tel = get_proper_telescope("vla")
     tel.inner_radial_limit = telescope_pars["inner_radius"]
     tel.diameter = telescope_pars["primary_diameter"]
-    radial_mask = tel.create_aperture_mask(axis, axis, exclude_arms=False)
+    radial_mask = tel.create_aperture_mask(axis, axis, use_detailed_mask=False)
     img_radius = img_radius[radial_mask]
     npnt_1d = img_radius.shape[0]
     idx_1d = np.empty([npnt_1d, 2], dtype=int)

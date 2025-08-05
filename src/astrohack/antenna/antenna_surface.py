@@ -47,13 +47,12 @@ class AntennaSurface:
         clip_type="sigma",
         clip_level=3,
         pmodel="rigid",
-        crop=False,
         nan_out_of_bounds=True,
         panel_margins=0.05,
         reread=False,
         pol_state="I",
         patch_phase=False,
-        exclude_shadows=True,
+        use_detailed_mask=True,
     ):
         """
         Antenna Surface description capable of computing RMS, Gains, and fitting the surface to obtain screw adjustments
@@ -62,13 +61,12 @@ class AntennaSurface:
             clip_type: Type of clipping to be applied to amplitude
             clip_level: Level of clipping
             pmodel: model of panel surface fitting, if is None defaults to telescope default
-            crop: Crop apertures to slightly larger frames than the antenna diameter
             nan_out_of_bounds: Should the region outside the dish be replaced with NaNs?
             panel_margins: Margin to be ignored at edges of panels when fitting, defaults to 20% if None
             reread: Read a previously processed holography
             pol_state: Polarization state to select
             patch_phase: Phase data from inputxds needs to be wrapped to -pi to pi interval
-            exclude_shadows: Excluded shadowed regions from analysis
+            use_detailed_mask: use detailed mask (arms shadows, ngvla outer panels)
         """
         self.reread = reread
         self.phase = None
@@ -91,16 +89,15 @@ class AntennaSurface:
         if patch_phase:
             self.phase = phase_wrapping(self.phase)
 
-        self._create_aperture_mask(clip_type, clip_level, exclude_shadows)
+        self._create_aperture_mask(clip_type, clip_level, use_detailed_mask)
         self.deviation = self.telescope.phase_to_deviation(
             self.u_axis, self.v_axis, self.mask, self.phase, self.wavelength
         )
+
         self.panels = self.telescope.build_panel_list(pmodel, panel_margins)
         if not self.reread:
             self.panelmodel = pmodel
             self.panel_margins = panel_margins
-            if crop:
-                self._crop_maps()
             self.panel_distribution = self.telescope.attribute_pixels_to_panels(
                 self.panels,
                 self.u_axis,
@@ -250,28 +247,12 @@ class AntennaSurface:
 
         return clip
 
-    def _crop_maps(self, margin=0.025):
-        """
-        Crop the amplitude and phase/deviation maps to decrease that usage and speedup calculations
-        Args:
-            margin: How much margin should be left outside the dish diameter
-        """
-        edge = (0.5 + margin) * self.telescope.diameter
-        iumin = np.argmax(self.u_axis > -edge)
-        iumax = np.argmax(self.u_axis > edge)
-        ivmin = np.argmax(self.v_axis > -edge)
-        ivmax = np.argmax(self.v_axis > edge)
-        self.u_axis = self.u_axis[iumin:iumax]
-        self.v_axis = self.v_axis[ivmin:ivmax]
-        self.amplitude = self.amplitude[iumin:iumax, ivmin:ivmax]
-        self.phase = self.phase[iumin:iumax, ivmin:ivmax]
-
-    def _create_aperture_mask(self, clip_type, clip_level, exclude_shadows):
+    def _create_aperture_mask(self, clip_type, clip_level, use_detailed_mask):
 
         self.base_mask, self.rad, self.phi = self.telescope.create_aperture_mask(
             self.u_axis,
             self.v_axis,
-            exclude_arms=exclude_shadows,
+            use_detailed_mask=use_detailed_mask,
             return_polar_meshes=True,
             use_outer_limit=True,
         )
@@ -286,6 +267,7 @@ class AntennaSurface:
     def _nan_out_of_bounds(self):
         self.phase = np.where(self.base_mask, self.phase, np.nan)
         self.amplitude = np.where(self.base_mask, self.amplitude, np.nan)
+        self.deviation = np.where(self.base_mask, self.deviation, np.nan)
 
     def _fetch_panel_ringed(self, ring, panel):
         """
@@ -546,10 +528,8 @@ class AntennaSurface:
             self._plot_map(plotname, factor * maps[iplot], title, parm_dict)
 
     def _plot_map(self, filename, data, title, parm_dict, add_colorbar=True):
-
         cmap = parm_dict["colormap"]
         fig, ax = create_figure_and_axes(parm_dict["figure_size"], [1, 1])
-
         simple_imshow_map_plot(
             ax,
             fig,

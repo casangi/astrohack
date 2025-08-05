@@ -8,6 +8,7 @@ from astrohack.utils import (
     dynamic_format,
     format_observation_summary,
     make_header,
+    create_dataset_label,
 )
 from astrohack.antenna import get_proper_telescope, AntennaSurface
 from astrohack.utils import (
@@ -369,6 +370,12 @@ def export_phase_fit_chunk(parm_dict):
     ddi = parm_dict["this_ddi"]
     destination = parm_dict["destination"]
     phase_fit_results = parm_dict["xds_data"].attrs["phase_fitting"]
+    if phase_fit_results is None:
+        logger.warning(
+            f"No phase fit results to export for {create_dataset_label(antenna, ddi)}"
+        )
+        return
+
     angle_unit = parm_dict["angle_unit"]
     length_unit = parm_dict["length_unit"]
     field_names = ["Parameter", "Value", "Unit"]
@@ -378,7 +385,10 @@ def export_phase_fit_chunk(parm_dict):
     for mapkey, map_dict in phase_fit_results.items():
         for freq, freq_dict in map_dict.items():
             for pol, pol_dict in freq_dict.items():
-                outstr += f'* {mapkey.replace("_", " ")}, Frequency {format_frequency(freq)}, polarization state {pol}:\n\n '
+                outstr += (
+                    f'* {mapkey.replace("_", " ")}, Frequency {format_frequency(freq)}, '
+                    f"polarization state {pol}:\n\n "
+                )
                 table = create_pretty_table(field_names, alignment)
                 for par_name in aips_par_names:
                     item = pol_dict[par_name]
@@ -425,7 +435,10 @@ def export_zernike_fit_chunk(parm_dict):
         for ichan, freq in enumerate(freq_axis):
             for icorr, corr in enumerate(corr_axis):
                 outstr += f"* map {itime}, Frequency {format_frequency(freq)}, Correlation {corr}:\n"
-                outstr += f"   Fit RMS = {rms[itime, ichan, icorr].real:.8f} + {rms[itime, ichan, icorr].imag:.8f}*i\n\n"
+                outstr += (
+                    f"   Fit RMS = {rms[itime, ichan, icorr].real:.8f} + {rms[itime, ichan, icorr].imag:.8f}*i"
+                    f"\n\n"
+                )
                 table = create_pretty_table(field_names, alignment)
                 for icoeff, coeff in enumerate(zernike_coeffs[itime, ichan, icorr]):
                     row = [
