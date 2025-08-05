@@ -489,8 +489,8 @@ class NgvlaPrototype(Telescope):
             point_list = [Point(u_val, -v_val) for v_val in v_axis for u_val in u_axis]
             pnt_str_tree = STRtree(point_list)
             ap_polygon = Polygon(self.aperture_polygon)
-            intersection = pnt_str_tree.query(ap_polygon, predicate='intersects')
-            mask_1d = np.full((v_axis.shape[0]*u_axis.shape[0]), False)
+            intersection = pnt_str_tree.query(ap_polygon, predicate="intersects")
+            mask_1d = np.full((v_axis.shape[0] * u_axis.shape[0]), False)
             mask_1d[intersection] = True
             mask = mask_1d.reshape((u_axis.shape[0], v_axis.shape[0]))
         else:
