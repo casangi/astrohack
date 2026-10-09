@@ -276,7 +276,8 @@ def _normalize_beam(beam_grid, n_chan, pol_axis, datalabel):
                 p1_peak = beam_grid[chan, i_p1, center_pixel[0], center_pixel[1]]
                 p2_peak = beam_grid[chan, i_p2, center_pixel[0], center_pixel[1]]
             except ValueError:
-                logger.error(f"{datalabel}: Has problems!")
+                logger.error(f"{datalabel}: Has gridding problems!")
+                raise ValueError(f"{datalabel}: Has gridding problems!")
 
             normalization = np.abs(0.5 * (p1_peak + p2_peak))
 

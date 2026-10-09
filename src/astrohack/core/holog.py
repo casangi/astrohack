@@ -38,6 +38,9 @@ def process_holog_chunk(holog_chunk_params: dict, output_mds: AstrohackImageFile
 
     label = create_dataset_label(ant_key, ddi_key, separator=",")
     logger.info(f"Processing {label}")
+    # Test to catch the case where the is no valid visibilities, to avoid a crash in gridding
+    if not test_xdt_for_valid_data(ant_ddi_xdt, datalabel=label):
+        return
 
     summary = deepcopy(ant_ddi_xdt["map_0"].attrs["summary"])
 
@@ -248,6 +251,42 @@ def process_holog_chunk(holog_chunk_params: dict, output_mds: AstrohackImageFile
     )
 
     logger.info(f"Finished processing {label}")
+
+
+def test_xdt_for_valid_data(ant_ddi_xdt, datalabel):
+    """
+    Test if the antenna_ddi xdtree has valid visibility and pointing data before proceeding.
+    Args:
+        ant_ddi_xdt: Antenna DDI XDTree
+        datalabel: data label
+
+    Returns: True if data seems valid, False otherwise
+
+    """
+
+    vis_sum = 0.0 + 0j
+    pnt_l_sum = 0.0
+    pnt_m_sum = 0.0
+    for map_xds in ant_ddi_xdt.values():
+        vis_sum += np.nansum(map_xds.VIS)
+        pnt_l_sum += np.nansum(map_xds.DIRECTIONAL_COSINES[0, :])
+        pnt_m_sum += np.nansum(map_xds.DIRECTIONAL_COSINES[1, :])
+
+    proceed = True
+    if vis_sum == 0j:
+        proceed = False
+        logger.error(f"No valid visibilities for {datalabel}, skipping it")
+    if pnt_l_sum == 0 or pnt_m_sum == 0:
+        proceed = False
+        if pnt_l_sum == 0:
+            direction_error = "l direction"
+        elif pnt_m_sum == 0:
+            direction_error = "m direction"
+        else:
+            direction_error = "l and m directions"
+        logger.error(f"{datalabel} has not moved in the {direction_error}, skipping it")
+
+    return proceed
 
 
 def _crop_and_split_aperture(aperture_grid, u_axis, v_axis, telescope, scaling=1.5):
