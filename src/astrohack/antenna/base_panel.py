@@ -1,6 +1,7 @@
 import numpy as np
 import toolviper.utils.logger as logger
-from matplotlib import pyplot as plt
+
+from matplotlib.patches import Circle
 from matplotlib.colors import Normalize
 
 from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT, PanelModel, PanelPoint
@@ -207,7 +208,7 @@ class BasePanel:
                 corr = 0
             else:
                 corr = corrections[iscrew]
-            circle = plt.Circle(
+            circle = Circle(
                 (screw.xc, screw.yc),
                 self.plot_screw_size,
                 color=cmap(norm(corr)),
