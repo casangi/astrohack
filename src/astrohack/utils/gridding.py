@@ -139,7 +139,7 @@ def grid_beam(
         time_centroid.append(map_xdt.coords["time"][time_centroid_index].values)
 
         beam_grid[holog_map_index, ...] = _normalize_beam(
-            beam_grid[holog_map_index, ...], n_chan, pol_axis
+            beam_grid[holog_map_index, ...], n_chan, pol_axis, datalabel=label
         )
 
     return (
@@ -240,7 +240,7 @@ def _scipy_gridding(vis, lm, l_grid, m_grid, grid_interpolation_mode, avg_chan, 
     return beam_grid
 
 
-def _normalize_beam(beam_grid, n_chan, pol_axis):
+def _normalize_beam(beam_grid, n_chan, pol_axis, datalabel):
     """
     Normalize the gridded beam data
     Args:
@@ -275,6 +275,8 @@ def _normalize_beam(beam_grid, n_chan, pol_axis):
                 center_pixel = np.array(beam_grid.shape[-2:]) // 2
                 p1_peak = beam_grid[chan, i_p1, center_pixel[0], center_pixel[1]]
                 p2_peak = beam_grid[chan, i_p2, center_pixel[0], center_pixel[1]]
+            except ValueError:
+                logger.error(f"{datalabel}: Has problems!")
 
             normalization = np.abs(0.5 * (p1_peak + p2_peak))
 
