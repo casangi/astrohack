@@ -15,7 +15,7 @@ class PolygonPanel(BasePanel):
         model,
         panel_info,
         panel_margin,
-        plot_screw_size=0.20,
+        plot_screw_size=0.1,
     ):
         """
         Initializes a polygon based panel based on a polygon shape and the screw positions
