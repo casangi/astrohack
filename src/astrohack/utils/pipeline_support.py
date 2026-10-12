@@ -349,7 +349,7 @@ def add_basic_info_and_parameters_to_report(param_dict: dict):
         make_dict_str_simple(param_dict), "Pipeline parameters:"
     )
 
-    if casatools_available:
+    if casatools_available and Path(param_dict["msname"]).is_dir():
         msmd = casatools.msmetadata()
         msmd.open(param_dict["msname"])
         timerange = msmd.timerangeforobs(0)
