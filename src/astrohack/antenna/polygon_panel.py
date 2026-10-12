@@ -36,6 +36,26 @@ class PolygonPanel(BasePanel):
         for screw in array_screws:
             screw_list.append(PanelPoint(screw[0], screw[1]))
 
+        # Compute refence points for the flexible model, for Ring panels the flexible model uses 2 reference points
+        # per ring. here we define reference points as the mean points of the lower and upper edges of the polygon
+        # panels which are assumed to be approximately four sided.
+        xcoords = []
+        ycoords = []
+        for corners in poly.exterior.coords:
+            xcoords.append(corners[0])
+            ycoords.append(corners[1])
+
+        xcoords = np.array(xcoords)
+        ycoords = np.array(ycoords)
+        y_sort_idx = np.argsort(ycoords)
+        y_ascending = ycoords[y_sort_idx]
+        x_y_ascending = xcoords[y_sort_idx]
+        y_jump = np.argmax(np.diff(y_ascending)) + 1
+        x1 = np.mean(np.min(x_y_ascending[:y_jump]), np.max(x_y_ascending[:y_jump]))
+        x2 = np.mean(np.min(x_y_ascending[y_jump:]), np.max(x_y_ascending[y_jump:]))
+        y2 = np.mean(np.min(y_ascending[y_jump:]), np.max(y_ascending[y_jump:]))
+        ref_points = [x1, x2, y2]
+
         screws = np.array(screw_list, dtype=np.object_)
         super().__init__(
             model,
@@ -45,7 +65,7 @@ class PolygonPanel(BasePanel):
             label,
             center=PanelPoint(poly.centroid.x, poly.centroid.y),
             zeta=None,
-            ref_points=None,
+            ref_points=ref_points,
         )
         self.polygon = poly
         self.margin = panel_margin
