@@ -63,7 +63,7 @@ def _solve_mean_opt(_self, samples):
     mean = 0
     if len(samples) > 0:
         points = _fetch_sample_values(samples)
-        mean = np.mean(points[:, 2])
+        mean = np.nanmean(points[:, 2])
     return [mean]
 
 
@@ -99,19 +99,19 @@ def _solve_rigid_opt(self, samples):
     """
     matrix, vector = _build_system([self.npar, self.npar])
     points = _fetch_sample_values(samples)
-    matrix[0, 0] = np.sum(points[:, 0] ** 2)
-    matrix[0, 1] = np.sum(points[:, 0] * points[:, 1])
-    matrix[0, 2] = np.sum(points[:, 0])
+    matrix[0, 0] = np.nansum(points[:, 0] ** 2)
+    matrix[0, 1] = np.nansum(points[:, 0] * points[:, 1])
+    matrix[0, 2] = np.nansum(points[:, 0])
     matrix[1, 0] = matrix[0, 1]
-    matrix[1, 1] = np.sum(points[:, 1] * points[:, 1])
-    matrix[1, 2] = np.sum(points[:, 1])
+    matrix[1, 1] = np.nansum(points[:, 1] * points[:, 1])
+    matrix[1, 2] = np.nansum(points[:, 1])
     matrix[2, 0] = matrix[0, 2]
     matrix[2, 1] = matrix[1, 2]
     matrix[2, 2] = len(samples)
 
-    vector[0] = np.sum(points[:, 2] * points[:, 0])
-    vector[1] = np.sum(points[:, 2] * points[:, 1])
-    vector[2] = np.sum(points[:, 2])
+    vector[0] = np.nansum(points[:, 2] * points[:, 0])
+    vector[1] = np.nansum(points[:, 2] * points[:, 1])
+    vector[2] = np.nansum(points[:, 2])
 
     return gauss_elimination(matrix, vector)
 
@@ -153,20 +153,20 @@ def _solve_flexible_opt(self, samples):
     matrix, vector = _build_system([self.npar, self.npar])
     coeffs_val = self._flexible_coeffs_arrays(samples)
 
-    matrix[0, 0] = np.sum(coeffs_val[:, 0] * coeffs_val[:, 0])
-    matrix[0, 1] = np.sum(coeffs_val[:, 0] * coeffs_val[:, 1])
-    matrix[0, 2] = np.sum(coeffs_val[:, 0] * coeffs_val[:, 2])
-    matrix[0, 3] = np.sum(coeffs_val[:, 0] * coeffs_val[:, 3])
-    matrix[1, 1] = np.sum(coeffs_val[:, 1] * coeffs_val[:, 1])
-    matrix[1, 2] = np.sum(coeffs_val[:, 1] * coeffs_val[:, 2])
-    matrix[1, 3] = np.sum(coeffs_val[:, 1] * coeffs_val[:, 3])
-    matrix[2, 2] = np.sum(coeffs_val[:, 2] * coeffs_val[:, 2])
-    matrix[2, 3] = np.sum(coeffs_val[:, 2] * coeffs_val[:, 3])
-    matrix[3, 3] = np.sum(coeffs_val[:, 3] * coeffs_val[:, 3])
-    vector[0] = np.sum(coeffs_val[:, 4] * coeffs_val[:, 0])
-    vector[1] = np.sum(coeffs_val[:, 4] * coeffs_val[:, 1])
-    vector[2] = np.sum(coeffs_val[:, 4] * coeffs_val[:, 2])
-    vector[3] = np.sum(coeffs_val[:, 4] * coeffs_val[:, 3])
+    matrix[0, 0] = np.nansum(coeffs_val[:, 0] * coeffs_val[:, 0])
+    matrix[0, 1] = np.nansum(coeffs_val[:, 0] * coeffs_val[:, 1])
+    matrix[0, 2] = np.nansum(coeffs_val[:, 0] * coeffs_val[:, 2])
+    matrix[0, 3] = np.nansum(coeffs_val[:, 0] * coeffs_val[:, 3])
+    matrix[1, 1] = np.nansum(coeffs_val[:, 1] * coeffs_val[:, 1])
+    matrix[1, 2] = np.nansum(coeffs_val[:, 1] * coeffs_val[:, 2])
+    matrix[1, 3] = np.nansum(coeffs_val[:, 1] * coeffs_val[:, 3])
+    matrix[2, 2] = np.nansum(coeffs_val[:, 2] * coeffs_val[:, 2])
+    matrix[2, 3] = np.nansum(coeffs_val[:, 2] * coeffs_val[:, 3])
+    matrix[3, 3] = np.nansum(coeffs_val[:, 3] * coeffs_val[:, 3])
+    vector[0] = np.nansum(coeffs_val[:, 4] * coeffs_val[:, 0])
+    vector[1] = np.nansum(coeffs_val[:, 4] * coeffs_val[:, 1])
+    vector[2] = np.nansum(coeffs_val[:, 4] * coeffs_val[:, 2])
+    vector[3] = np.nansum(coeffs_val[:, 4] * coeffs_val[:, 3])
 
     matrix[1, 0] = matrix[0, 1]
     matrix[2, 0] = matrix[0, 2]
@@ -190,7 +190,7 @@ def _correct_flexible_opt(self, points):
     coeffs_val = self._flexible_coeffs_arrays(points)
     coeffs = coeffs_val[:, 0:4]
     coords = _fetch_sample_coords(points)
-    corr1d = np.sum(coeffs[:, :] * self.parameters[:], axis=1)
+    corr1d = np.nansum(coeffs[:, :] * self.parameters[:], axis=1)
     return _fuse_idx_and_corrections(coords, corr1d)
 
 
@@ -377,7 +377,7 @@ def _solve_scipy_opt(self, samples, verbose=False, x0=None):
     liminf = [-np.inf, -np.inf, -np.inf]
     limsup = [np.inf, np.inf, np.inf]
     if x0 is None:
-        p0 = [1e2, 1e2, np.mean(devia)]
+        p0 = [1e2, 1e2, np.nanmean(devia)]
     else:
         p0 = x0
     if self.npar > len(p0):
