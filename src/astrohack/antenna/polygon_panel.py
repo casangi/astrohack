@@ -50,7 +50,7 @@ class PolygonPanel(BasePanel):
         y_sort_idx = np.argsort(ycoords)
         y_ascending = ycoords[y_sort_idx]
         x_y_ascending = xcoords[y_sort_idx]
-        y_jump = np.argmax(np.diff(y_ascending)) + 1
+        y_jump = int(np.argmax(np.diff(y_ascending))) + 1
         x1 = np.mean(np.min(x_y_ascending[:y_jump]), np.max(x_y_ascending[:y_jump]))
         x2 = np.mean(np.min(x_y_ascending[y_jump:]), np.max(x_y_ascending[y_jump:]))
         y2 = np.mean(np.min(y_ascending[y_jump:]), np.max(y_ascending[y_jump:]))
