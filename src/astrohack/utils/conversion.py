@@ -184,22 +184,6 @@ def convert_dict_from_numba(func):
     return wrapper
 
 
-def hadec_to_elevation(hadec, lat):
-    """Convert HA + DEC to elevation.
-
-    (HA [rad], dec [rad])
-
-    Provided by D. Faes DSOC
-    """
-    #
-    cosha = np.cos(hadec[0])
-    coslat = np.cos(lat)
-    sinlat = np.sin(lat)
-    sin_el = sinlat * np.sin(hadec[1]) + coslat * np.cos(hadec[1]) * cosha
-    el = np.arcsin(sin_el)
-    return el
-
-
 def casa_time_to_mjd(times):
     corrected = times / 3600 / 24.0
     return corrected

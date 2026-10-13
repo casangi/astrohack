@@ -265,6 +265,7 @@ def main():
         # "unit/mdses/test_locit_mds.py",
         # "unit/mdses/test_beamcut_mds.py",
         # "unit/mdses/test_panel_mds.py",
+        # "unit/mdses/test_position_mds.py"
         # "stakeholder/test_stakeholder_vla.py",
         # "unit/user_facing_functions/test_locit.py",
         # "unit/user_facing_functions/test_extract_locit.py",

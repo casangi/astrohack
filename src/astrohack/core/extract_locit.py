@@ -10,10 +10,8 @@ from astropy.time import Time
 
 from astrohack.io.position_mds import AstrohackPositionFile
 from astrohack.io.locit_mds import AstrohackLocitFile
-from astrohack.utils.algorithms import data_statistics
 from astrohack.utils.conversion import convert_unit, casa_time_to_mjd
 from astrohack.utils.constants import twopi
-from astrohack.utils.text import statistics_to_text
 
 
 def _get_caltable_name(extract_locit_parms):

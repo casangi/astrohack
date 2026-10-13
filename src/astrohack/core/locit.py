@@ -1,11 +1,11 @@
 import pathlib
 import numpy as np
-from astropy.coordinates import EarthLocation
+from astropy.coordinates import EarthLocation, SkyCoord, CIRS, AltAz
 from astropy.time import Time
+import astropy.units as u
 from scipy import optimize as opt
 
 import toolviper.utils.logger as logger
-import astropy.units as units
 import xarray as xr
 
 from astrohack.io.position_mds import AstrohackPositionFile
@@ -15,7 +15,7 @@ from astrohack.utils.text import (
     param_to_list,
 )
 
-from astrohack.utils.conversion import convert_unit, hadec_to_elevation
+from astrohack.utils.conversion import convert_unit
 from astrohack.utils.algorithms import least_squares, phase_wrapping
 from astrohack.utils.constants import twopi
 
@@ -621,6 +621,87 @@ def _compute_chi_squared(delays, fit, coordinates, fit_kterm, fit_rate):
     return model, chi_squared
 
 
+def _build_coordinate_array(ant_info, delay_time, field_ids, source_dict):
+    """
+    Build coordinate array using only astropy functions.
+    Args:
+        ant_info: Dictionary with antenna information
+        delay_time: Time of delay samples in mjd
+        field_ids: Field IDs for delay measurements
+        source_dict: Dictionary with source information
+
+    Returns:
+        coordinate array of shape [4, n_samples]  and lst, first dimension of coordinate array is:\
+         hour angle, declination elevation and time since first sample.
+    """
+    geo_pos = ant_info["geocentric_position"]
+    ant_location = EarthLocation.from_geocentric(
+        geo_pos[0],
+        geo_pos[1],
+        geo_pos[2],
+        "meter",
+    )
+    n_times = len(field_ids)
+    j2000_radec = np.zeros((n_times, 2))
+    keys_are_str = isinstance(list(source_dict.keys())[0], str)
+    for row, field_id in enumerate(field_ids):
+        if keys_are_str:
+            src_key = str(field_id)
+        else:
+            src_key = field_id
+        j2000_radec[row, :] = source_dict[src_key]["fk5"]
+    astropy_times = Time(delay_time, format="mjd", scale="utc", location=ant_location)
+    skycoords = SkyCoord(
+        ra=j2000_radec[:, 0] * u.rad, dec=j2000_radec[:, 1] * u.rad, frame="icrs"
+    ).transform_to(CIRS(obstime=astropy_times))
+    lst = astropy_times.sidereal_time("apparent").to(u.rad) / u.rad
+    ra = skycoords.ra.rad
+    hour_angle = lst - ra
+    altaz_frame = AltAz(location=ant_location, obstime=astropy_times)
+    altaz_coords = skycoords.transform_to(altaz_frame)
+
+    coordinates = np.zeros((4, n_times))
+    coordinates[0, :] = np.where(
+        hour_angle.value > 0, hour_angle.value, hour_angle.value + twopi
+    )
+    coordinates[1, :] = skycoords.dec.rad
+    coordinates[2, :] = altaz_coords.alt.rad
+    coordinates[3, :] = delay_time - delay_time[0]
+    return coordinates, lst
+
+
+def _filter_data_on_elevation_and_scans(
+    elevation_limit_deg, scans_to_exclude, coordinates, lst, scans, delays
+):
+    """
+    Filter delays based on elevation and scans to exclude
+    Args:
+        elevation_limit_deg: Elevation limit in degrees
+        scans_to_exclude: List of scans to exclude
+        coordinates: Coordinates (ha, dec, el, time)
+        lst: local sidereal time array
+        scans: scan array
+        delays: delay array
+
+    Returns:
+        elevation limit in radians, filtered scans, filtered delays, filtered coordinates, filtered lst
+    """
+    elevation_limit_rad = elevation_limit_deg * convert_unit(
+        "deg", "rad", "trigonometric"
+    )
+    el_selection = coordinates[2, :] > elevation_limit_rad
+    scan_selection = np.full_like(el_selection, True)
+    for bad_scan in scans_to_exclude:
+        scan_selection = np.logical_and(scan_selection, scans != bad_scan)
+    final_selection = np.logical_and(el_selection, scan_selection)
+
+    delays = delays[final_selection]
+    coordinates = coordinates[:, final_selection]
+    lst = lst[final_selection]
+    scans = scans[final_selection]
+    return elevation_limit_rad, scans, delays, coordinates, lst
+
+
 def _build_filtered_arrays(
     field_id, time, delays, scans, locit_parms, antenna_info, source_dict
 ):
@@ -640,47 +721,21 @@ def _build_filtered_arrays(
     coordinates (ha, dec, ele, time), delays, scans, local sidereal time all filtered by elevation limit and the \
     elevation_limit
     """
-    elevation_limit = locit_parms["elevation_limit"] * convert_unit(
-        "deg", "rad", "trigonometric"
-    )
-    geo_pos = antenna_info["geocentric_position"]
-    ant_pos = EarthLocation.from_geocentric(geo_pos[0], geo_pos[1], geo_pos[2], "meter")
-    astro_time = Time(time, format="mjd", scale="utc", location=ant_pos)
-    lst = astro_time.sidereal_time("apparent").to(units.radian) / units.radian
-    key = "precessed"
 
-    n_samples = len(field_id)
-    coordinates = np.ndarray([4, n_samples])
-    for i_sample in range(n_samples):
-        field = str(field_id[i_sample])
-        coordinates[0:2, i_sample] = source_dict[field][key]
-        coordinates[2, i_sample] = hadec_to_elevation(
-            source_dict[field][key], antenna_info["latitude"]
+    coordinates, lst = _build_coordinate_array(
+        antenna_info, time, field_id, source_dict
+    )
+    elevation_limit_rad, scans, delays, coordinates, lst = (
+        _filter_data_on_elevation_and_scans(
+            locit_parms["elevation_limit"],
+            locit_parms["exclude_scans"],
+            coordinates,
+            lst,
+            scans,
+            delays,
         )
-        coordinates[3, i_sample] = (
-            time[i_sample] - time[0]
-        )  # time is set to zero at the beginning of obs
-
-    # convert to actual hour angle and wrap it to the [-pi, pi) interval
-    coordinates[0, :] = lst.value - coordinates[0, :]
-    coordinates[0, :] = np.where(
-        coordinates[0, :] < 0, coordinates[0, :] + twopi, coordinates[0, :]
     )
-
-    # Filter data below elevation limit
-    el_selection = coordinates[2, :] > elevation_limit
-    scan_selection = np.full_like(el_selection, True)
-    for bad_scan in locit_parms["exclude_scans"]:
-        scan_selection = np.logical_and(scan_selection, scans != bad_scan)
-    final_selection = np.logical_and(el_selection, scan_selection)
-
-    delays = delays[final_selection]
-    coordinates = coordinates[:, final_selection]
-    lst = lst[final_selection]
-    nin = np.sum(final_selection)
-    scans = scans[final_selection]
-
-    return coordinates, delays, scans, lst, elevation_limit, nin
+    return coordinates, delays, scans, lst, elevation_limit_rad, lst.size
 
 
 def _geometrical_coeffs(coordinates):

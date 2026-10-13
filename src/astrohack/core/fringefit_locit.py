@@ -1,16 +1,14 @@
 import shutil
 
 import numpy as np
-from astropy.coordinates import EarthLocation, SkyCoord, CIRS, AltAz
 from casacoretables import tables as ctables
-from astropy.time import Time
-import astropy.units as u
-from dask.array import logical_and
 
 from astrohack import AstrohackPositionFile
+from astrohack.core.locit import (
+    _build_coordinate_array,
+    _filter_data_on_elevation_and_scans,
+)
 import toolviper.utils.logger as logger
-
-from astrohack.utils.conversion import convert_unit
 
 
 def fringefit_locit_looping_dict(
@@ -108,9 +106,6 @@ def _match_delays_to_coordinates(
         Elevation limit in rad, list of used spws.
     """
     user_pol_sel = locit_parms["polarization"]
-    el_limit = (
-        convert_unit("deg", "rad", "trigonometric") * locit_parms["elevation_limit"]
-    )
 
     if user_pol_sel == "both":
         pol_sel = [0, 1]
@@ -135,25 +130,10 @@ def _match_delays_to_coordinates(
     ant_delays = delay_dict["delays"][ddi_sel]
     ant_scans = delay_dict["scans"][ddi_sel]
 
-    geo_pos = ant_info["geocentric_position"]
-    ant_location = EarthLocation.from_geocentric(
-        geo_pos[0],
-        geo_pos[1],
-        geo_pos[2],
-        "meter",
+    n_dumps_coordinates, n_dumps_lst = _build_coordinate_array(
+        ant_info, ant_time, ant_fields, field_dict
     )
-    j2000_radec = np.zeros_like(ant_delays)
-    for row, atime in enumerate(ant_time):
-        j2000_radec[row, :] = field_dict[ant_fields[row]]["fk5"]
-    astropy_times = Time(ant_time, format="mjd", scale="utc", location=ant_location)
-    skycoords = SkyCoord(
-        ra=j2000_radec[:, 0] * u.rad, dec=j2000_radec[:, 1] * u.rad, frame="icrs"
-    ).transform_to(CIRS(obstime=astropy_times))
-    lst = astropy_times.sidereal_time("apparent").to(u.rad) / u.rad
-    ra = skycoords.ra.rad
-    hour_angle = lst - ra
-    altaz_frame = AltAz(location=ant_location, obstime=astropy_times)
-    altaz_coords = skycoords.transform_to(altaz_frame)
+
     n_rows = ant_time.shape[0]
     n_pol = len(pol_sel)
     coordinate_array = np.zeros((4, n_pol * n_rows))
@@ -163,25 +143,28 @@ def _match_delays_to_coordinates(
     for i_pol, pol_id in enumerate(pol_sel):
         f_row = i_pol * n_rows
         l_row = (i_pol + 1) * n_rows
-        coordinate_array[0, f_row:l_row] = hour_angle.value
-        coordinate_array[1, f_row:l_row] = skycoords.dec.rad
-        coordinate_array[2, f_row:l_row] = altaz_coords.alt.rad
-        coordinate_array[3, f_row:l_row] = ant_time - init_time
+        coordinate_array[:, f_row:l_row] = n_dumps_coordinates
         delay_array[f_row:l_row] = ant_delays[:, pol_id]
-        lst_array[f_row:l_row] = lst
+        lst_array[f_row:l_row] = n_dumps_lst
         scan_array[f_row:l_row] = ant_scans
 
-    el_selection = coordinate_array[2, :] >= el_limit
-    scan_selection = np.full_like(scan_array, True)
-    for bad_scan in locit_parms["exclude_scans"]:
-        scan_selection = np.logical_and(scan_selection, scan_array != bad_scan)
-    final_selection = np.logical_and(el_selection, scan_selection)
+    elevation_limit_rad, scan_array, delay_array, coordinate_array, lst_array = (
+        _filter_data_on_elevation_and_scans(
+            locit_parms["elevation_limit"],
+            locit_parms["exclude_scans"],
+            coordinate_array,
+            lst_array,
+            scan_array,
+            delay_array,
+        )
+    )
+
     return (
-        coordinate_array[:, final_selection],
-        delay_array[final_selection],
-        lst_array[final_selection],
-        scan_array[final_selection],
-        el_limit,
+        coordinate_array,
+        delay_array,
+        lst_array,
+        scan_array,
+        elevation_limit_rad,
         used_ddis,
     )
 

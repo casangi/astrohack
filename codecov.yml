@@ -2,7 +2,7 @@ ignore:
   - "examples"
   - "stakeholder_test"
   - "etc"
-  - "src/astrohack/scripts/verification"
+  - "src/astrohack/scripts"
   - "src/astrohack/config"
   - "src/astrohack/data"
   - "tests"
