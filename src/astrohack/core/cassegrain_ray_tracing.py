@@ -222,7 +222,7 @@ def reflect_off_analytical_secondary(rt_xds, offset=np.array((0, 0, 0))):
             xtol=1e-8,
         )
         if ier == 1:
-            distance_to_secondary[ipnt] = val
+            distance_to_secondary[ipnt] = val[0]
         else:
             distance_to_secondary[ipnt] = np.nan
 
