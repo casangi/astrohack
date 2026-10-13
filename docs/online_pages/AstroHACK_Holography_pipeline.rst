@@ -24,19 +24,16 @@ The pipeline has been written with a simple command line interface that expects 
 
     CASA <1>: !holography-reduction-pipeline -h
 
-    #####################################################################################################################################
-    ###  Welcome to the AstroHACK holography reduction pipeline                                                                       ###
-    #####################################################################################################################################
+    ###################################################################################################################################################################################
+    ###  Welcome to the AstroHACK holography reduction pipeline                                                                                                                     ###
+    ###################################################################################################################################################################################
 
-    usage: holography-reduction-pipeline [-h] [-r ROOT_NAME] [-s SPW] [-a ANTENNA] [-n NCORES] [-m MEMORY_PER_CORE]
-                                         [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-o] [-y] [--reimport-asdm]
-                                         [--starting-stage {calibration,extract_pointing,extract_holog,holog,panel,exports,report}]
-                                         [--dpi DPI] [-d DATA_COLUMN] [--plot-pointing] [--exclude-bad-antennas EXCLUDE_BAD_ANTENNAS]
-                                         [-q QUACK_NCHAN] [-f HOLOGRAPHY_FIELD] [--baseline-average-nearest BASELINE_AVERAGE_NEAREST]
-                                         [--pointing-interpolation-method {linear,gaussian}] [--grid-size GRID_SIZE]
-                                         [--cell-size CELL_SIZE] [--grid-interpolation-mode GRID_INTERPOLATION_MODE]
-                                         [--padding-factor PADDING_FACTOR] [--zernike-n-order ZERNIKE_N_ORDER] [-z] [-c]
-                                         [--clip-type {sigma,none,absolute,relative,noise_threshold}] [--clip-level CLIP_LEVEL]
+    usage: holography-reduction-pipeline [-h] [-r ROOT_NAME] [-s SPW] [-a ANTENNA] [-n NCORES] [-m MEMORY_PER_CORE] [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-o] [-y]
+                                         [--reimport-asdm] [--starting-stage {calibration,extract_pointing,extract_holog,holog,panel,exports,report}] [--dpi DPI] [-d DATA_COLUMN]
+                                         [--plot-pointing] [--exclude-bad-antennas EXCLUDE_BAD_ANTENNAS] [-q QUACK_NCHAN] [-f HOLOGRAPHY_FIELD]
+                                         [--baseline-average-nearest BASELINE_AVERAGE_NEAREST] [--pointing-interpolation-method {linear,gaussian}] [--grid-size GRID_SIZE]
+                                         [--cell-size CELL_SIZE] [--grid-interpolation-mode GRID_INTERPOLATION_MODE] [--padding-factor PADDING_FACTOR]
+                                         [--zernike-n-order ZERNIKE_N_ORDER] [-z] [-c] [--clip-type {sigma,none,absolute,relative,noise_threshold}] [--clip-level CLIP_LEVEL]
                                          [--panel-model {mean,rigid,flexible,corotated_scipy,corotated_lst_sq,corotated_robust,xy_paraboloid,rotated_paraboloid,full_paraboloid_lst_sq}]
                                          [--panel-margins PANEL_MARGINS] [-u SCREW_UNIT]
                                          filename [refant]
@@ -51,15 +48,13 @@ The pipeline has been written with a simple command line interface that expects 
       -h, --help            show this help message and exit
       -r ROOT_NAME, --root-name ROOT_NAME
                             Root name for the products of the pipeline, default is ms_name without extension
-      -s SPW, --spw SPW     Select SPWs for processing, for a list use comma separated values with no spaces, e.g.: '0,1,2', default is
-                            all
+      -s SPW, --spw SPW     Select SPWs for processing, for a list use comma separated values with no spaces, e.g.: '0,1,2', default is all
       -a ANTENNA, --antenna ANTENNA
-                            Select antennas for processing, for a list use comma separated values with no spaces, e.g.: 'ea01,ea02',
-                            default is all
+                            Select antennas for processing, for a list use comma separated values with no spaces, e.g.: 'ea01,ea02', default is all
       -n NCORES, --ncores NCORES
                             Number of cores to use, default is 4
       -m MEMORY_PER_CORE, --memory-per-core MEMORY_PER_CORE
-                            Memory per core to use, default is 10GB
+                            Memory per core to use, the memory unit should be explicitly given, i.e. 4 means for 4B, default is 10GB
       --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                             Logging level to use, default is WARNING
       -o, --overwrite       Overwrite existing files if found
@@ -72,8 +67,7 @@ The pipeline has been written with a simple command line interface that expects 
                             Data column to be extracted from MS, default is CORRECTED_DATA
       --plot-pointing       Plot antenna pointing, default is False
       --exclude-bad-antennas EXCLUDE_BAD_ANTENNAS
-                            Exclude antennas with bad data, for a list use comma separated values with no spaces, e.g.: 'ea18,ea01',
-                            default is None.
+                            Exclude antennas with bad data, for a list use comma separated values with no spaces, e.g.: 'ea18,ea01', default is None.
       -q QUACK_NCHAN, --quack-nchan QUACK_NCHAN
                             Number of channels to quack at the edge of the spectral window (default is 4)
       -f HOLOGRAPHY_FIELD, --holography-field HOLOGRAPHY_FIELD
@@ -83,9 +77,9 @@ The pipeline has been written with a simple command line interface that expects 
       --pointing-interpolation-method {linear,gaussian}
                             Interpolation method to use for matching pointing and visibilities, default is linear
       --grid-size GRID_SIZE
-                            Choose grid size for beam image, the default is to guess it from the data.
+                            Choose grid size for beam image in pixels, the default is to guess it from the data.
       --cell-size CELL_SIZE
-                            Choose cell size for beam image, the default is to guess it from the data.
+                            Choose cell size for beam image in radians, the default is to guess it from the data.
       --grid-interpolation-mode GRID_INTERPOLATION_MODE
                             Choose interpolation mode for beam image (default is gaussian)
       --padding-factor PADDING_FACTOR
@@ -93,20 +87,18 @@ The pipeline has been written with a simple command line interface that expects 
       --zernike-n-order ZERNIKE_N_ORDER
                             Zernike N polynomial order to be fitted to the apertures (default is 4)
       -z, --use-zernike-phase-fitting
-                            Use zernike phase fitting instead of regular perturbation phase fitting (ngVLA uses this even when option
-                            is not given).
+                            Use zernike phase fitting instead of regular perturbation phase fitting (ngVLA uses this even when option is not given).
       -c, --combine         Combine SPWs to improve SNR (all selected SPWs will be combined)
       --clip-type {sigma,none,absolute,relative,noise_threshold}
                             Choose the type of clipping algorithm to use in the apertures before fitting panels (default is sigma)
       --clip-level CLIP_LEVEL
-                            Choose the level for the chosen clipping algorithm (default is 3)
+                            Choose the level for the chosen clipping algorithm, panel help for more details (default is 3)
       --panel-model {mean,rigid,flexible,corotated_scipy,corotated_lst_sq,corotated_robust,xy_paraboloid,rotated_paraboloid,full_paraboloid_lst_sq}
                             Choose the panel model to use (default is flexible)
       --panel-margins PANEL_MARGINS
                             Define the fraction of the edge of the panels to be excluded from fitting (default is 0.05)
       -u SCREW_UNIT, --screw-unit SCREW_UNIT
                             Unit to present screw adjustments (default is mils)
-
 
 
 Calibration stage

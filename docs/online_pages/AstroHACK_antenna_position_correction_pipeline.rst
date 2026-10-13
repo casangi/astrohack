@@ -24,15 +24,13 @@ The pipeline has been written with a simple command line interface that expects 
 
     CASA <1>: !baseline-reduction-pipeline -h
 
-    #####################################################################################################################################
-    ###  Welcome to the AstroHACK baseline reduction pipeline                                                                         ###
-    #####################################################################################################################################
+    ###################################################################################################################################################################################
+    ###  Welcome to the AstroHACK baseline reduction pipeline                                                                                                                       ###
+    ###################################################################################################################################################################################
 
-    usage: baseline-reduction-pipeline [-h] [-r ROOT_NAME] [-s SPW] [-a ANTENNA] [-n NCORES] [-m MEMORY_PER_CORE]
-                                       [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-o] [-y] [--reimport-asdm]
-                                       [--starting-stage {calibration,locit,exports,report}] [--dpi DPI] [-f FRINGEFIT_SOURCE]
-                                       [-i INTENT] [-e ELEVATION_LIMIT] [-p {both,L,R}] [-c {simple,difference}] [-k] [-dr]
-                                       [-l DELAY_LIMITS] [--use-fringefit-locit] [--exclude-scans EXCLUDE_SCANS]
+    usage: baseline-reduction-pipeline [-h] [-r ROOT_NAME] [-s SPW] [-a ANTENNA] [-n NCORES] [-m MEMORY_PER_CORE] [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-o] [-y]
+                                       [--reimport-asdm] [--starting-stage {calibration,locit,exports,report}] [--dpi DPI] [-f FRINGEFIT_SOURCE] [-i INTENT] [-e ELEVATION_LIMIT]
+                                       [-p {both,L,R}] [-c {simple,difference}] [-k] [-dr] [-l DELAY_LIMITS] [--use-fringefit-locit] [--exclude-scans EXCLUDE_SCANS]
                                        filename [refant]
 
     Baseline reduction pipeline
@@ -45,15 +43,13 @@ The pipeline has been written with a simple command line interface that expects 
       -h, --help            show this help message and exit
       -r ROOT_NAME, --root-name ROOT_NAME
                             Root name for the products of the pipeline, default is ms_name without extension
-      -s SPW, --spw SPW     Select SPWs for processing, for a list use comma separated values with no spaces, e.g.: '0,1,2', default is
-                            all
+      -s SPW, --spw SPW     Select SPWs for processing, for a list use comma separated values with no spaces, e.g.: '0,1,2', default is all
       -a ANTENNA, --antenna ANTENNA
-                            Select antennas for processing, for a list use comma separated values with no spaces, e.g.: 'ea01,ea02',
-                            default is all
+                            Select antennas for processing, for a list use comma separated values with no spaces, e.g.: 'ea01,ea02', default is all
       -n NCORES, --ncores NCORES
                             Number of cores to use, default is 4
       -m MEMORY_PER_CORE, --memory-per-core MEMORY_PER_CORE
-                            Memory per core to use, default is 10GB
+                            Memory per core to use, the memory unit should be explicitly given, i.e. 4 means for 4B, default is 10GB
       --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                             Logging level to use, default is WARNING
       -o, --overwrite       Overwrite existing files if found
@@ -76,12 +72,11 @@ The pipeline has been written with a simple command line interface that expects 
       -dr, --fit-delay-rate
                             Fit delay rate
       -l DELAY_LIMITS, --delay-limits DELAY_LIMITS
-                            Symmetrical limit for delay plots, default is 0.1 which results in the limits being [-0.1, 0.1]
+                            Symmetrical limit for delay plots in nanoseconds, default is 0.1 which results in the limits being [-0.1, 0.1]
       --use-fringefit-locit
-                            Use fringefit_locit to determine very large errors (> 3 meters) in antenna positions (EXPERIMENTAL)
+                            Use fringefit_locit to determine very large errors (order of meters) in antenna positions (EXPERIMENTAL)
       --exclude-scans EXCLUDE_SCANS
-                            Select scans to exclude from locit delay fitting, for a list use comma separated values with no spaces,
-                            e.g.: '5,37', default is None
+                            Select scans to exclude from locit delay fitting, for a list use comma separated values with no spaces, e.g.: '5,37', default is None
 
 
 Pipeline initialization

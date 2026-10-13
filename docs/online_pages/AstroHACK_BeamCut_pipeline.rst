@@ -24,16 +24,14 @@ The pipeline has been written with a simple command line interface that expects 
 
     CASA <1>: !beamcut-reduction-pipeline -h
 
-    #####################################################################################################################################
-    ###  Welcome to the AstroHACK beamcut reduction pipeline                                                                          ###
-    #####################################################################################################################################
+    ###################################################################################################################################################################################
+    ###  Welcome to the AstroHACK beamcut reduction pipeline                                                                                                                        ###
+    ###################################################################################################################################################################################
 
-    usage: beamcut-reduction-pipeline [-h] [-r ROOT_NAME] [-s SPW] [-a ANTENNA] [-n NCORES] [-m MEMORY_PER_CORE]
-                                      [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-o] [-y] [--reimport-asdm]
-                                      [--starting-stage {calibration,extract_pointing,extract_holog,beamcut,exports,report}]
-                                      [--dpi DPI] [-d DATA_COLUMN] [--plot-pointing] [--exclude-bad-antennas EXCLUDE_BAD_ANTENNAS]
-                                      [-q QUACK_NCHAN] [-f BEAMCUT_FIELD] [--baseline-average-nearest BASELINE_AVERAGE_NEAREST]
-                                      [--pointing-interpolation-method {linear,gaussian}]
+    usage: beamcut-reduction-pipeline [-h] [-r ROOT_NAME] [-s SPW] [-a ANTENNA] [-n NCORES] [-m MEMORY_PER_CORE] [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-o] [-y]
+                                      [--reimport-asdm] [--starting-stage {calibration,extract_pointing,extract_holog,beamcut,exports,report}] [--dpi DPI] [-d DATA_COLUMN]
+                                      [--plot-pointing] [--exclude-bad-antennas EXCLUDE_BAD_ANTENNAS] [-q QUACK_NCHAN] [-f BEAMCUT_FIELD]
+                                      [--baseline-average-nearest BASELINE_AVERAGE_NEAREST] [--pointing-interpolation-method {linear,gaussian}]
                                       filename [refant]
 
     Beamcut reduction pipeline
@@ -46,15 +44,13 @@ The pipeline has been written with a simple command line interface that expects 
       -h, --help            show this help message and exit
       -r ROOT_NAME, --root-name ROOT_NAME
                             Root name for the products of the pipeline, default is ms_name without extension
-      -s SPW, --spw SPW     Select SPWs for processing, for a list use comma separated values with no spaces, e.g.: '0,1,2', default is
-                            all
+      -s SPW, --spw SPW     Select SPWs for processing, for a list use comma separated values with no spaces, e.g.: '0,1,2', default is all
       -a ANTENNA, --antenna ANTENNA
-                            Select antennas for processing, for a list use comma separated values with no spaces, e.g.: 'ea01,ea02',
-                            default is all
+                            Select antennas for processing, for a list use comma separated values with no spaces, e.g.: 'ea01,ea02', default is all
       -n NCORES, --ncores NCORES
                             Number of cores to use, default is 4
       -m MEMORY_PER_CORE, --memory-per-core MEMORY_PER_CORE
-                            Memory per core to use, default is 10GB
+                            Memory per core to use, the memory unit should be explicitly given, i.e. 4 means for 4B, default is 10GB
       --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                             Logging level to use, default is WARNING
       -o, --overwrite       Overwrite existing files if found
@@ -67,8 +63,7 @@ The pipeline has been written with a simple command line interface that expects 
                             Data column to be extracted from MS, default is CORRECTED_DATA
       --plot-pointing       Plot antenna pointing, default is False
       --exclude-bad-antennas EXCLUDE_BAD_ANTENNAS
-                            Exclude antennas with bad data, for a list use comma separated values with no spaces, e.g.: 'ea18,ea01',
-                            default is None.
+                            Exclude antennas with bad data, for a list use comma separated values with no spaces, e.g.: 'ea18,ea01', default is None.
       -q QUACK_NCHAN, --quack-nchan QUACK_NCHAN
                             Number of channels to quack at the edge of the spectral window (default is 4)
       -f BEAMCUT_FIELD, --beamcut-field BEAMCUT_FIELD
