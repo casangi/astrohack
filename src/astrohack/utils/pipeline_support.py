@@ -428,7 +428,7 @@ def create_parser_with_base_options(pipeline_type: str, stage_choices: list):
         "--memory-per-core",
         type=str,
         default="10GB",
-        help="Memory per core to use, the memory unit should be explicitly given, i.e. 4 means for 4B, default is %(default)s",
+        help="Memory per core to use, if no unit is given GB is assumed, default is %(default)s",
     )
 
     parser.add_argument(
@@ -631,6 +631,26 @@ def fetch_ms_metadata_for_holograpy(param_dict, pipeline_type):
     return param_dict
 
 
+def parse_core_memory(user_memory_value):
+    memory_units = ["kB", "MB", "GB", "TB", "B"]
+    for unit in memory_units:
+        if unit in user_memory_value:
+            user_numeral = user_memory_value.replace(unit, "")
+            try:
+                user_numeral = float(user_numeral)
+                return user_memory_value
+            except ValueError:
+                raise ValueError(
+                    f"{user_memory_value} is not a valid memory description"
+                )
+
+    try:
+        user_numeral = float(user_memory_value)
+        return f"{user_numeral}GB"
+    except ValueError:
+        raise ValueError(f"{user_memory_value} is not a valid memory description")
+
+
 def common_parameter_initialization_for_holography(
     pipeline_type: str,
     stages: list,
@@ -662,6 +682,7 @@ def common_parameter_initialization_for_holography(
             param_dict, "exclude_bad_antennas"
         )
     param_dict["parallel"] = param_dict["ncores"] >= 2
+    param_dict["memory_per_core"] = parse_core_memory(param_dict["memory_per_core"])
 
     return param_dict
 

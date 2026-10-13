@@ -50,7 +50,7 @@ The pipeline has been written with a simple command line interface that expects 
       -n NCORES, --ncores NCORES
                             Number of cores to use, default is 4
       -m MEMORY_PER_CORE, --memory-per-core MEMORY_PER_CORE
-                            Memory per core to use, the memory unit should be explicitly given, i.e. 4 means for 4B, default is 10GB
+                            Memory per core to use, if no unit is given GB is assumed, default is 10GB
       --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                             Logging level to use, default is WARNING
       -o, --overwrite       Overwrite existing files if found
