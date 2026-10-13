@@ -29,6 +29,9 @@ class PolygonPanel(BasePanel):
                 f"corotated models such as {model} are not supported for Polygon based panels"
             )
 
+        def get_mean_of_edge(array):
+            return (np.min(array) + np.max(array)) / 2.0
+
         poly = Polygon(panel_info["polygon"])
 
         array_screws = panel_info["screws"]
@@ -51,9 +54,9 @@ class PolygonPanel(BasePanel):
         y_ascending = ycoords[y_sort_idx]
         x_y_ascending = xcoords[y_sort_idx]
         y_jump = int(np.argmax(np.diff(y_ascending))) + 1
-        x1 = np.mean(np.min(x_y_ascending[:y_jump]), np.max(x_y_ascending[:y_jump]))
-        x2 = np.mean(np.min(x_y_ascending[y_jump:]), np.max(x_y_ascending[y_jump:]))
-        y2 = np.mean(np.min(y_ascending[y_jump:]), np.max(y_ascending[y_jump:]))
+        x1 = get_mean_of_edge(x_y_ascending[:y_jump])
+        x2 = get_mean_of_edge(x_y_ascending[y_jump:])
+        y2 = get_mean_of_edge(y_ascending[y_jump:])
         ref_points = [x1, x2, y2]
 
         screws = np.array(screw_list, dtype=np.object_)
