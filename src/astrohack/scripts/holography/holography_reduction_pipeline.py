@@ -41,14 +41,14 @@ def parse(pipeline_type: str, stages: list):
         "--grid-size",
         default=None,
         type=int,
-        help="Choose grid size for beam image, the default is to guess it from the data.",
+        help="Choose grid size for beam image in pixels, the default is to guess it from the data.",
     )
 
     parser.add_argument(
         "--cell-size",
         default=None,
         type=float,
-        help="Choose cell size for beam image, the default is to guess it from the data.",
+        help="Choose cell size for beam image in radians, the default is to guess it from the data.",
     )
 
     parser.add_argument(
@@ -101,7 +101,7 @@ def parse(pipeline_type: str, stages: list):
         "--clip-level",
         default=3,
         type=float,
-        help="Choose the level for the chosen clipping algorithm (default is %(default)s)",
+        help="Choose the level for the chosen clipping algorithm, panel help for more details (default is %(default)s)",
     )
 
     parser.add_argument(

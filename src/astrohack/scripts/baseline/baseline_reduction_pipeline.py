@@ -107,14 +107,14 @@ def parse(pipelie_type, stages):
         "--delay-limits",
         type=float,
         default=0.1,
-        help="Symmetrical limit for delay plots, default is %(default)s which results in the limits being [-%(default)s, %(default)s]",
+        help="Symmetrical limit for delay plots in nanoseconds, default is %(default)s which results in the limits being [-%(default)s, %(default)s]",
     )
 
     parser.add_argument(
         "--use-fringefit-locit",
         action="store_true",
         default=False,
-        help="Use fringefit_locit to determine very large errors (> 3 meters) in antenna positions (EXPERIMENTAL)",
+        help="Use fringefit_locit to determine very large errors (order of  meters) in antenna positions (EXPERIMENTAL)",
     )
 
     parser.add_argument(

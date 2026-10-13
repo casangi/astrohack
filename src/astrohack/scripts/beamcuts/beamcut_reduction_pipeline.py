@@ -31,7 +31,7 @@ from astrohack.utils.text import (
 def parse(pipeline_type, stages):
     parser = basic_holography_parser(pipeline_type, stages)
 
-    # extract beam cut options will come here
+    # beam cut only options will come here
 
     return vars(parser.parse_args())
 

@@ -429,7 +429,7 @@ def create_parser_with_base_options(pipeline_type: str, stage_choices: list):
         "--memory-per-core",
         type=str,
         default="10GB",
-        help="Memory per core to use, default is %(default)s",
+        help="Memory per core to use, the memory unit should be explicitly given, i.e. 4 means for 4B, default is %(default)s",
     )
 
     parser.add_argument(
