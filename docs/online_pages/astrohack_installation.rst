@@ -4,17 +4,17 @@ Astrohack Installation
 Installation under Anaconda
 ###########################
 
-When installing Astrohack in an `Anaconda
+When installing AstroHACK in an `Anaconda
 <https://docs.conda.io/projects/conda/en/latest/>`_ environment it is
 recommended to start with a fresh environment, Preferably under
-python3.13, as it is the most recent, and also fastest, version of
-python supported by astrohack. A fresh environment is recommended as
+python 3.13, as it is the most recent, and also fastest, version of
+python supported by AstroHACK. A fresh environment is recommended as
 to avoid conflicting dependencies with other packages. To create such
 an environment:
 
 .. code-block:: sh
 		
-   $ conda create --name astrohack python=3.12 --no-default-packages
+   $ conda create --name astrohack python=3.13 --no-default-packages
    $ conda activate astrohack
 
 Astrohack reads MeasurementSets and CASA calibration tables through
@@ -24,7 +24,7 @@ dependency on both Linux and macOS. No separate ``python-casacore`` install is
 required (this used to be a manual step on macOS, and is no longer needed).
 
 Astrohack is not yet available for download directly from conda-forge,
-therefore we suggest to install astrohack by using pip:
+therefore we suggest to install AstroHACK by using pip:
 
 .. code-block:: sh
 
@@ -33,7 +33,7 @@ therefore we suggest to install astrohack by using pip:
 Source code installation
 ########################
 
-If you would like or need to be following the latest developments of astrohack, it is also possible to install astrohack from source by downloading
+If you would like or need to be following the latest developments of AstroHACK, it is also possible to install AstroHACK from source by downloading
 the `source code
 <https://github.com/nrao/astrohack/archive/refs/heads/astrohack-dev.zip>`_
 directly from github or using ``git clone``.
@@ -57,7 +57,7 @@ Updating a local git installation
 ---------------------------------
 
 To update a local git installation it is necessary to use git.
-The default installation follows the ``astrohack-dev`` branch, i.e. the main development branch of astrohack, which unless you are working with active development is the branch that should be followed. The updating process is the following:
+The default installation follows the ``astrohack-dev`` branch, i.e. the main development branch of AstroHACK, which unless you are working with active development is the branch that should be followed. The updating process is the following:
 
 .. code-block:: sh
 
@@ -96,24 +96,15 @@ Source code editable install:
    $ casa
    CASA <1> pip install -e .
 
-Running CASA + Astrohack @ NRAO
+Running CASA + AstroHACK @ NRAO
 ###############################
 
-The distributed CASA versions available in workstations at NRAO (e.g. casa-pipeline) do not allow for the installations of packages, as they are located in remote machines to which the user has no write access, making it impossible to install astrohack directly in them. Currently there are two workarounds:
-
-- Install a local version of casa and then follow the above instructions (Fastest).
-- Create an alias on your .bashrc or .profile to a version maintained by me on lustre (very slow...):
-
-.. code-block:: sh
-
-   alias casa-astrohack="/lustre/aoc/projects/ngvla/vdesouza/casa-astrohack/casa-6.7.5-18-py3.12.el8/bin/casa"
-
-In the near future (fall) I will work with IT services to provide a distributed version of casa + astrohack to be available at all sites.
-
+There is now a distributed way of running CASA + AstroHACK at NRAO workstations (at least in NM, CV and GBO not tested). This distributed CASA + AstroHACK bundle can be accessed through the ``casa-astrohack`` command.
+As with other distributed CASA versions there are a few versions that can be accessed. The default one, stable, should suffice for most user and uses the latest release of AstroHACK. The other verions should be used with care, or only if recommended by a developer.
 
 Installation or execution problems
 ##################################
 
 If the user encounters any issues during installation and/or execution
-of astrohack they should leave an issue here on github or write an
+of AstroHACK they should leave an issue here on github or write an
 e-mail to Victor de Souza at NRAO.

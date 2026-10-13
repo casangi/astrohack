@@ -63,6 +63,7 @@ still happening on a regular basis, so proceed with caution.
    online_pages/astrohack_installation
    online_pages/tutorials
    online_pages/api
-   online_pages/AstroHACK_BeamCut_reduction
-   online_pages/AstroHACK_antenna_position_corrections
+   online_pages/AstroHACK_BeamCut_pipeline
+   online_pages/AstroHACK_antenna_position_correction_pipeline
+   online_pages/AstroHACK_Holography_pipeline
    online_pages/AstroHACK-for-NF-ALMA

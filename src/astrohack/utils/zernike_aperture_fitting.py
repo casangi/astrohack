@@ -947,7 +947,8 @@ def _fit_an_aperture_plane_component_np_least_squares(matrix, aperture_plane_com
     """
     max_ap = np.nanmax(aperture_plane_comp)
     result, _, _, _ = np.linalg.lstsq(matrix, aperture_plane_comp / max_ap, rcond=None)
-    model = max_ap * np.matmul(matrix, result)
+    with np.errstate(all="ignore"):
+        model = max_ap * np.matmul(matrix, result)
     rms = np.sqrt(np.sum((aperture_plane_comp - model) ** 2)) / model.shape[0]
     return result, rms, model
 

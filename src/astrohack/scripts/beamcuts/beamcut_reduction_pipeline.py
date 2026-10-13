@@ -1,9 +1,4 @@
-import argparse
 import time
-
-import casatools
-import numpy as np
-from toolviper.dask.client import local_client
 
 from astrohack import (
     beamcut,
@@ -15,12 +10,11 @@ from astrohack import (
 from astrohack.utils.pipeline_support import (
     MessageBoard,
     add_basic_info_and_parameters_to_report,
-    asdm_test_and_import,
-    base_name_determination,
+    basic_holography_parser,
+    client_initialization,
+    common_parameter_initialization_for_holography,
     initialization_check,
-    list_input_tooltip,
-    parse_list_or_all,
-    parse_list_or_none,
+    open_astrohack_file,
     run_astrohack_function,
     run_casatask,
 )
@@ -29,190 +23,20 @@ from astrohack.utils.text import (
     add_preformatted_text_file_to_html,
     create_html_file_from_body,
     create_single_html_image_with_header,
-    format_duration,
     lnbr,
     make_collapsible_block,
 )
 
 
-def parse():
-    parser = argparse.ArgumentParser(description="Beam cut reduction pipeline")
+def parse(pipeline_type, stages):
+    parser = basic_holography_parser(pipeline_type, stages)
 
-    parser.add_argument(
-        "filename", type=str, help="Path to the input dataset to process."
-    )
-
-    parser.add_argument("refant", type=str, help="Reference antenna for calibration")
-
-    parser.add_argument(
-        "-r",
-        "--root-name",
-        type=str,
-        default=None,
-        help="Root name for the products of the pipeline, default"
-        " is ms_name without extension",
-    )
-
-    parser.add_argument(
-        "-q",
-        "--quack-nchan",
-        default=4,
-        type=int,
-        help="Number of channels to quack at the edge of the spectral window (default is %(default)s)",
-    )
-
-    parser.add_argument(
-        "-f",
-        "--beamcut-field",
-        default=None,
-        type=str,
-        help="Field Id or name of the beam cut data (default is to determine it from data)",
-    )
-
-    parser.add_argument(
-        "-s",
-        "--spw",
-        type=str,
-        default="all",
-        help=f"Select SPWs for which to produce beam cuts, {list_input_tooltip('0,1,2')}, default is %(default)s",
-    )
-
-    parser.add_argument(
-        "-a",
-        "--antenna",
-        type=str,
-        default="all",
-        help="Select antennas for which to produce beam cuts, "
-        f"{list_input_tooltip('ea01,ea02')}, default is %(default)s",
-    )
-
-    parser.add_argument(
-        "-n",
-        "--ncores",
-        type=int,
-        default=4,
-        help="Number of cores to use, default is %(default)d",
-    )
-
-    parser.add_argument(
-        "-m",
-        "--memory-per-core",
-        type=str,
-        default="10GB",
-        help="Memory per core to use, default is %(default)s",
-    )
-
-    parser.add_argument(
-        "-o",
-        "--overwrite",
-        action="store_true",
-        help="Overwrite existing files if found",
-    )
-
-    parser.add_argument(
-        "-d",
-        "--data-column",
-        type=str,
-        default="CORRECTED_DATA",
-        help="Data column to be extracted from MS, default is %(default)s",
-    )
-
-    parser.add_argument(
-        "-y", "--assume-yes", action="store_true", help="Assume yes on proceed."
-    )
-
-    # Example of parameter with choice
-    parser.add_argument(
-        "--starting-stage",
-        type=str,
-        default="calibration",
-        choices=[
-            "calibration",
-            "extract_pointing",
-            "extract_holog",
-            "beamcut",
-            "exports",
-            "report",
-        ],
-        help="Starting stage in which to start processing (default: %(default)s).",
-    )
-
-    parser.add_argument(
-        "--dpi",
-        type=int,
-        default=300,
-        help="Dots Per Inch for plotting, default is %(default)d",
-    )
-
-    parser.add_argument(
-        "--plot-pointing",
-        action="store_true",
-        help="Plot antenna pointing, default is %(default)s",
-    )
-
-    parser.add_argument(
-        "--exclude-bad-antennas",
-        default=None,
-        type=str,
-        help=f"Exclude antennas with bad data, {list_input_tooltip('ea18,ea01')}, default is %(default)s.",
-    )
-
-    parser.add_argument(
-        "--reimport-asdm",
-        action="store_true",
-        default=False,
-        help="Forcefully re-import the asdm file is the ms already exists (default: %(default)s)",
-    )
+    # beam cut only options will come here
 
     return vars(parser.parse_args())
 
 
-def fetch_ms_metadata(param_dict: dict):
-    # Fetch metadata from ms
-    msmd = casatools.msmetadata()
-    msmd.open(param_dict["msname"])
-    cal_scans = msmd.scansforintent("*PHASE*")
-    beamcut_scans = msmd.scansforintent("*MAP*ON_SOURCE")
-    spw_list = msmd.spwsforintent("*MAP*")
-    beamcut_fields = np.unique(msmd.fieldsforscans(beamcut_scans))
-    nchan = np.unique([msmd.nchan(i_spw) for i_spw in spw_list])
-    all_fields = msmd.fieldnames()
-    msmd.done()
-
-    if param_dict["beamcut_field"] is None:
-        if beamcut_fields.size > 1:
-            raise RuntimeError("More than 1 beam cut field, try splitting the ms")
-        param_dict["beamcut_field"] = beamcut_fields[0]
-    else:
-        try:
-            field_id = int(param_dict["beamcut_field"])
-            if field_id > all_fields.size - 1 or field_id < 0:
-                raise RuntimeError("Specified beam cut field ID is out of range")
-        except ValueError:
-            if param_dict["beamcut_field"] not in all_fields:
-                raise RuntimeError(
-                    f"{param_dict['beamcut_field']} not present in the ms"
-                )
-
-    if nchan.size > 1:
-        raise RuntimeError(
-            "Spectral windows have different nchans, don't know how to proceed automatically"
-        )
-
-    # Convert to comma-separated string
-    param_dict["calibration_scans"] = ",".join(map(str, cal_scans))
-    param_dict["beamcut_scans"] = ",".join(map(str, beamcut_scans))
-
-    fchan = param_dict["quack_nchan"]
-    lchan = nchan[0] - param_dict["quack_nchan"]
-    minspw = f"{round(np.min(spw_list)):d}"
-    maxspw = f"{round(np.max(spw_list)):d}"
-    spwrange = f"{minspw}~{maxspw}"
-    param_dict["quacked_spw_selection"] = f"{spwrange}:{fchan}~{lchan}"
-    return param_dict
-
-
-def param_init(param_dict: dict, msger: MessageBoard):
+def param_init(pipeline_type: str, msger: MessageBoard):
     extensions = {
         "delay_cal": ".dcal",
         "bandpass_cal": ".bcal",
@@ -224,23 +48,23 @@ def param_init(param_dict: dict, msger: MessageBoard):
         "report": "-report.html",
     }
 
-    base_name = base_name_determination(param_dict)
-    param_dict = asdm_test_and_import(param_dict, base_name, msger)
+    stages = [
+        "calibration",
+        "extract_pointing",
+        "extract_holog",
+        "beamcut",
+        "exports",
+        "report",
+    ]
 
-    for identifier, extension in extensions.items():
-        param_dict[f"{identifier}_name"] = base_name + extension
-
-    param_dict = fetch_ms_metadata(param_dict)
-
-    param_dict["antenna"] = parse_list_or_all(param_dict, "antenna")
-    param_dict["spw"] = parse_list_or_all(param_dict, "spw", list_type=int)
-    param_dict["exclude_bad_antennas"] = parse_list_or_none(
-        param_dict, "exclude_bad_antennas", list_type=str
+    param_dict = common_parameter_initialization_for_holography(
+        pipeline_type, stages, extensions, parse, msger
     )
 
-    param_dict["parallel"] = param_dict["ncores"] >= 2
+    # Extra parameter initialization comes here
+
     initialization_check(param_dict, "Beam cut reduction parameters")
-    return param_dict
+    return param_dict, stages
 
 
 def run_casa_calibration(param_dict, msger):
@@ -357,12 +181,8 @@ def run_astrohack_reduction(param_dict, msger):
 
 def run_astrohack_exports(param_dict, msger):
     param_dict["destination"] = param_dict["exports_name"]
-    pnt_mds = open_pointing(param_dict["point_name"])
-    if pnt_mds is None:
-        raise RuntimeError(f"{param_dict['point_name']} not found")
-    bmc_mds = open_beamcut(param_dict["beamcut_name"])
-    if bmc_mds is None:
-        raise RuntimeError(f"{param_dict['beamcut_name']} not found")
+    pnt_mds = open_astrohack_file(open_pointing, param_dict["point_name"])
+    bmc_mds = open_astrohack_file(open_beamcut, param_dict["beamcut_name"])
 
     plotting_methods = [
         pnt_mds.plot_array_configuration,
@@ -461,29 +281,22 @@ def prepare_html_report(param_dict, msger):
 
 
 def main():
+    pipeline_type = "beamcut"
     pipeline_start = time.time()
     msger = MessageBoard()
     print()
-    msger.heading("Welcome to the AstroHACK BeamCut reduction pipeline")
-    main_param_dict = param_init(parse(), msger)
+    msger.welcome_message(pipeline_type)
 
-    astrohack_stages = ["extract_holog", "extract_pointing", "beamcut", "exports"]
+    main_param_dict, stages = param_init(pipeline_type, msger)
+
+    astrohack_stages = stages[1:5]
     main_param_dict["processing_stage"] = main_param_dict["starting_stage"]
 
-    if main_param_dict["processing_stage"] == "calibration":
+    if main_param_dict["processing_stage"] == stages[0]:
         run_casa_calibration(main_param_dict, msger)
-        main_param_dict["processing_stage"] = "extract_pointing"
+        main_param_dict["processing_stage"] = astrohack_stages[0]
 
-    if (
-        main_param_dict["parallel"]
-        and main_param_dict["processing_stage"] in astrohack_stages
-    ):
-        client = local_client(
-            cores=main_param_dict["ncores"],
-            memory_limit=main_param_dict["memory_per_core"],
-        )
-    else:
-        client = None
+    client = client_initialization(main_param_dict, astrohack_stages)
 
     if main_param_dict["processing_stage"] in astrohack_stages[:-1]:
         run_astrohack_reduction(main_param_dict, msger)
@@ -499,8 +312,4 @@ def main():
         client.shutdown()
 
     pipeline_end = time.time()
-    msger.heading(
-        f"Beamcut processing finished in {format_duration(pipeline_end - pipeline_start)}, "
-        + f"individual plots and text results saved at: {main_param_dict['exports_name']}."
-        + f" Checkout the HTML report at: {main_param_dict['report_name']}."
-    )
+    msger.goodbye_message(pipeline_type, main_param_dict, pipeline_end - pipeline_start)
