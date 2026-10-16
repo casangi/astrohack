@@ -1,8 +1,7 @@
 import numpy as np
 import toolviper.utils.logger as logger
-
-from matplotlib.patches import Circle
 from matplotlib.colors import Normalize
+from matplotlib.patches import Circle
 
 from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT, PanelModel, PanelPoint
 from astrohack.utils.constants import fontsize, markersize, pi
