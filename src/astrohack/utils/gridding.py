@@ -1,28 +1,29 @@
+import math
 import time
+
 import numpy as np
 import xarray
-from toolviper.utils import logger as logger
-from scipy.interpolate import griddata
 from numba import njit
 from numba.core import types
 from numba.typed import List as numbaList
-import math
+from scipy.interpolate import griddata
+from toolviper.utils import logger as logger
 
-from astrohack.utils.constants import (
-    sig_2_fwhm,
-    njit_caching,
-)
 from astrohack.utils.algorithms import (
-    find_nearest,
     calc_coords,
-    find_peak_beam_value,
     chunked_average,
+    find_nearest,
+    find_peak_beam_value,
+)
+from astrohack.utils.constants import (
+    njit_caching,
+    sig_2_fwhm,
 )
 from astrohack.utils.tools import (
-    get_str_idx_in_list,
-    raise_type_error,
     check_is_proper_array,
     check_is_proper_shape,
+    get_str_idx_in_list,
+    raise_type_error,
 )
 
 

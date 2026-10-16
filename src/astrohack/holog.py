@@ -1,38 +1,35 @@
 import numpy as np
-
-from typing import List, Union, Tuple
-
 import toolviper.utils.parameter
 
-from astrohack.io.dio import open_holog
-from astrohack.utils.graph import create_and_execute_graph_from_dict
-from astrohack.utils.file import overwrite_file
 from astrohack.core.holog import process_holog_chunk
-from astrohack.utils.text import get_default_file_name
+from astrohack.io.dio import open_holog
 from astrohack.io.image_mds import AstrohackImageFile
+from astrohack.utils.file import overwrite_file
+from astrohack.utils.graph import create_and_execute_graph_from_dict
+from astrohack.utils.text import get_default_file_name
 
 
 @toolviper.utils.parameter.validate()
 def holog(
     holog_name: str,
     image_name: str | None = None,
-    grid_size: Union[int, np.ndarray, List[int], None] = None,
-    cell_size: Union[float | int, np.ndarray, List[int], None] = None,
+    grid_size: int | np.ndarray | list[int] | None = None,
+    cell_size: float | int | np.ndarray | list[int] | None = None,
     padding_factor: int = 10,
     grid_interpolation_mode: str = "gaussian",
     chan_average: bool = True,
     chan_tolerance_factor: float = 0.005,
     scan_average: bool = True,
     alma_osf_pad: str | None = None,
-    ant: Union[str, List[str]] = "all",
-    ddi: Union[str, int, List[int]] = "all",
+    ant: str | list[str] = "all",
+    ddi: str | int | list[int] = "all",
     zernike_n_order: int = 4,
     phase_fit_engine: str = "perturbations",
-    phase_fit_control: Union[List[bool], Tuple[bool]] = (True, True, True, True, True),
+    phase_fit_control: list[bool] | tuple[bool] = (True, True, True, True, True),
     to_stokes: bool = True,
     overwrite: bool = False,
     parallel: bool = False,
-) -> Union[AstrohackImageFile, None]:
+) -> AstrohackImageFile | None:
     """ Process holography data and derive aperture illumination pattern.
 
     :param holog_name: Name of holography .holog.zarr file to process.

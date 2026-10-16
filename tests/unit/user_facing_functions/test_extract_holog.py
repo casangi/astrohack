@@ -7,8 +7,7 @@ import toolviper
 
 from astrohack import open_holog
 from astrohack.core.holog_obs_dict import HologObsDict
-from astrohack.extract_holog import extract_holog
-from astrohack.extract_holog import generate_holog_obs_dict
+from astrohack.extract_holog import extract_holog, generate_holog_obs_dict
 from astrohack.utils.verification_tools import (
     add_data_folder_to_names_in_class,
     execute_cleanup,
@@ -45,17 +44,17 @@ class TestExtractHolog:
         new_hlg_mds = extract_holog(
             ms_name=self.ms_name, point_name=self.pnt_name, overwrite=True
         )
-        assert pathlib.Path(
-            self.def_hlg_name
-        ).is_dir(), f"A .holog.zarr file named {self.def_hlg_name} does not exist."
+        assert pathlib.Path(self.def_hlg_name).is_dir(), (
+            f"A .holog.zarr file named {self.def_hlg_name} does not exist."
+        )
         if produce_reference_data():
             return
 
         ref_hlg_mds = open_holog(self.ref_hlg_name)
 
-        assert new_hlg_mds.is_close_to(
-            ref_hlg_mds
-        ), "Reference and new mdses are different."
+        assert new_hlg_mds.is_close_to(ref_hlg_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_holog_obs_dict(self):
         """
@@ -85,9 +84,9 @@ class TestExtractHolog:
         )
 
         hlg_obs_dict_from_file = HologObsDict.from_holog_file(self.def_hlg_name)
-        assert (
-            hlg_obs_dict_from_file == loc_hlg_obs_dict
-        ), "holog obs dict stored in the holog file is not the same as the one given as input"
+        assert hlg_obs_dict_from_file == loc_hlg_obs_dict, (
+            "holog obs dict stored in the holog file is not the same as the one given as input"
+        )
 
     def test_ddi_and_ant_selection(self):
         """
@@ -138,9 +137,9 @@ class TestExtractHolog:
         )
         final_time = os.path.getctime(self.def_hlg_name)
 
-        assert (
-            initial_time != final_time
-        ), "Recreated file has to have a different time from the original file."
+        assert initial_time != final_time, (
+            "Recreated file has to have a different time from the original file."
+        )
 
         with pytest.raises(FileExistsError):
             extract_holog(
@@ -170,9 +169,9 @@ class TestExtractHolog:
             overwrite=True,
         )
         # Check that the expected antenna is present.
-        assert list(holog_mds.keys()) == [
-            "ant_ea25"
-        ], "After baseline distance selection, the holog_mds should contain holography data for only ea25"
+        assert list(holog_mds.keys()) == ["ant_ea25"], (
+            "After baseline distance selection, the holog_mds should contain holography data for only ea25"
+        )
 
         with pytest.raises(RuntimeError):
             extract_holog(

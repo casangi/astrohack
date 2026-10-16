@@ -1,10 +1,9 @@
 import datetime
 import inspect
-import os
 import json
-import shutil
+import os
 import pathlib
-
+import shutil
 
 import toolviper.utils.logger as logger
 from toolviper.utils.console import Colorize
@@ -37,7 +36,7 @@ def check_if_file_can_be_opened(filename, file_creator, minimal_version):
         raise FileNotFoundError(f"{filename} cannot be found.")
 
     try:
-        with open(f"{filename}/.zattrs", "r") as root_attrs_file:
+        with open(f"{filename}/.zattrs") as root_attrs_file:
             file_metadata = json.load(root_attrs_file)
     except FileNotFoundError:
         raise FileNotFoundError(f"{filename} is not a proper astrohack file")
@@ -56,7 +55,7 @@ def check_if_file_can_be_opened(filename, file_creator, minimal_version):
         file_creator = [file_creator]
     if origin_info["creator_function"] not in file_creator:
         raise ValueError(
-            f'{filename} was created by {origin_info["creator_function"]} but {" or ".join(file_creator)} was expected'
+            f"{filename} was created by {origin_info['creator_function']} but {' or '.join(file_creator)} was expected"
         )
 
     file_version = origin_info["version"]
@@ -76,7 +75,7 @@ def overwrite_file(file, overwrite):
             f"{file} already exists. To overwrite set overwrite to True, or remove current file."
         )
 
-        raise FileExistsError("{file} exists.".format(file=file))
+        raise FileExistsError(f"{file} exists.")
 
     elif (path.exists() is True) and (overwrite is True):
         if file.endswith(".zarr"):

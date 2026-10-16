@@ -1,41 +1,42 @@
 import os
 import time
+
 import numpy as np
 from astropy.utils import data as astropy_data
 
-from astrohack import extract_locit, locit, open_position, fringefit_locit
-from astrohack.utils.algorithms import rotate_to_gmt, data_statistics
+from astrohack import extract_locit, fringefit_locit, locit, open_position
+from astrohack.utils.algorithms import data_statistics, rotate_to_gmt
 from astrohack.utils.constants import clight, pol_str
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.pipeline_support import (
     MessageBoard,
+    add_basic_info_and_parameters_to_report,
+    asdm_test_and_import,
+    base_name_determination,
+    client_initialization,
+    create_parser_with_base_options,
     initialization_check,
-    run_casatask,
+    list_input_tooltip,
+    open_astrohack_file,
+    parse_list_or_all,
+    parse_list_or_none,
     proceed_check,
     run_astrohack_function,
-    parse_list_or_all,
-    base_name_determination,
-    asdm_test_and_import,
-    add_basic_info_and_parameters_to_report,
-    create_parser_with_base_options,
-    open_astrohack_file,
-    client_initialization,
-    parse_list_or_none,
-    list_input_tooltip,
+    run_casatask,
 )
 from astrohack.utils.text import (
-    format_duration,
-    create_html_file_from_body,
-    lnbr,
-    create_single_html_image_with_header,
-    add_preformatted_text_file_to_html,
     add_heading_to_html,
+    add_preformatted_text_file_to_html,
+    create_html_file_from_body,
+    create_single_html_image_with_header,
+    format_duration,
+    lnbr,
     make_collapsible_block,
 )
 from astrohack.visualization.plot_tools import (
-    filter_duplicates_in_legend,
-    create_figure_and_axes,
     close_figure,
+    create_figure_and_axes,
+    filter_duplicates_in_legend,
 )
 
 # This should hide the messages of downloading new IERS data by astropy
@@ -604,7 +605,7 @@ def run_post_locit_plots(param_dict: dict, msger: MessageBoard):
         ant_names.append(attributes["antenna_info"]["name"])
 
     try:
-        import casatasks
+        import casatasks  # noqa: F401
 
         param_dict["casatasks_found"] = True
     except ModuleNotFoundError:
@@ -725,7 +726,7 @@ def prepare_html_report(param_dict: dict, msger: MessageBoard):
             )
     create_html_file_from_body(html_body, report_title, param_dict["report_name"])
     stop = time.time()
-    msger.one_liner("Report finished in {:.2f} seconds".format(stop - start))
+    msger.one_liner(f"Report finished in {stop - start:.2f} seconds")
 
 
 def main():

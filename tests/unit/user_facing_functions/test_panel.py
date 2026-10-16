@@ -1,13 +1,13 @@
 import os
-import shutil
 import pathlib
-import pytest
-import numpy as np
+import shutil
 
+import numpy as np
+import pytest
 import toolviper
 
+from astrohack import open_panel, panel
 from astrohack.antenna.telescope import get_proper_telescope
-from astrohack import panel, open_panel
 from astrohack.utils.verification_tools import (
     add_data_folder_to_names_in_class,
     execute_cleanup,
@@ -49,16 +49,16 @@ class TestPanel:
         Check that the panel output name was created correctly.
         """
         new_pnl_mds = panel(image_name=self.img_name, overwrite=True)
-        assert pathlib.Path(
-            self.def_pnl_name
-        ).is_dir(), f"A .panel.zarr file named {self.def_pnl_name} does not exist."
+        assert pathlib.Path(self.def_pnl_name).is_dir(), (
+            f"A .panel.zarr file named {self.def_pnl_name} does not exist."
+        )
 
         if produce_reference_data():
             return
         ref_pnl_mds = open_panel(self.ref_pnl_name)
-        assert new_pnl_mds.is_close_to(
-            ref_pnl_mds
-        ), "Reference and new mdses are different."
+        assert new_pnl_mds.is_close_to(ref_pnl_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_data_selection(self):
         """
@@ -80,14 +80,14 @@ class TestPanel:
 
         exp_ant_list = [self.ant_key]
         exp_ddi_list = [self.ddi_key]
-        assert (
-            list(pnl_mds.keys())
-        ) == exp_ant_list, f"Expected {exp_ant_list} but got {list(pnl_mds.keys())}"
+        assert (list(pnl_mds.keys())) == exp_ant_list, (
+            f"Expected {exp_ant_list} but got {list(pnl_mds.keys())}"
+        )
         for ant_key, ant_xdt in pnl_mds.items():
             ddi_list = list(ant_xdt.keys())
-            assert (
-                ddi_list == exp_ddi_list
-            ), f"Expected {exp_ddi_list}, but got {ddi_list} for {ant_key}."
+            assert ddi_list == exp_ddi_list, (
+                f"Expected {exp_ddi_list}, but got {ddi_list} for {ant_key}."
+            )
 
     def test_overwrite(self):
         """
@@ -167,7 +167,9 @@ class TestPanel:
         nvalid_pix = np.sum(dish_mask)
         assert (
             np.sum(panel_mds[self.ant_key][self.ddi_key].MASK.values) == nvalid_pix
-        ), "An absolute clip of level 0 should include all and only the pixels inside the aperture"
+        ), (
+            "An absolute clip of level 0 should include all and only the pixels inside the aperture"
+        )
 
     def test_relative_clip(self):
         if produce_reference_data():
@@ -182,9 +184,9 @@ class TestPanel:
             ddi=self.ddi_id,
         )
 
-        assert (
-            np.sum(panel_mds[self.ant_key][self.ddi_key].MASK.values) == 1
-        ), "A relative clip of level 1 should include only the brightest pixel in the aperture"
+        assert np.sum(panel_mds[self.ant_key][self.ddi_key].MASK.values) == 1, (
+            "A relative clip of level 1 should include only the brightest pixel in the aperture"
+        )
 
     def test_sigma_clip(self):
         if produce_reference_data():
@@ -212,6 +214,6 @@ class TestPanel:
 
         n_mask_sig3 = np.sum(panel_sig3_mds[self.ant_key][self.ddi_key].MASK.values)
 
-        assert (
-            n_mask_sig2 > n_mask_sig3
-        ), "A mask with clip at 2 sigma should have more pixels than one clipped at 3 sigma"
+        assert n_mask_sig2 > n_mask_sig3, (
+            "A mask with clip at 2 sigma should have more pixels than one clipped at 3 sigma"
+        )

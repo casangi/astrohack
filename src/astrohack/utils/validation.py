@@ -1,7 +1,12 @@
 from astrohack.antenna.antenna_surface import SUPPORTED_POL_STATES
 from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT
-from astrohack.utils.constants import trigo_units, length_units, time_units, freq_units
-from astrohack.utils.constants import possible_splits
+from astrohack.utils.constants import (
+    freq_units,
+    length_units,
+    possible_splits,
+    time_units,
+    trigo_units,
+)
 from astrohack.visualization.plot_tools import astrohack_cmaps
 
 

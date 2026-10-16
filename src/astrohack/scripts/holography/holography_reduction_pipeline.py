@@ -2,34 +2,34 @@ import time
 from pathlib import Path
 
 from astrohack import (
-    extract_pointing,
-    extract_holog,
-    holog,
     combine,
-    panel,
-    open_pointing,
+    extract_holog,
+    extract_pointing,
+    holog,
     open_image,
     open_panel,
+    open_pointing,
+    panel,
 )
 from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT
 from astrohack.utils.pipeline_support import (
     MessageBoard,
-    initialization_check,
-    basic_holography_parser,
-    common_parameter_initialization_for_holography,
-    run_astrohack_function,
-    open_astrohack_file,
     add_basic_info_and_parameters_to_report,
+    basic_holography_parser,
     client_initialization,
+    common_parameter_initialization_for_holography,
+    initialization_check,
+    open_astrohack_file,
+    run_astrohack_function,
     run_casatask,
 )
 from astrohack.utils.text import (
-    lnbr,
     add_heading_to_html,
-    create_single_html_image_with_header,
-    create_html_file_from_body,
-    make_collapsible_block,
     add_preformatted_text_file_to_html,
+    create_html_file_from_body,
+    create_single_html_image_with_header,
+    lnbr,
+    make_collapsible_block,
 )
 
 
@@ -517,7 +517,7 @@ def prepare_html_report(param_dict: dict, msger: MessageBoard):
 
     create_html_file_from_body(html_body, report_title, param_dict["report_name"])
     stop = time.time()
-    msger.one_liner("Report finished in {:.2f} seconds".format(stop - start))
+    msger.one_liner(f"Report finished in {stop - start:.2f} seconds")
     return
 
 

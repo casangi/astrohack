@@ -1,17 +1,17 @@
 import glob
-import shutil
 import os
 import pathlib
-import matplotlib
+import shutil
 
+import matplotlib
 from toolviper.utils import data
 
 from astrohack import AstrohackImageFile, open_image
 from astrohack.utils.verification_tools import (
     add_data_folder_to_names_in_class,
-    are_txt_files_equal,
-    are_png_files_close,
     are_fits_files_close,
+    are_png_files_close,
+    are_txt_files_equal,
     execute_cleanup,
     produce_reference_data,
 )
@@ -37,9 +37,9 @@ class TestimageMDS:
             for full_path_name in glob.glob(f"{self.ref_products_name}/{pattern}")
         ]
         for plot_name in plot_name_list:
-            assert pathlib.Path(
-                f"{self.destination_folder}/{plot_name}"
-            ).is_file(), f"{plot_name} was not created"
+            assert pathlib.Path(f"{self.destination_folder}/{plot_name}").is_file(), (
+                f"{plot_name} was not created"
+            )
             assert are_png_files_close(
                 f"{self.destination_folder}/{plot_name}",
                 f"{self.ref_products_name}/{plot_name}",
@@ -51,9 +51,9 @@ class TestimageMDS:
             for full_path_name in glob.glob(f"{self.ref_products_name}/*.fits")
         ]
         for fits_name in fits_list:
-            assert pathlib.Path(
-                f"{self.destination_folder}/{fits_name}"
-            ).is_file(), f"{fits_name} was not created"
+            assert pathlib.Path(f"{self.destination_folder}/{fits_name}").is_file(), (
+                f"{fits_name} was not created"
+            )
             assert are_fits_files_close(
                 f"{self.destination_folder}/{fits_name}",
                 f"{self.ref_products_name}/{fits_name}",

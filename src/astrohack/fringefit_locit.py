@@ -1,20 +1,18 @@
 import toolviper.utils.parameter
 
-from typing import Union, List, Tuple
-
 from astrohack.core.extract_locit import (
-    extract_spectral_info,
     extract_antenna_data,
     extract_source_and_telescope,
+    extract_spectral_info,
 )
 from astrohack.core.fringefit_locit import (
     fringefit_locit_chunk,
     fringefit_locit_looping_dict,
 )
+from astrohack.io.position_mds import AstrohackPositionFile
 from astrohack.utils.file import overwrite_file
 from astrohack.utils.graph import create_and_execute_graph_from_dict
 from astrohack.utils.text import get_default_file_name
-from astrohack.io.position_mds import AstrohackPositionFile
 from astrohack.utils.tools import build_bad_scan_list
 
 
@@ -27,9 +25,9 @@ def fringefit_locit(
     fit_engine: str = "scipy",
     fit_kterm: bool = False,
     fit_delay_rate: bool = False,
-    ant: Union[str, List[str]] = "all",
-    ddi: Union[str, int, List[int]] = "all",
-    exclude_scans: Union[int, List[int], Tuple[int]] | None = None,
+    ant: str | list[str] = "all",
+    ddi: str | int | list[int] = "all",
+    exclude_scans: int | list[int] | tuple[int] | None = None,
     parallel: bool = True,
     overwrite: bool = False,
 ):

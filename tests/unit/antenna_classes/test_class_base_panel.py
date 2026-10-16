@@ -1,10 +1,10 @@
+import numpy as np
 import pytest
 
+from astrohack.antenna.base_panel import BasePanel
 from astrohack.antenna.panel_fitting import PanelPoint
 from astrohack.utils.algorithms import gauss_elimination
-from astrohack.antenna.base_panel import BasePanel
 from astrohack.utils.conversion import convert_unit
-import numpy as np
 
 
 def rigid_value(ix, iy, expected_par):
@@ -79,9 +79,9 @@ class TestBasePanel:
             ), f"{i_par}-eth parameter does not match its expected value"
 
         this_panel.get_corrections()
-        assert (
-            len(this_panel.corr) == n_side**2
-        ), "Number of corrected points do not match number of samples"
+        assert len(this_panel.corr) == n_side**2, (
+            "Number of corrected points do not match number of samples"
+        )
 
         one_corr = this_panel.model.correct_point(PanelPoint(0, 0))
         assert np.isclose(
@@ -105,9 +105,9 @@ class TestBasePanel:
         identity = np.identity(size)
         vector = np.arange(size)
         for pos in range(size):
-            assert (
-                gauss_elimination(identity, vector)[pos] == vector[pos]
-            ), "Gaussian elimination failed"
+            assert gauss_elimination(identity, vector)[pos] == vector[pos], (
+                "Gaussian elimination failed"
+            )
 
     def test_init(self):
         label = "TEST"
@@ -132,16 +132,16 @@ class TestBasePanel:
         for i in range(n_samp):
             this_panel.add_sample(point)
             this_panel.add_margin(point)
-        assert (
-            len(this_panel.samples) == n_samp
-        ), "Internal number of samples do not match the expected number of samples"
-        assert (
-            len(this_panel.margins) == n_samp
-        ), "Internal list of points does not have the expected size"
+        assert len(this_panel.samples) == n_samp, (
+            "Internal number of samples do not match the expected number of samples"
+        )
+        assert len(this_panel.margins) == n_samp, (
+            "Internal list of points does not have the expected size"
+        )
         for i in range(n_samp):
-            assert (
-                this_panel.samples[i].xc == point[0]
-            ), "{0:d}-eth point does not match input point".format(i)
+            assert this_panel.samples[i].xc == point[0], (
+                f"{i:d}-eth point does not match input point"
+            )
         return
 
     def test_fitting(self):

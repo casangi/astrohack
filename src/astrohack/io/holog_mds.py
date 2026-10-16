@@ -1,29 +1,26 @@
 from copy import deepcopy
+from datetime import date
 
 import numpy as np
-
-from datetime import date
-from astropy.time import Time
-from typing import Union, Tuple, List
-
-from toolviper.utils import logger as logger
 import toolviper.utils.parameter
+from astropy.time import Time
+from toolviper.utils import logger as logger
 
 from astrohack.io.base_mds import AstrohackBaseFile
+from astrohack.utils.algorithms import compute_average_stokes_visibilities
 from astrohack.utils.constants import fontsize, markersize
+from astrohack.utils.conversion import convert_unit
+from astrohack.utils.graph import create_and_execute_graphs_for_outputs
+from astrohack.utils.text import create_informative_label_from_summary, lnbr
+from astrohack.utils.validation import custom_plots_checker, custom_unit_checker
+from astrohack.visualization.observation_summary import (
+    generate_observation_summary,
+)
 from astrohack.visualization.plot_tools import (
     close_figure,
     create_figure_and_axes,
     scatter_plot,
 )
-from astrohack.utils.text import lnbr, create_informative_label_from_summary
-from astrohack.utils.graph import create_and_execute_graphs_for_outputs
-from astrohack.utils.conversion import convert_unit
-from astrohack.utils.algorithms import compute_average_stokes_visibilities
-from astrohack.visualization.observation_summary import (
-    generate_observation_summary,
-)
-from astrohack.utils.validation import custom_plots_checker, custom_unit_checker
 
 
 class AstrohackHologFile(AstrohackBaseFile):
@@ -48,12 +45,12 @@ class AstrohackHologFile(AstrohackBaseFile):
         self,
         destination: str,
         delta: float = 0.01,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
-        map_id: Union[int, List[int], str] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
+        map_id: int | list[int] | str = "all",
         complex_split: str = "polar",
         display: bool = False,
-        figure_size: Union[Tuple, List[float], np.ndarray, None] = None,
+        figure_size: tuple | list[float] | np.ndarray | None = None,
         dpi: int = 300,
         parallel: bool = False,
     ) -> None:
@@ -116,16 +113,16 @@ class AstrohackHologFile(AstrohackBaseFile):
     def plot_lm_sky_coverage(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
-        map_id: Union[int, List[int], str] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
+        map_id: int | list[int] | str = "all",
         angle_unit: str = "deg",
         time_unit: str = "hour",
-        plot_correlation: Union[str, List[str], None] = None,
+        plot_correlation: str | list[str] | None = None,
         complex_split: str = "polar",
         phase_unit: str = "deg",
         display: bool = False,
-        figure_size: Union[Tuple, List[float], np.ndarray, None] = None,
+        figure_size: tuple | list[float] | np.ndarray | None = None,
         dpi: int = 300,
         parallel: bool = False,
     ) -> None:
@@ -203,9 +200,9 @@ class AstrohackHologFile(AstrohackBaseFile):
     def export_to_aips(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
-        map_id: Union[int, List[int], str] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
+        map_id: int | list[int] | str = "all",
         parallel: bool = False,
     ) -> None:
         """ Export data compatible to AIPS's HOLOG task
@@ -246,9 +243,9 @@ class AstrohackHologFile(AstrohackBaseFile):
     def observation_summary(
         self,
         summary_file: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
-        map_id: Union[int, List[int], str] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
+        map_id: int | list[int] | str = "all",
         az_el_key: str = "center",
         phase_center_unit: str = "radec",
         az_el_unit: str = "deg",
@@ -386,7 +383,7 @@ def _plot_diagnostics_chunk(param_dict):
                     markersize=markersize,
                 )
                 axis[k].set_ylabel(
-                    f'Vis ({vis_dict["label"][i]}; {xds_data.pol.values[pol]})',
+                    f"Vis ({vis_dict['label'][i]}; {xds_data.pol.values[pol]})",
                     fontsize=thisfont,
                 )
                 axis[k].tick_params(axis="both", which="major", labelsize=thisfont)
@@ -402,8 +399,8 @@ def _plot_diagnostics_chunk(param_dict):
     )
 
     plotfile = (
-        f'{destination}/holog_diagnostics_{param_dict["this_ant"]}_'
-        f'{param_dict["this_ddi"]}_{param_dict["this_map"]}.png'
+        f"{destination}/holog_diagnostics_{param_dict['this_ant']}_"
+        f"{param_dict['this_ddi']}_{param_dict['this_map']}.png"
     )
     title = "Cal. check for: " + create_informative_label_from_summary(
         xds_data.attrs["summary"], "deg", add_date=False
@@ -419,10 +416,10 @@ def _plot_lm_sky_coverage_chunk(param_dict):
     time = deepcopy(xdt_data.time.values)
     time -= time[0]
     time *= convert_unit("sec", param_dict["time_unit"], "time")
-    param_dict["l_label"] = f'L [{param_dict["angle_unit"]}]'
-    param_dict["m_label"] = f'M [{param_dict["angle_unit"]}]'
+    param_dict["l_label"] = f"L [{param_dict['angle_unit']}]"
+    param_dict["m_label"] = f"M [{param_dict['angle_unit']}]"
     param_dict["time_label"] = (
-        f'Time from observation start [{param_dict["time_unit"]}]'
+        f"Time from observation start [{param_dict['time_unit']}]"
     )
 
     param_dict["marker"] = "."
@@ -532,8 +529,8 @@ def _plot_lm_coverage_sub(time, real_lm, ideal_lm, param_dict, summary):
         add_legend=False,
     )
     plotfile = (
-        f'{param_dict["destination"]}/holog_directional_cosines_'
-        f'{param_dict["this_ant"]}_{param_dict["this_ddi"]}_{param_dict["this_map"]}.png'
+        f"{param_dict['destination']}/holog_directional_cosines_"
+        f"{param_dict['this_ant']}_{param_dict['this_ddi']}_{param_dict['this_map']}.png"
     )
     title = "L&M for: " + create_informative_label_from_summary(summary, "deg")
     close_figure(fig, title, plotfile, param_dict["dpi"], param_dict["display"])
@@ -554,7 +551,7 @@ def _plot_correlation_sub(
                 np.angle(loc_vis)
                 * convert_unit("rad", param_dict["phase_unit"], "trigonometric")
             )
-            y_label.append(f'{correlation} Phase [{param_dict["phase_unit"]}]')
+            y_label.append(f"{correlation} Phase [{param_dict['phase_unit']}]")
             title.append("Phase")
         else:
             y_data = [loc_vis.real]
@@ -608,8 +605,8 @@ def _plot_correlation_sub(
             )
 
         plotfile = (
-            f'{param_dict["destination"]}/holog_directional_cosines_{correlation}_'
-            f'{param_dict["this_ant"]}_{param_dict["this_ddi"]}_{param_dict["this_map"]}.png'
+            f"{param_dict['destination']}/holog_directional_cosines_{correlation}_"
+            f"{param_dict['this_ant']}_{param_dict['this_ddi']}_{param_dict['this_map']}.png"
         )
         title = f"{correlation} vs L&M for: " + create_informative_label_from_summary(
             summary, "deg"
@@ -622,10 +619,9 @@ def _plot_correlation_sub(
             param_dict["display"],
         )
     else:
-
         logger.warning(
-            f'Correlation {correlation} is not present for {param_dict["this_ant"]} {param_dict["this_ddi"]} '
-            f'{param_dict["this_map"]}, skipping...'
+            f"Correlation {correlation} is not present for {param_dict['this_ant']} {param_dict['this_ddi']} "
+            f"{param_dict['this_map']}, skipping..."
         )
     return
 
@@ -635,8 +631,8 @@ def _export_to_aips_chunk(param_dict):
     stokes = "I"
     stokes_vis = compute_average_stokes_visibilities(xds_data, stokes)
     filename = (
-        f'{param_dict["destination"]}/holog_visibilities_{param_dict["this_ant"]}_'
-        f'{param_dict["this_ddi"]}_{param_dict["this_map"]}.txt'
+        f"{param_dict['destination']}/holog_visibilities_{param_dict['this_ant']}_"
+        f"{param_dict['this_ddi']}_{param_dict['this_map']}.txt"
     )
     ant_num = xds_data.attrs["summary"]["general"]["antenna name"].split("a")[1]
     cmt = "#! "

@@ -1,21 +1,21 @@
 from copy import deepcopy
 
-import toolviper.utils.logger as logger
+import astropy
 import numpy as np
+import toolviper.utils.logger as logger
+import xarray as xr
 from scipy.optimize import curve_fit
 from scipy.signal import find_peaks
 from scipy.stats import linregress
-import astropy
-import xarray as xr
 
-from astrohack.io.beamcut_mds import AstrohackBeamcutFile
 from astrohack.antenna.telescope import get_proper_telescope
+from astrohack.io.beamcut_mds import AstrohackBeamcutFile
+from astrohack.utils.constants import sig_2_fwhm
 from astrohack.utils.text import (
-    create_dataset_label,
     convert_unit,
+    create_dataset_label,
     format_value_unit,
 )
-from astrohack.utils.constants import sig_2_fwhm
 
 
 ###########################################################
@@ -232,7 +232,7 @@ def _cut_direction_determination_and_label_creation(lm_offsets, angle_unit="deg"
 
         direction += (
             r", $\theta$ = "
-            + f"{format_value_unit(convert_unit('rad', angle_unit, 'trigonometric')*lm_angle, angle_unit)}"
+            + f"{format_value_unit(convert_unit('rad', angle_unit, 'trigonometric') * lm_angle, angle_unit)}"
         )
         xlabel = "Mixed offset"
     elif np.abs(dy) > np.abs(dx):  # Elevation case
@@ -470,7 +470,7 @@ def _identify_pb_and_sidelobes_in_fit(
 
     # Reconstruct fit metadata
     n_peaks = centers.shape[0]
-    fit_pars = np.zeros((3 * n_peaks))
+    fit_pars = np.zeros(3 * n_peaks)
     fit_pars[0::3] = centers
     fit_pars[1::3] = amps
     fit_pars[2::3] = fwhms
@@ -582,7 +582,7 @@ def _beamcut_multi_lobes_gaussian_fit(cut_xdtree, datalabel):
         for parallel_hand in cut_xds.attrs["available_corrs"]:
             y_data = cut_xds[f"{parallel_hand}_amplitude"]
             this_corr_data_label = (
-                f'{datalabel}, {cut_xds.attrs["direction"]}, corr = {parallel_hand}'
+                f"{datalabel}, {cut_xds.attrs['direction']}, corr = {parallel_hand}"
             )
             initial_guesses, bounds, n_peaks = _build_multi_gaussian_initial_guesses(
                 x_data, y_data, primary_fwhm, this_corr_data_label

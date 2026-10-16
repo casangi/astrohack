@@ -1,11 +1,11 @@
+import json
 import os
-import pytest
 import pathlib
 import shutil
-import toolviper
-import json
 
 import numpy as np
+import pytest
+import toolviper
 
 from astrohack import open_image
 from astrohack.holog import holog
@@ -63,16 +63,16 @@ class TestHolog:
             overwrite=True,
         )
 
-        assert pathlib.Path(
-            self.def_img_name
-        ).is_dir(), f"A .image.zarr file named {self.def_img_name} does not exist."
+        assert pathlib.Path(self.def_img_name).is_dir(), (
+            f"A .image.zarr file named {self.def_img_name} does not exist."
+        )
         if produce_reference_data():
             return
 
         ref_img_mds = open_image(self.ref_img_name)
-        assert new_img_mds.is_close_to(
-            ref_img_mds
-        ), "Reference and new mdses are different."
+        assert new_img_mds.is_close_to(ref_img_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_data_selection(self):
         if produce_reference_data():
@@ -86,15 +86,15 @@ class TestHolog:
 
         ant_list = list(image_mds.keys())
         assert len(ant_list) == 1, "A single antenna should be present."
-        assert (
-            ant_list[0] == self.ant_key
-        ), "Ant name should be the same as the one given."
+        assert ant_list[0] == self.ant_key, (
+            "Ant name should be the same as the one given."
+        )
 
         ddi_list = list(image_mds[self.ant_key].keys())
         assert len(ddi_list) == 1, "A single ddi should be present."
-        assert (
-            ddi_list[0] == self.ddi_key
-        ), "DDI key should be the same as the one given."
+        assert ddi_list[0] == self.ddi_key, (
+            "DDI key should be the same as the one given."
+        )
 
     def test_padding_factor(self):
         """
@@ -147,9 +147,9 @@ class TestHolog:
         for ant_key in image_mds.keys():
             for ddi_key in image_mds[ant_key].keys():
                 this_ap_shape = image_mds[ant_key][ddi_key].APERTURE.shape
-                assert (
-                    this_ap_shape[1] == ref_nchan
-                ), f"Non chan_average aperture for {ant_key} {ddi_key} should have {ref_nchan} channels"
+                assert this_ap_shape[1] == ref_nchan, (
+                    f"Non chan_average aperture for {ant_key} {ddi_key} should have {ref_nchan} channels"
+                )
 
     def test_to_stokes(self):
         """
@@ -167,9 +167,9 @@ class TestHolog:
             parallel=False,
         )
         pol_axis = image_mds[self.ant_key][self.ddi_key].pol.values
-        assert np.all(
-            pol_axis == stokes_axis
-        ), f"If to_stokes is set to True output data should have {stokes_axis} as the polarization axis."
+        assert np.all(pol_axis == stokes_axis), (
+            f"If to_stokes is set to True output data should have {stokes_axis} as the polarization axis."
+        )
 
     def test_overwrite(self):
         """
@@ -188,9 +188,9 @@ class TestHolog:
             parallel=False,
         )
         modified_time = os.path.getctime(self.def_img_name)
-        assert (
-            initial_time != modified_time
-        ), "Recreated file has to have a different time from the original file."
+        assert initial_time != modified_time, (
+            "Recreated file has to have a different time from the original file."
+        )
 
         with pytest.raises(FileExistsError):
             holog(
@@ -223,13 +223,13 @@ class TestHolog:
             self.ref_json_dict["phase_fit_reference"] = pha_fit_res
             return
 
-        with open(self.ref_json_name, "r") as json_file:
+        with open(self.ref_json_name) as json_file:
             ref_dict = json.load(json_file)
 
         ref_phase_fit = ref_dict["phase_fit_reference"]
         for key in ref_phase_fit.keys():
             assert np.isclose(pha_fit_res[key]["value"], ref_phase_fit[key]["value"]), (
-                f"Phase fitting values differ from " f"reference for {key}"
+                f"Phase fitting values differ from reference for {key}"
             )
 
         image_mds = holog(
@@ -244,9 +244,9 @@ class TestHolog:
         )
         pha_fit_res = image_mds[self.ant_key][self.ddi_key].attrs["phase_fitting"]
 
-        assert (
-            pha_fit_res is None
-        ), "When phase_fit_control is a 5-way False tuple, phase fit results should be None"
+        assert pha_fit_res is None, (
+            "When phase_fit_control is a 5-way False tuple, phase fit results should be None"
+        )
 
         image_mds = holog(
             holog_name=self.hlg_name,
@@ -263,15 +263,15 @@ class TestHolog:
             "map_0"
         ]["14167000000.0"]["I"]
 
-        assert np.isnan(
-            pha_fit_res["x_point_offset"]["error"]
-        ), "If pointing offset is not fitted x_point_offset error should be NaN"
-        assert np.isnan(
-            pha_fit_res["z_focus_offset"]["error"]
-        ), "If focus is not fitted z_focus_offset error should be NaN"
-        assert np.isnan(
-            pha_fit_res["x_cassegrain_offset"]["error"]
-        ), "If cassegrain offset is not fitted x_cassegrain_offset error should be NaN"
+        assert np.isnan(pha_fit_res["x_point_offset"]["error"]), (
+            "If pointing offset is not fitted x_point_offset error should be NaN"
+        )
+        assert np.isnan(pha_fit_res["z_focus_offset"]["error"]), (
+            "If focus is not fitted z_focus_offset error should be NaN"
+        )
+        assert np.isnan(pha_fit_res["x_cassegrain_offset"]["error"]), (
+            "If cassegrain offset is not fitted x_cassegrain_offset error should be NaN"
+        )
 
     def test_no_phase_fit(self):
         if produce_reference_data():
@@ -287,9 +287,9 @@ class TestHolog:
         )
 
         pha_fit_res = image_mds[self.ant_key][self.ddi_key].attrs["phase_fitting"]
-        assert (
-            pha_fit_res is None
-        ), "When phase_fit_engine is set to 'none', phase fit results should be None"
+        assert pha_fit_res is None, (
+            "When phase_fit_engine is set to 'none', phase fit results should be None"
+        )
 
     def test_zernike_phase_fitting(self):
         image_mds = holog(
@@ -318,15 +318,15 @@ class TestHolog:
             self.ref_json_dict["corrected_phase_ref"] = corrected_phase_dict
             return
 
-        with open(self.ref_json_name, "r") as json_file:
+        with open(self.ref_json_name) as json_file:
             ref_dict = json.load(json_file)
 
         corrected_phase_dict = ref_dict["corrected_phase_ref"]
         for i_key, phase in corrected_phase_dict.items():
             position = positions[int(i_key)]
-            assert np.isclose(
-                phase_img[*position], phase
-            ), f"Phase is different from reference at {position}"
+            assert np.isclose(phase_img[*position], phase), (
+                f"Phase is different from reference at {position}"
+            )
 
     #
     def test_holog_zernike_coeffs(self):
@@ -353,13 +353,13 @@ class TestHolog:
             self.ref_json_dict["zernike_coeff_ref_imag"] = zer_coeffs.imag.tolist()
             return
 
-        with open(self.ref_json_name, "r") as json_file:
+        with open(self.ref_json_name) as json_file:
             ref_dict = json.load(json_file)
         ref_zernike_coeffs_real = np.array(ref_dict["zernike_coeff_ref_real"])
         ref_zernike_coeffs_imag = np.array(ref_dict["zernike_coeff_ref_imag"])
-        assert np.allclose(
-            ref_zernike_coeffs_real, zer_coeffs.real
-        ), "Fitted real part of Zernike coefficients do not match references"
-        assert np.allclose(
-            ref_zernike_coeffs_imag, zer_coeffs.imag
-        ), "Fitted imag part of Zernike coefficients do not match references"
+        assert np.allclose(ref_zernike_coeffs_real, zer_coeffs.real), (
+            "Fitted real part of Zernike coefficients do not match references"
+        )
+        assert np.allclose(ref_zernike_coeffs_imag, zer_coeffs.imag), (
+            "Fitted imag part of Zernike coefficients do not match references"
+        )

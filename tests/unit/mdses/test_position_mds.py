@@ -1,19 +1,20 @@
 import shutil
-import matplotlib
 
-from toolviper.utils import data
+import matplotlib
 import pytest
+from toolviper.utils import data
+
 from astrohack import (
+    AstrohackLocitFile,
     AstrohackPositionFile,
     extract_locit,
     locit,
     open_position,
-    AstrohackLocitFile,
 )
 from astrohack.utils.verification_tools import (
+    add_data_folder_to_names_in_class,
     are_png_files_close,
     are_txt_files_equal,
-    add_data_folder_to_names_in_class,
     execute_cleanup,
     produce_reference_data,
 )
@@ -134,9 +135,9 @@ class TestPositionMDS:
                     f"{self.ref_products_name}/{sky_coverage_name_dict[label]}",
                 )
                 if not produce_reference_data():
-                    assert (
-                        equal
-                    ), f"{msg}: {sky_coverage_name_dict[label]} differs from reference file."
+                    assert equal, (
+                        f"{msg}: {sky_coverage_name_dict[label]} differs from reference file."
+                    )
 
             position_mds.plot_delays(self.destination_folder, ant=ant, ddi=ddi)
             if not produce_reference_data():
@@ -144,9 +145,9 @@ class TestPositionMDS:
                     f"{self.destination_folder}/{delay_name_dict[label]}",
                     f"{self.ref_products_name}/{delay_name_dict[label]}",
                 )
-                assert (
-                    equal
-                ), f"{msg}: {delay_name_dict[label]} differs from reference file."
+                assert equal, (
+                    f"{msg}: {delay_name_dict[label]} differs from reference file."
+                )
 
             position_mds.plot_position_corrections(self.destination_folder, ddi=ddi)
             if not produce_reference_data():
@@ -154,9 +155,9 @@ class TestPositionMDS:
                     f"{self.destination_folder}/{ant_pos_name_dict[label]}",
                     f"{self.ref_products_name}/{ant_pos_name_dict[label]}",
                 )
-                assert (
-                    equal
-                ), f"{msg}: {ant_pos_name_dict[label]} differs from reference file."
+                assert equal, (
+                    f"{msg}: {ant_pos_name_dict[label]} differs from reference file."
+                )
 
         return
 
@@ -170,12 +171,12 @@ class TestPositionMDS:
         for label, filename in self.position_files.items():
             position_mds = open_position(filename)
             expected_depth = depth_dict[label]
-            assert (
-                position_mds.root.depth == expected_depth
-            ), f"{label.capitalize()} combination mds must have a depth of {expected_depth}."
-            assert (
-                "reference_antenna" in position_mds.root.attrs
-            ), f"{label.capitalize()} combination mds must have a root attribute for reference antenna."
-            assert (
-                "telescope_name" in position_mds.root.attrs
-            ), f"{label.capitalize()} combination mds must have a root attribute for telescopa name."
+            assert position_mds.root.depth == expected_depth, (
+                f"{label.capitalize()} combination mds must have a depth of {expected_depth}."
+            )
+            assert "reference_antenna" in position_mds.root.attrs, (
+                f"{label.capitalize()} combination mds must have a root attribute for reference antenna."
+            )
+            assert "telescope_name" in position_mds.root.attrs, (
+                f"{label.capitalize()} combination mds must have a root attribute for telescopa name."
+            )

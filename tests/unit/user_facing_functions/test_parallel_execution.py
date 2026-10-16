@@ -1,23 +1,23 @@
-import toolviper
-import shutil
 import pathlib
+import shutil
 
-from astrohack.utils.verification_tools import add_data_folder_to_names_in_class
+import toolviper
 from toolviper.dask.client import local_client
 
 from astrohack import (
+    beamcut,
     extract_holog,
     extract_pointing,
-    open_pointing,
-    open_holog,
     holog,
-    open_image,
-    panel,
-    open_panel,
     locit,
+    open_holog,
+    open_image,
+    open_panel,
+    open_pointing,
     open_position,
-    beamcut,
+    panel,
 )
+from astrohack.utils.verification_tools import add_data_folder_to_names_in_class
 
 
 class TestAstrohackInParallel:
@@ -82,14 +82,14 @@ class TestAstrohackInParallel:
             overwrite=True,
             parallel=True,
         )
-        assert pathlib.Path(
-            self.def_pnt_name
-        ).is_dir(), f"A .point.zarr file named {self.def_pnt_name} does not exist."
+        assert pathlib.Path(self.def_pnt_name).is_dir(), (
+            f"A .point.zarr file named {self.def_pnt_name} does not exist."
+        )
 
         ref_pnt_mds = open_pointing(self.ref_pnt_name)
-        assert new_pnt_mds.is_close_to(
-            ref_pnt_mds
-        ), "Reference and new mdses are different."
+        assert new_pnt_mds.is_close_to(ref_pnt_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_extract_holog(self):
         new_hlg_mds = extract_holog(
@@ -99,14 +99,14 @@ class TestAstrohackInParallel:
             overwrite=True,
             parallel=True,
         )
-        assert pathlib.Path(
-            self.def_hlg_name
-        ).is_dir(), f"A .holog.zarr file named {self.def_hlg_name} does not exist."
+        assert pathlib.Path(self.def_hlg_name).is_dir(), (
+            f"A .holog.zarr file named {self.def_hlg_name} does not exist."
+        )
 
         ref_hlg_mds = open_holog(self.ref_hlg_name)
-        assert new_hlg_mds.is_close_to(
-            ref_hlg_mds
-        ), "Reference and new mdses are different."
+        assert new_hlg_mds.is_close_to(ref_hlg_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_holog(self):
         new_img_mds = holog(
@@ -115,14 +115,14 @@ class TestAstrohackInParallel:
             overwrite=True,
             parallel=True,
         )
-        assert pathlib.Path(
-            self.def_img_name
-        ).is_dir(), f"A .image.zarr file named {self.def_img_name} does not exist."
+        assert pathlib.Path(self.def_img_name).is_dir(), (
+            f"A .image.zarr file named {self.def_img_name} does not exist."
+        )
 
         ref_img_mds = open_image(self.ref_img_name)
-        assert new_img_mds.is_close_to(
-            ref_img_mds
-        ), "Reference and new mdses are different."
+        assert new_img_mds.is_close_to(ref_img_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_panel(self):
         new_pnl_mds = panel(
@@ -131,14 +131,14 @@ class TestAstrohackInParallel:
             overwrite=True,
             parallel=True,
         )
-        assert pathlib.Path(
-            self.def_pnl_name
-        ).is_dir(), f"A .panel.zarr file named {self.def_pnl_name} does not exist."
+        assert pathlib.Path(self.def_pnl_name).is_dir(), (
+            f"A .panel.zarr file named {self.def_pnl_name} does not exist."
+        )
 
         ref_pnl_mds = open_panel(self.ref_pnl_name)
-        assert new_pnl_mds.is_close_to(
-            ref_pnl_mds
-        ), "Reference and new mdses are different."
+        assert new_pnl_mds.is_close_to(ref_pnl_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_locit(self):
         new_pos_mds = locit(
@@ -147,14 +147,14 @@ class TestAstrohackInParallel:
             parallel=True,
             overwrite=True,
         )
-        assert pathlib.Path(
-            self.def_pos_name
-        ).is_dir(), f"A .position.zarr file named {self.def_pos_name} does not exist."
+        assert pathlib.Path(self.def_pos_name).is_dir(), (
+            f"A .position.zarr file named {self.def_pos_name} does not exist."
+        )
 
         ref_pos_mds = open_position(self.ref_pos_name)
-        assert new_pos_mds.is_close_to(
-            ref_pos_mds
-        ), "Reference and new mdses are different."
+        assert new_pos_mds.is_close_to(ref_pos_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_beamcut(self):
         extract_pointing(
@@ -180,9 +180,9 @@ class TestAstrohackInParallel:
             overwrite=True,
             destination=None,
         )
-        assert pathlib.Path(
-            self.def_bmc_name
-        ).is_dir(), f"A .beamcut.zarr file named {self.def_bmc_name} does not exist."
+        assert pathlib.Path(self.def_bmc_name).is_dir(), (
+            f"A .beamcut.zarr file named {self.def_bmc_name} does not exist."
+        )
 
         serial_mds = beamcut(
             holog_name=self.bmc_hlg_name,
@@ -192,6 +192,6 @@ class TestAstrohackInParallel:
             destination=None,
         )
 
-        assert parallel_mds.is_close_to(
-            serial_mds
-        ), "parallel and serial mdses are different."
+        assert parallel_mds.is_close_to(serial_mds), (
+            "parallel and serial mdses are different."
+        )

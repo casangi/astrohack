@@ -1,8 +1,8 @@
 import os
-import shutil
-import pytest
 import pathlib
+import shutil
 
+import pytest
 import toolviper
 
 from astrohack import open_locit
@@ -52,17 +52,17 @@ class TestExtractLocit:
 
         # Create locit_mds and check the dictionary structure
         new_lct_mds = extract_locit(cal_table=self.cal_table_name, overwrite=True)
-        assert pathlib.Path(
-            self.def_lct_name
-        ).is_dir(), f"A .locit.zarr file named {self.def_lct_name} does not exist."
+        assert pathlib.Path(self.def_lct_name).is_dir(), (
+            f"A .locit.zarr file named {self.def_lct_name} does not exist."
+        )
 
         if produce_reference_data():
             return
 
         ref_lct_mds = open_locit(self.ref_lct_name)
-        assert new_lct_mds.is_close_to(
-            ref_lct_mds
-        ), "Reference and new mdses are different."
+        assert new_lct_mds.is_close_to(ref_lct_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_data_selection(self):
         """
@@ -80,15 +80,15 @@ class TestExtractLocit:
 
         ant_list = list(new_lct_mds.keys())
         assert len(ant_list) == 1, "A single antenna should be present."
-        assert (
-            ant_list[0] == self.ant_key
-        ), "Ant name should be the same as the one given."
+        assert ant_list[0] == self.ant_key, (
+            "Ant name should be the same as the one given."
+        )
 
         ddi_list = list(new_lct_mds[self.ant_key].keys())
         assert len(ddi_list) == 1, "A single ddi should be present."
-        assert (
-            ddi_list[0] == self.ddi_key
-        ), "DDI key should be the same as the one given."
+        assert ddi_list[0] == self.ddi_key, (
+            "DDI key should be the same as the one given."
+        )
 
     def test_overwrite(self):
         """
@@ -108,9 +108,9 @@ class TestExtractLocit:
             overwrite=True,
         )
         modified_time = os.path.getctime(self.def_lct_name)
-        assert (
-            initial_time != modified_time
-        ), "Recreated file has to have a different time from the original file."
+        assert initial_time != modified_time, (
+            "Recreated file has to have a different time from the original file."
+        )
 
         with pytest.raises(FileExistsError):
             extract_locit(

@@ -1,5 +1,5 @@
-.. image:: https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue
-   :target: https://www.python.org/downloads/release/python-3130/
+.. image:: https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue
+   :target: https://www.python.org/downloads/release/python-3140/
 
 .. image:: https://github.com/nrao/astrohack/actions/workflows/python-testing-linux.yml/badge.svg?branch=main
    :target: https://github.com/nrao/astrohack/actions/workflows/python-testing-linux.yml?query=branch%3Amain

@@ -1,12 +1,11 @@
+import numpy as np
 import toolviper.utils.logger as logger
-
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize
 
-from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT, PanelPoint, PanelModel
-from astrohack.utils.constants import pi, fontsize, markersize
+from astrohack.antenna.panel_fitting import PANEL_MODEL_DICT, PanelModel, PanelPoint
+from astrohack.utils.constants import fontsize, markersize, pi
 from astrohack.utils.conversion import convert_unit
-import numpy as np
 
 
 class BasePanel:

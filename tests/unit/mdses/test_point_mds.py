@@ -1,14 +1,14 @@
 import shutil
+
 import matplotlib
 import numpy as np
-
 from toolviper.utils import data
 
-from astrohack import AstrohackPointFile, open_pointing, generate_holog_obs_dict
+from astrohack import AstrohackPointFile, generate_holog_obs_dict, open_pointing
 from astrohack.utils.verification_tools import (
     add_data_folder_to_names_in_class,
-    are_png_files_close,
     are_lists_equal,
+    are_png_files_close,
     execute_cleanup,
     produce_reference_data,
 )
@@ -67,7 +67,9 @@ class TestPointMDS:
             assert are_png_files_close(
                 f"{self.destination_folder}/{plot_name}",
                 f"{self.ref_products_name}/{plot_name}",
-            ), "All antennas combined directional cosines plot is failing closeness test"
+            ), (
+                "All antennas combined directional cosines plot is failing closeness test"
+            )
 
         pnt_mds.plot_pointing_in_time(
             self.destination_folder,
@@ -79,7 +81,9 @@ class TestPointMDS:
             assert are_png_files_close(
                 f"{self.destination_folder}/{plot_name}",
                 f"{self.ref_products_name}/{plot_name}",
-            ), "All antennas combined directional cosines plot is failing closeness test"
+            ), (
+                "All antennas combined directional cosines plot is failing closeness test"
+            )
 
     def compute_simple_hash(self, pnt_mds: AstrohackPointFile, key_to_hash):
         return np.sum(np.abs(pnt_mds[self.ant_key][key_to_hash].values))
@@ -101,9 +105,9 @@ class TestPointMDS:
 
         assert old_dir_hash == new_dir_hash, "Direction hash should not change"
         assert old_tgt_hash != new_tgt_hash, "Target hash should have changed"
-        assert (
-            new_tgt_hash == new_dir_hash
-        ), "Target and direction hashes should be equal"
+        assert new_tgt_hash == new_dir_hash, (
+            "Target and direction hashes should be equal"
+        )
         assert new_pnt_off_hash == 0, "New pointing offset hash should be zero"
         assert new_dir_cos_hash == 0, "New directional cosines hash should be zero"
 
@@ -117,14 +121,14 @@ class TestPointMDS:
         for ddi_key, ddi_dict in hlg_obs_dict.items():
             ant_dict = ddi_dict["map_0"]["ant"]
             ant_keys = list(ant_dict.keys())
-            assert (
-                len(ant_keys) == 1
-            ), f"There should be a single mapping antenna for {ddi_key}"
-            assert (
-                ant_keys[0] == self.alt_ant_id
-            ), f"The only mapping antenna present for {ddi_key} should be {self.alt_ant_id}"
+            assert len(ant_keys) == 1, (
+                f"There should be a single mapping antenna for {ddi_key}"
+            )
+            assert ant_keys[0] == self.alt_ant_id, (
+                f"The only mapping antenna present for {ddi_key} should be {self.alt_ant_id}"
+            )
 
             ref_ants = ant_dict[self.alt_ant_id]
-            assert are_lists_equal(
-                ref_ants, exp_ref_ants
-            ), f"Reference antennas should be {exp_ref_ants} but got {ref_ants}"
+            assert are_lists_equal(ref_ants, exp_ref_ants), (
+                f"Reference antennas should be {exp_ref_ants} but got {ref_ants}"
+            )

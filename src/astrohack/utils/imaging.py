@@ -1,17 +1,17 @@
 import math
-import scipy.ndimage
-import numpy as np
-import astropy.units as units
-import astropy.coordinates as coord
-from numba import njit
-import scipy.fftpack
 import time
 
+import astropy.coordinates as coord
+import astropy.units as units
+import numpy as np
+import scipy.fftpack
+import scipy.ndimage
 import toolviper.utils.logger as logger
+from numba import njit
 
 from astrohack.utils.algorithms import calc_coords
-from astrohack.utils.gridding import gridding_correction
 from astrohack.utils.constants import clight, njit_caching
+from astrohack.utils.gridding import gridding_correction
 
 
 def calculate_parallactic_angle_chunk(

@@ -1,13 +1,14 @@
-import pytest
-import os
 import filecmp
+import os
 import shutil
+
 import numpy as np
+import pytest
 from shapely.geometry.polygon import Polygon
 
-from astrohack.utils.ray_tracing_general import simple_axis
 from astrohack.antenna.ring_panel import RingPanel
 from astrohack.antenna.telescope import RingedCassegrain, get_proper_telescope
+from astrohack.utils.ray_tracing_general import simple_axis
 
 
 class TestClassTelescope:
@@ -18,9 +19,9 @@ class TestClassTelescope:
         Test the initialization of a Telescope object using the VLA as a test case
         """
         tel = get_proper_telescope("vla")
-        assert isinstance(
-            tel, RingedCassegrain
-        ), "Telescope initialized to the proper class"
+        assert isinstance(tel, RingedCassegrain), (
+            "Telescope initialized to the proper class"
+        )
         assert tel.name == "VLA", "Telescope name loaded incorrectly"
         assert tel.diameter == 25.0, "Telescope diameter loaded incorrectly"
 
@@ -29,9 +30,9 @@ class TestClassTelescope:
             del vla_ns
 
         ngvla = get_proper_telescope("VLA", "na")
-        assert (
-            ngvla.name == "ngVLA proto 2025"
-        ), "ngVLA prototype is not properly initialized"
+        assert ngvla.name == "ngVLA proto 2025", (
+            "ngVLA prototype is not properly initialized"
+        )
 
         alma_da = get_proper_telescope("ALMA", "DA13")
         assert alma_da.name == "ALMA DA", "ALMA DA is not properly initialized"
@@ -71,9 +72,9 @@ class TestClassTelescope:
         testfile = f"{self.silly_name}-tel.zarr"
         tel = get_proper_telescope("vla")
         tel.write(testfile)
-        assert os.path.exists(
-            testfile
-        ), "Telescope configuration file not created at the proper location"
+        assert os.path.exists(testfile), (
+            "Telescope configuration file not created at the proper location"
+        )
         assert (
             filecmp.cmp(tel.file_path + "/vlba.zarr/.zattrs", testfile + "/.zattrs")
             == 0
@@ -82,9 +83,9 @@ class TestClassTelescope:
 
         tel.name = self.silly_name
         tel.write_to_distro()
-        assert os.path.exists(
-            tel.file_path + f"/{self.silly_name}.zarr"
-        ), "Telescope configuration file not created at the proper location"
+        assert os.path.exists(tel.file_path + f"/{self.silly_name}.zarr"), (
+            "Telescope configuration file not created at the proper location"
+        )
         shutil.rmtree(tel.file_path + f"/{self.silly_name}.zarr")
 
     def test_ringed_consistency(self):
@@ -127,9 +128,9 @@ class TestClassTelescope:
         mask = tel.create_aperture_mask(u_axis, v_axis, use_detailed_mask=False)
         radius = np.sqrt(u_axis[np.newaxis, :] ** 2 + v_axis[:, np.newaxis] ** 2)
         ref_mask = np.where(radius <= tel.diameter / 2, True, False)
-        assert mask[
-            mid_point, mid_point
-        ], "Mask should be true at the center of an unblocked aperture"
+        assert mask[mid_point, mid_point], (
+            "Mask should be true at the center of an unblocked aperture"
+        )
         assert np.all(ref_mask == mask), "Mask is not identical to reference"
 
         mask = tel.create_aperture_mask(u_axis, v_axis, use_detailed_mask=True)
@@ -137,82 +138,82 @@ class TestClassTelescope:
             poly = Polygon(tel.panel_dict[panel_label]["polygon"])
             iu = np.argmin(np.abs(u_axis - poly.centroid.x))
             iv = np.argmin(np.abs(v_axis - poly.centroid.y))
-            assert mask[
-                iu, iv
-            ], f"Panel {panel_label} centroid should be included in mask"
+            assert mask[iu, iv], (
+                f"Panel {panel_label} centroid should be included in mask"
+            )
 
     def test_build_ringed_panel_list(self):
         tel = get_proper_telescope("vla")
         panel_list = tel.build_panel_list("flexible", 0.2)
-        assert isinstance(
-            panel_list[0], RingPanel
-        ), "Wrong class for panels in panel list"
-        assert (
-            len(panel_list) == 172
-        ), "Panel list for the VLA is produced with the wrong number of panels"
-        assert (
-            panel_list[0].label == "1-1"
-        ), "Labelling for VLA panels is not working as expected"
-        assert (
-            panel_list[134].label == "6-3"
-        ), "Labelling for VLA panels is not working as expected"
-        assert (
-            panel_list[-1].label == "6-40"
-        ), "Labelling for VLA panels is not working as expected"
+        assert isinstance(panel_list[0], RingPanel), (
+            "Wrong class for panels in panel list"
+        )
+        assert len(panel_list) == 172, (
+            "Panel list for the VLA is produced with the wrong number of panels"
+        )
+        assert panel_list[0].label == "1-1", (
+            "Labelling for VLA panels is not working as expected"
+        )
+        assert panel_list[134].label == "6-3", (
+            "Labelling for VLA panels is not working as expected"
+        )
+        assert panel_list[-1].label == "6-40", (
+            "Labelling for VLA panels is not working as expected"
+        )
 
         tel = get_proper_telescope("alma", "dv12")
         panel_list = tel.build_panel_list("flexible", 0.2)
-        assert isinstance(
-            panel_list[0], RingPanel
-        ), "Wrong class for panels in panel list"
-        assert (
-            len(panel_list) == 264
-        ), "Panel list for the ALMA DV is produced with the wrong number of panels"
-        assert (
-            panel_list[0].label == "3-11"
-        ), "Labelling for ALMA DV panels is not working as expected"
-        assert (
-            panel_list[153].label == "7-63"
-        ), "Labelling for ALMA DV panels is not working as expected"
-        assert (
-            panel_list[-1].label == "4-81"
-        ), "Labelling for ALMA DV panels is not working as expected"
+        assert isinstance(panel_list[0], RingPanel), (
+            "Wrong class for panels in panel list"
+        )
+        assert len(panel_list) == 264, (
+            "Panel list for the ALMA DV is produced with the wrong number of panels"
+        )
+        assert panel_list[0].label == "3-11", (
+            "Labelling for ALMA DV panels is not working as expected"
+        )
+        assert panel_list[153].label == "7-63", (
+            "Labelling for ALMA DV panels is not working as expected"
+        )
+        assert panel_list[-1].label == "4-81", (
+            "Labelling for ALMA DV panels is not working as expected"
+        )
 
         tel = get_proper_telescope("alma", "da51")
         panel_list = tel.build_panel_list("flexible", 0.2)
-        assert isinstance(
-            panel_list[0], RingPanel
-        ), "Wrong class for panels in panel list"
-        assert (
-            len(panel_list) == 120
-        ), "Panel list for the ALMA DA is produced with the wrong number of panels"
-        assert (
-            panel_list[0].label == "2-11"
-        ), "Labelling for ALMA DA panels is not working as expected"
-        assert (
-            panel_list[72].label == "6-44"
-        ), "Labelling for ALMA DA panels is not working as expected"
-        assert (
-            panel_list[-1].label == "3-51"
-        ), "Labelling for ALMA DA panels is not working as expected"
+        assert isinstance(panel_list[0], RingPanel), (
+            "Wrong class for panels in panel list"
+        )
+        assert len(panel_list) == 120, (
+            "Panel list for the ALMA DA is produced with the wrong number of panels"
+        )
+        assert panel_list[0].label == "2-11", (
+            "Labelling for ALMA DA panels is not working as expected"
+        )
+        assert panel_list[72].label == "6-44", (
+            "Labelling for ALMA DA panels is not working as expected"
+        )
+        assert panel_list[-1].label == "3-51", (
+            "Labelling for ALMA DA panels is not working as expected"
+        )
 
         tel = get_proper_telescope("alma", "tp4")
         panel_list = tel.build_panel_list("flexible", 0.2)
-        assert isinstance(
-            panel_list[0], RingPanel
-        ), "Wrong class for panels in panel list"
-        assert (
-            len(panel_list) == 205
-        ), "Panel list for the ALMA TP is produced with the wrong number of panels"
-        assert (
-            panel_list[0].label == "1-11"
-        ), "Labelling for ALMA TP panels is not working as expected"
-        assert (
-            panel_list[72].label == "3-45"
-        ), "Labelling for ALMA TP panels is not working as expected"
-        assert (
-            panel_list[-1].label == "2-71"
-        ), "Labelling for ALMA TP panels is not working as expected"
+        assert isinstance(panel_list[0], RingPanel), (
+            "Wrong class for panels in panel list"
+        )
+        assert len(panel_list) == 205, (
+            "Panel list for the ALMA TP is produced with the wrong number of panels"
+        )
+        assert panel_list[0].label == "1-11", (
+            "Labelling for ALMA TP panels is not working as expected"
+        )
+        assert panel_list[72].label == "3-45", (
+            "Labelling for ALMA TP panels is not working as expected"
+        )
+        assert panel_list[-1].label == "2-71", (
+            "Labelling for ALMA TP panels is not working as expected"
+        )
 
         return
 
@@ -222,15 +223,15 @@ class TestClassTelescope:
         tel = get_proper_telescope("ngvla")
         panel_list = tel.build_panel_list(model, margin)
 
-        assert len(panel_list) == len(
-            tel.panel_dict.keys()
-        ), "Panel list has the wrong number of elements"
-        assert (
-            panel_list[0].model_name == model
-        ), "Panels have initialized with the wrong model"
-        assert (
-            panel_list[0].margin == margin
-        ), "Panels have initialized with the wrong margin"
+        assert len(panel_list) == len(tel.panel_dict.keys()), (
+            "Panel list has the wrong number of elements"
+        )
+        assert panel_list[0].model_name == model, (
+            "Panels have initialized with the wrong model"
+        )
+        assert panel_list[0].margin == margin, (
+            "Panels have initialized with the wrong margin"
+        )
 
     def test_assign_ringed_panel(self):
         tel = get_proper_telescope("vla")
@@ -249,9 +250,9 @@ class TestClassTelescope:
             and panel_map.shape[1] == v_axis.shape[0]
         ), "panel map has the wrong shape"
 
-        assert np.isnan(
-            panel_map[u_axis.shape[0] // 2, v_axis.shape[0] // 2]
-        ), "Panel map has a valid value for blocked region in aperture"
+        assert np.isnan(panel_map[u_axis.shape[0] // 2, v_axis.shape[0] // 2]), (
+            "Panel map has a valid value for blocked region in aperture"
+        )
         assert np.isnan(panel_map[0, 0]), "Panel map has a valid value outside aperture"
         assert panel_map[220, 150] == 39.0, "Wrong panel assignment"
         assert panel_map[100, 150] == 12.0, "Wrong panel assignment"

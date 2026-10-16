@@ -1,31 +1,29 @@
-import numpy as np
 import pathlib
 
-from astropy.time import Time
-from typing import Union, Tuple, List
-
-import toolviper.utils.parameter
+import numpy as np
 import toolviper.utils.logger as logger
+import toolviper.utils.parameter
+from astropy.time import Time
 
 from astrohack.antenna.telescope import get_proper_telescope
 from astrohack.io.base_mds import AstrohackBaseFile
-from astrohack.utils.text import (
-    create_pretty_table,
-    rad_to_hour_str,
-    rad_to_deg_str,
-    convert_unit,
-    lnbr,
-)
 from astrohack.utils.algorithms import compute_antenna_relative_off
-from astrohack.utils.constants import notavail, figsize
-from astrohack.visualization.plot_tools import (
-    create_figure_and_axes,
-    scatter_plot,
-    close_figure,
+from astrohack.utils.constants import figsize, notavail
+from astrohack.utils.text import (
+    convert_unit,
+    create_pretty_table,
+    lnbr,
+    rad_to_deg_str,
+    rad_to_hour_str,
 )
 from astrohack.utils.tools import get_telescope_lat_lon_rad
 from astrohack.utils.validation import custom_unit_checker
 from astrohack.visualization.array_cfg_plot import plot_array_configuration
+from astrohack.visualization.plot_tools import (
+    close_figure,
+    create_figure_and_axes,
+    scatter_plot,
+)
 
 
 class AstrohackLocitFile(AstrohackBaseFile):
@@ -145,7 +143,7 @@ class AstrohackLocitFile(AstrohackBaseFile):
                         [
                             rad_to_deg_str(ant_info["longitude"]),
                             rad_to_deg_str(ant_info["latitude"]),
-                            f'{ant_info["radius"]:.4f}',
+                            f"{ant_info['radius']:.4f}",
                         ]
                     )
             except KeyError:
@@ -167,7 +165,7 @@ class AstrohackLocitFile(AstrohackBaseFile):
         labels: bool = True,
         precessed: bool = False,
         display: bool = False,
-        figure_size: Union[Tuple, List[float | int], np.ndarray, None] = None,
+        figure_size: tuple | list[float | int] | np.ndarray | None = None,
         dpi: int = 300,
     ) -> None:
         """Plot source positions in either FK5 or precessed right ascension and declination.
@@ -235,9 +233,9 @@ class AstrohackLocitFile(AstrohackBaseFile):
         stations: bool = True,
         zoff: bool = False,
         unit: str = "km",
-        box_size: Union[int, float, None] = None,
+        box_size: int | float | None = None,
         display: bool = False,
-        figure_size: Union[Tuple, List[float | int], np.ndarray, None] = None,
+        figure_size: tuple | list[float | int] | np.ndarray | None = None,
         dpi: int = 300,
     ) -> None:
         """Plot antenna positions.

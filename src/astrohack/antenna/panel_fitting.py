@@ -1,6 +1,5 @@
 import numpy as np
 import scipy.optimize as opt
-
 import toolviper.utils.logger as logger
 
 from astrohack.utils.algorithms import gauss_elimination, least_squares_jit
@@ -404,7 +403,7 @@ def _solve_scipy_opt(self, samples, verbose=False, x0=None):
         else:
             params = result[0]
             if verbose:
-                logger.info("Converged with less than {0:d} iterations".format(maxfev))
+                logger.info(f"Converged with less than {maxfev:d} iterations")
             return params
 
 
@@ -568,7 +567,6 @@ PANEL_MODEL_DICT = {
 
 
 class PanelModel:
-
     def __init__(self, model_dict, zeta, ref_points, center):
         """
         Initialize a PanelModel object
@@ -661,7 +659,6 @@ class PanelModel:
 
 
 class PanelPoint:
-
     def __init__(self, xc, yc, ix=None, iy=None, value=None):
         """
         Initialize a point with its important properties

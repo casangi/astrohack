@@ -1,0 +1,30 @@
+# Ruff configuration (lint + format). Kept in its own file because
+# release_script.py rewrites pyproject.toml with toml.dump, which drops
+# comments.
+target-version = "py312"
+# Notebooks were not formatted by black either.
+extend-exclude = ["*.ipynb"]
+
+[lint]
+# Same rule set as the VIPER packages (toolviper, xradio, graphviper,
+# astroviper):
+#   E4/E7/E9 -- pycodestyle errors (import placement, statement syntax, runtime)
+#   F        -- pyflakes: undefined names, unused imports, unused variables
+#   B        -- flake8-bugbear: likely bugs (mutable defaults, loop captures, ...)
+#   UP       -- pyupgrade: outdated syntax/typing
+#   I        -- isort-compatible import sorting
+select = ["E4", "E7", "E9", "F", "B", "UP", "I"]
+# Findings that need hand edits, ignored so the switch from black to ruff is
+# style-only. TODO: fix them and drop the corresponding entries.
+ignore = [
+    "B007",  # unused loop control variable
+    "B008",  # function call in argument default
+    "B011",  # assert False
+    "B017",  # pytest.raises(Exception)
+    "B018",  # useless expression
+    "B030",  # except with a non-exception class
+    "B904",  # raise without `from` inside except
+    "B905",  # zip() without strict=
+    "UP030", # explicit positional indices in str.format
+    "UP031", # printf-style string formatting
+]

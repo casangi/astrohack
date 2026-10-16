@@ -1,23 +1,22 @@
 import pathlib
-import numpy as np
-from astropy.coordinates import EarthLocation, SkyCoord, CIRS, AltAz
-from astropy.time import Time
-import astropy.units as u
-from scipy import optimize as opt
 
+import astropy.units as u
+import numpy as np
 import toolviper.utils.logger as logger
 import xarray as xr
+from astropy.coordinates import CIRS, AltAz, EarthLocation, SkyCoord
+from astropy.time import Time
+from scipy import optimize as opt
 
 from astrohack.io.position_mds import AstrohackPositionFile
-from astrohack.utils.text import (
-    get_data_name,
-    create_dataset_label,
-    param_to_list,
-)
-
-from astrohack.utils.conversion import convert_unit
 from astrohack.utils.algorithms import least_squares, phase_wrapping
 from astrohack.utils.constants import twopi
+from astrohack.utils.conversion import convert_unit
+from astrohack.utils.text import (
+    create_dataset_label,
+    get_data_name,
+    param_to_list,
+)
 
 
 def locit_separated_chunk(locit_parms: dict, output_mds: AstrohackPositionFile):
@@ -596,7 +595,7 @@ def _fit_data(coordinates, delays, locit_parms):
             return np.nan, np.nan, False
 
     else:
-        msg = f'Unrecognized fitting engine: {locit_parms["fit_engine"]}'
+        msg = f"Unrecognized fitting engine: {locit_parms['fit_engine']}"
         logger.error(msg)
         return np.nan, np.nan, False
 
@@ -897,9 +896,7 @@ def _solve_scipy_optimize_curve_fit(
                 continue
             else:
                 if verbose:
-                    logger.info(
-                        "Converged with less than {0:d} iterations".format(maxfev)
-                    )
+                    logger.info(f"Converged with less than {maxfev:d} iterations")
                 break
 
     variance = np.diag(covar)

@@ -1,14 +1,15 @@
-import pathlib
-import numpy as np
-import shutil
 import glob
+import pathlib
+import shutil
+
 import matplotlib
+import numpy as np
 from toolviper.utils import data
 
 from astrohack import beamcut, extract_holog, extract_pointing, open_beamcut
 from astrohack.utils.verification_tools import (
-    are_lists_equal,
     add_data_folder_to_names_in_class,
+    are_lists_equal,
     execute_cleanup,
     produce_reference_data,
 )
@@ -22,7 +23,7 @@ def retrieve_data_from_report(report):
     azel_unit = None
     lm_unit = None
 
-    with open(report, "r") as rep_file:
+    with open(report) as rep_file:
         for line in rep_file:
             if line[0] == "-":  # header line
                 wrds = line.split()
@@ -112,21 +113,21 @@ class TestBeamcut:
         )
 
         destination_exists = pathlib.Path(self.destination_folder).is_dir()
-        assert (
-            destination_exists
-        ), f"destination folder {self.destination_folder} does not exist"
+        assert destination_exists, (
+            f"destination folder {self.destination_folder} does not exist"
+        )
 
         exp_n_pngs = 16
         n_pngs = len(glob.glob(f"{self.destination_folder}/*.png"))
-        assert (
-            n_pngs == exp_n_pngs
-        ), f"When a destination is given beamcut should prepare {exp_n_pngs} pngs, {n_pngs} have been found"
+        assert n_pngs == exp_n_pngs, (
+            f"When a destination is given beamcut should prepare {exp_n_pngs} pngs, {n_pngs} have been found"
+        )
 
         exp_n_txt = 4
         n_txts = len(glob.glob(f"{self.destination_folder}/*.txt"))
-        assert (
-            n_txts == exp_n_txt
-        ), f"When a destination is given beamcut should prepare {exp_n_txt} reports, {n_txts} have been found"
+        assert n_txts == exp_n_txt, (
+            f"When a destination is given beamcut should prepare {exp_n_txt} reports, {n_txts} have been found"
+        )
 
     def test_data_selection(self):
         # This test depends on knowing the contents of the original ms
@@ -144,15 +145,15 @@ class TestBeamcut:
         full_ddi_list = ["ddi_0", "ddi_1"]
 
         mds_ant_list = list(beamcut_mds.keys())
-        assert are_lists_equal(
-            full_ant_list, mds_ant_list
-        ), 'With ant="all", mds_ant_list should be equal to full_ant_list'
+        assert are_lists_equal(full_ant_list, mds_ant_list), (
+            'With ant="all", mds_ant_list should be equal to full_ant_list'
+        )
 
         for ant in full_ant_list:
             ddi_list = list(beamcut_mds[ant].keys())
-            assert are_lists_equal(
-                ddi_list, full_ddi_list
-            ), 'With ddi="all", ddi_list should be equal to full_ddi_list'
+            assert are_lists_equal(ddi_list, full_ddi_list), (
+                'With ddi="all", ddi_list should be equal to full_ddi_list'
+            )
 
         beamcut_mds = beamcut(
             holog_name=self.holog_name,
@@ -166,15 +167,15 @@ class TestBeamcut:
         short_ddi_list = ["ddi_1"]
 
         mds_ant_list = list(beamcut_mds.keys())
-        assert are_lists_equal(
-            short_ant_list, mds_ant_list
-        ), 'With ant="all", mds_ant_list should be equal to short_ant_list'
+        assert are_lists_equal(short_ant_list, mds_ant_list), (
+            'With ant="all", mds_ant_list should be equal to short_ant_list'
+        )
 
         for ant in short_ant_list:
             ddi_list = list(beamcut_mds[ant].keys())
-            assert are_lists_equal(
-                ddi_list, short_ddi_list
-            ), 'With ddi="all", ddi_list should be equal to short_ddi_list'
+            assert are_lists_equal(ddi_list, short_ddi_list), (
+                'With ddi="all", ddi_list should be equal to short_ddi_list'
+            )
 
     def test_report_configuration(self):
         if produce_reference_data():
@@ -196,18 +197,18 @@ class TestBeamcut:
         exp_el = 45.5
         exp_azel_unit = "deg"
         exp_lm_unit = "amin"
-        assert np.isclose(
-            rep_az, exp_az, atol=1e-1
-        ), f"Report's azimuth should be {exp_az} {exp_azel_unit}, got {rep_az} {rep_azel_unit}"
-        assert np.isclose(
-            rep_el, exp_el, atol=1e-1
-        ), f"Report's elevation should be {exp_el} {exp_azel_unit}, got {rep_el} {rep_azel_unit}"
-        assert (
-            rep_azel_unit == exp_azel_unit
-        ), f"Report's azimuth/elevation unit should be {exp_azel_unit}, got {rep_azel_unit}"
-        assert (
-            rep_lm_unit == exp_lm_unit
-        ), f"Report's lm offsets unit should be {exp_lm_unit}, got {rep_lm_unit}"
+        assert np.isclose(rep_az, exp_az, atol=1e-1), (
+            f"Report's azimuth should be {exp_az} {exp_azel_unit}, got {rep_az} {rep_azel_unit}"
+        )
+        assert np.isclose(rep_el, exp_el, atol=1e-1), (
+            f"Report's elevation should be {exp_el} {exp_azel_unit}, got {rep_el} {rep_azel_unit}"
+        )
+        assert rep_azel_unit == exp_azel_unit, (
+            f"Report's azimuth/elevation unit should be {exp_azel_unit}, got {rep_azel_unit}"
+        )
+        assert rep_lm_unit == exp_lm_unit, (
+            f"Report's lm offsets unit should be {exp_lm_unit}, got {rep_lm_unit}"
+        )
 
         # this test depends on us knowing some values expected to be in the report
         beamcut(
@@ -229,18 +230,18 @@ class TestBeamcut:
         exp_el = 46.0 * 60
         exp_azel_unit = "amin"
         exp_lm_unit = "asec"
-        assert np.isclose(
-            rep_az, exp_az, atol=30
-        ), f"Report's azimuth should be {exp_az} {exp_azel_unit}, got {rep_az} {rep_azel_unit}"
-        assert np.isclose(
-            rep_el, exp_el, atol=30
-        ), f"Report's elevation should be {exp_el} {exp_azel_unit}, got {rep_el} {rep_azel_unit}"
-        assert (
-            rep_azel_unit == exp_azel_unit
-        ), f"Report's azimuth/elevation unit should be {exp_azel_unit}, got {rep_azel_unit}"
-        assert (
-            rep_lm_unit == exp_lm_unit
-        ), f"Report's lm offsets unit should be {exp_lm_unit}, got {rep_lm_unit}"
+        assert np.isclose(rep_az, exp_az, atol=30), (
+            f"Report's azimuth should be {exp_az} {exp_azel_unit}, got {rep_az} {rep_azel_unit}"
+        )
+        assert np.isclose(rep_el, exp_el, atol=30), (
+            f"Report's elevation should be {exp_el} {exp_azel_unit}, got {rep_el} {rep_azel_unit}"
+        )
+        assert rep_azel_unit == exp_azel_unit, (
+            f"Report's azimuth/elevation unit should be {exp_azel_unit}, got {rep_azel_unit}"
+        )
+        assert rep_lm_unit == exp_lm_unit, (
+            f"Report's lm offsets unit should be {exp_lm_unit}, got {rep_lm_unit}"
+        )
 
     def test_naming(self):
         shutil.rmtree(self.remote_beamcut_name, ignore_errors=True)
@@ -253,9 +254,9 @@ class TestBeamcut:
             overwrite=True,
         )
 
-        assert pathlib.Path(
-            self.remote_beamcut_name
-        ).is_dir(), "If no beamcut_name is given, beamcut should create an output file named {self.remote_beamcut_name}"
+        assert pathlib.Path(self.remote_beamcut_name).is_dir(), (
+            "If no beamcut_name is given, beamcut should create an output file named {self.remote_beamcut_name}"
+        )
 
         crazy_name = self.data_dir + "/crazy_name.beamcut.zarr"
 
@@ -265,8 +266,8 @@ class TestBeamcut:
             overwrite=True,
         )
 
-        assert pathlib.Path(
-            crazy_name
-        ).is_dir(), f"Beamcut should create an output file named {crazy_name}"
+        assert pathlib.Path(crazy_name).is_dir(), (
+            f"Beamcut should create an output file named {crazy_name}"
+        )
 
         return

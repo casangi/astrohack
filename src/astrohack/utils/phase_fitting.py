@@ -1,4 +1,5 @@
 import numpy as np
+import toolviper.utils.logger as logger
 from numba import njit
 
 from astrohack.utils.algorithms import (
@@ -6,11 +7,9 @@ from astrohack.utils.algorithms import (
     least_squares_jit,
     phase_wrapping,
 )
-from astrohack.utils.conversion import convert_unit
 from astrohack.utils.constants import clight, njit_caching
+from astrohack.utils.conversion import convert_unit
 from astrohack.utils.tools import get_str_idx_in_list
-
-import toolviper.utils.logger as logger
 
 aips_par_names = [
     "phase_offset",
@@ -430,7 +429,6 @@ def _correct_phase(
     for i_u, u_val in enumerate(u_axis):
         for i_v, v_val in enumerate(v_axis):
             if not np.isnan(phase_image[i_u, i_v]):
-
                 x_focus, y_focus, z_focus, x_tilt, y_tilt, x_cass, y_cass = (
                     _matrix_coeffs(
                         u_val,
@@ -795,7 +793,6 @@ def _correct_phase_block(
                     for i_v, v_val in enumerate(v_axis):
                         phase = phase_image[time, chan, pol, i_u, i_v]
                         if not np.isnan(phase):
-
                             (
                                 x_focus,
                                 y_focus,

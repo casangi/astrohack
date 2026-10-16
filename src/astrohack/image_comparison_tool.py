@@ -1,24 +1,23 @@
-from typing import Union, List, Tuple
-import xarray as xr
 import pathlib
-import numpy as np
 
-import toolviper.utils.logger as logger
+import numpy as np
 import toolviper
+import toolviper.utils.logger as logger
+import xarray as xr
 
 from astrohack.core.image_comparison_tool import (
-    image_comparison_chunk,
     create_fits_comparison_rms_table,
+    image_comparison_chunk,
 )
+from astrohack.utils.file import add_caller_and_version_to_dict
 from astrohack.utils.graph import compute_graph_from_lists
 from astrohack.utils.validation import custom_plots_checker, custom_unit_checker
-from astrohack.utils.file import add_caller_and_version_to_dict
 
 
 @toolviper.utils.parameter.validate(custom_checker=custom_plots_checker)
 def compare_fits_images(
-    image: Union[str, List[str]],
-    reference_image: Union[str, List[str]],
+    image: str | list[str],
+    reference_image: str | list[str],
     telescope_name: str,
     destination: str,
     comparison: str = "direct",
@@ -29,7 +28,7 @@ def compare_fits_images(
     plot_original: bool = False,
     plot_divided_image: bool = False,
     plot_scatter: bool = True,
-    z_scale_limits: Union[List[float], Tuple, np.ndarray, None] = None,
+    z_scale_limits: list[float] | tuple | np.ndarray | None = None,
     colormap: str = "viridis",
     dpi: int = 300,
     display: bool = False,

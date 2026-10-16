@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+
 from astrohack.antenna.base_panel import BasePanel, markersize
 from astrohack.antenna.panel_fitting import PanelPoint
 from astrohack.utils.text import spc

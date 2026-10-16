@@ -1,11 +1,11 @@
 import json
+from typing import Any
+
 import numpy as np
 import pandas as pd
-
 import toolviper.utils.logger as logger
-
-from typing import Union, List, Any
 from rich.console import Console
+
 from astrohack.io.dio import open_holog
 from astrohack.utils.text import get_data_name
 
@@ -25,7 +25,6 @@ def _check_if_array_in_dict(array_dict, array):
 
 
 class HologObsDict(dict):
-
     def __init__(self, dict_obj: dict = None):
         if dict_obj is None:
             super().__init__()
@@ -50,7 +49,7 @@ class HologObsDict(dict):
 
     @classmethod
     def from_json_file(cls, filepath):
-        with open(filepath, "r") as file:
+        with open(filepath) as file:
             json_dict = json.load(file)
             return cls(json_dict)
 
@@ -216,7 +215,7 @@ class HologObsDict(dict):
 
         return holog_obs_dict
 
-    def _select_ddi(self, selected_values: Union[int, List[int]]):
+    def _select_ddi(self, selected_values: int | list[int]):
         prefixed_selected_values = _add_prefix_to_keys("ddi", selected_values)
         ddi_list = list(self.keys())
         for ddi_key in ddi_list:
@@ -224,7 +223,7 @@ class HologObsDict(dict):
                 self.pop(ddi_key)
         return
 
-    def _select_antenna(self, selected_values: Union[str, List[str]]):
+    def _select_antenna(self, selected_values: str | list[str]):
         for ddi_key in self.keys():
             for map_key in self[ddi_key].keys():
                 ant_list = list(self[ddi_key][map_key]["ant"].keys())
@@ -233,7 +232,7 @@ class HologObsDict(dict):
                         self[ddi_key][map_key]["ant"].pop(ant_key)
         return
 
-    def _select_map(self, selected_values: Union[int, List[int]]):
+    def _select_map(self, selected_values: int | list[int]):
         prefixed_selected_values = _add_prefix_to_keys("map", selected_values)
         for ddi_key in self.keys():
             map_list = list(self[ddi_key].keys())
@@ -241,7 +240,7 @@ class HologObsDict(dict):
                 if map_key not in prefixed_selected_values:
                     self[ddi_key].pop(map_key)
 
-    def _select_scan(self, selected_values: Union[int, List[int]]):
+    def _select_scan(self, selected_values: int | list[int]):
         for ddi_key in self.keys():
             for map_key in self[ddi_key].keys():
                 self[ddi_key][map_key]["scan"] = selected_values

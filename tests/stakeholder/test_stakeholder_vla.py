@@ -1,22 +1,22 @@
 import json
-import toolviper
 import shutil
 
 import numpy as np
+import toolviper
 
 from astrohack import open_image
 from astrohack.core.holog_obs_dict import HologObsDict
-from astrohack.io.dio import open_panel
 from astrohack.extract_holog import extract_holog
 from astrohack.extract_pointing import extract_pointing
 from astrohack.holog import holog
+from astrohack.io.dio import open_panel
 from astrohack.panel import panel
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.verification_tools import (
+    add_data_folder_to_names_in_class,
+    are_dicts_close,
     execute_cleanup,
     produce_reference_data,
-    are_dicts_close,
-    add_data_folder_to_names_in_class,
 )
 
 
@@ -174,13 +174,13 @@ class TestStakeholder:
             self.ref_json_dict["holog_obs_dict"] = res_hlg_obs_dict
 
         else:
-            with open(self.ref_json_name, "r") as json_file:
+            with open(self.ref_json_name) as json_file:
                 ref_dict = json.load(json_file)
             ref_hlg_obs_dict = ref_dict["holog_obs_dict"]
 
-            assert are_dicts_close(
-                res_hlg_obs_dict, ref_hlg_obs_dict
-            ), "Reference and computed holog observation dicts do not match"
+            assert are_dicts_close(res_hlg_obs_dict, ref_hlg_obs_dict), (
+                "Reference and computed holog observation dicts do not match"
+            )
 
     def test_center_pixels(self):
         res_pixels_dict = {}
@@ -191,13 +191,13 @@ class TestStakeholder:
             self.ref_json_dict["center_pixels"] = res_pixels_dict
 
         else:
-            with open(self.ref_json_name, "r") as json_file:
+            with open(self.ref_json_name) as json_file:
                 ref_dict = json.load(json_file)
             ref_pixels_dict = ref_dict["center_pixels"]
 
-            assert are_dicts_close(
-                res_pixels_dict, ref_pixels_dict, tol=1e-6
-            ), "Reference and computed center pixels do not match"
+            assert are_dicts_close(res_pixels_dict, ref_pixels_dict, tol=1e-6), (
+                "Reference and computed center pixels do not match"
+            )
 
         return
 
@@ -207,7 +207,7 @@ class TestStakeholder:
         if produce_reference_data():
             self.ref_json_dict["panel_shifts"] = res_mean_shift.tolist()
         else:
-            with open(self.ref_json_name, "r") as json_file:
+            with open(self.ref_json_name) as json_file:
                 ref_dict = json.load(json_file)
             ref_mean_shift = ref_dict["panel_shifts"]
 
@@ -226,6 +226,6 @@ class TestStakeholder:
             else:
                 evaluation = "worse..."
 
-            assert np.allclose(
-                res_delta_from_true, ref_delta_from_true, atol=1e-6
-            ), f"Panel shifts have changed and we are doing {evaluation}"
+            assert np.allclose(res_delta_from_true, ref_delta_from_true, atol=1e-6), (
+                f"Panel shifts have changed and we are doing {evaluation}"
+            )

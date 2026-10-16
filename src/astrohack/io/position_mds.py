@@ -1,46 +1,44 @@
 import pathlib
+
 import numpy as np
-
-from typing import List, Union, Tuple
-
 import toolviper.utils.logger as logger
 import toolviper.utils.parameter
 
-from astrohack.utils.text import (
-    fixed_format_error,
-    create_pretty_table,
-    param_to_list,
-    add_prefix,
-    string_to_ascii_file,
-    lnbr,
-    undscr,
-)
-from astrohack.utils.algorithms import (
-    rotate_to_gmt,
-    compute_antenna_relative_off,
-    data_statistics,
-)
-from astrohack.utils.conversion import convert_unit
 from astrohack.antenna.telescope import get_proper_telescope
 from astrohack.io.locit_mds import AstrohackLocitFile
+from astrohack.utils.algorithms import (
+    compute_antenna_relative_off,
+    data_statistics,
+    rotate_to_gmt,
+)
 from astrohack.utils.constants import (
     clight,
     notavail,
     pi,
     twopi,
 )
+from astrohack.utils.conversion import convert_unit
 from astrohack.utils.graph import create_and_execute_graphs_for_outputs
-from astrohack.utils.validation import custom_unit_checker
-from astrohack.utils.tools import get_telescope_lat_lon_rad
-from astrohack.visualization.plot_tools import (
-    create_figure_and_axes,
-    scatter_plot,
-    close_figure,
-    plot_boxes_limits_and_labels,
+from astrohack.utils.text import (
+    add_prefix,
+    create_pretty_table,
+    fixed_format_error,
+    lnbr,
+    param_to_list,
+    string_to_ascii_file,
+    undscr,
 )
+from astrohack.utils.tools import get_telescope_lat_lon_rad
+from astrohack.utils.validation import custom_unit_checker
 from astrohack.visualization.array_cfg_plot import (
-    plot_one_antenna_position,
     define_inner_box_size,
+    plot_one_antenna_position,
+)
+from astrohack.visualization.plot_tools import (
+    close_figure,
+    create_figure_and_axes,
+    plot_boxes_limits_and_labels,
+    scatter_plot,
 )
 
 
@@ -65,8 +63,8 @@ class AstrohackPositionFile(AstrohackLocitFile):
     def export_locit_fit_results(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         position_unit: str = "m",
         time_unit: str = "hour",
         delay_unit: str = "nsec",
@@ -210,7 +208,7 @@ class AstrohackPositionFile(AstrohackLocitFile):
     def export_results_to_parminator(
         self,
         filename: str,
-        ant: Union[str, List[str]] = "all",
+        ant: str | list[str] = "all",
         ddi: int | None = None,
         correction_threshold: float | int = 0.01,
     ) -> None:
@@ -269,12 +267,12 @@ class AstrohackPositionFile(AstrohackLocitFile):
     def plot_sky_coverage(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         time_unit: str = "hour",
         angle_unit: str = "deg",
         display: bool = False,
-        figure_size: Union[Tuple, List[float | int], np.ndarray, None] = None,
+        figure_size: tuple | list[float | int] | np.ndarray | None = None,
         dpi: int = 300,
         parallel: bool = False,
     ) -> None:
@@ -337,15 +335,15 @@ class AstrohackPositionFile(AstrohackLocitFile):
     def plot_delays(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         time_unit: str = "hour",
         angle_unit: str = "deg",
         delay_unit: str = "nsec",
-        delay_limits: Union[Tuple, List[float | int], np.ndarray, None] = None,
+        delay_limits: tuple | list[float | int] | np.ndarray | None = None,
         plot_model: bool = True,
         display: bool = False,
-        figure_size: Union[Tuple, List[float | int], np.ndarray, None] = None,
+        figure_size: tuple | list[float | int] | np.ndarray | None = None,
         dpi: int = 300,
         parallel: bool = False,
     ) -> None:
@@ -419,12 +417,12 @@ class AstrohackPositionFile(AstrohackLocitFile):
     def plot_position_corrections(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         unit: str = "km",
-        box_size: Union[int, float] = None,
-        scaling: Union[int, float] = 250,
-        figure_size: Union[Tuple, List[float | int], np.ndarray, None] = None,
+        box_size: int | float = None,
+        scaling: int | float = 250,
+        figure_size: tuple | list[float | int] | np.ndarray | None = None,
         display: bool = False,
         dpi: int = 300,
     ) -> None:
@@ -480,7 +478,7 @@ class AstrohackPositionFile(AstrohackLocitFile):
         if combined:
             filename = (
                 f"{destination}/position_corrections_combined_"
-                + f'{self.root.attrs["combine_specifier"]}.png'
+                + f"{self.root.attrs['combine_specifier']}.png"
             )
             attribute_list = []
             for ant in ant_list:
@@ -650,7 +648,7 @@ def _plot_delays_chunk(parm_dict):
     antenna = parm_dict["this_ant"]
     destination = parm_dict["destination"]
     if combined:
-        export_name = f'{destination}/position_delays_{antenna}_combined_{parm_dict["comb_type"]}.png'
+        export_name = f"{destination}/position_delays_{antenna}_combined_{parm_dict['comb_type']}.png"
         suptitle = f"Delays for antenna {antenna.split(undscr)[1]}"
     else:
         ddi = parm_dict["this_ddi"]
@@ -779,8 +777,8 @@ def _export_position_xds_to_table_row(
     delay_rms = np.sqrt(attributes["chi_squared"])
     mean_freq = np.nanmean(attributes["frequency"])
     phase_rms = twopi * mean_freq * delay_rms
-    row.append(f"{delay_rms*del_fact:4.2e}")
-    row.append(f"{phase_rms*pha_fact:5.1f}")
+    row.append(f"{delay_rms * del_fact:4.2e}")
+    row.append(f"{phase_rms * pha_fact:5.1f}")
 
     sig_scale_pos = convert_unit("mm", pos_unit, "length")
     sig_scale_del = 1e-3 * convert_unit("nsec", del_unit, "time")

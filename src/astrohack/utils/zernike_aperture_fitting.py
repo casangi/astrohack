@@ -64,7 +64,7 @@ def zernike_order_2(u_ax, v_ax, return_powers=False):
     # M = 0
     matrix[:, 4] = -1 + 2 * u_pow[2] + 2 * v_pow[2] ** 2
     # M = 2
-    matrix[:, 5] = -u_pow[2] ** 2 + v_pow[2] ** 2
+    matrix[:, 5] = -(u_pow[2] ** 2) + v_pow[2] ** 2
 
     if return_powers:
         return matrix, u_pow, v_pow
@@ -928,7 +928,7 @@ def fit_zernike_coefficients(
                 )
                 zernike_model[
                     itime, ichan, ipol, uv_idx_grid[:, 0], uv_idx_grid[:, 1]
-                ] = (real_model[:] + 1j * imag_model[:])
+                ] = real_model[:] + 1j * imag_model[:]
                 zernike_coeffs[itime, ichan, ipol] = real_coeffs + 1j * imag_coeffs
                 fit_rms[itime, ichan, ipol] = real_rms + 1j * imag_rms
 

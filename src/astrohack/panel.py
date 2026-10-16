@@ -1,15 +1,12 @@
 import toolviper.utils.parameter
 
-from astrohack.utils.file import overwrite_file
 from astrohack.core.panel import process_panel_chunk
-from astrohack.utils.validation import custom_panel_checker
-from astrohack.utils.text import get_default_file_name
-from astrohack.utils.graph import create_and_execute_graph_from_dict
-
-from astrohack.io.panel_mds import AstrohackPanelFile
 from astrohack.io.dio import open_image
-
-from typing import Union, List
+from astrohack.io.panel_mds import AstrohackPanelFile
+from astrohack.utils.file import overwrite_file
+from astrohack.utils.graph import create_and_execute_graph_from_dict
+from astrohack.utils.text import get_default_file_name
+from astrohack.utils.validation import custom_panel_checker
 
 
 @toolviper.utils.parameter.validate(custom_checker=custom_panel_checker)
@@ -17,13 +14,13 @@ def panel(
     image_name: str,
     panel_name: str | None = None,
     clip_type: str = "sigma",
-    clip_level: Union[float | int, dict[dict[float | int]]] = 3.0,
+    clip_level: float | int | dict[dict[float | int]] = 3.0,
     use_detailed_mask: bool = True,
     panel_model: str = "rigid",
     panel_margins: float = 0.05,
     polarization_state: str = "I",
-    ant: Union[str, List[str]] = "all",
-    ddi: Union[str, int, List[str]] = "all",
+    ant: str | list[str] = "all",
+    ddi: str | int | list[str] = "all",
     parallel: bool = False,
     overwrite: bool = False,
 ):

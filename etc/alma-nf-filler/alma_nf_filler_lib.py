@@ -1,12 +1,13 @@
-from asdm import ASDM, ASDMParseOptions
-import numpy as np
-import xarray as xr
-import scipy
+import time as timer
 
-from astrohack.antenna.telescope import get_proper_telescope
+import numpy as np
+import scipy
+import xarray as xr
+from asdm import ASDM, ASDMParseOptions
 from matplotlib import pyplot as plt
 from scipy import interpolate
-import time as timer
+
+from astrohack.antenna.telescope import get_proper_telescope
 
 RAD2DEG = 180 / np.pi
 DAY2SEC = 86400
@@ -765,7 +766,6 @@ def _plot_cal(sol, cal, data, cal_type, holog_name, verbose):
     cal_time *= 24 * 60
 
     if cal_type == "PHASE":
-
         sol *= RAD2DEG
         raw_data *= RAD2DEG
         cal *= RAD2DEG
@@ -823,11 +823,11 @@ def combine_data(meta_dict, pnt_info, tp_info, int_time, verbose):
     new_pnt_info = _match_pnt_to_time(pnt_info, time_axes, meta_dict)
     new_tp_info = _match_tp_to_time(tp_info, time_axes, meta_dict)
     if verbose:
-        print(f'Number of time matched samples: {new_tp_info["nsamp"]}')
+        print(f"Number of time matched samples: {new_tp_info['nsamp']}")
 
     matched_info = _match_tp_and_pnt(new_tp_info, new_pnt_info)
     if verbose:
-        print(f'Number of filtered samples: {matched_info["nsamp"]}')
+        print(f"Number of filtered samples: {matched_info['nsamp']}")
 
     matched_info["integ_time"] = int_time
     if verbose:
@@ -1336,8 +1336,8 @@ def _write_dict_as_json(file_name, input_dict, add_origin=True):
     Returns:
     json file in disk
     """
-    import json
     import copy
+    import json
 
     class NumpyEncoder(json.JSONEncoder):
         def default(self, obj):

@@ -1,13 +1,13 @@
 import shutil
-import matplotlib
 
+import matplotlib
 from toolviper.utils import data
 
 from astrohack import AstrohackHologFile, open_holog
 from astrohack.utils.verification_tools import (
     add_data_folder_to_names_in_class,
-    are_txt_files_equal,
     are_png_files_close,
+    are_txt_files_equal,
     execute_cleanup,
     produce_reference_data,
 )

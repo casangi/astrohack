@@ -1,18 +1,18 @@
+import argparse
 import inspect
 import pathlib
-import argparse
 import shutil
-from pathlib import Path
 import time
-from typing import Callable
+from collections.abc import Callable
+from pathlib import Path
 
 import numpy as np
 
 from astrohack.utils.text import (
+    add_preformatted_text_file_to_html,
+    format_duration,
     lnbr,
     spc,
-    format_duration,
-    add_preformatted_text_file_to_html,
 )
 
 
@@ -33,7 +33,6 @@ def file_is_asdm(filename):
 
 
 class MessageBoard:
-
     def __init__(self, width=None, block_char="#", spacing=1, blocking=3):
         if width is None:
             term_size = shutil.get_terminal_size((80, 20))
@@ -138,7 +137,7 @@ def run_casatask(
     if task_name == "plotms":
         import casaplotms
 
-        casatask_func = getattr(casaplotms, "plotms")
+        casatask_func = casaplotms.plotms
     else:
         import casatasks
 
@@ -206,7 +205,7 @@ def make_dict_str_simple(the_dict, ident=4):
     for key, value in the_dict.items():
         if not isinstance(key, str):
             key = str(key)
-        outstr += f"{ident*' '}{key:{key_len}s} => {value}{lnbr}"
+        outstr += f"{ident * ' '}{key:{key_len}s} => {value}{lnbr}"
     return outstr
 
 
@@ -324,9 +323,9 @@ def get_time_string_from_dict(time_dict, qa):
 
 
 def get_lst_string_from_time_str(time_str):
+    import astropy.units as u
     from astropy.coordinates import EarthLocation
     from astropy.time import Time
-    import astropy.units as u
 
     vla_location = EarthLocation(
         lat=34.0785 * u.deg, lon=-107.6184 * u.deg, height=2124 * u.m

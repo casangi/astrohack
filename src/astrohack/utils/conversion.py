@@ -1,8 +1,7 @@
 import numpy as np
-
 import toolviper.utils.logger as logger
 
-from astrohack.utils.constants import unit_dict, fact_dict
+from astrohack.utils.constants import fact_dict, unit_dict
 from astrohack.utils.tools import get_str_idx_in_list
 
 
@@ -46,7 +45,6 @@ def convert_unit(unitin, unitout, kind):
         factorlist = fact_dict[kind]
 
     except KeyError:
-
         logger.error("Unrecognized unit kind: " + kind)
         raise KeyError("Unrecognized unit kind")
 

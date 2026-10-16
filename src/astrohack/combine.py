@@ -1,25 +1,23 @@
-from typing import Union, List
-
 import toolviper.utils.parameter
 
-from astrohack.io.dio import open_image
 from astrohack.core.combine import process_combine_chunk
-from astrohack.utils.graph import create_and_execute_graph_from_dict
-from astrohack.utils.file import overwrite_file
-from astrohack.utils.text import get_default_file_name
+from astrohack.io.dio import open_image
 from astrohack.io.image_mds import AstrohackImageFile
+from astrohack.utils.file import overwrite_file
+from astrohack.utils.graph import create_and_execute_graph_from_dict
+from astrohack.utils.text import get_default_file_name
 
 
 @toolviper.utils.parameter.validate()
 def combine(
     image_name: str,
     combine_name: str | None = None,
-    ant: Union[str, List[str]] = "all",
-    ddi: Union[int, List[int], str] = "all",
+    ant: str | list[str] = "all",
+    ddi: int | list[int] | str = "all",
     weighted: bool = False,
     parallel: bool = False,
     overwrite: bool = False,
-) -> Union[AstrohackImageFile, None]:
+) -> AstrohackImageFile | None:
     """Combine DDIs in a Holography image to increase SNR
 
     :param image_name: Input holography data file name. Accepted data format is the output from ``astrohack.holog.holog``

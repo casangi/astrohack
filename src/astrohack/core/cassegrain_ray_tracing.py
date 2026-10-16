@@ -1,15 +1,18 @@
-import numpy as np
-from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
-import xarray as xr
+import numpy as np
 import toolviper.utils.logger as logger
+import xarray as xr
+from scipy.optimize import fsolve
 
-from astrohack.utils.file import overwrite_file
-from astrohack.utils.constants import clight
-from astrohack.utils.algorithms import data_statistics
-from astrohack.utils.constants import twopi
+from astrohack.antenna.telescope import get_proper_telescope
+from astrohack.utils.algorithms import (
+    create_coordinate_images,
+    data_statistics,
+    phase_wrapping,
+)
+from astrohack.utils.constants import clight, twopi
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.algorithms import phase_wrapping, create_coordinate_images
+from astrohack.utils.file import overwrite_file
 from astrohack.utils.ray_tracing_general import (
     generalized_dot,
     generalized_norm,
@@ -17,21 +20,20 @@ from astrohack.utils.ray_tracing_general import (
     reflect_light,
     simple_axis,
 )
+from astrohack.utils.text import (
+    create_pretty_table,
+    format_label,
+    format_value_error,
+    lnbr,
+    statistics_to_text,
+)
 from astrohack.visualization.plot_tools import (
-    get_proper_color_map,
-    create_figure_and_axes,
-    well_positioned_colorbar,
     close_figure,
     compute_extent,
+    create_figure_and_axes,
+    get_proper_color_map,
+    well_positioned_colorbar,
 )
-from astrohack.utils.text import (
-    format_value_error,
-    format_label,
-    create_pretty_table,
-    statistics_to_text,
-    lnbr,
-)
-from astrohack.antenna.telescope import get_proper_telescope
 
 nanvec3d = np.full([3], np.nan)
 
@@ -220,7 +222,7 @@ def reflect_off_analytical_secondary(rt_xds, offset=np.array((0, 0, 0))):
             xtol=1e-8,
         )
         if ier == 1:
-            distance_to_secondary[ipnt] = val
+            distance_to_secondary[ipnt] = val[0]
         else:
             distance_to_secondary[ipnt] = np.nan
 
@@ -352,16 +354,16 @@ def title_from_input_parameters(inpt_dict):
     """
     title = ""
     title += (
-        f'Pointing offset = ({inpt_dict["x_pointing_offset"]}, {inpt_dict["y_pointing_offset"]}) '
-        f'[{inpt_dict["pointing_offset_unit"]}], '
+        f"Pointing offset = ({inpt_dict['x_pointing_offset']}, {inpt_dict['y_pointing_offset']}) "
+        f"[{inpt_dict['pointing_offset_unit']}], "
     )
     title += (
-        f'Focus offset = ({inpt_dict["x_focus_offset"]}, {inpt_dict["y_focus_offset"]}, '
-        f'{inpt_dict["z_focus_offset"]}) [{inpt_dict["focus_offset_unit"]}], '
+        f"Focus offset = ({inpt_dict['x_focus_offset']}, {inpt_dict['y_focus_offset']}, "
+        f"{inpt_dict['z_focus_offset']}) [{inpt_dict['focus_offset_unit']}], "
     )
-    title += f'Phase offset = {inpt_dict["phase_offset"]} [{inpt_dict["phase_unit"]}], '
+    title += f"Phase offset = {inpt_dict['phase_offset']} [{inpt_dict['phase_unit']}], "
     lambda_char = "\u03bb"
-    title += f'{lambda_char} = {inpt_dict["observing_wavelength"]} [{inpt_dict["wavelength_unit"]}]'
+    title += f"{lambda_char} = {inpt_dict['observing_wavelength']} [{inpt_dict['wavelength_unit']}]"
     return title
 
 

@@ -1,16 +1,14 @@
 import toolviper.utils.parameter
 
-from astrohack.utils.graph import create_and_execute_graph_from_dict
-from astrohack.utils.text import get_default_file_name
-from astrohack.utils.file import overwrite_file, check_ms_exists
 from astrohack.core.extract_pointing import (
-    extract_pointing_preprocessing,
     extract_pointing_chunk,
+    extract_pointing_preprocessing,
     post_process_evaluation,
 )
 from astrohack.io.point_mds import AstrohackPointFile
-
-from typing import Union
+from astrohack.utils.file import check_ms_exists, overwrite_file
+from astrohack.utils.graph import create_and_execute_graph_from_dict
+from astrohack.utils.text import get_default_file_name
 
 
 @toolviper.utils.parameter.validate()
@@ -19,7 +17,7 @@ def extract_pointing(
     point_name: str | None = None,
     parallel: bool = False,
     overwrite: bool = False,
-) -> Union[AstrohackPointFile, None]:
+) -> AstrohackPointFile | None:
     """ Extract pointing data from measurement set.  Creates holography output file.
 
     :param ms_name: Name of input measurement file name.

@@ -1,18 +1,15 @@
 import toolviper.utils.parameter
 
-from astrohack.utils.graph import create_and_execute_graph_from_dict
-from astrohack.utils.file import overwrite_file, check_if_file_can_be_opened
 from astrohack.core.locit import (
-    locit_separated_chunk,
     locit_combined_chunk,
     locit_difference_chunk,
+    locit_separated_chunk,
 )
-from astrohack.utils.text import get_default_file_name
 from astrohack.io.locit_mds import AstrohackLocitFile
 from astrohack.io.position_mds import AstrohackPositionFile
-
-from typing import Union, List, Tuple
-
+from astrohack.utils.file import check_if_file_can_be_opened, overwrite_file
+from astrohack.utils.graph import create_and_execute_graph_from_dict
+from astrohack.utils.text import get_default_file_name
 from astrohack.utils.tools import build_bad_scan_list
 
 
@@ -25,10 +22,10 @@ def locit(
     fit_engine: str = "scipy",
     fit_kterm: bool = False,
     fit_delay_rate: bool = True,
-    ant: Union[str, List[str]] = "all",
-    ddi: Union[str, int, List[int]] = "all",
+    ant: str | list[str] = "all",
+    ddi: str | int | list[int] = "all",
     combine_ddis: str = "simple",
-    exclude_scans: Union[int, List[int], Tuple[int]] | None = None,
+    exclude_scans: int | list[int] | tuple[int] | None = None,
     parallel: bool = False,
     overwrite: bool = False,
 ):

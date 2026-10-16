@@ -1,6 +1,7 @@
 import contextlib
 import inspect
 import io
+
 import numpy as np
 import xarray as xr
 import xarray.testing
@@ -54,7 +55,7 @@ def are_png_files_close(img_path1, img_path2, tol=1e-5):
                 f"Mean diff: {float(np.mean(np.absolute(diff)))}",
             )
 
-    except IOError as e:
+    except OSError as e:
         print(f"Error opening images: {e}")
         return False, "Failed opening images"
 
@@ -73,9 +74,9 @@ def capture_prints_from_function(function, args=None):
 
 
 def are_txt_files_equal(txt_path1, txt_path2, ignored_key_words=()):
-    with open(txt_path1, "r") as txt_file1:
+    with open(txt_path1) as txt_file1:
         txt1_content = txt_file1.read()
-    with open(txt_path2, "r") as txt_file2:
+    with open(txt_path2) as txt_file2:
         txt2_content = txt_file2.read()
 
     txt1_lines = txt1_content.splitlines()
@@ -102,16 +103,16 @@ def are_txt_files_equal(txt_path1, txt_path2, ignored_key_words=()):
 
 def is_captured_output_equal_to_txt_reference(function, txt_ref, args=None):
     captured_output = capture_prints_from_function(function, args)
-    with open(txt_ref, "r") as ref_file:
+    with open(txt_ref) as ref_file:
         ref_content = ref_file.read()
     return ref_content == captured_output
 
 
 def _get_ds_metadata(ds):
     if hasattr(ds, "_input_pars"):
-        metadata = getattr(ds, "_input_pars")
+        metadata = ds._input_pars
     elif isinstance(ds, xr.Dataset) or isinstance(ds, xr.DataTree):
-        metadata = getattr(ds, "attrs")
+        metadata = ds.attrs
     else:
         metadata = ds.root.attrs
     return metadata
@@ -323,25 +324,25 @@ def analyse_summary(mds_obj, exp_file_name, exp_input_pars, exp_ant_keys_list):
         else:
             pass
 
-    assert (
-        this_filename == exp_file_name
-    ), "File name in Summary should be equal to the expected one"
+    assert this_filename == exp_file_name, (
+        "File name in Summary should be equal to the expected one"
+    )
 
-    assert are_dicts_close(
-        this_input_pars, exp_input_pars
-    ), "Input parameter dictionaries should identical"
+    assert are_dicts_close(this_input_pars, exp_input_pars), (
+        "Input parameter dictionaries should identical"
+    )
 
-    assert are_dicts_close(
-        this_orig_info, exp_orig_info
-    ), "Origin info dictionaries should be identical"
+    assert are_dicts_close(this_orig_info, exp_orig_info), (
+        "Origin info dictionaries should be identical"
+    )
 
-    assert are_lists_equal(
-        this_ant_list, exp_ant_keys_list
-    ), "Antenna list should be equal to the expected one"
+    assert are_lists_equal(this_ant_list, exp_ant_keys_list), (
+        "Antenna list should be equal to the expected one"
+    )
 
-    assert are_lists_equal(
-        this_method_list, exp_method_list
-    ), "Method list should be equal to the expected one"
+    assert are_lists_equal(this_method_list, exp_method_list), (
+        "Method list should be equal to the expected one"
+    )
 
 
 def create_origin_dict(caller):

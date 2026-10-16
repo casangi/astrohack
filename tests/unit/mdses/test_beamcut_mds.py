@@ -1,15 +1,15 @@
-import shutil
 import os
+import shutil
 
 import matplotlib
-from toolviper.utils import data
 import pytest
+from toolviper.utils import data
 
-from astrohack import open_beamcut, AstrohackBeamcutFile
+from astrohack import AstrohackBeamcutFile, open_beamcut
 from astrohack.utils.verification_tools import (
+    add_data_folder_to_names_in_class,
     are_png_files_close,
     are_txt_files_equal,
-    add_data_folder_to_names_in_class,
     execute_cleanup,
     produce_reference_data,
 )
@@ -58,9 +58,9 @@ class TestBeamcutMDS:
         beamcut_mds.observation_summary(local_obs_summary)
 
         if not produce_reference_data():
-            assert are_txt_files_equal(
-                local_obs_summary, obs_summary_reference_name
-            ), "Observation summary should be exactly equal to reference observation summary"
+            assert are_txt_files_equal(local_obs_summary, obs_summary_reference_name), (
+                "Observation summary should be exactly equal to reference observation summary"
+            )
             return
 
     @pytest.mark.skip(
@@ -85,9 +85,9 @@ class TestBeamcutMDS:
                     f"{self.destination_folder}/{plot_filename}",
                     f"{self.ref_products_name}/{plot_filename}",
                 )
-                assert (
-                    equal
-                ), f"{msg}: {plot_type} plot png file is different from the expected png file"
+                assert equal, (
+                    f"{msg}: {plot_type} plot png file is different from the expected png file"
+                )
 
     def test_beamcut_mds_fit_report(self):
         ant = "ea15"
@@ -98,8 +98,11 @@ class TestBeamcutMDS:
 
         beamcut_mds.export_report(self.destination_folder, ant=ant, ddi=ddi)
         if not produce_reference_data():
-            are_txt_files_equal(
-                f"{self.destination_folder}/{report_name}",
-                f"{self.ref_products_name}/{report_name}",
-            ), "Local and reference beamfit reports do not match"
+            (
+                are_txt_files_equal(
+                    f"{self.destination_folder}/{report_name}",
+                    f"{self.ref_products_name}/{report_name}",
+                ),
+                "Local and reference beamfit reports do not match",
+            )
         return

@@ -1,7 +1,7 @@
 import toolviper.utils.logger as logger
 
-from astrohack.io.panel_mds import AstrohackPanelFile
 from astrohack.antenna.antenna_surface import AntennaSurface
+from astrohack.io.panel_mds import AstrohackPanelFile
 from astrohack.utils.text import create_dataset_label, undscr
 
 

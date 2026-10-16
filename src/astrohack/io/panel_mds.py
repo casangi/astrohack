@@ -1,25 +1,21 @@
 import numpy as np
-
-from typing import Union, List, Tuple
-
 import toolviper.utils.logger as logger
 import toolviper.utils.parameter
 
 from astrohack.antenna.antenna_surface import AntennaSurface
-from astrohack.utils.constants import plot_types
 from astrohack.io.base_mds import AstrohackBaseFile
-from astrohack.utils.graph import create_and_execute_graphs_for_outputs
+from astrohack.utils.constants import clight, plot_types
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.constants import clight
+from astrohack.utils.graph import create_and_execute_graphs_for_outputs
 from astrohack.utils.text import (
-    format_frequency,
-    format_wavelength,
-    create_pretty_table,
-    string_to_ascii_file,
-    format_value_unit,
-    lnbr,
-    undscr,
     create_informative_label_from_summary,
+    create_pretty_table,
+    format_frequency,
+    format_value_unit,
+    format_wavelength,
+    lnbr,
+    string_to_ascii_file,
+    undscr,
 )
 from astrohack.utils.validation import custom_plots_checker, custom_unit_checker
 from astrohack.visualization.observation_summary import (
@@ -66,14 +62,14 @@ class AstrohackPanelFile(AstrohackBaseFile):
     def export_screws(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         unit: str = "mm",
         threshold: float | int | None = None,
         panel_labels: bool = True,
         display: bool = False,
         colormap: str = "RdBu_r",
-        figure_size: Union[Tuple, List[float | int], np.ndarray, None] = None,
+        figure_size: tuple | list[float | int] | np.ndarray | None = None,
         dpi: int = 300,
         parallel: bool = False,
     ) -> None:
@@ -132,19 +128,19 @@ class AstrohackPanelFile(AstrohackBaseFile):
     def plot_antennas(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         plot_type: str = "deviation",
         plot_screws: bool = False,
-        amplitude_limits: Union[Tuple, List[float], np.ndarray, None] = None,
+        amplitude_limits: tuple | list[float] | np.ndarray | None = None,
         phase_unit: str = "deg",
-        phase_limits: Union[Tuple, List[float], np.ndarray, None] = None,
+        phase_limits: tuple | list[float] | np.ndarray | None = None,
         deviation_unit: str = "mm",
-        deviation_limits: Union[Tuple, List[float], np.ndarray, None] = None,
+        deviation_limits: tuple | list[float] | np.ndarray | None = None,
         panel_labels: bool = False,
         display: bool = False,
         colormap: str = "viridis",
-        figure_size: Union[Tuple, List[float], np.ndarray] = (8.0, 6.4),
+        figure_size: tuple | list[float] | np.ndarray = (8.0, 6.4),
         dpi: int = 300,
         parallel: bool = False,
     ) -> None:
@@ -230,8 +226,8 @@ class AstrohackPanelFile(AstrohackBaseFile):
     def export_to_fits(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         parallel: bool = False,
     ) -> None:
         """Export contents of an Astrohack MDS file to several FITS files in the destination folder
@@ -269,11 +265,11 @@ class AstrohackPanelFile(AstrohackBaseFile):
     def export_gain_tables(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
-        wavelengths: Union[float | int, List[float | int], np.ndarray, None] = None,
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
+        wavelengths: float | int | list[float | int] | np.ndarray | None = None,
         wavelength_unit: str = "cm",
-        frequencies: Union[float | int, List[float | int], np.ndarray, None] = None,
+        frequencies: float | int | list[float | int] | np.ndarray | None = None,
         frequency_unit: str = "GHz",
         rms_unit: str = "mm",
         parallel: bool = False,
@@ -333,8 +329,8 @@ class AstrohackPanelFile(AstrohackBaseFile):
     def observation_summary(
         self,
         summary_file: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         az_el_key: str = "center",
         phase_center_unit: str = "radec",
         az_el_unit: str = "deg",

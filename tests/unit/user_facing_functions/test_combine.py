@@ -1,15 +1,16 @@
 import os
-import shutil
-import toolviper
 import pathlib
-import pytest
+import shutil
 
+import pytest
+import toolviper
+
+from astrohack import combine, open_image
 from astrohack.utils.verification_tools import (
     add_data_folder_to_names_in_class,
     execute_cleanup,
     produce_reference_data,
 )
-from astrohack import combine, open_image
 
 
 class TestCombine:
@@ -46,15 +47,15 @@ class TestCombine:
 
     def test_defaults(self):
         new_cmb_mds = combine(image_name=self.img_name, overwrite=True)
-        assert pathlib.Path(
-            self.def_cmb_name
-        ).is_dir(), f"A .combine.zarr file named {self.def_cmb_name} does not exist."
+        assert pathlib.Path(self.def_cmb_name).is_dir(), (
+            f"A .combine.zarr file named {self.def_cmb_name} does not exist."
+        )
         if produce_reference_data():
             return
         ref_cmb_mds = open_image(self.ref_cmb_name)
-        assert new_cmb_mds.is_close_to(
-            ref_cmb_mds
-        ), "Reference and new mdses are different."
+        assert new_cmb_mds.is_close_to(ref_cmb_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_ddi_and_ant_selection(self):
         """
@@ -75,9 +76,9 @@ class TestCombine:
         exp_ddi_list = [self.ddi_key]
         for ant_key, ant_xdt in cmb_mds.items():
             ddi_list = list(ant_xdt.keys())
-            assert (
-                ddi_list == exp_ddi_list
-            ), f"Expected {exp_ddi_list}, but got {ddi_list} for {ant_key}."
+            assert ddi_list == exp_ddi_list, (
+                f"Expected {exp_ddi_list}, but got {ddi_list} for {ant_key}."
+            )
 
         cmb_mds = combine(
             image_name=self.img_name,
@@ -90,15 +91,15 @@ class TestCombine:
         )
 
         exp_ant_list = [self.ant_key]
-        assert (
-            list(cmb_mds.keys())
-        ) == exp_ant_list, f"Expected {exp_ant_list} but got {list(cmb_mds.keys())}"
+        assert (list(cmb_mds.keys())) == exp_ant_list, (
+            f"Expected {exp_ant_list} but got {list(cmb_mds.keys())}"
+        )
         exp_ddi_list = [self.cmb_ddi_key]
         for ant_key, ant_xdt in cmb_mds.items():
             ddi_list = list(ant_xdt.keys())
-            assert (
-                ddi_list == exp_ddi_list
-            ), f"Expected {exp_ddi_list}, but got {ddi_list} for {ant_key}."
+            assert ddi_list == exp_ddi_list, (
+                f"Expected {exp_ddi_list}, but got {ddi_list} for {ant_key}."
+            )
 
     def test_combine_overwrite(self):
         """
@@ -120,9 +121,9 @@ class TestCombine:
 
         final_time = os.path.getctime(self.def_cmb_name)
 
-        assert (
-            initial_time != final_time
-        ), "Recreated file has to have a different time from the original file."
+        assert initial_time != final_time, (
+            "Recreated file has to have a different time from the original file."
+        )
 
         with pytest.raises(FileExistsError):
             combine(

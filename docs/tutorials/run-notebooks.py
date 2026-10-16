@@ -1,5 +1,4 @@
 # ! python
-# coding: utf-8
 
 import argparse
 import glob
@@ -11,8 +10,10 @@ from nbconvert.preprocessors.execute import CellExecutionError
 
 start = time.time()
 # Parse args
-parser = argparse.ArgumentParser(description="Runs a set of Jupyter \
-                                              notebooks.")
+parser = argparse.ArgumentParser(
+    description="Runs a set of Jupyter \
+                                              notebooks."
+)
 file_text = """ Notebook file(s) to be run, e.g. '*.ipynb' (default),
 'my_nb1.ipynb', 'my_nb1.ipynb my_nb2.ipynb', 'my_dir/*.ipynb'
 """
@@ -74,8 +75,8 @@ for i, note_name in enumerate(notebooks):
             print(msg)
         finally:
             # Write output file
-            with open(n_out + ".ipynb", mode="wt") as out_note_file:
+            with open(n_out + ".ipynb", mode="w") as out_note_file:
                 nbformat.write(nb, out_note_file)
 
 stop = time.time()
-print(f"Running notebooks took {stop-start:.2f} s")
+print(f"Running notebooks took {stop - start:.2f} s")

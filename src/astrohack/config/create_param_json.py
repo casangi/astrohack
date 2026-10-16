@@ -114,16 +114,16 @@ class Param:
             self.dicio["max"] = self.missing
 
     def export_to_json(self, lvl, spc, op, clc):
-        outstr = f'{lvl*spc}"{self.name}":{op}'
+        outstr = f'{lvl * spc}"{self.name}":{op}'
         for key in self.dicio.keys():
             outstr += self._write_key(key, lvl + 1, spc)
         outstr = outstr[:-2] + "\n"
-        outstr += f"{lvl*spc}{clc}"
+        outstr += f"{lvl * spc}{clc}"
         return outstr
 
     def _write_key(self, key, lvl, spc):
         value = self.dicio[key]
-        base = f'{lvl*spc}"{key}":'
+        base = f'{lvl * spc}"{key}":'
         if isinstance(value, list):
             extra = "["
             for ival in range(len(value)):
@@ -171,7 +171,7 @@ class Function:
                     self.param_list.append(Param(parstr, header=self.header))
 
     def export_to_json(self, lvl, spc, op, clc):
-        outstr = f'{lvl*spc}"{self.name}":{op}'
+        outstr = f'{lvl * spc}"{self.name}":{op}'
         for param in self.param_list:
             outstr += param.export_to_json(lvl + 1, spc, op, clc)
         outstr += f"{spc}{clc}"
@@ -185,7 +185,7 @@ class PythonFile:
         self._parse()
 
     def _parse(self):
-        with open(self.file_name, "r") as pyfile:
+        with open(self.file_name) as pyfile:
             function_head = []
             in_function = False
             n_3quotes = 0

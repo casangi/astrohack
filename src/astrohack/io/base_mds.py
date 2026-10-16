@@ -1,21 +1,19 @@
-from typing import Union
-
-import xarray as xr
-import zarr
-import pathlib
 import glob
+import pathlib
 
 import toolviper.utils.logger as logger
+import xarray as xr
+import zarr
 
+from astrohack.utils.file import add_caller_and_version_to_dict
 from astrohack.utils.text import (
-    get_summary_header,
-    get_property_string,
     get_data_content_string,
     get_method_list_string,
+    get_property_string,
+    get_summary_header,
     lnbr,
 )
-from astrohack.utils.file import add_caller_and_version_to_dict
-from astrohack.utils.verification_tools import are_dicts_close, are_data_trees_close
+from astrohack.utils.verification_tools import are_data_trees_close, are_dicts_close
 
 
 class AstrohackBaseFile:
@@ -227,8 +225,8 @@ class AstrohackBaseFile:
 
     def add_node(
         self,
-        xarray_data: Union[xr.Dataset, xr.DataTree],
-        key_list: Union[list[str], tuple[str]],
+        xarray_data: xr.Dataset | xr.DataTree,
+        key_list: list[str] | tuple[str],
     ):
         """
         Add a node to the data tree file structure, however this node is not yet consolidated into the data tree \

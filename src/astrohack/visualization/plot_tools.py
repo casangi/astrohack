@@ -1,17 +1,17 @@
-from typing import Union, Any
+from typing import Any
 
 import matplotlib.image
 import numpy as np
-from scipy.stats import linregress, theilslopes, siegelslopes
-
 import toolviper.utils.logger as logger
-from matplotlib.patches import Rectangle
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import colormaps as matplotlib_cmaps
+from matplotlib.axes import Axes
 from matplotlib.colors import ListedColormap
 from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy.stats import linregress, siegelslopes, theilslopes
+
 from astrohack.utils.constants import figsize, fontsize
-from matplotlib.axes import Axes
 
 astrohack_cmaps = list(matplotlib_cmaps.keys())
 astrohack_cmaps.append("AIPS")
@@ -35,9 +35,9 @@ def get_execution_environment():
 
 
 def create_figure_and_axes(
-    figure_size: Union[list, tuple, None],
-    boxes: Union[list, tuple, np.ndarray],
-    default_figsize: Union[list, tuple] = figsize,
+    figure_size: list | tuple | None,
+    boxes: list | tuple | np.ndarray,
+    default_figsize: list | tuple = figsize,
     sharex: bool = False,
     sharey: bool = False,
     plot_is_3d: bool = False,
@@ -123,8 +123,9 @@ def close_figure(
         if py_env in ["terminal", "ipython", "other"]:
             mpl_backend = matplotlib.get_backend()
             if mpl_backend.lower() == "tkagg":
-                from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
                 import tkinter as tk
+
+                from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
                 # 2. Instantiate canvas without explicit master (defaults to an internal Tk root)
                 canvas = FigureCanvasTkAgg(figure)
@@ -136,11 +137,12 @@ def close_figure(
                 window.title(f"Astrohack: {title}")
                 window.mainloop()
             elif mpl_backend == "macosx":
+                import time
+
                 from matplotlib.backends.backend_macosx import (
                     FigureCanvasMac,
                     FigureManagerMac,
                 )
-                import time
 
                 running = True
 

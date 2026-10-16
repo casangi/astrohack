@@ -1,5 +1,4 @@
 import numpy as np
-
 from toolviper.utils import logger as logger
 
 
@@ -65,8 +64,7 @@ def get_telescope_lat_lon_rad(telescope):
         lat = telescope.array_center["m1"]["value"]
         rad = telescope.array_center["m2"]["value"]
     else:
-
-        msg = f'Unsupported telescope position reference :{telescope.array_center["refer"]}'
+        msg = f"Unsupported telescope position reference :{telescope.array_center['refer']}"
         logger.error(msg)
         raise NotImplementedError(msg)
 

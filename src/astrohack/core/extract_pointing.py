@@ -1,25 +1,23 @@
 import os
 
 import numpy as np
+import toolviper.utils.logger as logger
 import xarray as xr
-
 from casacoretables import tables as ctables
 from numba import njit
 from numba.core import types
 from numba.typed import Dict
 from scipy import spatial
 
-import toolviper.utils.logger as logger
-
 from astrohack.io.point_mds import AstrohackPointFile
 from astrohack.utils.algorithms import (
     compute_antenna_baseline_distance_matrix_dict,
     data_statistics,
 )
+from astrohack.utils.constants import njit_caching
 from astrohack.utils.conversion import convert_dict_from_numba
 from astrohack.utils.text import undscr
 from astrohack.utils.tools import get_valid_state_ids
-from astrohack.utils.constants import njit_caching
 
 
 def extract_pointing_preprocessing(input_params):
@@ -389,7 +387,7 @@ def _evaluate_time_sampling(
 
     if outlier_fraction > threshold:
         logger.warning(
-            f"{data_label} pointing table has {100*outlier_fraction:.2}% of data with irregular "
+            f"{data_label} pointing table has {100 * outlier_fraction:.2}% of data with irregular "
             f"time sampling"
         )
 

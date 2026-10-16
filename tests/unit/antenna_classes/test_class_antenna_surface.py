@@ -1,17 +1,16 @@
 import json
-
-from astrohack.antenna.antenna_surface import AntennaSurface
-from astrohack import open_image
-from astrohack.utils.conversion import convert_unit
+import shutil
 
 import numpy as np
 import toolviper
-import shutil
 
+from astrohack import open_image
+from astrohack.antenna.antenna_surface import AntennaSurface
+from astrohack.utils.conversion import convert_unit
 from astrohack.utils.verification_tools import (
     add_data_folder_to_names_in_class,
-    produce_reference_data,
     execute_cleanup,
+    produce_reference_data,
 )
 
 datafolder = "paneldata/"
@@ -68,11 +67,11 @@ class TestClassAntennaSurface:
         assert self.tant.telescope.ringed, "Currently only ringed telescopes supported"
         assert self.tant.panelmodel == "rigid", "Default panel kind should be rigid"
         # Tests _build_polar
-        assert (
-            self.tant.rad.shape == self.datashape
-        ), "Radius image does not have the expected dimensions"
+        assert self.tant.rad.shape == self.datashape, (
+            "Radius image does not have the expected dimensions"
+        )
         assert abs(self.tant.rad[self.middle_pix, self.middle_pix]) < 15e-1, (
-            "Radius at the center of the image " "is more than 15 cm from zero"
+            "Radius at the center of the image is more than 15 cm from zero"
         )
         assert (
             abs(
@@ -84,15 +83,15 @@ class TestClassAntennaSurface:
         ), "Azimuth at the horizontal axis is more than 1% different from pi/2"
         # tests _build_ring_panels
         assert len(self.tant.panels) == np.sum(self.tant.telescope.n_panel_per_ring), (
-            "Number of panels do not " "match the expected number"
+            "Number of panels do not match the expected number"
         )
         # tests _build_ring_mask
-        assert (
-            self.tant.mask.shape == self.datashape
-        ), "Mask image does not have the expected dimensions"
-        assert not self.tant.mask[
-            0, 0
-        ], "Mask is True at edges, where it should be False"
+        assert self.tant.mask.shape == self.datashape, (
+            "Mask image does not have the expected dimensions"
+        )
+        assert not self.tant.mask[0, 0], (
+            "Mask is True at edges, where it should be False"
+        )
 
     def test_fit_surface(self):
         """
@@ -105,7 +104,7 @@ class TestClassAntennaSurface:
             panel_fit_res.append(panel.model.parameters.tolist())
 
         assert len(self.tant.panels[0].model.parameters) == expected_len, (
-            "Fitted results have a different length" " from reference"
+            "Fitted results have a different length from reference"
         )
         if produce_reference_data():
             self.ref_json_dict["solved_parameters"] = panel_fit_res
@@ -116,9 +115,9 @@ class TestClassAntennaSurface:
 
         ref_solved_pars = ref_json_dict["solved_parameters"]
 
-        assert len(ref_solved_pars) == len(
-            self.tant.panels
-        ), "Number of solved panels does not match with the number of panels in reference"
+        assert len(ref_solved_pars) == len(self.tant.panels), (
+            "Number of solved panels does not match with the number of panels in reference"
+        )
 
         n_failed_panels = 0
         for i_panel, panel in enumerate(self.tant.panels):
@@ -126,9 +125,9 @@ class TestClassAntennaSurface:
                 ref_solved_pars[i_panel], panel.model.parameters, atol=self.tolerance
             ):
                 n_failed_panels += 1
-        assert (
-            n_failed_panels == 0
-        ), f"Fitting results differ for {n_failed_panels} panels."
+        assert n_failed_panels == 0, (
+            f"Fitting results differ for {n_failed_panels} panels."
+        )
 
     def test_correct_surface(self):
         """
@@ -153,14 +152,14 @@ class TestClassAntennaSurface:
             len(z_gains[0])
             assert z_gains[0][0] == z_gains[0][1]
         except TypeError:
-            assert (
-                z_gains[0] == z_gains[1]
-            ), "Theoretical gains should be equal to real gains for a perfect antenna"
+            assert z_gains[0] == z_gains[1], (
+                "Theoretical gains should be equal to real gains for a perfect antenna"
+            )
         self.tant.phase = self.rand
         r_gains = self.tant.gains()
-        assert (
-            r_gains[0] < r_gains[1]
-        ), "Real gains need to be inferior to theoretical gains on a noisy surface"
+        assert r_gains[0] < r_gains[1], (
+            "Real gains need to be inferior to theoretical gains on a noisy surface"
+        )
 
     def test_get_rms(self):
         """
@@ -173,6 +172,6 @@ class TestClassAntennaSurface:
         self.tant.mask[:, :] = True
         fac = convert_unit("mm", "m", "length")
         r_rms = self.tant.get_rms()[1] * fac
-        assert (
-            abs(r_rms - self.sigma) / self.sigma < 0.01
-        ), "Computed RMS does not match expected RMS within 1%"
+        assert abs(r_rms - self.sigma) / self.sigma < 0.01, (
+            "Computed RMS does not match expected RMS within 1%"
+        )

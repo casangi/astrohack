@@ -111,11 +111,13 @@ pip install -e .          # setuptools src-layout; deps incl. casacoretables, to
 
 Packaging notes / pre-existing quirks (not introduced by the casacore work):
 - No `[build-system]` table in `pyproject.toml` → setuptools default backend.
-- `readme = "README.md"` but the file is `README.rst`; `license.file =
-  "LICENSE.txt"` but the file is `LICENSE`. These mismatches don't affect a
-  source/editable install but would bite a strict sdist/wheel build — fix the
-  filenames if you touch packaging.
-- `python` 3.11–3.13; `numpy<=2.2`; `zarr<3.0.0` are pinned deliberately.
+- `python` 3.12–3.14 (`requires-python >= 3.12, < 3.15`, issue #388).
+- `zarr<3.0.0` is pinned deliberately (zarr 3 migration: issue #300), and
+  therefore `xarray<2026.9.0` (xarray 2026.9 dropped zarr-python 2 support).
+  numpy is not pinned: numba sets its own supported numpy range.
+- zarr 2 needs `numcodecs<0.16`, which has no cp314 wheels, so on Python 3.14
+  pip builds numcodecs 0.15.1 from source (needs GCC <= 14 or
+  `CFLAGS=-std=gnu17`; GCC 15 defaults to C23).
 
 For quick iteration without installing, `PYTHONPATH=src python -m pytest …`
 works (the package imports cleanly from `src/`).

@@ -1,19 +1,16 @@
+import pathlib
 from copy import deepcopy
 
 import numpy as np
-import pathlib
-
-from typing import Union, List, Tuple
-
 import toolviper.utils.logger as logger
 import toolviper.utils.parameter
 
-from astrohack.visualization.array_cfg_plot import plot_array_configuration
-from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
 from astrohack.io.base_mds import AstrohackBaseFile
 from astrohack.utils.conversion import convert_unit
 from astrohack.utils.text import param_to_list, undscr
 from astrohack.utils.validation import custom_unit_checker
+from astrohack.visualization.array_cfg_plot import plot_array_configuration
+from astrohack.visualization.plot_tools import close_figure, create_figure_and_axes
 
 
 class AstrohackPointFile(AstrohackBaseFile):
@@ -37,15 +34,15 @@ class AstrohackPointFile(AstrohackBaseFile):
     def plot_pointing_in_time(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
+        ant: str | list[str] = "all",
         pointing_key: str = "DIRECTIONAL_COSINES",
         plot_antennas_separately: bool = False,
         azel_unit: str = "deg",
         time_unit: str = "hour",
-        az_scale: Union[Tuple, List[float], np.ndarray, None] = None,
-        el_scale: Union[Tuple, List[float], np.ndarray, None] = None,
-        time_scale: Union[Tuple, List[float], np.ndarray, None] = None,
-        figure_size: Union[Tuple, List[float], np.ndarray] = (5.0, 6.4),
+        az_scale: tuple | list[float] | np.ndarray | None = None,
+        el_scale: tuple | list[float] | np.ndarray | None = None,
+        time_scale: tuple | list[float] | np.ndarray | None = None,
+        figure_size: tuple | list[float] | np.ndarray = (5.0, 6.4),
         display: bool = False,
         dpi: int = 300,
     ) -> None:
@@ -182,8 +179,8 @@ class AstrohackPointFile(AstrohackBaseFile):
         stations: bool = True,
         zoff: bool = False,
         unit: str = "km",
-        box_size: Union[int, float, None] = None,
-        figure_size: Union[Tuple, List[float | int], np.ndarray, None] = None,
+        box_size: int | float | None = None,
+        figure_size: tuple | list[float | int] | np.ndarray | None = None,
         display: bool = False,
         dpi: int = 300,
     ) -> None:
@@ -225,7 +222,7 @@ class AstrohackPointFile(AstrohackBaseFile):
     @toolviper.utils.parameter.validate()
     def set_antennas_as_reference(
         self,
-        reference_antennas: Union[str, list[str], tuple[str]],
+        reference_antennas: str | list[str] | tuple[str],
         write_changes: bool = True,
     ) -> None:
         """

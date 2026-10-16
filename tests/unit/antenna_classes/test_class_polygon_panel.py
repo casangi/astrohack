@@ -1,8 +1,8 @@
+import numpy as np
 import pytest
+from shapely import Polygon
 
 from astrohack.antenna.polygon_panel import PolygonPanel
-import numpy as np
-from shapely import Polygon
 
 
 class TestPolygonPanel:
@@ -21,12 +21,12 @@ class TestPolygonPanel:
         Tests the correct initialization of a PolygonPanel object, not all parameters tested
         """
 
-        assert isinstance(
-            self.panel.polygon, Polygon
-        ), "Polygon is not an instance of a shapely polygon"
-        assert isinstance(
-            self.panel.margin_polygon, Polygon
-        ), "Margin Polygon is not an instance of a shapely polygon"
+        assert isinstance(self.panel.polygon, Polygon), (
+            "Polygon is not an instance of a shapely polygon"
+        )
+        assert isinstance(self.panel.margin_polygon, Polygon), (
+            "Margin Polygon is not an instance of a shapely polygon"
+        )
 
         margin_poly = self.panel.margin_polygon.exterior.coords
 
@@ -56,16 +56,16 @@ class TestPolygonPanel:
         Test over the is_inside test for a point
         """
         is_sample, is_in_panel = self.panel.is_inside(0.5, 0.5)
-        assert (
-            is_sample and is_in_panel
-        ), "center of the panel must be a sample and inside panel"
+        assert is_sample and is_in_panel, (
+            "center of the panel must be a sample and inside panel"
+        )
 
         is_sample, is_in_panel = self.panel.is_inside(2.0, 2.0)
-        assert (
-            not is_sample and not is_in_panel
-        ), "Point outside panel must not be inside panel"
+        assert not is_sample and not is_in_panel, (
+            "Point outside panel must not be inside panel"
+        )
 
         is_sample, is_in_panel = self.panel.is_inside(0.95, 0.95)
-        assert (
-            not is_sample and is_in_panel
-        ), "Point at margin must be inside but not a sample"
+        assert not is_sample and is_in_panel, (
+            "Point at margin must be inside but not a sample"
+        )

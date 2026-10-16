@@ -1,9 +1,7 @@
-import xarray as xr
 import numpy as np
-
-from matplotlib import patches
-
 import toolviper.utils.logger as logger
+import xarray as xr
+from matplotlib import patches
 
 from astrohack.antenna.telescope import get_proper_telescope
 from astrohack.utils.algorithms import (
@@ -11,33 +9,31 @@ from astrohack.utils.algorithms import (
     phase_wrapping,
 )
 from astrohack.utils.constants import clight, fourpi
-from astrohack.utils.conversion import to_antenna_tapering
-from astrohack.utils.conversion import convert_unit
+from astrohack.utils.conversion import convert_unit, to_antenna_tapering
+from astrohack.utils.fits import (
+    put_axis_in_fits_header,
+    put_resolution_in_fits_header,
+    write_fits,
+)
 from astrohack.utils.text import (
     add_prefix,
     bool_to_str,
+    create_dataset_label,
+    create_informative_label_from_summary,
     format_frequency,
     format_value_unit,
-    string_to_ascii_file,
-    create_dataset_label,
-    statistics_to_text,
     lnbr,
     spc,
-    create_informative_label_from_summary,
+    statistics_to_text,
+    string_to_ascii_file,
 )
 from astrohack.visualization.plot_tools import (
-    create_figure_and_axes,
     close_figure,
-    simple_imshow_map_plot,
-    get_proper_color_map,
-    well_positioned_colorbar,
     compute_extent,
-)
-
-from astrohack.utils.fits import (
-    write_fits,
-    put_resolution_in_fits_header,
-    put_axis_in_fits_header,
+    create_figure_and_axes,
+    get_proper_color_map,
+    simple_imshow_map_plot,
+    well_positioned_colorbar,
 )
 
 SUPPORTED_POL_STATES = ["I", "RR", "LL", "XX", "YY"]
@@ -125,7 +121,7 @@ class AntennaSurface:
         if self.pol_state not in inputxds.coords["pol"]:
             msg = (
                 f"Polarization state {self.pol_state} is not present in the data (available states: "
-                f'{inputxds.coords["pol"]})'
+                f"{inputxds.coords['pol']})"
             )
             logger.error(msg)
             raise ValueError(msg)
@@ -485,13 +481,13 @@ class AntennaSurface:
         else:
             if self.residuals is None:
                 maps = [self.deviation]
-                labels = [f'original RMS={rms:.2f} {parm_dict["unit"]}']
+                labels = [f"original RMS={rms:.2f} {parm_dict['unit']}"]
             else:
                 maps = [self.deviation, self.corrections, self.residuals]
                 labels = [
-                    f'original RMS={rms[0]:.2f} {parm_dict["unit"]}',
+                    f"original RMS={rms[0]:.2f} {parm_dict['unit']}",
                     "correction",
-                    f"residual RMS={rms[1]:.2f} " f'{parm_dict["unit"]}',
+                    f"residual RMS={rms[1]:.2f} {parm_dict['unit']}",
                 ]
         self._multi_plot(maps, labels, prefix, basename, fac, parm_dict, caller)
 
@@ -686,11 +682,11 @@ class AntennaSurface:
             mmrms = self.get_rms("mm")
             outfile += (
                 f"# Antenna surface RMS before adjustment: {format_value_unit(rmses[0], unit)} or "
-                f'{format_value_unit(mmrms[0], "mm")}{lnbr}'
+                f"{format_value_unit(mmrms[0], 'mm')}{lnbr}"
             )
             outfile += (
                 f"# Antenna surface RMS after adjustment: {format_value_unit(rmses[1], unit)} or "
-                f'{format_value_unit(mmrms[1], "mm")}{lnbr}'
+                f"{format_value_unit(mmrms[1], 'mm')}{lnbr}"
             )
         outfile += "# Lower means away from subreflector" + lnbr
         outfile += "# Raise means toward the subreflector" + lnbr
@@ -698,23 +694,21 @@ class AntennaSurface:
         outfile += "# RAISE the panel if the number is NEGATIVE" + lnbr
         outfile += "# Adjustments are in " + unit + lnbr
         outfile += lnbr
-        outfile += f"{comment_char} Panel{2*spc}"
+        outfile += f"{comment_char} Panel{2 * spc}"
         nscrews = len(self.telescope.screw_description)
         for screw in self.telescope.screw_description:
-            outfile += f"{4*spc}{screw:2s}{4*spc}"
-        outfile += f"Fallback{4*spc}Model{lnbr}"
+            outfile += f"{4 * spc}{screw:2s}{4 * spc}"
+        outfile += f"Fallback{4 * spc}Model{lnbr}"
         fac = convert_unit("m", unit, "length")
 
         for ipanel in range(len(self.panel_labels)):
-            outfile += "{0:>5s}".format(self.panel_labels[ipanel])
+            outfile += f"{self.panel_labels[ipanel]:>5s}"
 
             for iscrew in range(nscrews):
-                outfile += " {0:>9.2f}".format(
-                    fac * self.screw_adjustments[ipanel, iscrew]
-                )
+                outfile += f" {fac * self.screw_adjustments[ipanel, iscrew]:>9.2f}"
 
             outfile += (
-                f"{5*spc}{bool_to_str(self.panel_fallback[ipanel]):>3s}{7*spc}{self.panel_model_array[ipanel]}"
+                f"{5 * spc}{bool_to_str(self.panel_fallback[ipanel]):>3s}{7 * spc}{self.panel_model_array[ipanel]}"
                 + lnbr
             )
 

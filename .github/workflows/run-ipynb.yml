@@ -1,4 +1,4 @@
-# .github/workflows/python-testing-linux.yml
+# .github/workflows/run-ipynb.yml
 name: ipynb Tests
 
 on:
@@ -12,7 +12,8 @@ on:
       - '**.rst'
 
 jobs:
- 
+
   call-testing-ipynb-linux:
     uses: nrao/gh-actions-templates-public/.github/workflows/run-ipynb-template.yml@main
-    secrets: inherit
+    with:
+      python-version: "3.13"

@@ -1,34 +1,36 @@
-import numpy as np
-from scipy.interpolate import griddata
-from matplotlib import pyplot as plt
-import xarray as xr
 import pathlib
 
+import numpy as np
+import xarray as xr
+from matplotlib import pyplot as plt
+from scipy.interpolate import griddata
+
 from astrohack.antenna.telescope import get_proper_telescope
-from astrohack.utils.conversion import convert_unit
-from astrohack.utils.text import (
-    statistics_to_text,
-    dynamic_format,
-    create_pretty_table,
-    string_to_ascii_file,
-    lnbr,
-)
 from astrohack.utils.algorithms import (
-    data_statistics,
     are_axes_equal,
+    data_statistics,
 )
-from astrohack.visualization.plot_tools import well_positioned_colorbar, compute_extent
-from astrohack.visualization.plot_tools import (
-    close_figure,
-    get_proper_color_map,
-    scatter_plot,
-)
+from astrohack.utils.conversion import convert_unit
 from astrohack.utils.fits import (
-    read_fits,
     get_axis_from_fits_header,
     get_stokes_axis_iaxis,
     put_axis_in_fits_header,
+    read_fits,
     write_fits,
+)
+from astrohack.utils.text import (
+    create_pretty_table,
+    dynamic_format,
+    lnbr,
+    statistics_to_text,
+    string_to_ascii_file,
+)
+from astrohack.visualization.plot_tools import (
+    close_figure,
+    compute_extent,
+    get_proper_color_map,
+    scatter_plot,
+    well_positioned_colorbar,
 )
 
 
@@ -40,7 +42,6 @@ def test_image(fits_image):
 
 
 class FITSImage:
-
     def __init__(self):
         """
         Blank slate initialization of the FITSImage object
@@ -166,7 +167,7 @@ class FITSImage:
             self.y_axis, _, self.y_unit = get_axis_from_fits_header(self.header, 2)
         else:
             raise NotImplementedError(
-                f'Unrecognized origin:{lnbr}{self.header["origin"]}'
+                f"Unrecognized origin:{lnbr}{self.header['origin']}"
             )
         self._create_base_mask()
         self.original_x_axis = np.copy(self.x_axis)
@@ -728,7 +729,7 @@ def image_comparison_chunk(compare_params):
             display=display,
         )
     else:
-        raise ValueError(f'Unknown comparison type {compare_params["comparison"]}')
+        raise ValueError(f"Unknown comparison type {compare_params['comparison']}")
 
     if compare_params["export_to_fits"]:
         image.export_to_fits(destination)
@@ -785,7 +786,6 @@ def create_fits_comparison_rms_table(parameters, xdt):
 
     table = create_pretty_table(fields)
     for image in image_list:
-
         image_xds = xdt[image]["Image"].to_dataset()
         reference_xds = xdt[image]["Reference"].to_dataset()
 
@@ -807,7 +807,7 @@ def create_fits_comparison_rms_table(parameters, xdt):
 
         table.add_row(row)
 
-    outstr = f'RMS comparison table from {parameters["zarr_data_tree"]}:{lnbr}'
+    outstr = f"RMS comparison table from {parameters['zarr_data_tree']}:{lnbr}"
     outstr += table.get_string()
     string_to_ascii_file(outstr, parameters["table_file"])
     if parameters["print_table"]:

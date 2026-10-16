@@ -1,19 +1,17 @@
 import copy
+import pathlib
 import shutil
+from collections.abc import ItemsView, KeysView, ValuesView
 
 import pytest
 import xarray
-import pathlib
-
-from collections.abc import KeysView, ValuesView, ItemsView
-
 from toolviper.utils import data
 
 from astrohack.io.base_mds import AstrohackBaseFile
 from astrohack.utils.verification_tools import (
     add_data_folder_to_names_in_class,
-    are_dicts_close,
     analyse_summary,
+    are_dicts_close,
     are_lists_equal,
     create_origin_dict,
 )
@@ -57,9 +55,9 @@ class TestBaseMds:
     def test_init_and_open_base_mds(self):
         base_mds = AstrohackBaseFile(self.silly_name)
 
-        assert (
-            base_mds.filename == self.silly_name
-        ), "base mds file name should be the same as the one given as argument to __init__"
+        assert base_mds.filename == self.silly_name, (
+            "base mds file name should be the same as the one given as argument to __init__"
+        )
 
         assert not base_mds.is_open, "base mds file should not be opened yet"
 
@@ -67,17 +65,17 @@ class TestBaseMds:
             successful_open = base_mds.open()
 
         successful_open = base_mds.open(self.pos_mds_name)
-        assert (
-            successful_open
-        ), "Opening base_mds should succeed now that the correct file name is given"
+        assert successful_open, (
+            "Opening base_mds should succeed now that the correct file name is given"
+        )
 
-        assert (
-            base_mds.is_open
-        ), "is_open property needs to return True now that the file has been opened"
+        assert base_mds.is_open, (
+            "is_open property needs to return True now that the file has been opened"
+        )
 
-        assert (
-            base_mds.filename == self.pos_mds_name
-        ), ".file attribute should now be set to the name of the given file."
+        assert base_mds.filename == self.pos_mds_name, (
+            ".file attribute should now be set to the name of the given file."
+        )
 
         return
 
@@ -86,14 +84,14 @@ class TestBaseMds:
         base_mds.open()
 
         old_xdt_keys = base_mds.keys()
-        assert isinstance(
-            old_xdt_keys, KeysView
-        ), "Keys method should return a dict_keys object"
+        assert isinstance(old_xdt_keys, KeysView), (
+            "Keys method should return a dict_keys object"
+        )
 
         n_old_keys = len(old_xdt_keys)
-        assert (
-            n_old_keys == self.exp_n_ant_in_mds
-        ), f"File should have {self.exp_n_ant_in_mds}, but has {n_old_keys} antenna subtrees"
+        assert n_old_keys == self.exp_n_ant_in_mds, (
+            f"File should have {self.exp_n_ant_in_mds}, but has {n_old_keys} antenna subtrees"
+        )
 
         get_ant_subtree = base_mds[self.get_ant_key]
         assert isinstance(get_ant_subtree, xarray.DataTree)
@@ -101,13 +99,13 @@ class TestBaseMds:
         base_mds[self.set_ant_key] = get_ant_subtree
         new_xdt_keys = base_mds.keys()
         n_new_keys = len(new_xdt_keys)
-        assert (
-            n_new_keys == n_old_keys + 1
-        ), f"File should now contain {n_old_keys+1} antenna subtrees"
+        assert n_new_keys == n_old_keys + 1, (
+            f"File should now contain {n_old_keys + 1} antenna subtrees"
+        )
 
-        assert (
-            self.set_ant_key in new_xdt_keys
-        ), "New antenna subtree should appear amongst keys"
+        assert self.set_ant_key in new_xdt_keys, (
+            "New antenna subtree should appear amongst keys"
+        )
 
         return
 
@@ -116,36 +114,36 @@ class TestBaseMds:
         base_mds.open()
 
         old_xdt_values = base_mds.values()
-        assert isinstance(
-            old_xdt_values, ValuesView
-        ), "Values method should return a ValuesView object"
-        assert (
-            len(old_xdt_values) == self.exp_n_ant_in_mds
-        ), f"File should contain {self.exp_n_ant_in_mds} antenna subtrees"
+        assert isinstance(old_xdt_values, ValuesView), (
+            "Values method should return a ValuesView object"
+        )
+        assert len(old_xdt_values) == self.exp_n_ant_in_mds, (
+            f"File should contain {self.exp_n_ant_in_mds} antenna subtrees"
+        )
 
         any_ant_subtree = list(old_xdt_values)[0]
         assert isinstance(any_ant_subtree, xarray.DataTree)
 
         old_xdt_items = base_mds.items()
-        assert isinstance(
-            old_xdt_items, ItemsView
-        ), "Items method should return a ItemsView object"
+        assert isinstance(old_xdt_items, ItemsView), (
+            "Items method should return a ItemsView object"
+        )
 
         new_base_mds = AstrohackBaseFile.create_from_input_parameters(
             self.output_file_name, self.ref_input_pars
         )
 
-        assert isinstance(
-            new_base_mds.root, xarray.DataTree
-        ), "Root attribute must be a DataTree"
+        assert isinstance(new_base_mds.root, xarray.DataTree), (
+            "Root attribute must be a DataTree"
+        )
 
-        assert (
-            len(new_base_mds.root.children) == 0
-        ), "Root data tree must not contain any children"
+        assert len(new_base_mds.root.children) == 0, (
+            "Root data tree must not contain any children"
+        )
 
-        assert (
-            new_base_mds.root.attrs["input_parameters"] == self.ref_input_pars
-        ), "input_parameters should be equal to the given dictionary"
+        assert new_base_mds.root.attrs["input_parameters"] == self.ref_input_pars, (
+            "input_parameters should be equal to the given dictionary"
+        )
 
         assert are_dicts_close(
             new_base_mds.root.attrs["origin_info"],
@@ -162,23 +160,23 @@ class TestBaseMds:
         # Delete old objs for better testing
         del base_mds, new_base_mds
 
-        assert pathlib.Path(
-            self.output_file_name
-        ).is_dir(), f"Write method should create a directory named {self.output_file_name} containing the DataTree"
+        assert pathlib.Path(self.output_file_name).is_dir(), (
+            f"Write method should create a directory named {self.output_file_name} containing the DataTree"
+        )
 
         new_base_mds = AstrohackBaseFile(self.output_file_name)
         new_base_mds.open()
-        assert (
-            new_base_mds.root.attrs["input_parameters"] == self.ref_input_pars
-        ), "input_parameters from file on disk should be equal to the given dictionary"
+        assert new_base_mds.root.attrs["input_parameters"] == self.ref_input_pars, (
+            "input_parameters from file on disk should be equal to the given dictionary"
+        )
 
-        assert (
-            len(new_base_mds.keys()) == 1
-        ), "Disk read from file should contain one single key"
+        assert len(new_base_mds.keys()) == 1, (
+            "Disk read from file should contain one single key"
+        )
 
-        assert (
-            new_base_mds[self.set_ant_key] == any_ant_subtree
-        ), "Antenna subtree in writen file should be equal to the one given to it"
+        assert new_base_mds[self.set_ant_key] == any_ant_subtree, (
+            "Antenna subtree in writen file should be equal to the one given to it"
+        )
 
     def test_incremental_write_and_closeness(self):
         shutil.rmtree(self.output_file_name, ignore_errors=True)
@@ -189,18 +187,18 @@ class TestBaseMds:
             self.output_file_name, self.ref_input_pars
         )
         exp_n_keys = 0
-        assert (
-            len(new_mds.keys()) == exp_n_keys
-        ), f"new_mds should have {exp_n_keys} keys at this moment."
+        assert len(new_mds.keys()) == exp_n_keys, (
+            f"new_mds should have {exp_n_keys} keys at this moment."
+        )
 
-        assert not pathlib.Path(
-            self.output_file_name
-        ).is_dir(), f"{self.output_file_name} should not exist on disk at this point"
+        assert not pathlib.Path(self.output_file_name).is_dir(), (
+            f"{self.output_file_name} should not exist on disk at this point"
+        )
 
         new_mds.write(mode="w")
-        assert pathlib.Path(
-            self.output_file_name
-        ).is_dir(), f"{self.output_file_name} should exist on disk at this point"
+        assert pathlib.Path(self.output_file_name).is_dir(), (
+            f"{self.output_file_name} should exist on disk at this point"
+        )
 
         ant_key_list = []
         # Test adding datasets
@@ -226,28 +224,28 @@ class TestBaseMds:
             by_xdt_mds.add_node(ant_xdt.copy(), [ant_key])
             data_path = pathlib.Path(f"{self.output_file_name}/{ant_key}")
             assert data_path.is_dir(), f"{data_path} should exist on disk at this point"
-        assert (
-            len(by_xdt_mds.keys()) == 0
-        ), "Key list should not have grown at this point"
+        assert len(by_xdt_mds.keys()) == 0, (
+            "Key list should not have grown at this point"
+        )
         by_xdt_mds.consolidate(["ant"])
 
         this_ant_key_list = list(by_xdt_mds.keys())
         assert are_lists_equal(ant_key_list, this_ant_key_list)
 
-        assert by_xdt_mds.is_close_to(
-            new_mds
-        ), "MDSes created using datatrees and datasets should be equal"
+        assert by_xdt_mds.is_close_to(new_mds), (
+            "MDSes created using datatrees and datasets should be equal"
+        )
 
-        assert new_mds.is_close_to(
-            by_xdt_mds
-        ), "MDSes created using datasets and datatrees should be equal"
+        assert new_mds.is_close_to(by_xdt_mds), (
+            "MDSes created using datasets and datatrees should be equal"
+        )
 
         assert new_mds.is_close_to(base_mds), "New mds should be close to base mds"
 
         new_mds.root.attrs["random"] = 42
-        assert not new_mds.is_close_to(
-            base_mds
-        ), "New mds should not be close to base mds"
+        assert not new_mds.is_close_to(base_mds), (
+            "New mds should not be close to base mds"
+        )
 
     def test_summary(self):
         base_mds = AstrohackBaseFile(self.pos_mds_name)

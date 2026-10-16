@@ -1,10 +1,11 @@
-import numpy as np
-import toolviper
 import shutil
 
-from astrohack.utils.constants import clight
-from astrohack.utils.gridding import grid_beam, grid_1d_data, gridding_correction
+import numpy as np
+import toolviper
+
 from astrohack import get_proper_telescope, open_holog
+from astrohack.utils.constants import clight
+from astrohack.utils.gridding import grid_1d_data, grid_beam, gridding_correction
 from astrohack.utils.ray_tracing_general import simple_axis
 from astrohack.utils.verification_tools import (
     add_data_folder_to_names_in_class,
@@ -52,9 +53,9 @@ class TestGridAlgorithms:
         )
 
         n_nan = np.sum(np.isnan(resamp_under))
-        assert (
-            n_nan == exp_n_nan
-        ), "Number of NaNs is not what is expected when introducing an irregularity in the origin axis"
+        assert n_nan == exp_n_nan, (
+            "Number of NaNs is not what is expected when introducing an irregularity in the origin axis"
+        )
 
     def resample_weight_test(self, method, is_over, ref_weights):
         if is_over:
@@ -79,13 +80,13 @@ class TestGridAlgorithms:
             second_dim_len=1,
         )
 
-        assert np.allclose(
-            resamp_y, self.fill_value
-        ), f"{method.capitalize()} {mode} resampled data does not have the expected values"
+        assert np.allclose(resamp_y, self.fill_value), (
+            f"{method.capitalize()} {mode} resampled data does not have the expected values"
+        )
 
-        assert np.allclose(
-            np.unique(weights), ref_weights
-        ), f"{method.capitalize()} {mode} weights are different from what is expected"
+        assert np.allclose(np.unique(weights), ref_weights), (
+            f"{method.capitalize()} {mode} weights are different from what is expected"
+        )
 
     def beam_grid_assertions(
         self,
@@ -111,45 +112,45 @@ class TestGridAlgorithms:
         i_x_cen = expected_shape[3] // 2
         i_y_cen = expected_shape[4] // 2
 
-        assert np.all(
-            np.isclose(expected_shape, beam_grid.shape)
-        ), f"{mode.capitalize()} beam grid does not have the expected shape"
+        assert np.all(np.isclose(expected_shape, beam_grid.shape)), (
+            f"{mode.capitalize()} beam grid does not have the expected shape"
+        )
 
         for i_pol, pol in enumerate(pol_axis):
             assert np.isclose(
                 beam_grid[0, i_chan, i_pol, i_x_cen, i_y_cen], ref_center_values[i_pol]
             ), f"{mode.capitalize()} center pixel for {pol} does not match reference"
 
-        assert np.isclose(
-            time_centroid[0], self.expected_time_centroid
-        ), f"{mode.capitalize()} time centroid is different from the expected"
+        assert np.isclose(time_centroid[0], self.expected_time_centroid), (
+            f"{mode.capitalize()} time centroid is different from the expected"
+        )
 
-        assert (
-            l_axis.shape[0] == self.grid_size[0]
-        ), f"{mode.capitalize()} grid size and l axis size are not equal"
+        assert l_axis.shape[0] == self.grid_size[0], (
+            f"{mode.capitalize()} grid size and l axis size are not equal"
+        )
 
-        assert (
-            m_axis.shape[0] == self.grid_size[1]
-        ), f"{mode.capitalize()} grid size and m axis size are not equal"
+        assert m_axis.shape[0] == self.grid_size[1], (
+            f"{mode.capitalize()} grid size and m axis size are not equal"
+        )
 
-        assert np.all(
-            np.isclose(ref_freq_axis, output_freq_axis)
-        ), f"{mode.capitalize()} output frequency axis is not equal to the reference"
+        assert np.all(np.isclose(ref_freq_axis, output_freq_axis)), (
+            f"{mode.capitalize()} output frequency axis is not equal to the reference"
+        )
 
         if "linear" in mode:
-            assert (
-                not grid_corr
-            ), f"{mode.capitalize()} beam grid does not warrants a gridding correction in aperture plane"
+            assert not grid_corr, (
+                f"{mode.capitalize()} beam grid does not warrants a gridding correction in aperture plane"
+            )
         elif "gaussian" in mode:
-            assert (
-                grid_corr
-            ), f"{mode.capitalize()} beam grid warrants a gridding correction in aperture plane"
+            assert grid_corr, (
+                f"{mode.capitalize()} beam grid warrants a gridding correction in aperture plane"
+            )
         else:
             raise RuntimeError(f"Unrecognized mode {mode}")
 
-        assert are_dicts_close(
-            obs_sum, self.obs_sum, tol=1e-6
-        ), f"{mode.capitalize()} observation summary differs from the expected"
+        assert are_dicts_close(obs_sum, self.obs_sum, tol=1e-6), (
+            f"{mode.capitalize()} observation summary differs from the expected"
+        )
 
     @classmethod
     def setup_class(cls):
@@ -304,9 +305,9 @@ class TestGridAlgorithms:
         ]
 
         for idx, val in reference_values:
-            assert np.isclose(
-                corr_aperture[0, 0, 0, *idx], val
-            ), f"Aperture correction at {idx} is not what was expected"
+            assert np.isclose(corr_aperture[0, 0, 0, *idx], val), (
+                f"Aperture correction at {idx} is not what was expected"
+            )
 
     def test_1d_linear_gridding(self):
         method = "linear"

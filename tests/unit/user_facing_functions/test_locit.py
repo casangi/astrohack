@@ -1,16 +1,15 @@
 import os
-
-import shutil
-import toolviper
-import pytest
 import pathlib
+import shutil
 
+import pytest
+import toolviper
 
 from astrohack import open_position
 from astrohack.locit import locit
 from astrohack.utils.verification_tools import (
-    are_lists_equal,
     add_data_folder_to_names_in_class,
+    are_lists_equal,
     execute_cleanup,
     produce_reference_data,
 )
@@ -53,17 +52,17 @@ class TestLocit:
         """
 
         new_pos_mds = locit(locit_name=self.lct_name, overwrite=True)
-        assert pathlib.Path(
-            self.def_pos_name
-        ).is_dir(), f"A .position.zarr file named {self.def_pos_name} does not exist."
+        assert pathlib.Path(self.def_pos_name).is_dir(), (
+            f"A .position.zarr file named {self.def_pos_name} does not exist."
+        )
 
         if produce_reference_data():
             return
 
         ref_pos_mds = open_position(self.ref_pos_name)
-        assert new_pos_mds.is_close_to(
-            ref_pos_mds
-        ), "Reference and new mdses are different."
+        assert new_pos_mds.is_close_to(ref_pos_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_data_selection(self):
         """
@@ -84,15 +83,15 @@ class TestLocit:
 
         ant_list = list(new_pos_mds.keys())
         assert len(ant_list) == 1, "A single antenna should be present."
-        assert (
-            ant_list[0] == self.ant_key
-        ), "Ant name should be the same as the one given."
+        assert ant_list[0] == self.ant_key, (
+            "Ant name should be the same as the one given."
+        )
 
         ddi_list = list(new_pos_mds[self.ant_key].keys())
         assert len(ddi_list) == 1, "A single ddi should be present."
-        assert (
-            ddi_list[0] == self.ddi_key
-        ), "DDI key should be the same as the one given."
+        assert ddi_list[0] == self.ddi_key, (
+            "DDI key should be the same as the one given."
+        )
 
     def test_fit_kterm(self):
         """
@@ -158,9 +157,9 @@ class TestLocit:
             overwrite=True,
         )
 
-        assert (
-            new_pos_mds is None
-        ), "There should be no position mds created when elevation limit is 90 degrees"
+        assert new_pos_mds is None, (
+            "There should be no position mds created when elevation limit is 90 degrees"
+        )
 
     def test_polarization(self):
         """
@@ -205,9 +204,9 @@ class TestLocit:
             "SCANS",
         ]
         for key in position_mds.keys():
-            assert are_lists_equal(
-                list(position_mds[key].keys()), ref_list
-            ), "An XDS should contain all the expected keys"
+            assert are_lists_equal(list(position_mds[key].keys()), ref_list), (
+                "An XDS should contain all the expected keys"
+            )
 
     def test_scan_exclusion(self):
         """
@@ -226,9 +225,9 @@ class TestLocit:
         )
         ant_xds = position_mds[self.ant_key]
         for bad_scan in bad_scans:
-            assert (
-                bad_scan not in ant_xds.SCANS.values
-            ), f"Scan {bad_scan} should have been excluded from dataset"
+            assert bad_scan not in ant_xds.SCANS.values, (
+                f"Scan {bad_scan} should have been excluded from dataset"
+            )
 
     def test_overwrite(self):
         """
@@ -245,9 +244,9 @@ class TestLocit:
             overwrite=True,
         )
         modified_time = os.path.getctime(self.def_pos_name)
-        assert (
-            initial_time != modified_time
-        ), "Recreated file has to have a different time from the original file."
+        assert initial_time != modified_time, (
+            "Recreated file has to have a different time from the original file."
+        )
 
         with pytest.raises(FileExistsError):
             locit(

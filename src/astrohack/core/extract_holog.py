@@ -1,26 +1,23 @@
 import os
 
-import numpy as np
-import xarray as xr
 import astropy
+import numpy as np
 import toolviper.utils.logger as logger
-
+import xarray as xr
+from casacoretables import tables as ctables
 from numba import njit
 from numba.core import types
 
-from casacoretables import tables as ctables
-
-from astrohack.io.holog_mds import AstrohackHologFile
-from astrohack.utils.tools import get_valid_state_ids
 from astrohack.antenna.telescope import get_proper_telescope
-from astrohack.utils.text import create_dataset_label, undscr
-from astrohack.utils.imaging import calculate_parallactic_angle_chunk
-from astrohack.utils.algorithms import calculate_optimal_grid_parameters
-from astrohack.utils.conversion import casa_time_to_mjd
-from astrohack.utils.constants import twopi, clight
-from astrohack.utils.gridding import grid_1d_data
-from astrohack.utils.constants import pol_str, njit_caching
 from astrohack.core.holog_obs_dict import HologObsDict
+from astrohack.io.holog_mds import AstrohackHologFile
+from astrohack.utils.algorithms import calculate_optimal_grid_parameters
+from astrohack.utils.constants import clight, njit_caching, pol_str, twopi
+from astrohack.utils.conversion import casa_time_to_mjd
+from astrohack.utils.gridding import grid_1d_data
+from astrohack.utils.imaging import calculate_parallactic_angle_chunk
+from astrohack.utils.text import create_dataset_label, undscr
+from astrohack.utils.tools import get_valid_state_ids
 
 
 def extract_holog_preprocessing(extract_holog_params, pnt_mds):
@@ -139,16 +136,10 @@ def extract_holog_preprocessing(extract_holog_params, pnt_mds):
             scans = map_data["scans"]
             if len(scans) > 1:
                 logger.info(
-                    "Pre-processing ddi: {ddi}, scans: [{min} ... {max}]".format(
-                        ddi=ddi, min=scans[0], max=scans[-1]
-                    )
+                    f"Pre-processing ddi: {ddi}, scans: [{scans[0]} ... {scans[-1]}]"
                 )
             else:
-                logger.info(
-                    "Pre-processing ddi: {ddi}, scan: {scan}".format(
-                        ddi=ddi, scan=scans
-                    )
-                )
+                logger.info(f"Pre-processing ddi: {ddi}, scan: {scans}")
 
             if len(list(map_data["ant"].keys())) != 0:
                 map_ant_list = []
@@ -158,7 +149,6 @@ def extract_holog_preprocessing(extract_holog_params, pnt_mds):
                 ref_ant_per_map_ant_name_list = []
                 ref_ant_stations_list = []
                 for map_ant_name, ref_ant_name_list in map_data["ant"].items():
-
                     ref_ant_ids = _convert_ant_name_to_id(
                         ref_ant_name_list,
                         ant_names,

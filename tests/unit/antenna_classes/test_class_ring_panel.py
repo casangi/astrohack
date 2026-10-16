@@ -1,5 +1,6 @@
-from astrohack.antenna.ring_panel import RingPanel
 import numpy as np
+
+from astrohack.antenna.ring_panel import RingPanel
 
 
 class TestRingPanel:
@@ -54,9 +55,9 @@ class TestRingPanel:
         for i_screw, test_screw in enumerate(test_screws):
             diff_sum += code_screws[i_screw].xc - test_screw[0]
             diff_sum += code_screws[i_screw].yc - test_screw[1]
-        assert (
-            code_screws.shape[0] == n_screws
-        ), "If no scheme is given, there should be 4 screws at the corners"
+        assert code_screws.shape[0] == n_screws, (
+            "If no scheme is given, there should be 4 screws at the corners"
+        )
         assert np.abs(diff_sum) < 1e-15, "Screws with no offset do not match"
 
         offset = 6e-2  # 6 cm offset from panel edge
@@ -86,18 +87,18 @@ class TestRingPanel:
         assert np.abs(diff_sum) < 1e-15, "Screws with an offset do not match"
         scheme = ["c"]
         code_screws = self.panel._init_screws(scheme, offset)
-        assert (
-            code_screws.shape[0] == 1
-        ), "If scheme has a single screw, output must have a single screw"
+        assert code_screws.shape[0] == 1, (
+            "If scheme has a single screw, output must have a single screw"
+        )
         diff_sum = (
             code_screws[0].xc
             - self.panel.center.xc
             + code_screws[0].yc
             - self.panel.center.yc
         )
-        assert (
-            np.abs(diff_sum) < 1e-15
-        ), "A center screw must be at the center of a panel"
+        assert np.abs(diff_sum) < 1e-15, (
+            "A center screw must be at the center of a panel"
+        )
         return
 
     def test_is_inside(self):
@@ -107,18 +108,18 @@ class TestRingPanel:
         is_sample, is_in_panel = self.panel.is_inside(
             (self.in_radius + self.out_radius) / 2, 1.5 * self.angle
         )
-        assert (
-            is_sample and is_in_panel
-        ), "center of the panel must be a sample and inside panel"
+        assert is_sample and is_in_panel, (
+            "center of the panel must be a sample and inside panel"
+        )
         is_sample, is_in_panel = self.panel.is_inside(
             (self.in_radius + self.out_radius) / 2, 3.5 * self.angle
         )
-        assert (not is_sample) and (
-            not is_in_panel
-        ), "Point on the other side of the surface must be fully outside panel"
+        assert (not is_sample) and (not is_in_panel), (
+            "Point on the other side of the surface must be fully outside panel"
+        )
         is_sample, is_in_panel = self.panel.is_inside(
             (self.in_radius + self.out_radius) / 2, 1.1 * self.angle
         )
-        assert (
-            not is_sample
-        ) and is_in_panel, "Point at margin must be inside but not a sample"
+        assert (not is_sample) and is_in_panel, (
+            "Point at margin must be inside but not a sample"
+        )

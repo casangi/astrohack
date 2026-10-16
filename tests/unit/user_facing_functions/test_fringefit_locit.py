@@ -1,10 +1,9 @@
 import os
-
-import shutil
-import toolviper
-import pytest
 import pathlib
+import shutil
 
+import pytest
+import toolviper
 
 from astrohack import open_position
 from astrohack.fringefit_locit import fringefit_locit
@@ -54,17 +53,17 @@ class TestFringeFitLocit:
         new_pos_mds = fringefit_locit(
             fringefit_caltable=self.fringefit_name, overwrite=True
         )
-        assert pathlib.Path(
-            self.def_pos_name
-        ).is_dir(), f"A .position.zarr file named {self.def_pos_name} does not exist."
+        assert pathlib.Path(self.def_pos_name).is_dir(), (
+            f"A .position.zarr file named {self.def_pos_name} does not exist."
+        )
 
         if produce_reference_data():
             return
 
         ref_pos_mds = open_position(self.ref_pos_name)
-        assert new_pos_mds.is_close_to(
-            ref_pos_mds
-        ), "Reference and new mdses are different."
+        assert new_pos_mds.is_close_to(ref_pos_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_data_selection(self):
         """
@@ -84,23 +83,23 @@ class TestFringeFitLocit:
 
         ant_list = list(new_pos_mds.keys())
         assert len(ant_list) == 1, "A single antenna should be present."
-        assert (
-            ant_list[0] == self.ant_key
-        ), "Ant name should be the same as the one given."
+        assert ant_list[0] == self.ant_key, (
+            "Ant name should be the same as the one given."
+        )
 
         ref_pos_mds = open_position(self.ref_pos_name)
 
         ref_ave_freq = ref_pos_mds[self.ant_key].attrs["frequency"]
         new_ave_freq = new_pos_mds[self.ant_key].attrs["frequency"]
-        assert (
-            ref_ave_freq != new_ave_freq
-        ), "Average frequencies in new and ref position mds must not match"
+        assert ref_ave_freq != new_ave_freq, (
+            "Average frequencies in new and ref position mds must not match"
+        )
 
         ref_delay_arr = ref_pos_mds[self.ant_key]["DELAYS"]
         new_delay_arr = new_pos_mds[self.ant_key]["DELAYS"]
-        assert (
-            new_delay_arr.size < ref_delay_arr.size
-        ), "New delay array must be smaller than ref delay array."
+        assert new_delay_arr.size < ref_delay_arr.size, (
+            "New delay array must be smaller than ref delay array."
+        )
 
     def test_fit_kterm(self):
         """
@@ -158,9 +157,9 @@ class TestFringeFitLocit:
             overwrite=True,
         )
 
-        assert (
-            new_pos_mds is None
-        ), "There should be no position mds created when elevation limit is 90 degrees"
+        assert new_pos_mds is None, (
+            "There should be no position mds created when elevation limit is 90 degrees"
+        )
 
     def test_polarization(self):
         """
@@ -196,9 +195,9 @@ class TestFringeFitLocit:
         )
         ant_xds = position_mds[self.ant_key]
         for bad_scan in bad_scans:
-            assert (
-                bad_scan not in ant_xds.SCANS.values
-            ), f"Scan {bad_scan} should have been excluded from dataset"
+            assert bad_scan not in ant_xds.SCANS.values, (
+                f"Scan {bad_scan} should have been excluded from dataset"
+            )
 
     def test_overwrite(self):
         """
@@ -215,9 +214,9 @@ class TestFringeFitLocit:
             overwrite=True,
         )
         modified_time = os.path.getctime(self.def_pos_name)
-        assert (
-            initial_time != modified_time
-        ), "Recreated file has to have a different time from the original file."
+        assert initial_time != modified_time, (
+            "Recreated file has to have a different time from the original file."
+        )
 
         with pytest.raises(FileExistsError):
             fringefit_locit(

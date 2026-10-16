@@ -1,17 +1,15 @@
-import toolviper.utils.logger as logger
-
-import numpy as np
 import astropy.units as units
+import numpy as np
+import toolviper.utils.logger as logger
 import xarray as xr
-
-from casacoretables import tables as ctables
-from astropy.coordinates import SkyCoord, CIRS
+from astropy.coordinates import CIRS, SkyCoord
 from astropy.time import Time
+from casacoretables import tables as ctables
 
-from astrohack.io.position_mds import AstrohackPositionFile
 from astrohack.io.locit_mds import AstrohackLocitFile
-from astrohack.utils.conversion import convert_unit, casa_time_to_mjd
+from astrohack.io.position_mds import AstrohackPositionFile
 from astrohack.utils.constants import twopi
+from astrohack.utils.conversion import casa_time_to_mjd, convert_unit
 
 
 def _get_caltable_name(extract_locit_parms):
@@ -267,7 +265,7 @@ def extract_antenna_phase_gains(extract_locit_parms, ddi_dict, locit_mds):
             if i_refant != i_best_ant:
                 logger.info(
                     f"Discarding gains derived with antenna "
-                    f'{locit_mds.root.attrs["full_antenna_list"][ref_antennas[i_refant]]}'
+                    f"{locit_mds.root.attrs['full_antenna_list'][ref_antennas[i_refant]]}"
                     f" as reference ({100 * counts[i_refant] / n_gains:.2f}% of the data)"
                 )
                 sel_refant = antenna2 != ref_antennas[i_refant]
@@ -291,7 +289,7 @@ def extract_antenna_phase_gains(extract_locit_parms, ddi_dict, locit_mds):
     elif "ALMA" == telescope_name:
         polarization_scheme = ["X", "Y"]
     else:
-        msg = f'Unrecognized telescope {extract_locit_parms["telescope_name"]}'
+        msg = f"Unrecognized telescope {extract_locit_parms['telescope_name']}"
         logger.error(msg)
         raise ValueError(msg)
 

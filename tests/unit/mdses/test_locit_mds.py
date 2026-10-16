@@ -1,19 +1,19 @@
+import os
 import shutil
+
 import matplotlib
 import pytest
-import os
-
 from toolviper.utils import data
 
 from astrohack import AstrohackLocitFile, open_locit
 from astrohack.utils.verification_tools import (
+    add_data_folder_to_names_in_class,
     are_lists_equal,
     are_png_files_close,
-    is_captured_output_equal_to_txt_reference,
-    add_data_folder_to_names_in_class,
-    execute_cleanup,
-    produce_reference_data,
     capture_prints_from_function,
+    execute_cleanup,
+    is_captured_output_equal_to_txt_reference,
+    produce_reference_data,
 )
 
 matplotlib.use("Agg")
@@ -81,9 +81,9 @@ class TestLocitMDS:
                 f"{self.destination_folder}/{src_fk5_plot_name}",
                 f"{self.ref_products_name}/{src_fk5_plot_name}",
             )
-            assert (
-                equal
-            ), f"{msg}: FK5 source position plot should be exactly equal to reference FK5 source position plot"
+            assert equal, (
+                f"{msg}: FK5 source position plot should be exactly equal to reference FK5 source position plot"
+            )
 
         src_prece_plot_name = "locit_source_table_precessed.png"
         locit_mds.plot_source_positions(self.destination_folder, precessed=True)
@@ -92,9 +92,9 @@ class TestLocitMDS:
                 f"{self.destination_folder}/{src_prece_plot_name}",
                 f"{self.ref_products_name}/{src_prece_plot_name}",
             )
-            assert (
-                equal
-            ), f"{msg}: Precessed source position plot should be exactly equal to reference precessed source position plot"
+            assert equal, (
+                f"{msg}: Precessed source position plot should be exactly equal to reference precessed source position plot"
+            )
 
         array_cfg_plot_name = "locit_array_configuration.png"
         locit_mds.plot_array_configuration(self.destination_folder)
@@ -103,24 +103,24 @@ class TestLocitMDS:
                 f"{self.destination_folder}/{array_cfg_plot_name}",
                 f"{self.ref_products_name}/{array_cfg_plot_name}",
             )
-            assert (
-                equal
-            ), f"{msg}: Array configuration plot should be exactly equal to reference array configuration plot"
+            assert equal, (
+                f"{msg}: Array configuration plot should be exactly equal to reference array configuration plot"
+            )
 
     def test_locit_mds_metadata_style(self):
         locit_mds = open_locit(self.locit_name)
 
-        assert "source_dict" in list(
-            locit_mds.root.attrs.keys()
-        ), "Root attributes should contain 'source_dict'"
+        assert "source_dict" in list(locit_mds.root.attrs.keys()), (
+            "Root attributes should contain 'source_dict'"
+        )
 
         expected_src_keys = ["fk5", "id", "name", "precessed"]
         src_table = locit_mds.root.attrs["source_dict"]
         for key, value in src_table.items():
             assert key.isdigit(), "Source key should be a digit referencing field Ids"
-            assert are_lists_equal(
-                list(value.keys()), expected_src_keys
-            ), "Source position keys should be the same as expected keys"
+            assert are_lists_equal(list(value.keys()), expected_src_keys), (
+                "Source position keys should be the same as expected keys"
+            )
 
         expected_ant_keys = [
             "geocentric_position",
@@ -134,8 +134,8 @@ class TestLocitMDS:
             "station",
         ]
         for ant_xdtree in locit_mds.values():
-            assert "antenna_info" in list(
-                ant_xdtree.attrs.keys()
-            ), "Each antenna xarray DataTree needs to contain antenna info"
+            assert "antenna_info" in list(ant_xdtree.attrs.keys()), (
+                "Each antenna xarray DataTree needs to contain antenna info"
+            )
             antenna_info = ant_xdtree.attrs["antenna_info"]
             assert are_lists_equal(list(antenna_info.keys()), expected_ant_keys)

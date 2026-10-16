@@ -1,17 +1,15 @@
 import numpy as np
-import scipy.signal as scisig
+import pandas as pd
 import scipy.constants
+import scipy.signal as scisig
+import toolviper.utils.logger as logger
 import xarray as xr
 from numba import njit
-
-import pandas as pd
 from scipy.spatial import distance_matrix
 
-import toolviper.utils.logger as logger
-
-from astrohack.utils.text import format_angular_distance, create_dataset_label
+from astrohack.utils.constants import njit_caching, pi, twopi
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.constants import pi, twopi, njit_caching
+from astrohack.utils.text import create_dataset_label, format_angular_distance
 
 
 def tokenize_version_number(version_number):
@@ -81,9 +79,7 @@ def _apply_mask(data, scaling=0.5):
     mask = int(x // (1 // scaling))
 
     assert mask > 0, logger.error(
-        "Scaling values too small. Minimum values is:{}, though search may still fail due to lack of points.".format(
-            1 / x
-        )
+        f"Scaling values too small. Minimum values is:{1 / x}, though search may still fail due to lack of points."
     )
 
     start = int(x // 2 - mask // 2)
@@ -160,7 +156,6 @@ def chunked_average(data, weight, avg_map, avg_freq):
     index = 0
 
     for avg_index in avg_chan_index:
-
         while (index < n_chan) and (avg_map[index] == avg_index):
             # Most probably will have to unravel assignment
             data_avg[:, avg_index, :] = (

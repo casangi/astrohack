@@ -1,12 +1,12 @@
-import shutil
-import dask
-import xarray as xr
-import toolviper.utils.logger as logger
 import copy
 import pathlib
+import shutil
 
-from astrohack.utils.text import approve_prefix
-from astrohack.utils.text import param_to_list
+import dask
+import toolviper.utils.logger as logger
+import xarray as xr
+
+from astrohack.utils.text import approve_prefix, param_to_list
 
 
 def _white_list_creation(key_prefix, looping_dict, param_dict):
@@ -130,7 +130,6 @@ def create_and_execute_graph_from_dict(
             shutil.rmtree(output_mds.filename)
             return _factorized_graph_execution_return(False, return_list, fetch_returns)
         else:
-
             return _factorized_graph_execution_return(True, return_list, fetch_returns)
 
     return _factorized_graph_execution_return(True, return_list, fetch_returns)

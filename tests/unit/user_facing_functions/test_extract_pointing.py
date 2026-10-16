@@ -1,5 +1,6 @@
 import pathlib
 import shutil
+
 import pytest
 import toolviper
 
@@ -35,14 +36,14 @@ class TestExtractPointing:
         """Test extract_pointing with default parameters"""
 
         new_pnt_mds = extract_pointing(ms_name=self.ms_name, overwrite=True)
-        assert pathlib.Path(
-            self.def_pnt_name
-        ).is_dir(), f"A .point.zarr file named {self.def_pnt_name} does not exist."
+        assert pathlib.Path(self.def_pnt_name).is_dir(), (
+            f"A .point.zarr file named {self.def_pnt_name} does not exist."
+        )
 
         ref_pnt_mds = open_pointing(self.ref_pnt_name)
-        assert new_pnt_mds.is_close_to(
-            ref_pnt_mds
-        ), "Reference and new mdses are different."
+        assert new_pnt_mds.is_close_to(ref_pnt_mds), (
+            "Reference and new mdses are different."
+        )
 
     def test_renaming(self):
         """Test extract_pointing naming"""
@@ -50,13 +51,13 @@ class TestExtractPointing:
             ms_name=self.ms_name, point_name=self.alt_pnt_name, overwrite=True
         )
 
-        assert pathlib.Path(
-            self.alt_pnt_name
-        ).is_dir(), f"A .point.zarr file named {self.alt_pnt_name} does not exist."
+        assert pathlib.Path(self.alt_pnt_name).is_dir(), (
+            f"A .point.zarr file named {self.alt_pnt_name} does not exist."
+        )
 
-        assert (
-            new_pnt_mds.filename == self.alt_pnt_name
-        ), "Point mds filename does not match the file on disk."
+        assert new_pnt_mds.filename == self.alt_pnt_name, (
+            "Point mds filename does not match the file on disk."
+        )
 
     def test_invalid_ms_name(self):
         """Test extract_pointing with invalid ms name"""

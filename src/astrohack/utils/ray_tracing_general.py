@@ -1,23 +1,23 @@
-import xarray as xr
 import pickle
-import numpy as np
 
-from scipy.spatial import distance_matrix
+import numpy as np
+import xarray as xr
 from numba import njit
 from numpy.linalg import LinAlgError
+from scipy.spatial import distance_matrix
 
 from astrohack.utils.algorithms import (
-    least_squares,
     create_2d_array_reconstruction_array,
     create_coordinate_images,
+    least_squares,
     regrid_data_onto_2d_grid,
 )
+from astrohack.utils.constants import njit_caching
 from astrohack.visualization.plot_tools import (
+    close_figure,
     create_figure_and_axes,
     simple_imshow_map_plot,
-    close_figure,
 )
-from astrohack.utils.constants import njit_caching
 
 nanvec3d = np.array([np.nan, np.nan, np.nan])
 return_line = "\033[F"
@@ -410,7 +410,7 @@ class LocalQPS:
         )
         print("0% done")
         for ipnt, point in enumerate(self.global_pcd):
-            print(f"{return_line}{100*ipnt/self.npnt:.2f}% done       ")
+            print(f"{return_line}{100 * ipnt / self.npnt:.2f}% done       ")
             dist2 = np.sum((point[np.newaxis, :] - self.global_pcd) ** 2, axis=-1)
             n_closest = np.argsort(dist2)[: self.local_qps_n_pnt]
             self.local_pcds[ipnt] = self.global_pcd[n_closest]

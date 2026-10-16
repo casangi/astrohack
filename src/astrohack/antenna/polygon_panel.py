@@ -1,16 +1,14 @@
-from shapely import Polygon, Point
+import numpy as np
+from shapely import Point, Polygon
 from shapely.plotting import plot_polygon
 
-from astrohack.utils.constants import markersize
 from astrohack.antenna.base_panel import BasePanel
 from astrohack.antenna.panel_fitting import PanelPoint
-import numpy as np
-
+from astrohack.utils.constants import markersize
 from astrohack.utils.text import spc
 
 
 class PolygonPanel(BasePanel):
-
     def __init__(
         self,
         label,

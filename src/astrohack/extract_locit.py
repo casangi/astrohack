@@ -1,26 +1,25 @@
 import shutil
-import toolviper.utils.parameter
-from typing import Union, List
 
+import toolviper.utils.parameter
 from toolviper.utils import logger
 
-from astrohack.utils.file import overwrite_file, check_ms_exists
 from astrohack.core.extract_locit import (
     extract_antenna_data,
-    extract_spectral_info,
-    extract_source_and_telescope,
     extract_antenna_phase_gains,
+    extract_source_and_telescope,
+    extract_spectral_info,
 )
-from astrohack.utils.text import get_default_file_name
 from astrohack.io.locit_mds import AstrohackLocitFile
+from astrohack.utils.file import check_ms_exists, overwrite_file
+from astrohack.utils.text import get_default_file_name
 
 
 @toolviper.utils.parameter.validate()
 def extract_locit(
     cal_table: str,
     locit_name: str | None = None,
-    ant: Union[str, List[str]] = "all",
-    ddi: Union[str, int, List[int]] = "all",
+    ant: str | list[str] = "all",
+    ddi: str | int | list[int] = "all",
     overwrite: bool = False,
 ):
     """

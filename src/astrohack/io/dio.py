@@ -1,19 +1,17 @@
 from astrohack.io.beamcut_mds import AstrohackBeamcutFile
+from astrohack.io.holog_mds import AstrohackHologFile
+from astrohack.io.image_mds import AstrohackImageFile
 from astrohack.io.locit_mds import AstrohackLocitFile
+from astrohack.io.panel_mds import AstrohackPanelFile
+from astrohack.io.point_mds import AstrohackPointFile
+from astrohack.io.position_mds import AstrohackPositionFile
 from astrohack.utils.constants import minimum_xdtree_version
 from astrohack.utils.file import (
     check_if_file_can_be_opened,
 )
-from astrohack.io.image_mds import AstrohackImageFile
-from astrohack.io.holog_mds import AstrohackHologFile
-from astrohack.io.panel_mds import AstrohackPanelFile
-from astrohack.io.point_mds import AstrohackPointFile
-from astrohack.io.position_mds import AstrohackPositionFile
-
-from typing import Union
 
 
-def open_beamcut(file: str) -> Union[AstrohackBeamcutFile, None]:
+def open_beamcut(file: str) -> AstrohackBeamcutFile | None:
     """ Open beamcut file and return instance of the beamcut data object. Object includes summary function to list\
      available nodes.
 
@@ -54,7 +52,7 @@ def open_beamcut(file: str) -> Union[AstrohackBeamcutFile, None]:
         return None
 
 
-def open_holog(file: str) -> Union[AstrohackHologFile, None]:
+def open_holog(file: str) -> AstrohackHologFile | None:
     """ Open holog file and return instance of the holog data object. Object includes summary function to list\
      available dictionary keys.
 
@@ -95,7 +93,7 @@ def open_holog(file: str) -> Union[AstrohackHologFile, None]:
         return None
 
 
-def open_image(file: str) -> Union[AstrohackImageFile, None]:
+def open_image(file: str) -> AstrohackImageFile | None:
     """ Open image file and return instance of the image data object. Object includes summary function to list \
     available dictionary keys.
 
@@ -133,7 +131,7 @@ def open_image(file: str) -> Union[AstrohackImageFile, None]:
         return None
 
 
-def open_panel(file: str) -> Union[AstrohackPanelFile, None]:
+def open_panel(file: str) -> AstrohackPanelFile | None:
     """ Open panel file and return instance of the panel data object. Object includes summary function to list \
     available dictionary keys.
 
@@ -171,7 +169,7 @@ def open_panel(file: str) -> Union[AstrohackPanelFile, None]:
         return None
 
 
-def open_locit(file: str) -> Union[AstrohackLocitFile, None]:
+def open_locit(file: str) -> AstrohackLocitFile | None:
     """ Open locit file and return instance of the locit data object. Object includes summary function to list \
     available dictionary keys.
 
@@ -209,7 +207,7 @@ def open_locit(file: str) -> Union[AstrohackLocitFile, None]:
         return None
 
 
-def open_position(file: str) -> Union[AstrohackPositionFile, None]:
+def open_position(file: str) -> AstrohackPositionFile | None:
     """ Open position file and return instance of the position data object. Object includes summary function to list \
     available dictionary keys.
 
@@ -250,7 +248,7 @@ def open_position(file: str) -> Union[AstrohackPositionFile, None]:
         return None
 
 
-def open_pointing(file: str) -> Union[AstrohackPointFile, None]:
+def open_pointing(file: str) -> AstrohackPointFile | None:
     """ Open pointing file and return instance of the pointing data object. Object includes summary function to list\
      available dictionary keys.
 

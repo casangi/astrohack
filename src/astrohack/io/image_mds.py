@@ -1,47 +1,43 @@
 import numpy as np
-
-from typing import List, Union, Tuple
-
 import toolviper.utils.logger as logger
 import toolviper.utils.parameter
 
 from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.io.base_mds import AstrohackBaseFile
-from astrohack.utils.conversion import convert_5d_grid_from_stokes
-from astrohack.utils.graph import create_and_execute_graphs_for_outputs
 from astrohack.utils.constants import clight, length_units, trigo_units
-from astrohack.utils.conversion import convert_unit
-from astrohack.utils.phase_fitting import aips_par_names
-from astrohack.utils.validation import (
-    custom_split_checker,
-    custom_plots_checker,
-    custom_unit_checker,
+from astrohack.utils.conversion import convert_5d_grid_from_stokes, convert_unit
+from astrohack.utils.fits import (
+    add_prefix,
+    put_axis_in_fits_header,
+    put_resolution_in_fits_header,
+    put_stokes_axis_in_fits_header,
+    write_fits,
 )
+from astrohack.utils.graph import create_and_execute_graphs_for_outputs
+from astrohack.utils.phase_fitting import aips_par_names
 from astrohack.utils.text import (
-    format_label,
-    create_pretty_table,
-    string_to_ascii_file,
     create_dataset_label,
+    create_informative_label_from_summary,
+    create_pretty_table,
+    format_label,
     format_value_error,
     lnbr,
     spc,
+    string_to_ascii_file,
     undscr,
-    create_informative_label_from_summary,
 )
-from astrohack.utils.fits import (
-    write_fits,
-    add_prefix,
-    put_axis_in_fits_header,
-    put_stokes_axis_in_fits_header,
-    put_resolution_in_fits_header,
-)
-from astrohack.visualization.plot_tools import (
-    create_figure_and_axes,
-    close_figure,
-    simple_imshow_map_plot,
+from astrohack.utils.validation import (
+    custom_plots_checker,
+    custom_split_checker,
+    custom_unit_checker,
 )
 from astrohack.visualization.observation_summary import (
     generate_observation_summary,
+)
+from astrohack.visualization.plot_tools import (
+    close_figure,
+    create_figure_and_axes,
+    simple_imshow_map_plot,
 )
 
 
@@ -67,8 +63,8 @@ class AstrohackImageFile(AstrohackBaseFile):
         self,
         destination: str,
         complex_split: str = "cartesian",
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         parallel: bool = False,
     ) -> None:
         """Export contents of an AstrohackImageFile object to several FITS files in the destination folder
@@ -118,19 +114,19 @@ class AstrohackImageFile(AstrohackBaseFile):
     def plot_apertures(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
-        polarization_state: Union[str, List[str]] = "I",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
+        polarization_state: str | list[str] = "I",
         plot_screws: bool = False,
-        amplitude_limits: Union[List[float | int], Tuple, np.ndarray, None] = None,
+        amplitude_limits: list[float | int] | tuple | np.ndarray | None = None,
         phase_unit: str = "deg",
-        phase_limits: Union[List[float | int], Tuple, np.ndarray, None] = None,
+        phase_limits: list[float | int] | tuple | np.ndarray | None = None,
         deviation_unit: str = "mm",
-        deviation_limits: Union[List[float | int], Tuple, np.ndarray, None] = None,
+        deviation_limits: list[float | int] | tuple | np.ndarray | None = None,
         panel_labels: bool = False,
         display: bool = False,
         colormap: str = "viridis",
-        figure_size: Union[Tuple, List[float | int], np.ndarray, None] = None,
+        figure_size: tuple | list[float | int] | np.ndarray | None = None,
         dpi: int = 300,
         parallel: bool = False,
     ) -> None:
@@ -202,14 +198,14 @@ class AstrohackImageFile(AstrohackBaseFile):
     def plot_beams(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         complex_split: str = "polar",
         angle_unit: str = "deg",
         phase_unit: str = "deg",
         display: bool = False,
         colormap: str = "viridis",
-        figure_size: Union[Tuple, List[float], np.ndarray] = (8, 3.5),
+        figure_size: tuple | list[float] | np.ndarray = (8, 3.5),
         dpi: int = 300,
         parallel: bool = False,
     ) -> None:
@@ -266,8 +262,8 @@ class AstrohackImageFile(AstrohackBaseFile):
     def export_phase_fit_results(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         angle_unit: str = "deg",
         length_unit: str = "mm",
         parallel: bool = False,
@@ -309,8 +305,8 @@ class AstrohackImageFile(AstrohackBaseFile):
     def export_zernike_fit_results(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         parallel: bool = False,
     ) -> None:
         """Export Zernike coefficients from the data in an AstrohackImageFIle object to ASCII files.
@@ -345,11 +341,11 @@ class AstrohackImageFile(AstrohackBaseFile):
     def plot_zernike_model(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         display: bool = False,
         colormap: str = "viridis",
-        figure_size: Union[Tuple, List[float], np.ndarray] = (16, 9),
+        figure_size: tuple | list[float] | np.ndarray = (16, 9),
         dpi: int = 300,
         parallel: bool = False,
     ) -> None:
@@ -397,8 +393,8 @@ class AstrohackImageFile(AstrohackBaseFile):
     def observation_summary(
         self,
         summary_file: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         az_el_key: str = "center",
         phase_center_unit: str = "radec",
         az_el_unit: str = "deg",
@@ -710,8 +706,8 @@ def _plot_beam_by_pol(laxis, maxis, pol, beam_image, basename, parm_dict):
 
     fig, axes = create_figure_and_axes(parm_dict["figure_size"], [1, 2])
     norm_z_label = "Z Scale [Normalized]"
-    x_label = f'L axis [{parm_dict["angle_unit"]}]'
-    y_label = f'M axis [{parm_dict["angle_unit"]}]'
+    x_label = f"L axis [{parm_dict['angle_unit']}]"
+    y_label = f"M axis [{parm_dict['angle_unit']}]"
 
     if parm_dict["complex_split"] == "cartesian":
         vmin = np.min([np.nanmin(beam_image.real), np.nanmin(beam_image.imag)])
@@ -809,7 +805,7 @@ def _export_phase_fit_chunk(parm_dict):
                 outstr += (
                     f"* {mapkey.replace(undscr, spc)}, "
                     f"{create_informative_label_from_summary(summary, azel_unit)}, "
-                    f"polarization state {pol}:{2*lnbr} "
+                    f"polarization state {pol}:{2 * lnbr} "
                 )
                 table = create_pretty_table(field_names, alignment)
                 for par_name in aips_par_names:

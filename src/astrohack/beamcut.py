@@ -1,31 +1,29 @@
 import pathlib
-import numpy as np
 
-from toolviper.utils.parameter import validate
+import numpy as np
 import toolviper.utils.logger as logger
+from toolviper.utils.parameter import validate
 
 from astrohack.core.beamcut import process_beamcut_chunk
-from astrohack.utils.text import get_default_file_name
-from astrohack.utils.file import overwrite_file
-from astrohack.utils.graph import create_and_execute_graph_from_dict
 from astrohack.io.beamcut_mds import AstrohackBeamcutFile
 from astrohack.io.dio import open_holog
+from astrohack.utils.file import overwrite_file
+from astrohack.utils.graph import create_and_execute_graph_from_dict
+from astrohack.utils.text import get_default_file_name
 from astrohack.utils.validation import custom_plots_checker
-
-from typing import Union, List, Tuple
 
 
 @validate(custom_checker=custom_plots_checker)
 def beamcut(
     holog_name: str,
     beamcut_name: str | None = None,
-    ant: Union[str, List[str]] = "all",
-    ddi: Union[int, List[int], str] = "all",
+    ant: str | list[str] = "all",
+    ddi: int | list[int] | str = "all",
     destination: str | None = None,
     lm_unit: str = "amin",
     azel_unit: str = "deg",
     phase_unit: str = "deg",
-    phase_scale: Union[List[float | int], Tuple[float | int], np.ndarray, None] = None,
+    phase_scale: list[float | int] | tuple[float | int] | np.ndarray | None = None,
     y_scale: list[float | int] | None = None,
     dpi: int = 300,
     display: bool = False,

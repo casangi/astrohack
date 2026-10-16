@@ -1,41 +1,40 @@
+import numpy as np
 import toolviper
 import toolviper.utils.logger as logger
-import numpy as np
 
-from astrohack.utils.validation import custom_unit_checker, custom_plots_checker
+from astrohack.antenna.telescope import get_proper_telescope
 from astrohack.core.cassegrain_ray_tracing import (
-    make_gridded_cassegrain_primary,
-    reflect_off_primary,
-    reflect_off_analytical_secondary,
-    detect_light,
-    compute_phase,
-    write_rt_xds_to_zarr,
-    open_rt_zarr,
-    title_from_input_parameters,
-    plot_2d_map,
     add_rz_ray_to_plot,
     compare_ray_tracing_to_phase_fit_results,
+    compute_phase,
+    detect_light,
+    make_gridded_cassegrain_primary,
+    open_rt_zarr,
+    plot_2d_map,
+    reflect_off_analytical_secondary,
+    reflect_off_primary,
+    title_from_input_parameters,
+    write_rt_xds_to_zarr,
 )
+from astrohack.utils.algorithms import regrid_data_onto_2d_grid
 from astrohack.utils.constants import clight
 from astrohack.utils.conversion import convert_unit
-from astrohack.utils.algorithms import regrid_data_onto_2d_grid
 from astrohack.utils.file import add_caller_and_version_to_dict
 from astrohack.utils.phase_fitting import aips_like_phase_fitting
-from astrohack.visualization.plot_tools import create_figure_and_axes, close_figure
-from typing import Union
 from astrohack.utils.text import spc, undscr
-from astrohack.antenna.telescope import get_proper_telescope
+from astrohack.utils.validation import custom_plots_checker, custom_unit_checker
+from astrohack.visualization.plot_tools import close_figure, create_figure_and_axes
 
 
 @toolviper.utils.parameter.validate(custom_checker=custom_unit_checker)
 def create_ray_tracing_telescope_parameter_dict(
-    primary_diameter: Union[float, int] = 25,
-    secondary_diameter: Union[float, int] = 2.5146,
-    focal_length: Union[float, int] = 9.0,
-    z_intercept: Union[float, int] = 3.140,
-    foci_half_distance: Union[float, int] = 3.662,
-    inner_radius: Union[float, int] = 2.0,
-    horn_diameter: Union[float, int] = 0.2,
+    primary_diameter: float | int = 25,
+    secondary_diameter: float | int = 2.5146,
+    focal_length: float | int = 9.0,
+    z_intercept: float | int = 3.140,
+    foci_half_distance: float | int = 3.662,
+    inner_radius: float | int = 2.0,
+    horn_diameter: float | int = 0.2,
     length_unit: str = "m",
 ):
     """Create a dictionary with a cassegrain telescope parameters
@@ -100,19 +99,19 @@ def create_ray_tracing_telescope_parameter_dict(
 def cassegrain_ray_tracing_pipeline(
     output_xds_filename: str,
     telescope_parameters: dict,
-    grid_size: Union[float, int] = 28,
-    grid_resolution: Union[float, int] = 0.1,
+    grid_size: float | int = 28,
+    grid_resolution: float | int = 0.1,
     grid_unit: str = "m",
-    x_pointing_offset: Union[float, int] = 0,
-    y_pointing_offset: Union[float, int] = 0,
+    x_pointing_offset: float | int = 0,
+    y_pointing_offset: float | int = 0,
     pointing_offset_unit: str = "asec",
-    x_focus_offset: Union[float, int] = 0,
-    y_focus_offset: Union[float, int] = 0,
-    z_focus_offset: Union[float, int] = 0,
+    x_focus_offset: float | int = 0,
+    y_focus_offset: float | int = 0,
+    z_focus_offset: float | int = 0,
     focus_offset_unit: str = "mm",
-    phase_offset: Union[float, int] = 0,
+    phase_offset: float | int = 0,
     phase_unit: str = "deg",
-    observing_wavelength: Union[float, int] = 1,
+    observing_wavelength: float | int = 1,
     wavelength_unit: str = "cm",
     overwrite: bool = False,
 ):
@@ -241,7 +240,7 @@ def cassegrain_ray_tracing_pipeline(
 @toolviper.utils.parameter.validate(custom_checker=custom_plots_checker)
 def plot_2d_maps_from_rt_xds(
     rt_xds_filename: str,
-    keys: Union[str, list],
+    keys: str | list,
     rootname: str,
     phase_unit: str = "deg",
     length_unit: str = "m",

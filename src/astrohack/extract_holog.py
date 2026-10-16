@@ -1,23 +1,19 @@
 import pathlib
 from copy import deepcopy
 
-import toolviper.utils.parameter
 import toolviper.utils.logger as logger
+import toolviper.utils.parameter
 
-
-from astrohack.io.dio import open_pointing, open_holog
-
-from astrohack.utils.file import overwrite_file, check_ms_exists
 from astrohack.core.extract_holog import (
     extract_holog_preprocessing,
+    process_extract_holog_chunk,
 )
-from astrohack.core.extract_holog import process_extract_holog_chunk
-from astrohack.utils.text import get_default_file_name
-from astrohack.io.holog_mds import AstrohackHologFile
 from astrohack.core.holog_obs_dict import HologObsDict
+from astrohack.io.dio import open_holog, open_pointing
+from astrohack.io.holog_mds import AstrohackHologFile
+from astrohack.utils.file import check_ms_exists, overwrite_file
 from astrohack.utils.graph import create_and_execute_graph_from_dict
-
-from typing import Union, List
+from astrohack.utils.text import get_default_file_name
 
 
 @toolviper.utils.parameter.validate(add_data_type=HologObsDict)
@@ -26,18 +22,18 @@ def extract_holog(
     point_name: str,
     holog_name: str | None = None,
     holog_obs_dict: HologObsDict | None = None,
-    ant: Union[str, List[str]] = "all",
-    ddi: Union[int, List[int], str] = "all",
-    baseline_average_distance: Union[float, int, str] = "all",
-    baseline_average_nearest: Union[int, str] = 1,
-    exclude_antennas: Union[list[str], str, None] = None,
+    ant: str | list[str] = "all",
+    ddi: int | list[int] | str = "all",
+    baseline_average_distance: float | int | str = "all",
+    baseline_average_nearest: int | str = 1,
+    exclude_antennas: list[str] | str | None = None,
     data_column: str = "CORRECTED_DATA",
     time_smoothing_interval: float | int | None = None,
     pointing_interpolation_method: str = "linear",
     parallel: bool = False,
     overwrite: bool = False,
     append: bool = False,
-) -> Union[AstrohackHologFile, None]:
+) -> AstrohackHologFile | None:
     """
     Extract holography and optionally pointing data, from measurement set. Creates holography output file.
 
@@ -243,7 +239,7 @@ def generate_holog_obs_dict(
     point_name: str,
     baseline_average_distance: str = "all",
     baseline_average_nearest: str = "all",
-    exclude_antennas: Union[list[str], str, None] = None,
+    exclude_antennas: list[str] | str | None = None,
     parallel: bool = False,
 ) -> HologObsDict:
     """

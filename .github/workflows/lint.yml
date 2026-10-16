@@ -1,0 +1,12 @@
+# Lint and format check with ruff (configuration: ruff.toml),
+# through the shared template. Replaces black.yml; runs on
+# the same events (every push and pull request).
+name: Lint
+
+on: [push, pull_request]
+
+jobs:
+  call-ruff:
+    uses: nrao/gh-actions-templates-public/.github/workflows/ruff-template.yml@main
+    with:
+      ruff-version: "0.16.10"

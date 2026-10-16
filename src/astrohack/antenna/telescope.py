@@ -1,19 +1,19 @@
+import pathlib
+
+import numpy as np
+import toolviper.utils.logger as logger
+import xarray as xr
 from shapely.geometry.point import Point
 from shapely.geometry.polygon import Polygon
 from shapely.strtree import STRtree
-import numpy as np
-import pathlib
-
-import xarray as xr
-import toolviper.utils.logger as logger
 
 from astrohack.antenna.polygon_panel import PolygonPanel
-from astrohack.utils.constants import twopi, fourpi
 from astrohack.antenna.ring_panel import RingPanel
-from astrohack.utils.algorithms import create_coordinate_images, arm_shadow_masking
-from astrohack.utils.ray_tracing_general import GlobalQPS
+from astrohack.utils.algorithms import arm_shadow_masking, create_coordinate_images
+from astrohack.utils.constants import fourpi, twopi
 from astrohack.utils.package_info import get_astrohack_path
-from astrohack.utils.text import spc, lnbr, undscr
+from astrohack.utils.ray_tracing_general import GlobalQPS
+from astrohack.utils.text import lnbr, spc, undscr
 
 
 class Telescope:
@@ -205,7 +205,7 @@ class RingedCassegrain(Telescope):
         Returns:
             The proper label for the panel at iring, ipanel
         """
-        return "{0:d}-{1:d}".format(iring + 1, ipanel + 1)
+        return f"{iring + 1:d}-{ipanel + 1:d}"
 
     def _alma_panel_labeling(self, iring, ipanel):
         """
@@ -229,7 +229,7 @@ class RingedCassegrain(Telescope):
             sector = self.n_panel_per_ring[0]
         nppersec = self.n_panel_per_ring[iring] / self.n_panel_per_ring[0]
         jpanel = int(nppersec - (ipanel % nppersec))
-        return "{0:1d}-{1:1d}{2:1d}".format(sector, iring + 1, jpanel)
+        return f"{sector:1d}-{iring + 1:1d}{jpanel:1d}"
 
     def build_panel_list(self, panel_model, panel_margins):
         """

@@ -1,4 +1,4 @@
-# Run MacOS tests using template in ToolVIPER
+# Run MacOS tests using the shared template (nrao/gh-actions-templates-public).
 name: MacOS Tests
 
 on:
@@ -14,3 +14,7 @@ on:
 jobs:
   call-testing-macos:
     uses: nrao/gh-actions-templates-public/.github/workflows/python-testing-macos-template.yml@main
+    with:
+      # TODO: add "3.14" once casacoretables publishes cp314 macOS wheels.
+      # Its sdist needs bison >= 3 and flex, which the macOS runners lack.
+      python-versions: '["3.12", "3.13"]'

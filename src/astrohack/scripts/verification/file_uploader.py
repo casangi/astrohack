@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
-import toolviper
 import json
-import shutil
 import pathlib
+import shutil
 import subprocess
+
+import toolviper
 
 parser = argparse.ArgumentParser(
     description="Upload test files to R2 cloudfare (Tokens are fetched from user Env)",
@@ -82,7 +83,7 @@ def download_manifest(args, manifest_filename=".manifest.json"):
     else:
         manifest_filename = args.manifest_path
 
-    with open(manifest_filename, "r") as manifest:
+    with open(manifest_filename) as manifest:
         manifest = json.load(manifest)
     return manifest_filename, manifest
 
@@ -116,7 +117,7 @@ def prepare_data_for_upload(args):
 def update_manifest_version(manifest):
     current = manifest["version"]
     rev, major, minor = current.split(".")
-    minor = f"{int(minor)+1}"
+    minor = f"{int(minor) + 1}"
     manifest["version"] = f"{rev}.{major}.{minor}"
     print(f"Updating manifest version from {current} to {manifest['version']}")
 
@@ -146,8 +147,9 @@ def upload_a_file_to_cloudflare(
 
 
 def upload_data_to_cloudflare(manifest_filename, file_properties):
-    import boto3
     import os
+
+    import boto3
 
     ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID")
     BUCKET_NAME = "public-data"
@@ -168,7 +170,7 @@ def upload_data_to_cloudflare(manifest_filename, file_properties):
         s3_client, BUCKET_NAME, manifest_filename, remote_download_json_name
     )
     local_file_name = file_properties["file"]
-    remote_file_name = f'{file_properties["path"]}/{local_file_name}'
+    remote_file_name = f"{file_properties['path']}/{local_file_name}"
     upload_a_file_to_cloudflare(
         s3_client, BUCKET_NAME, local_file_name, remote_file_name
     )

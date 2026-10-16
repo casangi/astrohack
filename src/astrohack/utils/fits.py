@@ -1,9 +1,8 @@
-from toolviper.utils import logger as logger
-
 import datetime
-import numpy as np
 
+import numpy as np
 from astropy.io import fits
+from toolviper.utils import logger as logger
 
 from astrohack.utils.text import add_prefix
 
@@ -19,7 +18,7 @@ def get_stokes_axis_iaxis(header):
     """
     naxis = header["NAXIS"]
     for iaxis in range(naxis):
-        axis_type = safe_keyword_fetch(header, f"CTYPE{iaxis+1}")
+        axis_type = safe_keyword_fetch(header, f"CTYPE{iaxis + 1}")
         if "STOKES" in axis_type:
             return iaxis + 1
     return None

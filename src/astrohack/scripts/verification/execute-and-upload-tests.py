@@ -1,9 +1,10 @@
-from astrohack.utils.package_info import get_astrohack_path
 import os
 import shutil
-import pytest
 import subprocess
 
+import pytest
+
+from astrohack.utils.package_info import get_astrohack_path
 from astrohack.utils.text import format_duration
 
 

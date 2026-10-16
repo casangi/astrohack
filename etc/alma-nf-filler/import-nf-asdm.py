@@ -1,6 +1,6 @@
-from alma_nf_filler_lib import asdm_to_holog, print_asdm_summary
-from alma_nf_filler_lib import CALIBRATION_OPTIONS
 import argparse
+
+from alma_nf_filler_lib import CALIBRATION_OPTIONS, asdm_to_holog, print_asdm_summary
 
 parser = argparse.ArgumentParser(
     description="Import an ALMA Near-Field ASDM to an AstroHACK .holog.zarr file"
@@ -10,7 +10,7 @@ parser.add_argument("nf_asdm", type=str, help="Path to the root of the ALMA NF A
 parser.add_argument(
     "holog_name",
     type=str,
-    help="Name of the created AstroHACK file to be created " "(no extension)",
+    help="Name of the created AstroHACK file to be created (no extension)",
 )
 parser.add_argument(
     "-t",
@@ -40,7 +40,7 @@ parser.add_argument(
     "--phase_cal",
     type=str,
     default=CALIBRATION_OPTIONS[0],
-    help='Apply phase calibration of the specified type, "none" ' "means no phase cal",
+    help='Apply phase calibration of the specified type, "none" means no phase cal',
     choices=CALIBRATION_OPTIONS,
 )
 parser.add_argument(

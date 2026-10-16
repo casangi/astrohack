@@ -197,7 +197,7 @@ def get_data_content_string(data_object, alignment="l", field_names=None):
 def print_dict_types(le_dict, ident=4, show_values=False):
     for key, value in le_dict.items():
         if isinstance(value, dict):
-            print(f"{ident*spc}{key}:")
+            print(f"{ident * spc}{key}:")
             print_dict_types(value, ident=ident + 4, show_values=show_values)
         else:
             if show_values:
@@ -343,7 +343,7 @@ def get_method_list_string(astrohack_obj, alignment="l", print_len=80):
             name_len = meth_len
     desc_len = print_len - name_len - 3 - 4  # Separators and padding
 
-    outstr = f"{2*lnbr}Available methods:{lnbr}"
+    outstr = f"{2 * lnbr}Available methods:{lnbr}"
     table = create_pretty_table(["Methods", "Description"], alignment)
     for name, method in method_list:
         # ignore dunder methods
@@ -533,7 +533,7 @@ def fixed_format_error(value, error, scaling, significance_scale):
     out_val = value * scaling
     out_err = error * scaling
     after_comma = int(np.ceil(np.max([0, -np.log10(significance_scale)]) + 1))
-    out_fmt = f" {after_comma+2}.{after_comma}f"
+    out_fmt = f" {after_comma + 2}.{after_comma}f"
     return f"{out_val:{out_fmt}} \u00b1 {out_err:{out_fmt}}"
 
 
@@ -639,7 +639,7 @@ def dynamic_format(value):
     if data_oom >= 4 or data_oom < -3:
         return ".3e"
     else:
-        return f"{round(abs(data_oom))+1}f"
+        return f"{round(abs(data_oom)) + 1}f"
 
 
 def format_az_el_information(az_el_dict, key="center", unit="deg", precision=".1f"):
@@ -725,7 +725,7 @@ def format_general_information(
                 line += f"{rad_to_hour_str(item[0])} {rad_to_deg_str(item[1])} [FK5]"
             else:
                 fac = convert_unit("rad", phase_center_unit, "trigonometric")
-                line += f"({fac*item[0]:{precision}}, {fac*item[1]:{precision}}) [{phase_center_unit}]"
+                line += f"({fac * item[0]:{precision}}, {fac * item[1]:{precision}}) [{phase_center_unit}]"
         elif "time" in key:
             date = Time(item, format="mjd").to_datetime()
             line += f"{date.strftime(time_format)} (UTC)"
@@ -839,7 +839,7 @@ def make_header(heading, separator, header_width, buffer_width):
         after_blank = before_blank
     outstr = sep_line
     buffer = buffer_width * separator
-    outstr += f"{buffer}{before_blank*spc}{heading}{after_blank*spc}{buffer}{lnbr}"
+    outstr += f"{buffer}{before_blank * spc}{heading}{after_blank * spc}{buffer}{lnbr}"
     outstr += sep_line + lnbr
     return outstr
 
@@ -996,7 +996,7 @@ def add_preformatted_text_file_to_html(
     if len(text_file) > 255:
         full_text_str = text_file
     elif pathlib.Path(text_file).exists():
-        with open(text_file, "r") as opened_text_file:
+        with open(text_file) as opened_text_file:
             full_text_str = opened_text_file.read()
     else:
         full_text_str = text_file

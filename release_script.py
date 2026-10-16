@@ -1,8 +1,9 @@
-import toml
 import argparse
-import os
 import fileinput
 import glob
+import os
+
+import toml
 
 parser = argparse.ArgumentParser(
     description="Bumps the current version, reintalls with pip, "
@@ -37,18 +38,18 @@ def print_section_header(header):
 
 
 def bump_version(bump):
-    with open(toml_file_name, "r") as project_file:
+    with open(toml_file_name) as project_file:
         project_toml = toml.load(project_file)
 
     current_version = project_toml["project"]["version"]
     revision, major, minor = current_version.split(".")
 
     if bump == "revision":
-        bumped_version = f"{int(revision)+1}.0.0"
+        bumped_version = f"{int(revision) + 1}.0.0"
     elif bump == "major":
-        bumped_version = f"{revision}.{int(major)+1}.0"
+        bumped_version = f"{revision}.{int(major) + 1}.0"
     elif bump == "minor":
-        bumped_version = f"{revision}.{major}.{int(minor)+1}"
+        bumped_version = f"{revision}.{major}.{int(minor) + 1}"
     else:
         raise ValueError(f"Do not know what to do with a {bump} bump")
 

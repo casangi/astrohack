@@ -1,18 +1,18 @@
-import pathlib
-import os
 import glob
-import matplotlib
+import os
+import pathlib
 import shutil
 
+import matplotlib
 from toolviper.utils import data
 
 from astrohack import AstrohackPanelFile, open_panel
 from astrohack.antenna.antenna_surface import AntennaSurface
 from astrohack.utils.verification_tools import (
     add_data_folder_to_names_in_class,
-    are_txt_files_equal,
-    are_png_files_close,
     are_fits_files_close,
+    are_png_files_close,
+    are_txt_files_equal,
     execute_cleanup,
     produce_reference_data,
 )
@@ -38,9 +38,9 @@ class TestpanelMDS:
             for full_path_name in glob.glob(f"{self.ref_products_name}/{pattern}")
         ]
         for plot_name in plot_name_list:
-            assert pathlib.Path(
-                f"{self.destination_folder}/{plot_name}"
-            ).is_file(), f"{plot_name} was not created"
+            assert pathlib.Path(f"{self.destination_folder}/{plot_name}").is_file(), (
+                f"{plot_name} was not created"
+            )
             assert are_png_files_close(
                 f"{self.destination_folder}/{plot_name}",
                 f"{self.ref_products_name}/{plot_name}",
@@ -52,9 +52,9 @@ class TestpanelMDS:
             for full_path_name in glob.glob(f"{self.ref_products_name}/*.fits")
         ]
         for fits_name in fits_list:
-            assert pathlib.Path(
-                f"{self.destination_folder}/{fits_name}"
-            ).is_file(), f"{fits_name} was not created"
+            assert pathlib.Path(f"{self.destination_folder}/{fits_name}").is_file(), (
+                f"{fits_name} was not created"
+            )
             assert are_fits_files_close(
                 f"{self.destination_folder}/{fits_name}",
                 f"{self.ref_products_name}/{fits_name}",
@@ -84,9 +84,9 @@ class TestpanelMDS:
         pnl_mds = open_panel(self.pnl_name)
 
         ant_obj = pnl_mds.get_antenna(ant=self.ant_id, ddi=self.ddi_id)
-        assert isinstance(
-            ant_obj, AntennaSurface
-        ), "Gotten antenna object is not a Antenna Surface obj"
+        assert isinstance(ant_obj, AntennaSurface), (
+            "Gotten antenna object is not a Antenna Surface obj"
+        )
 
     def test_fits_exports(self):
         pnl_mds = open_panel(self.pnl_name)

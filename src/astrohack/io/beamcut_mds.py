@@ -1,30 +1,27 @@
 import numpy as np
-from typing import List, Union, Tuple
-
 from toolviper.utils.parameter import validate
 
-from .base_mds import AstrohackBaseFile
-
+from astrohack.utils.conversion import convert_unit, to_antenna_tapering
+from astrohack.utils.graph import create_and_execute_graphs_for_outputs
 from astrohack.utils.text import (
-    format_value_unit,
+    create_informative_label_from_summary,
     create_pretty_table,
+    format_value_unit,
     lnbr,
     spc,
-    create_informative_label_from_summary,
 )
-from astrohack.utils.conversion import to_antenna_tapering, convert_unit
-from astrohack.visualization.plot_tools import (
-    set_y_axis_lims_from_default,
-    create_figure_and_axes,
-    scatter_plot,
-    close_figure,
-)
-
+from astrohack.utils.validation import custom_plots_checker, custom_unit_checker
 from astrohack.visualization.observation_summary import (
     generate_observation_summary,
 )
-from astrohack.utils.graph import create_and_execute_graphs_for_outputs
-from astrohack.utils.validation import custom_plots_checker, custom_unit_checker
+from astrohack.visualization.plot_tools import (
+    close_figure,
+    create_figure_and_axes,
+    scatter_plot,
+    set_y_axis_lims_from_default,
+)
+
+from .base_mds import AstrohackBaseFile
 
 
 class AstrohackBeamcutFile(AstrohackBaseFile):
@@ -48,8 +45,8 @@ class AstrohackBeamcutFile(AstrohackBaseFile):
     def observation_summary(
         self,
         summary_file: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         az_el_key: str = "center",
         phase_center_unit: str = "radec",
         az_el_unit: str = "deg",
@@ -113,8 +110,8 @@ class AstrohackBeamcutFile(AstrohackBaseFile):
     def plot_in_amplitude(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         lm_unit: str = "amin",
         azel_unit: str = "deg",
         y_scale: list[float | int] | None = None,
@@ -167,11 +164,11 @@ class AstrohackBeamcutFile(AstrohackBaseFile):
     def plot_in_tapering(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         lm_unit: str = "amin",
         azel_unit: str = "deg",
-        y_scale: Union[list[float | int], tuple[float | int], None] = None,
+        y_scale: list[float | int] | tuple[float | int] | None = None,
         display: bool = False,
         dpi: int = 300,
         parallel: bool = False,
@@ -222,8 +219,8 @@ class AstrohackBeamcutFile(AstrohackBaseFile):
     def plot_lm_offsets(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         lm_unit: str = "amin",
         azel_unit: str = "deg",
         display: bool = False,
@@ -275,12 +272,12 @@ class AstrohackBeamcutFile(AstrohackBaseFile):
     def plot_in_phase(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         lm_unit: str = "amin",
         azel_unit: str = "deg",
         phase_unit: str = "deg",
-        phase_scale: Union[List[float], Tuple[float], np.ndarray, None] = None,
+        phase_scale: list[float] | tuple[float] | np.ndarray | None = None,
         display: bool = False,
         dpi: int = 300,
         parallel: bool = False,
@@ -336,8 +333,8 @@ class AstrohackBeamcutFile(AstrohackBaseFile):
     def export_report(
         self,
         destination: str,
-        ant: Union[str, List[str]] = "all",
-        ddi: Union[str, int, List[int]] = "all",
+        ant: str | list[str] = "all",
+        ddi: str | int | list[int] = "all",
         lm_unit: str = "amin",
         azel_unit: str = "deg",
         parallel: bool = False,
@@ -512,7 +509,7 @@ def _create_report_chunk(par_dict, spacing=2, item_marker="-", precision=3):
     for icut, cut_xds in enumerate(cut_xdtree.children.values()):
         sub_title = _make_parallel_hand_sub_title(cut_xds.attrs, icut, lm_unit)
         for i_corr, parallel_hand in enumerate(cut_xds.attrs["available_corrs"]):
-            outstr += f"{spacing*spc}{item_marker}{spc}{parallel_hand} {sub_title}, Beam fit results:{lnbr}"
+            outstr += f"{spacing * spc}{item_marker}{spc}{parallel_hand} {sub_title}, Beam fit results:{lnbr}"
             table = create_pretty_table(items, "c")
             fit_pars = cut_xds.attrs[f"{parallel_hand}_amp_fit_pars"]
             centers = fit_pars[0::3]
@@ -521,13 +518,12 @@ def _create_report_chunk(par_dict, spacing=2, item_marker="-", precision=3):
             max_amp = np.max(cut_xds[f"{parallel_hand}_amplitude"].values)
 
             for i_peak in range(cut_xds.attrs[f"{parallel_hand}_n_peaks"]):
-
                 table.add_row(
                     [
-                        f"{i_peak+1})",  # Id
-                        f"{lm_fac*centers[i_peak]:.{precision}f}",  # center
+                        f"{i_peak + 1})",  # Id
+                        f"{lm_fac * centers[i_peak]:.{precision}f}",  # center
                         f"{amps[i_peak]:.{precision}f}",  # Amp
-                        f"{lm_fac*fwhms[i_peak]:.{precision}f}",  # FWHM
+                        f"{lm_fac * fwhms[i_peak]:.{precision}f}",  # FWHM
                         f"{to_antenna_tapering(amps[i_peak] / max_amp):.{precision}f}",  # Tapering
                     ]
                 )
@@ -617,7 +613,9 @@ def _add_lobe_identification_to_plot(ax, centers, peaks, y_off, y_lims):
         text_y_coor = peak + y_off
         if text_y_coor < y_lims[1] - y_off:
             text_y_coor = y_lims[1] - y_off
-        ax.text(centers[i_peak], text_y_coor, f"{i_peak+1})", ha="center", va="bottom")
+        ax.text(
+            centers[i_peak], text_y_coor, f"{i_peak + 1})", ha="center", va="bottom"
+        )
 
 
 def _add_beam_parameters_box(
@@ -1025,7 +1023,7 @@ def _plot_cuts_in_lm_sub(cut_xdtree, par_dict):
         ax.plot(
             lm_offsets[:, 0],
             lm_offsets[:, 1],
-            label=f'cut {icut}, {cut_xds.attrs["direction"]}',
+            label=f"cut {icut}, {cut_xds.attrs['direction']}",
             marker=".",
             ls="",
             color=colors[icut],
