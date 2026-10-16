@@ -7,6 +7,6 @@ on: [push, pull_request]
 
 jobs:
   call-ruff:
-    uses: nrao/gh-actions-templates-public/.github/workflows/ruff-template.yml@17-ci-python-312-314-push-pr-split
+    uses: nrao/gh-actions-templates-public/.github/workflows/ruff-template.yml@main
     with:
       ruff-version: "0.16.10"
