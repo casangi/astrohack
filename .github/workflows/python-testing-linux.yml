@@ -24,8 +24,5 @@ jobs:
       # from source on 3.14, and its bundled c-blosc does not compile with
       # GCC >= 15 (C23 default), which ubuntu-latest moves to with 26.04.
       gcc-version: "14"
-      # TODO: remove once toolviper is re-released with requires-python
-      # "<3.15" (every release on PyPI caps it below 3.14).
-      ignore-requires-python: true
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
