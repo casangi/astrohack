@@ -189,7 +189,7 @@ def run_casa_calibration(param_dict: dict, msger: MessageBoard):
                 },
                 msger,
                 intended_output=intended_delay_out,
-                overwrite=overwrite_delay
+                overwrite=overwrite_delay,
             )
         )
         append_delay = True
