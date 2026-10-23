@@ -26,3 +26,4 @@ docs = [ "pandoc", "sphinx-autosummary-accessors", "nbsphinx", "sphinx_rtd_theme
 [project.scripts]
 beamcut-reduction-pipeline = "astrohack.scripts.beamcuts.beamcut_reduction_pipeline:main"
 baseline-reduction-pipeline = "astrohack.scripts.baseline.baseline_reduction_pipeline:main"
+holography-reduction-pipeline = "astrohack.scripts.holography.holography_reduction_pipeline:main"
