@@ -1,6 +1,8 @@
 import time
 from pathlib import Path
 
+import numpy as np
+
 from astrohack import (
     combine,
     extract_holog,
@@ -164,50 +166,33 @@ def param_init(pipeline_type: str, msger: MessageBoard):
 
 
 def run_casa_calibration(param_dict: dict, msger: MessageBoard):
-    msger.heading("Calibration will come here!")
-    base_0_del_ok = run_casatask(
-        "gaincal",
-        {
-            "vis": param_dict["msname"],
-            "caltable": param_dict["delay_cal_name"],
-            "refant": param_dict["refant"],
-            "solint": "10s",
-            "spw": param_dict["quacked_base_band_0_selection"],
-            "scan": param_dict["calibration_scans"],
-            "minblperant": 3,
-            "gaintype": "K",
-            "append": False,
-            "calmode": "p",
-            "combine": "spw",
-        },
-        msger,
-        intended_output=param_dict["delay_cal_name"],
-        overwrite=param_dict["overwrite"],
-    )
+    delay_success = []
+    for base_band in param_dict["quacked_base_band_selection"]:
+        delay_success.append(
+            run_casatask(
+                "gaincal",
+                {
+                    "vis": param_dict["msname"],
+                    "caltable": param_dict["delay_cal_name"],
+                    "refant": param_dict["refant"],
+                    "solint": "10s",
+                    "spw": base_band,
+                    "scan": param_dict["calibration_scans"],
+                    "minblperant": 3,
+                    "gaintype": "K",
+                    "append": False,
+                    "calmode": "p",
+                    "combine": "spw",
+                },
+                msger,
+                intended_output=param_dict["delay_cal_name"],
+                overwrite=param_dict["overwrite"],
+            )
+        )
 
-    base_1_del_ok = run_casatask(
-        "gaincal",
-        {
-            "vis": param_dict["msname"],
-            "caltable": param_dict["delay_cal_name"],
-            "refant": param_dict["refant"],
-            "solint": "10s",
-            "spw": param_dict["quacked_base_band_1_selection"],
-            "scan": param_dict["calibration_scans"],
-            "minblperant": 3,
-            "gaintype": "K",
-            "append": True,
-            "calmode": "p",
-            "combine": "spw",
-        },
-        msger,
-        # Setting intended output to None skips the overwrite heuristics but will make check not robust.
-        intended_output=None,
-        overwrite=False,
-    )
     gaintable = []
     spwmap = []
-    delay_ok = base_0_del_ok and base_1_del_ok
+    delay_ok = np.all(delay_success)
 
     if delay_ok:
         gaintable.append(param_dict["delay_cal_name"])
