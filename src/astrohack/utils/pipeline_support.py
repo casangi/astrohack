@@ -559,9 +559,10 @@ def fetch_ms_metadata_for_holograpy(param_dict, pipeline_type):
             base_band1.append(mapping_spw_list[j_spw])
     base_bands = [base_band0, base_band1]
     base_bands = [base_band for base_band in base_bands if len(base_band) > 0]
-    print(base_bands)
     del base_band0, base_band1
-    base_band_strs = [f"{np.min(base_band)}~{np.max(base_band)}" for base_band in base_bands]
+    base_band_strs = [
+        f"{np.min(base_band)}~{np.max(base_band)}" for base_band in base_bands
+    ]
 
     field_key = f"{pipeline_type}_field"
     if param_dict[field_key] is None:
