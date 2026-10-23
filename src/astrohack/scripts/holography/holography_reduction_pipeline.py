@@ -167,6 +167,9 @@ def param_init(pipeline_type: str, msger: MessageBoard):
 
 def run_casa_calibration(param_dict: dict, msger: MessageBoard):
     delay_success = []
+    intended_delay_out = param_dict["delay_cal_name"]
+    overwrite_delay = param_dict["overwrite"]
+    append_delay = False
     for base_band in param_dict["quacked_base_band_selection"]:
         delay_success.append(
             run_casatask(
@@ -180,15 +183,18 @@ def run_casa_calibration(param_dict: dict, msger: MessageBoard):
                     "scan": param_dict["calibration_scans"],
                     "minblperant": 3,
                     "gaintype": "K",
-                    "append": False,
+                    "append": append_delay,
                     "calmode": "p",
                     "combine": "spw",
                 },
                 msger,
-                intended_output=param_dict["delay_cal_name"],
-                overwrite=param_dict["overwrite"],
+                intended_output=intended_delay_out,
+                overwrite=overwrite_delay
             )
         )
+        append_delay = True
+        overwrite_delay = False
+        intended_delay_out = None
 
     gaintable = []
     spwmap = []
