@@ -611,7 +611,7 @@ def fetch_ms_metadata_for_holograpy(param_dict, pipeline_type):
     delay_spwmap = []
     full_spwmap = []
     for i_spw in all_spw_list:
-        if i_spw in base_bands:
+        if np.any(i_spw in base_bands):
             for ibase, base_band in enumerate(base_bands):
                 if i_spw in base_band:
                     delay_spwmap.append(np.min(base_band))
