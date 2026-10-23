@@ -557,9 +557,11 @@ def fetch_ms_metadata_for_holograpy(param_dict, pipeline_type):
             base_band0.append(mapping_spw_list[j_spw])
         elif "B0D0" in spw_name[0]:
             base_band1.append(mapping_spw_list[j_spw])
-
-    base_band0_str = f"{np.min(base_band0)}~{np.max(base_band0)}"
-    base_band1_str = f"{np.min(base_band1)}~{np.max(base_band1)}"
+    base_bands = [base_band0, base_band1]
+    base_bands = [base_band for base_band in base_bands if len(base_band) > 0]
+    print(base_bands)
+    del base_band0, base_band1
+    base_band_strs = [f"{np.min(base_band)}~{np.max(base_band)}" for base_band in base_bands]
 
     field_key = f"{pipeline_type}_field"
     if param_dict[field_key] is None:
@@ -582,44 +584,39 @@ def fetch_ms_metadata_for_holograpy(param_dict, pipeline_type):
     fchan = param_dict["quack_nchan"]
     if np.unique(mapping_spw_nchan).size > 1:
         quacked_list = []
-        quacked_base0_list = []
-        quacked_base1_list = []
+        quacked_base_list = [[] for base_band in base_bands]
         for j_spw, i_nchan in enumerate(mapping_spw_nchan):
             i_spw = mapping_spw_list[j_spw]
             quacked_spw = f"{i_spw}:{fchan}~{i_nchan - fchan}"
             quacked_list.append(quacked_spw)
-            if i_spw in base_band0:
-                quacked_base0_list.append(quacked_spw)
-            elif i_spw in base_band1:
-                quacked_base1_list.append(quacked_spw)
-            else:
-                pass
+            for ibase, base_band in enumerate(base_bands):
+                if i_spw in base_band:
+                    quacked_base_list[ibase].append(quacked_spw)
 
         param_dict["quacked_spw_selection"] = ",".join(quacked_list)
-        param_dict["quacked_base_band_0_selection"] = ",".join(quacked_base0_list)
-        param_dict["quacked_base_band_1_selection"] = ",".join(quacked_base1_list)
+        quacked_base_bands = []
+        for quacked_base_band in quacked_base_list:
+            quacked_base_bands.append(",".join(quacked_base_band))
     else:
         lchan = mapping_spw_nchan[0] - param_dict["quack_nchan"]
         minspw = f"{round(np.min(mapping_spw_list)):d}"
         maxspw = f"{round(np.max(mapping_spw_list)):d}"
         spwrange = f"{minspw}~{maxspw}"
         param_dict["quacked_spw_selection"] = f"{spwrange}:{fchan}~{lchan}"
-        param_dict["quacked_base_band_0_selection"] = (
-            f"{base_band0_str}:{fchan}~{lchan}"
-        )
-        param_dict["quacked_base_band_1_selection"] = (
-            f"{base_band1_str}:{fchan}~{lchan}"
-        )
+        quacked_base_bands = []
+        for base_band_str in base_band_strs:
+            quacked_base_bands.append(f"{base_band_str}:{fchan}~{lchan}")
 
+    param_dict["quacked_base_band_selection"] = quacked_base_bands
     delay_spwmap = []
     full_spwmap = []
     for i_spw in all_spw_list:
-        if i_spw in base_band0:
-            delay_spwmap.append(np.min(base_band0))
-        elif i_spw in base_band1:
-            delay_spwmap.append(np.min(base_band1))
+        if i_spw in base_bands:
+            for ibase, base_band in enumerate(base_bands):
+                if i_spw in base_band:
+                    delay_spwmap.append(np.min(base_band))
         else:
-            delay_spwmap.append(np.min((np.min(base_band0), np.min(base_band1))))
+            delay_spwmap.append(np.min(base_bands))
         full_spwmap.append(i_spw)
     param_dict["delay_spwmap"] = delay_spwmap
     param_dict["full_spwmap"] = full_spwmap
