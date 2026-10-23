@@ -18,6 +18,7 @@ from astrohack.utils.pipeline_support import (
     initialization_check,
     list_input_tooltip,
     open_astrohack_file,
+    parse_core_memory,
     parse_list_or_all,
     parse_list_or_none,
     proceed_check,
@@ -183,6 +184,7 @@ def param_init(param_dict: dict, msger: MessageBoard):
     param_dict["exports_name"] = f"{base_name}.exports"
     param_dict["report_name"] = f"{base_name}-report.html"
     param_dict["parallel"] = param_dict["ncores"] > 1
+    param_dict["memory_per_core"] = parse_core_memory(param_dict["memory_per_core"])
 
     param_dict["antenna"] = parse_list_or_all(param_dict, "antenna")
     param_dict["spw"] = parse_list_or_all(param_dict, "spw", list_type=int)

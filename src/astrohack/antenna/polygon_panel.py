@@ -15,7 +15,7 @@ class PolygonPanel(BasePanel):
         model,
         panel_info,
         panel_margin,
-        plot_screw_size=0.20,
+        plot_screw_size=0.1,
     ):
         """
         Initializes a polygon based panel based on a polygon shape and the screw positions
@@ -29,12 +29,35 @@ class PolygonPanel(BasePanel):
                 f"corotated models such as {model} are not supported for Polygon based panels"
             )
 
+        def get_mean_of_edge(array):
+            return (np.min(array) + np.max(array)) / 2.0
+
         poly = Polygon(panel_info["polygon"])
 
         array_screws = panel_info["screws"]
         screw_list = []
         for screw in array_screws:
             screw_list.append(PanelPoint(screw[0], screw[1]))
+
+        # Compute refence points for the flexible model, for Ring panels the flexible model uses 2 reference points
+        # per ring. here we define reference points as the mean points of the lower and upper edges of the polygon
+        # panels which are assumed to be approximately four sided.
+        xcoords = []
+        ycoords = []
+        for corners in poly.exterior.coords:
+            xcoords.append(corners[0])
+            ycoords.append(corners[1])
+
+        xcoords = np.array(xcoords)
+        ycoords = np.array(ycoords)
+        y_sort_idx = np.argsort(ycoords)
+        y_ascending = ycoords[y_sort_idx]
+        x_y_ascending = xcoords[y_sort_idx]
+        y_jump = int(np.argmax(np.diff(y_ascending))) + 1
+        x1 = get_mean_of_edge(x_y_ascending[:y_jump])
+        x2 = get_mean_of_edge(x_y_ascending[y_jump:])
+        y2 = get_mean_of_edge(y_ascending[y_jump:])
+        ref_points = [x1, x2, y2]
 
         screws = np.array(screw_list, dtype=np.object_)
         super().__init__(
@@ -45,7 +68,7 @@ class PolygonPanel(BasePanel):
             label,
             center=PanelPoint(poly.centroid.x, poly.centroid.y),
             zeta=None,
-            ref_points=None,
+            ref_points=ref_points,
         )
         self.polygon = poly
         self.margin = panel_margin
